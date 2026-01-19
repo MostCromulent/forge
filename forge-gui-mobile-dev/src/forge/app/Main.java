@@ -1,6 +1,7 @@
 package forge.app;
 
 import com.badlogic.gdx.Gdx;
+import forge.gui.GuiBase;
 import forge.interfaces.IDeviceAdapter;
 import forge.util.*;
 import org.apache.commons.lang3.tuple.Pair;
@@ -21,6 +22,13 @@ import java.util.Optional;
 public class Main {
     private static final String versionString = BuildInfo.getVersionString();
     public static void main(String[] args) {
+        // Check if launched from desktop GUI for Adventure mode with desktop battle UI
+        if ("true".equals(System.getProperty("FORGE_DESKTOP_ADVENTURE")) ||
+            "true".equals(System.getenv("FORGE_DESKTOP_ADVENTURE"))) {
+            GuiBase.setDesktopAdventureMode(true);
+            System.out.println("Adventure Mode: Running in desktop adventure mode (battles use desktop UI)");
+        }
+
         if (!OperatingSystem.isWindows()) {
             /* Prevents crash on non Windows OS before creating the LWJGL3 window.
                It seems it defeats the purpose of having a splash image since

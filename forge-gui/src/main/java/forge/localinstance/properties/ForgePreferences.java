@@ -196,6 +196,7 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         SUBMENU_ONLINE ("false"),
         SUBMENU_GAUNTLET ("false"),
         SUBMENU_QUEST ("false"),
+        SUBMENU_ADVENTURE ("false"),
         SUBMENU_PUZZLE("false"),
         SUBMENU_SETTINGS ("false"),
         SUBMENU_UTILITIES ("false"),

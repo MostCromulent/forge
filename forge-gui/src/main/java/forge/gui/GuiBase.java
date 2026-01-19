@@ -17,6 +17,7 @@ public class GuiBase {
     private static boolean usingAppDirectory = false;
     private static ForgePreferences forgePrefs;
     private static HWInfo hwInfo;
+    private static boolean desktopAdventureMode = false;
 
     public static IGuiBase getInterface() { return guiInterface; }
     public static void setInterface(IGuiBase i0) { guiInterface = i0; }
@@ -68,4 +69,7 @@ public class GuiBase {
 
     public static void setInterrupted(boolean value) { interrupted = value; }
     public static boolean isInterrupted() { return interrupted; }
+
+    public static boolean isDesktopAdventureMode() { return desktopAdventureMode; }
+    public static void setDesktopAdventureMode(boolean value) { desktopAdventureMode = value; }
 }

@@ -29,7 +29,9 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.quest.QuestUtil;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
+import forge.adventure.IAdventureBattleHost;
 import forge.gui.FThreads;
+import forge.gui.GuiBase;
 import forge.gui.interfaces.IGuiGame;
 import forge.item.IPaperCard;
 import forge.item.PaperCard;
@@ -63,6 +65,7 @@ public class DuelScene extends ForgeScene {
 
     //GameLobby lobby;
     HostedMatch hostedMatch;
+    IGuiGame battleUI;  // The GUI used for battle (mobile MatchController or desktop CMatchUI)
     EnemySprite enemy;
     PlayerSprite player;
     RegisteredPlayer humanPlayer;
@@ -377,10 +380,17 @@ public class DuelScene extends ForgeScene {
                 p.assignConspiracies();
         }
 
-        final Map<RegisteredPlayer, IGuiGame> guiMap = new HashMap<>();
-        guiMap.put(humanPlayer, MatchController.instance);
+        // When running in desktop adventure mode, use IPC to delegate battle to desktop process
+        if (GuiBase.isDesktopAdventureMode()) {
+            startDesktopBattle(players, humanPlayer, bossBattle, mainGameType);
+            return;
+        }
 
+        // Standard mobile battle flow
+        final Map<RegisteredPlayer, IGuiGame> guiMap = new HashMap<>();
+        battleUI = MatchController.instance;
         hostedMatch = MatchController.hostMatch();
+        guiMap.put(humanPlayer, battleUI);
 
         GameRules rules;
 
@@ -400,7 +410,9 @@ public class DuelScene extends ForgeScene {
         //hostedMatch.setEndGameHook(() -> DuelScene.this.GameEnd());
         hostedMatch.startMatch(rules, appliedVariants, players, guiMap, bossBattle ? MusicPlaylist.BOSS : MusicPlaylist.MATCH);
         MatchController.instance.setGameView(hostedMatch.getGameView());
+
         boolean showMessages = enemy.getData().boss || (enemy.getData().copyPlayerDeck && Current.player().isUsingCustomDeck());
+
         if (chaosBattle || showMessages || isDeckMissing) {
             final FBufferedImage fb = getFBEnemyAvatar();
             bossDialogue = createFOption(isDeckMissing ? isDeckMissingMsg : Forge.getLocalizer().getMessage("AdvBossIntro" + Aggregates.randomInt(1, 35)),
@@ -414,13 +426,127 @@ public class DuelScene extends ForgeScene {
         for (final Player p : hostedMatch.getGame().getPlayers()) {
             if (p.getController() instanceof PlayerControllerHuman) {
                 final PlayerControllerHuman humanController = (PlayerControllerHuman) p.getController();
-                humanController.setGui(MatchController.instance);
-                MatchController.instance.setOriginalGameController(p.getView(), humanController);
-                MatchController.instance.openView(new TrackableCollection<>(p.getView()));
+                humanController.setGui(battleUI);
+                battleUI.setOriginalGameController(p.getView(), humanController);
+                battleUI.openView(new TrackableCollection<>(p.getView()));
             }
         }
         super.enter();
         matchOverlay.show();
+    }
+
+    /**
+     * Starts a battle via IPC when running in desktop adventure mode.
+     * Writes battle request to file and waits for desktop to complete the battle.
+     */
+    private void startDesktopBattle(List<RegisteredPlayer> players, RegisteredPlayer humanPlayer,
+                                    boolean bossBattle, GameType gameType) {
+        try {
+            // Build the battle request
+            IAdventureBattleHost.BattleRequest request = new IAdventureBattleHost.BattleRequest();
+
+            // Human player data
+            request.humanPlayerName = humanPlayer.getPlayer().getName();
+            request.humanStartingLife = humanPlayer.getStartingLife();
+            request.humanManaShards = humanPlayer.getManaShards();
+
+            // Save human deck to IPC file
+            IAdventureBattleHost.saveHumanDeck(playerDeck);
+
+            // AI players data
+            int aiIndex = 0;
+            for (RegisteredPlayer p : players) {
+                if (p == humanPlayer) continue;
+
+                // Save AI deck to IPC file
+                IAdventureBattleHost.saveAiDeck(p.getDeck(), aiIndex);
+
+                IAdventureBattleHost.AIPlayerData aiData = new IAdventureBattleHost.AIPlayerData();
+                aiData.name = p.getPlayer().getName();
+                aiData.deckIndex = aiIndex;
+                aiData.startingLife = p.getStartingLife();
+                aiData.teamNumber = p.getTeamNumber();
+                aiData.aiType = "";  // Use default AI
+                request.aiPlayers.add(aiData);
+                aiIndex++;
+            }
+
+            // Game settings
+            request.gameType = gameType.name();
+            request.gamesPerMatch = eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch;
+            request.playForAnte = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE);
+            request.matchAnteRarity = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_MATCH_RARITY);
+            request.isBossBattle = bossBattle;
+            request.enemyName = enemy.getName();
+
+            // Write request and signal desktop
+            request.write();
+
+            System.out.println("Desktop Adventure: Battle request written, waiting for desktop to complete battle...");
+
+            // Start polling for battle completion in background
+            new Thread(() -> {
+                waitForDesktopBattle();
+            }, "DesktopBattle-Waiter").start();
+
+        } catch (Exception e) {
+            System.err.println("Failed to start desktop battle: " + e.getMessage());
+            e.printStackTrace();
+            // Fall back to ending the duel scene
+            afterGameEnd(enemy.getName(), false);
+            exitDuelScene();
+        }
+    }
+
+    /**
+     * Waits for the desktop process to complete the battle, then processes the result.
+     */
+    private void waitForDesktopBattle() {
+        try {
+            // Poll for battle completion (check every 500ms)
+            while (!IAdventureBattleHost.isBattleComplete()) {
+                Thread.sleep(500);
+            }
+
+            // Read the result
+            IAdventureBattleHost.BattleResult result = IAdventureBattleHost.BattleResult.read();
+
+            System.out.println("Desktop Adventure: Battle complete! Winner: " + (result.humanWon ? "Human" : "AI"));
+
+            // Update player shards if changed
+            if (eventData == null || eventData.eventRules.allowsShards) {
+                Current.player().setShards(result.shardsAfterBattle);
+            }
+
+            // Handle ante results
+            if (!result.cardsWon.isEmpty() || !result.cardsLost.isEmpty()) {
+                // TODO: Handle ante card transfers
+                // For now just log them
+                for (String card : result.cardsWon) {
+                    System.out.println("Won card: " + card);
+                }
+                for (String card : result.cardsLost) {
+                    System.out.println("Lost card: " + card);
+                }
+            }
+
+            // Clear the IPC signal
+            IAdventureBattleHost.clearBattleCompleteSignal();
+
+            // Process the game end on the main thread
+            Gdx.app.postRunnable(() -> {
+                afterGameEnd(enemy.getName(), result.humanWon);
+                exitDuelScene();
+            });
+
+        } catch (Exception e) {
+            System.err.println("Error waiting for desktop battle: " + e.getMessage());
+            e.printStackTrace();
+            Gdx.app.postRunnable(() -> {
+                afterGameEnd(enemy.getName(), false);
+                exitDuelScene();
+            });
+        }
     }
 
     private static final String PLACEHOLDER_MAIN = "Wastes";

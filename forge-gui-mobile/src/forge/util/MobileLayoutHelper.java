@@ -3,18 +3,18 @@ package forge.util;
 import forge.toolbox.FContainer;
 import forge.toolbox.FDisplayObject;
 
-/** 
- * Helper class for doing custom layout
+/**
+ * Helper class for doing custom layout (Mobile version using float coordinates)
  *
  */
-public final class LayoutHelper {
+public final class MobileLayoutHelper {
     private final float parentWidth, parentHeight;
     private float x, y, lineBottom, gapX, gapY;
 
-    public LayoutHelper(FContainer parent) {
+    public MobileLayoutHelper(FContainer parent) {
         this(parent, 3, 3);
     }
-    public LayoutHelper(FContainer parent, float gapX0, float gapY0) {
+    public MobileLayoutHelper(FContainer parent, float gapX0, float gapY0) {
         parentWidth = parent.getWidth();
         parentHeight = parent.getHeight();
         gapX = gapX0;

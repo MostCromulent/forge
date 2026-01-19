@@ -46,6 +46,7 @@ import forge.screens.home.online.VSubmenuOnlineLobby;
 import forge.screens.home.puzzle.VSubmenuPuzzleCreate;
 import forge.screens.home.puzzle.VSubmenuPuzzleSolve;
 //import forge.screens.home.puzzle.VSubmenuTutorial;
+import forge.screens.home.adventure.VSubmenuAdventure;
 import forge.screens.home.quest.VSubmenuChallenges;
 import forge.screens.home.quest.VSubmenuDuels;
 import forge.screens.home.quest.VSubmenuQuestDecks;
@@ -128,6 +129,8 @@ public enum VHomeUI implements IVTopLevelUI {
         allSubmenus.add(VSubmenuChallenges.SINGLETON_INSTANCE);
         allSubmenus.add(VSubmenuQuestDraft.SINGLETON_INSTANCE);
         allSubmenus.add(VSubmenuQuestPrefs.SINGLETON_INSTANCE);
+
+        allSubmenus.add(VSubmenuAdventure.SINGLETON_INSTANCE);
 
         allSubmenus.add(VSubmenuGauntletQuick.SINGLETON_INSTANCE);
         allSubmenus.add(VSubmenuGauntletBuild.SINGLETON_INSTANCE);

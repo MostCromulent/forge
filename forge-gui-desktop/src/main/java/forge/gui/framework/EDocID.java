@@ -18,6 +18,7 @@ import forge.screens.home.quest.VSubmenuQuestDraft;
 import forge.screens.home.quest.VSubmenuQuestLoadData;
 import forge.screens.home.quest.VSubmenuQuestPrefs;
 import forge.screens.home.quest.VSubmenuQuestStart;
+import forge.screens.home.adventure.VSubmenuAdventure;
 import forge.screens.home.sanctioned.VSubmenuConstructed;
 import forge.screens.home.sanctioned.VSubmenuDraft;
 import forge.screens.home.sanctioned.VSubmenuSealed;
@@ -84,6 +85,7 @@ public enum EDocID {
     HOME_WINSTON (VSubmenuWinston.SINGLETON_INSTANCE),
     HOME_NETWORK (VSubmenuOnlineLobby.SINGLETON_INSTANCE),
     HOME_RELEASE_NOTES (VSubmenuReleaseNotes.SINGLETON_INSTANCE),
+    HOME_ADVENTURE (VSubmenuAdventure.SINGLETON_INSTANCE),
 
     REPORT_MESSAGE (),
     REPORT_STACK (),

@@ -50,7 +50,10 @@ import forge.toolbox.*;
 import forge.toolbox.FEvent.FEventHandler;
 import forge.toolbox.FEvent.FEventType;
 import forge.toolbox.FList.CompactModeHandler;
-import forge.util.*;
+import forge.util.Aggregates;
+import forge.util.ItemPool;
+import forge.util.IterableUtil;
+import forge.util.MobileLayoutHelper;
 
 
 public abstract class ItemManager<T extends InventoryItem> extends FContainer implements IItemManager<T>, ActivateHandler {
@@ -349,7 +352,7 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
 
     @Override
     public void doLayout(float width, float height) {
-        LayoutHelper helper = new LayoutHelper(this, ItemFilter.PADDING, ItemFilter.PADDING);
+        MobileLayoutHelper helper = new MobileLayoutHelper(this, ItemFilter.PADDING, ItemFilter.PADDING);
         float fieldHeight = searchFilter.getMainComponent().getHeight();
         float viewButtonWidth = fieldHeight;
         helper.offset(0, ItemFilter.PADDING);
@@ -376,7 +379,7 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
         helper.fill(currentView.getScroller());
     }
 
-    private void drawLandscape(List<ItemFilter<? extends T>> filters, LayoutHelper helper, float fieldHeight) {
+    private void drawLandscape(List<ItemFilter<? extends T>> filters, MobileLayoutHelper helper, float fieldHeight) {
         // TODO reduce landscape mode combobox buttons for the filters
         for (ItemFilter<? extends T> filter : filters) {
             helper.include(filter.getWidget(), filter.getPreferredWidth(helper.getRemainingLineWidth(), fieldHeight), fieldHeight);
@@ -392,7 +395,7 @@ public abstract class ItemManager<T extends InventoryItem> extends FContainer im
         }
     }
 
-    private void drawPortrait(List<ItemFilter<? extends T>> filters, LayoutHelper helper, float width, float fieldHeight) {
+    private void drawPortrait(List<ItemFilter<? extends T>> filters, MobileLayoutHelper helper, float width, float fieldHeight) {
         CardTypeFilter cardTypeFilter = null;
         CardColorFilter colorFilter = null;
         CardFormatFilter cardFormatFilter = null;
