@@ -1061,6 +1061,11 @@ bandwidth.logging.enabled=true
 debug.logger.enabled=true
 debug.logger.console.level=INFO
 debug.logger.file.level=DEBUG
+
+# Log Management
+debug.logger.max.logs=20
+debug.logger.cleanup.enabled=true
+debug.logger.directory=logs
 ```
 
 **Startup Confirmation**: When Forge starts, it logs the configuration:
@@ -1070,6 +1075,9 @@ debug.logger.file.level=DEBUG
 [NetworkDebugConfig]   debug.logger.enabled=true
 [NetworkDebugConfig]   debug.logger.console.level=INFO
 [NetworkDebugConfig]   debug.logger.file.level=DEBUG
+[NetworkDebugConfig]   debug.logger.max.logs=20
+[NetworkDebugConfig]   debug.logger.cleanup.enabled=true
+[NetworkDebugConfig]   debug.logger.directory=logs
 ```
 
 **If config file is missing**, default values are used (all debugging enabled).
@@ -1102,7 +1110,7 @@ debug.logger.file.level=DEBUG    # File captures everything
 
 #### Log File Location
 
-Log files are created in the `logs/` directory (relative to the Forge working directory, typically `forge-gui-desktop/logs/`):
+Log files are created in a configurable directory (default: `logs/`, relative to the Forge working directory, typically `forge-gui-desktop/logs/`):
 
 ```
 logs/network-debug-20250121-075900-12345.log
@@ -1111,6 +1119,64 @@ logs/network-debug-20250121-075900-12345.log
 The filename includes:
 - Timestamp (YYYYMMDD-HHMMSS)
 - Process ID (for distinguishing multiple Forge instances)
+
+**Custom Log Directory**: Set `debug.logger.directory` in `NetworkDebug.config` to specify a different location:
+```properties
+# Relative path (from working directory)
+debug.logger.directory=logs
+
+# Absolute path
+debug.logger.directory=/var/log/forge
+```
+
+**Log File Header**: Each log file includes system information for diagnostics:
+```
+================================================================================
+Network Debug Log Started: Mon Jan 21 07:59:00 PST 2025
+PID: 12345
+Log file: /path/to/forge/logs/network-debug-20250121-075900-12345.log
+
+System Information:
+  Java Version: 17.0.2
+  Java Vendor: Oracle Corporation
+  Max Memory: 4096 MB
+  Available Processors: 8
+  OS: Linux 5.15.0
+  OS Arch: amd64
+================================================================================
+```
+
+#### Log Management and Retention
+
+To prevent unlimited disk space usage, the logger automatically manages old log files based on configuration settings:
+
+**Control**: Set these options in `NetworkDebug.config`:
+- `debug.logger.max.logs=20` - Maximum number of log files to keep (default: 20)
+- `debug.logger.cleanup.enabled=true` - Enable/disable automatic cleanup (default: true)
+
+**Cleanup Behavior**:
+- When a new log file is created, the logger checks if the total number of logs exceeds the limit
+- If exceeded, the oldest log files are automatically deleted (silently, without console output)
+- Files modified within the last 5 minutes are never deleted (grace period for multiple running instances)
+- Set `max.logs=0` to disable the limit and keep all logs (useful for development)
+
+**Example Configurations**:
+```properties
+# Keep last 20 logs (default)
+debug.logger.max.logs=20
+debug.logger.cleanup.enabled=true
+
+# Keep all logs indefinitely (development)
+debug.logger.max.logs=0
+
+# Disable cleanup entirely
+debug.logger.cleanup.enabled=false
+
+# Keep only last 5 logs (minimal disk usage)
+debug.logger.max.logs=5
+```
+
+**Grace Period**: The 5-minute grace period prevents accidental deletion of logs from other Forge instances that may be running concurrently. Only logs older than 5 minutes are candidates for cleanup.
 
 #### Changing Configuration
 
