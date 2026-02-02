@@ -1,4 +1,4 @@
-2# Ignore IDEA config files
+# Ignore IDEA config files
 
 *.idea
 *.iml
@@ -97,3 +97,7 @@ __pycache__
 
 # Ignore network debug logs
 forge-gui-desktop/logs
+
+# Ignore Claude Code configuration (branch-specific)
+.claude/
+CLAUDE.md

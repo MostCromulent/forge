@@ -6,7 +6,7 @@ This file tracks known bugs in the Forge codebase, particularly for the NetworkP
 
 ## Active Bugs
 
-### Bug #13: Multiplayer Checksum Mismatch - Player Ordering Issue
+### Bug 13: Multiplayer Checksum Mismatch - Player Ordering Issue
 
 **Status:** FIXED
 **Severity:** MEDIUM
@@ -36,7 +36,7 @@ Also updated `logChecksumDetails()` in both files to show players in sorted orde
 
 ---
 
-### Bug #12: Multiplayer (3+ player) Desync - Collection Lookup Failures
+### Bug 12: Multiplayer (3+ player) Desync - Collection Lookup Failures
 
 **Status:** FIXED
 **Severity:** HIGH
