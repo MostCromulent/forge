@@ -260,11 +260,46 @@ return baos.size();  // Compressed size - apples-to-apples comparison
 
 ## Testing Functions
 
-### Test Entry Point: NetworkPlayIntegrationTest
+### CI Test Categories:
+- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (6) + `testTrueNetworkTraffic` - run with every CI build
+- **Stress tests**: All other game tests in `NetworkPlayIntegrationTest` - require `-Drun.stress.tests=true`
 
-All tests are in `NetworkPlayIntegrationTest.java`. Tests require `-Drun.stress.tests=true` to execute.
+### Test Files
 
-#### Unit Tests (always run with stress flag)
+| File | Location | Purpose |
+|------|----------|---------|
+| `NetworkPlayIntegrationTest.java` | `forge-gui-desktop/.../forge/net/` | Integration tests with real network I/O |
+| `DeltaSyncUnitTest.java` | `forge-gui-desktop/.../forge/gamesimulationtests/` | Unit tests for delta sync components |
+
+---
+
+### DeltaSyncUnitTest
+
+**Location:** `forge-gui-desktop/src/test/java/forge/gamesimulationtests/DeltaSyncUnitTest.java`
+
+Fast unit tests for delta sync components. No network I/O - tests individual classes in isolation.
+
+| Category | Tests | What's Tested |
+|----------|-------|---------------|
+| DeltaPacket | 4 | Packet creation, empty packets, checksums, size calculation |
+| DeltaSyncManager | 5 | Client registration, acknowledgment, sequence tracking, unregistration |
+| GameSession | 6 | Session creation, player registration, connection state, pause/resume |
+| Reconnection | 4 | Token validation, reconnection handling, timeout, disconnected player tracking |
+| MockClient | 4 | Connection, reconnection, delta tracking, full state override |
+| Serialization | 5 | ObjectOutputStream overhead, size accuracy, empty packet size |
+| NetworkByteTracker | 5 | Byte tracking, reset, enable/disable, stats summary |
+
+**Run all:** `mvn -pl forge-gui-desktop verify -Dtest="DeltaSyncUnitTest"`
+
+---
+
+### NetworkPlayIntegrationTest
+
+**Location:** `forge-gui-desktop/src/test/java/forge/net/NetworkPlayIntegrationTest.java`
+
+Integration tests with real network I/O.
+
+#### Unit Tests (always run in CI)
 
 | Test | Explanation |
 |------|-------------|
@@ -277,13 +312,12 @@ All tests are in `NetworkPlayIntegrationTest.java`. Tests require `-Drun.stress.
 
 #### Single Game Integration Tests
 
-| Test | Explanation |
-|------|-------------|
-| `testFullAutomatedGame` | Runs a 2-player AI-vs-AI game using `UnifiedNetworkHarness.remoteClients(0)`. Uses `ServerGameLobby` with `FServerManager` (network infrastructure). Both players are local AI - no remote client connection. Validates the network game hosting pathway works. |
-| `testTrueNetworkTraffic` | **Key Delta Sync Test.** Runs a 2-player game with an actual TCP network client using `UnifiedNetworkHarness.remoteClients(1)`. Server hosts with one local AI player. `HeadlessNetworkClient` connects as remote player via TCP. Verifies delta sync packets are sent and received. Validates: client connection, delta packet count > 0, game completion. |
-| `testMultiplayer3Player` | Runs a 3-player free-for-all game using `UnifiedNetworkHarness.playerCount(3).remoteClients(2)` with real network clients. 1 local AI host + 2 remote `HeadlessNetworkClient` instances. Each remote client receives delta packets independently. Validates multiplayer delta sync with concurrent clients. |
-| `testMultiplayer4Player` | Same as 3-player test but with 4 players using `UnifiedNetworkHarness.playerCount(4).remoteClients(3)`. 1 local AI host + 3 remote clients. Tests delta sync scaling with more concurrent connections. |
-| `testUnifiedHarnessLocalMode` | Verifies `UnifiedNetworkHarness` with `remoteClients(0)` runs games with local AI only. Tests that no remote clients are created. |
+| Test | CI | Explanation |
+|------|-----|-------------|
+| `testTrueNetworkTraffic` | **Default** | **Key Delta Sync Test.** Runs a 2-player game with an actual TCP network client. Uses **minimal 10-card basic land decks** for fast execution (~3 turns, ~25 seconds). Deck legality temporarily disabled for this test only. Validates: client connection, delta packet count > 0, game completion. |
+| `testUnifiedHarnessLocalMode` | Stress | Runs a 2-player AI-vs-AI game using `UnifiedNetworkHarness.remoteClients(0)`. Uses `ServerGameLobby` with `FServerManager` (network infrastructure). Both players are local AI - no remote client connection. Validates the network game hosting pathway works. |
+| `testMultiplayer3Player` | Stress | Runs a 3-player free-for-all game using `UnifiedNetworkHarness.playerCount(3).remoteClients(2)` with real network clients. 1 local AI host + 2 remote `HeadlessNetworkClient` instances. Each remote client receives delta packets independently. Validates multiplayer delta sync with concurrent clients. |
+| `testMultiplayer4Player` | Stress | Same as 3-player test but with 4 players using `UnifiedNetworkHarness.playerCount(4).remoteClients(3)`. 1 local AI host + 3 remote clients. Tests delta sync scaling with more concurrent connections. |
 
 #### Batch Tests
 
@@ -292,20 +326,15 @@ There are three execution methods: **Loop** (simple loop, same JVM, local AI), *
 | Test | Explanation |
 |------|-------------|
 | `testBatchTesting` | **Loop method.** Runs 3 games in a loop using `UnifiedNetworkHarness` with `remoteClients(0)`. Uses local AI mode (server with local AI players, no remote client). All games run in the same JVM process. Simplest approach, good for basic validation. |
-| `testSequentialThreeGames` | **Sequential method.** Runs 3 games using `ComprehensiveTestExecutor` with `sequential(true)`. Uses `NETWORK_REMOTE` mode with real `HeadlessNetworkClient` TCP connections. Games run one after another in the same JVM. Better for debugging (single process, easier to trace). Isolated log files per game. |
-| `testParallelThreeGames` | **Parallel method.** Runs 3 games using `MultiProcessGameExecutor`. Spawns separate JVM processes running `ComprehensiveGameRunner`. Uses `NETWORK_REMOTE` mode. Multiple games run simultaneously. Complete process isolation prevents test interference. |
-| `testParallelTwoGames` | **Parallel method.** Quick 2-game parallel test. Same as `testParallelThreeGames` but with only 2 games for faster validation. |
-| `testConfigurableSequential` | **Sequential method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of sequential games with custom timeout. |
-| `testConfigurableParallel` | **Parallel method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of parallel games with custom timeout. Expects 80% success rate. |
+| `testConfigurableSequential` | **Sequential method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of sequential games with custom timeout. Use `-Dtest.gameCount=3` for quick validation. |
+| `testConfigurableParallel` | **Parallel method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of parallel games with custom timeout. Expects 80% success rate. Use `-Dtest.gameCount=2` or `-Dtest.gameCount=3` for quick parallel tests. |
 
 #### Comprehensive Delta Sync Tests
 
 | Test | Explanation |
 |------|-------------|
-| `runComprehensiveDeltaSyncTest` | **Main Validation Test.** Default: 100 games (50x 2-player, 30x 3-player, 20x 4-player). Uses parallel multi-process execution for speed. Runs log analysis after completion. Validates against success rate >= 90%, bandwidth efficiency, and zero checksum mismatches. Generates detailed markdown report. |
+| `runComprehensiveDeltaSyncTest` | **Main Validation Test.** Default: 100 games (50x 2-player, 30x 3-player, 20x 4-player). Uses parallel multi-process execution for speed. Runs log analysis after completion. Validates against success rate >= 90%, bandwidth efficiency, and zero checksum mismatches. Generates detailed markdown report. Configurable via `-Dtest.2pGames`, `-Dtest.3pGames`, `-Dtest.4pGames` for any game mix including 2-player-only (`-Dtest.3pGames=0 -Dtest.4pGames=0`) or multiplayer-only (`-Dtest.2pGames=0`). |
 | `runQuickDeltaSyncTest` | Smaller scale: 10 games (5x 2-player, 3x 3-player, 2x 4-player). Good for quick validation during development. Same validation criteria as comprehensive test. |
-| `runTwoPlayerOnlyTest` | 10 x 2-player games only. Focused testing of the most common game configuration. Uses parallel execution. |
-| `runMultiplayerOnlyTest` | 10 games: 5x 3-player + 5x 4-player. Focused testing of multiplayer delta sync. Validates concurrent client handling. |
 | `analyzeExistingLogs` | Parses existing log files without running new games. Useful for re-analyzing previous test runs. Can target specific batch by ID via `-Dtest.batchId=YYYYMMDD-HHMMSS`. |
 
 ---
@@ -548,6 +577,13 @@ By default, tests use random Quest precon decks loaded by `TestDeckLoader`. Ther
 
 **Priority:** `deck1/deck2` (file path) takes precedence over `precon1/precon2` (precon name), which takes precedence over random selection.
 
+**Minimal Test Decks:**
+
+`TestDeckLoader.createMinimalDeck(landName, count)` creates basic-land-only decks for fast CI testing:
+- Games end quickly as players can only play lands and deck out
+- Deck legality checking must be disabled to use decks smaller than 60 cards
+- Used by `testTrueNetworkTraffic` with 10-card decks for ~3-turn games
+
 ---
 
 ## Use Case Examples
@@ -599,7 +635,8 @@ mvn -pl forge-gui-desktop -am verify \
 
 ```bash
 mvn -pl forge-gui-desktop -am verify \
-    -Dtest="NetworkPlayIntegrationTest#testSequentialThreeGames" \
+    -Dtest="NetworkPlayIntegrationTest#testConfigurableSequential" \
+    -Dtest.gameCount=3 \
     -Drun.stress.tests=true \
     -Dsurefire.failIfNoSpecifiedTests=false
 ```
@@ -662,7 +699,7 @@ After consolidation, the testing infrastructure consists of **16 files** focused
 | File | Lines | Description |
 |------|-------|-------------|
 | **Entry Point** | | |
-| `NetworkPlayIntegrationTest.java` | ~584 | All tests consolidated here |
+| `NetworkPlayIntegrationTest.java` | ~572 | All tests consolidated here (17 test methods) |
 | **Core Harness** | | |
 | `UnifiedNetworkHarness.java` | ~630 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
 | **Network Client** | | |
