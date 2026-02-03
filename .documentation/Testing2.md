@@ -9,6 +9,7 @@
   - [Primary Metric 2: Checksum Validation](#primary-metric-2-checksum-validation)
   - [Primary Metric 3: Success Rate](#primary-metric-3-success-rate)
   - [Interpreting Results](#interpreting-results)
+- [Error in Previous Comparison Methodology](#error-in-previous-comparison-methodology)
 - [Testing Functions](#testing-functions)
 - [UnifiedNetworkHarness API](#unifiednetworkharness-api)
 - [Test Metrics](#test-metrics)
@@ -84,16 +85,18 @@ This is the **core bandwidth efficiency metric**. It compares actual bytes sent 
 
 #### FullState Baseline Calculation
 
-The FullState measurement uses Java's standard `ObjectOutputStream` serialization (lines 202-212):
+The FullState measurement uses LZ4-compressed `ObjectOutputStream` serialization (lines 202-214), matching the compression used by the actual network layer:
 
 ```java
 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-ObjectOutputStream oos = new ObjectOutputStream(baos);
+LZ4BlockOutputStream lz4Out = new LZ4BlockOutputStream(baos);
+ObjectOutputStream oos = new ObjectOutputStream(lz4Out);
 oos.writeObject(gameView);
-return baos.size();  // Uncompressed serialized size
+oos.close();
+return baos.size();  // Compressed serialized size
 ```
 
-This represents what the legacy full-state protocol would send (before network compression).
+This represents what the legacy full-state protocol would send over the wire, providing an apples-to-apples comparison with ActualNetwork bytes.
 
 #### Analysis Workflow
 
@@ -173,6 +176,85 @@ Validation: PASSED
 | Checksum mismatch | View serialization bug, race condition |
 | TIMEOUT failures | Infinite loop, deadlock, slow AI |
 | EXCEPTION failures | Null pointer, serialization error |
+
+---
+
+## Error in Previous Comparison Methodology
+
+**Date Identified:** 2026-02-03
+
+### The Problem
+
+Prior to this fix, the bandwidth savings calculations were comparing **compressed** delta bytes against **uncompressed** full state bytes, resulting in inflated savings percentages.
+
+#### Previous Implementation (Incorrect)
+
+| Measurement | Compression Applied |
+|-------------|---------------------|
+| **ActualNetwork** | LZ4 compressed (via `CompatibleObjectEncoder`) |
+| **FullState** | Uncompressed (raw `ObjectOutputStream`) |
+
+The `CompatibleObjectEncoder` (line 30) applies LZ4 compression to all network traffic:
+```java
+oout = new ObjectOutputStream(new LZ4BlockOutputStream(bout));
+```
+
+But `estimateFullStateSize()` was using raw serialization without compression:
+```java
+// OLD - INCORRECT
+ObjectOutputStream oos = new ObjectOutputStream(baos);  // No compression
+oos.writeObject(gameView);
+return baos.size();  // Uncompressed size
+```
+
+#### Why This Matters
+
+The savings formula was:
+```
+actualSavings = (1 - actualNetworkBytes / fullStateSize) × 100
+```
+
+This compared:
+- **Numerator**: Compressed delta bytes
+- **Denominator**: Uncompressed full state bytes
+
+If the legacy protocol sent full state updates, those would **also** be LZ4 compressed. So the comparison was unfair - we were claiming credit for both delta sync efficiency AND compression, when compression would apply equally to both approaches.
+
+#### Example Impact
+
+Assume LZ4 achieves 50% compression and delta sync reduces data to 40% of full state:
+
+| Metric | Incorrect Calculation | Correct Calculation |
+|--------|----------------------|---------------------|
+| ActualNetwork (delta) | 40% × 50% = 20% | 40% × 50% = 20% |
+| FullState baseline | 100% (uncompressed) | 100% × 50% = 50% (compressed) |
+| **Claimed savings** | 1 - (20%/100%) = **80%** | 1 - (20%/50%) = **60%** |
+
+The incorrect methodology overstated savings by approximately 20 percentage points in this example.
+
+### The Fix
+
+`estimateFullStateSize()` now applies the same LZ4 compression as the network layer:
+
+```java
+// NEW - CORRECT
+LZ4BlockOutputStream lz4Out = new LZ4BlockOutputStream(baos);
+ObjectOutputStream oos = new ObjectOutputStream(lz4Out);
+oos.writeObject(gameView);
+oos.close();
+return baos.size();  // Compressed size - apples-to-apples comparison
+```
+
+### Implications
+
+1. **Historical test results** showing bandwidth savings should be considered inflated
+2. **Future test results** will show lower but accurate savings percentages
+3. **The 90% savings threshold** may need adjustment based on new measurements
+4. **Delta sync still provides real benefits** - the savings are genuine, just smaller than previously reported
+
+### Files Modified
+
+- `forge-gui/src/main/java/forge/gamemodes/net/server/NetGuiGame.java` - Added LZ4 compression to `estimateFullStateSize()`
 
 ---
 
