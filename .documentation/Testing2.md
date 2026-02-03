@@ -1,63 +1,230 @@
 # NetworkPlay Test Infrastructure
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Validation Metrics](#validation-metrics-what-does-success-look-like)
+  - [Metrics Hierarchy](#metrics-hierarchy)
+  - [Primary Metric 1: ActualNetwork vs FullState](#primary-metric-1-actualnetwork-vs-fullstate)
+  - [Primary Metric 2: Checksum Validation](#primary-metric-2-checksum-validation)
+  - [Primary Metric 3: Success Rate](#primary-metric-3-success-rate)
+  - [Interpreting Results](#interpreting-results)
+- [Testing Functions](#testing-functions)
+- [UnifiedNetworkHarness API](#unifiednetworkharness-api)
+- [Test Metrics](#test-metrics)
+- [Technical Implementation](#technical-implementation)
+- [Configuration](#configuration)
+- [Use Case Examples](#use-case-examples)
+- [Output Files](#output-files)
+- [File Inventory](#file-inventory-16-files)
+
+---
+
 ## Overview
 
-The NetworkPlay test infrastructure provides automated headless testing for Forge's network play features, specifically focused on **delta sync validation**. After consolidation, the infrastructure consists of **16 files** focused on network testing.
+The consolidated NetworkPlay test infrastructure provides automated  testing for Forge's network play features, specifically focused on **delta sync validation**.
 
 **Location:** `forge-gui-desktop/src/test/java/forge/net/`
 
-### Key Capabilities
+---
 
-| Capability | Description |
-|------------|-------------|
-| **Delta Sync Validation** | Verify bandwidth-efficient game state synchronization |
-| **Headless Execution** | Full games without display server (no X11/Wayland) |
-| **Real Network Traffic** | TCP connections with actual packet transmission |
-| **2-4 Player Support** | Multiplayer games with multiple remote clients |
-| **Batch Testing** | 100+ games via multi-process parallel execution |
-| **Log Analysis** | Automated parsing for bandwidth and error metrics |
+## Validation Metrics: what does success look like?
 
-### File Inventory (16 files)
+This section explains the key metrics used to validate delta sync correctness and efficiency, how they are collected, and how to interpret results.
 
-| File | Lines | Description |
-|------|-------|-------------|
-| **Entry Point** | | |
-| `NetworkPlayIntegrationTest.java` | ~584 | All tests consolidated here |
-| **Core Harness** | | |
-| `UnifiedNetworkHarness.java` | ~630 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
-| **Network Client** | | |
-| `HeadlessNetworkClient.java` | ~578 | TCP client for testing |
-| `HeadlessNetworkGuiGame.java` | ~348 | Network GUI mock with delta processing |
-| **GUI Mock** | | |
-| `HeadlessGuiDesktop.java` | ~222 | Desktop GUI mock |
-| **Executors** | | |
-| `ComprehensiveTestExecutor.java` | ~376 | Batch orchestration |
-| `MultiProcessGameExecutor.java` | ~660 | Parallel JVM spawning |
-| `ComprehensiveGameRunner.java` | ~240 | JVM subprocess entry point |
-| **Configuration** | | |
-| `GameTestMode.java` | ~64 | Mode enum (NETWORK_LOCAL, NETWORK_REMOTE) |
-| `TestConfiguration.java` | ~237 | System property loading |
-| `TestDeckLoader.java` | ~167 | Deck loading |
-| `PortAllocator.java` | ~105 | Port allocation |
-| `GameEventListener.java` | ~267 | Event logging |
-| **Analysis** | | |
-| `analysis/NetworkLogAnalyzer.java` | ~734 | Log parsing |
-| `analysis/GameLogMetrics.java` | ~283 | Per-game log metrics |
-| `analysis/AnalysisResult.java` | ~775 | Aggregated results |
+### Metrics Hierarchy
 
-**Total: ~5,500 lines across 16 files**
+DeltaSync validation uses a tiered metrics approach:
 
-### Files Consolidated
+| Tier | Metric | Purpose | Pass Threshold |
+|------|--------|---------|----------------|
+| **Primary** | ActualNetwork vs FullState | Bandwidth efficiency | >= 90% savings |
+| **Primary** | Checksum Validation | State integrity | 0 mismatches |
+| **Primary** | Success Rate | End-to-end reliability | >= 90% |
+| **Secondary** | Approximate vs ActualNetwork | Compression overhead | Informational |
+| **Secondary** | Delta Composition | Debugging insight | Informational |
 
-The following files were removed during consolidation:
+**Validation passes when ALL primary metrics meet thresholds** (see `AnalysisResult.passesValidation()` at line 707).
 
-| Removed File | Replacement |
-|--------------|-------------|
-| `AutomatedGameTestHarness.java` | `UnifiedNetworkHarness` with `remoteClients(0)` |
-| `NetworkClientTestHarness.java` | `UnifiedNetworkHarness` with `remoteClients(1)` |
-| `scenarios/MultiplayerNetworkScenario.java` | `UnifiedNetworkHarness` with `playerCount(3-4).remoteClients(2-3)` |
-| `GameTestHarnessFactory.java` | Direct use of `UnifiedNetworkHarness` |
-| `GameTestMetrics.java` | `UnifiedNetworkHarness.GameResult` |
+### Primary Metric 1: ActualNetwork vs FullState
+
+This is the **core bandwidth efficiency metric**. It compares actual bytes sent over TCP using delta sync against what would have been sent with full state serialization using the legacy network protocol.
+
+#### The Three Measurements
+
+| Measurement | What It Represents                                           | How Calculated |
+|-------------|--------------------------------------------------------------|----------------|
+| **Approximate** | Estimated delta size (no compression)                        | `DeltaPacket.getApproximateSize()` - sums object delta bytes + new object data |
+| **ActualNetwork** | Real TCP bytes sent (delta + compression/overhead)           | `NetworkByteTracker.getTotalBytesSent()` - actual socket writes |
+| **FullState** | Baseline legacy network protocl: full GameView serialization | `estimateFullStateSize()` via `ObjectOutputStream` |
+
+#### Collection Workflow
+
+**Location:** `forge-gui/.../net/server/NetGuiGame.java` lines 150-181
+
+```
+1. Before sending delta packet:
+   networkBytesBefore = getActualNetworkBytesSent()    // line 152
+
+2. Send delta packet:
+   send(ProtocolMethod.applyDelta, delta)              // line 154
+
+3. After sending, calculate metrics:
+   deltaSize = delta.getApproximateSize()              // line 164
+   fullStateSize = estimateFullStateSize(gameView)     // line 165
+   actualNetworkBytes = networkBytesAfter - networkBytesBefore  // line 167
+
+4. Calculate savings percentages:
+   savings = (1 - deltaSize/fullStateSize) × 100       // line 173
+   actualSavings = (1 - actualNetworkBytes/fullStateSize) × 100  // line 174
+
+5. Log to NetworkDebugLogger:
+   "[DeltaSync] Packet #N: Approximate=X bytes, ActualNetwork=Y bytes, FullState=Z bytes"
+```
+
+#### FullState Baseline Calculation
+
+The FullState measurement uses Java's standard `ObjectOutputStream` serialization (lines 202-212):
+
+```java
+ByteArrayOutputStream baos = new ByteArrayOutputStream();
+ObjectOutputStream oos = new ObjectOutputStream(baos);
+oos.writeObject(gameView);
+return baos.size();  // Uncompressed serialized size
+```
+
+This represents what the legacy full-state protocol would send (before network compression).
+
+#### Analysis Workflow
+
+**Log Parsing:** `NetworkLogAnalyzer.java` line 34-35
+```java
+Pattern.compile("\\[DeltaSync\\] Packet #(\\d+): Approximate=(\\d+) bytes, ActualNetwork=(\\d+) bytes, FullState=(\\d+) bytes")
+```
+
+**Aggregation:** `AnalysisResult.java` lines 61-75
+```java
+totalDeltaBytes = sum of ActualNetwork bytes across all packets
+totalFullStateBytes = sum of FullState bytes across all packets
+averageBandwidthSavings = 100 × (1 - totalDeltaBytes / totalFullStateBytes)
+```
+
+### Primary Metric 2: Checksum Validation
+
+Checksums verify that client and server game state remain synchronized.
+
+#### What's Checksummed
+
+**Location:** `DeltaSyncManager.computeStateChecksum()` lines 734-758
+
+```java
+int hash = 17;
+hash = 31 * hash + gameView.getTurn();
+hash = 31 * hash + gameView.getPhase().ordinal();
+for (PlayerView player : sortedPlayers) {  // Sorted by ID for consistency
+    hash = 31 * hash + player.getId();
+    hash = 31 * hash + player.getLife();
+}
+```
+
+Checksums cover: **Turn number**, **Phase**, **Player IDs**, **Life totals**
+
+#### Validation Frequency
+
+Checksums are computed and logged every **20 packets** (configurable via `CHECKSUM_INTERVAL`).
+
+#### Detection
+
+**Log Pattern:** `NetworkLogAnalyzer.java` line 49-50
+```java
+Pattern.compile("CHECKSUM MISMATCH|checksum mismatch|desync", Pattern.CASE_INSENSITIVE)
+```
+
+A checksum mismatch indicates **state desynchronization** - a critical failure.
+
+### Primary Metric 3: Success Rate
+
+Games must complete without errors. Classification by `GameLogMetrics.FailureMode`:
+
+| Mode | Meaning |
+|------|---------|
+| `NONE` | Game completed successfully |
+| `TIMEOUT` | Game exceeded time limit |
+| `CHECKSUM_MISMATCH` | State desynchronization detected |
+| `EXCEPTION` | Unhandled error during game |
+| `INCOMPLETE` | Game started but didn't finish |
+
+### Interpreting Results
+
+#### What "Good" Looks Like
+
+```
+Validation: PASSED
+- Success Rate: 96% (>= 90% required)
+- Bandwidth Savings: 98.4% (>= 90% required)
+- Checksum Mismatches: 0 (must be 0)
+```
+
+#### Failure Patterns
+
+| Pattern | Likely Cause |
+|---------|--------------|
+| Low bandwidth savings (<90%) | Delta too large, too many new objects per packet |
+| Checksum mismatch | View serialization bug, race condition |
+| TIMEOUT failures | Infinite loop, deadlock, slow AI |
+| EXCEPTION failures | Null pointer, serialization error |
+
+---
+
+## Testing Functions
+
+### Test Entry Point: NetworkPlayIntegrationTest
+
+All tests are in `NetworkPlayIntegrationTest.java`. Tests require `-Drun.stress.tests=true` to execute.
+
+#### Unit Tests (always run with stress flag)
+
+| Test | Explanation |
+|------|-------------|
+| `testDeckLoaderHasPrecons` | Verifies that `TestDeckLoader` can find quest precon decks. Ensures test infrastructure has access to the 424 precon decks needed for random deck selection. |
+| `testDeckLoaderCanLoadDeck` | Verifies that `TestDeckLoader.getRandomPrecon()` returns a valid deck with at least 40 cards. Ensures decks are properly loaded and playable. |
+| `testGameResultInitialization` | Verifies `GameResult` class correctly stores and reports game metrics (turns, winner, bytes sent). Tests the result collection infrastructure. |
+| `testGameTestModeEnum` | Verifies `GameTestMode` enum values (`NETWORK_LOCAL`, `NETWORK_REMOTE`) have correct properties. Tests `usesRemoteClient()` returns expected values. |
+| `testConfigurationParsing` | Verifies `TestConfiguration` correctly parses system properties for decks, test mode, player count, and iterations. Ensures command-line configuration works. |
+| `testServerStartAndStop` | Verifies `FServerManager` can start and stop a server on a given port. Tests basic server lifecycle without running a game. |
+
+#### Single Game Integration Tests
+
+| Test | Explanation |
+|------|-------------|
+| `testFullAutomatedGame` | Runs a 2-player AI-vs-AI game using `UnifiedNetworkHarness.remoteClients(0)`. Uses `ServerGameLobby` with `FServerManager` (network infrastructure). Both players are local AI - no remote client connection. Validates the network game hosting pathway works. |
+| `testTrueNetworkTraffic` | **Key Delta Sync Test.** Runs a 2-player game with an actual TCP network client using `UnifiedNetworkHarness.remoteClients(1)`. Server hosts with one local AI player. `HeadlessNetworkClient` connects as remote player via TCP. Verifies delta sync packets are sent and received. Validates: client connection, delta packet count > 0, game completion. |
+| `testMultiplayer3Player` | Runs a 3-player free-for-all game using `UnifiedNetworkHarness.playerCount(3).remoteClients(2)` with real network clients. 1 local AI host + 2 remote `HeadlessNetworkClient` instances. Each remote client receives delta packets independently. Validates multiplayer delta sync with concurrent clients. |
+| `testMultiplayer4Player` | Same as 3-player test but with 4 players using `UnifiedNetworkHarness.playerCount(4).remoteClients(3)`. 1 local AI host + 3 remote clients. Tests delta sync scaling with more concurrent connections. |
+| `testUnifiedHarnessLocalMode` | Verifies `UnifiedNetworkHarness` with `remoteClients(0)` runs games with local AI only. Tests that no remote clients are created. |
+
+#### Batch Tests
+
+There are three execution methods: **Loop** (simple loop, same JVM, local AI), **Sequential** (same JVM with real TCP clients, better for debugging), and **Parallel** (separate JVM per game, fastest for large runs).
+
+| Test | Explanation |
+|------|-------------|
+| `testBatchTesting` | **Loop method.** Runs 3 games in a loop using `UnifiedNetworkHarness` with `remoteClients(0)`. Uses local AI mode (server with local AI players, no remote client). All games run in the same JVM process. Simplest approach, good for basic validation. |
+| `testSequentialThreeGames` | **Sequential method.** Runs 3 games using `ComprehensiveTestExecutor` with `sequential(true)`. Uses `NETWORK_REMOTE` mode with real `HeadlessNetworkClient` TCP connections. Games run one after another in the same JVM. Better for debugging (single process, easier to trace). Isolated log files per game. |
+| `testParallelThreeGames` | **Parallel method.** Runs 3 games using `MultiProcessGameExecutor`. Spawns separate JVM processes running `ComprehensiveGameRunner`. Uses `NETWORK_REMOTE` mode. Multiple games run simultaneously. Complete process isolation prevents test interference. |
+| `testParallelTwoGames` | **Parallel method.** Quick 2-game parallel test. Same as `testParallelThreeGames` but with only 2 games for faster validation. |
+| `testConfigurableSequential` | **Sequential method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of sequential games with custom timeout. |
+| `testConfigurableParallel` | **Parallel method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of parallel games with custom timeout. Expects 80% success rate. |
+
+#### Comprehensive Delta Sync Tests
+
+| Test | Explanation |
+|------|-------------|
+| `runComprehensiveDeltaSyncTest` | **Main Validation Test.** Default: 100 games (50x 2-player, 30x 3-player, 20x 4-player). Uses parallel multi-process execution for speed. Runs log analysis after completion. Validates against success rate >= 90%, bandwidth efficiency, and zero checksum mismatches. Generates detailed markdown report. |
+| `runQuickDeltaSyncTest` | Smaller scale: 10 games (5x 2-player, 3x 3-player, 2x 4-player). Good for quick validation during development. Same validation criteria as comprehensive test. |
+| `runTwoPlayerOnlyTest` | 10 x 2-player games only. Focused testing of the most common game configuration. Uses parallel execution. |
+| `runMultiplayerOnlyTest` | 10 games: 5x 3-player + 5x 4-player. Focused testing of multiplayer delta sync. Validates concurrent client handling. |
+| `analyzeExistingLogs` | Parses existing log files without running new games. Useful for re-analyzing previous test runs. Can target specific batch by ID via `-Dtest.batchId=YYYYMMDD-HHMMSS`. |
 
 ---
 
@@ -127,59 +294,7 @@ The unified result class for all network test configurations:
 
 ---
 
-## Testing Functions
-
-### Test Entry Point: NetworkPlayIntegrationTest
-
-All tests are in `NetworkPlayIntegrationTest.java`. Tests require `-Drun.stress.tests=true` to execute.
-
-#### Unit Tests (always run with stress flag)
-
-| Test | Explanation |
-|------|-------------|
-| `testDeckLoaderHasPrecons` | Verifies that `TestDeckLoader` can find quest precon decks. Ensures test infrastructure has access to the 424 precon decks needed for random deck selection. |
-| `testDeckLoaderCanLoadDeck` | Verifies that `TestDeckLoader.getRandomPrecon()` returns a valid deck with at least 40 cards. Ensures decks are properly loaded and playable. |
-| `testGameResultInitialization` | Verifies `GameResult` class correctly stores and reports game metrics (turns, winner, bytes sent). Tests the result collection infrastructure. |
-| `testGameTestModeEnum` | Verifies `GameTestMode` enum values (`NETWORK_LOCAL`, `NETWORK_REMOTE`) have correct properties. Tests `usesRemoteClient()` returns expected values. |
-| `testConfigurationParsing` | Verifies `TestConfiguration` correctly parses system properties for decks, test mode, player count, and iterations. Ensures command-line configuration works. |
-| `testServerStartAndStop` | Verifies `FServerManager` can start and stop a server on a given port. Tests basic server lifecycle without running a game. |
-
-#### Single Game Integration Tests
-
-| Test | Explanation |
-|------|-------------|
-| `testFullAutomatedGame` | Runs a 2-player AI-vs-AI game using `UnifiedNetworkHarness.remoteClients(0)`. Uses `ServerGameLobby` with `FServerManager` (network infrastructure). Both players are local AI - no remote client connection. Validates the network game hosting pathway works. |
-| `testTrueNetworkTraffic` | **Key Delta Sync Test.** Runs a 2-player game with an actual TCP network client using `UnifiedNetworkHarness.remoteClients(1)`. Server hosts with one local AI player. `HeadlessNetworkClient` connects as remote player via TCP. Verifies delta sync packets are sent and received. Validates: client connection, delta packet count > 0, game completion. |
-| `testMultiplayer3Player` | Runs a 3-player free-for-all game using `UnifiedNetworkHarness.playerCount(3).remoteClients(2)` with real network clients. 1 local AI host + 2 remote `HeadlessNetworkClient` instances. Each remote client receives delta packets independently. Validates multiplayer delta sync with concurrent clients. |
-| `testMultiplayer4Player` | Same as 3-player test but with 4 players using `UnifiedNetworkHarness.playerCount(4).remoteClients(3)`. 1 local AI host + 3 remote clients. Tests delta sync scaling with more concurrent connections. |
-| `testUnifiedHarnessLocalMode` | Verifies `UnifiedNetworkHarness` with `remoteClients(0)` runs games with local AI only. Tests that no remote clients are created. |
-
-#### Batch Tests
-
-There are three execution methods: **Factory** (simple loop, same JVM, NETWORK_LOCAL), **Sequential** (same JVM with real TCP clients, better for debugging), and **Parallel** (separate JVM per game, fastest for large runs).
-
-| Test | Explanation |
-|------|-------------|
-| `testBatchTesting` | **Loop method.** Runs 3 games in a loop using `UnifiedNetworkHarness` with `remoteClients(0)`. Uses local AI mode (server with local AI players, no remote client). All games run in the same JVM process. Simplest approach, good for basic validation. |
-| `testSequentialThreeGames` | **Sequential method.** Runs 3 games using `ComprehensiveTestExecutor` with `sequential(true)`. Uses `NETWORK_REMOTE` mode with real `HeadlessNetworkClient` TCP connections. Games run one after another in the same JVM. Better for debugging (single process, easier to trace). Isolated log files per game. |
-| `testParallelThreeGames` | **Parallel method.** Runs 3 games using `MultiProcessGameExecutor`. Spawns separate JVM processes running `ComprehensiveGameRunner`. Uses `NETWORK_REMOTE` mode. Multiple games run simultaneously. Complete process isolation prevents test interference. |
-| `testParallelTwoGames` | **Parallel method.** Quick 2-game parallel test. Same as `testParallelThreeGames` but with only 2 games for faster validation. |
-| `testConfigurableSequential` | **Sequential method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of sequential games with custom timeout. |
-| `testConfigurableParallel` | **Parallel method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of parallel games with custom timeout. Expects 80% success rate. |
-
-#### Comprehensive Delta Sync Tests
-
-| Test | Explanation |
-|------|-------------|
-| `runComprehensiveDeltaSyncTest` | **Main Validation Test.** Default: 100 games (50x 2-player, 30x 3-player, 20x 4-player). Uses parallel multi-process execution for speed. Runs log analysis after completion. Validates against success rate >= 90%, bandwidth efficiency, and zero checksum mismatches. Generates detailed markdown report. |
-| `runQuickDeltaSyncTest` | Smaller scale: 10 games (5x 2-player, 3x 3-player, 2x 4-player). Good for quick validation during development. Same validation criteria as comprehensive test. |
-| `runTwoPlayerOnlyTest` | 10 x 2-player games only. Focused testing of the most common game configuration. Uses parallel execution. |
-| `runMultiplayerOnlyTest` | 10 games: 5x 3-player + 5x 4-player. Focused testing of multiplayer delta sync. Validates concurrent client handling. |
-| `analyzeExistingLogs` | Parses existing log files without running new games. Useful for re-analyzing previous test runs. Can target specific batch by ID via `-Dtest.batchId=YYYYMMDD-HHMMSS`. |
-
----
-
-## Key Test Metrics
+## Test Metrics
 
 Tests collect and validate the following metrics:
 
@@ -439,25 +554,65 @@ mvn -pl forge-gui-desktop -am verify \
 
 ---
 
-## Validation Criteria
-
-Comprehensive tests validate against these criteria:
-
-| Criterion | Target | Description |
-|-----------|--------|-------------|
-| Success Rate | >= 90% | Games completing without errors |
-| Bytes per Delta | < 200 | Efficient delta packet size |
-| Checksum Mismatches | 0 | No desync errors |
-| Per-Player Success | >= 80% | Success rate for each player count |
-
----
-
 ## Output Files
 
-Tests generate the following output files in the `logs/` directory:
+All test outputs are saved to the **Forge network logs directory**:
+
+**Location by platform:**
+- **Windows**: `%APPDATA%\Forge\networklogs\` (e.g., `C:\Users\<name>\AppData\Roaming\Forge\networklogs\`)
+- **macOS**: `~/Library/Application Support/Forge/networklogs/`
+- **Linux**: `~/.forge/networklogs/`
 
 | File Pattern | Description |
 |--------------|-------------|
-| `network-debug-runBATCHID-*.log` | Per-game debug logs |
-| `comprehensive-test-results-TIMESTAMP.md` | Test results report |
-| `analysis-results-TIMESTAMP.md` | Log analysis report |
+| `network-debug-runBATCHID-*.log` | Per-game debug logs with full delta sync metrics |
+| `network-debug-*-analysis.md` | Single-game analysis reports (auto-generated) |
+| `comprehensive-test-results-TIMESTAMP.md` | Batch test results summary |
+| `quick-test-results-TIMESTAMP.md` | Quick test results summary |
+| `analysis-results-TIMESTAMP.md` | Batch log analysis report |
+
+---
+
+## File Inventory (16 files)
+
+After consolidation, the testing infrastructure consists of **16 files** focused on network testing.
+
+| File | Lines | Description |
+|------|-------|-------------|
+| **Entry Point** | | |
+| `NetworkPlayIntegrationTest.java` | ~584 | All tests consolidated here |
+| **Core Harness** | | |
+| `UnifiedNetworkHarness.java` | ~630 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
+| **Network Client** | | |
+| `HeadlessNetworkClient.java` | ~578 | TCP client for testing |
+| `HeadlessNetworkGuiGame.java` | ~348 | Network GUI mock with delta processing |
+| **GUI Mock** | | |
+| `HeadlessGuiDesktop.java` | ~222 | Desktop GUI mock |
+| **Executors** | | |
+| `ComprehensiveTestExecutor.java` | ~376 | Batch orchestration |
+| `MultiProcessGameExecutor.java` | ~660 | Parallel JVM spawning |
+| `ComprehensiveGameRunner.java` | ~240 | JVM subprocess entry point |
+| **Configuration** | | |
+| `GameTestMode.java` | ~64 | Mode enum (NETWORK_LOCAL, NETWORK_REMOTE) |
+| `TestConfiguration.java` | ~237 | System property loading |
+| `TestDeckLoader.java` | ~167 | Deck loading |
+| `PortAllocator.java` | ~105 | Port allocation |
+| `GameEventListener.java` | ~267 | Event logging |
+| **Analysis** | | |
+| `analysis/NetworkLogAnalyzer.java` | ~734 | Log parsing |
+| `analysis/GameLogMetrics.java` | ~283 | Per-game log metrics |
+| `analysis/AnalysisResult.java` | ~775 | Aggregated results |
+
+**Total: ~5,500 lines across 16 files**
+
+### Files Consolidated
+
+The following files from the initial PR were removed during consolidation:
+
+| Removed File | Replacement |
+|--------------|-------------|
+| `AutomatedGameTestHarness.java` | `UnifiedNetworkHarness` with `remoteClients(0)` |
+| `NetworkClientTestHarness.java` | `UnifiedNetworkHarness` with `remoteClients(1)` |
+| `scenarios/MultiplayerNetworkScenario.java` | `UnifiedNetworkHarness` with `playerCount(3-4).remoteClients(2-3)` |
+| `GameTestHarnessFactory.java` | Direct use of `UnifiedNetworkHarness` |
+| `GameTestMetrics.java` | `UnifiedNetworkHarness.GameResult` |
