@@ -24,7 +24,7 @@
 
 The NetworkPlay test infrastructure provides automated testing for Forge's network play features, specifically focused on **delta sync validation**.
 
-This document outlines the validation metrics, functions, and configuration of these testing tools following a significant consolidation on 2026-03-02.
+This document outlines the validation metrics, functions, and configuration of these testing tools following a significant consolidation on 03/02/2026.
 
 **Location:** `forge-gui-desktop/src/test/java/forge/net/`
 
@@ -661,11 +661,9 @@ All test outputs are saved to the **Forge network logs directory**:
 
 | File Pattern | Description |
 |--------------|-------------|
-| `network-debug-runBATCHID-*.log` | Per-game debug logs with full delta sync metrics |
-| `network-debug-*-analysis.md` | Single-game analysis reports (auto-generated) |
-| `comprehensive-test-results-TIMESTAMP.md` | Batch test results summary |
+| `network-debug-BATCHID-batch*-game*-*.log` | Per-game debug logs with full delta sync metrics |
+| `network-debug-BATCHID-results.md` | Batch test results summary (e.g., `network-debug-run20260204-200033-results.md`) |
 | `quick-test-results-TIMESTAMP.md` | Quick test results summary |
-| `analysis-results-TIMESTAMP.md` | Batch log analysis report |
 
 ---
 

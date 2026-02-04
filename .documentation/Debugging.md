@@ -34,15 +34,28 @@ This file tracks known bugs in the Forge codebase, particularly for the NetworkP
 
 ---
 
+## Core Engine Issues (Out of Scope)
+
+Issues discovered during NetworkPlay testing that exist in core Forge engine, not network-specific code. Documented here for reference if encountered again.
+
+| # | Issue | Frequency | Description | Archived Log |
+|---|-------|-----------|-------------|--------------|
+| CE-1 | Attack Declaration Loop Timeout | 1% (1/100 games) | Race condition: `InputAttack` captures mutable `combat.getDefenders()` reference; if `Combat.endCombat()` clears `attackableEntries` during attack declaration, `defenders.getFirst()` returns null, causing "attack null" prompt and infinite retry loop in `PhaseHandler.declareAttackersTurnBasedAction()`. Symptom: game timeout at 300s stuck in COMBAT_DECLARE_ATTACKERS. | `testlogs/network-debug-run20260204-200033-batch5-game0-3p-test.log` |
+
+---
+
 ## Debug Infrastructure
 
 ### NetworkDebugLogger
 
 Location: `forge-gui/src/main/java/forge/gamemodes/net/NetworkDebugLogger.java`
 
-Configurable logging for network debugging. Logs go to:
-- Console (configurable level)
-- File: `forge-gui-desktop/logs/`
+Configurable logging for network debugging. All logs are saved to the **Forge network logs directory**:
+
+**Location by platform:**
+- **Windows**: `%APPDATA%\Forge\networklogs\` (e.g., `C:\Users\<name>\AppData\Roaming\Forge\networklogs\`)
+- **macOS**: `~/Library/Application Support/Forge/networklogs/`
+- **Linux**: `~/.forge/networklogs/`
 
 Usage:
 ```java
@@ -60,3 +73,5 @@ Key log prefixes used by NetworkDebugLogger:
 - `[InputSyncronizedBase]` - Latch operations
 - `[AI Takeover]` - AI conversion process
 - `[DeltaSync]` - Delta synchronization
+
+---

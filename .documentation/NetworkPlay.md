@@ -31,7 +31,7 @@ The NetworkPlay branch introduces four major features to improve the multiplayer
 **Additional Resources:**
 - **[Debugging](#debugging)**: Comprehensive debug logging for diagnosing network synchronization issues.
 - **[Debugging.md](Debugging.md)**: Record of known bugs, debugging progress, and resolution status.
-- **[Testing.md](Testing.md)**: Automated headless testing infrastructure and comprehensive validation results (100 games: 97% success rate, 1 checksum mismatch auto-recovered, 99.5% bandwidth savings across 2-4 player configurations).
+- **[Testing.md](Testing.md)**: Automated headless testing infrastructure and comprehensive validation results (100 games: 99% success rate, 0 checksum mismatches, 98% bandwidth savings across 2-4 player configurations).
 
 ---
 
