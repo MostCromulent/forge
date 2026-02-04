@@ -29,6 +29,8 @@ This file tracks known bugs in the Forge codebase, particularly for the NetworkP
 | 13 | Multiplayer checksum mismatch - Player ordering | NetworkPlay | Sort players by ID before computing checksum in both server and client to ensure consistent iteration order. | - |
 | 14 | NullPointerException in disconnect handler | NetworkPlay | Race condition: game thread set `currentGameSession=null` between null check and use. Fixed by capturing in local variable before use. | - |
 | 15 | TreeSet casting error in DeltaSync serialization | NetworkPlay | Type mismatch: `CantHaveKeyword` property defined as `StringListType` but `CardView.updateCantHaveKeyword()` stores a `TreeSet`. Fixed serializer to cast to `Collection<String>` instead of `List<String>`. | - |
+| 16 | GameView ID Mismatch in Checksum (4-player games) | NetworkPlay | Race condition: Game loop could advance Phase while `collectDeltas()` was running. Fixed by capturing Turn/Phase snapshot at START of delta collection, then using snapshot values for checksum computation. Ensures checksum matches what client will have after applying delta. | - |
+| 17 | Client Connection Timeout (4-player games) | NetworkPlay | Slot assignment race condition: `RemoteClient.index` defaulted to 0 (host slot), causing early `LobbyUpdateEvent` to report wrong slot. Fixed by: (1) Initialize index to -1 (UNASSIGNED_SLOT), (2) Only set slot in event if client has valid slot, (3) Client waits for valid slot before counting down connected latch, (4) Added `synchronized` to `connectPlayer()` to prevent concurrent slot assignment. | - |
 
 ---
 
