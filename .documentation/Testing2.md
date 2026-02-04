@@ -177,6 +177,22 @@ Validation: PASSED
 | TIMEOUT failures | Infinite loop, deadlock, slow AI |
 | EXCEPTION failures | Null pointer, serialization error |
 
+##### "Object ID not found" Warnings
+
+This non-fatal warning occurs when delta application references a CardView ID that doesn't exist in the client's tracker. Games typically complete successfully despite these warnings.
+
+**Why Games Complete Successfully:**
+- Missing objects are skipped during delta application (not treated as fatal errors)
+- The delta sync uses graceful degradation - if a referenced object isn't found, it's logged and the property update is skipped
+- Periodic checksum validation catches critical desyncs; if checksums match, game state is consistent enough to continue
+- If checksum mismatch is detected, automatic full state resync recovers the client to correct state
+
+**Identified Causes:**
+
+1. **View type ID collisions** (FIXED): Different object types (CardView, PlayerView, StackItemView) have separate ID counters that can collide. Fixed by implementing composite delta keys that encode both type and ID, preventing collisions between different object types. (Bug #4, commit 1d564ab2d8)
+
+2. **Copy/clone card effects** (NOT YET ADDRESSED): Certain spell effects that create copies or clones of cards may create CardView objects that aren't properly synchronized. The server includes copy card IDs in delta packets before the new objects are sent to the client.
+
 ---
 
 ## Error in Previous Comparison Methodology
