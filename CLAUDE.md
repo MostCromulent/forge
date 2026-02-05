@@ -8,63 +8,110 @@ instead of into the platform-specific subclasses where it belongs.
 
 ### Inheritance Hierarchy
 
+On upstream master (`Card-Forge/forge`):
+
 ```
 IGuiGame (interface, forge-gui)
-  └─ AbstractGuiGame (abstract, forge-gui)
+  └─ AbstractGuiGame (abstract, forge-gui; also implements IMayViewCards)
+       ├─ CMatchUI (forge-gui-desktop) — Swing desktop implementation
+       ├─ NetGuiGame (forge-gui) — server-side network proxy
+       └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
+```
+
+On the `NetworkPlay` branch (`MostCromulent/forge`), `NetworkGuiGame` was extracted from
+`AbstractGuiGame` and inserted between the base class and the network-aware subclasses:
+
+```
+IGuiGame (interface, forge-gui)
+  └─ AbstractGuiGame (abstract, forge-gui; also implements IMayViewCards)
        ├─ NetworkGuiGame (abstract, forge-gui) — adds network delta sync
        │    ├─ CMatchUI (forge-gui-desktop) — Swing desktop implementation
        │    └─ NetGuiGame (forge-gui) — server-side network proxy
        └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
 ```
 
+If you are working on the `NetworkPlay` branch, treat `NetworkGuiGame` as the home for
+all network protocol logic. On upstream master, that code still lives in
+`AbstractGuiGame` (as no-op stubs overridden by `CMatchUI` and `NetGuiGame`).
+
 ### Layer Responsibilities (As-Is)
 
 #### `IGuiGame` — Interface Contract (forge-gui)
-Defines ~113 method signatures that any GUI implementation must provide. This is the
-contract the game engine programs against. Changes here affect all platforms.
+Defines 113 method signatures that any GUI implementation must provide. This is the
+contract the game engine programs against. Changes here affect all platforms. No default
+methods — every method must be implemented (or stubbed) by the concrete class.
 
 #### `AbstractGuiGame` — Shared Game-UI State (forge-gui)
-Platform-agnostic state management and convenience methods. Contains:
+Implements `IGuiGame` and `IMayViewCards`. Platform-agnostic state management and
+convenience methods. Contains:
 - Player tracking (current player, local players, game controllers)
 - Game state flags (pause, speed, daytime)
 - Card visibility rules (`mayView`, `mayFlip`)
 - UI state tracking (highlighted cards, selectable cards)
 - Auto-pass / auto-yield state management
-- Await-next-input timer (the basic mechanism, not display formatting)
+- Await-next-input timer mechanism (`awaitNextInput`/`cancelAwaitNextInput`)
 - Choice/input convenience wrappers (`one()`, `many()`, `getInteger()`, etc.)
 - Concede/spectator logic
 - No-op stubs for optional interface methods (`refreshField`, `refreshCardDetails`, etc.)
+- No-op stubs for network methods (`applyDelta`, `fullStateSync`, etc.) overridden in
+  network-aware subclasses
+
+**Known technical debt in `AbstractGuiGame`:** The current code violates some of the
+principles below. These are pre-existing issues, not patterns to extend:
+- `isLibgdxPort()` platform checks at lines 79 and 210 of `AbstractGuiGame.java` — these
+  should be handled via method overrides in subclasses, not runtime platform branching.
+- `updatePromptForAwait()` (line 482) constructs a "Waiting for Opponent" display string
+  via `Localizer` and passes it to `showPromptMessage()`. This display formatting should
+  live in subclasses, but both this method and `awaitNextInput()` are declared `final`,
+  which currently prevents subclass customization. Fixing this would require making the
+  prompt content overridable.
+- Several `Localizer.getMessage()` calls in concede dialogs and `getInteger()` construct
+  user-facing strings. Button labels ("OK"/"Cancel"/"Yes"/"No") are arguably shared, but
+  status messages ("Waiting for Opponent", "Yielding until end of turn") are display
+  concerns.
+- Three files in `forge-gui` (not `AbstractGuiGame` itself) import `javax.swing` or
+  `java.awt`: `AutoUpdater.java`, `JVMOptions.java`, `OperatingSystem.java`.
 
 **What does NOT belong here:** Anything that constructs display strings for specific UI
 contexts, formats visual output, manages Swing/libgdx components, or implements
 rendering logic. If it's about *how something looks* rather than *what state the game is
-in*, it belongs in a subclass.
+in*, it belongs in a subclass. Do not add new instances of the patterns listed above as
+technical debt.
 
-#### `NetworkGuiGame` — Network Delta Sync (forge-gui)
+#### `NetworkGuiGame` — Network Delta Sync (forge-gui) — NetworkPlay branch only
 Extends `AbstractGuiGame` with network-specific deserialization, delta packet
 application, and tracker state management. All network protocol logic lives here,
-keeping the base class free of network dependencies.
+keeping the base class free of network dependencies. Does not exist on upstream master.
 
 #### `CMatchUI` — Desktop Match Screen (forge-gui-desktop)
-The Swing-based desktop implementation. Extends `NetworkGuiGame`. This is where
+The Swing-based desktop implementation. On upstream master it extends `AbstractGuiGame`
+directly; on the `NetworkPlay` branch it extends `NetworkGuiGame`. This is where
 desktop-specific display logic, Swing component management, and screen coordination
-belong. Implements `ICDoc` (controller) and `IMenuProvider`. Owns references to all
-desktop panel controllers (`CField`, `CHand`, `CPrompt`, `CLog`, etc.).
+belong. Implements `ICDoc` (controller) and `IMenuProvider`. Owns references to desktop
+panel controllers (`CAntes`, `CCombat`, `CDependencies`, `CDetailPicture`, `CDev`,
+`CDock`, `CLog`, `CPrompt`, `CStack`).
 
 #### `MatchController` — Mobile Match Screen (forge-gui-mobile)
 The libgdx-based mobile implementation. Extends `AbstractGuiGame` directly (not
-`NetworkGuiGame`). Singleton pattern. Mobile-specific display and interaction logic
-belongs here.
+`NetworkGuiGame`, even on the `NetworkPlay` branch — mobile has no network play
+support). Uses the singleton pattern (`MatchController.instance`). Mobile-specific
+display and interaction logic belongs here.
 
 #### `V*` Views (forge-gui-desktop: `forge.screens.match.views`)
-Pure Swing UI components (`VField`, `VHand`, `VPrompt`, `VStack`, etc.). Each
-implements `IVDoc<C*>` and defines how a panel *looks* — layout, Swing components,
+Pure Swing UI components (`VField`, `VHand`, `VPrompt`, `VStack`, etc.). Each panel
+view implements `IVDoc<C*>` and defines how a panel *looks* — layout, Swing components,
 rendering. Views hold a reference to their corresponding controller.
+
+Note: `VMatchUI` is the top-level match screen view and implements `IVTopLevelUI` (not
+`IVDoc`), so it follows a different pattern from the per-panel views.
 
 #### `C*` Controllers (forge-gui-desktop: `forge.screens.match.controllers`)
 Per-panel controllers (`CField`, `CHand`, `CPrompt`, `CLog`, etc.). Each implements
 `ICDoc` and manages the behavior of its corresponding `V*` view. Controllers hold a
 reference to `CMatchUI` and their `V*` view.
+
+Exception: `CDetailPicture` is a composite controller that manages `CDetail` and
+`CPicture` together. It does not itself implement `ICDoc`.
 
 ### Where Does My Code Go? — Decision Checklist
 
@@ -72,8 +119,10 @@ Before adding or modifying GUI code, work through this checklist top-to-bottom.
 The first matching rule wins:
 
 1. **Does it define a new capability the game engine needs from the UI?**
-   Add it to `IGuiGame`. Implement in `AbstractGuiGame` (if shared logic) or leave
-   abstract for platform-specific implementations.
+   Add the method signature to `IGuiGame`. Provide a concrete implementation in
+   `AbstractGuiGame` if the logic is shared across platforms, otherwise leave it
+   unimplemented there so each platform subclass (`CMatchUI`, `MatchController`) must
+   provide its own.
 
 2. **Is it shared game-UI state that both desktop and mobile need identically?**
    (e.g., tracking which cards are selectable, auto-yield flags, player controller mappings)
@@ -84,7 +133,8 @@ The first matching rule wins:
    `AbstractGuiGame` — this is the template method pattern already used there.
 
 4. **Does it involve network protocol, delta packets, or tracker synchronization?**
-   `NetworkGuiGame`.
+   On the `NetworkPlay` branch: `NetworkGuiGame`. On upstream master: the network-aware
+   subclasses (`CMatchUI`, `NetGuiGame`) or `AbstractGuiGame` with no-op stubs.
 
 5. **Does it format display strings, build UI messages, or manage visual presentation
    for a specific platform?**
@@ -102,6 +152,9 @@ The first matching rule wins:
 
 ### Red Flags — Signs You're in the Wrong Layer
 
+These anti-patterns already exist in the codebase as technical debt (see above). Do not
+add new instances of them.
+
 - **Adding `javax.swing.*` or `java.awt.*` imports to anything in `forge-gui/`.**
   The `forge-gui` module is shared across platforms. Swing imports mean desktop-specific
   code that belongs in `forge-gui-desktop`.
@@ -114,14 +167,16 @@ The first matching rule wins:
 
 - **Adding a `Timer`/`TimerTask` loop in `AbstractGuiGame` that calls
   `showPromptMessage()` to update what the user sees.**
-  Periodic UI refresh is a display concern. The base class owns the *mechanism*
-  (`awaitNextInput`/`cancelAwaitNextInput`) but not the *presentation* of what gets
-  shown during the wait.
+  The existing `awaitNextInput` timer mechanism already has this problem in a mild form
+  (`updatePromptForAwait` passes a localized "Waiting for Opponent" string). Do not make
+  it worse by adding more display logic to the timer callback. The base class should own
+  the *mechanism* but not the *presentation*.
 
 - **Checking `GuiBase.isNetworkplay()` or `GuiBase.getInterface().isLibgdxPort()` in
   `AbstractGuiGame` to branch on platform.**
   Platform-specific branches should be handled by overriding methods in the appropriate
-  subclass, not by runtime platform checks in the shared base.
+  subclass, not by runtime platform checks in the shared base. (Lines 79 and 210 of
+  `AbstractGuiGame` already violate this — do not extend the pattern.)
 
 - **Putting game-state logic (auto-yield decisions, controller management) in a `V*`
   view class.**
@@ -139,27 +194,45 @@ periodic UI refresh loop into the shared abstract layer. It works, but it violat
 separation: now the platform-agnostic base class dictates exactly what the waiting
 message looks like on every platform.
 
-**Better:** Keep `AbstractGuiGame.awaitNextInput()` as the basic mechanism (single delayed
-prompt). Override the prompt content in `CMatchUI` and `MatchController` separately to
-add platform-specific waiting messages with elapsed time. Or, have `AbstractGuiGame`
-expose the await start timestamp and let subclasses format their own display.
+Note: `AbstractGuiGame` already has a mild form of this problem —
+`updatePromptForAwait()` passes a hardcoded "Waiting for Opponent" string to
+`showPromptMessage()`, and both `awaitNextInput()` and `updatePromptForAwait()` are
+`final`, so subclasses cannot currently override the prompt content.
+
+**Better:** Make the prompt content overridable (e.g., change `updatePromptForAwait` from
+`protected final` to `protected`, or have `AbstractGuiGame` expose the await start
+timestamp and let subclasses supply the display string). Then `CMatchUI` and
+`MatchController` can each format their own platform-specific waiting messages.
 
 ## Project Module Summary
 
 | Module | Purpose |
 |---|---|
-| `forge-core` | Core engine, card mechanics, rules |
-| `forge-game` | Game session, player interactions, game flow |
+| `forge-core` | Card data model (CardRules, CardType, CardDb), deck structures, static definitions |
+| `forge-game` | Game engine, runtime card mechanics, spell abilities, combat, game flow |
 | `forge-ai` | Computer opponent decision logic |
 | `forge-gui` | Shared UI abstractions, interfaces, scripting resources |
 | `forge-gui-desktop` | Swing desktop GUI (screen layout, rendering, desktop-specific logic) |
 | `forge-gui-mobile` | libgdx mobile GUI logic |
+| `forge-gui-mobile-dev` | Mobile development/testing harness |
 | `forge-gui-android` | Android backend (depends on forge-gui-mobile) |
 | `forge-gui-ios` | iOS backend (depends on forge-gui-mobile) |
+| `forge-lda` | LDA (Latent Dirichlet Allocation) analysis tooling |
+| `forge-installer` | Distribution and installer packaging |
+| `adventure-editor` | Adventure mode content editor |
+
+Note on `forge-core` vs `forge-game`: "Card mechanics" can be ambiguous. `forge-core`
+holds the *static data model* — what a card is (rules text, type line, colors, editions).
+`forge-game` holds the *runtime behavior* — what a card does during a game (`Card.java`,
+`SpellAbility.java`, `GameAction.java`, `Combat.java`). If you are modifying how a card
+effect works at game time, you are almost certainly in `forge-game`, not `forge-core`.
 
 ## Desktop View-Controller Naming Convention
 
-- `V*` prefix = View class (Swing UI component, implements `IVDoc`)
+- `V*` prefix = View class (Swing UI component, implements `IVDoc<C*>`)
 - `C*` prefix = Controller class (behavior/logic, implements `ICDoc`)
-- Each `V*` has a corresponding `C*` (e.g., `VField`/`CField`, `VPrompt`/`CPrompt`)
-- Top-level screens: `VMatchUI`/`CMatchUI`, `VDeckEditorUI`/`CDeckEditorUI`, `VHomeUI`/`CHomeUI`
+- Each panel `V*` has a corresponding `C*` (e.g., `VField`/`CField`, `VPrompt`/`CPrompt`)
+- Top-level screen views (`VMatchUI`, `VDeckEditorUI`, `VHomeUI`) implement
+  `IVTopLevelUI` instead of `IVDoc` and follow a different pattern
+- `CDetailPicture` is a composite controller (manages `CDetail` + `CPicture`) and does
+  not implement `ICDoc` directly
