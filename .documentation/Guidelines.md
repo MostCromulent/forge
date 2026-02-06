@@ -11,19 +11,18 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - [Network-Specific Guidelines](#network-specific-guidelines)
 - [Testing](#testing)
 - [Architecture Reference](#architecture-reference)
-  - [Inheritance Hierarchy](#inheritance-hierarchy)
-  - [Layer Responsibilities](#layer-responsibilities)
-  - [Where Does My Code Go? — Decision Checklist](#where-does-my-code-go--decision-checklist)
-  - [Red Flags — Signs You're in the Wrong Layer](#red-flags--signs-youre-in-the-wrong-layer)
+    - [Inheritance Hierarchy](#inheritance-hierarchy)
+    - [Layer Responsibilities](#layer-responsibilities)
+    - [Where Does My Code Go? — Decision Checklist](#where-does-my-code-go--decision-checklist)
+    - [Red Flags — Signs You're in the Wrong Layer](#red-flags--signs-youre-in-the-wrong-layer)
 
 ## General Principles
 - **Keep it simple:** Code should be simple, easy to follow, and use as few lines as possible while still achieving the desired functionality.
 - **Minimal diff:** Prefer small, focused changes over large refactors. The fewer lines changed, the easier to review and less risk of introducing bugs. Do not make cosmetic fixes (whitespace, formatting, style) to code that isn't otherwise being changed for functional reasons — it creates diff noise and draws reviewer scrutiny to unrelated code.
-- **Minimize core changes:** Network-specific logic should be isolated in dedicated subclasses (e.g., `NetworkGuiGame`) rather than added to core classes like `AbstractGuiGame`.
+- **Search before creating:** Before implementing new functionality, search the codebase for existing mechanisms that solve the same or a similar problem. Before creating a new helper method, search the file for existing functions with equivalent logic. Before adding a new system (e.g., a timer, a polling loop, a status display), search broadly for existing mechanisms that already do the same thing. Enhance the existing mechanism rather than creating a parallel one.
 - **Avoid over-engineering:** Solve the problem at hand with the simplest approach that works. Don't introduce new classes, event types, or abstractions when existing infrastructure can be reused. Prefer modifying 3 files over creating 10 new ones. If a feature can be built by composing existing mechanisms do that instead of building new framework.
 
 ## Code Style
-- **Avoid duplicate functions and mechanisms:** Before creating new helper methods, search the file for existing functions with equivalent logic. More broadly, before adding a new system (e.g., a timer, a polling loop, a status display), search the codebase for existing mechanisms that already do the same thing. Enhance the existing mechanism rather than creating a parallel one.
 - **Check hotkey conflicts:** When assigning keyboard shortcuts, search for `VK_F[key]` and `getKeyStroke` in the codebase to ensure no conflicts with hardcoded menu accelerators (e.g., F1=Help, F11=Fullscreen).
 - **Wrap parseInt/parseLong in try-catch:** System property parsing should handle `NumberFormatException` gracefully with fallback to defaults.
 - **Add @Override annotations:** When implementing interface methods, always add `@Override` annotation.
@@ -34,16 +33,17 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Demand-driven computation:** Expensive operations (iterating all cards, getting all abilities) should only be performed when actually needed, not proactively or on every update cycle. Consider the performance cost of helper methods that might be called frequently (e.g., on every priority pass or network update).
 - **Keep engine clean:** GUI-specific logic (UI hints, styling) belongs in View classes, not in forge-game engine classes like Player.java or PhaseHandler.java.
 - **Fix bugs at the closest layer:** Errors and bug fixes should be solved in the closest layer that is practicable and effective. For example, a network serialization issue should be fixed in the network layer, not by adding guards in the game engine. A card rules bug belongs in forge-game, not worked around in forge-gui. Fixing at the source keeps the codebase clean and avoids defensive code proliferating through unrelated layers.
-- **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. However, display formatting, UI messages, and visual presentation always belong in platform subclasses (`CMatchUI`, `MatchController`) even when the feature is cross-platform — shared code should expose data, subclasses decide how to present it.
+- **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. Display that uses platform-specific APIs (Swing components, libgdx widgets) belongs in platform subclasses (`CMatchUI`, `MatchController`). However, simple text messages and lightweight UI logic that is identical across platforms may live in `AbstractGuiGame` to avoid duplication — prefer one implementation in the base class over two identical copies in subclasses.
 - **Check for mobile GUI:** Desktop-only features must check `GuiBase.getInterface().isLibgdxPort()` and return early/disable for mobile. Users switching between desktop and mobile share preferences.
-- **Isolate network code:** Network-specific functionality should be in dedicated classes (NetworkGuiGame, NetGameController) rather than polluting core game classes.
+- **Isolate network code:** Network-specific functionality should be in dedicated classes (`NetworkGuiGame`, `NetGameController`) rather than added to core classes like `AbstractGuiGame`. Keep core game classes free of network dependencies so they remain usable in non-network contexts.
+- **Avoid `GuiBase.isNetworkplay()`:** This is a static field that can be corrupted when mixing lobby types (e.g., switching between local and network games). Do not increase its usage. Prefer polymorphism (override methods in network-aware subclasses) over runtime checks against this flag.
 
 ## Network-Specific Guidelines
-- **Delta sync efficiency:** When modifying TrackableObject properties, ensure delta tracking is properly maintained to avoid full-state fallbacks.
-- **Reconnection safety:** Any changes to game initialization sequence must maintain reconnection compatibility - session establishment before state transmission.
-- **Serialization compatibility:** Changes to serialized objects must maintain backwards compatibility or include migration logic.
-- **Thread safety:** Network code handles concurrent operations - ensure proper synchronization when accessing shared state.
-- **Bandwidth awareness:** Network operations should minimize data transfer - prefer delta updates over full state when possible.
+- **Delta sync efficiency:** When adding or modifying `TrackableObject` properties, register them in `TrackableProperty` with the correct `TrackableType` so delta tracking picks them up. Failing to do this causes full-state fallbacks that defeat the purpose of delta sync.
+- **Reconnection safety:** Game initialization must follow the sequence: session establishment, then state transmission. Do not send game state before the client has confirmed its session — this causes the client to silently drop packets.
+- **Serialization compatibility:** Changes to objects serialized over the network (anything in `TrackableProperty`, `DeltaPacket`, lobby messages) must maintain backwards compatibility or include version-aware migration logic.
+- **Thread safety:** Network callbacks execute on Netty threads, not the game thread. Access to shared state (e.g., `gameControllers`, `gameView`, tracker collections) from network callbacks must be synchronized or delegated to the game thread via `FThreads.invokeInEdtAndWait()` or equivalent.
+- **Bandwidth awareness:** Prefer delta updates over full state. When adding new data to network packets, consider whether it changes frequently — high-frequency data belongs in delta tracking, not in per-packet headers.
 
 ## Testing
 - **Headless CI compatibility:** Test classes must not depend on GUI components (`FOptionPane`, `JOptionPane`, etc.) that fail in headless CI environments. Use headless alternatives or skip GUI-dependent tests in CI.
@@ -68,21 +68,13 @@ IGuiGame (interface, forge-gui)
        └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
 ```
 
-On upstream master (`Card-Forge/forge`), `NetworkGuiGame` does not exist. `CMatchUI`
-and `NetGuiGame` extend `AbstractGuiGame` directly:
-
-```
-IGuiGame (interface, forge-gui)
-  └─ AbstractGuiGame (abstract, forge-gui; also implements IMayViewCards)
-       ├─ CMatchUI (forge-gui-desktop) — Swing desktop implementation
-       ├─ NetGuiGame (forge-gui) — server-side network proxy
-       └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
-```
+Note: On upstream master (`Card-Forge/forge`), `NetworkGuiGame` does not exist —
+`CMatchUI` and `NetGuiGame` extend `AbstractGuiGame` directly.
 
 ### Layer Responsibilities
 
 #### `IGuiGame` — Interface Contract (forge-gui)
-Defines 113 method signatures that any GUI implementation must provide. This is the
+Defines the method signatures that any GUI implementation must provide. This is the
 contract the game engine programs against. Changes here affect all platforms. No default
 methods — every method must be implemented (or stubbed) by the concrete class.
 
@@ -101,10 +93,11 @@ convenience methods. Contains:
 - No-op stubs for network methods (`applyDelta`, `fullStateSync`, etc.) overridden in
   network-aware subclasses
 
-**What does NOT belong here:** Anything that constructs display strings for specific UI
-contexts, formats visual output, manages Swing/libgdx components, or implements
-rendering logic. If it's about *how something looks* rather than *what state the game is
-in*, it belongs in a subclass.
+**What does NOT belong here:** Anything that manages Swing/libgdx components, implements
+platform-specific rendering, or uses platform-specific APIs. Simple text messages and
+lightweight UI logic that is identical across all platforms *may* live here to avoid
+duplication (prefer one implementation over two identical copies in subclasses). But if
+the display differs per platform or uses platform APIs, it belongs in a subclass.
 
 #### `NetworkGuiGame` — Network Delta Sync (forge-gui) — NetworkPlay branch only
 Extends `AbstractGuiGame` with network-specific deserialization, delta packet
@@ -165,9 +158,11 @@ The first matching rule wins:
    network-aware subclasses `CMatchUI`/`NetGuiGame`, or `AbstractGuiGame` with no-op
    stubs.)
 
-5. **Does it format display strings, build UI messages, or manage visual presentation
-   for a specific platform?**
-   `CMatchUI` (desktop) or `MatchController` (mobile). NOT `AbstractGuiGame`.
+5. **Does it use platform-specific APIs, or does the display differ between desktop
+   and mobile?**
+   `CMatchUI` (desktop) or `MatchController` (mobile). However, simple text messages
+   and lightweight UI logic that is identical across all platforms may live in
+   `AbstractGuiGame` to avoid duplication — see rule #2.
 
 6. **Does it coordinate multiple desktop panels or manage screen-level concerns?**
    (e.g., targeting overlay, floating zones, keyboard shortcuts, menus)
@@ -187,16 +182,22 @@ Some of these anti-patterns already exist in the codebase as technical debt. Do 
   The `forge-gui` module is shared across platforms. Swing imports mean desktop-specific
   code that belongs in `forge-gui-desktop`.
 
-- **Adding display string formatting to `AbstractGuiGame`.**
-  Display presentation belongs in `CMatchUI` or `MatchController`. `AbstractGuiGame`
-  should only pass raw data (player views, state flags) — subclasses decide how to
-  present it.
+- **Adding platform-specific display logic to `AbstractGuiGame`.**
+  Code that uses Swing/libgdx APIs or differs between desktop and mobile belongs in
+  `CMatchUI` or `MatchController`. Simple text messages identical across platforms are
+  acceptable in `AbstractGuiGame` to avoid duplication.
 
 - **Checking `GuiBase.isNetworkplay()` or `GuiBase.getInterface().isLibgdxPort()` in
   `AbstractGuiGame` to branch on platform.**
   Platform-specific branches should be handled by overriding methods in the appropriate
-  subclass, not by runtime platform checks in the shared base. (Lines 79 and 210 of
-  `AbstractGuiGame` already violate this — do not extend the pattern.)
+  subclass, not by runtime platform checks in the shared base. (The `isLibgdxPort()`
+  checks in `setCurrentPlayer()` and `mayView()` already violate this — do not extend
+  the pattern.)
+
+- **Increasing usage of `GuiBase.isNetworkplay()` anywhere in the codebase.**
+  This is a static field that can hold stale/incorrect values when lobby types are mixed.
+  Prefer polymorphism (method overrides in network-aware subclasses) over checking this
+  flag. Existing usages are technical debt — do not add new ones.
 
 - **Putting game-state logic (auto-yield decisions, controller management) in a `V*`
   view class.**
