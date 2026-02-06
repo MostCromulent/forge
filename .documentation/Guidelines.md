@@ -9,9 +9,7 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - [Code Style](#code-style)
 - [Architecture](#architecture)
 - [Network-Specific Guidelines](#network-specific-guidelines)
-- [Performance](#performance)
 - [Testing](#testing)
-- [Documentation](#documentation)
 - [Architecture Reference](#architecture-reference)
   - [Inheritance Hierarchy](#inheritance-hierarchy)
   - [Layer Responsibilities](#layer-responsibilities)
@@ -33,7 +31,7 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Intuitive naming conventions:** when naming files or functions the name should be as intuitive as possible so developers can understand its purpose and function.
 
 ## Architecture
-- **Demand-driven computation:** Expensive operations (iterating all cards, getting all abilities) should only be performed when actually needed, not proactively or on every update cycle.
+- **Demand-driven computation:** Expensive operations (iterating all cards, getting all abilities) should only be performed when actually needed, not proactively or on every update cycle. Consider the performance cost of helper methods that might be called frequently (e.g., on every priority pass or network update).
 - **Keep engine clean:** GUI-specific logic (UI hints, styling) belongs in View classes, not in forge-game engine classes like Player.java or PhaseHandler.java.
 - **Fix bugs at the closest layer:** Errors and bug fixes should be solved in the closest layer that is practicable and effective. For example, a network serialization issue should be fixed in the network layer, not by adding guards in the game engine. A card rules bug belongs in forge-game, not worked around in forge-gui. Fixing at the source keeps the codebase clean and avoids defensive code proliferating through unrelated layers.
 - **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. However, display formatting, UI messages, and visual presentation always belong in platform subclasses (`CMatchUI`, `MatchController`) even when the feature is cross-platform — shared code should expose data, subclasses decide how to present it.
@@ -45,18 +43,11 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Reconnection safety:** Any changes to game initialization sequence must maintain reconnection compatibility - session establishment before state transmission.
 - **Serialization compatibility:** Changes to serialized objects must maintain backwards compatibility or include migration logic.
 - **Thread safety:** Network code handles concurrent operations - ensure proper synchronization when accessing shared state.
-
-## Performance
-- **Check cost of helpers:** Consider the performance cost of helper methods that might be called frequently (e.g., on every priority pass or network update).
 - **Bandwidth awareness:** Network operations should minimize data transfer - prefer delta updates over full state when possible.
 
 ## Testing
 - **Headless CI compatibility:** Test classes must not depend on GUI components (`FOptionPane`, `JOptionPane`, etc.) that fail in headless CI environments. Use headless alternatives or skip GUI-dependent tests in CI.
 - **Multi-process test isolation:** Tests spawning subprocesses must handle classpath/JAR discovery robustly across different environments (local dev vs CI).
-
-## Documentation
-- **Update NetworkPlay.md:** Core architectural changes should be reflected in `.documentation/NetworkPlay.md` in the NetworkPlay/dev branch.
-- **Track known issues:** Add bugs to `.documentation/Debugging.md` with full context in the NetworkPlay/dev branch.
 
 ---
 
