@@ -46,7 +46,7 @@ This section summarizes recurring themes from PR feedback for quick reference.
 
 ---
 
-## GUI Layer Architecture Reference
+# Architecture Reference
 
 This section provides detailed architectural guidance for the GUI layer. When the
 decision checklist or red flags below conflict with the general guidelines above,
@@ -178,25 +178,16 @@ The first matching rule wins:
 
 ### Red Flags — Signs You're in the Wrong Layer
 
-These anti-patterns already exist in the codebase as technical debt (see "Known Issues"
-below). Do not add new instances of them.
+Some of these anti-patterns already exist in the codebase as technical debt. Do not add new instances of them.
 
 - **Adding `javax.swing.*` or `java.awt.*` imports to anything in `forge-gui/`.**
   The `forge-gui` module is shared across platforms. Swing imports mean desktop-specific
   code that belongs in `forge-gui-desktop`.
 
-- **Adding display string formatting (time formatting, player name display, "Waiting for
-  X..." messages) to `AbstractGuiGame`.**
+- **Adding display string formatting (time formatting, player name display) to `AbstractGuiGame`.**
   Display presentation belongs in `CMatchUI` or `MatchController`. `AbstractGuiGame`
   should only pass raw data (player views, state flags) — subclasses decide how to
   present it.
-
-- **Adding a `Timer`/`TimerTask` loop in `AbstractGuiGame` that calls
-  `showPromptMessage()` to update what the user sees.**
-  The existing `awaitNextInput` timer mechanism already has this problem in a mild form
-  (`updatePromptForAwait` passes a localized "Waiting for Opponent" string). Do not make
-  it worse by adding more display logic to the timer callback. The base class should own
-  the *mechanism* but not the *presentation*.
 
 - **Checking `GuiBase.isNetworkplay()` or `GuiBase.getInterface().isLibgdxPort()` in
   `AbstractGuiGame` to branch on platform.**
@@ -208,83 +199,3 @@ below). Do not add new instances of them.
   view class.**
   Views are for layout and rendering. State logic goes in the corresponding `C*`
   controller or `CMatchUI`.
-
-### Concrete Example — What Not To Do
-
-**Bad:** Adding a "Waiting for [Player]... (5s)" feature by putting `getWaitingMessage()`,
-`findWaitingForPlayerName()`, `getElapsedTimeString()`, and a 1-second
-`scheduleTimerUpdate()` loop directly into `AbstractGuiGame.awaitNextInput()`.
-
-This embeds display formatting (time strings, player name lookup for display) and a
-periodic UI refresh loop into the shared abstract layer. It works, but it violates
-separation: now the platform-agnostic base class dictates exactly what the waiting
-message looks like on every platform.
-
-Note: `AbstractGuiGame` already has a mild form of this problem —
-`updatePromptForAwait()` passes a hardcoded "Waiting for Opponent" string to
-`showPromptMessage()`, and both `awaitNextInput()` and `updatePromptForAwait()` are
-`final`, so subclasses cannot currently override the prompt content.
-
-**Better:** Make the prompt content overridable (e.g., change `updatePromptForAwait` from
-`protected final` to `protected`, or have `AbstractGuiGame` expose the await start
-timestamp and let subclasses supply the display string). Then `CMatchUI` and
-`MatchController` can each format their own platform-specific waiting messages.
-
-### Project Module Summary
-
-| Module | Purpose |
-|---|---|
-| `forge-core` | Card data model (CardRules, CardType, CardDb), deck structures, static definitions |
-| `forge-game` | Game engine, runtime card mechanics, spell abilities, combat, game flow |
-| `forge-ai` | Computer opponent decision logic |
-| `forge-gui` | Shared UI abstractions, interfaces, scripting resources |
-| `forge-gui-desktop` | Swing desktop GUI (screen layout, rendering, desktop-specific logic) |
-| `forge-gui-mobile` | libgdx mobile GUI logic |
-| `forge-gui-mobile-dev` | Mobile development/testing harness |
-| `forge-gui-android` | Android backend (depends on forge-gui-mobile) |
-| `forge-gui-ios` | iOS backend (depends on forge-gui-mobile) |
-| `forge-lda` | LDA (Latent Dirichlet Allocation) analysis tooling |
-| `forge-installer` | Distribution and installer packaging |
-| `adventure-editor` | Adventure mode content editor |
-
-Note on `forge-core` vs `forge-game`: "Card mechanics" can be ambiguous. `forge-core`
-holds the *static data model* — what a card is (rules text, type line, colors, editions).
-`forge-game` holds the *runtime behavior* — what a card does during a game (`Card.java`,
-`SpellAbility.java`, `GameAction.java`, `Combat.java`). If you are modifying how a card
-effect works at game time, you are almost certainly in `forge-game`, not `forge-core`.
-
-### Desktop View-Controller Naming Convention
-
-- `V*` prefix = View class (Swing UI component, implements `IVDoc<C*>`)
-- `C*` prefix = Controller class (behavior/logic, implements `ICDoc`)
-- Each panel `V*` has a corresponding `C*` (e.g., `VField`/`CField`, `VPrompt`/`CPrompt`)
-- Top-level screen views (`VMatchUI`, `VDeckEditorUI`, `VHomeUI`) implement
-  `IVTopLevelUI` instead of `IVDoc` and follow a different pattern
-- `CDetailPicture` is a composite controller (manages `CDetail` + `CPicture`) and does
-  not implement `ICDoc` directly
-
----
-
-## Known Issues to Address
-
-Pre-existing technical debt in `AbstractGuiGame`. These violate the architectural
-principles above and should not be extended with new instances:
-
-1. **`isLibgdxPort()` platform checks** (lines 79, 210 of `AbstractGuiGame.java`) —
-   Runtime platform branching in the shared base class. Should be handled via method
-   overrides in subclasses.
-
-2. **Display string in `updatePromptForAwait()`** (line 482) — Constructs a "Waiting for
-   Opponent" display string via `Localizer` and passes it to `showPromptMessage()`. This
-   display formatting should live in subclasses, but both `updatePromptForAwait()` and
-   `awaitNextInput()` are declared `final`, preventing subclass customization.
-
-3. **`Localizer.getMessage()` calls in shared code** — Several calls in concede dialogs
-   and `getInteger()` construct user-facing strings. Button labels ("OK"/"Cancel") are
-   arguably shared, but status messages ("Waiting for Opponent", "Yielding until end of
-   turn") are display concerns that belong in subclasses.
-
-4. **`javax.swing`/`java.awt` imports in `forge-gui`** — Three files in the shared
-   module import platform-specific libraries: `AutoUpdater.java`, `JVMOptions.java`,
-   `OperatingSystem.java`. These should live in `forge-gui-desktop` or be refactored to
-   remove the dependency.
