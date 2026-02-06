@@ -4,6 +4,20 @@
 
 This section summarizes recurring themes from PR feedback for quick reference.
 
+## Table of Contents
+- [General Principles](#general-principles)
+- [Code Style](#code-style)
+- [Architecture](#architecture)
+- [Network-Specific Guidelines](#network-specific-guidelines)
+- [Performance](#performance)
+- [Testing](#testing)
+- [Documentation](#documentation)
+- [Architecture Reference](#architecture-reference)
+  - [Inheritance Hierarchy](#inheritance-hierarchy)
+  - [Layer Responsibilities](#layer-responsibilities)
+  - [Where Does My Code Go? — Decision Checklist](#where-does-my-code-go--decision-checklist)
+  - [Red Flags — Signs You're in the Wrong Layer](#red-flags--signs-youre-in-the-wrong-layer)
+
 ## General Principles
 - **Keep it simple:** Code should be simple, easy to follow, and use as few lines as possible while still achieving the desired functionality.
 - **Minimal diff:** Prefer small, focused changes over large refactors. The fewer lines changed, the easier to review and less risk of introducing bugs. Do not make cosmetic fixes (whitespace, formatting, style) to code that isn't otherwise being changed for functional reasons — it creates diff noise and draws reviewer scrutiny to unrelated code.
