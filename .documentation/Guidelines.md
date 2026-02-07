@@ -21,22 +21,26 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Minimal diff:** Prefer small, focused changes over large refactors. The fewer lines changed, the easier to review and less risk of introducing bugs. Do not make cosmetic fixes (whitespace, formatting, style) to code that isn't otherwise being changed for functional reasons — it creates diff noise and draws reviewer scrutiny to unrelated code.
 - **Search before creating:** Before implementing new functionality, search the codebase for existing mechanisms that solve the same or a similar problem. Before creating a new helper method, search the file for existing functions with equivalent logic. Before adding a new system (e.g., a timer, a polling loop, a status display), search broadly for existing mechanisms that already do the same thing. Enhance the existing mechanism rather than creating a parallel one.
 - **Avoid over-engineering:** Solve the problem at hand with the simplest approach that works. Don't introduce new classes, event types, or abstractions when existing infrastructure can be reused. Prefer modifying 3 files over creating 10 new ones. If a feature can be built by composing existing mechanisms do that instead of building new framework.
+- **Trace changes across execution contexts:** Before implementing, enumerate the runtime contexts where the affected code will execute: local single-player, local multiplayer, network host, network client, AI opponent. Verify the change is appropriate (or correctly no-op'd) in each. If a flag or property is set on one side of a client-server boundary, check whether it needs to be set on the other side too.
+- **Trace callers before modifying:** Before changing a method's behavior, search for all call sites and understand the contexts they run in. A method called from one place is safe to change; a method called from network callbacks, UI threads, and game logic simultaneously needs careful consideration. For network code, trace the full path: who sends, what serializes it, what deserializes it, who receives.
+- **Challenge narrow scoping:** When implementing a feature gated behind a specific condition (e.g., `if (isNetworkPlay)`), ask whether the feature would be useful more broadly. If the underlying mechanism is general-purpose (timers, status displays, input constraints), implement the mechanism generically and let the condition control when it's *activated*, not whether it *exists*.
 
 ## Code Style
 - **Check hotkey conflicts:** When assigning keyboard shortcuts, search for `VK_F[key]` and `getKeyStroke` in the codebase to ensure no conflicts with hardcoded menu accelerators (e.g., F1=Help, F11=Fullscreen).
 - **Wrap parseInt/parseLong in try-catch:** System property parsing should handle `NumberFormatException` gracefully with fallback to defaults.
 - **Add @Override annotations:** When implementing interface methods, always add `@Override` annotation.
 - **Meaningful toString():** Classes used in logging/debugging should override `toString()` rather than inheriting from Object.
-- **Intuitive naming conventions:** when naming files or functions the name should be as intuitive as possible so developers can understand its purpose and function.
+- **Intuitive naming:** Names of files, classes, and methods should communicate purpose without needing to read the implementation. Prefer `hasNetGame()` over `checkNet()`, `cancelAwaitNextInput()` over `resetTimer()`, `NetworkGuiGame` over `NetGG`. Names should describe *what* they answer or do, not *how* — a reader skimming a call site or class hierarchy should understand the intent immediately.
+- **`this` in anonymous classes/lambdas:** Inside anonymous inner classes (e.g., `TimerTask`, `Runnable`) and lambdas nested within them, `this` refers to the anonymous class, not the enclosing class. Use `EnclosingClass.this` (e.g., `AbstractGuiGame.this`) when passing the outer instance.
 
 ## Architecture
 - **Demand-driven computation:** Expensive operations (iterating all cards, getting all abilities) should only be performed when actually needed, not proactively or on every update cycle. Consider the performance cost of helper methods that might be called frequently (e.g., on every priority pass or network update).
 - **Keep engine clean:** GUI-specific logic (UI hints, styling) belongs in View classes, not in forge-game engine classes like Player.java or PhaseHandler.java.
-- **Fix bugs at the closest layer:** Errors and bug fixes should be solved in the closest layer that is practicable and effective. For example, a network serialization issue should be fixed in the network layer, not by adding guards in the game engine. A card rules bug belongs in forge-game, not worked around in forge-gui. Fixing at the source keeps the codebase clean and avoids defensive code proliferating through unrelated layers.
+- **Fix bugs at the closest layer:** Errors and bug fixes should be solved in the closest layer that is effective. For example, a network serialization issue should be fixed in the network layer, not by adding guards in the game engine. A card rules bug belongs in forge-game, not worked around in forge-gui. Fixing at the source keeps the codebase clean and avoids defensive code proliferating through unrelated layers.
 - **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. Display that uses platform-specific APIs (Swing components, libgdx widgets) belongs in platform subclasses (`CMatchUI`, `MatchController`). However, simple text messages and lightweight UI logic that is identical across platforms may live in `AbstractGuiGame` to avoid duplication — prefer one implementation in the base class over two identical copies in subclasses.
 - **Check for mobile GUI:** Desktop-only features must check `GuiBase.getInterface().isLibgdxPort()` and return early/disable for mobile. Users switching between desktop and mobile share preferences.
 - **Isolate network code:** Network-specific functionality should be in dedicated classes (`NetworkGuiGame`, `NetGameController`) rather than added to core classes like `AbstractGuiGame`. Keep core game classes free of network dependencies so they remain usable in non-network contexts.
-- **Avoid `GuiBase.isNetworkplay()`:** This is a static field that can be corrupted when mixing lobby types (e.g., switching between local and network games). Do not increase its usage. Prefer polymorphism (override methods in network-aware subclasses) over runtime checks against this flag.
+- **Prefer `GuiBase.isNetworkplay(game)` over `GuiBase.isNetworkplay()`:** The no-arg version is a static field that can hold stale values when mixing lobby types. When an `IGuiGame` reference is available, always pass it to the overloaded `isNetworkplay(IGuiGame)` which queries `game.isNetGame()` directly. Only use the no-arg version in code with no game context (e.g., utility classes, views).
 
 ## Network-Specific Guidelines
 - **Delta sync efficiency:** When adding or modifying `TrackableObject` properties, register them in `TrackableProperty` with the correct `TrackableType` so delta tracking picks them up. Failing to do this causes full-state fallbacks that defeat the purpose of delta sync.
@@ -44,6 +48,8 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Serialization compatibility:** Changes to objects serialized over the network (anything in `TrackableProperty`, `DeltaPacket`, lobby messages) must maintain backwards compatibility or include version-aware migration logic.
 - **Thread safety:** Network callbacks execute on Netty threads, not the game thread. Access to shared state (e.g., `gameControllers`, `gameView`, tracker collections) from network callbacks must be synchronized or delegated to the game thread via `FThreads.invokeInEdtAndWait()` or equivalent.
 - **Bandwidth awareness:** Prefer delta updates over full state. When adding new data to network packets, consider whether it changes frequently — high-frequency data belongs in delta tracking, not in per-packet headers.
+- **Distinguish events from continuous state:** When code runs during network play, ask: "Will this generate network traffic? Is that once, or on every tick?" One-time state transitions (e.g., "player is now waiting") should be sent as a single network event. Locally-derived continuous state (timers, counters, animations) must be computed on each side independently — never stream tick-by-tick updates over the wire.
+- **Account for client-server asymmetry:** The server and client have fundamentally different object graphs. The server has `HostedMatch`, `NetGuiGame`, full game state, and all player controllers. The remote client has `CMatchUI`/`NetworkGuiGame` with a proxy view of game state received via delta sync — no `HostedMatch`, no direct access to other players' controllers. **Design from the client's perspective first** — the client is the constrained side. Ask: "What does the client need to know, and how will it receive that information?" If a feature requires data the client doesn't have, the server must explicitly provide it (via delta properties, protocol messages, or lobby initialization). Don't assume that because something is reachable on the server, it's also reachable on the client.
 
 ## Testing
 - **Headless CI compatibility:** Test classes must not depend on GUI components (`FOptionPane`, `JOptionPane`, etc.) that fail in headless CI environments. Use headless alternatives or skip GUI-dependent tests in CI.
@@ -190,19 +196,20 @@ Some of these anti-patterns already exist in the codebase as technical debt. Do 
   `CMatchUI` or `MatchController`. Simple text messages identical across platforms are
   acceptable in `AbstractGuiGame` to avoid duplication.
 
-- **Checking `GuiBase.isNetworkplay()` or `GuiBase.getInterface().isLibgdxPort()` in
-  `AbstractGuiGame` to branch on platform.**
+- **Checking `GuiBase.getInterface().isLibgdxPort()` in `AbstractGuiGame` to branch
+  on platform.**
   Platform-specific branches should be handled by overriding methods in the appropriate
   subclass, not by runtime platform checks in the shared base. (The `isLibgdxPort()`
   checks in `setCurrentPlayer()` and `mayView()` already violate this — do not extend
   the pattern.)
 
-- **Increasing usage of `GuiBase.isNetworkplay()` anywhere in the codebase.**
-  This is a static field that can hold stale/incorrect values when lobby types are mixed.
-  Prefer polymorphism (method overrides in network-aware subclasses) over checking this
-  flag. Existing usages are technical debt — do not add new ones.
-
 - **Putting game-state logic (auto-yield decisions, controller management) in a `V*`
   view class.**
   Views are for layout and rendering. State logic goes in the corresponding `C*`
   controller or `CMatchUI`.
+
+- **Moving local-only logic into a shared layer without considering network propagation.**
+  If code previously ran only locally (e.g., a timer in `CMatchUI`) and you refactor it
+  into a shared class (`AbstractGuiGame`, `InputLockUI`), check whether the shared layer's
+  state changes are now serialized over the network. Shared-layer state is often synced
+  automatically — what was a harmless local update may become constant network traffic.
