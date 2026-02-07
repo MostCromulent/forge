@@ -27,6 +27,35 @@ This file tracks known bugs in the Forge codebase, particularly for the NetworkP
 
 **Investigation:** TODO — likely a CardView removed from game state before the delta referencing it arrives at the client
 
+### Bug #19: Host AI (Alice) wins 100% of 2-player games
+
+**Status:** Open - Needs Investigation
+**Discovered:** 2026-02-07 via comprehensive test (run20260207-154048)
+**Frequency:** 50/50 2-player games (100%)
+**Severity:** Medium (functional correctness concern)
+
+**Details:**
+- Alice (Host AI) won all 50 two-player games — expected ~50%
+- In 3p games, distribution is fair: Alice 50%, Charlie 50%
+- In 4p games, distribution is fair: Charlie 40%, Alice 35%, Diana 25%
+- The anomaly is isolated to 2-player games
+
+**Win distribution (run20260207-154048):**
+
+| Players | Alice (Host AI) | Charlie (Remote) | Diana (Remote) |
+|---------|----------------|------------------|----------------|
+| 2p (50) | 50 (100%) | 0 (0%) | — |
+| 3p (30) | 15 (50%) | 15 (50%) | — |
+| 4p (20) | 7 (35%) | 8 (40%) | 5 (25%) |
+
+**Possible causes:**
+- First-player advantage (Alice always goes first)
+- Headless client (Bob) not making competitive decisions in 2p specifically
+- Deck selection bias favoring host
+- Remote player AI responses behaving differently than host AI in 2p
+
+**Investigation:** TODO
+
 ---
 
 ## Resolved Bugs
