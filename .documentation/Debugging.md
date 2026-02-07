@@ -6,7 +6,26 @@ This file tracks known bugs in the Forge codebase, particularly for the NetworkP
 
 ## Active Bugs
 
-*No active bugs at this time.*
+### Bug #18: NetworkDeserializer "Object not found in Tracker" warnings
+
+**Status:** Open - Low Priority
+**Discovered:** 2026-02-07 via comprehensive test (run20260207-154048)
+**Frequency:** 6/100 games (6%), non-fatal — all affected games completed successfully
+**Severity:** Low (games completed, no checksum mismatches)
+
+**Warning:** `[WARN] [NetworkDeserializer] Object not found in Tracker: type=CardView, id=<N>`
+
+**Details:**
+- Appears during delta deserialization on the client side
+- Affects both 2p and 3p games
+- Warnings occur in pairs (same ID logged twice)
+- No impact on game outcome or checksum validation
+
+**Affected logs (run20260207-154048):**
+- batch0-game0-3p, batch0-game7-3p, batch1-game8-2p
+- batch4-game0-3p, batch4-game7-3p, batch7-game3-2p
+
+**Investigation:** TODO — likely a CardView removed from game state before the delta referencing it arrives at the client
 
 ---
 

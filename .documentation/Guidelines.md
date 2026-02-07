@@ -48,6 +48,9 @@ This section summarizes recurring themes from PR feedback for quick reference.
 ## Testing
 - **Headless CI compatibility:** Test classes must not depend on GUI components (`FOptionPane`, `JOptionPane`, etc.) that fail in headless CI environments. Use headless alternatives or skip GUI-dependent tests in CI.
 - **Multi-process test isolation:** Tests spawning subprocesses must handle classpath/JAR discovery robustly across different environments (local dev vs CI).
+- **Test gating with `skipUnlessStressTestsEnabled()`:** Stress and integration tests (batch tests, multiplayer tests, comprehensive/quick delta sync tests) must call `skipUnlessStressTestsEnabled()` as their first line so they are skipped during CI's default `mvn clean test`. Only pass `-Drun.stress.tests=true` for local validation runs.
+- **Always-run tests:** Unit tests (deck loader, game result, configuration parsing), `testServerStartAndStop`, `testTrueNetworkTraffic`, and `DeltaSyncUnitTest` must NOT be gated — they should always pass in CI without extra flags.
+- **CI checkstyle:** The root `checkstyle.xml` only enforces `RedundantImport` and `UnusedImports`. Fix these before pushing — they will fail the CI build.
 
 ---
 
