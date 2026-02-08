@@ -72,10 +72,10 @@ On the `NetworkPlay` branch (`MostCromulent/forge`):
 ```
 IGuiGame (interface, forge-gui)
   └─ AbstractGuiGame (abstract, forge-gui; also implements IMayViewCards)
-       ├─ NetworkGuiGame (abstract, forge-gui) — adds network delta sync
-       │    ├─ CMatchUI (forge-gui-desktop) — Swing desktop implementation
-       │    └─ NetGuiGame (forge-gui) — server-side network proxy
-       └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
+       └─ NetworkGuiGame (abstract, forge-gui) — adds network delta sync
+            ├─ CMatchUI (forge-gui-desktop) — Swing desktop implementation
+            ├─ NetGuiGame (forge-gui) — server-side network proxy
+            └─ MatchController (forge-gui-mobile) — libgdx mobile implementation
 ```
 
 Note: On upstream master (`Card-Forge/forge`), `NetworkGuiGame` does not exist —

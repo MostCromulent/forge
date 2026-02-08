@@ -99,7 +99,9 @@ AbstractGuiGame (core game logic, ~900 lines)
     ↑ extends
 NetworkGuiGame (network deserialization, ~930 lines)
     ↑ extends
-NetGuiGame (server-side network proxy)
+├─ NetGuiGame (server-side network proxy)
+├─ CMatchUI (desktop Swing)
+└─ MatchController (mobile libgdx)
 ```
 
 All network logic (~930 lines) is extracted to the `NetworkGuiGame` subclass. Master branch merges will have minimal conflicts in `AbstractGuiGame`.
@@ -545,7 +547,7 @@ See [Debugging.md](https://github.com/MostCromulent/forge/blob/NetworkPlay/dev/.
 
 ## Known Limitations
 
-1. **Desktop only.** Delta sync is currently only supported on the desktop client (`CMatchUI`, which extends `NetworkGuiGame`), whereas the mobile client (`MatchController`) extends `AbstractGuiGame` directly. The `NetworkGuiGame` layer is in the shared `forge-gui` module, so mobile support could be added in the future by having `MatchController` extend `NetworkGuiGame` once PR review is satisfied of desktop implementation.
+1. **Desktop and mobile.** Delta sync is supported on both the desktop client (`CMatchUI`) and mobile client (`MatchController`), which both extend `NetworkGuiGame`. Mobile receives delta packets via the same `GameClientHandler` → EDT dispatch → `applyDelta()` path as desktop. No mobile-specific delta sync code was needed — `NetworkGuiGame` is platform-neutral. A prerequisite `GuiMobile.isGuiThread()` fix was required to ensure network callbacks are correctly dispatched to the libgdx GL thread (previously, Netty I/O threads were misidentified as GUI threads due to a negative-logic heuristic).
 
 2. **No protocol version negotiation.** There is no handshake or version check between client and server. Both must be built from the same branch/commit. A version mismatch will produce opaque deserialization errors.
 
