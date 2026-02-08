@@ -39,10 +39,10 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Demand-driven computation:** Expensive operations (iterating all cards, getting all abilities) should only be performed when actually needed, not proactively or on every update cycle. Consider the performance cost of helper methods that might be called frequently (e.g., on every priority pass or network update).
 - **Keep engine clean:** GUI-specific logic (UI hints, styling) belongs in View classes, not in forge-game engine classes like Player.java or PhaseHandler.java.
 - **Fix bugs at the closest layer:** Errors and bug fixes should be solved in the closest layer that is effective. For example, a network serialization issue should be fixed in the network layer, not by adding guards in the game engine. A card rules bug belongs in forge-game, not worked around in forge-gui. Fixing at the source keeps the codebase clean and avoids defensive code proliferating through unrelated layers.
-- **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. Display that uses platform-specific APIs (Swing components, libgdx widgets) belongs in platform subclasses (`CMatchUI`, `MatchController`). However, simple text messages and lightweight UI logic that is identical across platforms may live in `AbstractGuiGame` to avoid duplication — prefer one implementation in the base class over two identical copies in subclasses.
+- **Platform-neutral code for platform-neutral features:** If a feature is intended to work across platforms (desktop and mobile), implement the *state and logic* in shared code (e.g., `AbstractGuiGame`, `forge-gui`) rather than in platform-specific classes. Display that uses platform-specific APIs (Swing components, libgdx widgets) belongs in platform subclasses (`CMatchUI`, `MatchController`). However, simple text messages and lightweight UI logic that is identical across platforms may live in `AbstractGuiGame` to avoid duplication — prefer one implementation in the base class over two identical copies in subclasses. **Code smell:** If you find yourself writing the same algorithm with the same state fields in both `CMatchUI` and `MatchController`, that's a strong signal it belongs in `AbstractGuiGame` instead.
 - **Check for mobile GUI:** Desktop-only features must check `GuiBase.getInterface().isLibgdxPort()` and return early/disable for mobile. Users switching between desktop and mobile share preferences.
 - **Isolate network code:** Network-specific functionality should be in dedicated classes (`NetworkGuiGame`, `NetGameController`) rather than added to core classes like `AbstractGuiGame`. Keep core game classes free of network dependencies so they remain usable in non-network contexts.
-- **Prefer `GuiBase.isNetworkplay(game)` over `GuiBase.isNetworkplay()`:** The no-arg version is a static field that can hold stale values when mixing lobby types. When an `IGuiGame` reference is available, always pass it to the overloaded `isNetworkplay(IGuiGame)` which queries `game.isNetGame()` directly. Only use the no-arg version in code with no game context (e.g., utility classes, views). **Important:** `isNetGame()` must return `true` for *all* game instances in a network match — both the server-side proxy (`NetGuiGame`) and the host's local GUI (`CMatchUI`). If adding a new code path gated on `isNetGame()`, test it from the host's perspective, not just the remote client's.
+- **Use `GuiBase.isNetworkplay(game)` for network detection:** There is only one signature — `isNetworkplay(IGuiGame game)`. When a game reference is available, pass it; the method delegates to `game.isNetGame()` for a per-instance answer. When no game is available, pass `null`; the method falls back to `IGuiBase.hasNetGame()` which iterates registered game instances. **Important:** `isNetGame()` must return `true` for *all* game instances in a network match — both the server-side proxy (`NetGuiGame`) and the host's local GUI (`CMatchUI`/`MatchController`). The host's local GUI gets its flag set via `FServerManager.getGui()` calling `setNetGame()`. If adding a new code path gated on `isNetGame()`, test it from the host's perspective, not just the remote client's.
 
 ## Network-Specific Guidelines
 - **Account for client-server asymmetry:** A network match has three execution contexts, not two: (1) the **host's local GUI** (`CMatchUI`) — sees full game state but displays locally; (2) the **server-side proxy** (`NetGuiGame`) — serializes `IGuiGame` calls over the wire to the remote client; (3) the **remote client** (`CMatchUI`/`NetworkGuiGame` receiving protocol calls) — has only a proxy view of game state. When branching on network status, verify the behavior is correct in all three contexts. The host's local GUI is the most commonly forgotten — it participates in the match alongside `NetGuiGame` but is a separate `IGuiGame` instance. 
@@ -118,12 +118,12 @@ application, and tracker state management. All network protocol logic lives here
 keeping the base class free of network dependencies. Does not exist on upstream master.
 
 #### `CMatchUI` — Desktop Match Screen (forge-gui-desktop)
-The Swing-based desktop implementation. On upstream master it extends `AbstractGuiGame`
-directly; on the `NetworkPlay` branch it extends `NetworkGuiGame`. This is where
-desktop-specific display logic, Swing component management, and screen coordination
-belong. Implements `ICDoc` (controller) and `IMenuProvider`. Owns references to desktop
-panel controllers (`CAntes`, `CCombat`, `CDependencies`, `CDetailPicture`, `CDev`,
-`CDock`, `CLog`, `CPrompt`, `CStack`).
+The Swing-based desktop implementation. Extends `AbstractGuiGame` (on `NetworkPlay/main`
+it extends `NetworkGuiGame` instead). This is where desktop-specific display logic,
+Swing component management, and screen coordination belong. Implements `ICDoc`
+(controller) and `IMenuProvider`. Owns references to desktop panel controllers (`CAntes`,
+`CCombat`, `CDependencies`, `CDetailPicture`, `CDev`, `CDock`, `CLog`, `CPrompt`,
+`CStack`).
 
 #### `MatchController` — Mobile Match Screen (forge-gui-mobile)
 The libgdx-based mobile implementation. On upstream master, `MatchController` supports
@@ -215,8 +215,5 @@ Some of these anti-patterns already exist in the codebase as technical debt. Do 
   Views are for layout and rendering. State logic goes in the corresponding `C*`
   controller or `CMatchUI`.
 
-- **Moving local-only logic into a shared layer without considering network propagation.**
-  If code previously ran only locally (e.g., a timer in `CMatchUI`) and you refactor it
-  into a shared class (`AbstractGuiGame`, `InputLockUI`), check whether the shared layer's
-  state changes are now serialized over the network. Shared-layer state is often synced
-  automatically — what was a harmless local update may become constant network traffic.
+- **Moving local-only logic into a shared layer without checking network and side-effect implications.**
+  When refactoring code from a subclass into a shared class (`AbstractGuiGame`), check two things: (1) whether the shared layer serializes state changes over the network — what was a harmless local update may become constant network traffic; (2) whether methods in the shared class have side effects that interfere with the new logic (e.g., a display update method that cancels the timer calling it). Trace the full call chain within the class.
