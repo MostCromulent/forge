@@ -19,11 +19,13 @@ This section summarizes recurring themes from PR feedback for quick reference.
 ## General Principles
 - **Keep it simple:** Code should be simple, easy to follow, and use as few lines as possible while still achieving the desired functionality.
 - **Minimal diff:** Prefer small, focused changes over large refactors. The fewer lines changed, the easier to review and less risk of introducing bugs. Do not make cosmetic fixes (whitespace, formatting, style) to code that isn't otherwise being changed for functional reasons — it creates diff noise and draws reviewer scrutiny to unrelated code.
-- **Search before creating:** Before implementing new functionality, search the codebase for existing mechanisms that solve the same or a similar problem. Before creating a new helper method, search the file for existing functions with equivalent logic. Before adding a new system (e.g., a timer, a polling loop, a status display), search broadly for existing mechanisms that already do the same thing. Enhance the existing mechanism rather than creating a parallel one. **Exception:** More specific guidelines (particularly in [Network-Specific Guidelines](#network-specific-guidelines)) may require intentional duplication — e.g., computing timers or derived state independently on each side of a client-server boundary to avoid network traffic. When a domain-specific principle conflicts with this general rule, the more specific principle wins.
+- **Search before creating / avoid duplication:** Before implementing new functionality, search the codebase for existing mechanisms that solve the same or a similar problem. Before creating a new helper method, search the file for existing functions with equivalent logic. Before adding a new system (e.g., a timer, a polling loop, a status display), search broadly for existing mechanisms that already do the same thing. Enhance the existing mechanism rather than creating a parallel one. **Exception:** More specific guidelines (particularly in [Network-Specific Guidelines](#network-specific-guidelines)) may require intentional duplication — e.g., computing timers or derived state independently on each side of a client-server boundary to avoid network traffic. When a domain-specific principle conflicts with this general rule, the more specific principle wins.
 - **Avoid over-engineering:** Solve the problem at hand with the simplest approach that works. Don't introduce new classes, event types, or abstractions when existing infrastructure can be reused. Prefer modifying 3 files over creating 10 new ones. If a feature can be built by composing existing mechanisms do that instead of building new framework.
 - **Trace changes across execution contexts:** Before implementing, enumerate the runtime contexts where the affected code will execute: local single-player, local multiplayer, network host, network client, AI opponent. Verify the change is appropriate (or correctly no-op'd) in each. If a flag or property is set on one side of a client-server boundary, check whether it needs to be set on the other side too.
 - **Trace callers before modifying:** Before changing a method's behavior, search for all call sites and understand the contexts they run in. A method called from one place is safe to change; a method called from network callbacks, UI threads, and game logic simultaneously needs careful consideration. For network code, trace the full path: who sends, what serializes it, what deserializes it, who receives.
 - **Check for dead code:** When a change removes callers or replaces a mechanism, check whether any methods, fields, or branches become unreachable. Remove dead code in the same change rather than leaving it for later.
+- **No speculative code:** Don't add code that isn't exercised by the current PR — engine support "for future use", helper methods with no callers, abstractions for hypothetical requirements. If no script or feature in Forge currently needs it, don't add it. Unused code creates maintenance burden and will likely be cleaned up in a future refactor anyway.
+- **Don't commit project-internal files:** Files used only for local development or AI-assisted workflows (`.claude/`, `DOCUMENTATION.md`, scratch notes) must not be committed to the main repository. Check `git status` and `.gitignore` before committing. If a file wouldn't be useful to other contributors, it doesn't belong in the repo.
 
 ## Code Style
 - **Check hotkey conflicts:** When assigning keyboard shortcuts, search for `VK_F[key]` and `getKeyStroke` in the codebase to ensure no conflicts with hardcoded menu accelerators (e.g., F1=Help, F11=Fullscreen).
@@ -50,6 +52,7 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Serialization compatibility:** Changes to objects serialized over the network (anything in `TrackableProperty`, `DeltaPacket`, lobby messages) must maintain backwards compatibility or include version-aware migration logic.
 - **Thread safety:** Network callbacks execute on Netty threads, not the game thread. Access to shared state (e.g., `gameControllers`, `gameView`, tracker collections) from network callbacks must be synchronized or delegated to the game thread via `FThreads.invokeInEdtAndWait()` or equivalent.
 - **Bandwidth awareness:** Prefer delta updates over full state. When adding new data to network packets, consider whether it changes frequently — high-frequency data belongs in delta tracking, not in per-packet headers.
+- **Test serialization of new objects:** When adding or modifying objects that may be transmitted over the network (game state, card data, player info), verify they are serializable. Netty will throw `NotSerializableException` at runtime for non-serializable objects — these are easy to miss in local testing but break network play immediately. Run at least one network game (or the `testTrueNetworkTraffic` test) after changing data model classes.
 - **Distinguish events from continuous state:** When code runs during network play, ask: "Will this generate network traffic? Is that once, or on every tick?" One-time state transitions (e.g., "player is now waiting") should be sent as a single network event. Locally-derived continuous state (timers, counters, animations) must be computed on each side independently — never stream tick-by-tick updates over the wire. This intentional duplication overrides the general [Search before creating](#general-principles) principle: independent client-side and server-side implementations of the same logic is the correct pattern when sharing would create recurring network traffic.
 
 ## Testing
@@ -124,10 +127,12 @@ panel controllers (`CAntes`, `CCombat`, `CDependencies`, `CDetailPicture`, `CDev
 
 #### `MatchController` — Mobile Match Screen (forge-gui-mobile)
 The libgdx-based mobile implementation. On upstream master, `MatchController` supports
-network play via the legacy protocol. On the `NetworkPlay` branch, it extends
-`AbstractGuiGame` directly (not `NetworkGuiGame`) — delta sync is not yet implemented
-for mobile. Uses the singleton pattern (`MatchController.instance`). Mobile-specific
-display and interaction logic belongs here.
+network play via the legacy protocol. On the `NetworkPlay/main` branch, it extends
+`NetworkGuiGame` (same as `CMatchUI`), giving mobile clients delta sync support with
+no mobile-specific network code. On `NetworkPlay/ui` and `NetworkPlay/dev`, it still
+extends `AbstractGuiGame` directly. Uses the singleton pattern
+(`MatchController.instance`). Mobile-specific display and interaction logic belongs
+here.
 
 #### `V*` Views (forge-gui-desktop: `forge.screens.match.views`)
 Pure Swing UI components (`VField`, `VHand`, `VPrompt`, `VStack`, etc.). Each panel
