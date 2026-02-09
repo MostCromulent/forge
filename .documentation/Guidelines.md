@@ -9,12 +9,21 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - [Code Style](#code-style)
 - [Architecture](#architecture)
 - [Network-Specific Guidelines](#network-specific-guidelines)
+    - [Design](#design)
+    - [Implementation](#implementation)
+    - [Verification](#verification)
 - [Testing](#testing)
 - [Architecture Reference](#architecture-reference)
-    - [Inheritance Hierarchy](#inheritance-hierarchy)
-    - [Layer Responsibilities](#layer-responsibilities)
-    - [Where Does My Code Go? — Decision Checklist](#where-does-my-code-go--decision-checklist)
-    - [Red Flags — Signs You're in the Wrong Layer](#red-flags--signs-youre-in-the-wrong-layer)
+    - [GUI Architecture](#gui-architecture)
+        - [Inheritance Hierarchy](#inheritance-hierarchy)
+        - [Layer Responsibilities](#layer-responsibilities)
+        - [Where Does My Code Go? — Decision Checklist](#where-does-my-code-go--decision-checklist)
+        - [Red Flags — Signs You're in the Wrong Layer](#red-flags--signs-youre-in-the-wrong-layer)
+    - [Network Architecture](#network-architecture)
+        - [Server Lifecycle](#server-lifecycle)
+        - [GUI Creation and the guis Map](#gui-creation-and-the-guis-map)
+        - [Protocol Pipeline](#protocol-pipeline)
+        - [Client Side](#client-side)
 
 ## General Principles
 - **Keep it simple:** Code should be simple, easy to follow, and use as few lines as possible while still achieving the desired functionality.
@@ -24,7 +33,7 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Trace changes across execution contexts:** Before implementing, enumerate the runtime contexts where the affected code will execute: local single-player, local multiplayer, network host, network client, AI opponent. Verify the change is appropriate (or correctly no-op'd) in each. If a flag or property is set on one side of a client-server boundary, check whether it needs to be set on the other side too.
 - **Trace callers before modifying:** Before changing a method's behavior, search for all call sites and understand the contexts they run in. A method called from one place is safe to change; a method called from network callbacks, UI threads, and game logic simultaneously needs careful consideration. For network code, trace the full path: who sends, what serializes it, what deserializes it, who receives.
 - **Check for dead code:** When a change removes callers or replaces a mechanism, check whether any methods, fields, or branches become unreachable. Remove dead code in the same change rather than leaving it for later.
-- **No speculative code:** Don't add code that isn't exercised by the current PR — engine support "for future use", helper methods with no callers, abstractions for hypothetical requirements. If no script or feature in Forge currently needs it, don't add it. Unused code creates maintenance burden and will likely be cleaned up in a future refactor anyway.
+- **Don't write workarounds for existing bugs — flag them instead:** If your new code needs special handling because existing code doesn't match its declared types or contracts (e.g., a `Set` arriving where a `List` is declared), stop and flag the inconsistency to the user rather than adding defensive code. The comment you'd write to explain the workaround is the sign you should be asking instead. The user decides whether to fix it in scope, defer it, or accept it.
 - **Don't commit project-internal files:** Files used only for local development or AI-assisted workflows (`.claude/`, `DOCUMENTATION.md`, scratch notes) must not be committed to the main repository. Check `git status` and `.gitignore` before committing. If a file wouldn't be useful to other contributors, it doesn't belong in the repo.
 
 ## Code Style
@@ -45,15 +54,23 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Use `GuiBase.isNetworkplay(game)` for network detection:** There is only one signature — `isNetworkplay(IGuiGame game)`. When a game reference is available, pass it; the method delegates to `game.isNetGame()` for a per-instance answer. When no game is available, pass `null`; the method falls back to `IGuiBase.hasNetGame()` which iterates registered game instances. **Important:** `isNetGame()` must return `true` for *all* game instances in a network match — both the server-side proxy (`NetGuiGame`) and the host's local GUI (`CMatchUI`/`MatchController`). The host's local GUI gets its flag set via `FServerManager.getGui()` calling `setNetGame()`. If adding a new code path gated on `isNetGame()`, test it from the host's perspective, not just the remote client's.
 
 ## Network-Specific Guidelines
-- **Account for client-server asymmetry:** A network match has three execution contexts, not two: (1) the **host's local GUI** (`CMatchUI`) — sees full game state but displays locally; (2) the **server-side proxy** (`NetGuiGame`) — serializes `IGuiGame` calls over the wire to the remote client; (3) the **remote client** (`CMatchUI`/`NetworkGuiGame` receiving protocol calls) — has only a proxy view of game state. When branching on network status, verify the behavior is correct in all three contexts. The host's local GUI is the most commonly forgotten — it participates in the match alongside `NetGuiGame` but is a separate `IGuiGame` instance. 
+
+### Design
+- **Account for client-server asymmetry:** A network match has three execution contexts, not two: (1) the **host's local GUI** (`CMatchUI`) — sees full game state but displays locally; (2) the **server-side proxy** (`NetGuiGame`) — serializes `IGuiGame` calls over the wire to the remote client; (3) the **remote client** (`CMatchUI`/`NetworkGuiGame` receiving protocol calls) — has only a proxy view of game state. When branching on network status, verify the behavior is correct in all three contexts. The host's local GUI is the most commonly forgotten — it participates in the match alongside `NetGuiGame` but is a separate `IGuiGame` instance.
 - **Design from the client's perspective first** — the client is the constrained side. Ask: "What does the client need to know, and how will it receive that information?" If a feature requires data the client doesn't have, the server must explicitly provide it (via delta properties, protocol messages, or lobby initialization). Don't assume that because something is reachable on the server, it's also reachable on the client.
+- **Use stable identifiers for player lookup:** Display names are not stable identifiers — the game engine may transform them (e.g. deduplicating identical names). Use slot indices or GUI type for player identification in network code rather than matching on `Player.getName()`.
+- **Distinguish events from continuous state:** When code runs during network play, ask: "Will this generate network traffic? Is that once, or on every tick?" One-time state transitions (e.g., "player is now waiting") should be sent as a single network event. Locally-derived continuous state (timers, counters, animations) must be computed on each side independently — never stream tick-by-tick updates over the wire. This intentional duplication overrides the general [Search before creating](#general-principles) principle: independent client-side and server-side implementations of the same logic is the correct pattern when sharing would create recurring network traffic.
+
+### Implementation
+- **Preserve message ordering:** The client's `GameClientHandler.beforeCall()` assumes messages arrive in the same sequence as during normal game start. When resending game state (e.g. during reconnection), follow the same message order as `HostedMatch.startGame()` — the client builds local objects (Match, Game, Tracker) based on what previous messages have established. Sending messages out of order causes the client to read uninitialized state and fail silently or throw exceptions.
+- **Reconnection: replay, don't reinvent:** When a client reconnects mid-game, resync by replaying the same sequence of protocol calls the client would have received during normal game start (e.g. `setGameView` then `openView`), followed by replaying the current prompt. Don't create a separate "reconnect protocol" — reuse the existing message types in their expected order.
 - **Delta sync efficiency:** When adding or modifying `TrackableObject` properties, register them in `TrackableProperty` with the correct `TrackableType` so delta tracking picks them up. Failing to do this causes full-state fallbacks that defeat the purpose of delta sync.
-- **Reconnection safety:** Game initialization must follow the sequence: session establishment, then state transmission. Do not send game state before the client has confirmed its session — this causes the client to silently drop packets.
 - **Serialization compatibility:** Changes to objects serialized over the network (anything in `TrackableProperty`, `DeltaPacket`, lobby messages) must maintain backwards compatibility or include version-aware migration logic.
 - **Thread safety:** Network callbacks execute on Netty threads, not the game thread. Access to shared state (e.g., `gameControllers`, `gameView`, tracker collections) from network callbacks must be synchronized or delegated to the game thread via `FThreads.invokeInEdtAndWait()` or equivalent.
 - **Bandwidth awareness:** Prefer delta updates over full state. When adding new data to network packets, consider whether it changes frequently — high-frequency data belongs in delta tracking, not in per-packet headers.
+
+### Verification
 - **Test serialization of new objects:** When adding or modifying objects that may be transmitted over the network (game state, card data, player info), verify they are serializable. Netty will throw `NotSerializableException` at runtime for non-serializable objects — these are easy to miss in local testing but break network play immediately. Run at least one network game (or the `testTrueNetworkTraffic` test) after changing data model classes.
-- **Distinguish events from continuous state:** When code runs during network play, ask: "Will this generate network traffic? Is that once, or on every tick?" One-time state transitions (e.g., "player is now waiting") should be sent as a single network event. Locally-derived continuous state (timers, counters, animations) must be computed on each side independently — never stream tick-by-tick updates over the wire. This intentional duplication overrides the general [Search before creating](#general-principles) principle: independent client-side and server-side implementations of the same logic is the correct pattern when sharing would create recurring network traffic.
 
 ## Testing
 - **Headless CI compatibility:** Test classes must not depend on GUI components (`FOptionPane`, `JOptionPane`, etc.) that fail in headless CI environments. Use headless alternatives or skip GUI-dependent tests in CI.
@@ -61,14 +78,17 @@ This section summarizes recurring themes from PR feedback for quick reference.
 - **Test gating with `skipUnlessStressTestsEnabled()`:** Stress and integration tests (batch tests, multiplayer tests, comprehensive/quick delta sync tests) must call `skipUnlessStressTestsEnabled()` as their first line so they are skipped during CI's default `mvn clean test`. Only pass `-Drun.stress.tests=true` for local validation runs.
 - **Always-run tests:** Unit tests (deck loader, game result, configuration parsing), `testServerStartAndStop`, `testTrueNetworkTraffic`, and `DeltaSyncUnitTest` must NOT be gated — they should always pass in CI without extra flags.
 - **CI checkstyle:** The root `checkstyle.xml` only enforces `RedundantImport` and `UnusedImports`. Fix these before pushing — they will fail the CI build.
+- **Manual network testing shares preferences:** When testing network play locally, both host and client instances read the same preferences file, so they have identical player names. The game engine then deduplicates these names (e.g. "2nd MostCromulent"), which breaks any code matching `Player.getName()` against the original login username. See the [network guideline on player identification](#network-specific-guidelines) — use slot index or GUI type, not names.
 
 ---
 
 ## Architecture Reference
 
-This section provides detailed architectural guidance for the GUI layer. When the decision checklist or red flags below conflict with the general guidelines above, the more specific rule wins.
+When the decision checklist or red flags below conflict with the general guidelines above, the more specific rule wins.
 
-### Inheritance Hierarchy
+### GUI Architecture
+
+#### Inheritance Hierarchy
 
 On the `NetworkPlay` branch (`MostCromulent/forge`):
 
@@ -84,14 +104,14 @@ IGuiGame (interface, forge-gui)
 Note: On upstream master (`Card-Forge/forge`), `NetworkGuiGame` does not exist —
 `CMatchUI` and `NetGuiGame` extend `AbstractGuiGame` directly.
 
-### Layer Responsibilities
+#### Layer Responsibilities
 
-#### `IGuiGame` — Interface Contract (forge-gui)
+##### `IGuiGame` — Interface Contract (forge-gui)
 Defines the method signatures that any GUI implementation must provide. This is the
 contract the game engine programs against. Changes here affect all platforms. No default
 methods — every method must be implemented (or stubbed) by the concrete class.
 
-#### `AbstractGuiGame` — Shared Game-UI State (forge-gui)
+##### `AbstractGuiGame` — Shared Game-UI State (forge-gui)
 Implements `IGuiGame` and `IMayViewCards`. Platform-agnostic state management and
 convenience methods. Contains:
 - Player tracking (current player, local players, game controllers)
@@ -112,12 +132,12 @@ lightweight UI logic that is identical across all platforms *may* live here to a
 duplication (prefer one implementation over two identical copies in subclasses). But if
 the display differs per platform or uses platform APIs, it belongs in a subclass.
 
-#### `NetworkGuiGame` — Network Delta Sync (forge-gui) — NetworkPlay branch only
+##### `NetworkGuiGame` — Network Delta Sync (forge-gui) — NetworkPlay branch only
 Extends `AbstractGuiGame` with network-specific deserialization, delta packet
 application, and tracker state management. All network protocol logic lives here,
 keeping the base class free of network dependencies. Does not exist on upstream master.
 
-#### `CMatchUI` — Desktop Match Screen (forge-gui-desktop)
+##### `CMatchUI` — Desktop Match Screen (forge-gui-desktop)
 The Swing-based desktop implementation. Extends `AbstractGuiGame` (on `NetworkPlay/main`
 it extends `NetworkGuiGame` instead). This is where desktop-specific display logic,
 Swing component management, and screen coordination belong. Implements `ICDoc`
@@ -125,7 +145,7 @@ Swing component management, and screen coordination belong. Implements `ICDoc`
 `CCombat`, `CDependencies`, `CDetailPicture`, `CDev`, `CDock`, `CLog`, `CPrompt`,
 `CStack`).
 
-#### `MatchController` — Mobile Match Screen (forge-gui-mobile)
+##### `MatchController` — Mobile Match Screen (forge-gui-mobile)
 The libgdx-based mobile implementation. On upstream master, `MatchController` supports
 network play via the legacy protocol. On the `NetworkPlay/main` branch, it extends
 `NetworkGuiGame` (same as `CMatchUI`), giving mobile clients delta sync support with
@@ -134,7 +154,7 @@ extends `AbstractGuiGame` directly. Uses the singleton pattern
 (`MatchController.instance`). Mobile-specific display and interaction logic belongs
 here.
 
-#### `V*` Views (forge-gui-desktop: `forge.screens.match.views`)
+##### `V*` Views (forge-gui-desktop: `forge.screens.match.views`)
 Pure Swing UI components (`VField`, `VHand`, `VPrompt`, `VStack`, etc.). Each panel
 view implements `IVDoc<C*>` and defines how a panel *looks* — layout, Swing components,
 rendering. Views hold a reference to their corresponding controller.
@@ -142,7 +162,7 @@ rendering. Views hold a reference to their corresponding controller.
 Note: `VMatchUI` is the top-level match screen view and implements `IVTopLevelUI` (not
 `IVDoc`), so it follows a different pattern from the per-panel views.
 
-#### `C*` Controllers (forge-gui-desktop: `forge.screens.match.controllers`)
+##### `C*` Controllers (forge-gui-desktop: `forge.screens.match.controllers`)
 Per-panel controllers (`CField`, `CHand`, `CPrompt`, `CLog`, etc.). Each implements
 `ICDoc` and manages the behavior of its corresponding `V*` view. Controllers hold a
 reference to `CMatchUI` and their `V*` view.
@@ -150,7 +170,7 @@ reference to `CMatchUI` and their `V*` view.
 Exception: `CDetailPicture` is a composite controller that manages `CDetail` and
 `CPicture` together. It does not itself implement `ICDoc`.
 
-### Where Does My Code Go? — Decision Checklist
+#### Where Does My Code Go? — Decision Checklist
 
 Before adding or modifying GUI code, work through this checklist top-to-bottom.
 The first matching rule wins:
@@ -190,7 +210,7 @@ The first matching rule wins:
 8. **Does it define how a desktop panel looks — layout, Swing components, rendering?**
    The corresponding `V*` view (e.g., `VPrompt`, `VField`, `VLog`).
 
-### Red Flags — Signs You're in the Wrong Layer
+#### Red Flags — Signs You're in the Wrong Layer
 
 Some of these anti-patterns already exist in the codebase as technical debt. Do not add new instances of them.
 
@@ -217,3 +237,85 @@ Some of these anti-patterns already exist in the codebase as technical debt. Do 
 
 - **Moving local-only logic into a shared layer without checking network and side-effect implications.**
   When refactoring code from a subclass into a shared class (`AbstractGuiGame`), check two things: (1) whether the shared layer serializes state changes over the network — what was a harmless local update may become constant network traffic; (2) whether methods in the shared class have side effects that interfere with the new logic (e.g., a display update method that cancels the timer calling it). Trace the full call chain within the class.
+
+### Network Architecture
+
+This section covers the network play infrastructure common to all branches. Branch-specific
+extensions (delta sync, reconnection) are documented in branch notes.
+
+#### Server Lifecycle
+
+`FServerManager` is the server-side singleton that manages the Netty server, client
+connections, and the bridge between the game engine and remote clients.
+
+- **Startup:** `FServerManager.listen()` binds a Netty server socket. When a client
+  connects, `channelActive()` fires and a `RemoteClient` is created, keyed by `Channel`
+  in the `clients` map (`Map<Channel, RemoteClient>`).
+- **Login:** The client sends a `LoginEvent` with username, avatar, and sleeve index.
+  `handleLogin()` calls `ServerGameLobby.connectPlayer()` which fills the first `OPEN`
+  slot, changing it to `REMOTE`.
+- **RemoteClient:** Wraps a Netty `Channel` with the client's username and slot index.
+  The slot index is assigned at login and identifies the player for the lifetime of the
+  connection. `RemoteClient` implements `IToClient` for sending messages.
+
+#### GUI Creation and the guis Map
+
+When a game starts, `GameLobby.startGame()` builds the **guis map**
+(`Map<RegisteredPlayer, IGuiGame>`) — the authoritative mapping from player to GUI:
+
+- For each lobby slot, `ServerGameLobby.getGui(index)` delegates to
+  `FServerManager.getGui(index)`.
+- `LOCAL` slots → `GuiBase.getInterface().getNewGuiGame()` → a new `CMatchUI` (desktop)
+  or `MatchController` (mobile).
+- `REMOTE` slots → `new NetGuiGame(client, index)` — finds the `RemoteClient` matching
+  the slot index.
+- `AI` slots → no GUI entry.
+
+The guis map is stored in `HostedMatch.startMatch()` and never rebuilt during the game.
+`HostedMatch.getGuiForPlayer(Player)` looks up by `player.getRegisteredPlayer()` — this
+uses **identity equality** (Object default), so the `RegisteredPlayer` instance must be
+the same object used as the key, not a copy.
+
+`NetGuiGame` is the server-side proxy: every `IGuiGame` method call is serialized via
+`GameProtocolSender` and sent to the remote client over the Netty channel. It stores its
+`slotIndex` for reliable identification (player names are unreliable — see the
+[stable identifiers guideline](#design)).
+
+#### Protocol Pipeline
+
+Messages flow through the Netty pipeline as serialized Java objects:
+
+```
+Server (game thread)                          Client
+  │                                             │
+  ├─ NetGuiGame.send(method, args)              │
+  │    └─ GameProtocolSender                    │
+  │         └─ RemoteClient.send()              │
+  │              └─ Channel.writeAndFlush()      │
+  │                   ── [Netty wire] ──►        │
+  │                                     GameProtocolHandler.channelRead()
+  │                                       ├─ beforeCall() [IO thread]
+  │                                       └─ method.invoke() [EDT]
+```
+
+**Critical threading detail:** `GameProtocolHandler.channelRead()` calls `beforeCall()`
+synchronously on the Netty IO thread, then dispatches the actual GUI method to the EDT
+via `FThreads.invokeInEdtNowOrLater()`. This means `beforeCall()` for message N+1 can
+execute before the EDT has processed message N's GUI method. Code in `beforeCall()` must
+not read state that is set by a previous message's EDT-dispatched method — use fields set
+within `beforeCall()` itself instead.
+
+Replies (for `sendAndWait` calls like `getChoices`, `confirm`) flow back through the
+`ReplyPool`. The server blocks on `ReplyPool.get()` until the client responds.
+
+#### Client Side
+
+- **`FGameClient`:** Connects to the server, sends `LoginEvent`, manages the Netty
+  channel. Holds references to the local `IGuiGame` and lobby listeners.
+- **`GameClientHandler`:** Extends `GameProtocolHandler<IGuiGame>`. Its `beforeCall()`
+  builds local state that the client needs for display: on `openView`, it creates a local
+  `Match`, `Game`, and `Tracker` from lobby data. These local objects exist only so the
+  client's `CMatchUI` can function — the server remains the source of truth.
+- **Lobby:** `ClientGameLobby` mirrors the server lobby state. The server sends
+  `LobbyUpdateEvent`s to keep it in sync. Slot data (names, decks, avatars) is used by
+  `GameClientHandler` to create `RegisteredPlayer` objects for the local Match.
