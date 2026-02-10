@@ -1,10 +1,10 @@
 package forge.toolbox;
 
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.FontMetrics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -181,6 +181,7 @@ public class FOptionPane extends FDialog {
     public static String showNetworkConnectDialog(final String message, final String title) {
         final Callable<String> showChoice = () -> {
             final Localizer localizer = Localizer.getInstance();
+            final int padding = 10;
 
             // URL input field
             final FTextField txtInput = new FTextField.Builder().text("").build();
@@ -191,7 +192,7 @@ public class FOptionPane extends FDialog {
             final FComboBox<String> cbUpnp = new FComboBox<>(localizedOptions);
             cbUpnp.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2));
             cbUpnp.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
-            cbUpnp.setFont(FSkin.getFont());
+            cbUpnp.setFont(FSkin.getFont(12));
             cbUpnp.setEditable(false);
             cbUpnp.setFocusable(true);
             cbUpnp.setOpaque(true);
@@ -205,44 +206,44 @@ public class FOptionPane extends FDialog {
                     .orElse(localizer.getMessage("lblAsk"));
             cbUpnp.setSelectedItem(selectedLocalized);
 
-            // Build compound panel: input field + hosting section
-            final JPanel panel = new JPanel();
-            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-            panel.setOpaque(false);
+            // Build hosting panel (displayed below the buttons)
+            final JPanel hostingPanel = new JPanel();
+            hostingPanel.setLayout(new BoxLayout(hostingPanel, BoxLayout.Y_AXIS));
+            hostingPanel.setOpaque(false);
 
-            // Input field row
-            txtInput.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(txtInput);
-            panel.add(Box.createVerticalStrut(12));
-
-            // "If hosting:" header
             final SkinnedLabel hostingLabel = new SkinnedLabel(localizer.getMessage("lblIfHosting"));
-            hostingLabel.setFont(FSkin.getBoldFont());
+            hostingLabel.setFont(FSkin.getFont(12));
             hostingLabel.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
             hostingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            panel.add(hostingLabel);
-            panel.add(Box.createVerticalStrut(4));
+            hostingPanel.add(hostingLabel);
+            hostingPanel.add(Box.createVerticalStrut(4));
 
-            // UPnP row
-            final JPanel upnpRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+            final JPanel upnpRow = new JPanel();
+            upnpRow.setLayout(new BoxLayout(upnpRow, BoxLayout.X_AXIS));
             upnpRow.setOpaque(false);
             upnpRow.setAlignmentX(Component.LEFT_ALIGNMENT);
             final SkinnedLabel upnpLabel = new SkinnedLabel(localizer.getMessage("lblUpnpAutoPortForward"));
             upnpLabel.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
-            upnpLabel.setFont(FSkin.getFont());
+            upnpLabel.setFont(FSkin.getFont(12));
             upnpRow.add(upnpLabel);
+            upnpRow.add(Box.createHorizontalStrut(5));
             upnpRow.add(cbUpnp);
-            panel.add(upnpRow);
-            panel.add(Box.createVerticalStrut(4));
+            hostingPanel.add(upnpRow);
+            hostingPanel.add(Box.createVerticalStrut(4));
 
-            // Hyperlink to Network Play wiki
+            // Wiki link with theme-aware color
             final String networkPlayUrl = "https://github.com/Card-Forge/forge/wiki/network-play";
             final String linkLabel = localizer.getMessage("lblNetworkPlayGuideLink");
+            final Color textColor = FSkin.getColor(FSkin.Colors.CLR_TEXT).getColor();
+            final float brightness = (textColor.getRed() * 299 + textColor.getGreen() * 587
+                    + textColor.getBlue() * 114) / 255000f;
+            final String linkHex = brightness > 0.5f ? "#5BA4CF" : "#2563EB";
             final String linkHtml = "<html>" + localizer.getMessage("lblNetworkPlayManualSetup",
-                    "<a href='" + networkPlayUrl + "'>" + linkLabel + "</a>") + "</html>";
-            final JLabel linkText = new JLabel(linkHtml);
+                    "<a style='color: " + linkHex + "; font-weight: bold;' href='" + networkPlayUrl + "'>"
+                    + linkLabel + "</a>") + "</html>";
+            final SkinnedLabel linkText = new SkinnedLabel(linkHtml);
             linkText.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
-            linkText.setFont(FSkin.getFont());
+            linkText.setFont(FSkin.getFont(12));
             linkText.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             linkText.setAlignmentX(Component.LEFT_ALIGNMENT);
             linkText.addMouseListener(new MouseAdapter() {
@@ -255,10 +256,10 @@ public class FOptionPane extends FDialog {
                     }
                 }
             });
-            panel.add(linkText);
+            hostingPanel.add(linkText);
 
-            // Create the dialog
-            final FOptionPane optionPane = new FOptionPane(message, title, null, panel,
+            // Create the dialog with just the text input as component
+            final FOptionPane optionPane = new FOptionPane(message, title, null, txtInput,
                     ImmutableList.of(localizer.getMessage("lblOK"), localizer.getMessage("lblCancel")), -1);
             optionPane.setDefaultFocus(txtInput);
             txtInput.addKeyListener(new KeyAdapter() {
@@ -269,6 +270,13 @@ public class FOptionPane extends FDialog {
                     }
                 }
             });
+
+            // Add hosting panel below the buttons
+            final int gapBelowButtons = padding * 3;
+            optionPane.add(hostingPanel, "newline, x " + padding + ", w 100%-" + (padding * 2) + ", gaptop " + gapBelowButtons);
+            final int extraHeight = hostingPanel.getPreferredSize().height + gapBelowButtons + padding;
+            optionPane.setSize(optionPane.getWidth(), optionPane.getHeight() + extraHeight);
+
             optionPane.setVisible(true);
             final int dialogResult = optionPane.result;
             optionPane.dispose();
