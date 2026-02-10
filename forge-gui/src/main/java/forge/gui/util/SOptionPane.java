@@ -83,6 +83,10 @@ public class SOptionPane {
         return GuiBase.getInterface().showInputDialog(message, title, icon, initialInput, inputOptions, isNumeric);
     }
 
+    public static String showNetworkConnectDialog(final String message, final String title) {
+        return GuiBase.getInterface().showNetworkConnectDialog(message, title);
+    }
+
     private SOptionPane() {
     }
 }

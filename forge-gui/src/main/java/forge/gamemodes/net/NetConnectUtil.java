@@ -30,7 +30,7 @@ public class NetConnectUtil {
     private NetConnectUtil() { }
 
     public static String getServerUrl() {
-        final String url = SOptionPane.showInputDialog(Localizer.getInstance().getMessage("lblOnlineMultiplayerDest"), Localizer.getInstance().getMessage("lblConnectToServer"));
+        final String url = SOptionPane.showNetworkConnectDialog(Localizer.getInstance().getMessage("lblOnlineMultiplayerDest"), Localizer.getInstance().getMessage("lblConnectToServer"));
         if (url == null) { return null; }
 
         //prompt user for player one name if needed

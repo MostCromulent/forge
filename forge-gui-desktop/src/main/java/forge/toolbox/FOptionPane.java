@@ -1,11 +1,18 @@
 package forge.toolbox;
 
 import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Desktop;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.FontMetrics;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
@@ -15,8 +22,12 @@ import javax.swing.text.StyleConstants;
 import com.google.common.collect.ImmutableList;
 
 import forge.gui.FThreads;
+import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.skin.FSkinProp;
+import forge.model.FModel;
 import forge.toolbox.FSkin.SkinImage;
+import forge.toolbox.FSkin.SkinnedLabel;
 import forge.util.Localizer;
 import forge.view.FDialog;
 import forge.view.FView;
@@ -162,6 +173,123 @@ public class FOptionPane extends FDialog {
         try {
             return future.get();
         } catch (final Exception e) { // should be no exception here
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String showNetworkConnectDialog(final String message, final String title) {
+        final Callable<String> showChoice = () -> {
+            final Localizer localizer = Localizer.getInstance();
+
+            // URL input field
+            final FTextField txtInput = new FTextField.Builder().text("").build();
+
+            // UPnP combo box
+            final Map<String, String> upnpMapping = ForgeConstants.getUPnPPreferenceMapping();
+            final String[] localizedOptions = upnpMapping.keySet().toArray(new String[0]);
+            final FComboBox<String> cbUpnp = new FComboBox<>(localizedOptions);
+            cbUpnp.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2));
+            cbUpnp.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
+            cbUpnp.setFont(FSkin.getFont());
+            cbUpnp.setEditable(false);
+            cbUpnp.setFocusable(true);
+            cbUpnp.setOpaque(true);
+
+            // Pre-select current UPnP preference value
+            final String savedValue = FModel.getNetPreferences().getPref(ForgeNetPreferences.FNetPref.UPnP);
+            final String selectedLocalized = upnpMapping.entrySet().stream()
+                    .filter(entry -> entry.getValue().equals(savedValue))
+                    .map(Map.Entry::getKey)
+                    .findFirst()
+                    .orElse(localizer.getMessage("lblAsk"));
+            cbUpnp.setSelectedItem(selectedLocalized);
+
+            // Build compound panel: input field + hosting section
+            final JPanel panel = new JPanel();
+            panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+            panel.setOpaque(false);
+
+            // Input field row
+            txtInput.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(txtInput);
+            panel.add(Box.createVerticalStrut(12));
+
+            // "If hosting:" header
+            final SkinnedLabel hostingLabel = new SkinnedLabel(localizer.getMessage("lblIfHosting"));
+            hostingLabel.setFont(FSkin.getBoldFont());
+            hostingLabel.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
+            hostingLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            panel.add(hostingLabel);
+            panel.add(Box.createVerticalStrut(4));
+
+            // UPnP row
+            final JPanel upnpRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+            upnpRow.setOpaque(false);
+            upnpRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+            final SkinnedLabel upnpLabel = new SkinnedLabel(localizer.getMessage("lblUpnpAutoPortForward"));
+            upnpLabel.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
+            upnpLabel.setFont(FSkin.getFont());
+            upnpRow.add(upnpLabel);
+            upnpRow.add(cbUpnp);
+            panel.add(upnpRow);
+            panel.add(Box.createVerticalStrut(4));
+
+            // Hyperlink to Network Play wiki
+            final String networkPlayUrl = "https://github.com/Card-Forge/forge/wiki/network-play";
+            final String linkLabel = localizer.getMessage("lblNetworkPlayGuideLink");
+            final String linkHtml = "<html>" + localizer.getMessage("lblNetworkPlayManualSetup",
+                    "<a href='" + networkPlayUrl + "'>" + linkLabel + "</a>") + "</html>";
+            final JLabel linkText = new JLabel(linkHtml);
+            linkText.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
+            linkText.setFont(FSkin.getFont());
+            linkText.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            linkText.setAlignmentX(Component.LEFT_ALIGNMENT);
+            linkText.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(final MouseEvent e) {
+                    try {
+                        Desktop.getDesktop().browse(new URI(networkPlayUrl));
+                    } catch (final Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            });
+            panel.add(linkText);
+
+            // Create the dialog
+            final FOptionPane optionPane = new FOptionPane(message, title, null, panel,
+                    ImmutableList.of(localizer.getMessage("lblOK"), localizer.getMessage("lblCancel")), -1);
+            optionPane.setDefaultFocus(txtInput);
+            txtInput.addKeyListener(new KeyAdapter() {
+                @Override
+                public void keyPressed(final KeyEvent e) {
+                    if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                        optionPane.setResult(0);
+                    }
+                }
+            });
+            optionPane.setVisible(true);
+            final int dialogResult = optionPane.result;
+            optionPane.dispose();
+
+            if (dialogResult == 0) {
+                // Save UPnP preference on OK
+                final String selectedUpnp = cbUpnp.getSelectedItem();
+                final String internalValue = upnpMapping.get(selectedUpnp);
+                if (internalValue != null) {
+                    FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.UPnP, internalValue);
+                    FModel.getNetPreferences().save();
+                }
+                return txtInput.getText();
+            }
+            return null;
+        };
+        final FutureTask<String> future = new FutureTask<>(showChoice);
+        FThreads.invokeInEdtAndWait(future);
+        try {
+            return future.get();
+        } catch (final Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }

@@ -66,6 +66,14 @@ public interface IGuiBase {
     float getScreenScale();
     UpnpServiceConfiguration getUpnpPlatformService();
 
+    /**
+     * Show a network connect dialog with UPnP preference and help link below the input field.
+     * Default implementation falls back to a standard input dialog.
+     */
+    default String showNetworkConnectDialog(String message, String title) {
+        return showInputDialog(message, title, null, "", null, false);
+    }
+
     /** Returns true if any currently active game is a network game. */
     boolean hasNetGame();
 }
