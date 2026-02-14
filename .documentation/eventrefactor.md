@@ -1,5 +1,56 @@
 # GameEvent View Refactor Plan
 
+## Table of Contents
+
+1. [Goal](#goal)
+2. [Current State](#current-state)
+   - [Engine Object Usage in Events](#engine-object-usage-in-events)
+   - [Visitor Implementations](#visitor-implementations)
+3. [Strategy: Convenience Constructors](#strategy-convenience-constructors)
+   - [Field Type Changes](#field-type-changes)
+   - [Zone Handling](#zone-handling)
+   - [Mana Handling](#mana-handling)
+   - [Formerly "Server-Only" Events](#formerly-server-only-events-now-included-updated-per-investigation-4)
+4. [CardView Gaps for EventVisualizer](#cardview-gaps-for-eventvisualizer)
+   - [Addressing the Land Sound Gap](#addressing-the-land-sound-gap)
+5. [Implementation Order](#implementation-order)
+   - [Step 1: Foundation](#step-1-foundation)
+   - [Step 2: Simple Events (~27 records)](#step-2-simple-events-27-records)
+   - [Step 3: Complex Events (~20 records)](#step-3-complex-events-20-records)
+   - [Step 4: Visitor Updates](#step-4-visitor-updates)
+   - [Step 5: Network Integration](#step-5-network-integration)
+   - [Step 6: Retire Redundant Protocol Methods](#step-6-retire-redundant-protocol-methods)
+6. [Implementation Order & Dependency](#implementation-order--dependency)
+7. [Risk Analysis](#risk-analysis)
+8. [Testing Strategy](#testing-strategy)
+   - [Per-Step Gate](#per-step-gate)
+   - [New Unit Tests](#new-unit-tests)
+   - [Existing Tests](#existing-tests)
+   - [Manual Network Testing](#manual-network-testing-after-steps-5-and-6)
+   - [Test Scope in the PR](#test-scope-in-the-pr)
+9. [Estimated Scope (Single PR)](#estimated-scope-single-pr)
+10. [Guidelines Compliance](#guidelines-compliance)
+11. [Delta Sync Integration (NetworkPlay/main)](#delta-sync-integration-networkplaymain)
+    - [Architectural Difference: Inheritance Hierarchy](#architectural-difference-inheritance-hierarchy)
+    - [Event Forwarding vs Delta Sync: Parallel Channels](#event-forwarding-vs-delta-sync-parallel-channels)
+    - [Ordering Guarantee](#ordering-guarantee)
+    - [Protocol Method Retirement — Already Aligned](#protocol-method-retirement-step-6--already-aligned)
+    - [New TrackableProperty Entries](#new-trackableproperty-entries-step-1)
+    - [GameEvent extends Serializable](#gameevent-extends-serializable-step-1)
+    - [Subgame Lifecycle Wiring](#subgame-lifecycle-wiring-step-3--investigation-4)
+    - [Pre-Computed Event Fields and Client-Side Log Generation](#pre-computed-event-fields-and-client-side-log-generation)
+    - [Summary: Integration Checklist](#summary-integration-checklist)
+12. [Open Questions](#open-questions)
+13. [Pre-Implementation Investigation](#pre-implementation-investigation)
+    - [Investigation 1: View Class API Audit](#investigation-1-view-class-api-audit--complete)
+    - [Investigation 2: GameLogFormatter Full Audit](#investigation-2-gamelogformatter-full-audit--complete)
+    - [Investigation 3: Protocol Method Data Audit](#investigation-3-protocol-method-data-audit--complete)
+    - [Investigation 4: Formerly-Excluded Event Data Audit](#investigation-4-formerly-excluded-event-data-audit--complete)
+    - [Investigation 5: GameOutcome Serializability](#investigation-5-gameoutcome-serializability--complete)
+    - [Investigation 6: Netty Serialization Round-Trip](#investigation-6-netty-serialization-round-trip--complete)
+
+---
+
 ## Goal
 
 Make **all** `GameEvent` subclasses network-serializable by replacing engine object references (`Card`, `Player`, `SpellAbility`, `Zone`) with their serializable view counterparts (`CardView`, `PlayerView`, `SpellAbilityView`, `ZoneType`). This enables forwarding raw game events to network clients, allowing each client to process events locally using its own `IGameEventVisitor` implementations, settings, and locale.
