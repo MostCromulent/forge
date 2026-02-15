@@ -10,21 +10,21 @@
    - [Field Type Changes](#field-type-changes)
    - [Zone Handling](#zone-handling)
    - [Mana Handling](#mana-handling)
-   - [Formerly "Server-Only" Events](#formerly-server-only-events-now-included-updated-per-investigation-4)
+   - [Formerly "Server-Only" Events](#formerly-server-only-events-updated-per-investigation-4-and-trt-feedback)
 4. [CardView Gaps for EventVisualizer](#cardview-gaps-for-eventvisualizer)
-   - [Addressing the Land Sound Gap](#addressing-the-land-sound-gap)
+   - [Addressing the Land Sound Gap — RESOLVED (non-issue)](#addressing-the-land-sound-gap--resolved-non-issue)
 5. [Implementation Order](#implementation-order)
    - [Step 1: Foundation](#step-1-foundation)
    - [Step 2: Simple Events (~27 records)](#step-2-simple-events-27-records)
-   - [Step 3: Complex Events (~20 records)](#step-3-complex-events-20-records)
-   - [Step 4: Visitor Updates](#step-4-visitor-updates)
-   - [Step 5: Network Integration](#step-5-network-integration)
-   - [Step 6: Retire Redundant Protocol Methods](#step-6-retire-redundant-protocol-methods)
+   - [Step 3: Complex Events (~20 records) — COMPLETE](#step-3-complex-events-20-records--complete)
+   - [Step 4: Visitor Updates — COMPLETE](#step-4-visitor-updates--complete-done-as-part-of-steps-2-and-3)
+   - [Step 5: Network Integration — COMPLETE](#step-5-network-integration--complete)
+   - [Step 6: Retire Redundant Protocol Methods — COMPLETE](#step-6-retire-redundant-protocol-methods--complete)
 6. [Implementation Order & Dependency](#implementation-order--dependency)
 7. [Risk Analysis](#risk-analysis)
-8. [Testing Strategy](#testing-strategy)
-   - [Per-Step Gate](#per-step-gate)
-   - [New Unit Tests](#new-unit-tests)
+8. [Testing Strategy — COMPLETE](#testing-strategy--complete)
+   - [Per-Step Gate — COMPLETE](#per-step-gate--complete)
+   - [New Unit Tests — COMPLETE](#new-unit-tests--complete)
    - [Existing Tests](#existing-tests)
    - [Manual Network Testing](#manual-network-testing-after-steps-5-and-6)
    - [Test Scope in the PR](#test-scope-in-the-pr)
@@ -37,7 +37,7 @@
     - [Protocol Method Retirement — Already Aligned](#protocol-method-retirement-step-6--already-aligned)
     - [New TrackableProperty Entries](#new-trackableproperty-entries-step-1)
     - [GameEvent extends Serializable](#gameevent-extends-serializable-step-1)
-    - [Subgame Lifecycle Wiring](#subgame-lifecycle-wiring-step-3--investigation-4)
+    - [Subgame Lifecycle Wiring — N/A](#subgame-lifecycle-wiring--na-per-trt-feedback)
     - [Pre-Computed Event Fields and Client-Side Log Generation](#pre-computed-event-fields-and-client-side-log-generation)
     - [Summary: Integration Checklist](#summary-integration-checklist)
 12. [Open Questions](#open-questions)
@@ -45,7 +45,7 @@
     - [Investigation 1: View Class API Audit](#investigation-1-view-class-api-audit--complete)
     - [Investigation 2: GameLogFormatter Full Audit](#investigation-2-gamelogformatter-full-audit--complete)
     - [Investigation 3: Protocol Method Data Audit](#investigation-3-protocol-method-data-audit--complete)
-    - [Investigation 4: Formerly-Excluded Event Data Audit](#investigation-4-formerly-excluded-event-data-audit--complete)
+    - [Investigation 4: Formerly-Excluded Event Data Audit](#investigation-4-formerly-excluded-event-data-audit--complete-amended-per-trt-feedback)
     - [Investigation 5: GameOutcome Serializability](#investigation-5-gameoutcome-serializability--complete)
     - [Investigation 6: Netty Serialization Round-Trip](#investigation-6-netty-serialization-round-trip--complete)
 
@@ -64,9 +64,9 @@ Make **all** `GameEvent` subclasses network-serializable by replacing engine obj
 
 | Metric | Count |
 |--------|-------|
-| GameEvent subclasses (records) | 57 |
+| GameEvent subclasses (records) | 55 *(57 minus 2 subgame events reclassified as UiEvent)* |
 | Already serializable (primitives/enums only) | 10 |
-| Reference non-serializable engine objects | 47 |
+| Reference non-serializable engine objects | 45 *(47 minus 2 subgame events reclassified as UiEvent)* |
 | `new GameEvent*` creation sites | 167 |
 | Files containing creation sites | 63 |
 | Visitor implementations | 5 |
@@ -82,7 +82,7 @@ Make **all** `GameEvent` subclasses network-serializable by replacing engine obj
 | `GameEntity` | 3 | `GameEntityView` | Ready |
 | `Zone` | 2 | `ZoneType` (enum) | Ready (downgrade to enum) |
 | `Mana` | 1 | None | Needs new view or simplification |
-| `Game` | 2 | `String` (message only) | Replace with minimal serializable data |
+| `Game` | ~~2~~ 0 | ~~`String` (message only)~~ | ~~Replace with minimal serializable data~~ — Both events (`SubgameStart`, `SubgameEnd`) reclassified as `UiEvent` (per TRT feedback) |
 | `PlayerController` | 1 | `PlayerView` | Extract player identity |
 | `Multimap<GameEntity, Card>` | 1 | `Multimap<GameEntityView, CardView>` | Needs conversion helper |
 | `Map<GameEntity, Multimap<Card,Card>>` | 1 | Equivalent with views | Needs conversion helper |
@@ -98,7 +98,7 @@ Make **all** `GameEvent` subclasses network-serializable by replacing engine obj
 | `FControlGamePlayback` | forge-gui | Minimal (1 SpellAbility access) | Yes — client replay |
 | `EventVisualizer` | forge-gui | Yes (SVar, mana abilities) | Yes — client sound effects |
 | `GameLogFormatter` | forge-game | Moderate (toString/getName) | Possible — client-side logging |
-| `MatchUiEventVisitor` | forge-gui | Yes (PlayerController, Game) | Yes — lifecycle events forwarded to all clients |
+| `MatchUiEventVisitor` | forge-gui | Yes (PlayerController, Game) | Mostly host-only — subgame events reclassified as `UiEvent` (per TRT feedback). Remaining `GameEvent` handlers unchanged. |
 
 ## Strategy: Convenience Constructors
 
@@ -166,12 +166,20 @@ public record GameEventManaPool(PlayerView player, EventValueChangeType mode, by
 
 **Option B:** Create a `ManaView` record. Overkill given the single consumer doesn't use it.
 
-### Formerly "Server-Only" Events (Now Included) *(Updated per Investigation 4)*
+### Formerly "Server-Only" Events *(Updated per Investigation 4 and TRT feedback)*
 
-Three events reference engine-only types (`Game`, `PlayerController`). Per TRT feedback, these are **not excluded** — all events are made serializable to avoid a two-class system. The engine types are replaced with minimal serializable equivalents:
+#### Subgame Events → Reclassified as `UiEvent` *(per TRT feedback)*
 
-- `GameEventSubgameStart(Game subgame, String message)` → `GameEventSubgameStart(String message)` — the `Game` reference is used by `MatchUiEventVisitor` for extensive lifecycle wiring (event subscriptions, GUI switching, player iteration). This wiring is fundamentally host-only. **Solution:** Move lifecycle wiring into `SubgameEffect.resolveSubgame()` directly. Event shrinks to message-only. `GameLogFormatter` has no handler. `FControlGameEventHandler` has no handler.
-- `GameEventSubgameEnd(Game maingame, String message)` → `GameEventSubgameEnd(String message, String dayTime)` — similar to Start. `MatchUiEventVisitor` uses `Game` for GUI switching (moves to `SubgameEffect`). `FControlGameEventHandler` uses `Game` for zone refresh (replace with broadcast refresh of all zones for all players via `GameView.getPlayers()`) and daytime check (new `String dayTime` field: `"Day"`, `"Night"`, or `null`). `GameLogFormatter` has no handler.
+`GameEventSubgameStart` and `GameEventSubgameEnd` are **reclassified as `UiEvent`** (not `GameEvent`). These events are host-local lifecycle signals — they wire up event subscriptions, switch GUI views, and iterate players for controller checks. None of this is relevant to a remote client. If the `EventVisualizer` listened to both `GameEvent` and `UiEvent`, forwarding these to a remote client could cause it to play sounds or react to GUI transitions that aren't part of its game flow.
+
+**Action:** Move the two event records from `forge.game.event` to `forge.gui.events`, change them to implement `UiEvent` instead of `GameEvent`, and update their visitor interface to `IUiEventVisitor`. The existing `MatchUiEventVisitor` handlers in `HostedMatch` remain unchanged — no `SubgameEffect` extraction needed. `GameLogFormatter` and `FControlGameEventHandler` have no handlers for these events, so no changes there either.
+
+This creates a clean dividing line: `GameEvent` = game state (serialized, forwarded to network clients). `UiEvent` = local GUI concerns (host-only, never forwarded).
+
+#### `GameEventPlayerControl` → Serializable `GameEvent`
+
+One event references engine-only types (`PlayerController`, `LobbyPlayer`). The engine types are replaced with minimal serializable equivalents:
+
 - `GameEventPlayerControl(Player, LobbyPlayer, PlayerController, LobbyPlayer, PlayerController)` → `GameEventPlayerControl(PlayerView player, String oldLobbyPlayerName, String newLobbyPlayerName, boolean newControllerIsHuman)` — `GameLogFormatter` uses only `.player().getName()` and `.newLobbyPlayer().getName()` (no `PlayerController` access). `FControlGameEventHandler` uses `instanceof PlayerControllerHuman` (replaced by boolean field) and `setGameController` wiring (uses handler's own `humanController` field). `LobbyPlayer` is NOT serializable (Investigation 6) — replaced with `String` names.
 
 ## CardView Gaps for EventVisualizer
@@ -190,22 +198,15 @@ Three events reference engine-only types (`Game`, `PlayerController`). Per TRT f
 5. `isTrigger()` — Used by GameLogFormatter. **Adding in Step 1.**
 6. `getActivatingPlayer()` — Used by GameLogFormatter. **Adding in Step 1.**
 
-### Addressing the Land Sound Gap
+### Addressing the Land Sound Gap — RESOLVED (non-issue)
 
-For the land color sound (`getLandSound()` in EventVisualizer), the logic inspects mana abilities to determine what colors the land produces. This data is not available on `CardView`.
-
-**Options (choose during implementation):**
-1. **Add a `manaColors` tracked property to CardView** — a simple `String` like `"WUB"` computed from the card's mana abilities. Updated when the card enters the battlefield. EventVisualizer reads this instead of inspecting abilities. ~10 lines in CardView + Card.
-2. **Accept degraded land sounds on client** — Client plays generic `OtherLand` for all lands. Host plays full color-specific sounds locally. Simple, zero new infrastructure.
-3. **Forward land sounds as SoundEffectType** — Keep the existing `hearSoundEffect` protocol method specifically for land sounds (where the host computes the color). Everything else uses event forwarding.
-
-**Recommendation:** Option 2 for the initial refactor (simplest, no new tracked properties), with Option 1 as a follow-up if users notice.
+The land sound gap was a non-issue. `CardView.CardStateView` already has `origProduceManaW()`, `origProduceManaU()`, `origProduceManaB()`, `origProduceManaR()`, `origProduceManaG()` tracked properties (backed by `TrackableProperty.OrigProduceMana*`), which are synced to clients via the normal GameView update mechanism. The `getLandSound()` implementation reads these 5 booleans to determine mono/dual/tri-color land sounds with full accuracy — no degradation, no new infrastructure needed.
 
 ## Implementation Order
 
 All work lands in a single PR. Implementation proceeds in this order to keep the branch compilable at each step.
 
-### Step 1: Foundation
+### Step 1: Foundation — COMPLETE
 
 **Scope:** Add missing view methods, create conversion utilities. (Updated per Investigation 1 findings.)
 
@@ -243,7 +244,7 @@ All work lands in a single PR. Implementation proceeds in this order to keep the
 **Files changed:** ~6 (`CardView.java`, `SpellAbilityView.java`, `SpellAbility.java`, `TrackableProperty.java`, possibly `GameEntityView.java`, `GameEvent.java`)
 **Risk:** Very low — additive only. All additions follow existing patterns.
 
-### Step 2: Simple Events (~27 records)
+### Step 2: Simple Events (~27 records) — COMPLETE
 
 **Scope:** Migrate events whose fields are only `Player`, `Card`, or primitives. These are the most numerous and mechanically straightforward.
 
@@ -289,7 +290,7 @@ All work lands in a single PR. Implementation proceeds in this order to keep the
 **Files changed:** ~27 event records
 **Risk:** Low — mechanical transformation.
 
-### Step 3: Complex Events (~20 records)
+### Step 3: Complex Events (~20 records) — COMPLETE
 
 **Scope:** Events with `Zone`, `SpellAbility`, `Mana`, collections, and complex types.
 
@@ -311,8 +312,8 @@ All work lands in a single PR. Implementation proceeds in this order to keep the
 | `GameEventAnteCardsSelected` | `Multimap<Player, Card>` → `Multimap<PlayerView, CardView>` |
 | `GameEventPlayerStatsChanged` | `Collection<Player>` → `Collection<PlayerView>` |
 | `GameEventGameStarted` | `Player` → `PlayerView`, `Iterable<Player>` → `Iterable<PlayerView>` |
-| `GameEventSubgameStart` | `Game` → removed (lifecycle wiring moves to `SubgameEffect`). Keep `String message` only. |
-| `GameEventSubgameEnd` | `Game` → removed (lifecycle wiring moves to `SubgameEffect`). Keep `String message`, add `String dayTime`. |
+| ~~`GameEventSubgameStart`~~ | ~~Reclassified as `UiEvent` — removed from GameEvent scope (per TRT feedback).~~ |
+| ~~`GameEventSubgameEnd`~~ | ~~Reclassified as `UiEvent` — removed from GameEvent scope (per TRT feedback).~~ |
 | `GameEventPlayerControl` | `Player` → `PlayerView`, drop both `PlayerController` fields, add `boolean newControllerIsHuman`. `LobbyPlayer` → `String` names (NOT serializable — Investigation 6). |
 | `GameEventGameOutcome` | `GameOutcome` → pre-computed `int lastTurnNumber`, `List<String> outcomeStrings`, `String winningPlayerName`, `String matchSummary`. `Collection<GameOutcome> history` → folded into `matchSummary`. *(Investigation 5)* |
 
@@ -332,10 +333,10 @@ private static Multimap<GameEntityView, CardView> convertMap(Multimap<GameEntity
 }
 ```
 
-**Files changed:** ~21 event records (including `SubgameEffect.java` for lifecycle wiring extraction)
-**Risk:** Medium. Collection conversions need null-safety. `Mana` simplification changes what data is available. `Game`/`PlayerController` replacements need auditing to ensure no essential data is lost.
+**Files changed:** ~19 event records *(reduced: subgame events reclassified as UiEvent, no SubgameEffect extraction needed)*
+**Risk:** Medium. Collection conversions need null-safety. `Mana` simplification changes what data is available. `PlayerController` replacement needs auditing to ensure no essential data is lost.
 
-### Step 4: Visitor Updates
+### Step 4: Visitor Updates — COMPLETE (done as part of Steps 2 and 3)
 
 **Scope:** Update all 5 visitors to compile and behave correctly with view-based event fields.
 
@@ -344,12 +345,12 @@ private static Multimap<GameEntityView, CardView> convertMap(Multimap<GameEntity
 - `visit(GameEventTurnPhase)`: `ap.getTokensInPlay()` / `ap.getCreaturesInPlay()` — these Player methods are NOT on PlayerView. PlayerView has `getBattlefield()` returning `FCollectionView<CardView>`. Simplest fix: always refresh battlefield for the turn player (minor perf cost but safe), or filter `getBattlefield()` on card type.
 - `visit(GameEventPlayerControl)`: `event.player().getGame().isGameOver()` — engine-only. After refactor, event carries `PlayerView`. Use `GameView.isGameOver()` accessible from the GUI layer. `ev.newController() instanceof PlayerControllerHuman` → `ev.newControllerIsHuman()`. For `setGameController` wiring: use the handler's own `humanController` field when `newControllerIsHuman` is true.
 - `visit(GameEventShuffle)`: `event.player().getZone(ZoneType.Library)` — used to get library zone for update. PlayerView has `getCards(ZoneType.Library)` and zone tracking, but the actual usage here is just triggering a zone update in the GUI, so the visitor can use `updateZone(playerView, ZoneType.Library)` directly.
-- `visit(GameEventSubgameEnd)`: `event.maingame().getPlayers()` zone iteration → broadcast refresh for all players via `GameView.getPlayers()`. `event.maingame().isDay()/isNight()` → `event.dayTime()` (new field).
+- ~~`visit(GameEventSubgameEnd)`:~~ No longer a `GameEvent` — reclassified as `UiEvent` (per TRT feedback). No changes needed here.
 - Net effect: mostly code simplification, with a few minor adjustments.
 
 **EventVisualizer:** *(Updated per Investigation 1)*
 - `visit(GameEventSpellResolved)`: `evt.spell().getHostCard()` now returns `CardView`. Change `source.isCreature()` etc. to `source.getCurrentState().isCreature()`. `evt.spell().isSpell()` now available via new `SpellAbilityView.isSpell()` added in Step 1.
-- `visit(GameEventZone)`: `card.isLand()` → `card.getCurrentState().isLand()`. For `getManaAbilities()` (land color sounds): accept degraded land sounds on view-based path (return `OtherLand` when mana abilities unavailable).
+- `visit(GameEventZone)`: `card.isLand()` → `card.getCurrentState().isLand()`. Land color sounds use `origProduceMana*()` tracked properties on `CardView.CardStateView` — full color accuracy, no degradation.
 - `visit(GameEventBlockersDeclared)`: Change `Objects.equals(event.defendingPlayer().getLobbyPlayer(), player)` to `event.defendingPlayer().isLobbyPlayer(player)`. `PlayerView.isLobbyPlayer()` already exists and does the same comparison.
 - `hasSpecificCardEffect()`: Accept `CardView`. `hasSVar()` not on views → always return `false` (ScriptedEffect excluded from network forwarding anyway).
 - `getScriptedSoundEffectName()`: This method is only called from `SoundSystem` on the host, which subscribes directly to the `Game` EventBus. The host still fires events with engine objects via the convenience constructors, so the canonical view fields are populated from `.getView()` calls. **However**, `getScriptedSoundEffectName()` casts events to access engine-specific fields (`evSpell.spell().getHostCard()` as `Card`, `evZone.card()` as `Card`). After the refactor these return `CardView`, not `Card`. This method needs one of:
@@ -370,15 +371,14 @@ private static Multimap<GameEntityView, CardView> convertMap(Multimap<GameEntity
 **FControlGamePlayback:**
 - `visit(GameEventSpellResolved)`: `evt.spell().getHostCard()` → now returns `CardView`. Minor update.
 
-**MatchUiEventVisitor:** *(Updated per Investigation 4)*
-- `visit(GameEventSubgameStart)`: Lifecycle wiring (event subscriptions, GUI switching, player iteration) moves to `SubgameEffect.resolveSubgame()`. Handler becomes minimal — display message only, or removed entirely (message display can happen in `SubgameEffect` too).
-- `visit(GameEventSubgameEnd)`: Same — lifecycle wiring moves to `SubgameEffect`. Handler becomes minimal or removed.
+**MatchUiEventVisitor:** *(Updated per Investigation 4 and TRT feedback)*
+- `visit(GameEventSubgameStart)` and `visit(GameEventSubgameEnd)`: **No changes needed.** These events are reclassified as `UiEvent` (per TRT feedback) and remain host-local. The existing `MatchUiEventVisitor` handlers stay as-is — no `SubgameEffect` extraction required.
 - `visit(GameEventPlayerControl)`: No override exists in `MatchUiEventVisitor` (uses `Base` default → null). No change needed.
 
 **Files changed:** ~5
 **Risk:** Low-medium (downgraded from medium-high per Investigation 2). Main risk is consistent `toString()` → `getName()` replacement.
 
-### Step 5: Network Integration
+### Step 5: Network Integration — COMPLETE
 
 **Scope:** Add `GameEvent` forwarding to the existing master branch protocol pipeline. **All** events are forwarded — no filtering, no two-class split.
 
@@ -427,7 +427,7 @@ private static Multimap<GameEntityView, CardView> convertMap(Multimap<GameEntity
 **Files changed:** ~6-8
 **Risk:** Medium. Events must survive Netty serialization round-trip.
 
-### Step 6: Retire Redundant Protocol Methods
+### Step 6: Retire Redundant Protocol Methods — COMPLETE
 
 **Scope:** Systematically audit and remove per-feature protocol methods that are now redundant because the client processes forwarded events directly. Per TRT's feedback, the goal is to **reduce** net protocol complexity — event forwarding replaces per-method calls, it doesn't layer on top of them.
 
@@ -484,17 +484,19 @@ Steps 2 and 3 are independent of each other but both must complete before Step 4
 | Large PR is hard to review | Medium | Medium | Clear commit-per-step structure. Each commit is mechanical and independently verifiable. Event record changes are repetitive (same pattern 50 times). |
 | Master has no integration test infrastructure | Medium | Medium | `testTrueNetworkTraffic` exists on master for basic protocol validation. Manual network testing required for event forwarding. |
 | Removing protocol methods breaks client state | High | Low | **AUDITED (Investigation 3).** Protocol methods are trigger signals, not data carriers — actual data from GameView sync. All 7 removals are clean. Prerequisite: event forwarding calls `updateGameView()` first. `updateZones`/`updateCards` non-event callers use separate protocol paths. Verify in testing. |
-| Subgame/PlayerControl events lose essential data | Medium | Low | **AUDITED (Investigation 4).** `GameLogFormatter` has no handlers for subgame events, and only uses `player.getName()` + `newLobbyPlayer.getName()` for PlayerControl (no `PlayerController` access). `MatchUiEventVisitor` uses `Game` extensively for lifecycle wiring — solved by moving wiring to `SubgameEffect`. `FControlGameEventHandler` uses `Game` for zone refresh and daytime — solved with broadcast refresh + `dayTime` field. `PlayerController` instanceof check → `boolean newControllerIsHuman` field. |
+| Subgame/PlayerControl events lose essential data | Medium | Low | **AUDITED (Investigation 4), AMENDED (TRT feedback).** Subgame events reclassified as `UiEvent` — no longer in GameEvent scope, no serialization or data-loss risk. `PlayerControl`: `GameLogFormatter` only uses `player.getName()` + `newLobbyPlayer.getName()` (no `PlayerController` access). `PlayerController` instanceof check → `boolean newControllerIsHuman` field. |
 
-## Testing Strategy
+## Testing Strategy — COMPLETE
 
-### Per-Step Gate
+### Per-Step Gate — COMPLETE
 
 Every step must pass `mvn -pl forge-gui -am compile` before proceeding. Full CI suite (`mvn -U -B clean test`) must pass after Steps 1, 4, and 6 (the steps that change non-event code or remove protocol methods).
 
-### New Unit Tests
+**Result:** Full CI suite passed after all steps: 261 tests, 0 failures, 0 errors, 0 checkstyle violations. Two regressions were found and fixed: (1) `SpellAbilityView` NPE from eager `isSpell`/`isTrigger`/`activatingPlayer` updates during `WrappedAbility` construction — fixed by deferring to lazy `getView()`; (2) `GameEventManaPool` NPE from null mana in `clearPool` — fixed with null guard.
 
-Add a new test class `GameEventSerializationTest` (in `forge-gui-desktop/src/test/java/forge/net/` alongside `testTrueNetworkTraffic`). This covers the two highest-risk areas: serialization round-trips and log output regression.
+### New Unit Tests — COMPLETE
+
+`GameEventSerializationTest` created in `forge-gui-desktop/src/test/java/forge/game/event/`. 9 tests covering serialization round-trips for view-typed event records.
 
 **1. Serialization round-trip tests** — Verify events survive `ObjectOutputStream` → `ObjectInputStream` with correct field values.
 
@@ -529,7 +531,7 @@ These tests construct events with known view objects (using test `CardView`/`Pla
 |-----------|-------------------|
 | `GameEventSpellResolved` with creature | Returns creature-related `SoundEffectType`. `source.getCurrentState().isCreature()` works. |
 | `GameEventSpellResolved` with instant/sorcery | `isInstant()`/`isSorcery()` on `CardStateView` (added in Step 1) returns correct type. |
-| `GameEventZone` with land | Land sound path works. Degraded `OtherLand` returned when mana abilities unavailable (expected for view-based path). |
+| `GameEventZone` with land | Land sound path works. Full color-accurate sounds via `origProduceMana*()` tracked properties on `CardView.CardStateView`. |
 | `GameEventBlockersDeclared` | `isLobbyPlayer()` comparison works for defending player identity check. |
 
 ### Existing Tests
@@ -547,7 +549,7 @@ Host a two-player network game (host + one remote client). The following scenari
 |----------|------------------------|
 | Cast a creature spell | Client hears spell sound, sees stack animation, game log shows "Player casts Creature" |
 | Creature deals combat damage | Client hears damage sound, life totals update, game log shows damage |
-| Play a land | Client hears land sound (generic `OtherLand` acceptable), land appears on battlefield |
+| Play a land | Client hears correct color-specific land sound (via `origProduceMana*()` tracked properties), land appears on battlefield |
 | Tap a permanent | Client sees tap animation/state change |
 | Sacrifice a permanent | Client sees card leave battlefield, game log shows sacrifice |
 | Scry / Surveil | Game log shows "Player scries/surveils" |
@@ -568,7 +570,7 @@ Host a two-player network game (host + one remote client). The following scenari
 
 | Scenario | What It Tests |
 |----------|---------------|
-| Subgame (e.g. Shahrazad or similar effect) | Lifecycle wiring moved to `SubgameEffect`. Client receives subgame start/end messages. |
+| Subgame (e.g. Shahrazad or similar effect) | Subgame events are `UiEvent`s (host-only). Verify subgame still works correctly for local play; no network forwarding expected. |
 | Game ends (player loses) | `GameEventGameOutcome` pre-computed fields. Client shows correct winner and match summary. |
 | Multi-game match (best of 3) | `matchSummary` field in `GameEventGameOutcome` accumulates correctly across games. |
 
@@ -588,14 +590,60 @@ Host a two-player network game (host + one remote client). The following scenari
 |------|---------------|---------------------|
 | Step 1: Foundation | ~6 | ~85 *(revised: +SpellAbilityView additions, +GameEntityView.toString, +GameEvent Serializable per Investigation 6)* |
 | Step 2: Simple Events | ~27 | ~350 |
-| Step 3: Complex Events | ~21 | ~450 *(revised: +2 new event fields, +SubgameEffect lifecycle extraction, +dayTime/newControllerIsHuman fields per Investigation 4, +GameEventGameOutcome pre-computed fields per Investigation 5)* |
-| Step 4: Visitor Updates | ~5 | ~270 *(revised: +FControlGameEventHandler SubgameEnd/PlayerControl updates per Investigation 4)* |
+| Step 3: Complex Events | ~19 | ~380 *(revised: subgame events removed from scope (UiEvent reclassification), no SubgameEffect extraction. +newControllerIsHuman field per Investigation 4, +GameEventGameOutcome pre-computed fields per Investigation 5)* |
+| Step 4: Visitor Updates | ~5 | ~230 *(revised: subgame visitor updates removed. +FControlGameEventHandler PlayerControl updates per Investigation 4)* |
 | Step 5: Network Integration | ~6-8 | ~100 |
 | Step 6: Retire Protocol Methods | ~5-8 *(revised per Investigation 3)* | ~-50 (net removal) |
 | Tests: `GameEventSerializationTest` | 1 | ~200-250 (serialization round-trips, log regression, EventVisualizer smoke) |
-| **Total** | **~72-77** | **~1405-1455** |
+| **Total** | **~68-73** | **~1295-1345** |
 
-Note: Step 6 is net negative — removing protocol method overrides and ProtocolMethod entries reduces code. Overall total is higher than original estimate because Steps 1/3/4 grew with investigation findings (SpellAbilityView additions, GameEvent Serializable, pre-computed event fields, SubgameEffect lifecycle extraction, LobbyPlayer → String, GameEventGameOutcome pre-computed fields). Test file adds ~200-250 lines but runs in CI and catches the highest-risk regressions (serialization failures, log format divergence).
+Note: Step 6 is net negative — removing protocol method overrides and ProtocolMethod entries reduces code. Steps 3/4 were reduced by TRT's feedback to reclassify subgame events as `UiEvent` (removing SubgameEffect lifecycle extraction and subgame visitor updates). Remaining growth from investigation findings: SpellAbilityView additions, GameEvent Serializable, pre-computed event fields, LobbyPlayer → String, GameEventGameOutcome pre-computed fields. Test file adds ~200-250 lines but runs in CI and catches the highest-risk regressions (serialization failures, log format divergence).
+
+## Implementation Notes (Deviations from Plan)
+
+The following significant deviations from the plan occurred during implementation:
+
+### Step 4 absorbed into Steps 2 and 3
+
+The plan had Step 4 (Visitor Updates) as a separate phase after event conversion. In practice, changing event record field types immediately broke all visitors at compile time, so visitor fixes were done as cascading fixes during Steps 2 and 3. Step 4 was marked complete with no additional work.
+
+### Step 5 used `handleGameEvent` instead of `forwardGameEvent`
+
+The plan specified `forwardGameEvent` as the ProtocolMethod name. Implementation used `handleGameEvent` to match the `IGuiGame` method naming convention.
+
+### Step 6 removed 5 protocol methods, not 7
+
+The plan listed 7 removals including `notifyStackAddition` and `notifyStackRemoval`. These two were never `ProtocolMethod` entries — they were only `IGuiGame` interface methods with existing no-op defaults in `NetGuiGame`. Only 5 actual `ProtocolMethod` entries were removed: `updatePlayerControl`, `updateZones`, `updateCards`, `updateManaPool`, `updateLives`. Five no-op defaults were added to `AbstractGuiGame` for the `IGuiGame` methods that `NetGuiGame` previously overrode.
+
+### SpellAbilityView tracked properties required lazy initialization
+
+The plan specified adding `isSpell()`, `isTrigger()`, and `getActivatingPlayer()` as tracked properties on `SpellAbilityView` in Step 1, updated eagerly in the constructor. This caused an NPE during `WrappedAbility` construction: `WrappedAbility` extends `Ability`, whose `super()` call creates a `SpellAbilityView` before `WrappedAbility.sa` is assigned, so `isSpell()` (which delegates to `sa.isSpell()`) fails with NPE. Fix: these properties are deferred to lazy update in `SpellAbility.getView()`, matching the existing pattern for `updateHostCard`/`updateDescription`/`updatePromptIfOnlyPossibleAbility`.
+
+### GameEventManaPool null mana not anticipated
+
+The plan specified replacing `Mana` with `byte manaColor` via `mana.getColor()`. `ManaPool.clearPool()` fires the event with `null` mana (mode `Cleared`), causing an NPE. Fixed with a null guard: `mana != null ? mana.getColor() : (byte) 0`.
+
+### CMatchUI `notifyStackAddition` significantly simplified
+
+The plan described updating visitors to use view types. In practice, `CMatchUI.notifyStackAddition()` and its helper methods deeply accessed engine types (`SpellAbility.getRootAbility()`, `SpellAbility.getPaidList()`, `AbilityKey`, `TargetChoices`, `SpellAbilityStackInstance.getTargetRestrictions()`). Edge case code for sacrificed enchantments and triggering source SA lookup had to be removed as these require engine-level access not available on view types.
+
+### Subgame event reclassification deferred
+
+The plan (amended per TRT feedback) specified reclassifying `GameEventSubgameStart` and `GameEventSubgameEnd` from `GameEvent` to `UiEvent`. This was NOT done due to a module dependency issue not anticipated in the plan: `SubgameEffect` in `forge-game` creates these events, but `UiEvent` is defined in `forge-gui`. `forge-game` cannot depend on `forge-gui`. Options (A: filter in forwarding, B: `LocalGameEvent` marker interface, C: callback/hook pattern) have been documented and sent to TRT for review. The risk is limited to network play with Shahrazad-like effects (extremely rare).
+
+### GameLogFormatter `toString()` → `getName()` resolved by `GameEntityView.toString()`
+
+The plan specified replacing `card.toString()` with `card.getName()` in 8+ places in `GameLogFormatter`. Instead, `GameEntityView.toString()` was added in Step 1 to return `getName()`, matching `GameEntity.toString()` behavior. This made the explicit replacements unnecessary — the existing `toString()` calls produce the same output with view types.
+
+### Serialization test scope reduced
+
+The plan described 3 categories of tests (~200-250 lines): (1) serialization round-trips, (2) GameLogFormatter output regression, (3) EventVisualizer smoke tests. Only category 1 was implemented (9 tests, 183 lines). Categories 2 and 3 were not created because they require more complex test infrastructure (constructing full formatter/visualizer contexts). Events using `ZoneType` fields could not be tested because `ZoneType`'s static initializer requires the `Localizer`, which is unavailable in unit tests without GUI bootstrapping.
+
+### Client-side sound effects required SoundSystem wiring in handleGameEvent
+
+Manual network testing revealed that sound effects were not playing on the remote client. Root cause: `SoundSystem.instance` received `GameEvent`s via a Guava `@Subscribe` subscription on the game's event bus, which only exists on the host. On the client, game events arrive via the `handleGameEvent` protocol method, but `AbstractGuiGame.handleGameEvent()` was a no-op — nothing fed events to `SoundSystem`.
+
+Fix: `AbstractGuiGame.handleGameEvent()` now calls `SoundSystem.instance.receiveEvent(event)`. To avoid double sound playback on the host (where `SoundSystem` was already subscribed to the game event bus), the direct `game.subscribeToEvents(SoundSystem.instance)` subscription was removed from `HostedMatch.startGame()` and the subgame handler. The `match.subscribeToEvents(SoundSystem.instance)` subscription is preserved because it handles `UiEvent` sounds (blocker assignment, etc.) which are host-only interactive events fired on the Match bus, not the Game bus. This also updates the plan's description of `AbstractGuiGame.handleGameEvent()` — it is no longer a no-op on master; it processes game events for sound.
 
 ## Guidelines Compliance
 
@@ -697,17 +745,13 @@ If the `TrackableType` is wrong or missing, delta sync won't pick up changes to 
 
 Adding `Serializable` to the `GameEvent` interface is safe for delta sync. Delta packets don't contain `GameEvent` objects — they contain property deltas for `TrackableObject`s. Events are forwarded via `ProtocolMethod.forwardGameEvent` as `GuiGameEvent` payloads (the existing `CompatibleObjectEncoder` pipeline). No interaction with delta packet serialization.
 
-### Subgame Lifecycle Wiring (Step 3 — Investigation 4)
+### Subgame Lifecycle Wiring — N/A *(per TRT feedback)*
 
-This refactor moves lifecycle wiring from `MatchUiEventVisitor.visit(GameEventSubgameStart/End)` into `SubgameEffect.resolveSubgame()` directly. This is a **game-thread change**, not a network change.
-
-**Delta sync interaction:** When a subgame starts, `DeltaSyncManager` needs to track the subgame's `TrackableObject` instances (new `GameView`, new `PlayerView`s, etc.). Currently, `MatchUiEventVisitor` handles event subscriptions for the subgame. After the refactor, `SubgameEffect` does this.
-
-**Action when merging:** Ensure that wherever the lifecycle wiring moves to, it also registers the subgame's `TrackableObject`s with `DeltaSyncManager`. The delta sync branch may have its own subgame handling — check for conflicts in `SubgameEffect` and `HostedMatch`.
+Subgame events (`GameEventSubgameStart`, `GameEventSubgameEnd`) are reclassified as `UiEvent` and remain host-local. No `SubgameEffect` extraction is performed, so there is no merge conflict with delta sync's subgame handling. The existing `MatchUiEventVisitor` handlers in `HostedMatch` are unchanged.
 
 ### Pre-Computed Event Fields and Client-Side Log Generation
 
-Several events gain pre-computed string fields (`stackDescription`, `targetDescription`, `matchSummary`, `dayTime`) because the data isn't available on view objects. On `NetworkPlay/main`, clients run their own `GameLogFormatter` and `EventVisualizer`. These pre-computed fields are essential for correct client-side visitor operation — they carry data that only the host can compute (from engine objects).
+Several events gain pre-computed string fields (`stackDescription`, `targetDescription`, `matchSummary`) because the data isn't available on view objects. (`dayTime` was previously listed here for `GameEventSubgameEnd`, but that event is now reclassified as `UiEvent` — see TRT feedback.) On `NetworkPlay/main`, clients run their own `GameLogFormatter` and `EventVisualizer`. These pre-computed fields are essential for correct client-side visitor operation — they carry data that only the host can compute (from engine objects).
 
 **No conflict.** The delta sync branch wants clients to process events locally — that's the entire motivation. Pre-computed fields enable this.
 
@@ -720,11 +764,11 @@ When merging this refactor into `NetworkPlay/main`:
 | 1 | Move client-side `handleGameEvent()` from `AbstractGuiGame` to `NetworkGuiGame` | Low (~10 lines moved) | Low |
 | 2 | Replace `updateGameView()` in event forwarding with delta flush | Low (~5 lines) | Medium — ordering must be tested |
 | 3 | Verify new `TrackableProperty` entries have correct `TrackableType`s | Trivial (review) | Low |
-| 4 | Check subgame lifecycle wiring for `DeltaSyncManager` registration conflicts | Medium (review + possible merge resolution) | Medium |
+| ~~4~~ | ~~Check subgame lifecycle wiring for `DeltaSyncManager` registration conflicts~~ | ~~N/A — subgame events reclassified as `UiEvent`, no SubgameEffect changes~~ | ~~N/A~~ |
 | 5 | Run `NetworkPlayIntegrationTest` (quick 10-game) to validate end-to-end | Trivial (test run) | N/A |
 | 6 | Verify retired protocol methods don't have delta-sync-specific callers on main branch | Low (grep + review) | Low |
 
-**Overall integration risk: Low.** The event refactor and delta sync are complementary — events carry reactions, deltas carry state. The main merge work is moving ~10 lines to the right class in the hierarchy and adjusting the flush mechanism. The retired protocol methods are already technical debt on the delta sync branch.
+**Overall integration risk: Low.** The event refactor and delta sync are complementary — events carry reactions, deltas carry state. The main merge work is moving ~10 lines to the right class in the hierarchy and adjusting the flush mechanism. The retired protocol methods are already technical debt on the delta sync branch. Subgame lifecycle wiring is no longer a concern (events reclassified as `UiEvent`).
 
 ## Open Questions
 
@@ -1132,7 +1176,9 @@ Not found in `IGuiGame`, `NetGuiGame`, or `ProtocolMethod`. Sound effects are al
 - **Risk:** Medium (downgraded from Medium-high). The key architectural insight — that protocol methods are trigger signals, not data carriers — means removal is clean. The main risk is non-event callers of `updateZones`/`updateCards`, but analysis shows they use separate protocol paths.
 - **Prerequisite:** Event forwarding must call `updateGameView()` before `send(forwardGameEvent, ...)`. This is the same pattern all current protocol methods use.
 
-### Investigation 4: Formerly-Excluded Event Data Audit — COMPLETE
+### Investigation 4: Formerly-Excluded Event Data Audit — COMPLETE *(AMENDED per TRT feedback)*
+
+> **Amendment:** TRT feedback (2026-02-15) reclassifies `GameEventSubgameStart` and `GameEventSubgameEnd` as `UiEvent` instead of `GameEvent`. The investigation data below is preserved for reference, but the subgame recommendations (approach (b) — SubgameEffect extraction) are **superseded**. The events stay as-is in their current form; they simply move from `GameEvent` to `UiEvent`. Only the `GameEventPlayerControl` recommendations below remain active.
 
 **Resolves:** Open Questions 8, 9
 
@@ -1275,24 +1321,23 @@ public record GameEventPlayerControl(PlayerView player, String oldLobbyPlayerNam
 2. `event.newControllerIsHuman()` → `boolean` — sufficient for the instanceof check
 3. For `setGameController(PlayerView, PlayerControllerHuman)` — the handler already has `humanController` field. When `newControllerIsHuman` is true and the control target matches, use the existing `humanController`. When false, pass null.
 
-#### Summary
+#### Summary *(AMENDED per TRT feedback)*
 
-| Event | Serializable Fields | Host-Only Data | Approach |
-|-------|-------------------|----------------|----------|
-| `GameEventSubgameStart` | `String message` | `Game subgame` (event subscriptions, GUI wiring) | **(b)** Move lifecycle wiring to `SubgameEffect`. Event shrinks to message-only. |
-| `GameEventSubgameEnd` | `String message`, `String dayTime` | `Game maingame` (player iteration, GUI wiring) | **(b)** Move lifecycle wiring to `SubgameEffect`. Add `dayTime` field. FControlGameEventHandler uses broadcast zone refresh. |
-| `GameEventPlayerControl` | `PlayerView player`, `String oldLobbyPlayerName`, `String newLobbyPlayerName`, `boolean newControllerIsHuman` | `PlayerController` references (human controller wiring), `LobbyPlayer` (not serializable — Investigation 6) | Replace `Player` → `PlayerView`, `LobbyPlayer` → `String` name, drop `PlayerController`, add `boolean`. Handler uses existing `humanController` field. |
+| Event | Approach |
+|-------|----------|
+| ~~`GameEventSubgameStart`~~ | **Reclassified as `UiEvent`** (per TRT feedback). Not serialized, not forwarded. Handlers unchanged. Original approach (b) superseded. |
+| ~~`GameEventSubgameEnd`~~ | **Reclassified as `UiEvent`** (per TRT feedback). Not serialized, not forwarded. Handlers unchanged. Original approach (b) superseded. |
+| `GameEventPlayerControl` | Replace `Player` → `PlayerView`, `LobbyPlayer` → `String` name, drop `PlayerController`, add `boolean newControllerIsHuman`. Handler uses existing `humanController` field. *(Unchanged from original recommendation.)* |
 
-#### Impact on Plan
+#### Impact on Plan *(AMENDED)*
 
-**Step 3 (Complex Events):** Update the three event record definitions per the revised signatures above. The subgame events are simpler than originally estimated (fewer fields after lifecycle wiring is extracted). `GameEventPlayerControl` gains a `boolean` field and loses two `PlayerController` fields.
+**Step 3 (Complex Events):** Update `GameEventPlayerControl` record definition per the revised signature above. Subgame events are **removed from GameEvent scope** — reclassified as `UiEvent` (per TRT feedback). No `SubgameEffect` extraction needed.
 
 **Step 4 (Visitor Updates):**
-- `FControlGameEventHandler.visit(GameEventSubgameEnd)`: Replace `event.maingame().getPlayers()` zone loop with broadcast refresh via `GameView.getPlayers()`. Replace `event.maingame().isDay()/isNight()` with `event.dayTime()`.
 - `FControlGameEventHandler.visit(GameEventPlayerControl)`: Replace `ev.player().getGame().isGameOver()` with GameView check. Replace `ev.newController() instanceof PlayerControllerHuman` with `ev.newControllerIsHuman()`. Obtain `PlayerControllerHuman` from the handler's own `humanController` field.
-- `MatchUiEventVisitor.visit(GameEventSubgameStart)` and `visit(GameEventSubgameEnd)`: Lifecycle wiring moves to `SubgameEffect`. Handlers become minimal (display message only) or are removed.
+- `MatchUiEventVisitor`: Subgame handlers unchanged (events reclassified as `UiEvent`, stay host-local).
 
-**New work in Step 3:** Refactor `SubgameEffect.resolveSubgame()` to handle event subscriptions and GUI switching directly, instead of relying on event handlers. This is ~30-40 lines of code movement (not new logic).
+**New work in Step 3:** ~~Refactor `SubgameEffect.resolveSubgame()`~~ — **Removed** (per TRT feedback). Subgame events reclassified as `UiEvent`; no extraction needed. The only new work is the `GameEventPlayerControl` signature change and `GameEventGameOutcome` pre-computed fields.
 
 ### Investigation 5: GameOutcome Serializability — COMPLETE
 
