@@ -171,13 +171,94 @@ writerNetFile.level      = trace
 writerNetFile.format     = [{date: HH:mm:ss.SSS}] [{level}] {message}
 ```
 
+## Migrating System.out/err to Logger
+
+The codebase has ~610 `System.out/err` calls and ~148 `printStackTrace()` calls across ~200 files. These currently get captured to `forge.log` via the `MultiplexOutputStream` hack, but they bypass tinylog entirely — no levels, no formatting, no filtering. Migrating them to `Logger.*()` is what makes the rest of this strategy actually work.
+
+This doesn't need to happen all at once. It can be done incrementally, module by module or file by file.
+
+### Level Assignment Guide
+
+When converting a `System.out.println()` or `System.err.println()` to a Logger call, use this decision tree:
+
+**`Logger.error(exception)` or `Logger.error(exception, message)`** — replace all `e.printStackTrace()`
+- There are ~148 of these. This is the single highest-value migration — stack traces become structured, get timestamps, and route through tinylog's writers instead of raw stderr.
+- Also use for `System.err.println("Error: ...")` that reports a failure.
+
+**`Logger.warn(message)`** — unexpected but non-fatal states
+- Card/rule validation failures: `"Tried to switch to non-existent state"`, `"Trying to sacrifice immutables"`, `"Illegal Split Card CMC mode"`
+- Missing data: `"Can't find PaperCard from key"`, `"unsupported card found in quest save"`, `"INVALID PROPERTY: translation missing"`
+- These are things that shouldn't happen but don't crash the app. Users and devs both benefit from seeing them.
+
+**`Logger.info(message)`** — operational events users should see
+- Startup/init confirmation: `"Error handling registered!"`, `"Language loaded successfully"`
+- Progress reporting: `"Read cards: N files in Xms"`, `"Downloading update from..."`
+- Performance timing: FTrace startup timings
+- Game lifecycle: server start, connection events, game completion summaries
+- Rule of thumb: if a user submitting a bug report would benefit from this line being in their log, it's INFO.
+
+**`Logger.debug(message)`** — verbose diagnostic output
+- Per-turn/per-creature AI decision traces (e.g. AiAttackController's guarded attack logging)
+- Per-card state dumps, per-damage-event details
+- Deck generation internals, booster pack composition details
+- Rule of thumb: if it fires many times per game turn or per card, it's debug.
+- Code that uses a `static final boolean DEBUG_FLAG = false` guard can either:
+  - Stay as-is (the compiler eliminates dead code) — acceptable for very high-volume traces
+  - Convert to `Logger.debug()` and let tinylog's level filtering handle it — preferred when the volume is moderate
+
+**Delete entirely** — forgotten debug prints
+- Unconditional `System.out.println()` in game logic with no guard and no clear purpose
+- Anything that looks like it was added during development and never cleaned up
+- `System.out.println(someObject)` with no label or context
+
+### Migration Patterns
+
+```java
+// BEFORE: printStackTrace
+try { ... } catch (Exception e) { e.printStackTrace(); }
+// AFTER:
+try { ... } catch (Exception e) { Logger.error(e); }
+// or with context:
+try { ... } catch (Exception e) { Logger.error(e, "Failed to load card image for {}", cardName); }
+
+// BEFORE: System.err for unexpected state
+System.err.println("Can't find PaperCard from key: " + key);
+// AFTER:
+Logger.warn("Can't find PaperCard from key: {}", key);
+
+// BEFORE: System.out for progress
+System.out.printf("Read cards: %d files in %d ms%n", count, elapsed);
+// AFTER:
+Logger.info("Read cards: {} files in {} ms", count, elapsed);
+
+// BEFORE: guarded debug
+if (LOG_AI_ATTACKS) { System.out.println("Attacking with " + card); }
+// AFTER:
+Logger.debug("Attacking with {}", card);
+```
+
+Note: tinylog's `{}` placeholder syntax avoids string concatenation when the message won't be logged (unlike `String.format` which always evaluates). Prefer `Logger.info("msg {}", arg)` over `Logger.info("msg " + arg)`.
+
+### Migration Priority
+
+1. **`e.printStackTrace()` → `Logger.error(e)`** — highest value, mechanical replacement, ~148 calls
+2. **`System.err.println` error/warning messages → `Logger.warn/error`** — next highest, makes errors visible in structured logs
+3. **Startup/progress `System.out.println` → `Logger.info`** — makes operational info available through tinylog formatting and filtering
+4. **Guarded debug prints → `Logger.debug`** — lowest priority, these already work (just bypass tinylog)
+
+### What to Leave Alone
+
+- **`MultiplexOutputStream` in `ExceptionHandler`** — keep this until the migration is substantially complete. It's the safety net that catches any remaining raw `System.out` calls and writes them to `forge.log`. Remove it as a final cleanup step.
+- **Intentional CLI/test output** — if something is genuinely meant for direct console output (test harness results, CLI tool output), it can stay as `System.out`. But these are rare.
+
 ## Implementation Steps
 
 1. **On master:** Update `tinylog.properties` with per-package suppression and `{class-name}` in format.
 2. **On master:** Re-level `ExceptionHandler.debug("Error handling registered!")` to `info()`.
 3. **On master (optional):** Add rolling file writer for main `forge.log`. Requires `DynamicSegment` setup at startup.
-4. **On merge from NetworkPlay/main:** Network writers come automatically. Verify no conflicts with the new general writers.
-5. **Eventually:** Remove `MultiplexOutputStream` capture once all output goes through tinylog — lower priority, separate PR.
+4. **On master:** Migrate `System.out/err` → Logger incrementally (see priority list above).
+5. **On merge from NetworkPlay/main:** Network writers come automatically. Verify no conflicts with the new general writers.
+6. **Eventually:** Remove `MultiplexOutputStream` capture once all output goes through tinylog — final cleanup after migration is substantially complete.
 
 ## Key Decisions
 
@@ -189,3 +270,4 @@ writerNetFile.format     = [{date: HH:mm:ss.SSS}] [{level}] {message}
 | Main log file rotation? | **tinylog rolling file writer** | Replace manual MultiplexOutputStream hack |
 | Format? | **Include `{class-name}`** | Shows log origin without package verbosity |
 | Network vs library noise? | **Two independent mechanisms** | NETWORK tag = Forge's own net logging; `level@` = third-party SLF4J suppression |
+| System.out migration? | **Incremental, priority-ordered** | printStackTrace first, then errors, then info, then debug |
