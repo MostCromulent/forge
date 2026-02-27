@@ -131,46 +131,6 @@ The NetworkPlay/main branch already provides:
 
 No additional work needed here. When NetworkPlay merges to master, the network logging infrastructure comes with it.
 
-## Proposed tinylog.properties (Full — Post-Merge)
-
-This combines master's general logging needs with NetworkPlay/main's existing network writers:
-
-```properties
-# === Global Level ===
-level                    = info
-
-# Suppress noisy third-party libraries even when Forge is at debug
-level@io.netty           = warn
-level@org.jupnp          = warn
-level@org.eclipse.jetty  = warn
-
-# === Console Writer (general) ===
-writerConsole            = console
-writerConsole.level      = info
-writerConsole.format     = {date: HH:mm:ss} [{level|min-size=5}] {class-name}: {message}
-
-# === Main Log File ===
-writerFile               = rolling file
-writerFile.level         = debug
-writerFile.file          = {dynamic}/forge_{count}.log
-writerFile.latest        = {dynamic}/forge.log
-writerFile.format        = {date: yyyy-MM-dd HH:mm:ss.SSS} [{level|min-size=5}] [{thread}] {class}: {message}
-writerFile.policies      = startup, size: 10mb
-writerFile.backups       = 5
-
-# === Network Console Writer (NETWORK tag only) ===
-writerNetConsole         = console
-writerNetConsole.tag     = NETWORK
-writerNetConsole.level   = info
-writerNetConsole.format  = [{date: HH:mm:ss.SSS}] [{level}] {message}
-
-# === Network File Writer (NETWORK tag only, per-instance routing) ===
-writerNetFile            = network log
-writerNetFile.tag        = NETWORK
-writerNetFile.level      = trace
-writerNetFile.format     = [{date: HH:mm:ss.SSS}] [{level}] {message}
-```
-
 ## Migrating System.out/err to Logger
 
 The codebase has ~610 `System.out/err` calls and ~148 `printStackTrace()` calls across ~200 files. These currently get captured to `forge.log` via the `MultiplexOutputStream` hack, but they bypass tinylog entirely — no levels, no formatting, no filtering. Migrating them to `Logger.*()` is what makes the rest of this strategy actually work.
@@ -250,6 +210,46 @@ Note: tinylog's `{}` placeholder syntax avoids string concatenation when the mes
 
 - **`MultiplexOutputStream` in `ExceptionHandler`** — keep this until the migration is substantially complete. It's the safety net that catches any remaining raw `System.out` calls and writes them to `forge.log`. Remove it as a final cleanup step.
 - **Intentional CLI/test output** — if something is genuinely meant for direct console output (test harness results, CLI tool output), it can stay as `System.out`. But these are rare.
+
+## Proposed tinylog.properties (Full — Post-Merge)
+
+This combines master's general logging needs with NetworkPlay/main's existing network writers:
+
+```properties
+# === Global Level ===
+level                    = info
+
+# Suppress noisy third-party libraries even when Forge is at debug
+level@io.netty           = warn
+level@org.jupnp          = warn
+level@org.eclipse.jetty  = warn
+
+# === Console Writer (general) ===
+writerConsole            = console
+writerConsole.level      = info
+writerConsole.format     = {date: HH:mm:ss} [{level|min-size=5}] {class-name}: {message}
+
+# === Main Log File ===
+writerFile               = rolling file
+writerFile.level         = debug
+writerFile.file          = {dynamic}/forge_{count}.log
+writerFile.latest        = {dynamic}/forge.log
+writerFile.format        = {date: yyyy-MM-dd HH:mm:ss.SSS} [{level|min-size=5}] [{thread}] {class}: {message}
+writerFile.policies      = startup, size: 10mb
+writerFile.backups       = 5
+
+# === Network Console Writer (NETWORK tag only) ===
+writerNetConsole         = console
+writerNetConsole.tag     = NETWORK
+writerNetConsole.level   = info
+writerNetConsole.format  = [{date: HH:mm:ss.SSS}] [{level}] {message}
+
+# === Network File Writer (NETWORK tag only, per-instance routing) ===
+writerNetFile            = network log
+writerNetFile.tag        = NETWORK
+writerNetFile.level      = trace
+writerNetFile.format     = [{date: HH:mm:ss.SSS}] [{level}] {message}
+```
 
 ## Implementation Steps
 
