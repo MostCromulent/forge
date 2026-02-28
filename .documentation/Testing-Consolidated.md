@@ -378,7 +378,7 @@ The unified result class for all network test configurations:
 ## Testing Functions
 
 ### CI Test Categories:
-- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (5) + `testTrueNetworkTraffic` - run with every CI build
+- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (4) + `testTrueNetworkTraffic` - run with every CI build
 - **Stress tests**: All other game tests in `NetworkPlayIntegrationTest` - require `-Drun.stress.tests=true`
 
 ### Test Files
@@ -422,8 +422,6 @@ Integration tests with real network I/O.
 |------|-------------|
 | `testDeckLoaderHasPrecons` | Verifies that `TestDeckLoader` can find quest precon decks. Ensures test infrastructure has access to the 424 precon decks needed for random deck selection. |
 | `testDeckLoaderCanLoadDeck` | Verifies that `TestDeckLoader.getRandomPrecon()` returns a valid deck with at least 40 cards. Ensures decks are properly loaded and playable. |
-| `testGameResultInitialization` | Verifies `GameResult` class correctly stores and reports game metrics (turns, winner, bytes sent). Tests the result collection infrastructure. |
-| `testGameTestModeEnum` | Verifies `GameTestMode` enum values (`NETWORK_LOCAL`, `NETWORK_REMOTE`) have correct properties. Tests `usesRemoteClient()` returns expected values. |
 | `testServerStartAndStop` | Verifies `FServerManager` can start and stop a server on a given port. Tests basic server lifecycle without running a game. |
 
 #### Single Game Integration Tests
@@ -470,19 +468,21 @@ There are three execution methods: **Loop** (simple loop, same JVM, local AI), *
 
 ### Test Modes
 
-| Mode | Description |
-|------|-------------|
-| `NETWORK_REMOTE` | **Default.** Real TCP client connection with actual network traffic. True delta sync testing. |
-| `NETWORK_LOCAL` | Network stack active but all players are local AI. No actual network packets sent. |
+Test modes are configured via the `UnifiedNetworkHarness` builder's `remoteClients()` method:
+
+| Mode | Builder | Description |
+|------|---------|-------------|
+| **Remote** (default) | `.remoteClients(1+)` | Real TCP client connection with actual network traffic. True delta sync testing. |
+| **Local** | `.remoteClients(0)` | Network stack active but all players are local AI. No actual network packets sent. |
 
 **When to use each mode:**
 
 | Mode | Use Case |
 |------|----------|
-| `NETWORK_REMOTE` | **Delta sync validation** - Verifies packets are correctly serialized, transmitted over TCP, and deserialized. Use for validating network protocol correctness. This is the primary testing mode. |
-| `NETWORK_LOCAL` | **Server infrastructure testing** - Tests `ServerGameLobby` and `FServerManager` code paths without network overhead. Useful for quick smoke tests or when debugging server-side logic that doesn't involve actual packet transmission. |
+| Remote | **Delta sync validation** - Verifies packets are correctly serialized, transmitted over TCP, and deserialized. Use for validating network protocol correctness. This is the primary testing mode. |
+| Local | **Server infrastructure testing** - Tests `ServerGameLobby` and `FServerManager` code paths without network overhead. Useful for quick smoke tests or when debugging server-side logic that doesn't involve actual packet transmission. |
 
-**Key difference:** `NETWORK_REMOTE` creates a real `HeadlessNetworkClient` that connects via TCP socket and receives delta sync packets over the network. `NETWORK_LOCAL` runs both players in the same process with no network I/O - the "network" code paths execute but no packets leave the machine.
+**Key difference:** Remote mode creates a real `HeadlessNetworkClient` that connects via TCP socket and receives delta sync packets over the network. Local mode runs all players in the same process with no network I/O - the "network" code paths execute but no packets leave the machine.
 
 ### Deck Configuration
 
@@ -641,14 +641,14 @@ All test outputs are saved to the **Forge network logs directory**:
 
 ---
 
-## File Inventory (14 files)
+## File Inventory (13 files)
 
-After consolidation, the testing infrastructure consists of **14 files** focused on network testing.
+After consolidation, the testing infrastructure consists of **13 files** focused on network testing.
 
 | File | Lines | Description |
 |------|-------|-------------|
 | **Entry Point** | | |
-| `NetworkPlayIntegrationTest.java` | ~505 | All tests consolidated here (15 test methods) |
+| `NetworkPlayIntegrationTest.java` | ~506 | All tests consolidated here (13 test methods) |
 | **Core Harness** | | |
 | `UnifiedNetworkHarness.java` | ~620 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
 | **Network Client** | | |
@@ -661,7 +661,6 @@ After consolidation, the testing infrastructure consists of **14 files** focused
 | `MultiProcessGameExecutor.java` | ~580 | Parallel JVM spawning (uses `UnifiedNetworkHarness.GameResult` directly) |
 | `ComprehensiveGameRunner.java` | ~130 | JVM subprocess entry point (uses `UnifiedNetworkHarness.GameResult` directly) |
 | **Configuration** | | |
-| `GameTestMode.java` | ~64 | Mode enum (NETWORK_LOCAL, NETWORK_REMOTE) |
 | `TestDeckLoader.java` | ~167 | Deck loading |
 | `PortAllocator.java` | ~105 | Port allocation |
 | **Analysis** | | |
@@ -669,7 +668,7 @@ After consolidation, the testing infrastructure consists of **14 files** focused
 | `analysis/GameLogMetrics.java` | ~283 | Per-game log metrics |
 | `analysis/AnalysisResult.java` | ~775 | Aggregated results |
 
-**Total: ~5,100 lines across 14 files**
+**Total: ~5,000 lines across 13 files**
 
 ### Files Removed
 
@@ -679,6 +678,7 @@ The following files were removed during cleanup:
 |--------------|--------|
 | `TestConfiguration.java` | Superseded by `ComprehensiveTestExecutor.fromSystemProperties()` |
 | `GameEventListener.java` | Dead code (verbose=false at runtime, query methods never called) |
+| `GameTestMode.java` | Dead code (only consumer was deleted `TestConfiguration`); modes expressed via `remoteClients(0)` vs `remoteClients(1+)` |
 
 Result class hierarchies were also consolidated:
 
