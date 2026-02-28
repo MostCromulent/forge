@@ -378,7 +378,7 @@ The unified result class for all network test configurations:
 ## Testing Functions
 
 ### CI Test Categories:
-- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (4) + `testTrueNetworkTraffic` - run with every CI build
+- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (3) + `testTrueNetworkTraffic` - run with every CI build
 - **Stress tests**: All other game tests in `NetworkPlayIntegrationTest` - require `-Drun.stress.tests=true`
 
 ### Test Files
@@ -430,16 +430,13 @@ Integration tests with real network I/O.
 |------|-----|-------------|
 | `testTrueNetworkTraffic` | **Default** | **Key Delta Sync Test.** Runs a 2-player game with an actual TCP network client. Uses **minimal 10-card basic land decks** for fast execution (~3 turns, ~25 seconds). Deck legality temporarily disabled for this test only. Validates: client connection, delta packet count > 0, game completion. |
 | `testUnifiedHarnessLocalMode` | Stress | Runs a 2-player AI-vs-AI game using `UnifiedNetworkHarness.remoteClients(0)`. Uses `ServerGameLobby` with `FServerManager` (network infrastructure). Both players are local AI - no remote client connection. Validates the network game hosting pathway works. |
-| `testMultiplayer3Player` | Stress | Runs a 3-player free-for-all game using `UnifiedNetworkHarness.playerCount(3).remoteClients(2)` with real network clients. 1 local AI host + 2 remote `HeadlessNetworkClient` instances. Each remote client receives delta packets independently. Validates multiplayer delta sync with concurrent clients. |
-| `testMultiplayer4Player` | Stress | Same as 3-player test but with 4 players using `UnifiedNetworkHarness.playerCount(4).remoteClients(3)`. 1 local AI host + 3 remote clients. Tests delta sync scaling with more concurrent connections. |
 
 #### Batch Tests
 
-There are three execution methods: **Loop** (simple loop, same JVM, local AI), **Sequential** (same JVM with real TCP clients, better for debugging), and **Parallel** (separate JVM per game, fastest for large runs).
+Two execution methods: **Sequential** (same JVM with real TCP clients, better for debugging) and **Parallel** (separate JVM per game, fastest for large runs).
 
 | Test | Explanation |
 |------|-------------|
-| `testBatchTesting` | **Loop method.** Runs 3 games in a loop using `UnifiedNetworkHarness` with `remoteClients(0)`. Uses local AI mode (server with local AI players, no remote client). All games run in the same JVM process. Simplest approach, good for basic validation. |
 | `testConfigurableSequential` | **Sequential method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of sequential games with custom timeout. Use `-Dtest.gameCount=3` for quick validation. |
 | `testConfigurableParallel` | **Parallel method.** Configurable via `-Dtest.gameCount` and `-Dtest.timeoutMs`. Allows running any number of parallel games with custom timeout. Expects 80% success rate. Use `-Dtest.gameCount=2` or `-Dtest.gameCount=3` for quick parallel tests. |
 
@@ -648,7 +645,7 @@ After consolidation, the testing infrastructure consists of **13 files** focused
 | File | Lines | Description |
 |------|-------|-------------|
 | **Entry Point** | | |
-| `NetworkPlayIntegrationTest.java` | ~506 | All tests consolidated here (13 test methods) |
+| `NetworkPlayIntegrationTest.java` | ~430 | All tests consolidated here (10 test methods) |
 | **Core Harness** | | |
 | `UnifiedNetworkHarness.java` | ~620 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
 | **Network Client** | | |
@@ -668,7 +665,7 @@ After consolidation, the testing infrastructure consists of **13 files** focused
 | `analysis/GameLogMetrics.java` | ~283 | Per-game log metrics |
 | `analysis/AnalysisResult.java` | ~775 | Aggregated results |
 
-**Total: ~5,000 lines across 13 files**
+**Total: ~4,900 lines across 13 files**
 
 ### Files Removed
 
