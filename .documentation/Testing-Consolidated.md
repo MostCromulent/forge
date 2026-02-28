@@ -16,7 +16,7 @@
 - [Test Metrics](#test-metrics)
 - [Use Case Examples](#use-case-examples)
 - [Output Files](#output-files)
-- [File Inventory](#file-inventory-16-files)
+- [File Inventory](#file-inventory-14-files)
 
 ---
 
@@ -378,7 +378,7 @@ The unified result class for all network test configurations:
 ## Testing Functions
 
 ### CI Test Categories:
-- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (6) + `testTrueNetworkTraffic` - run with every CI build
+- **Default CI tests**: `DeltaSyncUnitTest` (39 tests) + `NetworkPlayIntegrationTest` unit tests (5) + `testTrueNetworkTraffic` - run with every CI build
 - **Stress tests**: All other game tests in `NetworkPlayIntegrationTest` - require `-Drun.stress.tests=true`
 
 ### Test Files
@@ -424,7 +424,6 @@ Integration tests with real network I/O.
 | `testDeckLoaderCanLoadDeck` | Verifies that `TestDeckLoader.getRandomPrecon()` returns a valid deck with at least 40 cards. Ensures decks are properly loaded and playable. |
 | `testGameResultInitialization` | Verifies `GameResult` class correctly stores and reports game metrics (turns, winner, bytes sent). Tests the result collection infrastructure. |
 | `testGameTestModeEnum` | Verifies `GameTestMode` enum values (`NETWORK_LOCAL`, `NETWORK_REMOTE`) have correct properties. Tests `usesRemoteClient()` returns expected values. |
-| `testConfigurationParsing` | Verifies `TestConfiguration` correctly parses system properties for decks, test mode, player count, and iterations. Ensures command-line configuration works. |
 | `testServerStartAndStop` | Verifies `FServerManager` can start and stop a server on a given port. Tests basic server lifecycle without running a game. |
 
 #### Single Game Integration Tests
@@ -468,7 +467,6 @@ There are three execution methods: **Loop** (simple loop, same JVM, local AI), *
 | `test.batchSize` | `10` | Parallel batch size |
 | `test.timeoutMs` | `300000` | Per-game timeout (5 min) |
 | `test.gameCount` | `3` | Games for configurable tests |
-| `testMode` | `NETWORK_REMOTE` | `NETWORK_REMOTE` (real TCP) or `NETWORK_LOCAL` (no network I/O) |
 
 ### Test Modes
 
@@ -494,17 +492,6 @@ By default, tests use random Quest precon decks loaded by `TestDeckLoader`. Ther
 - Each game randomly selects two different precon decks
 - Decks are loaded from `forge-gui/res/quest/precons/`
 - Random selection ensures diverse game states for thorough testing
-
-**Custom Deck Options:**
-
-| Property | Description |
-|----------|-------------|
-| `deck1` | Path to deck file for player 1 (e.g., `/path/to/deck.dck`) |
-| `deck2` | Path to deck file for player 2 |
-| `precon1` | Quest precon name for player 1 (e.g., `"Quest Precon - Red"`) |
-| `precon2` | Quest precon name for player 2 |
-
-**Priority:** `deck1/deck2` (file path) takes precedence over `precon1/precon2` (precon name), which takes precedence over random selection.
 
 **Minimal Test Decks:**
 
@@ -635,19 +622,6 @@ mvn -pl forge-gui-desktop -am verify \
     -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-### Run with Specific Decks
-
-```bash
-mvn -pl forge-gui-desktop -am verify \
-    -Dtest="NetworkPlayIntegrationTest#testWithSystemProperties" \
-    -Dprecon1="Quest Precon - Red" \
-    -Dprecon2="Quest Precon - Blue" \
-    -DtestMode=NETWORK_REMOTE \
-    -Diterations=5 \
-    -Drun.stress.tests=true \
-    -Dsurefire.failIfNoSpecifiedTests=false
-```
-
 ---
 
 ## Output Files
@@ -667,16 +641,16 @@ All test outputs are saved to the **Forge network logs directory**:
 
 ---
 
-## File Inventory (16 files)
+## File Inventory (14 files)
 
-After consolidation, the testing infrastructure consists of **16 files** focused on network testing.
+After consolidation, the testing infrastructure consists of **14 files** focused on network testing.
 
 | File | Lines | Description |
 |------|-------|-------------|
 | **Entry Point** | | |
-| `NetworkPlayIntegrationTest.java` | ~572 | All tests consolidated here (17 test methods) |
+| `NetworkPlayIntegrationTest.java` | ~505 | All tests consolidated here (15 test methods) |
 | **Core Harness** | | |
-| `UnifiedNetworkHarness.java` | ~630 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
+| `UnifiedNetworkHarness.java` | ~620 | Unified harness for all game configurations (2-4 players, 0+ remote clients) |
 | **Network Client** | | |
 | `HeadlessNetworkClient.java` | ~578 | TCP client for testing |
 | `HeadlessNetworkGuiGame.java` | ~348 | Network GUI mock with delta processing |
@@ -684,24 +658,36 @@ After consolidation, the testing infrastructure consists of **16 files** focused
 | `HeadlessGuiDesktop.java` | ~222 | Desktop GUI mock |
 | **Executors** | | |
 | `ComprehensiveTestExecutor.java` | ~376 | Batch orchestration |
-| `MultiProcessGameExecutor.java` | ~660 | Parallel JVM spawning |
-| `ComprehensiveGameRunner.java` | ~240 | JVM subprocess entry point |
+| `MultiProcessGameExecutor.java` | ~580 | Parallel JVM spawning (uses `UnifiedNetworkHarness.GameResult` directly) |
+| `ComprehensiveGameRunner.java` | ~130 | JVM subprocess entry point (uses `UnifiedNetworkHarness.GameResult` directly) |
 | **Configuration** | | |
 | `GameTestMode.java` | ~64 | Mode enum (NETWORK_LOCAL, NETWORK_REMOTE) |
-| `TestConfiguration.java` | ~237 | System property loading |
 | `TestDeckLoader.java` | ~167 | Deck loading |
 | `PortAllocator.java` | ~105 | Port allocation |
-| `GameEventListener.java` | ~267 | Event logging |
 | **Analysis** | | |
 | `analysis/NetworkLogAnalyzer.java` | ~734 | Log parsing |
 | `analysis/GameLogMetrics.java` | ~283 | Per-game log metrics |
 | `analysis/AnalysisResult.java` | ~775 | Aggregated results |
 
-**Total: ~5,500 lines across 16 files**
+**Total: ~5,100 lines across 14 files**
 
-### Files Consolidated
+### Files Removed
 
-The following files from the initial PR were removed during consolidation:
+The following files were removed during cleanup:
+
+| Removed File | Reason |
+|--------------|--------|
+| `TestConfiguration.java` | Superseded by `ComprehensiveTestExecutor.fromSystemProperties()` |
+| `GameEventListener.java` | Dead code (verbose=false at runtime, query methods never called) |
+
+Result class hierarchies were also consolidated:
+
+| Removed Class | Replacement |
+|---------------|-------------|
+| `ComprehensiveGameRunner.GameRunResult` | `UnifiedNetworkHarness.GameResult` used directly |
+| `MultiProcessGameExecutor.GameResult` | `UnifiedNetworkHarness.GameResult` used directly |
+
+Earlier consolidation also removed:
 
 | Removed File | Replacement |
 |--------------|-------------|
