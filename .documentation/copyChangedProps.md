@@ -231,3 +231,59 @@ This ensures all `copyChangedProps` calls are serialized on EDT. The `listSize()
 | `forge-core/.../util/collect/FCollection.java` | `replace()`, `listSize()`, `readObject()` |
 | `forge-game/.../trackable/TrackableTypes.java` | `copyChangedProps` rewrite |
 | `forge-gui/.../net/client/GameClientHandler.java` | Null check in `replicatePlayerView` |
+
+-----
+
+## Revised Response to Developer Feedback
+
+### 1. "IOOBE has existed for years - not sure it's enough to cause a hard crash"
+
+**They're right to be skeptical.** The IOOBE itself doesn't cause a hard crash - it's caught and continued. The document overstates this. The `catch (IndexOutOfBoundsException)` block has been there since 2020 and the exception is silently swallowed.
+
+The real question is whether the cumulative effect of skipping elements (when the catch fires) causes enough state drift to freeze a client. My honest assessment: **probably not directly.** A skipped `copyChangedProps` means one tracked object has stale properties for one update cycle ΓÇö it'll likely get corrected on the next `setGameView`. The client might show briefly stale data (wrong life total for a frame, etc.) but shouldn't freeze from this alone.
+
+The more plausible freeze path is the **NPE in `replicatePlayerView`** (the separate fix in `GameClientHandler`). That NPE propagates through `beforeCall()` on the Netty IO thread (which has no try-catch), hits `exceptionCaught()`, and Netty closes the channel. That looks exactly like a freeze ΓÇö no error dialog, client just stops responding. The document bundles this with the IOOBE fix but they're really separate issues.
+
+**Bottom line:** The IOOBE catch-and-continue is ugly and masks corruption, but the developers are right that it's not a crash vector on its own. The `replace()` fix is still worthwhile as a correctness and performance improvement ΓÇö it eliminates a class of bugs rather than hiding them.
+
+### 2. "Does the 10x traffic claim account for the flush fix / batching?"
+
+**The 10x claim is outdated and should be dropped.**
+
+The document describes a state that existed for roughly two weeks. Here's the timeline:
+
+- **PR #9760** (GameEvent refactor): Changed the server from batched UI updates (~3-5 messages per game action) to sending every individual GameEvent immediately, each triggering a full `updateGameView()` serialization. 10 events per action ΓåÆ 20 messages (10 full GameView + 10 event). This is where the ~10x figure comes from.
+- **PR #9868** (merged Feb 22): Fixed the batching. Events are coalesced via `GameEventForwarder`, and `updateGameView()` is called once per batch. 10 events ΓåÆ 11 messages (1 GameView + 10 events). The dominant cost (redundant full GameView serializations) was eliminated.
+- **PR #9911**: Fixed a separate serialization race condition (flush moved from EDT to game thread). Orthogonal to message volume.
+
+**Current master includes both #9868 and #9911.** The 10x traffic increase no longer exists. The document is describing a transient state that was already fixed before this branch was created.
+
+The developers' intuition ΓÇö that removing old `update*` methods should offset the new GameEvent messages ΓÇö is essentially what #9868 achieved. Master still sends individual GameEvent messages (more messages than pre-refactor), but without the redundant GameView serializations that were the real cost. Whether the net traffic is higher or lower than pre-refactor depends on event-to-action ratios and relative message sizes, but the order-of-magnitude problem is gone.
+
+**The copyChangedProps document should drop the "10x" framing entirely.** It's not relevant to evaluating the fix on this branch.
+
+### 3. "remove/add while iterating isn't unstable in general"
+
+**I agree with the developers.** I traced through the logic carefully:
+
+In **single-threaded** operation, `remove(i)` + `add(i, existingObj)` during a forward loop works correctly on FCollection:
+
+1. `remove(i)` removes `newObj` from both list and set. List shrinks by 1.
+2. `add(i, existingObj)` calls `insert(i, existingObj)`. Since `existingObj` came from the tracker (not from this collection), `set.add(existingObj)` returns `true`, and `list.add(i, existingObj)` inserts at the correct position. List grows back by 1.
+3. Net result: element at index `i` is swapped. Loop continues to `i+1` correctly.
+
+The pattern is **not unstable in general** ΓÇö it produces correct results in single-threaded operation. The IOOBE comes from **concurrent access**: the IO thread and EDT both run `copyChangedProps` on the same `FCollection` instances without synchronization. One thread's `remove(i)` temporarily shrinks the list while the other thread's `size()` or `get(i)` sees inconsistent state.
+
+**On the `replace()` atomicity point** ΓÇö the developers are also right that `replace()` isn't truly atomic either. It does `list.set()` then `set.remove()` then `set.add()` ΓÇö another thread can still interleave. However, `replace()` has a meaningfully **smaller vulnerability window**: `list.set()` never changes the list size (it's an in-place swap), so a concurrent thread can never see a temporarily-shrunken list. With `remove()+add()`, there's a window where `list.size()` is N-1. With `replace()`, `list.size()` is always N. So it's a real improvement for the concurrent case even though it's not a complete fix.
+
+**Their conclusion is correct**: `replace()` is a nice low-level optimization ΓÇö O(1) vs O(n), and it narrows the concurrency window ΓÇö but it should not be presented as fixing an inherent instability in the remove/add pattern itself.
+
+### Revised summary
+
+| Claim in document | Assessment |
+|---|---|
+| remove/add is "fundamentally broken" during iteration | **Overstated.** Works correctly single-threaded. Vulnerable under concurrent access. |
+| ~500 silent IOOBEs per game | **Plausible** but only under concurrent access, not from the remove/add pattern itself |
+| 10x traffic increase | **Outdated.** Describes the post-#9760 / pre-#9868 state. Already fixed on master. Should be removed from the document. |
+| Client freeze from IOOBE | **Unlikely from IOOBE alone.** The NPEΓåÆchannel-close path is the more credible freeze cause. |
+| `replace()` as a fix | **Good optimization and genuine improvement**, but frame it as reducing concurrency window + performance, not fixing a "fundamentally broken" pattern |
