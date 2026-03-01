@@ -250,7 +250,7 @@ The more plausible freeze path is the **NPE in `replicatePlayerView`** (the sepa
 
 **The 10x claim is outdated and should be dropped.**
 
-The document describes a state that existed for roughly two weeks. Here's the timeline:
+The document describes a state that existed for roughly a week. Here's the timeline:
 
 - **PR #9760** (GameEvent refactor): Changed the server from batched UI updates (~3-5 messages per game action) to sending every individual GameEvent immediately, each triggering a full `updateGameView()` serialization. 10 events per action ΓåÆ 20 messages (10 full GameView + 10 event). This is where the ~10x figure comes from.
 - **PR #9868** (merged Feb 22): Fixed the batching. Events are coalesced via `GameEventForwarder`, and `updateGameView()` is called once per batch. 10 events ΓåÆ 11 messages (1 GameView + 10 events). The dominant cost (redundant full GameView serializations) was eliminated.
