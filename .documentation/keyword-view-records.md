@@ -672,6 +672,6 @@ Two occurrences of `getKeywordKey().equals(cState.getKeywordKey())` at lines ~13
 
 4. **Record immutability vs. count annotation**: `annotateKeywordCounts()` currently mutates `KeywordData` in place. With immutable records, it would need to create new `KeywordView` instances. Should we add a mutable wrapper for the GUI layer, or accept the allocation cost of creating new records?
 
-5. **Keyword enum stability across versions**: Serialization uses `Keyword.ordinal()`. If a Keyword enum entry is inserted in the middle, ordinals shift and network clients on different versions break. Should we use `Keyword.name()` (string, slower but stable) instead? Or document that both sides must be the same version?
+5. **Keyword enum stability across versions**: Serialization uses `Keyword.ordinal()`. If a Keyword enum entry is inserted in the middle, ordinals shift and network clients on different versions break. Should we use `Keyword.name()` (string, slower but stable) instead? Or document that both sides must be the same version? **Resolved** — network host and client must use the same version. `Keyword.ordinal()` serialization is safe.                                         
 
 6. **`extractTypeParam` for icon keys**: Protection's `typeParam` needs to carry the compact color code (e.g., "RU") for icon derivation. The current `getProtectionKey()` method on `Card` does this analysis by inspecting `Protection.fromWhat`. Should `extractTypeParam()` replicate that logic, or can it call into the existing `getProtectionKey()` logic and decompose the result?
