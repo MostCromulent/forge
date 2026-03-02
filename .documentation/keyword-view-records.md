@@ -7,6 +7,11 @@
 - [KeywordView Record](#keywordview-record)
 - [Storage & Serialization](#storage--serialization)
 - [Game-Layer Computation](#game-layer-computation)
+  - [Keyword abilities](#keyword-abilities)
+  - [Keyword actions (API detection)](#keyword-actions-api-detection)
+  - [Detection metadata on KeywordAction enum](#detection-metadata-on-keywordaction-enum)
+  - [Keyword abilities — detection reference](#keyword-abilities--detection-reference)
+  - [Keyword actions — detection reference](#keyword-actions--detection-reference)
 - [Consumer Migration](#consumer-migration)
 - [Files Affected](#files-affected)
 - [Implementation Order](#implementation-order)
@@ -15,7 +20,7 @@
 
 ## Goal
 
-Replace the `keyword -> string -> re-parse -> extract display data` pipeline for keyword tooltip display in PR # 9806 with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
+Replace the `keyword -> string -> re-parse -> extract display data` pipeline for the keyword tooltips functionality in #9806 with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
 
 Implements issue # 9918.
 
@@ -225,6 +230,148 @@ public enum KeywordAction {
 ```
 
 The detection method and target string let the computation loop be data-driven rather than a giant switch statement.
+
+### Keyword abilities — detection reference
+
+Keyword abilities are already fully detected via the `Keyword` enum and `KeywordCollection`. Each has a typed class (`SimpleKeyword`, `KeywordWithCost`, `KeywordWithAmount`, `KeywordWithType`, etc.) providing `getTitle()`, `getReminderText()`, and typed parameter accessors. The `KeywordView` record is built directly from these — no detection logic needed beyond iterating the collection.
+
+Display edge cases to handle during record construction:
+
+| Keyword | Class | Issue | Fix in `computeKeywordViews()` |
+|---------|-------|-------|-------------------------------|
+| Escape | `KeywordWithCost` | Header shows "Escape" without cost | Use `getCost()` for full header: "Escape — {cost}" |
+| Craft | `Craft` | Header shows "Craft {mana}" without exile types | Use `getTitle()` or parse original string for full display |
+| Equip | `Equip` | Non-standard equip variants confuse display | Already partially handled; verify edge cases |
+| Trample | `Trample` | "Trample" detected separately from "Trample over planeswalkers" | Deduplicate: suppress base if variant exists |
+| Protection | `Protection` | Multiple protections need merging | Merge during record construction; combine `typeParam` for icon key |
+
+### Keyword actions — detection reference
+
+#### Basic actions (excluded from tooltips — `basic=true`)
+
+| # | Action | Notes |
+|---|--------|-------|
+| 1 | Activate | Fundamental game action |
+| 2 | Attach | |
+| 3 | Cast | |
+| 4 | Counter | |
+| 5 | Create | |
+| 6 | Destroy | |
+| 7 | Discard | |
+| 8 | Double | |
+| 9 | Triple | |
+| 10 | Exchange | |
+| 11 | Exile | |
+| 12 | Play | |
+| 13 | Reveal | |
+| 14 | Sacrifice | |
+| 15 | Search | |
+| 16 | Shuffle | |
+| 17 | Tap/Untap | |
+| 18 | Set in Motion | Archenemy action |
+| 19 | Abandon | Archenemy action |
+
+These are excluded from tooltip display and will not produce `KeywordView` records.
+
+#### Non-basic actions with direct Effect class (DetectionMethod.EFFECT)
+
+| # | Action | Effect class | Notes |
+|---|--------|-------------|-------|
+| 20 | Scry | `ScryEffect` | Also occurs as cost (`CostScry` if exists) and in triggers/REs |
+| 21 | Surveil | `SurveilEffect` | |
+| 22 | Mill | `MillEffect` | Also occurs as cost |
+| 23 | Fight | `FightEffect` | |
+| 24 | Goad | `GoadEffect` | |
+| 25 | Investigate | `InvestigateEffect` | |
+| 26 | Explore | `ExploreEffect` | |
+| 27 | Connive | `ConniveEffect` | |
+| 28 | Discover | `DiscoverEffect` | |
+| 29 | Cloak | `CloakEffect` | |
+| 30 | Manifest | `ManifestEffect` | Substring collision with Manifest Dread resolved by API |
+| 31 | Manifest Dread | `ManifestDreadEffect` | Distinct effect class — no collision |
+| 32 | Amass | `AmassEffect` | Includes creature type param |
+| 33 | Learn | `LearnEffect` | |
+| 34 | Incubate | `IncubateEffect` | |
+| 35 | The Ring Tempts You | `RingTemptsYouEffect` | |
+| 36 | Venture | `VentureEffect` | |
+| 37 | Vote | `VoteEffect` | |
+| 38 | Clash | `ClashEffect` | |
+| 39 | Detain | `DetainEffect` | |
+| 40 | Regenerate | `RegenerateEffect` | |
+| 41 | Meld | `MeldEffect` | |
+| 42 | Proliferate | `CountersProliferateEffect` | |
+| 43 | Planeswalk | `PlaneswalkEffect` | Oracle false positive ("planeswalker") eliminated by API |
+| 44 | Open an Attraction | `OpenAttractionEffect` | |
+| 45 | Assemble | `AssembleContraptionEffect` | Un-set action |
+| 46 | Villainous Choice | `VillainousChoiceEffect` | |
+| 47 | Time Travel | `TimeTravelEffect` | |
+| 48 | Endure | `EndureEffect` | |
+| 49 | Airbend | `AirbendEffect` | |
+| 50 | Earthbend | `EarthbendEffect` | |
+| 51 | Blight | `BlightEffect` | |
+
+#### Non-basic actions detectable via params on generic effects (DetectionMethod.PARAM)
+
+| # | Action | Host effect | Detection param | Notes |
+|---|--------|-----------|-----------------|-------|
+| 52 | Support | `CountersPut` | `Support$` | Refactored by Hanmac (#9870) |
+| 53 | Bolster | `CountersPut` | `Bolster$` | Refactored by Hanmac (#9872) |
+| 54 | Populate | `CopyPermanent` | `Populate$` | Param exists on master |
+| 55 | Roll to Visit | `RollDice` | Optional param | Per Jetz72 |
+| 56 | Adapt | Various | Refactored | Was keyword, now SpellAbility (#9854) |
+| 57 | Monstrosity | Various | Refactored | Was keyword, now SpellAbility (#9859) |
+
+#### Non-basic actions detectable via cost classes (DetectionMethod.COST)
+
+| # | Action | Cost class | Notes |
+|---|--------|-----------|-------|
+| 58 | Exert | `CostExert` | |
+| 59 | Behold | `CostBehold` / `CostBeholdExile` | |
+| 60 | Collect Evidence | `CostCollectEvidence` | |
+| 61 | Forage | `CostForage` | |
+| 62 | Waterbend | `CostWaterbend` | |
+
+#### Non-basic actions detectable via attribute params (DetectionMethod.ATTRIBUTE)
+
+| # | Action | Host effect | Detection | Notes |
+|---|--------|-----------|-----------|-------|
+| 63 | Suspect | `AlterAttribute` | `Attributes$` contains "Suspect"/"Suspected" | |
+| 64 | Harness | `AlterAttribute` | `Attributes$` contains "Harnessed" | |
+
+#### Non-basic actions requiring oracle text fallback (DetectionMethod.ORACLE)
+
+| # | Action | Why no API | Notes |
+|---|--------|-----------|-------|
+| 65 | Fateseal | Indistinguishable from generic `Scry`-like effect | ~10 cards. Could add marker param to eliminate fallback. |
+| 66 | Transform | `SetState` — same API as Convert, flip, MDFC | ~many cards. Could add marker param for Convert's 15 cards. |
+| 67 | Convert | `SetState` — same API as Transform | Rules-identical to Transform per Jetz72. |
+
+#### Game concepts (not 701.x actions)
+
+In the `KeywordAction` enum for tooltip display but aren't keyword actions per the comprehensive rules:
+
+| # | Concept | Detection | Notes |
+|---|---------|----------|-------|
+| — | Devotion | SVar `Count$Devotion.*` on `CardFace` | Game concept, not action |
+| — | Domain | `Keyword` enum | Ability word — detected as keyword ability |
+| — | Metalcraft | `Keyword` enum | Ability word — detected as keyword ability |
+| — | Threshold | `Keyword` enum | Ability word — detected as keyword ability |
+| — | Delirium | `Keyword` enum | Ability word — detected as keyword ability |
+
+Domain, Metalcraft, Threshold, and Delirium are ability words with `Keyword` enum entries — they will appear as keyword ability `KeywordView` records, not action records. Devotion is detected via SVar and handled by `annotateKeywordCounts()` on the GUI side.
+
+#### Detection summary
+
+| Category | Count | Detection method |
+|----------|-------|-----------------|
+| Basic (excluded) | 19 | N/A — no records produced |
+| Direct Effect class | 32 | `SpellAbility.getApiType()` match |
+| Param on generic effect | 6 | `sa.hasParam("X$")` |
+| Cost class | 5 | Cost type inspection |
+| Attribute param | 2 | `AlterAttribute` + `Attributes$` |
+| Oracle fallback needed | 3 | Fateseal, Transform, Convert |
+| Game concepts | 5 | SVar / keyword ability (not action records) |
+| **Total** | **67** (+5 concepts) | **45 API-detectable, 3 oracle, 19 basic** |
 
 ## Consumer Migration
 
