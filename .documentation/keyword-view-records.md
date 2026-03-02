@@ -668,7 +668,7 @@ Two occurrences of `getKeywordKey().equals(cState.getKeywordKey())` at lines ~13
 
 2. **Keyword action detection location**: Should action detection live in `CardStateView.updateKeywords()` alongside ability record computation, or in a separate method on `Card`? `updateKeywords()` already has access to the `Card` object. Putting it there keeps it in one place but makes the method longer.
 
-3. **Oracle text fallback for Fateseal**: Fateseal is the sole oracle-fallback action (~2 cards). Should this scanning happen game-side (in the record computation) or remain GUI-side as a post-processing step? Alternatively, add a marker param to the ~10 Fateseal card scripts to eliminate the fallback entirely.
+3. **Oracle text fallback for Fateseal**: Fateseal is the sole oracle-fallback action (~2 cards). Should this scanning happen game-side (in the record computation) or remain GUI-side as a post-processing step? Alternatively, add a marker param to the ~2 Fateseal card scripts to eliminate the fallback entirely.
 
 4. **Record immutability vs. count annotation**: `annotateKeywordCounts()` currently mutates `KeywordData` in place. With immutable records, it would need to create new `KeywordView` instances. Should we add a mutable wrapper for the GUI layer, or accept the allocation cost of creating new records?
 
