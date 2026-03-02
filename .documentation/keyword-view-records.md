@@ -1,8 +1,21 @@
 # KeywordView Records Implementation Plan
 
+## Table of Contents
+
+- [Goal](#goal)
+- [Background](#background)
+- [KeywordView Record](#keywordview-record)
+- [Storage & Serialization](#storage--serialization)
+- [Game-Layer Computation](#game-layer-computation)
+- [Consumer Migration](#consumer-migration)
+- [Files Affected](#files-affected)
+- [Implementation Order](#implementation-order)
+- [Part 2: hoveroptions Branch Cleanup](#part-2-hoveroptions-branch-cleanup)
+- [Open Questions](#open-questions)
+
 ## Goal
 
-Replace the `keyword -> string -> re-parse -> extract display data` pipeline in the `hoveroptions` branch with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
+Replace the `keyword -> string -> re-parse -> extract display data` pipeline with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
 
 Implements issue # 9918.
 
@@ -171,7 +184,7 @@ The merging logic currently lives in `KeywordInfoUtil.buildKeywords()` (GUI laye
 
 ### Keyword actions (API detection)
 
-After building ability records, detect keyword actions from the card's SpellAbilities, triggers, costs, and replacements. This is the Phase 2 detection from the [keyword detection refactor](keyword-detection-refactor.md):
+After building ability records, detect keyword actions from the card's SpellAbilities, triggers, costs, and replacements:
 
 ```java
 Set<String> detectedActions = new LinkedHashSet<>();  // dedup
@@ -211,7 +224,7 @@ public enum KeywordAction {
 }
 ```
 
-The detection method and target string let the computation loop be data-driven rather than a giant switch statement. See the [keyword detection refactor](keyword-detection-refactor.md) tables for the full mapping.
+The detection method and target string let the computation loop be data-driven rather than a giant switch statement.
 
 ## Consumer Migration
 
@@ -353,6 +366,104 @@ These are **computed from** the records, not stored as separate properties. Icon
 - Remove `KeywordCollectionViewType` TODO stub from `TrackableTypes`
 - Remove `KeywordData` class if all callers migrated to `KeywordView`
 - Remove `addKeywordActions()` oracle scanning infrastructure (if fully replaced)
+
+## Part 2: hoveroptions Branch Cleanup
+
+Once KeywordView records are implemented, the following code on the `hoveroptions` branch becomes redundant or can be significantly simplified. This section catalogs the cleanup opportunities.
+
+### KeywordInfoUtil.java — near-complete elimination
+
+The bulk of `KeywordInfoUtil` exists to re-parse keyword strings and scan oracle text. With pre-computed records, most of it goes away:
+
+| Method | Lines | What happens |
+|--------|-------|-------------|
+| `buildKeywords()` | ~64–150 | **Removed.** Re-parsing via `Keyword.getInstance()`, parameterized merging (Protection, Equip display), and deduplication all move game-side. Replaced by direct read of `getKeywordViews()`. |
+| `addKeywordActions()` | ~156–290 | **Removed.** Oracle text regex scanning for 67 keyword actions. Replaced by game-layer API detection. |
+| `addMissingKeywordsFromFlags()` | ~297–323 | **Removed.** Cross-checking boolean flags against parsed keywords is unnecessary when records are authoritative. |
+| `sortByOracleText()` | ~329–340 | **Kept initially**, or moved game-side if records carry a sort key. |
+| `annotateKeywordCounts()` | ~348–686 | **Kept** as client-side post-processing. Dynamic counts (Devotion, Affinity, Domain) change with board state and are cheaper to compute locally. |
+| `colorNamesToSymbols()` | ~729–737 | **Kept** if reminder text formatting stays GUI-side, otherwise moves game-side. |
+| `KeywordData` inner class | ~40–56 | **Removed** once all callers migrate to `KeywordView`. |
+
+**Net result:** ~500+ lines removed from KeywordInfoUtil. What remains is count annotation and possibly symbol formatting.
+
+### Tooltip call sites — simplified orchestration
+
+Both `CardInfoPopup` and `CardZoomer` currently orchestrate a 5-step pipeline. This collapses to 1–2 steps:
+
+**CardInfoPopup.java** (~lines 285–304):
+```java
+// Before: 5 calls
+keywords = buildKeywords(keywordKey, addedNames);
+addMissingKeywordsFromFlags(keywords, state, addedNames);
+addKeywordActions(keywords, oracleText, addedNames, cardName);
+sortByOracleText(keywords, oracleText);
+annotateKeywordCounts(keywords, cardView);
+
+// After: 1-2 calls
+keywords = state.getKeywordViews();  // or wrap in KeywordData if needed
+annotateKeywordCounts(keywords, cardView);  // only step that remains
+```
+
+**CardZoomer.java** (~lines 329–343): Same simplification.
+
+### Protection icon rendering — eliminate if-else chains
+
+Both platforms have ~70-line if-else chains parsing `getProtectionKey()` strings. These become a single call to `deriveProtectionKey()`:
+
+**CardPanel.java** (desktop, ~lines 710–782):
+```java
+// Before: 72-line if-else chain
+if (getProtectionKey().contains("everything") || getProtectionKey().contains("allcolors")) { ... }
+else if (getProtectionKey().contains("coloredspells")) { ... }
+else if (getProtectionKey().equals("R")) { ... }
+else if (getProtectionKey().equals("G")) { ... }
+// ... 15+ more cases
+
+// After: same logic, but reads from deriveProtectionKey()
+// The if-else chain itself doesn't change — it just reads from a different source.
+// Future cleanup: replace with a map lookup.
+```
+
+**CardRenderer.java** (mobile, ~lines 1157–1233): Same pattern, ~76 lines. Same migration.
+
+**Note:** The if-else chains themselves are pre-existing code not introduced by `hoveroptions`. The cleanup here is changing the data source from `getProtectionKey()` to `deriveProtectionKey()`. A further cleanup (converting the chains to map lookups) is a separate improvement opportunity, not a direct consequence of KeywordView records.
+
+### Hexproof icon rendering — minor simplification
+
+**CardPanel.java** (~lines 640–647) and **CardRenderer.java** (~lines 1041–1045):
+- `getHexproofKey().split(":")` parsing replaced by `deriveHexproofKey()`
+- ~5 lines per platform
+
+### FCardImageRenderer.java — Level up checks
+
+Three occurrences of `getKeywordKey().contains("Level up")` at lines ~192, ~311, ~389:
+- Replaced by `hasLevelUp()` boolean flag or `getKeywordViews().stream().anyMatch(...)` check
+- Boolean flag preferred in a rendering hot path
+
+### VField.java — token stacking equality
+
+Two occurrences of `getKeywordKey().equals(cState.getKeywordKey())` at lines ~139, ~150:
+- Replaced by `getKeywordViews().equals(cState.getKeywordViews())`
+- Record auto-equals makes this work correctly
+
+### CardRenderer.java — Flash/Flashback check
+
+~Lines 829–835: `keywordKey.contains("Flash")` / `keywordKey.contains("Flashback")` parsing:
+- Replaced by checking `KeywordView` records or existing boolean flags
+- Minor — ~7 lines
+
+### Cleanup summary
+
+| Category | Files | Lines removed/simplified |
+|----------|-------|------------------------|
+| KeywordInfoUtil re-parsing & oracle scanning | KeywordInfoUtil.java | ~500 lines removed |
+| Tooltip orchestration pipeline | CardInfoPopup.java, CardZoomer.java | ~35 lines simplified |
+| Protection/Hexproof data source migration | CardPanel.java, CardRenderer.java | ~10 lines changed (data source swap) |
+| Level up string check | FCardImageRenderer.java | ~3 lines changed |
+| Token stacking equality | VField.java | ~2 lines changed |
+| Flash/Flashback check | CardRenderer.java | ~7 lines simplified |
+| **Total** | **7 files** | **~550+ lines removed, ~50 lines simplified** |
 
 ## Open Questions
 
