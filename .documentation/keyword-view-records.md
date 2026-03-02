@@ -15,9 +15,9 @@
 
 ## Goal
 
-Replace the `keyword -> string -> re-parse -> extract display data` pipeline with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
+Replace the `keyword -> string -> re-parse -> extract display data` pipeline for keyword tooltip display in PR # 9806 with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
 
-Implements issue # 9918. Particularly relevant for keyword tooltip display in PR # 9806.
+Implements issue # 9918.
 
 ## Background
 
