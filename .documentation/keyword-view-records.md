@@ -20,9 +20,9 @@
 
 ## Goal
 
-Replace the `keyword -> string -> re-parse -> extract display data` pipeline for the keyword tooltips functionality in #9806 with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
+Replace the `keyword -> string -> re-parse -> extract display data` pipeline for the keyword tooltips functionality in <!-- -->#9806 with pre-computed `KeywordView` records stored in `CardStateView`. Covers both keyword abilities (Flying, Protection, Escape) and keyword actions (Scry, Goad, Support). Replaces `KeywordKey`, `ProtectionKey`, and `HexproofKey` with a single structured collection.
 
-Implements issue # 9918.
+Implements issue <!-- -->#9918.
 
 ## Background
 
@@ -314,12 +314,12 @@ These are excluded from tooltip display and will not produce `KeywordView` recor
 
 | # | Action | Host effect | Detection param | Notes |
 |---|--------|-----------|-----------------|-------|
-| 52 | Support | `CountersPut` | `Support$` | Refactored by Hanmac (#9870) |
-| 53 | Bolster | `CountersPut` | `Bolster$` | Refactored by Hanmac (#9872) |
+| 52 | Support | `CountersPut` | `Support$` | Refactored by Hanmac (<!-- -->#9870) |
+| 53 | Bolster | `CountersPut` | `Bolster$` | Refactored by Hanmac (<!-- -->#9872) |
 | 54 | Populate | `CopyPermanent` | `Populate$` | Param exists on master |
 | 55 | Roll to Visit | `RollDice` | Optional param | Per Jetz72 |
-| 56 | Adapt | Various | Refactored | Was keyword, now SpellAbility (#9854) |
-| 57 | Monstrosity | Various | Refactored | Was keyword, now SpellAbility (#9859) |
+| 56 | Adapt | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9854) |
+| 57 | Monstrosity | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9859) |
 
 #### Non-basic actions detectable via cost classes (DetectionMethod.COST)
 
@@ -625,3 +625,4 @@ Two occurrences of `getKeywordKey().equals(cState.getKeywordKey())` at lines ~13
 5. **Keyword enum stability across versions**: Serialization uses `Keyword.ordinal()`. If a Keyword enum entry is inserted in the middle, ordinals shift and network clients on different versions break. Should we use `Keyword.name()` (string, slower but stable) instead? Or document that both sides must be the same version?
 
 6. **`extractTypeParam` for icon keys**: Protection's `typeParam` needs to carry the compact color code (e.g., "RU") for icon derivation. The current `getProtectionKey()` method on `Card` does this analysis by inspecting `Protection.fromWhat`. Should `extractTypeParam()` replicate that logic, or can it call into the existing `getProtectionKey()` logic and decompose the result?
+The
