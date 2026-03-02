@@ -194,22 +194,49 @@ After building ability records, detect keyword actions from the card's SpellAbil
 ```java
 Set<String> detectedActions = new LinkedHashSet<>();  // dedup
 
+// Inspect spell abilities
 for (SpellAbility sa : c.getAllSpellAbilities()) {
-    // 1. Direct Effect class match (32 actions)
-    detectByApiType(sa, detectedActions, views);
-
-    // 2. Named param match (Support$, Bolster$, Populate$, etc.) (6 actions)
-    detectByParams(sa, detectedActions, views);
-
-    // 3. Cost type match (CostExert, CostBehold, etc.) (5 actions)
-    detectByCosts(sa, detectedActions, views);
-
-    // 4. AlterAttribute match (Suspect, Harness) (2 actions)
-    detectByAttributes(sa, detectedActions, views);
+    detectFromAbility(sa, detectedActions, views);
 }
 
-// 5. Oracle text fallback for Fateseal, Transform/Convert (~3 actions)
+// Inspect triggers — actions like Scry often appear only in trigger effects
+// e.g. "When ~ enters, scry 2" has ScryEffect in the trigger's execute ability
+for (Trigger trigger : c.getTriggers()) {
+    SpellAbility exec = trigger.getOverridingAbility();
+    if (exec != null) {
+        detectFromAbility(exec, detectedActions, views);
+    }
+}
+
+// Inspect replacement effects — actions can also appear as replacements
+for (ReplacementEffect re : c.getReplacementEffects()) {
+    SpellAbility exec = re.getOverridingAbility();
+    if (exec != null) {
+        detectFromAbility(exec, detectedActions, views);
+    }
+}
+
+// Oracle text fallback for Fateseal (~2 card scripts; see Step 2a)
 detectByOracleText(c.getOracleText(), detectedActions, views);
+```
+
+Where `detectFromAbility()` walks the ability and its sub-abilities:
+
+```java
+void detectFromAbility(SpellAbility sa, Set<String> detected, List<KeywordView> views) {
+    // 1. Direct Effect class match (34 actions)
+    detectByApiType(sa, detected, views);
+    // 2. Named param match (Support$, Bolster$, Populate$, etc.) (6 actions)
+    detectByParams(sa, detected, views);
+    // 3. Cost type match (CostExert, CostBehold, CostMill, etc.) (7 actions)
+    detectByCosts(sa, detected, views);
+    // 4. AlterAttribute match (Suspect, Harness) (2 actions)
+    detectByAttributes(sa, detected, views);
+    // Recurse into sub-abilities
+    if (sa.getSubAbility() != null) {
+        detectFromAbility(sa.getSubAbility(), detected, views);
+    }
+}
 ```
 
 Each detector creates a `KeywordView(null, action.getDisplayName(), action.getReminderText(), null)` — keyword field is null since these are actions, not abilities.
@@ -277,9 +304,9 @@ These are excluded from tooltip display and will not produce `KeywordView` recor
 
 | # | Action | Effect class | Notes |
 |---|--------|-------------|-------|
-| 20 | Scry | `ScryEffect` | Also occurs as cost (`CostScry` if exists) and in triggers/REs |
+| 20 | Scry | `ScryEffect` | No `CostScry` class exists — scry-as-cost is not a Forge pattern. Also appears in triggers/REs. |
 | 21 | Surveil | `SurveilEffect` | |
-| 22 | Mill | `MillEffect` | Also occurs as cost |
+| 22 | Mill | `MillEffect` | Also occurs as cost via `CostMill` — see cost table below |
 | 23 | Fight | `FightEffect` | |
 | 24 | Goad | `GoadEffect` | |
 | 25 | Investigate | `InvestigateEffect` | |
@@ -309,42 +336,56 @@ These are excluded from tooltip display and will not produce `KeywordView` recor
 | 49 | Airbend | `AirbendEffect` | |
 | 50 | Earthbend | `EarthbendEffect` | |
 | 51 | Blight | `BlightEffect` | |
+| 52 | Transform | `SetStateEffect` | `Mode$Transform`. Rules-identical to Convert — both use the same API. Flip uses `Mode$Flip` (separate). |
+| 53 | Convert | `SetStateEffect` | `Mode$Transform`. "Convert" is flavor text on Transformers cards; engine treats identically to Transform. |
 
 #### Non-basic actions detectable via params on generic effects (DetectionMethod.PARAM)
 
 | # | Action | Host effect | Detection param | Notes |
 |---|--------|-----------|-----------------|-------|
-| 52 | Support | `CountersPut` | `Support$` | Refactored by Hanmac (<!-- -->#9870) |
-| 53 | Bolster | `CountersPut` | `Bolster$` | Refactored by Hanmac (<!-- -->#9872) |
-| 54 | Populate | `CopyPermanent` | `Populate$` | Param exists on master |
-| 55 | Roll to Visit | `RollDice` | Optional param | Per Jetz72 |
-| 56 | Adapt | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9854) |
-| 57 | Monstrosity | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9859) |
+| 54 | Support | `CountersPut` | `Support$` | Refactored by Hanmac (<!-- -->#9870) |
+| 55 | Bolster | `CountersPut` | `Bolster$` | Refactored by Hanmac (<!-- -->#9872) |
+| 56 | Populate | `CopyPermanent` | `Populate$` | Param exists on master |
+| 57 | Roll to Visit | `RollDice` | Optional param | Per Jetz72 |
+| 58 | Adapt | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9854) |
+| 59 | Monstrosity | Various | Refactored | Was keyword, now SpellAbility (<!-- -->#9859) |
 
 #### Non-basic actions detectable via cost classes (DetectionMethod.COST)
 
 | # | Action | Cost class | Notes |
 |---|--------|-----------|-------|
-| 58 | Exert | `CostExert` | |
-| 59 | Behold | `CostBehold` / `CostBeholdExile` | |
-| 60 | Collect Evidence | `CostCollectEvidence` | |
-| 61 | Forage | `CostForage` | |
-| 62 | Waterbend | `CostWaterbend` | |
+| 60 | Exert | `CostExert` | |
+| 61 | Behold | `CostBehold` / `CostBeholdExile` | |
+| 62 | Collect Evidence | `CostCollectEvidence` | |
+| 63 | Forage | `CostForage` | |
+| 64 | Waterbend | `CostWaterbend` | |
+| 65 | Mill (as cost) | `CostMill` | Supplements Effect class detection. E.g. Millikin: "T, mill a card: Add {C}". |
 
 #### Non-basic actions detectable via attribute params (DetectionMethod.ATTRIBUTE)
 
 | # | Action | Host effect | Detection | Notes |
 |---|--------|-----------|-----------|-------|
-| 63 | Suspect | `AlterAttribute` | `Attributes$` contains "Suspect"/"Suspected" | |
-| 64 | Harness | `AlterAttribute` | `Attributes$` contains "Harnessed" | |
+| 66 | Suspect | `AlterAttribute` | `Attributes$` contains "Suspect"/"Suspected" | |
+| 67 | Harness | `AlterAttribute` | `Attributes$` contains "Harnessed" | |
 
 #### Non-basic actions requiring oracle text fallback (DetectionMethod.ORACLE)
 
 | # | Action | Why no API | Notes |
 |---|--------|-----------|-------|
-| 65 | Fateseal | Indistinguishable from generic `Scry`-like effect | ~10 cards. Could add marker param to eliminate fallback. |
-| 66 | Transform | `SetState` — same API as Convert, flip, MDFC | ~many cards. Could add marker param for Convert's 15 cards. |
-| 67 | Convert | `SetState` — same API as Transform | Rules-identical to Transform per Jetz72. |
+| 68 | Fateseal | Indistinguishable from generic `Scry`-like effect | 2 card scripts. Add `Fateseal$` marker param to eliminate fallback — see Step 2a. |
+
+Transform and Convert were previously thought to require oracle fallback, but both use `SetStateEffect` with `Mode$Transform`, non-transforming MDFCs don't use `SetState`, and Flip uses `Mode$Flip`. "Convert" is flavor text on Transformers-franchise cards — the engine treats it identically to Transform. They are now in the Effect class table above.
+
+#### Potential addition: Flip as a keyword action
+
+Flip is not currently in the `KeywordAction` enum despite being a keyword action in spirit — it uses `SetStateEffect` with `Mode$Flip` and is cleanly distinguishable from Transform. Adding it would be straightforward:
+
+- Add `FLIP(false)` to `KeywordAction` enum
+- Detection: `SetStateEffect` + `Mode$Flip` (DetectionMethod.EFFECT, same as Transform/Convert)
+- Add `lblKwActionFlip` / `lblKwActionFlipReminder` to `en-US.properties`
+- Flip cards are a small, closed set (Kamigawa block) — low risk
+
+This is optional and can be done independently of the main implementation.
 
 #### Game concepts (not 701.x actions)
 
@@ -365,13 +406,13 @@ Domain, Metalcraft, Threshold, and Delirium are ability words with `Keyword` enu
 | Category | Count | Detection method |
 |----------|-------|-----------------|
 | Basic (excluded) | 19 | N/A — no records produced |
-| Direct Effect class | 32 | `SpellAbility.getApiType()` match |
+| Direct Effect class | 34 | `SpellAbility.getApiType()` match (includes Transform/Convert via `SetState` + `Mode$Transform`) |
 | Param on generic effect | 6 | `sa.hasParam("X$")` |
-| Cost class | 5 | Cost type inspection |
+| Cost class | 6 | Cost type inspection (includes Mill as cost via `CostMill`) |
 | Attribute param | 2 | `AlterAttribute` + `Attributes$` |
-| Oracle fallback needed | 3 | Fateseal, Transform, Convert |
+| Oracle fallback needed | 1 | Fateseal only (2 card scripts) |
 | Game concepts | 5 | SVar / keyword ability (not action records) |
-| **Total** | **67** (+5 concepts) | **45 API-detectable, 3 oracle, 19 basic** |
+| **Total** | **68** (+5 concepts) | **48 API-detectable, 1 oracle, 19 basic** |
 
 ## Consumer Migration
 
@@ -496,6 +537,15 @@ These are **computed from** the records, not stored as separate properties. Icon
 - Add action detection logic to `updateKeywords()` (or helper)
 - Append action `KeywordView` records to the list
 
+### Step 2a (optional): Add marker params to Fateseal/Support card scripts
+Fateseal (2 card scripts: `spin_into_myth.txt`, `mesmeric_sliver.txt`) and Support (~11 cards, pre-Hanmac refactor) are indistinguishable from generic effects without marker parameters. Support was resolved by Hanmac's refactor (<!-- -->#9870) which added `Support$` params. Fateseal remains the sole oracle-fallback action.
+
+Adding a `Fateseal$` marker param to the 2 Fateseal card scripts (similar to what Hanmac did for Support) would eliminate the last oracle-text fallback, making **all 49 non-basic keyword actions fully API-detectable** and allowing the oracle scanning infrastructure to be removed entirely.
+
+- Add `Fateseal$` (or similar) marker param to Fateseal card scripts in `forge-gui/res/cardsfolder/`
+- Add `DetectionMethod.PARAM` entry for Fateseal in `KeywordAction` enum
+- Remove `DetectionMethod.ORACLE` and `detectByOracleText()` — no longer needed
+
 ### Step 3: Migrate tooltip consumers
 - Refactor `KeywordInfoUtil.buildKeywords()` to consume records
 - Remove `addKeywordActions()` and `addMissingKeywordsFromFlags()`
@@ -618,11 +668,10 @@ Two occurrences of `getKeywordKey().equals(cState.getKeywordKey())` at lines ~13
 
 2. **Keyword action detection location**: Should action detection live in `CardStateView.updateKeywords()` alongside ability record computation, or in a separate method on `Card`? `updateKeywords()` already has access to the `Card` object. Putting it there keeps it in one place but makes the method longer.
 
-3. **Oracle text fallback for actions**: The 3 oracle-fallback actions (Fateseal, Transform, Convert) need oracle text scanning even in the new system. Should this scanning happen game-side (in the record computation) or remain GUI-side as a post-processing step? Game-side is cleaner (records are complete) but means `Card` needs to scan its own oracle text.
+3. **Oracle text fallback for Fateseal**: Fateseal is the sole oracle-fallback action (~10 cards). Should this scanning happen game-side (in the record computation) or remain GUI-side as a post-processing step? Alternatively, add a marker param to the ~10 Fateseal card scripts to eliminate the fallback entirely.
 
 4. **Record immutability vs. count annotation**: `annotateKeywordCounts()` currently mutates `KeywordData` in place. With immutable records, it would need to create new `KeywordView` instances. Should we add a mutable wrapper for the GUI layer, or accept the allocation cost of creating new records?
 
 5. **Keyword enum stability across versions**: Serialization uses `Keyword.ordinal()`. If a Keyword enum entry is inserted in the middle, ordinals shift and network clients on different versions break. Should we use `Keyword.name()` (string, slower but stable) instead? Or document that both sides must be the same version?
 
 6. **`extractTypeParam` for icon keys**: Protection's `typeParam` needs to carry the compact color code (e.g., "RU") for icon derivation. The current `getProtectionKey()` method on `Card` does this analysis by inspecting `Protection.fromWhat`. Should `extractTypeParam()` replicate that logic, or can it call into the existing `getProtectionKey()` logic and decompose the result?
-The
