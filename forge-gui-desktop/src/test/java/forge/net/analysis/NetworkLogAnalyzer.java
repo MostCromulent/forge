@@ -42,6 +42,12 @@ public class NetworkLogAnalyzer {
     private static final Pattern WARN_PATTERN = Pattern.compile(
             "WARN|WARNING|Unknown protocol method|Non-serializable", Pattern.CASE_INSENSITIVE);
 
+    // JVM/Netty warnings unrelated to network infrastructure — suppress from analysis
+    private static final Pattern SUPPRESSED_WARN_PATTERN = Pattern.compile(
+            "sun\\.misc\\.Unsafe|terminally deprecated method|restricted method in java\\.lang\\.System"
+            + "|reporting this to the maintainers of.*PlatformDepend",
+            Pattern.CASE_INSENSITIVE);
+
     private static final Pattern SEND_ERROR_PATTERN = Pattern.compile(
             "send error|Client send error|sendErrors=(\\d+)", Pattern.CASE_INSENSITIVE);
 
@@ -182,8 +188,9 @@ public class NetworkLogAnalyzer {
                     continue;
                 }
 
-                // Warnings
-                if (WARN_PATTERN.matcher(line).find()) {
+                // Warnings (skip known JVM/Netty noise)
+                if (WARN_PATTERN.matcher(line).find()
+                        && !SUPPRESSED_WARN_PATTERN.matcher(line).find()) {
                     metrics.addWarning(truncateLine(line));
                 }
             }
