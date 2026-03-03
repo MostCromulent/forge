@@ -3,6 +3,7 @@ package forge.net;
 import forge.deck.Deck;
 import forge.localinstance.properties.ForgeConstants;
 import forge.net.analysis.AnalysisResult;
+import forge.net.analysis.GameLogMetrics;
 import forge.net.analysis.NetworkLogAnalyzer;
 
 import org.testng.Assert;
@@ -14,6 +15,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Integration test suite for network protocol validation on master.
@@ -207,6 +214,75 @@ public class NetworkPlayIntegrationTest {
 
         // Validate: 80% success, 0 send errors, 70% per-player-count
         validateResults(executionResult, 80.0, 70.0);
+    }
+
+    // ==================== Re-analysis ====================
+
+    /**
+     * Re-analyze existing log files on disk without running games.
+     * Finds the most recent batch directories in networklogs/ and produces a new results file.
+     *
+     * Configurable via system properties:
+     *   -Dtest.logBatchCount=10  (number of most-recent batch dirs to include, default 10)
+     */
+    @Test(timeOut = 120000, description = "Re-analyze existing log files")
+    public void analyzeExistingLogs() {
+        TestUtils.skipUnlessStressTestsEnabled();
+
+        int batchCount = Integer.getInteger("test.logBatchCount", 10);
+        Pattern batchDirPattern = Pattern.compile("^\\d{8}-\\d{6}$");
+        Pattern filenamePlayerCount = Pattern.compile("game-\\d+-(\\d+)p\\.log");
+
+        File[] subdirs = networkLogDir.listFiles(f ->
+                f.isDirectory() && batchDirPattern.matcher(f.getName()).matches());
+        Assert.assertNotNull(subdirs, "networklogs directory should exist");
+        Assert.assertTrue(subdirs.length > 0, "No batch directories found in " + networkLogDir);
+
+        // Sort by name descending (newest first) and take the requested count
+        Arrays.sort(subdirs, Comparator.comparing(File::getName, Comparator.reverseOrder()));
+        int dirsToUse = Math.min(batchCount, subdirs.length);
+
+        System.out.printf("[analyzeExistingLogs] Found %d batch dirs, analyzing newest %d%n",
+                subdirs.length, dirsToUse);
+
+        NetworkLogAnalyzer analyzer = new NetworkLogAnalyzer();
+        List<GameLogMetrics> allMetrics = new ArrayList<>();
+        int gameIndex = 0;
+
+        for (int i = dirsToUse - 1; i >= 0; i--) {  // oldest-first for sequential indexing
+            File dir = subdirs[i];
+            File[] logFiles = dir.listFiles((d, name) -> name.endsWith(".log"));
+            if (logFiles == null) continue;
+
+            Arrays.sort(logFiles, Comparator.comparing(File::getName));
+            System.out.printf("[analyzeExistingLogs] Batch dir %s: %d log files%n",
+                    dir.getName(), logFiles.length);
+
+            for (File logFile : logFiles) {
+                GameLogMetrics m = analyzer.analyzeLogFile(logFile);
+                m.setGameIndex(gameIndex++);
+
+                // Extract player count from filename as fallback
+                if (m.getPlayerCount() == 2) {  // default — might not have been set from content
+                    Matcher fnMatcher = filenamePlayerCount.matcher(logFile.getName());
+                    if (fnMatcher.matches()) {
+                        try {
+                            m.setPlayerCount(Integer.parseInt(fnMatcher.group(1)));
+                        } catch (NumberFormatException ignored) { }
+                    }
+                }
+
+                allMetrics.add(m);
+            }
+        }
+
+        System.out.printf("[analyzeExistingLogs] Analyzed %d game logs%n", allMetrics.size());
+        Assert.assertFalse(allMetrics.isEmpty(), "Should have at least one log file to analyze");
+
+        AnalysisResult result = analyzer.buildAnalysisResult(allMetrics);
+        String report = result.generateReport();
+        System.out.println("\n" + report);
+        saveReportToFile(report, "reanalysis");
     }
 
     // ==================== Helper Methods ====================
