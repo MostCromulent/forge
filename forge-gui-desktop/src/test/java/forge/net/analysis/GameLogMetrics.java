@@ -2,6 +2,7 @@ package forge.net.analysis;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +41,7 @@ public class GameLogMetrics {
     private List<String> errors = new ArrayList<>();
     private Map<String, Integer> errorCounts = new HashMap<>();
     private int sendErrors;
-    private NetworkLogAnalyzer.ErrorContext errorContext;
+    private Map<String, NetworkLogAnalyzer.ErrorContext> errorContexts = new LinkedHashMap<>();
 
     /**
      * Check if this game was successful (completed with no send errors).
@@ -103,8 +104,16 @@ public class GameLogMetrics {
     /** Get occurrence counts by normalized error pattern. */
     public Map<String, Integer> getErrorCounts() { return errorCounts; }
 
-    public NetworkLogAnalyzer.ErrorContext getErrorContext() { return errorContext; }
-    public void setErrorContext(NetworkLogAnalyzer.ErrorContext errorContext) { this.errorContext = errorContext; }
+    /** Get error contexts keyed by normalized error pattern. */
+    public Map<String, NetworkLogAnalyzer.ErrorContext> getErrorContexts() { return errorContexts; }
+    public void setErrorContexts(Map<String, NetworkLogAnalyzer.ErrorContext> errorContexts) {
+        this.errorContexts = errorContexts;
+    }
+
+    /** Get the first error context (convenience for backward compatibility). */
+    public NetworkLogAnalyzer.ErrorContext getErrorContext() {
+        return errorContexts.isEmpty() ? null : errorContexts.values().iterator().next();
+    }
 
     @Override
     public String toString() {

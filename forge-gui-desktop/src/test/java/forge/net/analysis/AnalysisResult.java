@@ -5,11 +5,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -232,20 +230,17 @@ public class AnalysisResult {
             }
             sb.append("\n");
 
-            // Error context — one example per distinct error type
-            Set<String> seenErrorTypes = new HashSet<>();
-            List<NetworkLogAnalyzer.ErrorContext> distinctContexts = new ArrayList<>();
+            // Error context — one example per distinct error type, collected from all games
+            Map<String, NetworkLogAnalyzer.ErrorContext> distinctContexts = new LinkedHashMap<>();
             for (GameLogMetrics m : allMetrics) {
-                if (m.getErrorContext() == null) continue;
-                String normalized = normalizeError(m.getErrorContext().errorMessage());
-                if (seenErrorTypes.add(normalized)) {
-                    distinctContexts.add(m.getErrorContext());
+                for (Map.Entry<String, NetworkLogAnalyzer.ErrorContext> entry : m.getErrorContexts().entrySet()) {
+                    distinctContexts.putIfAbsent(entry.getKey(), entry.getValue());
                 }
             }
 
             if (!distinctContexts.isEmpty()) {
                 sb.append("### Error Context\n\n");
-                for (NetworkLogAnalyzer.ErrorContext ctx : distinctContexts) {
+                for (NetworkLogAnalyzer.ErrorContext ctx : distinctContexts.values()) {
                     sb.append(ctx.toMarkdown());
                     sb.append("\n");
                 }

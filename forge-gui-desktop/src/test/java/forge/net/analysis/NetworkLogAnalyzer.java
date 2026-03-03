@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -45,7 +46,9 @@ public class NetworkLogAnalyzer {
     // JVM/Netty warnings unrelated to network infrastructure — suppress from analysis
     private static final Pattern SUPPRESSED_WARN_PATTERN = Pattern.compile(
             "sun\\.misc\\.Unsafe|terminally deprecated method|restricted method in java\\.lang\\.System"
-            + "|reporting this to the maintainers of.*PlatformDepend",
+            + "|reporting this to the maintainers of.*PlatformDepend"
+            + "|enable-native-access|Restricted methods will be blocked"
+            + "|System::loadLibrary has been called by",
             Pattern.CASE_INSENSITIVE);
 
     private static final Pattern SEND_ERROR_PATTERN = Pattern.compile(
@@ -118,7 +121,9 @@ public class NetworkLogAnalyzer {
      */
     public GameLogMetrics analyzeLogFile(File logFile) {
         GameLogMetrics metrics = new GameLogMetrics();
-        metrics.setLogFileName(logFile.getName());
+        // Include parent dir name for batch identification (e.g., "20260304-072630/game-0-2p.log")
+        String parentName = logFile.getParentFile() != null ? logFile.getParentFile().getName() : "";
+        metrics.setLogFileName(parentName.isEmpty() ? logFile.getName() : parentName + "/" + logFile.getName());
 
         int maxTurn = 0;
 
@@ -199,8 +204,8 @@ public class NetworkLogAnalyzer {
             metrics.setFailureMode(determineFailureMode(metrics));
 
             if (!metrics.getErrors().isEmpty()) {
-                ErrorContext context = extractAroundFirstError(logFile);
-                metrics.setErrorContext(context);
+                Map<String, ErrorContext> contexts = extractErrorContexts(logFile);
+                metrics.setErrorContexts(contexts);
             }
 
         } catch (IOException e) {
@@ -238,26 +243,31 @@ public class NetworkLogAnalyzer {
      */
     public AnalysisResult buildFromExecutionResults(
             MultiProcessGameExecutor.ExecutionResult execResult) {
-        // Parse log files from all batch directories
+        // Parse log files from all batch directories.
+        // Each batch dir has game-0 through game-9, so use a running offset
+        // to map to global game indices (0-99).
         Map<Integer, GameLogMetrics> logMetricsByGame = new HashMap<>();
+        int batchOffset = 0;
         for (File logDir : execResult.getLogDirs()) {
             if (logDir != null && logDir.isDirectory()) {
                 File[] logFiles = logDir.listFiles((dir, name) -> name.endsWith(".log"));
                 if (logFiles != null) {
+                    int batchSize = logFiles.length;
                     for (File logFile : logFiles) {
                         GameLogMetrics logMetrics = analyzeLogFile(logFile);
-                        // Extract game index from filename (e.g., "game-0-2p.log" → 0)
+                        // Extract local game index from filename (e.g., "game-0-2p.log" → 0)
                         String name = logFile.getName();
                         if (name.startsWith("game-")) {
                             try {
                                 int dashIdx = name.indexOf('-', 5);
                                 if (dashIdx > 0) {
-                                    int gameIdx = Integer.parseInt(name.substring(5, dashIdx));
-                                    logMetricsByGame.put(gameIdx, logMetrics);
+                                    int localIdx = Integer.parseInt(name.substring(5, dashIdx));
+                                    logMetricsByGame.put(batchOffset + localIdx, logMetrics);
                                 }
                             } catch (NumberFormatException ignored) { }
                         }
                     }
+                    batchOffset += batchSize;
                 }
             }
         }
@@ -268,8 +278,11 @@ public class NetworkLogAnalyzer {
             int idx = entry.getKey();
             UnifiedNetworkHarness.GameResult gr = entry.getValue();
 
+            GameLogMetrics logMetrics = logMetricsByGame.get(idx);
+
             GameLogMetrics m = new GameLogMetrics();
-            m.setLogFileName("game" + idx);
+            // Use the log file name from analysis (includes batch dir) if available
+            m.setLogFileName(logMetrics != null ? logMetrics.getLogFileName() : "game" + idx);
             m.setGameIndex(idx);
             m.setPlayerCount(gr.playerCount);
             m.setGameCompleted(gr.success);
@@ -286,8 +299,7 @@ public class NetworkLogAnalyzer {
                 m.addError(gr.failureReason);
             }
 
-            // Merge errors, error counts, and warnings from log file analysis
-            GameLogMetrics logMetrics = logMetricsByGame.get(idx);
+            // Merge errors, error counts, warnings, and error contexts from log file analysis
             if (logMetrics != null) {
                 for (String logError : logMetrics.getErrors()) {
                     if (!m.getErrors().contains(logError)) {
@@ -300,8 +312,8 @@ public class NetworkLogAnalyzer {
                 for (String logWarning : logMetrics.getWarnings()) {
                     m.addWarning(logWarning);
                 }
-                if (logMetrics.getErrorContext() != null && m.getErrorContext() == null) {
-                    m.setErrorContext(logMetrics.getErrorContext());
+                for (Map.Entry<String, NetworkLogAnalyzer.ErrorContext> ctx : logMetrics.getErrorContexts().entrySet()) {
+                    m.getErrorContexts().putIfAbsent(ctx.getKey(), ctx.getValue());
                 }
             }
 
@@ -315,12 +327,19 @@ public class NetworkLogAnalyzer {
         return new AnalysisResult(metricsList);
     }
 
-    private ErrorContext extractAroundFirstError(File logFile) {
+    /**
+     * Extract error context for the first occurrence of each distinct error type in the log file.
+     * Returns a map from normalized error pattern to its ErrorContext.
+     */
+    private Map<String, ErrorContext> extractErrorContexts(File logFile) {
         List<String> allLines = new ArrayList<>();
-        int errorLineIndex = -1;
-        String errorMessage = null;
+        // Track the first occurrence of each distinct normalized error
+        Map<String, Integer> firstOccurrenceByType = new LinkedHashMap<>();
+        Map<String, String> rawMessageByType = new LinkedHashMap<>();
         int currentTurn = 0;
+        int turnAtFirstError = 0;
         List<String> warningsBefore = new ArrayList<>();
+        boolean seenAnyError = false;
 
         try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
             String line;
@@ -336,34 +355,46 @@ public class NetworkLogAnalyzer {
                     catch (NumberFormatException ignored) { }
                 }
 
-                if (errorLineIndex < 0 && WARN_PATTERN.matcher(line).find()) {
+                if (!seenAnyError && WARN_PATTERN.matcher(line).find()) {
                     warningsBefore.add(line);
                     if (warningsBefore.size() > 50) warningsBefore.remove(0);
                 }
 
-                if (errorLineIndex < 0 && ERROR_PATTERN.matcher(line).find()) {
-                    errorLineIndex = lineNumber - 1;
-                    errorMessage = line;
+                if (ERROR_PATTERN.matcher(line).find()) {
+                    if (!seenAnyError) {
+                        turnAtFirstError = currentTurn;
+                        seenAnyError = true;
+                    }
+                    String normalized = normalizeError(line);
+                    if (!firstOccurrenceByType.containsKey(normalized)) {
+                        firstOccurrenceByType.put(normalized, lineNumber - 1);
+                        rawMessageByType.put(normalized, line);
+                    }
                 }
             }
         } catch (IOException e) {
-            return null;
+            return Map.of();
         }
 
-        if (errorLineIndex < 0) return null;
+        if (firstOccurrenceByType.isEmpty()) return Map.of();
 
-        int startIndex = Math.max(0, errorLineIndex - CONTEXT_LINES_BEFORE);
-        int endIndex = Math.min(allLines.size() - 1, errorLineIndex + CONTEXT_LINES_AFTER);
+        Map<String, ErrorContext> contexts = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : firstOccurrenceByType.entrySet()) {
+            int errorLineIndex = entry.getValue();
+            int startIndex = Math.max(0, errorLineIndex - CONTEXT_LINES_BEFORE);
+            int endIndex = Math.min(allLines.size() - 1, errorLineIndex + CONTEXT_LINES_AFTER);
 
-        List<String> linesBefore = new ArrayList<>(allLines.subList(startIndex, errorLineIndex));
-        List<String> linesAfter = errorLineIndex + 1 <= endIndex
-                ? new ArrayList<>(allLines.subList(errorLineIndex + 1, endIndex + 1))
-                : new ArrayList<>();
+            List<String> linesBefore = new ArrayList<>(allLines.subList(startIndex, errorLineIndex));
+            List<String> linesAfter = errorLineIndex + 1 <= endIndex
+                    ? new ArrayList<>(allLines.subList(errorLineIndex + 1, endIndex + 1))
+                    : new ArrayList<>();
 
-        return new ErrorContext(
-                logFile.getName(), errorLineIndex + 1, currentTurn, null,
-                new ArrayList<>(), linesBefore, linesAfter,
-                new ArrayList<>(warningsBefore), errorMessage);
+            contexts.put(entry.getKey(), new ErrorContext(
+                    logFile.getName(), errorLineIndex + 1, turnAtFirstError, null,
+                    new ArrayList<>(), linesBefore, linesAfter,
+                    new ArrayList<>(warningsBefore), rawMessageByType.get(entry.getKey())));
+        }
+        return contexts;
     }
 
     private String truncateLine(String line) {
