@@ -108,6 +108,7 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
 
     @Override
     public final void exceptionCaught(final ChannelHandlerContext ctx, final Throwable cause) {
+        dispatchErrors.incrementAndGet();
         cause.printStackTrace();
         ctx.close();
     }

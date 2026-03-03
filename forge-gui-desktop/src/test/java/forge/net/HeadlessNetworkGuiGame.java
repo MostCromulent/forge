@@ -38,6 +38,8 @@ public class HeadlessNetworkGuiGame extends AbstractGuiGame {
 
     // Client-side tracking fields for test assertions
     private final AtomicInteger setGameViewCount = new AtomicInteger(0);
+    private final AtomicInteger errorDialogCount = new AtomicInteger(0);
+    private final List<String> errorMessages = Collections.synchronizedList(new ArrayList<>());
     private volatile boolean openViewCalled = false;
 
     public int getSetGameViewCount() {
@@ -46,6 +48,14 @@ public class HeadlessNetworkGuiGame extends AbstractGuiGame {
 
     public boolean isOpenViewCalled() {
         return openViewCalled;
+    }
+
+    public int getErrorDialogCount() {
+        return errorDialogCount.get();
+    }
+
+    public List<String> getErrorMessages() {
+        return new ArrayList<>(errorMessages);
     }
 
     @Override
@@ -186,6 +196,8 @@ public class HeadlessNetworkGuiGame extends AbstractGuiGame {
 
     @Override
     public void showErrorDialog(String message, String title) {
+        errorDialogCount.incrementAndGet();
+        errorMessages.add(title + ": " + message);
         System.err.println("[HeadlessNetworkGuiGame] " + title + ": " + message);
     }
 

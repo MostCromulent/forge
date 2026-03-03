@@ -10,6 +10,7 @@ import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
+import forge.gamemodes.net.GameProtocolHandler;
 import forge.gamemodes.net.event.*;
 import forge.gui.GuiBase;
 import forge.gui.interfaces.IGuiGame;
@@ -218,6 +219,17 @@ public final class FServerManager {
         }
         for (final RemoteClient client : disconnectedClients.values()) {
             total += client.getSendErrorCount();
+        }
+        return total;
+    }
+
+    public int getTotalDispatchErrors() {
+        int total = 0;
+        for (final Channel ch : clients.keySet()) {
+            GameProtocolHandler<?> handler = ch.pipeline().get(GameProtocolHandler.class);
+            if (handler != null) {
+                total += handler.getDispatchErrorCount();
+            }
         }
         return total;
     }

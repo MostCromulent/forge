@@ -171,9 +171,14 @@ public class UnifiedNetworkHarness {
             // 8. Collect results
             int turnCount = game.getPhaseHandler().getTurn();
             int serverSendErrors = server.getTotalSendErrors();
+            int serverDispatchErrors = server.getTotalDispatchErrors();
             int clientSendErrors = 0;
             for (HeadlessNetworkClient hc : clients) {
                 clientSendErrors += hc.getClient().getSendErrorCount();
+            }
+
+            if (serverDispatchErrors > 0) {
+                errors.add("Server dispatch errors: " + serverDispatchErrors);
             }
 
             // Check client received expected protocol calls
@@ -185,6 +190,11 @@ public class UnifiedNetworkHarness {
                 if (gui.getSetGameViewCount() == 0) {
                     errors.add("Client " + hc.getAssignedSlot() + " received 0 setGameView calls");
                 }
+                if (gui.getErrorDialogCount() > 0) {
+                    for (String errMsg : gui.getErrorMessages()) {
+                        errors.add("Client " + hc.getAssignedSlot() + " error dialog: " + errMsg);
+                    }
+                }
             }
 
             String winner = null;
@@ -195,7 +205,8 @@ public class UnifiedNetworkHarness {
             long duration = System.currentTimeMillis() - startTime;
 
             return new GameResult(true, gameStarted, turnCount,
-                    serverSendErrors + clientSendErrors, playerCount, winner,
+                    serverSendErrors + clientSendErrors + serverDispatchErrors,
+                    playerCount, winner,
                     null, errors, duration);
 
         } catch (Exception e) {

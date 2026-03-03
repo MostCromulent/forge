@@ -1,8 +1,12 @@
 package forge.net;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +29,7 @@ public class MultiProcessGameExecutor {
 
     private final long timeoutMs;
     private final int basePort;
+    private File logBaseDir;
 
     public MultiProcessGameExecutor() {
         this(DEFAULT_TIMEOUT_MS);
@@ -39,6 +44,10 @@ public class MultiProcessGameExecutor {
         this.basePort = basePort;
     }
 
+    public void setLogBaseDir(File logBaseDir) {
+        this.logBaseDir = logBaseDir;
+    }
+
     /**
      * Run multiple games with specified player counts in parallel.
      */
@@ -51,6 +60,14 @@ public class MultiProcessGameExecutor {
         List<ProcessMonitor> monitors = new ArrayList<>();
         ExecutionResult result = new ExecutionResult(gameCount);
 
+        // Create per-run log directory
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        File baseDir = logBaseDir != null ? logBaseDir : new File("target/network-test-logs");
+        File logDir = new File(baseDir, timestamp);
+        logDir.mkdirs();
+        result.setLogDir(logDir);
+        System.out.printf("%s Game logs: %s%n", LOG_PREFIX, logDir.getAbsolutePath());
+
         try {
             String classpath = System.getProperty("java.class.path");
             String javaHome = System.getProperty("java.home");
@@ -59,7 +76,8 @@ public class MultiProcessGameExecutor {
             for (int i = 0; i < gameCount; i++) {
                 int port = basePort + i;
                 int playerCount = playerCounts[i];
-                ProcessInfo info = startGameProcess(javaBin, classpath, port, i, playerCount);
+                File logFile = new File(logDir, "game-" + i + "-" + playerCount + "p.log");
+                ProcessInfo info = startGameProcess(javaBin, classpath, port, i, playerCount, logFile);
                 processes.add(info);
 
                 ProcessMonitor monitor = new ProcessMonitor(info);
@@ -122,8 +140,16 @@ public class MultiProcessGameExecutor {
 
             MultiProcessGameExecutor batchExecutor = new MultiProcessGameExecutor(
                     this.timeoutMs, this.basePort + currentPortOffset);
+            if (this.logBaseDir != null) {
+                batchExecutor.setLogBaseDir(this.logBaseDir);
+            }
 
             ExecutionResult batchResult = batchExecutor.runGamesWithPlayerCounts(batchPlayerCounts);
+
+            // Use the first batch's log directory for the aggregated result
+            if (aggregatedResult.getLogDir() == null && batchResult.getLogDir() != null) {
+                aggregatedResult.setLogDir(batchResult.getLogDir().getParentFile());
+            }
 
             // Merge batch results
             for (Map.Entry<Integer, UnifiedNetworkHarness.GameResult> entry : batchResult.getResults().entrySet()) {
@@ -143,8 +169,8 @@ public class MultiProcessGameExecutor {
         return aggregatedResult;
     }
 
-    private ProcessInfo startGameProcess(String javaBin, String classpath, int port, int gameIndex, int playerCount)
-            throws Exception {
+    private ProcessInfo startGameProcess(String javaBin, String classpath, int port, int gameIndex, int playerCount,
+                                         File logFile) throws Exception {
         List<String> command = new ArrayList<>();
         command.add(javaBin);
         command.add("-cp");
@@ -159,7 +185,7 @@ public class MultiProcessGameExecutor {
         pb.redirectErrorStream(true);
 
         Process process = pb.start();
-        return new ProcessInfo(gameIndex, port, playerCount, process);
+        return new ProcessInfo(gameIndex, port, playerCount, process, logFile);
     }
 
     /**
@@ -177,14 +203,19 @@ public class MultiProcessGameExecutor {
         void startReading() {
             Thread readerThread = new Thread(() -> {
                 try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(info.process.getInputStream()))) {
+                        new InputStreamReader(info.process.getInputStream()));
+                     BufferedWriter logWriter = new BufferedWriter(
+                        new FileWriter(info.logFile))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         System.out.printf("[Game %d] %s%n", info.gameIndex, line);
+                        logWriter.write(line);
+                        logWriter.newLine();
                         if (line.startsWith("RESULT:")) {
                             resultLine.set(line);
                         }
                     }
+                    logWriter.flush();
                 } catch (Exception e) {
                     System.err.printf("%s Error reading output for game %d: %s%n",
                             LOG_PREFIX, info.gameIndex, e.getMessage());
@@ -227,12 +258,14 @@ public class MultiProcessGameExecutor {
         final int port;
         final int playerCount;
         final Process process;
+        final File logFile;
 
-        ProcessInfo(int gameIndex, int port, int playerCount, Process process) {
+        ProcessInfo(int gameIndex, int port, int playerCount, Process process, File logFile) {
             this.gameIndex = gameIndex;
             this.port = port;
             this.playerCount = playerCount;
             this.process = process;
+            this.logFile = logFile;
         }
     }
 
@@ -244,10 +277,14 @@ public class MultiProcessGameExecutor {
         private final Map<Integer, UnifiedNetworkHarness.GameResult> results = new ConcurrentHashMap<>();
         private final Map<Integer, String> errors = new ConcurrentHashMap<>();
         private final Map<Integer, Boolean> timeouts = new ConcurrentHashMap<>();
+        private File logDir;
 
         public ExecutionResult(int totalGames) {
             this.totalGames = totalGames;
         }
+
+        public void setLogDir(File logDir) { this.logDir = logDir; }
+        public File getLogDir() { return logDir; }
 
         public void addResult(int idx, UnifiedNetworkHarness.GameResult r) {
             results.put(idx, r);

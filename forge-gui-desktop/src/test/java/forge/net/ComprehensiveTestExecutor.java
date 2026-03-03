@@ -1,5 +1,6 @@
 package forge.net;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -30,6 +31,7 @@ public class ComprehensiveTestExecutor {
     private int parallelBatchSize = 10;
     private long gameTimeoutMs = 300_000;
     private boolean sequential = false;
+    private File logBaseDir;
 
     public ComprehensiveTestExecutor twoPlayerGames(int count) {
         this.twoPlayerGames = count;
@@ -61,6 +63,11 @@ public class ComprehensiveTestExecutor {
         return this;
     }
 
+    public ComprehensiveTestExecutor logBaseDir(File dir) {
+        this.logBaseDir = dir;
+        return this;
+    }
+
     public int getTotalGames() {
         return twoPlayerGames + threePlayerGames + fourPlayerGames;
     }
@@ -85,6 +92,9 @@ public class ComprehensiveTestExecutor {
             result = executeSequentially(playerCounts);
         } else {
             MultiProcessGameExecutor executor = new MultiProcessGameExecutor(gameTimeoutMs);
+            if (logBaseDir != null) {
+                executor.setLogBaseDir(logBaseDir);
+            }
             result = executor.runGamesInBatches(playerCounts, parallelBatchSize);
         }
 

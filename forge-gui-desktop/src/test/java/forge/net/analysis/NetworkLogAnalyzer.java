@@ -8,7 +8,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -224,10 +226,33 @@ public class NetworkLogAnalyzer {
     }
 
     /**
-     * Build an AnalysisResult from execution results (no log files needed).
+     * Build an AnalysisResult from execution results, enriched with log file analysis.
      */
     public AnalysisResult buildFromExecutionResults(
             MultiProcessGameExecutor.ExecutionResult execResult) {
+        // Parse log files if available
+        Map<Integer, GameLogMetrics> logMetricsByGame = new HashMap<>();
+        File logDir = execResult.getLogDir();
+        if (logDir != null && logDir.isDirectory()) {
+            File[] logFiles = logDir.listFiles((dir, name) -> name.endsWith(".log"));
+            if (logFiles != null) {
+                for (File logFile : logFiles) {
+                    GameLogMetrics logMetrics = analyzeLogFile(logFile);
+                    // Extract game index from filename (e.g., "game-0-2p.log" → 0)
+                    String name = logFile.getName();
+                    if (name.startsWith("game-")) {
+                        try {
+                            int dashIdx = name.indexOf('-', 5);
+                            if (dashIdx > 0) {
+                                int gameIdx = Integer.parseInt(name.substring(5, dashIdx));
+                                logMetricsByGame.put(gameIdx, logMetrics);
+                            }
+                        } catch (NumberFormatException ignored) { }
+                    }
+                }
+            }
+        }
+
         List<GameLogMetrics> metricsList = new ArrayList<>();
 
         for (var entry : execResult.getResults().entrySet()) {
@@ -250,6 +275,22 @@ public class NetworkLogAnalyzer {
             }
             if (gr.failureReason != null && !gr.success) {
                 m.addError(gr.failureReason);
+            }
+
+            // Merge errors and warnings from log file analysis
+            GameLogMetrics logMetrics = logMetricsByGame.get(idx);
+            if (logMetrics != null) {
+                for (String logError : logMetrics.getErrors()) {
+                    if (!m.getErrors().contains(logError)) {
+                        m.addError(logError);
+                    }
+                }
+                for (String logWarning : logMetrics.getWarnings()) {
+                    m.addWarning(logWarning);
+                }
+                if (logMetrics.getErrorContext() != null && m.getErrorContext() == null) {
+                    m.setErrorContext(logMetrics.getErrorContext());
+                }
             }
 
             m.setFailureMode(gr.success ? GameLogMetrics.FailureMode.NONE :

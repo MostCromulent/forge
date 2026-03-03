@@ -1,6 +1,7 @@
 package forge.net;
 
 import forge.deck.Deck;
+import forge.localinstance.properties.ForgeConstants;
 import forge.net.analysis.AnalysisResult;
 import forge.net.analysis.NetworkLogAnalyzer;
 
@@ -39,11 +40,14 @@ import java.time.format.DateTimeFormatter;
 public class NetworkPlayIntegrationTest {
 
     private static boolean initialized = false;
+    private static File networkLogDir;
 
     @BeforeClass
     public static void setUp() {
         if (!initialized) {
             TestUtils.ensureFModelInitialized();
+            networkLogDir = new File(ForgeConstants.USER_DIR, "networklogs");
+            networkLogDir.mkdirs();
             initialized = true;
         }
     }
@@ -152,7 +156,8 @@ public class NetworkPlayIntegrationTest {
     public void runComprehensiveDeltaSyncTest() {
         TestUtils.skipUnlessStressTestsEnabled();
 
-        ComprehensiveTestExecutor executor = ComprehensiveTestExecutor.fromSystemProperties();
+        ComprehensiveTestExecutor executor = ComprehensiveTestExecutor.fromSystemProperties()
+                .logBaseDir(networkLogDir);
         System.out.println(executor.getConfigurationSummary());
 
         long startTime = System.currentTimeMillis();
@@ -161,6 +166,7 @@ public class NetworkPlayIntegrationTest {
 
         System.out.printf("[NetworkPlayIntegrationTest] Completed in %.1f minutes%n", duration / 60000.0);
         System.out.println(executionResult.toDetailedReport());
+        printLogLocation(executionResult);
 
         // Build analysis from execution results
         NetworkLogAnalyzer analyzer = new NetworkLogAnalyzer();
@@ -185,10 +191,12 @@ public class NetworkPlayIntegrationTest {
                 .twoPlayerGames(5)
                 .threePlayerGames(3)
                 .fourPlayerGames(2)
-                .parallelBatchSize(10);
+                .parallelBatchSize(10)
+                .logBaseDir(networkLogDir);
 
         MultiProcessGameExecutor.ExecutionResult executionResult = executor.execute();
         System.out.println(executionResult.toDetailedReport());
+        printLogLocation(executionResult);
 
         NetworkLogAnalyzer analyzer = new NetworkLogAnalyzer();
         AnalysisResult analysisResult = analyzer.buildFromExecutionResults(executionResult);
@@ -236,19 +244,28 @@ public class NetworkPlayIntegrationTest {
         System.out.println("[Validation] All criteria PASSED");
     }
 
-    private void saveReportToFile(String report, String prefix) {
-        try {
-            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
-            String filename = "network-test-" + prefix + "-" + timestamp + "-results.md";
-            File reportFile = new File("target", filename);
-            reportFile.getParentFile().mkdirs();
+    private void printLogLocation(MultiProcessGameExecutor.ExecutionResult result) {
+        File logDir = result.getLogDir();
+        if (logDir != null) {
+            System.out.println("Per-game logs saved to: " + logDir.getAbsolutePath());
+        }
+    }
 
-            try (FileWriter writer = new FileWriter(reportFile)) {
-                writer.write(report);
+    private void saveReportToFile(String report, String prefix) {
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        String filename = "network-test-" + prefix + "-" + timestamp + "-results.md";
+
+        // Save to networklogs directory
+        if (networkLogDir != null) {
+            try {
+                File reportFile = new File(networkLogDir, filename);
+                try (FileWriter writer = new FileWriter(reportFile)) {
+                    writer.write(report);
+                }
+                System.out.println("Report saved to: " + reportFile.getAbsolutePath());
+            } catch (IOException e) {
+                System.err.println("WARNING: Failed to save report to networklogs: " + e.getMessage());
             }
-            System.out.println("Report saved to: " + reportFile.getAbsolutePath());
-        } catch (IOException e) {
-            System.err.println("WARNING: Failed to save report: " + e.getMessage());
         }
     }
 }
