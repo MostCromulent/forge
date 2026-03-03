@@ -33,6 +33,8 @@ import java.util.List;
  */
 public class UnifiedNetworkHarness {
 
+    private static final String[] PLAYER_NAMES = {"Alice", "Bob", "Charlie", "Dave"};
+
     private final int playerCount;
     private final int port;
     private final long gameTimeoutMs;
@@ -84,6 +86,7 @@ public class UnifiedNetworkHarness {
             // 3. Configure slot 0: AI host
             LobbySlot slot0 = lobby.getSlot(0);
             slot0.setType(LobbySlotType.AI);
+            slot0.setName(PLAYER_NAMES[0]);
             slot0.setDeck(decks.get(0));
             slot0.setIsReady(true);
 
@@ -101,7 +104,7 @@ public class UnifiedNetworkHarness {
                 slot.setDeck(decks.get(slotIndex));
 
                 // Connect a headless client
-                String clientName = "TestPlayer" + (slotIndex + 1);
+                String clientName = PLAYER_NAMES[slotIndex];
                 HeadlessNetworkClient hClient = new HeadlessNetworkClient(clientName, "localhost", port);
                 clients.add(hClient);
 

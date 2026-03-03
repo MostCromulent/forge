@@ -175,7 +175,7 @@ public class MultiProcessGameExecutor {
         command.add(javaBin);
         command.add("-cp");
         command.add(classpath);
-        command.add("-Xmx512m");
+        command.add("-Xmx1g");
         command.add("forge.net.ComprehensiveGameRunner");
         command.add(String.valueOf(port));
         command.add(String.valueOf(gameIndex));
@@ -233,7 +233,8 @@ public class MultiProcessGameExecutor {
 
                 if (!completed) {
                     info.process.destroyForcibly();
-                    result.addTimeout(info.gameIndex);
+                    result.addResult(info.gameIndex, UnifiedNetworkHarness.GameResult.timeout(
+                            0, timeoutMs, info.playerCount));
                     return;
                 }
 
@@ -245,7 +246,9 @@ public class MultiProcessGameExecutor {
                     result.addResult(info.gameIndex, gameResult);
                 } else {
                     int exitCode = info.process.exitValue();
-                    result.addError(info.gameIndex, "No result line, exit code " + exitCode);
+                    result.addResult(info.gameIndex, UnifiedNetworkHarness.GameResult.failure(
+                            "Process exited without result (exit code " + exitCode + ")",
+                            0, info.playerCount));
                 }
             } catch (Exception e) {
                 result.addError(info.gameIndex, "Exception: " + e.getMessage());

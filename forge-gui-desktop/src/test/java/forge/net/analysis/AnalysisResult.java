@@ -32,6 +32,7 @@ public class AnalysisResult {
     private Map<Integer, PlayerCountStats> statsByPlayerCount;
     private Map<GameLogMetrics.FailureMode, Integer> failureModeCounts;
     private Map<String, Integer> errorFrequency;
+    private Map<String, Integer> winnerFrequency;
 
     public AnalysisResult(List<GameLogMetrics> metrics) {
         this.allMetrics = metrics;
@@ -87,6 +88,20 @@ public class AnalysisResult {
         errorFrequency = tempErrorFreq.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(20)
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (e1, e2) -> e1, LinkedHashMap::new));
+
+        // Winner frequency
+        winnerFrequency = new LinkedHashMap<>();
+        Map<String, Integer> tempWinnerFreq = new HashMap<>();
+        for (GameLogMetrics m : allMetrics) {
+            String winner = m.getWinner();
+            if (winner != null && !winner.isEmpty()) {
+                tempWinnerFreq.merge(winner, 1, Integer::sum);
+            }
+        }
+        winnerFrequency = tempWinnerFreq.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (e1, e2) -> e1, LinkedHashMap::new));
     }
@@ -152,6 +167,19 @@ public class AnalysisResult {
                             p, stats.gameCount, stats.successRate,
                             stats.averageTurns, stats.totalSendErrors));
                 }
+            }
+            sb.append("\n");
+        }
+
+        // Winner distribution
+        if (!winnerFrequency.isEmpty()) {
+            sb.append("### Winner Distribution\n\n");
+            sb.append("| Player | Wins | % |\n");
+            sb.append("|--------|------|---|\n");
+            for (Map.Entry<String, Integer> entry : winnerFrequency.entrySet()) {
+                double pct = successfulGames > 0 ? 100.0 * entry.getValue() / successfulGames : 0;
+                sb.append(String.format("| %s | %d | %.1f%% |\n",
+                        entry.getKey(), entry.getValue(), pct));
             }
             sb.append("\n");
         }
