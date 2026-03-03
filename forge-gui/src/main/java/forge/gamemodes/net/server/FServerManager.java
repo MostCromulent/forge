@@ -234,6 +234,17 @@ public final class FServerManager {
         return total;
     }
 
+    public int getTotalDeserializationErrors() {
+        int total = 0;
+        for (final Channel ch : clients.keySet()) {
+            CompatibleObjectDecoder decoder = ch.pipeline().get(CompatibleObjectDecoder.class);
+            if (decoder != null) {
+                total += decoder.getDeserializationErrorCount();
+            }
+        }
+        return total;
+    }
+
     public void broadcast(final NetEvent event) {
         if (event instanceof MessageEvent msgEvent) {
             lobbyListener.message(msgEvent.getSource(), msgEvent.getMessage());

@@ -2,12 +2,14 @@ package forge.net.analysis;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -32,6 +34,8 @@ public class AnalysisResult {
     private Map<Integer, PlayerCountStats> statsByPlayerCount;
     private Map<GameLogMetrics.FailureMode, Integer> failureModeCounts;
     private Map<String, Integer> errorFrequency;
+    private Map<String, Integer> errorGameCount;
+    private Map<String, List<String>> errorGameNames;
     private Map<String, Integer> winnerFrequency;
 
     public AnalysisResult(List<GameLogMetrics> metrics) {
@@ -77,19 +81,32 @@ public class AnalysisResult {
             failureModeCounts.merge(m.getFailureMode(), 1, Integer::sum);
         }
 
-        // Error frequency
+        // Error frequency (total count), games affected, and which games
         Map<String, Integer> tempErrorFreq = new HashMap<>();
+        Map<String, Integer> tempErrorGames = new HashMap<>();
+        Map<String, List<String>> tempErrorGameNames = new HashMap<>();
         for (GameLogMetrics m : allMetrics) {
-            for (String error : m.getErrors()) {
-                String normalized = normalizeError(error);
-                tempErrorFreq.merge(normalized, 1, Integer::sum);
+            for (Map.Entry<String, Integer> ec : m.getErrorCounts().entrySet()) {
+                tempErrorFreq.merge(ec.getKey(), ec.getValue(), Integer::sum);
+                tempErrorGames.merge(ec.getKey(), 1, Integer::sum);
+                tempErrorGameNames.computeIfAbsent(ec.getKey(), k -> new ArrayList<>())
+                        .add(m.getLogFileName());
             }
         }
-        errorFrequency = tempErrorFreq.entrySet().stream()
+        // Sort by total count, keep top 20
+        List<String> topErrors = tempErrorFreq.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(20)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
-                        (e1, e2) -> e1, LinkedHashMap::new));
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+        errorFrequency = new LinkedHashMap<>();
+        errorGameCount = new LinkedHashMap<>();
+        errorGameNames = new LinkedHashMap<>();
+        for (String key : topErrors) {
+            errorFrequency.put(key, tempErrorFreq.get(key));
+            errorGameCount.put(key, tempErrorGames.get(key));
+            errorGameNames.put(key, tempErrorGameNames.get(key));
+        }
 
         // Winner frequency
         winnerFrequency = new LinkedHashMap<>();
@@ -107,10 +124,7 @@ public class AnalysisResult {
     }
 
     private String normalizeError(String error) {
-        String normalized = error.replaceAll("\\[\\d{2}:\\d{2}:\\d{2}\\.\\d{3}\\]", "");
-        normalized = normalized.replaceAll("id=\\d+", "id=X");
-        normalized = normalized.replaceAll("\\d{5,}", "NNNN");
-        return normalized.trim();
+        return NetworkLogAnalyzer.normalizeError(error);
     }
 
     // Getters
@@ -203,31 +217,37 @@ public class AnalysisResult {
         // Top errors
         if (!errorFrequency.isEmpty()) {
             sb.append("### Top Errors (by frequency)\n\n");
-            sb.append("| Error Pattern | Count |\n");
-            sb.append("|---------------|-------|\n");
+            sb.append("| Error Pattern | Games | Count | Log Files |\n");
+            sb.append("|---------------|-------|-------|-----------|\n");
             int shown = 0;
             for (Map.Entry<String, Integer> entry : errorFrequency.entrySet()) {
                 if (shown++ >= 10) break;
                 String errorTruncated = entry.getKey().length() > 80 ?
                         entry.getKey().substring(0, 77) + "..." : entry.getKey();
-                sb.append(String.format("| `%s` | %d |\n", errorTruncated, entry.getValue()));
+                int games = errorGameCount.getOrDefault(entry.getKey(), 0);
+                List<String> gameNames = errorGameNames.getOrDefault(entry.getKey(), List.of());
+                String logFiles = String.join(", ", gameNames);
+                sb.append(String.format("| `%s` | %d | %d | %s |\n",
+                        errorTruncated, games, entry.getValue(), logFiles));
             }
             sb.append("\n");
 
-            // Error context for failed games
-            List<GameLogMetrics> failedWithContext = allMetrics.stream()
-                    .filter(m -> !m.isSuccessful() && m.getErrorContext() != null)
-                    .sorted(Comparator.comparingInt(GameLogMetrics::getGameIndex))
-                    .limit(5)
-                    .collect(Collectors.toList());
+            // Error context — one example per distinct error type
+            Set<String> seenErrorTypes = new HashSet<>();
+            List<NetworkLogAnalyzer.ErrorContext> distinctContexts = new ArrayList<>();
+            for (GameLogMetrics m : allMetrics) {
+                if (m.getErrorContext() == null) continue;
+                String normalized = normalizeError(m.getErrorContext().errorMessage());
+                if (seenErrorTypes.add(normalized)) {
+                    distinctContexts.add(m.getErrorContext());
+                }
+            }
 
-            if (!failedWithContext.isEmpty()) {
+            if (!distinctContexts.isEmpty()) {
                 sb.append("### Error Context\n\n");
-                for (GameLogMetrics m : failedWithContext) {
-                    if (m.getErrorContext() != null) {
-                        sb.append(m.getErrorContext().toMarkdown());
-                        sb.append("\n");
-                    }
+                for (NetworkLogAnalyzer.ErrorContext ctx : distinctContexts) {
+                    sb.append(ctx.toMarkdown());
+                    sb.append("\n");
                 }
             }
         }

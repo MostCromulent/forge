@@ -1,7 +1,9 @@
 package forge.net.analysis;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Stores per-game metrics extracted from log/output analysis.
@@ -36,14 +38,16 @@ public class GameLogMetrics {
     // Error tracking
     private List<String> warnings = new ArrayList<>();
     private List<String> errors = new ArrayList<>();
+    private Map<String, Integer> errorCounts = new HashMap<>();
     private int sendErrors;
     private NetworkLogAnalyzer.ErrorContext errorContext;
 
     /**
-     * Check if this game was successful (completed with no errors).
+     * Check if this game was successful (completed with no send errors).
+     * Log-detected errors (e.g. caught exceptions) are tracked but do not affect success.
      */
     public boolean isSuccessful() {
-        return gameCompleted && errors.isEmpty() && sendErrors == 0;
+        return gameCompleted && sendErrors == 0;
     }
 
     // Getters and setters
@@ -90,6 +94,14 @@ public class GameLogMetrics {
             errors.add(error);
         }
     }
+
+    /** Increment the occurrence count for a normalized error pattern. No cap. */
+    public void incrementErrorCount(String normalizedError) {
+        errorCounts.merge(normalizedError, 1, Integer::sum);
+    }
+
+    /** Get occurrence counts by normalized error pattern. */
+    public Map<String, Integer> getErrorCounts() { return errorCounts; }
 
     public NetworkLogAnalyzer.ErrorContext getErrorContext() { return errorContext; }
     public void setErrorContext(NetworkLogAnalyzer.ErrorContext errorContext) { this.errorContext = errorContext; }

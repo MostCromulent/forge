@@ -245,8 +245,7 @@ public class NetworkPlayIntegrationTest {
     }
 
     private void printLogLocation(MultiProcessGameExecutor.ExecutionResult result) {
-        File logDir = result.getLogDir();
-        if (logDir != null) {
+        for (File logDir : result.getLogDirs()) {
             System.out.println("Per-game logs saved to: " + logDir.getAbsolutePath());
         }
     }

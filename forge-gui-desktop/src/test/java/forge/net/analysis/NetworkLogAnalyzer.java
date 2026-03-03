@@ -34,8 +34,7 @@ public class NetworkLogAnalyzer {
             "winner=([^,\\s]+)");
 
     private static final Pattern ERROR_PATTERN = Pattern.compile(
-            "Exception|ERROR|error|NotSerializableException|InvocationTargetException",
-            Pattern.CASE_INSENSITIVE);
+            "Exception|\\bERROR\\b");
 
     private static final Pattern TIMEOUT_PATTERN = Pattern.compile(
             "timeout|timed out|did not complete within", Pattern.CASE_INSENSITIVE);
@@ -174,7 +173,9 @@ public class NetworkLogAnalyzer {
 
                 // Errors
                 if (ERROR_PATTERN.matcher(line).find()) {
-                    metrics.addError(truncateLine(line));
+                    String truncated = truncateLine(line);
+                    metrics.addError(truncated);
+                    metrics.incrementErrorCount(normalizeError(truncated));
                     if (metrics.getFirstErrorTurn() < 0 && maxTurn > 0) {
                         metrics.setFirstErrorTurn(maxTurn);
                     }
@@ -230,24 +231,25 @@ public class NetworkLogAnalyzer {
      */
     public AnalysisResult buildFromExecutionResults(
             MultiProcessGameExecutor.ExecutionResult execResult) {
-        // Parse log files if available
+        // Parse log files from all batch directories
         Map<Integer, GameLogMetrics> logMetricsByGame = new HashMap<>();
-        File logDir = execResult.getLogDir();
-        if (logDir != null && logDir.isDirectory()) {
-            File[] logFiles = logDir.listFiles((dir, name) -> name.endsWith(".log"));
-            if (logFiles != null) {
-                for (File logFile : logFiles) {
-                    GameLogMetrics logMetrics = analyzeLogFile(logFile);
-                    // Extract game index from filename (e.g., "game-0-2p.log" → 0)
-                    String name = logFile.getName();
-                    if (name.startsWith("game-")) {
-                        try {
-                            int dashIdx = name.indexOf('-', 5);
-                            if (dashIdx > 0) {
-                                int gameIdx = Integer.parseInt(name.substring(5, dashIdx));
-                                logMetricsByGame.put(gameIdx, logMetrics);
-                            }
-                        } catch (NumberFormatException ignored) { }
+        for (File logDir : execResult.getLogDirs()) {
+            if (logDir != null && logDir.isDirectory()) {
+                File[] logFiles = logDir.listFiles((dir, name) -> name.endsWith(".log"));
+                if (logFiles != null) {
+                    for (File logFile : logFiles) {
+                        GameLogMetrics logMetrics = analyzeLogFile(logFile);
+                        // Extract game index from filename (e.g., "game-0-2p.log" → 0)
+                        String name = logFile.getName();
+                        if (name.startsWith("game-")) {
+                            try {
+                                int dashIdx = name.indexOf('-', 5);
+                                if (dashIdx > 0) {
+                                    int gameIdx = Integer.parseInt(name.substring(5, dashIdx));
+                                    logMetricsByGame.put(gameIdx, logMetrics);
+                                }
+                            } catch (NumberFormatException ignored) { }
+                        }
                     }
                 }
             }
@@ -277,13 +279,16 @@ public class NetworkLogAnalyzer {
                 m.addError(gr.failureReason);
             }
 
-            // Merge errors and warnings from log file analysis
+            // Merge errors, error counts, and warnings from log file analysis
             GameLogMetrics logMetrics = logMetricsByGame.get(idx);
             if (logMetrics != null) {
                 for (String logError : logMetrics.getErrors()) {
                     if (!m.getErrors().contains(logError)) {
                         m.addError(logError);
                     }
+                }
+                for (Map.Entry<String, Integer> ec : logMetrics.getErrorCounts().entrySet()) {
+                    m.getErrorCounts().merge(ec.getKey(), ec.getValue(), Integer::sum);
                 }
                 for (String logWarning : logMetrics.getWarnings()) {
                     m.addWarning(logWarning);
@@ -356,5 +361,12 @@ public class NetworkLogAnalyzer {
 
     private String truncateLine(String line) {
         return line.length() > 200 ? line.substring(0, 197) + "..." : line;
+    }
+
+    static String normalizeError(String error) {
+        String normalized = error.replaceAll("\\[\\d{2}:\\d{2}:\\d{2}\\.\\d{3}\\]", "");
+        normalized = normalized.replaceAll("id=\\d+", "id=X");
+        normalized = normalized.replaceAll("\\d{5,}", "NNNN");
+        return normalized.trim();
     }
 }

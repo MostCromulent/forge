@@ -11,6 +11,8 @@ import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
+import forge.model.FModel;
+import forge.localinstance.properties.ForgePreferences.FPref;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +106,9 @@ public class UnifiedNetworkHarness {
                 slot.setDeck(decks.get(slotIndex));
 
                 // Connect a headless client
+                // GameClientHandler sends FPref.PLAYER_NAME in LoginEvent, so set it
                 String clientName = PLAYER_NAMES[slotIndex];
+                FModel.getPreferences().setPref(FPref.PLAYER_NAME, clientName);
                 HeadlessNetworkClient hClient = new HeadlessNetworkClient(clientName, "localhost", port);
                 clients.add(hClient);
 
@@ -180,8 +184,13 @@ public class UnifiedNetworkHarness {
                 clientSendErrors += hc.getClient().getSendErrorCount();
             }
 
+            int serverDeserializationErrors = server.getTotalDeserializationErrors();
+
             if (serverDispatchErrors > 0) {
                 errors.add("Server dispatch errors: " + serverDispatchErrors);
+            }
+            if (serverDeserializationErrors > 0) {
+                errors.add("Server deserialization errors: " + serverDeserializationErrors);
             }
 
             // Check client received expected protocol calls

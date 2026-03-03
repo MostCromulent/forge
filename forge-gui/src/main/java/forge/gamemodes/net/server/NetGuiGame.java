@@ -28,6 +28,7 @@ import forge.util.ITriggerEvent;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class NetGuiGame extends AbstractGuiGame {
 
@@ -36,6 +37,7 @@ public class NetGuiGame extends AbstractGuiGame {
     private volatile boolean paused;
     private GameEventForwarder forwarder;
     private boolean flushing;
+    private final AtomicInteger droppedWhilePaused = new AtomicInteger(0);
 
     public NetGuiGame(final IToClient client, final int slotIndex) {
         this.sender = new GameProtocolSender(client);
@@ -74,15 +76,31 @@ public class NetGuiGame extends AbstractGuiGame {
     }
 
     private void send(final ProtocolMethod method, final Object... args) {
-        if (paused) { return; }
+        if (paused) {
+            int count = droppedWhilePaused.incrementAndGet();
+            if (count <= 5 || count % 100 == 0) {
+                System.err.printf("NetGuiGame[slot %d] dropped %s while paused (total dropped: %d)%n",
+                        slotIndex, method.name(), count);
+            }
+            return;
+        }
         flushPendingEvents();
         sender.send(method, args);
     }
 
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
-        if (paused) { return null; }
+        if (paused) {
+            int count = droppedWhilePaused.incrementAndGet();
+            System.err.printf("NetGuiGame[slot %d] dropped sendAndWait %s while paused (total dropped: %d)%n",
+                    slotIndex, method.name(), count);
+            return null;
+        }
         flushPendingEvents();
         return sender.sendAndWait(method, args);
+    }
+
+    public int getDroppedWhilePausedCount() {
+        return droppedWhilePaused.get();
     }
 
     public void updateGameView() {

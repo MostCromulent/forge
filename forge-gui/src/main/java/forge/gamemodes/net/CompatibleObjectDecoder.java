@@ -10,9 +10,11 @@ import net.jpountz.lz4.LZ4BlockInputStream;
 
 import java.io.ObjectInputStream;
 import java.io.StreamCorruptedException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder {
     private final ClassResolver classResolver;
+    private final AtomicInteger deserializationErrors = new AtomicInteger(0);
 
     public CompatibleObjectDecoder(ClassResolver classResolver) {
         this(1048576, classResolver);
@@ -37,11 +39,20 @@ public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder {
         try {
             var5 = ois.readObject();
         } catch (StreamCorruptedException e) {
+            deserializationErrors.incrementAndGet();
             System.err.printf("Version Mismatch: %s%n", e.getMessage());
+        } catch (Exception e) {
+            deserializationErrors.incrementAndGet();
+            System.err.printf("Deserialization failed (%s): %s%n",
+                    e.getClass().getSimpleName(), e.getMessage());
         } finally {
             ois.close();
         }
 
         return var5;
+    }
+
+    public int getDeserializationErrorCount() {
+        return deserializationErrors.get();
     }
 }

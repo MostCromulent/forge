@@ -65,7 +65,7 @@ public class MultiProcessGameExecutor {
         File baseDir = logBaseDir != null ? logBaseDir : new File("target/network-test-logs");
         File logDir = new File(baseDir, timestamp);
         logDir.mkdirs();
-        result.setLogDir(logDir);
+        result.addLogDir(logDir);
         System.out.printf("%s Game logs: %s%n", LOG_PREFIX, logDir.getAbsolutePath());
 
         try {
@@ -146,9 +146,9 @@ public class MultiProcessGameExecutor {
 
             ExecutionResult batchResult = batchExecutor.runGamesWithPlayerCounts(batchPlayerCounts);
 
-            // Use the first batch's log directory for the aggregated result
-            if (aggregatedResult.getLogDir() == null && batchResult.getLogDir() != null) {
-                aggregatedResult.setLogDir(batchResult.getLogDir().getParentFile());
+            // Collect all batch log directories
+            for (File dir : batchResult.getLogDirs()) {
+                aggregatedResult.addLogDir(dir);
             }
 
             // Merge batch results
@@ -280,14 +280,15 @@ public class MultiProcessGameExecutor {
         private final Map<Integer, UnifiedNetworkHarness.GameResult> results = new ConcurrentHashMap<>();
         private final Map<Integer, String> errors = new ConcurrentHashMap<>();
         private final Map<Integer, Boolean> timeouts = new ConcurrentHashMap<>();
-        private File logDir;
+        private final List<File> logDirs = new ArrayList<>();
 
         public ExecutionResult(int totalGames) {
             this.totalGames = totalGames;
         }
 
-        public void setLogDir(File logDir) { this.logDir = logDir; }
-        public File getLogDir() { return logDir; }
+        public void addLogDir(File logDir) { this.logDirs.add(logDir); }
+        public File getLogDir() { return logDirs.isEmpty() ? null : logDirs.get(0); }
+        public List<File> getLogDirs() { return logDirs; }
 
         public void addResult(int idx, UnifiedNetworkHarness.GameResult r) {
             results.put(idx, r);
