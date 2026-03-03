@@ -1,0 +1,319 @@
+package forge.net.analysis;
+
+import forge.net.MultiProcessGameExecutor;
+import forge.net.UnifiedNetworkHarness;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Parses game process output (stdout/stderr) to extract metrics and errors.
+ * Adapted for master's protocol (no delta sync — analyzes stderr traces and structured output).
+ */
+public class NetworkLogAnalyzer {
+
+    private static final int CONTEXT_LINES_BEFORE = 20;
+    private static final int CONTEXT_LINES_AFTER = 5;
+
+    // Patterns for game output parsing
+    private static final Pattern GAME_OUTCOME_PATTERN = Pattern.compile(
+            "Game completed in (\\d+) turns");
+
+    private static final Pattern TURN_PATTERN = Pattern.compile(
+            "Turn (\\d+)");
+
+    private static final Pattern WINNER_PATTERN = Pattern.compile(
+            "winner=([^,\\s]+)");
+
+    private static final Pattern ERROR_PATTERN = Pattern.compile(
+            "Exception|ERROR|error|NotSerializableException|InvocationTargetException",
+            Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern TIMEOUT_PATTERN = Pattern.compile(
+            "timeout|timed out|did not complete within", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern WARN_PATTERN = Pattern.compile(
+            "WARN|WARNING|Unknown protocol method|Non-serializable", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern SEND_ERROR_PATTERN = Pattern.compile(
+            "send error|Client send error|sendErrors=(\\d+)", Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern PLAYER_COUNT_PATTERN = Pattern.compile(
+            "(\\d+)-player|(\\d+)p game|playerCount=(\\d+)", Pattern.CASE_INSENSITIVE);
+
+    // Error context records
+
+    public record PlayerState(
+        int playerId,
+        String playerName,
+        int life,
+        int handSize,
+        int graveyardSize,
+        int battlefieldSize
+    ) {
+        @Override
+        public String toString() {
+            return String.format("Player %d (%s): Life=%d, Hand=%d, GY=%d, BF=%d",
+                    playerId, playerName, life, handSize, graveyardSize, battlefieldSize);
+        }
+    }
+
+    public record ErrorContext(
+        String logFileName,
+        int errorLineNumber,
+        int turnAtError,
+        String phaseAtError,
+        List<PlayerState> playerStates,
+        List<String> linesBefore,
+        List<String> linesAfter,
+        List<String> warningsBefore,
+        String errorMessage
+    ) {
+        public String toMarkdown() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("**%s** (error at line %d):\n", logFileName, errorLineNumber));
+            sb.append(String.format("- Turn: %d\n", turnAtError));
+
+            if (!warningsBefore.isEmpty()) {
+                sb.append(String.format("\n- Warnings before error (%d):\n", warningsBefore.size()));
+                for (String warning : warningsBefore.subList(0, Math.min(5, warningsBefore.size()))) {
+                    sb.append(String.format("  - `%s`\n", truncate(warning, 100)));
+                }
+            }
+
+            sb.append("\n- Lines around error:\n```\n");
+            for (String line : linesBefore) {
+                sb.append("  ").append(truncate(line, 120)).append("\n");
+            }
+            sb.append(">>> ").append(truncate(errorMessage, 120)).append("\n");
+            for (String line : linesAfter) {
+                sb.append("  ").append(truncate(line, 120)).append("\n");
+            }
+            sb.append("```\n");
+
+            return sb.toString();
+        }
+
+        private static String truncate(String s, int maxLen) {
+            if (s == null) return "";
+            return s.length() <= maxLen ? s : s.substring(0, maxLen - 3) + "...";
+        }
+    }
+
+    /**
+     * Analyze a single log/output file.
+     */
+    public GameLogMetrics analyzeLogFile(File logFile) {
+        GameLogMetrics metrics = new GameLogMetrics();
+        metrics.setLogFileName(logFile.getName());
+
+        int maxTurn = 0;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                // Turn tracking
+                Matcher turnMatcher = TURN_PATTERN.matcher(line);
+                if (turnMatcher.find()) {
+                    try {
+                        int turn = Integer.parseInt(turnMatcher.group(1));
+                        if (turn > maxTurn) maxTurn = turn;
+                    } catch (NumberFormatException ignored) { }
+                }
+
+                // Game completion
+                Matcher outcomeMatcher = GAME_OUTCOME_PATTERN.matcher(line);
+                if (outcomeMatcher.find()) {
+                    metrics.setGameCompleted(true);
+                }
+
+                // Winner
+                Matcher winnerMatcher = WINNER_PATTERN.matcher(line);
+                if (winnerMatcher.find()) {
+                    metrics.setWinner(winnerMatcher.group(1));
+                    metrics.setGameCompleted(true);
+                }
+
+                // Player count
+                Matcher playerMatcher = PLAYER_COUNT_PATTERN.matcher(line);
+                if (playerMatcher.find()) {
+                    for (int i = 1; i <= playerMatcher.groupCount(); i++) {
+                        String match = playerMatcher.group(i);
+                        if (match != null) {
+                            try {
+                                int count = Integer.parseInt(match);
+                                if (count >= 2 && count <= 4) {
+                                    metrics.setPlayerCount(count);
+                                    break;
+                                }
+                            } catch (NumberFormatException ignored) { }
+                        }
+                    }
+                }
+
+                // Send errors
+                Matcher sendErrMatcher = SEND_ERROR_PATTERN.matcher(line);
+                if (sendErrMatcher.find()) {
+                    if (sendErrMatcher.group(1) != null) {
+                        try {
+                            metrics.setSendErrors(Integer.parseInt(sendErrMatcher.group(1)));
+                        } catch (NumberFormatException ignored) { }
+                    } else {
+                        metrics.setSendErrors(metrics.getSendErrors() + 1);
+                    }
+                }
+
+                // Errors
+                if (ERROR_PATTERN.matcher(line).find()) {
+                    metrics.addError(truncateLine(line));
+                    if (metrics.getFirstErrorTurn() < 0 && maxTurn > 0) {
+                        metrics.setFirstErrorTurn(maxTurn);
+                    }
+                    continue;
+                }
+
+                // Warnings
+                if (WARN_PATTERN.matcher(line).find()) {
+                    metrics.addWarning(truncateLine(line));
+                }
+            }
+
+            metrics.setTurnCount(maxTurn);
+            metrics.setFailureMode(determineFailureMode(metrics));
+
+            if (!metrics.getErrors().isEmpty()) {
+                ErrorContext context = extractAroundFirstError(logFile);
+                metrics.setErrorContext(context);
+            }
+
+        } catch (IOException e) {
+            metrics.addError("Failed to read log file: " + e.getMessage());
+            metrics.setFailureMode(GameLogMetrics.FailureMode.EXCEPTION);
+        }
+
+        return metrics;
+    }
+
+    private GameLogMetrics.FailureMode determineFailureMode(GameLogMetrics metrics) {
+        for (String error : metrics.getErrors()) {
+            if (TIMEOUT_PATTERN.matcher(error).find()) {
+                return GameLogMetrics.FailureMode.TIMEOUT;
+            }
+        }
+        if (!metrics.getErrors().isEmpty()) {
+            return GameLogMetrics.FailureMode.EXCEPTION;
+        }
+        if (!metrics.isGameCompleted()) {
+            return GameLogMetrics.FailureMode.INCOMPLETE;
+        }
+        return GameLogMetrics.FailureMode.NONE;
+    }
+
+    /**
+     * Build an AnalysisResult from a list of GameLogMetrics.
+     */
+    public AnalysisResult buildAnalysisResult(List<GameLogMetrics> metrics) {
+        return new AnalysisResult(metrics);
+    }
+
+    /**
+     * Build an AnalysisResult from execution results (no log files needed).
+     */
+    public AnalysisResult buildFromExecutionResults(
+            MultiProcessGameExecutor.ExecutionResult execResult) {
+        List<GameLogMetrics> metricsList = new ArrayList<>();
+
+        for (var entry : execResult.getResults().entrySet()) {
+            int idx = entry.getKey();
+            UnifiedNetworkHarness.GameResult gr = entry.getValue();
+
+            GameLogMetrics m = new GameLogMetrics();
+            m.setLogFileName("game" + idx);
+            m.setGameIndex(idx);
+            m.setPlayerCount(gr.playerCount);
+            m.setGameCompleted(gr.success);
+            m.setTurnCount(gr.turnCount);
+            m.setWinner(gr.winner);
+            m.setSendErrors(gr.sendErrors);
+
+            if (!gr.errors.isEmpty()) {
+                for (String e : gr.errors) {
+                    m.addError(e);
+                }
+            }
+            if (gr.failureReason != null && !gr.success) {
+                m.addError(gr.failureReason);
+            }
+
+            m.setFailureMode(gr.success ? GameLogMetrics.FailureMode.NONE :
+                    (gr.failureReason != null && gr.failureReason.contains("timeout") ?
+                            GameLogMetrics.FailureMode.TIMEOUT : GameLogMetrics.FailureMode.EXCEPTION));
+
+            metricsList.add(m);
+        }
+
+        return new AnalysisResult(metricsList);
+    }
+
+    private ErrorContext extractAroundFirstError(File logFile) {
+        List<String> allLines = new ArrayList<>();
+        int errorLineIndex = -1;
+        String errorMessage = null;
+        int currentTurn = 0;
+        List<String> warningsBefore = new ArrayList<>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(logFile))) {
+            String line;
+            int lineNumber = 0;
+
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                allLines.add(line);
+
+                Matcher turnMatcher = TURN_PATTERN.matcher(line);
+                if (turnMatcher.find()) {
+                    try { currentTurn = Integer.parseInt(turnMatcher.group(1)); }
+                    catch (NumberFormatException ignored) { }
+                }
+
+                if (errorLineIndex < 0 && WARN_PATTERN.matcher(line).find()) {
+                    warningsBefore.add(line);
+                    if (warningsBefore.size() > 50) warningsBefore.remove(0);
+                }
+
+                if (errorLineIndex < 0 && ERROR_PATTERN.matcher(line).find()) {
+                    errorLineIndex = lineNumber - 1;
+                    errorMessage = line;
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+
+        if (errorLineIndex < 0) return null;
+
+        int startIndex = Math.max(0, errorLineIndex - CONTEXT_LINES_BEFORE);
+        int endIndex = Math.min(allLines.size() - 1, errorLineIndex + CONTEXT_LINES_AFTER);
+
+        List<String> linesBefore = new ArrayList<>(allLines.subList(startIndex, errorLineIndex));
+        List<String> linesAfter = errorLineIndex + 1 <= endIndex
+                ? new ArrayList<>(allLines.subList(errorLineIndex + 1, endIndex + 1))
+                : new ArrayList<>();
+
+        return new ErrorContext(
+                logFile.getName(), errorLineIndex + 1, currentTurn, null,
+                new ArrayList<>(), linesBefore, linesAfter,
+                new ArrayList<>(warningsBefore), errorMessage);
+    }
+
+    private String truncateLine(String line) {
+        return line.length() > 200 ? line.substring(0, 197) + "..." : line;
+    }
+}

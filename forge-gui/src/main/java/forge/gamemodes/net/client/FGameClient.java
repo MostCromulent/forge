@@ -21,6 +21,7 @@ import io.netty.handler.timeout.IdleStateHandler;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class FGameClient implements IToServer {
     static final int HEARTBEAT_INTERVAL_SECONDS = Integer.getInteger("forge.net.heartbeatInterval", 15);
@@ -29,6 +30,7 @@ public class FGameClient implements IToServer {
     private final Integer port;
     private final List<ILobbyListener> lobbyListeners = Lists.newArrayList();
     private final ReplyPool replies = new ReplyPool();
+    private final AtomicInteger sendErrors = new AtomicInteger(0);
     private volatile boolean disconnectSimulated;
     private Channel channel;
 
@@ -95,7 +97,16 @@ public class FGameClient implements IToServer {
             return;
         }
         System.out.println("Client sent " + event);
-        channel.writeAndFlush(event);
+        try {
+            channel.writeAndFlush(event).sync();
+        } catch (final Exception e) {
+            sendErrors.incrementAndGet();
+            System.err.println("Client send error: " + e.getMessage());
+        }
+    }
+
+    public int getSendErrorCount() {
+        return sendErrors.get();
     }
 
     /**

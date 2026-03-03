@@ -1,0 +1,105 @@
+package forge.net.analysis;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Stores per-game metrics extracted from log/output analysis.
+ * Adapted for master's protocol (no delta sync — focuses on errors and completion).
+ */
+public class GameLogMetrics {
+
+    /**
+     * Classification of how a game failed (or NONE if it succeeded).
+     */
+    public enum FailureMode {
+        NONE,              // Game completed successfully
+        TIMEOUT,           // Game exceeded time limit
+        EXCEPTION,         // Exception/error logged
+        INCOMPLETE         // Game didn't complete for unknown reason
+    }
+
+    // Failure tracking
+    private FailureMode failureMode = FailureMode.NONE;
+    private int firstErrorTurn = -1;
+
+    // Game identification
+    private String logFileName;
+    private int gameIndex = -1;
+    private int playerCount = 2;
+
+    // Game completion status
+    private boolean gameCompleted;
+    private int turnCount;
+    private String winner;
+
+    // Error tracking
+    private List<String> warnings = new ArrayList<>();
+    private List<String> errors = new ArrayList<>();
+    private int sendErrors;
+    private NetworkLogAnalyzer.ErrorContext errorContext;
+
+    /**
+     * Check if this game was successful (completed with no errors).
+     */
+    public boolean isSuccessful() {
+        return gameCompleted && errors.isEmpty() && sendErrors == 0;
+    }
+
+    // Getters and setters
+
+    public FailureMode getFailureMode() { return failureMode; }
+    public void setFailureMode(FailureMode failureMode) { this.failureMode = failureMode; }
+
+    public int getFirstErrorTurn() { return firstErrorTurn; }
+    public void setFirstErrorTurn(int firstErrorTurn) { this.firstErrorTurn = firstErrorTurn; }
+
+    public String getLogFileName() { return logFileName; }
+    public void setLogFileName(String logFileName) { this.logFileName = logFileName; }
+
+    public int getGameIndex() { return gameIndex; }
+    public void setGameIndex(int gameIndex) { this.gameIndex = gameIndex; }
+
+    public int getPlayerCount() { return playerCount; }
+    public void setPlayerCount(int playerCount) { this.playerCount = playerCount; }
+
+    public boolean isGameCompleted() { return gameCompleted; }
+    public void setGameCompleted(boolean gameCompleted) { this.gameCompleted = gameCompleted; }
+
+    public int getTurnCount() { return turnCount; }
+    public void setTurnCount(int turnCount) { this.turnCount = turnCount; }
+
+    public String getWinner() { return winner; }
+    public void setWinner(String winner) { this.winner = winner; }
+
+    public int getSendErrors() { return sendErrors; }
+    public void setSendErrors(int sendErrors) { this.sendErrors = sendErrors; }
+
+    public List<String> getWarnings() { return warnings; }
+
+    public void addWarning(String warning) {
+        if (warnings.size() < 100) {
+            warnings.add(warning);
+        }
+    }
+
+    public List<String> getErrors() { return errors; }
+
+    public void addError(String error) {
+        if (errors.size() < 100) {
+            errors.add(error);
+        }
+    }
+
+    public NetworkLogAnalyzer.ErrorContext getErrorContext() { return errorContext; }
+    public void setErrorContext(NetworkLogAnalyzer.ErrorContext errorContext) { this.errorContext = errorContext; }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "GameLogMetrics[file=%s, players=%d, completed=%b, turns=%d, winner=%s, " +
+                "sendErrors=%d, warnings=%d, errors=%d, failureMode=%s]",
+                logFileName, playerCount, gameCompleted, turnCount, winner,
+                sendErrors, warnings.size(), errors.size(), failureMode);
+    }
+}

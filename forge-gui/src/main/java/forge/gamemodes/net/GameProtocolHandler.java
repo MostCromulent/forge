@@ -11,12 +11,19 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapter {
 
     private final boolean runInEdt;
+    private final AtomicInteger dispatchErrors = new AtomicInteger(0);
+
     protected GameProtocolHandler(final boolean runInEdt) {
         this.runInEdt = runInEdt;
+    }
+
+    public int getDispatchErrorCount() {
+        return dispatchErrors.get();
     }
 
     protected abstract ReplyPool getReplyPool(ChannelHandlerContext ctx);
@@ -40,6 +47,7 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
             final Method method = protocolMethod.getMethod();
             if (method == null) {
                 //throw new IllegalStateException(String.format("Method %s not found", protocolMethod.name()));
+                dispatchErrors.incrementAndGet();
                 catchedError[0] += String.format("IllegalStateException: Method %s not found (GameProtocolHandler.java Line 43)\n", protocolMethod.name());
                 System.err.printf("Method %s not found%n", protocolMethod.name());
             }
@@ -58,9 +66,11 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
                     try {
                         method.invoke(toInvoke, args);
                     } catch (final IllegalAccessException | IllegalArgumentException e) {
+                        dispatchErrors.incrementAndGet();
                         System.err.printf("Unknown protocol method %s with %d args%n", methodName, args == null ? 0 : args.length);
                     } catch (final InvocationTargetException e) {
                         //throw new RuntimeException(e.getTargetException());
+                        dispatchErrors.incrementAndGet();
                         catchedError[0] += (String.format("RuntimeException: %s (GameProtocolHandler.java Line 65)\n", e.getTargetException().toString()));
                         System.err.println(e.getTargetException().toString());
                     }
@@ -75,9 +85,11 @@ public abstract class GameProtocolHandler<T> extends ChannelInboundHandlerAdapte
                             System.err.printf("Non-serializable return type %s for method %s, returning null%n", returnType.getName(), methodName);
                         }
                     } catch (final IllegalAccessException | IllegalArgumentException e) {
+                        dispatchErrors.incrementAndGet();
                         System.err.printf("Unknown protocol method %s with %d args, replying with null%n", methodName, args == null ? 0 : args.length);
                     } catch (final NullPointerException | InvocationTargetException e) {
                         //throw new RuntimeException(e.getTargetException());
+                        dispatchErrors.incrementAndGet();
                         catchedError[0] += e.toString();
                         SOptionPane.showMessageDialog(catchedError[0], "Error", FSkinProp.ICO_WARNING);
                         System.err.println(e.toString());
