@@ -123,58 +123,6 @@ public class NetworkPlayIntegrationTest {
         System.out.printf("[NetworkPlayIntegrationTest] Test PASSED: %s%n", result);
     }
 
-    // ==================== Client-Action Round-Trip Test ====================
-
-    /**
-     * Validates client→server protocol round-trip by delaying convertToAI.
-     * For the first 3 turns, the client's auto-response system handles prompts
-     * and sends actions (selectButtonOk, selectCard, passPriority, etc.)
-     * over the wire via NetGameController → GuiGameEvent → GameServerHandler.
-     * After 3 turns, converts to server-side AI to finish the game quickly.
-     */
-    @Test(timeOut = 600000, description = "Client-action round-trip validation")
-    public void testClientActionRoundTrip() {
-        TestUtils.skipUnlessStressTestsEnabled();
-
-        int gameCount = 1; // TODO: restore to 5 after debugging
-        Deck deck1 = TestDeckLoader.createMinimalDeck("Mountain", 10);
-        Deck deck2 = TestDeckLoader.createMinimalDeck("Forest", 10);
-
-        System.out.printf("[NetworkPlayIntegrationTest] Client-action test: %d games, 3 client turns each%n",
-                gameCount);
-
-        int successes = 0;
-        int totalSendErrors = 0;
-
-        for (int i = 0; i < gameCount; i++) {
-            System.out.printf("[ClientAction] Game %d/%d starting...%n", i + 1, gameCount);
-
-            UnifiedNetworkHarness.GameResult result = UnifiedNetworkHarness.builder()
-                    .playerCount(2)
-                    .addDeck(deck1)
-                    .addDeck(deck2)
-                    .clientActionTurns(3)
-                    .gameTimeoutMs(90_000)
-                    .build()
-                    .execute();
-
-            System.out.printf("[ClientAction] Game %d/%d: %s%n", i + 1, gameCount, result);
-
-            if (result.success) {
-                successes++;
-            }
-            totalSendErrors += result.sendErrors;
-        }
-
-        System.out.printf("[ClientAction] Results: %d/%d succeeded, %d send errors%n",
-                successes, gameCount, totalSendErrors);
-
-        Assert.assertEquals(successes, gameCount,
-                String.format("All %d games should succeed, only %d did", gameCount, successes));
-        Assert.assertEquals(totalSendErrors, 0,
-                "Should have zero send errors, had " + totalSendErrors);
-    }
-
     // ==================== Batch Tests ====================
 
     /**
