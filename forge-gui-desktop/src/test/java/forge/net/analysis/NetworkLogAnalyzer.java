@@ -61,6 +61,10 @@ public class NetworkLogAnalyzer {
     private static final Pattern PLAYER_COUNT_PATTERN = Pattern.compile(
             "(\\d+)-player|(\\d+)p game|playerCount=(\\d+)", Pattern.CASE_INSENSITIVE);
 
+    // forge.log outcome pattern (from PlayerOutcome.toString via GameLogFormatter)
+    private static final Pattern FORGE_LOG_OUTCOME_PATTERN = Pattern.compile(
+            "(.+)\\s+has won\\b", Pattern.CASE_INSENSITIVE);
+
     // Error context records
 
     public record PlayerState(
@@ -174,11 +178,18 @@ public class NetworkLogAnalyzer {
                     } catch (NumberFormatException ignored) { }
                 }
 
-                // Winner
+                // Winner (structured output: winner=X)
                 Matcher winnerMatcher = WINNER_PATTERN.matcher(line);
                 if (winnerMatcher.find()) {
                     metrics.setWinner(winnerMatcher.group(1));
                     metrics.setGameCompleted(true);
+                }
+
+                // Winner (forge.log: "PlayerName has won because...")
+                Matcher forgeOutcomeMatcher = FORGE_LOG_OUTCOME_PATTERN.matcher(line);
+                if (forgeOutcomeMatcher.find()) {
+                    metrics.setGameCompleted(true);
+                    metrics.setWinner(forgeOutcomeMatcher.group(1).trim());
                 }
 
                 // Player count

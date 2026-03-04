@@ -148,7 +148,7 @@ public class AnalysisResult {
     public String generateReport() {
         StringBuilder sb = new StringBuilder();
 
-        sb.append("## Network Protocol Validation Results\n\n");
+        sb.append("## Log Analysis Results\n\n");
         sb.append(String.format("**Analysis Date:** %s\n\n",
                 analysisTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))));
 
