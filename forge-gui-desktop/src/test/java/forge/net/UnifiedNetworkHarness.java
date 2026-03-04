@@ -45,6 +45,7 @@ public class UnifiedNetworkHarness {
     private final long gameTimeoutMs;
     private final long connectionTimeoutMs;
     private final List<Deck> decks;
+    private final int clientActionTurns;
 
     private UnifiedNetworkHarness(Builder builder) {
         this.playerCount = builder.playerCount;
@@ -52,6 +53,7 @@ public class UnifiedNetworkHarness {
         this.gameTimeoutMs = builder.gameTimeoutMs;
         this.connectionTimeoutMs = builder.connectionTimeoutMs;
         this.decks = builder.decks;
+        this.clientActionTurns = builder.clientActionTurns;
     }
 
     /**
@@ -176,11 +178,18 @@ public class UnifiedNetworkHarness {
                 }
             });
 
-            // 6. Convert all remote players to AI on server side
-            for (int i = 0; i < remoteCount; i++) {
-                int slotIndex = i + 1;
-                LobbySlot slot = lobby.getSlot(slotIndex);
-                server.convertToAI(slotIndex, slot.getName());
+            // 6. Convert remote players to AI (immediately or after N turns)
+            boolean convertedToAI = false;
+            if (clientActionTurns <= 0) {
+                for (int i = 0; i < remoteCount; i++) {
+                    int slotIndex = i + 1;
+                    LobbySlot slot = lobby.getSlot(slotIndex);
+                    server.convertToAI(slotIndex, slot.getName());
+                }
+                convertedToAI = true;
+            } else {
+                System.out.printf("[Harness] Client-action mode: delaying convertToAI for %d turns%n",
+                        clientActionTurns);
             }
 
             // 7. Poll for game completion
@@ -189,6 +198,19 @@ public class UnifiedNetworkHarness {
                     int turn = game.getPhaseHandler().getTurn();
                     return GameResult.timeout(turn, System.currentTimeMillis() - startTime, playerCount);
                 }
+
+                // Delayed conversion: once turn threshold is reached, convert to AI
+                if (!convertedToAI && game.getPhaseHandler().getTurn() > clientActionTurns) {
+                    System.out.printf("[Harness] Turn %d reached, converting remote players to AI%n",
+                            game.getPhaseHandler().getTurn());
+                    for (int i = 0; i < remoteCount; i++) {
+                        int slotIndex = i + 1;
+                        LobbySlot slot = lobby.getSlot(slotIndex);
+                        server.convertToAI(slotIndex, slot.getName());
+                    }
+                    convertedToAI = true;
+                }
+
                 Thread.sleep(500);
             }
 
@@ -250,6 +272,7 @@ public class UnifiedNetworkHarness {
                 server.stopServer();
             }
             for (HeadlessNetworkClient hc : clients) {
+                try { hc.getGuiGame().shutdown(); } catch (Exception ignored) { }
                 try { hc.close(); } catch (Exception ignored) { }
             }
         }
@@ -269,6 +292,7 @@ public class UnifiedNetworkHarness {
         private long gameTimeoutMs = 120_000;
         private long connectionTimeoutMs = 10_000;
         private List<Deck> decks = new ArrayList<>();
+        private int clientActionTurns = 0;
 
         public Builder playerCount(int playerCount) {
             if (playerCount < 2 || playerCount > 4) {
@@ -300,6 +324,17 @@ public class UnifiedNetworkHarness {
 
         public Builder addDeck(Deck deck) {
             this.decks.add(deck);
+            return this;
+        }
+
+        /**
+         * Number of turns to let client-side auto-response drive before converting to AI.
+         * 0 (default) = convert immediately (existing behavior).
+         * When > 0, all prompts/responses flow over the wire via NetGameController
+         * for the first N turns, exercising the client→server protocol path.
+         */
+        public Builder clientActionTurns(int turns) {
+            this.clientActionTurns = turns;
             return this;
         }
 
