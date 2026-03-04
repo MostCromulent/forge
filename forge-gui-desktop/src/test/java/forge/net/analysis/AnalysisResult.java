@@ -157,7 +157,7 @@ public class AnalysisResult {
         sb.append("| Metric | Value |\n");
         sb.append("|--------|-------|\n");
         sb.append(String.format("| Total Games | %d |\n", totalGames));
-        sb.append(String.format("| Successful | %d |\n", successfulGames));
+        sb.append(String.format("| Completed | %d |\n", successfulGames));
         sb.append(String.format("| Failed | %d |\n", failedGames));
         sb.append(String.format("| Success Rate | %.1f%% |\n", getSuccessRate()));
         sb.append(String.format("| Total Turns | %d |\n", totalTurns));
@@ -230,7 +230,7 @@ public class AnalysisResult {
             }
             sb.append("\n");
 
-            // Error context — one example per distinct error type, collected from all games
+            // Error context — one example per distinct error type, collected across all games
             Map<String, NetworkLogAnalyzer.ErrorContext> distinctContexts = new LinkedHashMap<>();
             for (GameLogMetrics m : allMetrics) {
                 for (Map.Entry<String, NetworkLogAnalyzer.ErrorContext> entry : m.getErrorContexts().entrySet()) {
@@ -239,7 +239,7 @@ public class AnalysisResult {
             }
 
             if (!distinctContexts.isEmpty()) {
-                sb.append("### Error Context\n\n");
+                sb.append("### Error Context (first occurrence per unique error type)\n\n");
                 for (NetworkLogAnalyzer.ErrorContext ctx : distinctContexts.values()) {
                     sb.append(ctx.toMarkdown());
                     sb.append("\n");

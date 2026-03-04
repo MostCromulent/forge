@@ -51,6 +51,10 @@ public class NetworkLogAnalyzer {
             + "|System::loadLibrary has been called by",
             Pattern.CASE_INSENSITIVE);
 
+    // Structured result line from ComprehensiveGameRunner: RESULT:SUCCESS:playerCount:turnCount:sendErrors:...
+    private static final Pattern RESULT_LINE_PATTERN = Pattern.compile(
+            "RESULT:(SUCCESS|FAILURE):(\\d+):(\\d+):(\\d+):");
+
     private static final Pattern SEND_ERROR_PATTERN = Pattern.compile(
             "send error|Client send error|sendErrors=(\\d+)", Pattern.CASE_INSENSITIVE);
 
@@ -88,7 +92,9 @@ public class NetworkLogAnalyzer {
         public String toMarkdown() {
             StringBuilder sb = new StringBuilder();
             sb.append(String.format("**%s** (error at line %d):\n", logFileName, errorLineNumber));
-            sb.append(String.format("- Turn: %d\n", turnAtError));
+            if (turnAtError > 0) {
+                sb.append(String.format("- Turn: %d\n", turnAtError));
+            }
 
             if (!warningsBefore.isEmpty()) {
                 sb.append(String.format("\n- Warnings before error (%d):\n", warningsBefore.size()));
@@ -140,10 +146,32 @@ public class NetworkLogAnalyzer {
                     } catch (NumberFormatException ignored) { }
                 }
 
-                // Game completion
+                // Game completion (also extract turn count from toString output)
                 Matcher outcomeMatcher = GAME_OUTCOME_PATTERN.matcher(line);
                 if (outcomeMatcher.find()) {
                     metrics.setGameCompleted(true);
+                    try {
+                        int turns = Integer.parseInt(outcomeMatcher.group(1));
+                        if (turns > maxTurn) maxTurn = turns;
+                    } catch (NumberFormatException ignored) { }
+                }
+
+                // Structured RESULT line from ComprehensiveGameRunner
+                Matcher resultMatcher = RESULT_LINE_PATTERN.matcher(line);
+                if (resultMatcher.find()) {
+                    metrics.setGameCompleted("SUCCESS".equals(resultMatcher.group(1)));
+                    try {
+                        int pc = Integer.parseInt(resultMatcher.group(2));
+                        if (pc >= 2 && pc <= 4) metrics.setPlayerCount(pc);
+                    } catch (NumberFormatException ignored) { }
+                    try {
+                        int turns = Integer.parseInt(resultMatcher.group(3));
+                        if (turns > maxTurn) maxTurn = turns;
+                    } catch (NumberFormatException ignored) { }
+                    try {
+                        int se = Integer.parseInt(resultMatcher.group(4));
+                        metrics.setSendErrors(se);
+                    } catch (NumberFormatException ignored) { }
                 }
 
                 // Winner
@@ -355,7 +383,8 @@ public class NetworkLogAnalyzer {
                     catch (NumberFormatException ignored) { }
                 }
 
-                if (!seenAnyError && WARN_PATTERN.matcher(line).find()) {
+                if (!seenAnyError && WARN_PATTERN.matcher(line).find()
+                        && !SUPPRESSED_WARN_PATTERN.matcher(line).find()) {
                     warningsBefore.add(line);
                     if (warningsBefore.size() > 50) warningsBefore.remove(0);
                 }
@@ -378,6 +407,10 @@ public class NetworkLogAnalyzer {
 
         if (firstOccurrenceByType.isEmpty()) return Map.of();
 
+        // Use batch-qualified filename (e.g., "20260304-072630/game-0-2p.log")
+        String parentName = logFile.getParentFile() != null ? logFile.getParentFile().getName() : "";
+        String qualifiedName = parentName.isEmpty() ? logFile.getName() : parentName + "/" + logFile.getName();
+
         Map<String, ErrorContext> contexts = new LinkedHashMap<>();
         for (Map.Entry<String, Integer> entry : firstOccurrenceByType.entrySet()) {
             int errorLineIndex = entry.getValue();
@@ -390,7 +423,7 @@ public class NetworkLogAnalyzer {
                     : new ArrayList<>();
 
             contexts.put(entry.getKey(), new ErrorContext(
-                    logFile.getName(), errorLineIndex + 1, turnAtFirstError, null,
+                    qualifiedName, errorLineIndex + 1, turnAtFirstError, null,
                     new ArrayList<>(), linesBefore, linesAfter,
                     new ArrayList<>(warningsBefore), rawMessageByType.get(entry.getKey())));
         }

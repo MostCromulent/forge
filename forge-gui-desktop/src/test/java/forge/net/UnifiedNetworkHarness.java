@@ -2,6 +2,9 @@ package forge.net;
 
 import forge.deck.Deck;
 import forge.game.Game;
+import forge.game.GameLog;
+import forge.game.GameLogEntry;
+import forge.game.GameLogEntryType;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
@@ -159,6 +162,20 @@ public class UnifiedNetworkHarness {
 
             gameStarted = true;
 
+            // Log game events to stdout for correlation with errors in log analysis
+            game.getGameLog().addObserver((observable, arg) -> {
+                List<GameLogEntry> entries = ((GameLog) observable).getLogEntries(null);
+                if (!entries.isEmpty()) {
+                    GameLogEntry latest = entries.get(0); // Most recent (reverse order)
+                    GameLogEntryType type = latest.type();
+                    if (type == GameLogEntryType.TURN
+                            || type == GameLogEntryType.GAME_OUTCOME
+                            || type == GameLogEntryType.COMBAT) {
+                        System.out.println(latest.message());
+                    }
+                }
+            });
+
             // 6. Convert all remote players to AI on server side
             for (int i = 0; i < remoteCount; i++) {
                 int slotIndex = i + 1;
@@ -227,12 +244,13 @@ public class UnifiedNetworkHarness {
             return new GameResult(false, gameStarted, 0, 0, playerCount, null,
                     e.getMessage(), errors, duration);
         } finally {
-            // Cleanup
-            for (HeadlessNetworkClient hc : clients) {
-                try { hc.close(); } catch (Exception ignored) { }
-            }
+            // Stop server first to close all channels from server side,
+            // preventing broadcast-to-dead-channel races during cleanup
             if (server.isHosting()) {
                 server.stopServer();
+            }
+            for (HeadlessNetworkClient hc : clients) {
+                try { hc.close(); } catch (Exception ignored) { }
             }
         }
     }
