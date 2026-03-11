@@ -39,11 +39,19 @@ import java.time.format.DateTimeFormatter;
 public class BugReporter {
     private static final int STACK_OVERFLOW_MAX_MESSAGE_LEN = 16 * 1024;
 
-    public static final String REPORT = Localizer.getInstance().getMessage("lblReport");
-    public static final String SAVE = Localizer.getInstance().getMessage("lblSave");
-    public static final String DISCARD = Localizer.getInstance().getMessage("lblDiscardError");
-    public static final String EXIT = Localizer.getInstance().getMessage("lblExit");
-    public static final String SENTRY = Localizer.getInstance().getMessage("lblAutoSubmitBugReports");
+    public static final String REPORT = safeLocalize("lblReport", "Report");
+    public static final String SAVE = safeLocalize("lblSave", "Save");
+    public static final String DISCARD = safeLocalize("lblDiscardError", "Discard");
+    public static final String EXIT = safeLocalize("lblExit", "Exit");
+    public static final String SENTRY = safeLocalize("lblAutoSubmitBugReports", "Auto-submit bug reports");
+
+    private static String safeLocalize(String key, String fallback) {
+        try {
+            return Localizer.getInstance().getMessage(key);
+        } catch (Exception e) {
+            return fallback;
+        }
+    }
 
     private static Throwable exception;
     private static String message;

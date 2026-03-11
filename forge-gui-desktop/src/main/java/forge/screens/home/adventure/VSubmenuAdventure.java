@@ -7,9 +7,10 @@ import forge.gui.framework.DragTab;
 import forge.gui.framework.EDocID;
 import forge.screens.home.EMenuGroup;
 import forge.screens.home.IVSubmenu;
-import forge.screens.home.StartButton;
 import forge.screens.home.VHomeUI;
+import forge.toolbox.FButton;
 import forge.toolbox.FLabel;
+import forge.toolbox.FSkin;
 import forge.util.Localizer;
 import net.miginfocom.swing.MigLayout;
 
@@ -23,18 +24,19 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
     private DragCell parentCell;
     final Localizer localizer = Localizer.getInstance();
     private final DragTab tab = new DragTab(localizer.getMessage("lblAdventureMode"));
-    private final StartButton btnStart = new StartButton();
+    private final FButton btnStart = new FButton(localizer.getMessage("lblStartAdventure"));
     private final FLabel lblDescription = new FLabel.Builder()
             .text("<html><div style='text-align:center'>" +
                   "Adventure Mode lets you explore a fantasy world, " +
                   "collect cards, build decks, and battle enemies.<br><br>" +
-                  "Battles will use the desktop interface for the best experience." +
+                  "The adventure map opens in a separate window using the mobile interface. " +
+                  "When a battle starts, it will be played here in the desktop interface." +
                   "</div></html>")
             .fontSize(14)
             .build();
 
     VSubmenuAdventure() {
-        btnStart.setText(localizer.getMessage("lblStartAdventure"));
+        btnStart.setFont(FSkin.getRelativeFont(20));
     }
 
     @Override
@@ -77,7 +79,7 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
         return this.parentCell;
     }
 
-    public StartButton getBtnStart() {
+    public FButton getBtnStart() {
         return btnStart;
     }
 
@@ -95,7 +97,7 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
 
         container.add(lblTitle, "w 80%, h 40px!, gap 0 0 40px 20px, al center");
         container.add(lblDescription, "w 60%, h 100px!, gap 0 0 20px 20px, al center");
-        container.add(btnStart, "w 300px!, h 50px!, gap 0 0 30px 0, al center");
+        container.add(btnStart, "w 300!, h 75!, gap 0 0 30px 0, al center");
 
         if (container.isShowing()) {
             container.validate();

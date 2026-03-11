@@ -35,13 +35,7 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
     public void update() {
         MenuUtil.setMenuProvider(this);
         // Update button state based on whether Adventure is already running
-        if (AdventureDesktopLauncher.isRunning()) {
-            view.getBtnStart().setText(Localizer.getInstance().getMessage("lblAdventureRunning"));
-            view.getBtnStart().setEnabled(false);
-        } else {
-            view.getBtnStart().setText(Localizer.getInstance().getMessage("lblStartAdventure"));
-            view.getBtnStart().setEnabled(true);
-        }
+        view.getBtnStart().setEnabled(!AdventureDesktopLauncher.isRunning());
     }
 
     @Override
@@ -65,7 +59,6 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
         AdventureDesktopLauncher.launch();
 
         // Update button state
-        view.getBtnStart().setText(Localizer.getInstance().getMessage("lblAdventureRunning"));
         view.getBtnStart().setEnabled(false);
     }
 }

@@ -422,7 +422,7 @@ public class Forge implements ApplicationListener {
                 //load Drafts
                 preloadBoosterDrafts();
                 FThreads.invokeInEdtLater(() -> {
-                    if (selector.equals("Adventure")) {
+                    if (selector.equals("Adventure") || GuiBase.isDesktopAdventureMode()) {
                         //preload adventure resources to speedup startup if selector is adventure. Needs in edt when setting up worldstage
                         loadAdventureResources(false);
                         isMobileAdventureMode = true;
@@ -430,6 +430,10 @@ public class Forge implements ApplicationListener {
                     //selection transition
                     setTransitionScreen(new TransitionScreen(() -> {
                         if (createNewAdventureMap) {
+                            openAdventure();
+                            clearSplashScreen();
+                        } else if (GuiBase.isDesktopAdventureMode()) {
+                            // Launched from desktop — skip mode selector, go straight to adventure
                             openAdventure();
                             clearSplashScreen();
                         } else {

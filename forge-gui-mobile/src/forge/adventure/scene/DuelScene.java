@@ -50,6 +50,7 @@ import forge.sound.SoundSystem;
 import forge.toolbox.FCardPanel;
 import forge.toolbox.FDisplayObject;
 import forge.toolbox.FOptionPane;
+import forge.toolbox.FOverlay;
 import forge.trackable.TrackableCollection;
 import forge.util.Aggregates;
 import org.apache.commons.lang3.tuple.Pair;
@@ -85,6 +86,8 @@ public class DuelScene extends ForgeScene {
     final int enemyAvatarKey = 90001;
     final int playerAvatarKey = 90000;
     FOptionPane bossDialogue;
+    private LoadingOverlay waitingOverlay;
+    private boolean desktopBattleWaiting = false;
     List<IPaperCard> playerExtras = new ArrayList<>();
     List<IPaperCard> AIExtras = new ArrayList<>();
 
@@ -95,6 +98,25 @@ public class DuelScene extends ForgeScene {
 
     @Override
     public void dispose() {
+    }
+
+    @Override
+    public void render() {
+        if (!desktopBattleWaiting) {
+            return; // normal battles render through MatchController
+        }
+        // Desktop battle: draw overlays directly since ForgeScene.render() is a no-op
+        Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT);
+        float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
+        Forge.getGraphics().begin(w, h);
+        for (FOverlay overlay : FOverlay.getOverlays()) {
+            if (overlay.isVisibleOnScreen(getScreen())) {
+                overlay.screenPos.setSize(w, h);
+                overlay.setSize(w, h);
+                overlay.draw(Forge.getGraphics());
+            }
+        }
+        Forge.getGraphics().end();
     }
 
     public boolean hasCallbackExit() {
@@ -593,6 +615,11 @@ public class DuelScene extends ForgeScene {
 
             System.out.println("Desktop Adventure: Battle request written, waiting for desktop to complete battle...");
 
+            // Show waiting overlay so the user knows a battle is in progress
+            desktopBattleWaiting = true;
+            waitingOverlay = new LoadingOverlay("Waiting for desktop to resolve battle...", true);
+            waitingOverlay.show();
+
             // Start polling for battle completion in background
             new Thread(() -> {
                 waitForDesktopBattle();
@@ -602,6 +629,7 @@ public class DuelScene extends ForgeScene {
             System.err.println("Failed to start desktop battle: " + e.getMessage());
             e.printStackTrace();
             // Fall back to ending the duel scene
+            desktopBattleWaiting = false;
             afterGameEnd(enemy.getName(), false);
             exitDuelScene();
         }
@@ -612,9 +640,14 @@ public class DuelScene extends ForgeScene {
      */
     private void waitForDesktopBattle() {
         try {
+            System.out.println("Desktop Adventure: Polling for battle_complete at: " + IAdventureBattleHost.getBattleCompleteSignalPath());
             // Poll for battle completion (check every 500ms)
+            int pollCount = 0;
             while (!IAdventureBattleHost.isBattleComplete()) {
                 Thread.sleep(500);
+                if (++pollCount % 20 == 0) { // Log every 10 seconds
+                    System.out.println("Desktop Adventure: Still waiting... (poll #" + pollCount + ")");
+                }
             }
 
             // Read the result
@@ -644,14 +677,18 @@ public class DuelScene extends ForgeScene {
 
             // Process the game end on the main thread
             Gdx.app.postRunnable(() -> {
+                desktopBattleWaiting = false;
+                if (waitingOverlay != null) waitingOverlay.hide();
                 afterGameEnd(enemy.getName(), result.humanWon);
                 exitDuelScene();
             });
 
-        } catch (Exception e) {
-            System.err.println("Error waiting for desktop battle: " + e.getMessage());
+        } catch (Throwable e) {
+            System.err.println("Error waiting for desktop battle: " + e.getClass().getName() + ": " + e.getMessage());
             e.printStackTrace();
             Gdx.app.postRunnable(() -> {
+                desktopBattleWaiting = false;
+                if (waitingOverlay != null) waitingOverlay.hide();
                 afterGameEnd(enemy.getName(), false);
                 exitDuelScene();
             });
