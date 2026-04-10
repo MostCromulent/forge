@@ -922,7 +922,7 @@ public class CardImageRenderer {
         w -= 2 * outerBorderThickness;
         float cardNameBoxHeight = Math.max(MANA_SYMBOL_SIZE + 2 * HEADER_PADDING, 2 * getCapHeight(NAME_FONT)) + 2 * getCapHeight(TYPE_FONT) + 2;
 
-        //draw name/type box
+        //draw name/type box for primary state
         Color[] nameBoxColors = FSkinColor.tintColors(Color.WHITE, colors, CardRenderer.NAME_BOX_TINT);
         drawDetailsNameBox(g, card, state, canShow, nameBoxColors, x, y, w, cardNameBoxHeight);
 
@@ -932,7 +932,25 @@ public class CardImageRenderer {
 
         y += cardNameBoxHeight + innerBorderThickness;
         Color[] textBoxColors = FSkinColor.tintColors(Color.WHITE, colors, CardRenderer.TEXT_BOX_TINT);
-        drawDetailsTextBox(g, state, gameView, canShow, textBoxColors, x, y, w, textBoxHeight);
+
+        //for adventure/omen cards, split text box into left (secondary) and right (primary) halves
+        if (card.hasSecondaryState() && !isFaceDown && !altState) {
+            CardStateView secondaryState = card.getState(true);
+            float halfW = w / 2;
+            //left half: secondary state (adventure/omen) name + type + text
+            List<DetailColors> secBorderColors = CardDetailUtil.getBorderColors(secondaryState, canShow);
+            Color[] secColors = FSkinColor.tintColors(Color.WHITE, fillColorBackground(g, secBorderColors, x, y, halfW, textBoxHeight), CardRenderer.NAME_BOX_TINT);
+            float secNameHeight = Math.max(MANA_SYMBOL_SIZE + 2 * HEADER_PADDING, 2 * getCapHeight(NAME_FONT)) + 2 * getCapHeight(TYPE_FONT) + 2;
+            drawDetailsNameBox(g, card, secondaryState, canShow, secColors, x, y, halfW, secNameHeight);
+            float secTextY = y + secNameHeight + innerBorderThickness;
+            float secTextH = textBoxHeight - secNameHeight - innerBorderThickness;
+            Color[] secTextColors = FSkinColor.tintColors(Color.WHITE, fillColorBackground(g, secBorderColors, x, secTextY, halfW, secTextH), CardRenderer.TEXT_BOX_TINT);
+            drawDetailsTextBox(g, secondaryState, gameView, canShow, secTextColors, x, secTextY, halfW, secTextH);
+            //right half: primary state text
+            drawDetailsTextBox(g, state, gameView, canShow, textBoxColors, x + halfW, y, halfW, textBoxHeight);
+        } else {
+            drawDetailsTextBox(g, state, gameView, canShow, textBoxColors, x, y, w, textBoxHeight);
+        }
 
         y += textBoxHeight + innerBorderThickness;
         Color[] ptColors = FSkinColor.tintColors(Color.WHITE, colors, CardRenderer.PT_BOX_TINT);
