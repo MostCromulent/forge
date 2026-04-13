@@ -230,11 +230,6 @@ public final class CMatchUI
         refreshAllViews();
     }
 
-    @Override
-    protected void afterDeltaApplied() {
-        refreshAllViews();
-    }
-
     private void refreshAllViews() {
         if (sortedPlayers != null) {
             FThreads.invokeInEdtNowOrLater(() -> {
@@ -380,9 +375,10 @@ public final class CMatchUI
         return view.getHands();
     }
     public VHand getHandFor(final PlayerView p) {
-        final int idx = getPlayerIndex(p);
-        final List<VHand> allHands = getHandViews();
-        return idx < 0 || idx >= allHands.size() ? null : allHands.get(idx);
+        for (final VHand h : getHandViews()) {
+            if (p.equals(h.getPlayer())) { return h; }
+        }
+        return null;
     }
 
     @Override

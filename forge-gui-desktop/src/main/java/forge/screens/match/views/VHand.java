@@ -45,6 +45,7 @@ public class VHand implements IVDoc<CHand> {
     private final EDocID docID;
     private final DragTab tab = new DragTab(Localizer.getInstance().getMessage("lblYourHand"));
     private final PlayerView player;
+    public PlayerView getPlayer() { return player; }
     // Delta tracking for "+N new" tab labels. Baseline resets when the tab is viewed.
     private int baseCount = -1;
 
