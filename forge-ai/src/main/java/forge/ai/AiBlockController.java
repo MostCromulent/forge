@@ -69,6 +69,7 @@ public class AiBlockController {
     private int diff = 0;
 
     private boolean lifeInDanger = false;
+    private AiCombatCache combatCache; // initialized in assignBlockers
 
     // set to true when AI is predicting a blocking for another player so it doesn't use hidden information
     private boolean checkingOther = false;
@@ -79,10 +80,17 @@ public class AiBlockController {
     }
 
     // finds the creatures able to block the attacker
-    private static List<Card> getPossibleBlockers(final Combat combat, final Card attacker, final List<Card> blockersLeft, final boolean solo) {
+    private List<Card> getPossibleBlockers(final Combat combat, final Card attacker, final List<Card> blockersLeft, final boolean solo) {
         final List<Card> blockers = new ArrayList<>();
 
         for (final Card blocker : blockersLeft) {
+            // Fast reject: if keyword/evasion check fails, full check would also fail
+            if (combatCache != null) {
+                Boolean keywordResult = combatCache.canBlockKeyword(attacker, blocker);
+                if (keywordResult != null && !keywordResult) {
+                    continue; // keywords prevent blocking — skip expensive full check
+                }
+            }
             // if the blocker can block a creature with lure it can't block a creature without
             if (CombatUtil.canBlock(attacker, blocker, combat)) {
                 boolean cantBlockAlone = blocker.hasKeyword("CARDNAME can't attack or block alone.") || blocker.hasKeyword("CARDNAME can't block alone.");
@@ -188,7 +196,7 @@ public class AiBlockController {
         List<Card> currentAttackers = new ArrayList<>(attackersLeft);
 
         for (final Card attacker : attackersLeft) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
                 continue;
             }
 
@@ -252,7 +260,9 @@ public class AiBlockController {
                     if ((b.hasSVar("SacMe") && Integer.parseInt(b.getSVar("SacMe")) > 3) ||
                             (b.hasSVar("SacMeAfterBlock") && !attacker.hasKeyword(Keyword.TRAMPLE) && !attacker.hasKeyword(Keyword.BANDING))) {
                         blocker = b;
-                        if (!ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false)) {
+                        Boolean cachedCDA = combatCache != null ? combatCache.canDestroyAttacker(ai, attacker, blocker, combat, false) : null;
+                        boolean cda = cachedCDA != null ? cachedCDA : ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false);
+                        if (!cda) {
                             blockedButUnkilled.add(attacker);
                         }
                         break;
@@ -261,7 +271,7 @@ public class AiBlockController {
                 // 5.Blockers that can destroy the attacker and are worth less
                 if (!killingBlockers.isEmpty()) {
                     final Card worst = ComputerUtilCard.getWorstCreatureAI(killingBlockers);
-                    int value = ComputerUtilCard.evaluateCreature(attacker);
+                    int value = getCachedEval(attacker);
 
                     // check for triggers when unblocked
                     for (Trigger trigger : attacker.getTriggers()) {
@@ -284,7 +294,7 @@ public class AiBlockController {
                         }
                     }
 
-                    if (ComputerUtilCard.evaluateCreature(worst) + diff < value) {
+                    if (getCachedEval(worst) + diff < value) {
                         blocker = worst;
                     }
                 }
@@ -298,7 +308,7 @@ public class AiBlockController {
 
         // 6. Blockers that don't survive until the next turn anyway
         for (final Card attacker : attackersLeft) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
                 continue;
             }
 
@@ -310,7 +320,9 @@ public class AiBlockController {
                         || (b.hasKeyword(Keyword.FADING) && b.getCounters(CounterEnumType.FADE) == 0)
                         || b.hasSVar("EndOfTurnLeavePlay")) {
                     blocker = b;
-                    if (!ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false)) {
+                    Boolean cachedCDA2 = combatCache != null ? combatCache.canDestroyAttacker(ai, attacker, blocker, combat, false) : null;
+                    boolean cda2 = cachedCDA2 != null ? cachedCDA2 : ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false);
+                    if (!cda2) {
                         blockedButUnkilled.add(attacker);
                     }
                     break;
@@ -391,12 +403,12 @@ public class AiBlockController {
                 if (firstStrikeBlockers.size() > 1) {
                     CardLists.sortByPowerDesc(firstStrikeBlockers);
                     for (final Card blocker : firstStrikeBlockers) {
-                        final int damageNeeded = ComputerUtilCombat.getDamageToKill(attacker, false)
+                        final int damageNeeded = getCachedDamageToKill(attacker, false)
                                 + ComputerUtilCombat.predictToughnessBonusOfAttacker(attacker, blocker, combat, false);
                         // if the total damage of the blockgang was not enough
                         // without but is enough with this blocker finish the blockgang
                         if (ComputerUtilCombat.totalFirstStrikeDamageOfBlockers(attacker, blockGang) < damageNeeded
-                                || CombatUtil.getMinNumBlockersForAttacker(attacker, ai) > blockGang.size()) {
+                                || getCachedMinNumBlockers(attacker, ai) > blockGang.size()) {
                             blockGang.add(blocker);
                             if (ComputerUtilCombat.totalFirstStrikeDamageOfBlockers(attacker, blockGang) >= damageNeeded) {
                                 currentAttackers.remove(attacker);
@@ -424,11 +436,11 @@ public class AiBlockController {
             }
 
             // AI can't handle good blocks with more than three creatures yet
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, ai) > (considerTripleBlock ? 3 : 2)) {
+            if (getCachedMinNumBlockers(attacker, ai) > (considerTripleBlock ? 3 : 2)) {
                 continue;
             }
 
-            int evalAttackerValue = ComputerUtilCard.evaluateCreature(attacker);
+            int evalAttackerValue = getCachedEval(attacker);
 
             blockers = getPossibleBlockers(combat, attacker, blockersLeft, false);
             List<Card> usableBlockers;
@@ -439,12 +451,13 @@ public class AiBlockController {
 
             // Try to add blockers that could be destroyed, but are worth less than the attacker
             // Don't use blockers without First Strike or Double Strike if attacker has it
+            final int evalAtkForFilter = evalAttackerValue; // capture for lambda
             usableBlockers = CardLists.filter(blockers, c -> {
                 if (ComputerUtilCombat.dealsFirstStrikeDamage(attacker, false, combat)
                         && !ComputerUtilCombat.dealsFirstStrikeDamage(c, false, combat)) {
                     return false;
                 }
-                return lifeInDanger || wouldLikeToRandomlyTrade(attacker, c, combat) || ComputerUtilCard.evaluateCreature(c) + diff < ComputerUtilCard.evaluateCreature(attacker);
+                return lifeInDanger || wouldLikeToRandomlyTrade(attacker, c, combat) || getCachedEval(c) + diff < evalAtkForFilter;
             });
             if (usableBlockers.size() < 2) {
                 return;
@@ -454,19 +467,20 @@ public class AiBlockController {
             blockGang.add(leader);
             usableBlockers.remove(leader);
             absorbedDamage = ComputerUtilCombat.getEnoughDamageToKill(leader, attacker.getNetCombatDamage(), attacker, true);
-            currentValue = ComputerUtilCard.evaluateCreature(leader);
+            currentValue = getCachedEval(leader);
 
             // consider a double block
+            final int leaderDamage = ComputerUtilCombat.totalDamageOfBlockers(attacker, blockGang);
             for (final Card blocker : usableBlockers) {
                 // Add an additional blocker if the current blockers are not
                 // enough and the new one would deal the remaining damage
-                final int currentDamage = ComputerUtilCombat.totalDamageOfBlockers(attacker, blockGang);
+                final int currentDamage = leaderDamage; // blockGang unchanged in this loop
                 final int additionalDamage = ComputerUtilCombat.dealsDamageAsBlocker(attacker, blocker);
                 final int absorbedDamage2 = ComputerUtilCombat.getEnoughDamageToKill(blocker, attacker.getNetCombatDamage(), attacker, true);
-                final int addedValue = ComputerUtilCard.evaluateCreature(blocker);
-                final int damageNeeded = ComputerUtilCombat.getDamageToKill(attacker, false)
+                final int addedValue = getCachedEval(blocker);
+                final int damageNeeded = getCachedDamageToKill(attacker, false)
                         + ComputerUtilCombat.predictToughnessBonusOfAttacker(attacker, blocker, combat, false);
-                if ((damageNeeded > currentDamage || CombatUtil.getMinNumBlockersForAttacker(attacker, ai) > blockGang.size())
+                if ((damageNeeded > currentDamage || getCachedMinNumBlockers(attacker, ai) > blockGang.size())
                         && !(damageNeeded > currentDamage + additionalDamage)
                         // The attacker will be killed
                         && (absorbedDamage2 + absorbedDamage > attacker.getNetCombatDamage()
@@ -500,11 +514,11 @@ public class AiBlockController {
             blockerLoop:
             for (final Card secondBlocker : usableBlockers) {
                 // consider the properties of the second blocker
-                final int currentDamage = ComputerUtilCombat.totalDamageOfBlockers(attacker, blockGang);
+                final int currentDamage = leaderDamage; // blockGang unchanged, same as double-block loop
                 final int additionalDamage2 = ComputerUtilCombat.dealsDamageAsBlocker(attacker, secondBlocker);
                 final int absorbedDamage2 = ComputerUtilCombat.getEnoughDamageToKill(secondBlocker, attacker.getNetCombatDamage(), attacker, true);
-                final int addedValue2 = ComputerUtilCard.evaluateCreature(secondBlocker);
-                final int damageNeeded = ComputerUtilCombat.getDamageToKill(attacker, false)
+                final int addedValue2 = getCachedEval(secondBlocker);
+                final int damageNeeded = getCachedDamageToKill(attacker, false)
                         + ComputerUtilCombat.predictToughnessBonusOfAttacker(attacker, secondBlocker, combat, false);
 
                 List<Card> usableBlockersAsThird = new ArrayList<>(usableBlockers);
@@ -514,10 +528,10 @@ public class AiBlockController {
                 for (Card thirdBlocker : usableBlockersAsThird) {
                     final int additionalDamage3 = ComputerUtilCombat.dealsDamageAsBlocker(attacker, thirdBlocker);
                     final int absorbedDamage3 = ComputerUtilCombat.getEnoughDamageToKill(thirdBlocker, attacker.getNetCombatDamage(), attacker, true);
-                    final int addedValue3 = ComputerUtilCard.evaluateCreature(secondBlocker);
+                    final int addedValue3 = getCachedEval(thirdBlocker);
                     final int netCombatDamage = attacker.getNetCombatDamage();
 
-                    if ((damageNeeded > currentDamage || CombatUtil.getMinNumBlockersForAttacker(attacker, ai) > blockGang.size())
+                    if ((damageNeeded > currentDamage || getCachedMinNumBlockers(attacker, ai) > blockGang.size())
                             && !(damageNeeded > currentDamage + additionalDamage2 + additionalDamage3)
                             // The attacker will be killed
                             && ((absorbedDamage2 + absorbedDamage > netCombatDamage && absorbedDamage3 + absorbedDamage > netCombatDamage
@@ -555,7 +569,7 @@ public class AiBlockController {
 
         // Try to block a Menace attacker with two blockers, neither of which will die
         for (final Card attacker : attackersLeft) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) != 2) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) != 2) {
                 continue;
             }
 
@@ -606,7 +620,7 @@ public class AiBlockController {
         List<Card> killingBlockers;
 
         for (final Card attacker : attackersLeft) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1) {
                 continue;
             }
             if (ComputerUtilCombat.attackerHasThreateningAfflict(attacker, ai)) {
@@ -659,7 +673,7 @@ public class AiBlockController {
 
         Card attacker = attackers.get(0);
 
-        if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1
+        if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) > 1
             || StaticAbilityAssignCombatDamageAsUnblocked.assignCombatDamageAsUnblocked(attacker)
             || ComputerUtilCombat.attackerHasThreateningAfflict(attacker, ai)) {
             attackers.remove(0);
@@ -708,7 +722,7 @@ public class AiBlockController {
         List<Card> currentAttackers = new ArrayList<>(attackersLeft);
 
         for (final Card attacker : currentAttackers) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) <= 1) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) <= 1) {
                 continue;
             }
             List<Card> possibleBlockers = getPossibleBlockers(combat, attacker, blockersLeft, true);
@@ -745,7 +759,7 @@ public class AiBlockController {
         tramplingAttackers = CardLists.filter(tramplingAttackers, changesPTWhenBlocked(true).negate());
 
         for (final Card attacker : tramplingAttackers) {
-            if (CombatUtil.getMinNumBlockersForAttacker(attacker, combat.getDefenderPlayerByAttacker(attacker)) > combat.getBlockers(attacker).size()) {
+            if (getCachedMinNumBlockers(attacker, combat.getDefenderPlayerByAttacker(attacker)) > combat.getBlockers(attacker).size()) {
                 continue;
             }
 
@@ -810,7 +824,7 @@ public class AiBlockController {
             if (blockers.size() > 0) {
                 safeBlockers = getSafeBlockers(combat, attacker, blockers);
                 for (final Card blocker : safeBlockers) {
-                    final int damageNeeded = ComputerUtilCombat.getDamageToKill(attacker, false)
+                    final int damageNeeded = getCachedDamageToKill(attacker, false)
                             + ComputerUtilCombat.predictToughnessBonusOfAttacker(attacker, blocker, combat, false);
                     // Add an additional blocker if the current blockers are not
                     // enough and the new one would deal additional damage
@@ -837,7 +851,7 @@ public class AiBlockController {
             }
 
             for (final Card blocker : safeBlockers) {
-                final int damageNeeded = ComputerUtilCombat.getDamageToKill(attacker, false)
+                final int damageNeeded = getCachedDamageToKill(attacker, false)
                         + ComputerUtilCombat.predictToughnessBonusOfAttacker(attacker, blocker, combat, false);
                 // Add an additional blocker if the current blockers are not
                 // enough and the new one would deal the remaining damage
@@ -845,7 +859,7 @@ public class AiBlockController {
                 final int additionalDamage = ComputerUtilCombat.dealsDamageAsBlocker(attacker, blocker);
                 if (damageNeeded > currentDamage
                         && damageNeeded <= currentDamage + additionalDamage
-                        && ComputerUtilCard.evaluateCreature(blocker) + diff < ComputerUtilCard.evaluateCreature(attacker)
+                        && getCachedEval(blocker) + diff < getCachedEval(attacker)
                         && CombatUtil.canBlock(attacker, blocker, combat)
                         && !ComputerUtilCombat.canDestroyBlockerBeforeFirstStrike(blocker, attacker, false)) {
                     combat.addBlocker(attacker, blocker);
@@ -891,7 +905,7 @@ public class AiBlockController {
             CardCollection pwsWithChumpBlocks = new CardCollection();
             CardCollection chosenChumpBlockers = new CardCollection();
             CardCollection chumpPWDefenders = CardLists.filter(this.blockersLeft,
-                    card -> ComputerUtilCard.evaluateCreature(card) <= (card.isToken() ? evalThresholdToken : evalThresholdNonToken)
+                    card -> getCachedEval(card) <= (card.isToken() ? evalThresholdToken : evalThresholdNonToken)
             );
             CardLists.sortByPowerAsc(chumpPWDefenders);
             if (!chumpPWDefenders.isEmpty()) {
@@ -1042,6 +1056,10 @@ public class AiBlockController {
         if (attackers.isEmpty()) {
             return;
         }
+
+        // Initialize combat cache for blocking decisions
+        long cacheStartNanos = System.nanoTime();
+        this.combatCache = new AiCombatCache(ai.getGame().getCardsIn(ZoneType.Battlefield), ai);
 
         clearBlockers(combat, possibleBlockers);
 
@@ -1374,5 +1392,32 @@ public class AiBlockController {
             currentBlockTax += taxCMC;
         }
         return modified;
+    }
+
+    /** Evaluate creature using the combat cache if available, else direct. */
+    private int getCachedEval(Card c) {
+        if (combatCache != null) {
+            Integer cached = combatCache.evaluateCreature(c);
+            if (cached != null) return cached;
+        }
+        return ComputerUtilCard.evaluateCreature(c);
+    }
+
+    /** Get getDamageToKill using the combat cache if available. */
+    private int getCachedDamageToKill(Card attacker, boolean withoutAbilities) {
+        if (combatCache != null) {
+            Integer cached = combatCache.getDamageToKill(attacker, withoutAbilities);
+            if (cached != null) return cached;
+        }
+        return ComputerUtilCombat.getDamageToKill(attacker, withoutAbilities);
+    }
+
+    /** Get getMinNumBlockersForAttacker using the combat cache if available. */
+    private int getCachedMinNumBlockers(Card attacker, Player defender) {
+        if (combatCache != null) {
+            Integer cached = combatCache.getMinNumBlockers(attacker, defender);
+            if (cached != null) return cached;
+        }
+        return CombatUtil.getMinNumBlockersForAttacker(attacker, defender);
     }
 }

@@ -2036,9 +2036,19 @@ public class ComputerUtilCard {
         CardCollection deduped = new CardCollection();
         for (Card c : cc) {
             boolean unique = true;
+            // Original hand dedup: identical cards in hand by name
             if (c.isInZone(ZoneType.Hand) && !c.hasPerpetual()) {
                 for (Card d : deduped) {
                     if (d.isInZone(ZoneType.Hand) && d.getOwner().equals(c.getOwner()) && d.getName().equals(c.getName())) {
+                        unique = false;
+                        break;
+                    }
+                }
+            }
+            // Battlefield creature dedup: equivalent creatures by full AI equivalence check
+            if (unique && c.isInZone(ZoneType.Battlefield) && c.isCreature() && AiCacheMode.get().isCacheActive()) {
+                for (Card d : deduped) {
+                    if (d.isInZone(ZoneType.Battlefield) && areCreaturesEquivalentForAI(c, d)) {
                         unique = false;
                         break;
                     }
@@ -2049,6 +2059,63 @@ public class ComputerUtilCard {
             }
         }
         return deduped;
+    }
+
+    // AI-relevant SVars that can differ between otherwise identical creatures
+    private static final String[] AI_RELEVANT_SVARS = {
+        "NonCombatPriority", "HasAttackEffect", "HasCombatEffect",
+        "SacMe", "EndOfTurnLeavePlay", "MustAttack"
+    };
+
+    /**
+     * Check whether two creatures are equivalent for AI combat/evaluation purposes.
+     * Two equivalent creatures will produce identical results from canBlock, canDestroyAttacker,
+     * evaluateCreature, etc. — so the AI can cache a result for one and reuse it for the other.
+     *
+     * False negatives are safe (no speedup). False positives would be bugs (wrong AI decisions).
+     * Checks are ordered cheapest-first.
+     */
+    public static boolean areCreaturesEquivalentForAI(Card a, Card b) {
+        if (a == b) return true;
+        if (!a.isCreature() || !b.isCreature()) return false;
+        // Cheapest checks first: name, controller, primitives
+        if (!a.getName().equals(b.getName())) return false;
+        if (a.getController() != b.getController()) return false;
+        if (a.isTapped() != b.isTapped()) return false;
+        if (a.hasSickness() != b.hasSickness()) return false;
+        if (a.getNetPower() != b.getNetPower()) return false;
+        if (a.getNetToughness() != b.getNetToughness()) return false;
+        if (a.getDamage() != b.getDamage()) return false;
+        // Exclusion checks: any of these disqualify grouping
+        if (a.isEquipped() || b.isEquipped()) return false;
+        if (a.isEnchanted() || b.isEnchanted()) return false;
+        if (a.isFaceDown() || b.isFaceDown()) return false;
+        if (a.hasPerpetual() || b.hasPerpetual()) return false;
+        if (a.isDetained() != b.isDetained()) return false;
+        if (a.isGoaded() != b.isGoaded()) return false;
+        if (!a.getMustBlockCards().isEmpty() || !b.getMustBlockCards().isEmpty()) return false;
+        // Transform state
+        if (a.isDoubleFaced() != b.isDoubleFaced()) return false;
+        if (a.isDoubleFaced() && a.isTransformed() != b.isTransformed()) return false;
+        // Color (can differ due to "until end of turn" effects)
+        if (a.getColor() != b.getColor()) return false; // ColorSet is enum, reference equality
+        // Type (can differ due to type-change effects)
+        if (!a.getType().toString().equals(b.getType().toString())) return false;
+        // Collection checks: counters, abilities, keywords
+        if (!a.getCounters().equals(b.getCounters())) return false;
+        if (a.getSpellAbilities().size() != b.getSpellAbilities().size()) return false;
+        // Keyword comparison: size first (cheap), then string representations
+        List<KeywordInterface> aKw = a.getKeywords();
+        List<KeywordInterface> bKw = b.getKeywords();
+        if (aKw.size() != bKw.size()) return false;
+        for (int i = 0; i < aKw.size(); i++) {
+            if (!aKw.get(i).toString().equals(bKw.get(i).toString())) return false;
+        }
+        // SVar checks
+        for (String svar : AI_RELEVANT_SVARS) {
+            if (!Objects.equals(a.getSVar(svar), b.getSVar(svar))) return false;
+        }
+        return true;
     }
 
     // Determine if the AI has an AI:RemoveDeck:All or an AI:RemoveDeck:Random hint specified.

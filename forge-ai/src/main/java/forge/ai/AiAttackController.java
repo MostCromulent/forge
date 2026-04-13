@@ -82,6 +82,7 @@ public class AiAttackController {
     private final int timeOut;
     private final boolean canUseTimeout;
     private List<CompletableFuture<Integer>> futures = new ArrayList<>();
+    private AiCombatCache combatCache; // initialized in declareAttackers, after async section
 
     /**
      * <p>
@@ -950,6 +951,10 @@ public class AiAttackController {
             }
         }
 
+        // Initialize combat cache after async section (thread-safe: sequential from here)
+        long cacheStartNanos = System.nanoTime();
+        this.combatCache = new AiCombatCache(ai.getGame().getCardsIn(ZoneType.Battlefield), defendingOpponent);
+
         // Lightmine Field: make sure the AI doesn't wipe out its own creatures
         if (lightmineField) {
             doLightmineFieldAttackLogic(attackersLeft, numForcedAttackers.get(), playAggro);
@@ -1185,7 +1190,9 @@ public class AiAttackController {
             // check blockers individually, as the bulk canBeBlocked doesn't
             // check all circumstances
             for (final Card blocker : this.blockers) {
-                if (CombatUtil.canBlock(attacker, blocker)) {
+                Boolean cached = combatCache.canBlockKeyword(attacker, blocker);
+                boolean canBlock = cached != null ? cached : CombatUtil.canBlock(attacker, blocker);
+                if (canBlock) {
                     isUnblockableCreature = false;
                     break;
                 }
@@ -1199,6 +1206,7 @@ public class AiAttackController {
             // check blockers individually, as the bulk canBeBlocked doesn't
             // check all circumstances
             for (final Card blocker : myList) {
+                // nextTurn variant uses 3-arg canBlock — not cached (next-turn checks differ)
                 if (CombatUtil.canBlock(attacker, blocker, true)) {
                     isUnblockableCreature = false;
                     break;
@@ -1269,6 +1277,12 @@ public class AiAttackController {
         if ( LOG_AI_ATTACKS )
             System.out.println("attackersLeft = " + left);
 
+        // Enable shouldAttack caching if no Exalted sources exist (Exalted changes
+        // results based on combat state — first attacker sees empty combat, later ones don't)
+        if (combatCache != null && countExaltedBonus(ai) == 0) {
+            combatCache.enableShouldAttackCache();
+        }
+
         FCollection<GameEntity> possibleDefenders = new FCollection<>(defendingOpponent);
         possibleDefenders.addAll(defendingOpponent.getPlaneswalkersInPlay());
 
@@ -1284,7 +1298,18 @@ public class AiAttackController {
 
                 // TODO logic for Questing Beast to prefer players
 
-                if (shouldAttack(attacker, this.blockers, combat, defender) && canAttackWrapper(attacker, defender)) {
+                // Try cache first for shouldAttack
+                Boolean cachedShouldAttack = combatCache != null ? combatCache.shouldAttack(attacker) : null;
+                boolean doAttack;
+                if (cachedShouldAttack != null) {
+                    doAttack = cachedShouldAttack;
+                } else {
+                    doAttack = shouldAttack(attacker, this.blockers, combat, defender);
+                    if (combatCache != null) {
+                        combatCache.putShouldAttack(attacker, doAttack);
+                    }
+                }
+                if (doAttack && canAttackWrapper(attacker, defender)) {
                     combat.addAttacker(attacker, defender);
                     attackersAssigned.add(attacker);
 
@@ -1326,6 +1351,9 @@ public class AiAttackController {
             }
         }
 
+        if (combatCache != null) {
+            combatCache.report("Attack declaration", cacheStartNanos);
+        }
         return aiAggression;
     }
 
@@ -1360,7 +1388,10 @@ public class AiAttackController {
                     || attacker.isWitherDamage() || attacker.hasKeyword(Keyword.LIFELINK) || attacker.hasKeyword(Keyword.AFFLICT);
 
             // contains only the defender's blockers that can actually block the attacker
-            CardCollection validBlockers = CardLists.filter(defenders, defender1 -> CombatUtil.canBlock(attacker, defender1));
+            CardCollection validBlockers = CardLists.filter(defenders, defender1 -> {
+                Boolean cached = combatCache != null ? combatCache.canBlockKeyword(attacker, defender1) : null;
+                return cached != null ? cached : CombatUtil.canBlock(attacker, defender1);
+            });
 
             canTrampleOverDefenders = attacker.hasKeyword(Keyword.TRAMPLE) && attacker.getNetCombatDamage() > Aggregates.sum(validBlockers, Card::getNetToughness);
 
@@ -1380,19 +1411,23 @@ public class AiAttackController {
                 // if both isWorthLessThanAllKillers and canKillAllDangerous are false there's nothing more to check
                 if (isWorthLessThanAllKillers || canKillAllDangerous || numberOfPossibleBlockers < 2) {
                     numberOfPossibleBlockers += 1;
-                    if (isWorthLessThanAllKillers && ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false)
+                    Boolean cachedDestroy = combatCache != null ? combatCache.canDestroyAttacker(ai, attacker, blocker, combat, false) : null;
+                    boolean canDestroy = cachedDestroy != null ? cachedDestroy : ComputerUtilCombat.canDestroyAttacker(ai, attacker, blocker, combat, false);
+                    if (isWorthLessThanAllKillers && canDestroy
                             && !(attacker.hasKeyword(Keyword.UNDYING) && attacker.getCounters(CounterEnumType.P1P1) == 0)) {
                         canBeKilledByOne = true; // there is a single creature on the battlefield that can kill the creature
                         // see if the defending creature is of higher or lower
                         // value. We don't want to attack only to lose value
                         if (isWorthLessThanAllKillers && !attacker.hasSVar("SacMe")
-                                && ComputerUtilCard.evaluateCreature(blocker) <= ComputerUtilCard.evaluateCreature(attacker)) {
+                                && getCachedEval(blocker) <= getCachedEval(attacker)) {
                             isWorthLessThanAllKillers = false;
                         }
                     }
                     // see if this attacking creature can destroy this defender, if
                     // not record that it can't kill everything
-                    if (canKillAllDangerous && !ComputerUtilCombat.canDestroyBlocker(ai, blocker, attacker, combat, false)) {
+                    Boolean cachedDestroyBlk = combatCache != null ? combatCache.canDestroyBlocker(ai, blocker, attacker, combat, false) : null;
+                    boolean canDestroyBlk = cachedDestroyBlk != null ? cachedDestroyBlk : ComputerUtilCombat.canDestroyBlocker(ai, blocker, attacker, combat, false);
+                    if (canKillAllDangerous && !canDestroyBlk) {
                         canKillAll = false;
 
                         if (blocker.getSVar("HasCombatEffect").equals("TRUE") || blocker.getSVar("HasBlockEffect").equals("TRUE")
@@ -1767,4 +1802,12 @@ public class AiAttackController {
         return CardLists.getAmountOfKeyword(p.getCardsIn(ZoneType.Battlefield), Keyword.EXALTED);
     }
 
+    /** Evaluate creature using the combat cache if available, else direct. */
+    private int getCachedEval(Card c) {
+        if (combatCache != null) {
+            Integer cached = combatCache.evaluateCreature(c);
+            if (cached != null) return cached;
+        }
+        return ComputerUtilCard.evaluateCreature(c);
+    }
 }
