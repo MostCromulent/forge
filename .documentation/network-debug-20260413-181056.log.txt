@@ -1,0 +1,902 @@
+================================================================================
+Network Debug Log Started
+Log file key: 20260413-181056
+APP: Forge v.2.0.12-SNAPSHOT-04.13
+DEV: Samsung - SM-S711U
+SOC: Snapdragon 8 Gen 1 (SM8450)
+RAM: 7221 MB
+OS: Android 16 (Baklava)
+================================================================================
+18:10:56.317 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@8e8c156
+18:10:56.323 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@40d1ec4
+18:10:56.324 [INFO ] GameProtocolHandler: Received: Human joined the lobby.
+18:10:56.325 [INFO ] GameProtocolHandler: Received: AFK timeout: disabled
+18:10:56.325 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LoginEvent@1c79ce2
+18:10:56.335 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@c96d873
+18:10:56.883 [INFO ] FGameClient: Client sent forge.gamemodes.net.event.UpdateLobbyPlayerEvent@ab60ba9
+18:10:56.885 [INFO ] FGameClient: Client sent forge.gamemodes.net.event.UpdateLobbyPlayerEvent@e7c88cf
+18:10:56.885 [INFO ] FGameClient: Client sent forge.gamemodes.net.event.UpdateLobbyPlayerEvent@3ab965
+18:10:57.000 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@748e05a
+18:10:57.081 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@dff228b
+18:10:57.082 [INFO ] GameProtocolHandler: Received: Human is ready (2/2 players ready)
+18:10:57.911 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@4aa3f68
+18:10:57.912 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@e3edf81
+18:10:57.914 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@7a4a826
+18:10:57.919 [INFO ] GameProtocolHandler: Received: forge.gamemodes.net.event.LobbyUpdateEvent@fbb5c67
+18:10:58.330 [INFO ] GameProtocolHandler: Received: GuiGameEvent 0: setGameView (2 args)
+18:10:58.332 [INFO ] GameProtocolHandler: Received: GuiGameEvent 1: openView (1 args)
+18:10:58.372 [INFO ] GameProtocolHandler: Received: GuiGameEvent 2: setGameView (2 args)
+18:10:58.373 [INFO ] GameProtocolHandler: Received: GuiGameEvent 3: setGameView (2 args)
+18:10:58.953 [INFO ] GameProtocolHandler: Received: GuiGameEvent 4: setGameView (2 args)
+18:10:58.955 [INFO ] GameProtocolHandler: Received: GuiGameEvent 5: applyDelta (1 args)
+18:10:58.958 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:10:58.961 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:10:58.961 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:10:59.217 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 12 ms (22118 bytes compressed)
+18:10:59.217 [INFO ] GameProtocolHandler: Received: GuiGameEvent 6: setGameView (2 args)
+18:10:59.218 [INFO ] GameProtocolHandler: Received: GuiGameEvent 7: applyDelta (1 args)
+18:10:59.227 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:10:59.228 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:10:59.228 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:10:59.251 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (21188 bytes compressed)
+18:10:59.252 [INFO ] GameProtocolHandler: Received: GuiGameEvent 8: updateButtons (6 args)
+18:10:59.255 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:10:59.262 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22116 bytes compressed)
+18:10:59.262 [INFO ] GameProtocolHandler: Received: GuiGameEvent 9: setGameView (2 args)
+18:10:59.312 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 12 ms (21226 bytes compressed)
+18:10:59.313 [INFO ] GameProtocolHandler: Received: GuiGameEvent 10: showPromptMessage (2 args)
+18:10:59.316 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:02.781 [INFO ] FGameClient: Client sent GuiGameEvent 0: selectButtonOk (0 args)
+18:11:02.920 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22119 bytes compressed)
+18:11:02.920 [INFO ] GameProtocolHandler: Received: GuiGameEvent 11: setGameView (2 args)
+18:11:02.921 [INFO ] GameProtocolHandler: Received: GuiGameEvent 12: applyDelta (1 args)
+18:11:02.925 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:02.926 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:02.926 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:03.282 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22154 bytes compressed)
+18:11:03.283 [INFO ] GameProtocolHandler: Received: GuiGameEvent 13: setGameView (2 args)
+18:11:03.284 [INFO ] GameProtocolHandler: Received: GuiGameEvent 14: applyDelta (1 args)
+18:11:03.293 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:03.295 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22154 bytes compressed)
+18:11:03.295 [INFO ] GameProtocolHandler: Received: GuiGameEvent 15: setGameView (2 args)
+18:11:03.296 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 15 events before delta seq=-1
+18:11:03.296 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:03.311 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22154 bytes compressed)
+18:11:03.312 [INFO ] GameProtocolHandler: Received: GuiGameEvent 16: setGameView (2 args)
+18:11:03.313 [INFO ] GameProtocolHandler: Received: GuiGameEvent 17: applyDelta (1 args)
+18:11:03.318 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:03.318 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:03.319 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:03.336 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (21394 bytes compressed)
+18:11:03.337 [INFO ] GameProtocolHandler: Received: GuiGameEvent 18: showPromptMessage (2 args)
+18:11:03.339 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:03.346 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22159 bytes compressed)
+18:11:03.347 [INFO ] GameProtocolHandler: Received: GuiGameEvent 19: setGameView (2 args)
+18:11:03.347 [INFO ] GameProtocolHandler: Received: GuiGameEvent 20: applyDelta (1 args)
+18:11:03.352 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:03.353 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 5 events before delta seq=-1
+18:11:03.353 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:03.353 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21260 bytes compressed)
+18:11:03.353 [INFO ] GameProtocolHandler: Received: GuiGameEvent 21: updateButtons (6 args)
+18:11:03.355 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:03.361 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21241 bytes compressed)
+18:11:03.361 [INFO ] GameProtocolHandler: Received: GuiGameEvent 22: showWaitingTimer (2 args)
+18:11:03.362 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:03.861 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22253 bytes compressed)
+18:11:03.862 [INFO ] GameProtocolHandler: Received: GuiGameEvent 23: setGameView (2 args)
+18:11:03.863 [INFO ] GameProtocolHandler: Received: GuiGameEvent 24: applyDelta (1 args)
+18:11:03.868 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:03.871 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 36 events before delta seq=-1
+18:11:03.871 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:03.906 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22237 bytes compressed)
+18:11:03.906 [INFO ] GameProtocolHandler: Received: GuiGameEvent 25: setGameView (2 args)
+18:11:03.907 [INFO ] GameProtocolHandler: Received: GuiGameEvent 26: applyDelta (1 args)
+18:11:03.919 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21338 bytes compressed)
+18:11:03.919 [INFO ] GameProtocolHandler: Received: GuiGameEvent 27: updateButtons (6 args)
+18:11:03.921 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:03.926 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22237 bytes compressed)
+18:11:03.926 [INFO ] GameProtocolHandler: Received: GuiGameEvent 28: setGameView (2 args)
+18:11:03.934 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 4 ms (21371 bytes compressed)
+18:11:03.934 [INFO ] GameProtocolHandler: Received: GuiGameEvent 29: showPromptMessage (2 args)
+18:11:03.935 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:03.994 [INFO ] GameProtocolHandler: Protocol setGameView processed in 2 ms (queued 85 ms)
+18:11:03.994 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:03.995 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 10 events before delta seq=-1
+18:11:03.995 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:03.995 [INFO ] GameProtocolHandler: Protocol applyDelta processed in 1 ms (queued 87 ms)
+18:11:03.995 [INFO ] GameProtocolHandler: Protocol updateButtons processed in 0 ms (queued 74 ms)
+18:11:03.996 [INFO ] GameProtocolHandler: Protocol setGameView processed in 1 ms (queued 68 ms)
+18:11:03.996 [INFO ] GameProtocolHandler: Protocol showPromptMessage processed in 0 ms (queued 61 ms)
+18:11:05.730 [INFO ] FGameClient: Client sent GuiGameEvent 1: selectButtonOk (0 args)
+18:11:06.236 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22237 bytes compressed)
+18:11:06.236 [INFO ] GameProtocolHandler: Received: GuiGameEvent 30: setGameView (2 args)
+18:11:06.246 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21334 bytes compressed)
+18:11:06.246 [INFO ] GameProtocolHandler: Received: GuiGameEvent 31: showPromptMessage (2 args)
+18:11:06.248 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:06.255 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21335 bytes compressed)
+18:11:06.255 [INFO ] GameProtocolHandler: Received: GuiGameEvent 32: updateButtons (6 args)
+18:11:06.257 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:06.263 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21316 bytes compressed)
+18:11:06.263 [INFO ] GameProtocolHandler: Received: GuiGameEvent 33: showWaitingTimer (2 args)
+18:11:06.265 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:07.569 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22237 bytes compressed)
+18:11:07.570 [INFO ] GameProtocolHandler: Received: GuiGameEvent 34: setGameView (2 args)
+18:11:07.571 [INFO ] GameProtocolHandler: Received: GuiGameEvent 35: applyDelta (1 args)
+18:11:07.576 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 0, ?, Active=?) ===
+18:11:07.577 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:07.577 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:07.583 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22265 bytes compressed)
+18:11:07.584 [INFO ] GameProtocolHandler: Received: GuiGameEvent 36: setGameView (2 args)
+18:11:07.584 [INFO ] GameProtocolHandler: Received: GuiGameEvent 37: applyDelta (1 args)
+18:11:07.594 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, UPKEEP, Active=2nd Occelot) ===
+18:11:07.597 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 10 events before delta seq=-1
+18:11:07.597 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:07.599 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21373 bytes compressed)
+18:11:07.599 [INFO ] GameProtocolHandler: Received: GuiGameEvent 38: isUiSetToSkipPhase (2 args)
+18:11:07.601 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:07.604 [INFO ] FGameClient: Client sent Reply (38): false
+18:11:07.665 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22265 bytes compressed)
+18:11:07.666 [INFO ] GameProtocolHandler: Received: GuiGameEvent 39: setGameView (2 args)
+18:11:07.679 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (21393 bytes compressed)
+18:11:07.679 [INFO ] GameProtocolHandler: Received: GuiGameEvent 40: showPromptMessage (2 args)
+18:11:07.682 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:07.699 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21353 bytes compressed)
+18:11:07.700 [INFO ] GameProtocolHandler: Received: GuiGameEvent 41: updateButtons (6 args)
+18:11:07.703 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:07.703 [INFO ] GameProtocolHandler: Received: GuiGameEvent 42: alertUser (0 args)
+18:11:08.484 [INFO ] FGameClient: Client sent GuiGameEvent 2: selectButtonOk (0 args)
+18:11:08.728 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22290 bytes compressed)
+18:11:08.729 [INFO ] GameProtocolHandler: Received: GuiGameEvent 43: setGameView (2 args)
+18:11:08.730 [INFO ] GameProtocolHandler: Received: GuiGameEvent 44: applyDelta (1 args)
+18:11:08.737 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, UPKEEP, Active=2nd Occelot) ===
+18:11:08.738 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:08.738 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:08.743 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22290 bytes compressed)
+18:11:08.743 [INFO ] GameProtocolHandler: Received: GuiGameEvent 45: setGameView (2 args)
+18:11:08.744 [INFO ] GameProtocolHandler: Received: GuiGameEvent 46: applyDelta (1 args)
+18:11:08.753 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, UPKEEP, Active=2nd Occelot) ===
+18:11:08.754 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 3 events before delta seq=-1
+18:11:08.754 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:08.939 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22290 bytes compressed)
+18:11:08.939 [INFO ] GameProtocolHandler: Received: GuiGameEvent 47: setGameView (2 args)
+18:11:08.958 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21433 bytes compressed)
+18:11:08.959 [INFO ] GameProtocolHandler: Received: GuiGameEvent 48: showPromptMessage (2 args)
+18:11:08.961 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:09.031 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (21430 bytes compressed)
+18:11:09.031 [INFO ] GameProtocolHandler: Received: GuiGameEvent 49: updateButtons (6 args)
+18:11:09.034 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:09.052 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (21408 bytes compressed)
+18:11:09.052 [INFO ] GameProtocolHandler: Received: GuiGameEvent 50: showWaitingTimer (2 args)
+18:11:09.055 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:10.920 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22286 bytes compressed)
+18:11:10.921 [INFO ] GameProtocolHandler: Received: GuiGameEvent 51: setGameView (2 args)
+18:11:10.922 [INFO ] GameProtocolHandler: Received: GuiGameEvent 52: applyDelta (1 args)
+18:11:10.935 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, DRAW, Active=2nd Occelot) ===
+18:11:10.936 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:10.936 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:10.944 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22264 bytes compressed)
+18:11:10.944 [INFO ] GameProtocolHandler: Received: GuiGameEvent 53: setGameView (2 args)
+18:11:10.945 [INFO ] GameProtocolHandler: Received: GuiGameEvent 54: applyDelta (1 args)
+18:11:10.949 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN1, Active=2nd Occelot) ===
+18:11:10.950 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 5 events before delta seq=-1
+18:11:10.950 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:10.977 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21373 bytes compressed)
+18:11:10.977 [INFO ] GameProtocolHandler: Received: GuiGameEvent 55: isUiSetToSkipPhase (2 args)
+18:11:10.979 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:10.979 [INFO ] FGameClient: Client sent Reply (55): false
+18:11:11.031 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22264 bytes compressed)
+18:11:11.032 [INFO ] GameProtocolHandler: Received: GuiGameEvent 56: setGameView (2 args)
+18:11:11.063 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21401 bytes compressed)
+18:11:11.064 [INFO ] GameProtocolHandler: Received: GuiGameEvent 57: showPromptMessage (2 args)
+18:11:11.065 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:11.080 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21354 bytes compressed)
+18:11:11.081 [INFO ] GameProtocolHandler: Received: GuiGameEvent 58: updateButtons (6 args)
+18:11:11.082 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:11.083 [INFO ] GameProtocolHandler: Received: GuiGameEvent 59: alertUser (0 args)
+18:11:12.242 [INFO ] FGameClient: Client sent GuiGameEvent 3: selectCard (3 args)
+18:11:12.256 [INFO ] CompatibleObjectEncoder: Encoded 21719 bytes (compressed) for GuiGameEvent
+18:11:12.488 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 11 ms (21609 bytes compressed)
+18:11:12.488 [INFO ] GameProtocolHandler: Received: GuiGameEvent 60: getAbilityToPlay (3 args)
+18:11:12.490 [INFO ] FGameClient: Client sent Reply (60): Play land
+18:11:12.497 [INFO ] CompatibleObjectEncoder: Encoded 21427 bytes (compressed) for ReplyEvent
+18:11:12.606 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22264 bytes compressed)
+18:11:12.606 [INFO ] GameProtocolHandler: Received: GuiGameEvent 61: setGameView (2 args)
+18:11:12.607 [INFO ] GameProtocolHandler: Received: GuiGameEvent 62: applyDelta (1 args)
+18:11:12.615 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN1, Active=2nd Occelot) ===
+18:11:12.616 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:12.616 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:12.734 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22193 bytes compressed)
+18:11:12.735 [INFO ] GameProtocolHandler: Received: GuiGameEvent 63: setGameView (2 args)
+18:11:12.735 [INFO ] GameProtocolHandler: Received: GuiGameEvent 64: applyDelta (1 args)
+18:11:12.745 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN1, Active=2nd Occelot) ===
+18:11:12.747 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 16 events before delta seq=-1
+18:11:12.748 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:12.761 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21346 bytes compressed)
+18:11:12.761 [INFO ] GameProtocolHandler: Received: GuiGameEvent 65: isUiSetToSkipPhase (2 args)
+18:11:12.763 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:12.766 [INFO ] FGameClient: Client sent Reply (65): false
+18:11:12.860 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22193 bytes compressed)
+18:11:12.861 [INFO ] GameProtocolHandler: Received: GuiGameEvent 66: setGameView (2 args)
+18:11:12.937 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (21380 bytes compressed)
+18:11:12.937 [INFO ] GameProtocolHandler: Received: GuiGameEvent 67: showPromptMessage (2 args)
+18:11:12.941 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:13.005 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (21330 bytes compressed)
+18:11:13.005 [INFO ] GameProtocolHandler: Received: GuiGameEvent 68: updateButtons (6 args)
+18:11:13.008 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:13.008 [INFO ] GameProtocolHandler: Received: GuiGameEvent 69: alertUser (0 args)
+18:11:21.750 [INFO ] FGameClient: Client sent GuiGameEvent 4: selectButtonOk (0 args)
+18:11:21.912 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22187 bytes compressed)
+18:11:21.913 [INFO ] GameProtocolHandler: Received: GuiGameEvent 70: setGameView (2 args)
+18:11:21.914 [INFO ] GameProtocolHandler: Received: GuiGameEvent 71: applyDelta (1 args)
+18:11:21.922 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN1, Active=2nd Occelot) ===
+18:11:21.922 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:21.922 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:21.999 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22204 bytes compressed)
+18:11:21.999 [INFO ] GameProtocolHandler: Received: GuiGameEvent 72: setGameView (2 args)
+18:11:22.000 [INFO ] GameProtocolHandler: Received: GuiGameEvent 73: applyDelta (1 args)
+18:11:22.008 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21356 bytes compressed)
+18:11:22.009 [INFO ] GameProtocolHandler: Received: GuiGameEvent 74: isUiSetToSkipPhase (2 args)
+18:11:22.010 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_BEGIN, Active=2nd Occelot) ===
+18:11:22.010 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:22.010 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 8 events before delta seq=-1
+18:11:22.011 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:22.016 [INFO ] FGameClient: Client sent Reply (74): false
+18:11:22.041 [INFO ] FGameClient: Client sent GuiGameEvent 5: selectButtonOk (0 args)
+18:11:22.057 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22204 bytes compressed)
+18:11:22.057 [INFO ] GameProtocolHandler: Received: GuiGameEvent 75: setGameView (2 args)
+18:11:22.070 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21385 bytes compressed)
+18:11:22.070 [INFO ] GameProtocolHandler: Received: GuiGameEvent 76: showPromptMessage (2 args)
+18:11:22.072 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:22.083 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21332 bytes compressed)
+18:11:22.083 [INFO ] GameProtocolHandler: Received: GuiGameEvent 77: updateButtons (6 args)
+18:11:22.085 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:22.085 [INFO ] GameProtocolHandler: Received: GuiGameEvent 78: alertUser (0 args)
+18:11:22.103 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22198 bytes compressed)
+18:11:22.103 [INFO ] GameProtocolHandler: Received: GuiGameEvent 79: setGameView (2 args)
+18:11:22.108 [INFO ] GameProtocolHandler: Received: GuiGameEvent 80: applyDelta (1 args)
+18:11:22.116 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_BEGIN, Active=2nd Occelot) ===
+18:11:22.117 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:22.117 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:22.405 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22198 bytes compressed)
+18:11:22.405 [INFO ] GameProtocolHandler: Received: GuiGameEvent 81: setGameView (2 args)
+18:11:22.420 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21353 bytes compressed)
+18:11:22.421 [INFO ] GameProtocolHandler: Received: GuiGameEvent 82: showPromptMessage (2 args)
+18:11:22.423 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:22.428 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21370 bytes compressed)
+18:11:22.429 [INFO ] GameProtocolHandler: Received: GuiGameEvent 83: updateButtons (6 args)
+18:11:22.432 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:22.438 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21351 bytes compressed)
+18:11:22.438 [INFO ] GameProtocolHandler: Received: GuiGameEvent 84: showWaitingTimer (2 args)
+18:11:22.440 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:23.131 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22206 bytes compressed)
+18:11:23.132 [INFO ] GameProtocolHandler: Received: GuiGameEvent 85: setGameView (2 args)
+18:11:23.133 [INFO ] GameProtocolHandler: Received: GuiGameEvent 86: applyDelta (1 args)
+18:11:23.137 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_DECLARE_ATTACKERS, Active=2nd Occelot) ===
+18:11:23.138 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:23.138 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:23.153 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22676 bytes compressed)
+18:11:23.153 [INFO ] GameProtocolHandler: Received: GuiGameEvent 87: setGameView (2 args)
+18:11:23.154 [INFO ] GameProtocolHandler: Received: GuiGameEvent 88: applyDelta (1 args)
+18:11:23.163 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_DECLARE_ATTACKERS, Active=2nd Occelot) ===
+18:11:23.166 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 6 events before delta seq=-1
+18:11:23.166 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:23.170 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21367 bytes compressed)
+18:11:23.171 [INFO ] GameProtocolHandler: Received: GuiGameEvent 89: isUiSetToSkipPhase (2 args)
+18:11:23.173 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:23.177 [INFO ] FGameClient: Client sent Reply (89): false
+18:11:23.218 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22676 bytes compressed)
+18:11:23.219 [INFO ] GameProtocolHandler: Received: GuiGameEvent 90: setGameView (2 args)
+18:11:23.230 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21380 bytes compressed)
+18:11:23.231 [INFO ] GameProtocolHandler: Received: GuiGameEvent 91: showPromptMessage (2 args)
+18:11:23.233 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:23.253 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 12 ms (21331 bytes compressed)
+18:11:23.253 [INFO ] GameProtocolHandler: Received: GuiGameEvent 92: updateButtons (6 args)
+18:11:23.256 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:23.256 [INFO ] GameProtocolHandler: Received: GuiGameEvent 93: alertUser (0 args)
+18:11:24.146 [INFO ] FGameClient: Client sent GuiGameEvent 6: selectButtonOk (0 args)
+18:11:24.259 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22643 bytes compressed)
+18:11:24.259 [INFO ] GameProtocolHandler: Received: GuiGameEvent 94: setGameView (2 args)
+18:11:24.260 [INFO ] GameProtocolHandler: Received: GuiGameEvent 95: applyDelta (1 args)
+18:11:24.265 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_DECLARE_ATTACKERS, Active=2nd Occelot) ===
+18:11:24.266 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:24.266 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:24.534 [INFO ] GameProtocolHandler: Received: GuiGameEvent 97: applyDelta (1 args)
+18:11:24.538 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_DECLARE_ATTACKERS, Active=2nd Occelot) ===
+18:11:24.539 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 6 events before delta seq=-1
+18:11:24.539 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:24.558 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22661 bytes compressed)
+18:11:24.558 [INFO ] GameProtocolHandler: Received: GuiGameEvent 98: setGameView (2 args)
+18:11:24.573 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22662 bytes compressed)
+18:11:24.574 [INFO ] GameProtocolHandler: Received: GuiGameEvent 99: setGameView (2 args)
+18:11:24.575 [INFO ] GameProtocolHandler: Received: GuiGameEvent 100: applyDelta (1 args)
+18:11:24.581 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21325 bytes compressed)
+18:11:24.582 [INFO ] GameProtocolHandler: Received: GuiGameEvent 101: showPromptMessage (2 args)
+18:11:24.582 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_END, Active=2nd Occelot) ===
+18:11:24.582 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 5 events before delta seq=-1
+18:11:24.583 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:24.583 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.589 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21351 bytes compressed)
+18:11:24.589 [INFO ] GameProtocolHandler: Received: GuiGameEvent 102: isUiSetToSkipPhase (2 args)
+18:11:24.591 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.595 [INFO ] FGameClient: Client sent Reply (102): false
+18:11:24.596 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21328 bytes compressed)
+18:11:24.596 [INFO ] GameProtocolHandler: Received: GuiGameEvent 103: updateButtons (6 args)
+18:11:24.598 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.603 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21309 bytes compressed)
+18:11:24.603 [INFO ] GameProtocolHandler: Received: GuiGameEvent 104: showWaitingTimer (2 args)
+18:11:24.605 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.636 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22662 bytes compressed)
+18:11:24.636 [INFO ] GameProtocolHandler: Received: GuiGameEvent 105: setGameView (2 args)
+18:11:24.647 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21374 bytes compressed)
+18:11:24.647 [INFO ] GameProtocolHandler: Received: GuiGameEvent 106: showPromptMessage (2 args)
+18:11:24.649 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.654 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21329 bytes compressed)
+18:11:24.655 [INFO ] GameProtocolHandler: Received: GuiGameEvent 107: updateButtons (6 args)
+18:11:24.656 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:24.657 [INFO ] GameProtocolHandler: Received: GuiGameEvent 108: alertUser (0 args)
+18:11:25.097 [INFO ] FGameClient: Client sent GuiGameEvent 7: selectButtonOk (0 args)
+18:11:25.283 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 11 ms (22630 bytes compressed)
+18:11:25.283 [INFO ] GameProtocolHandler: Received: GuiGameEvent 109: setGameView (2 args)
+18:11:25.284 [INFO ] GameProtocolHandler: Received: GuiGameEvent 110: applyDelta (1 args)
+18:11:25.293 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, COMBAT_END, Active=2nd Occelot) ===
+18:11:25.294 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:25.294 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:25.325 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22190 bytes compressed)
+18:11:25.326 [INFO ] GameProtocolHandler: Received: GuiGameEvent 111: setGameView (2 args)
+18:11:25.327 [INFO ] GameProtocolHandler: Received: GuiGameEvent 112: applyDelta (1 args)
+18:11:25.333 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:25.335 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 9 events before delta seq=-1
+18:11:25.335 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:25.346 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21342 bytes compressed)
+18:11:25.347 [INFO ] GameProtocolHandler: Received: GuiGameEvent 113: isUiSetToSkipPhase (2 args)
+18:11:25.349 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:25.355 [INFO ] FGameClient: Client sent Reply (113): false
+18:11:25.389 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22190 bytes compressed)
+18:11:25.389 [INFO ] GameProtocolHandler: Received: GuiGameEvent 114: setGameView (2 args)
+18:11:25.399 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21377 bytes compressed)
+18:11:25.400 [INFO ] GameProtocolHandler: Received: GuiGameEvent 115: showPromptMessage (2 args)
+18:11:25.401 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:25.408 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21326 bytes compressed)
+18:11:25.408 [INFO ] GameProtocolHandler: Received: GuiGameEvent 116: updateButtons (6 args)
+18:11:25.410 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:25.410 [INFO ] GameProtocolHandler: Received: GuiGameEvent 117: alertUser (0 args)
+18:11:25.884 [INFO ] FGameClient: Client sent GuiGameEvent 8: selectCard (3 args)
+18:11:25.893 [INFO ] CompatibleObjectEncoder: Encoded 21656 bytes (compressed) for GuiGameEvent
+18:11:26.028 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (21627 bytes compressed)
+18:11:26.029 [INFO ] GameProtocolHandler: Received: GuiGameEvent 118: getAbilityToPlay (3 args)
+18:11:26.033 [INFO ] FGameClient: Client sent Reply (118): It That Heralds the End - Creature 2 / 2
+18:11:26.040 [INFO ] CompatibleObjectEncoder: Encoded 21469 bytes (compressed) for ReplyEvent
+18:11:26.097 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (21627 bytes compressed)
+18:11:26.098 [INFO ] GameProtocolHandler: Received: GuiGameEvent 119: getAbilityToPlay (3 args)
+18:11:26.100 [INFO ] FGameClient: Client sent Reply (119): It That Heralds the End - Creature 2 / 2
+18:11:26.107 [INFO ] CompatibleObjectEncoder: Encoded 21469 bytes (compressed) for ReplyEvent
+18:11:26.182 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22385 bytes compressed)
+18:11:26.182 [INFO ] GameProtocolHandler: Received: GuiGameEvent 120: setGameView (2 args)
+18:11:26.183 [INFO ] GameProtocolHandler: Received: GuiGameEvent 121: applyDelta (1 args)
+18:11:26.197 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:26.198 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:26.198 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:26.201 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22385 bytes compressed)
+18:11:26.201 [INFO ] GameProtocolHandler: Received: GuiGameEvent 122: setGameView (2 args)
+18:11:26.202 [INFO ] GameProtocolHandler: Received: GuiGameEvent 123: applyDelta (1 args)
+18:11:26.207 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:26.208 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:26.208 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:26.216 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21284 bytes compressed)
+18:11:26.217 [INFO ] GameProtocolHandler: Received: GuiGameEvent 124: updateButtons (6 args)
+18:11:26.218 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:26.254 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21283 bytes compressed)
+18:11:26.255 [INFO ] GameProtocolHandler: Received: GuiGameEvent 125: updateButtons (6 args)
+18:11:26.258 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:26.265 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22381 bytes compressed)
+18:11:26.265 [INFO ] GameProtocolHandler: Received: GuiGameEvent 126: setGameView (2 args)
+18:11:26.276 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21302 bytes compressed)
+18:11:26.277 [INFO ] GameProtocolHandler: Received: GuiGameEvent 127: showPromptMessage (2 args)
+18:11:26.279 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:26.675 [INFO ] FGameClient: Client sent GuiGameEvent 9: selectButtonOk (0 args)
+18:11:26.918 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22584 bytes compressed)
+18:11:26.919 [INFO ] GameProtocolHandler: Received: GuiGameEvent 128: setGameView (2 args)
+18:11:26.920 [INFO ] GameProtocolHandler: Received: GuiGameEvent 129: applyDelta (1 args)
+18:11:26.926 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22475 bytes compressed)
+18:11:26.926 [INFO ] GameProtocolHandler: Received: GuiGameEvent 130: setGameView (2 args)
+18:11:26.927 [INFO ] GameProtocolHandler: Received: GuiGameEvent 131: applyDelta (1 args)
+18:11:26.929 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:26.929 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:26.930 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:26.936 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:26.936 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 6 events before delta seq=-1
+18:11:26.937 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:26.968 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 11 ms (22962 bytes compressed)
+18:11:26.968 [INFO ] GameProtocolHandler: Received: GuiGameEvent 132: setGameView (2 args)
+18:11:26.971 [INFO ] GameProtocolHandler: Received: GuiGameEvent 133: applyDelta (1 args)
+18:11:26.984 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:26.987 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 9 events before delta seq=-1
+18:11:26.987 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:27.006 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22962 bytes compressed)
+18:11:27.006 [INFO ] GameProtocolHandler: Received: GuiGameEvent 134: setGameView (2 args)
+18:11:27.018 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21578 bytes compressed)
+18:11:27.018 [INFO ] GameProtocolHandler: Received: GuiGameEvent 135: showPromptMessage (2 args)
+18:11:27.020 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:27.034 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21527 bytes compressed)
+18:11:27.035 [INFO ] GameProtocolHandler: Received: GuiGameEvent 136: updateButtons (6 args)
+18:11:27.037 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:27.037 [INFO ] GameProtocolHandler: Received: GuiGameEvent 137: alertUser (0 args)
+18:11:27.042 [INFO ] FGameClient: Client sent GuiGameEvent 10: selectButtonOk (0 args)
+18:11:27.093 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (23014 bytes compressed)
+18:11:27.094 [INFO ] GameProtocolHandler: Received: GuiGameEvent 138: setGameView (2 args)
+18:11:27.095 [INFO ] GameProtocolHandler: Received: GuiGameEvent 139: applyDelta (1 args)
+18:11:27.105 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:27.106 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:27.106 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:27.320 [INFO ] FGameClient: Client sent GuiGameEvent 11: selectButtonOk (0 args)
+18:11:27.368 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (23014 bytes compressed)
+18:11:27.369 [INFO ] GameProtocolHandler: Received: GuiGameEvent 140: setGameView (2 args)
+18:11:27.375 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21494 bytes compressed)
+18:11:27.376 [INFO ] GameProtocolHandler: Received: GuiGameEvent 141: showPromptMessage (2 args)
+18:11:27.377 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:27.385 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21503 bytes compressed)
+18:11:27.385 [INFO ] GameProtocolHandler: Received: GuiGameEvent 142: updateButtons (6 args)
+18:11:27.387 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:27.393 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21478 bytes compressed)
+18:11:27.393 [INFO ] GameProtocolHandler: Received: GuiGameEvent 143: showWaitingTimer (2 args)
+18:11:27.395 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:28.248 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (23014 bytes compressed)
+18:11:28.249 [INFO ] GameProtocolHandler: Received: GuiGameEvent 144: setGameView (2 args)
+18:11:28.250 [INFO ] GameProtocolHandler: Received: GuiGameEvent 145: applyDelta (1 args)
+18:11:28.262 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:28.263 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:28.263 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:28.336 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22562 bytes compressed)
+18:11:28.336 [INFO ] GameProtocolHandler: Received: GuiGameEvent 146: setGameView (2 args)
+18:11:28.337 [INFO ] GameProtocolHandler: Received: GuiGameEvent 147: applyDelta (1 args)
+18:11:28.345 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:28.348 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 23 events before delta seq=-1
+18:11:28.348 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (3ms, no changes) ===
+18:11:28.354 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21495 bytes compressed)
+18:11:28.355 [INFO ] GameProtocolHandler: Received: GuiGameEvent 148: isUiSetToSkipPhase (2 args)
+18:11:28.357 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:28.361 [INFO ] FGameClient: Client sent Reply (148): false
+18:11:28.422 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 12 ms (22562 bytes compressed)
+18:11:28.422 [INFO ] GameProtocolHandler: Received: GuiGameEvent 149: setGameView (2 args)
+18:11:28.431 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21514 bytes compressed)
+18:11:28.431 [INFO ] GameProtocolHandler: Received: GuiGameEvent 150: showPromptMessage (2 args)
+18:11:28.432 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:28.438 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21465 bytes compressed)
+18:11:28.439 [INFO ] GameProtocolHandler: Received: GuiGameEvent 151: updateButtons (6 args)
+18:11:28.441 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:28.441 [INFO ] GameProtocolHandler: Received: GuiGameEvent 152: alertUser (0 args)
+18:11:28.788 [INFO ] FGameClient: Client sent GuiGameEvent 12: selectButtonOk (0 args)
+18:11:28.973 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22537 bytes compressed)
+18:11:28.974 [INFO ] GameProtocolHandler: Received: GuiGameEvent 153: setGameView (2 args)
+18:11:28.974 [INFO ] GameProtocolHandler: Received: GuiGameEvent 154: applyDelta (1 args)
+18:11:28.982 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, MAIN2, Active=2nd Occelot) ===
+18:11:28.983 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:28.983 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:28.989 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22565 bytes compressed)
+18:11:28.990 [INFO ] GameProtocolHandler: Received: GuiGameEvent 155: setGameView (2 args)
+18:11:28.991 [INFO ] GameProtocolHandler: Received: GuiGameEvent 156: applyDelta (1 args)
+18:11:28.998 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, END_OF_TURN, Active=2nd Occelot) ===
+18:11:28.999 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 8 events before delta seq=-1
+18:11:28.999 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:29.006 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21506 bytes compressed)
+18:11:29.006 [INFO ] GameProtocolHandler: Received: GuiGameEvent 157: isUiSetToSkipPhase (2 args)
+18:11:29.008 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.012 [INFO ] FGameClient: Client sent Reply (157): false
+18:11:29.038 [INFO ] FGameClient: Client sent GuiGameEvent 13: selectButtonOk (0 args)
+18:11:29.050 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22565 bytes compressed)
+18:11:29.050 [INFO ] GameProtocolHandler: Received: GuiGameEvent 158: setGameView (2 args)
+18:11:29.058 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21506 bytes compressed)
+18:11:29.058 [INFO ] GameProtocolHandler: Received: GuiGameEvent 159: showPromptMessage (2 args)
+18:11:29.060 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.066 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21469 bytes compressed)
+18:11:29.067 [INFO ] GameProtocolHandler: Received: GuiGameEvent 160: updateButtons (6 args)
+18:11:29.068 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.069 [INFO ] GameProtocolHandler: Received: GuiGameEvent 161: alertUser (0 args)
+18:11:29.103 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22538 bytes compressed)
+18:11:29.104 [INFO ] GameProtocolHandler: Received: GuiGameEvent 162: setGameView (2 args)
+18:11:29.106 [INFO ] GameProtocolHandler: Received: GuiGameEvent 163: applyDelta (1 args)
+18:11:29.114 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, END_OF_TURN, Active=2nd Occelot) ===
+18:11:29.115 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:29.116 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:29.272 [INFO ] FGameClient: Client sent GuiGameEvent 14: selectButtonOk (0 args)
+18:11:29.347 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 11 ms (22538 bytes compressed)
+18:11:29.348 [INFO ] GameProtocolHandler: Received: GuiGameEvent 164: setGameView (2 args)
+18:11:29.361 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21460 bytes compressed)
+18:11:29.362 [INFO ] GameProtocolHandler: Received: GuiGameEvent 165: showPromptMessage (2 args)
+18:11:29.364 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.369 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21462 bytes compressed)
+18:11:29.370 [INFO ] GameProtocolHandler: Received: GuiGameEvent 166: updateButtons (6 args)
+18:11:29.371 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.384 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21440 bytes compressed)
+18:11:29.384 [INFO ] GameProtocolHandler: Received: GuiGameEvent 167: showWaitingTimer (2 args)
+18:11:29.386 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.769 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22535 bytes compressed)
+18:11:29.769 [INFO ] GameProtocolHandler: Received: GuiGameEvent 168: setGameView (2 args)
+18:11:29.770 [INFO ] GameProtocolHandler: Received: GuiGameEvent 169: applyDelta (1 args)
+18:11:29.775 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 1, CLEANUP, Active=2nd Occelot) ===
+18:11:29.775 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:29.775 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:29.843 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22506 bytes compressed)
+18:11:29.843 [INFO ] GameProtocolHandler: Received: GuiGameEvent 170: setGameView (2 args)
+18:11:29.844 [INFO ] GameProtocolHandler: Received: GuiGameEvent 171: applyDelta (1 args)
+18:11:29.849 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, UPKEEP, Active=Occelot) ===
+18:11:29.851 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 14 events before delta seq=-1
+18:11:29.851 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:29.865 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22309 bytes compressed)
+18:11:29.866 [INFO ] GameProtocolHandler: Received: GuiGameEvent 172: isUiSetToSkipPhase (2 args)
+18:11:29.868 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:29.872 [INFO ] FGameClient: Client sent Reply (172): false
+18:11:29.917 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22506 bytes compressed)
+18:11:29.918 [INFO ] GameProtocolHandler: Received: GuiGameEvent 173: setGameView (2 args)
+18:11:29.929 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21398 bytes compressed)
+18:11:29.930 [INFO ] GameProtocolHandler: Received: GuiGameEvent 174: showPromptMessage (2 args)
+18:11:29.932 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.939 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21348 bytes compressed)
+18:11:29.939 [INFO ] GameProtocolHandler: Received: GuiGameEvent 175: updateButtons (6 args)
+18:11:29.941 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:29.941 [INFO ] GameProtocolHandler: Received: GuiGameEvent 176: alertUser (0 args)
+18:11:30.250 [INFO ] FGameClient: Client sent GuiGameEvent 15: selectButtonOk (0 args)
+18:11:30.393 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22504 bytes compressed)
+18:11:30.394 [INFO ] GameProtocolHandler: Received: GuiGameEvent 177: setGameView (2 args)
+18:11:30.395 [INFO ] GameProtocolHandler: Received: GuiGameEvent 178: applyDelta (1 args)
+18:11:30.402 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, DRAW, Active=Occelot) ===
+18:11:30.403 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:30.403 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:30.490 [INFO ] FGameClient: Client sent GuiGameEvent 16: selectButtonOk (0 args)
+18:11:30.530 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (22551 bytes compressed)
+18:11:30.530 [INFO ] GameProtocolHandler: Received: GuiGameEvent 179: setGameView (2 args)
+18:11:30.531 [INFO ] GameProtocolHandler: Received: GuiGameEvent 180: applyDelta (1 args)
+18:11:30.539 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22400 bytes compressed)
+18:11:30.539 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, DRAW, Active=Occelot) ===
+18:11:30.539 [INFO ] GameProtocolHandler: Received: GuiGameEvent 181: isUiSetToSkipPhase (2 args)
+18:11:30.541 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 13 events before delta seq=-1
+18:11:30.541 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:30.541 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:30.552 [INFO ] FGameClient: Client sent Reply (181): true
+18:11:30.615 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22550 bytes compressed)
+18:11:30.615 [INFO ] GameProtocolHandler: Received: GuiGameEvent 182: setGameView (2 args)
+18:11:30.616 [INFO ] GameProtocolHandler: Received: GuiGameEvent 183: applyDelta (1 args)
+18:11:30.627 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN1, Active=Occelot) ===
+18:11:30.628 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 5 events before delta seq=-1
+18:11:30.628 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:30.637 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22550 bytes compressed)
+18:11:30.637 [INFO ] GameProtocolHandler: Received: GuiGameEvent 184: setGameView (2 args)
+18:11:30.649 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21524 bytes compressed)
+18:11:30.649 [INFO ] GameProtocolHandler: Received: GuiGameEvent 185: showPromptMessage (2 args)
+18:11:30.651 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:30.657 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21527 bytes compressed)
+18:11:30.657 [INFO ] GameProtocolHandler: Received: GuiGameEvent 186: updateButtons (6 args)
+18:11:30.659 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:30.668 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21504 bytes compressed)
+18:11:30.668 [INFO ] GameProtocolHandler: Received: GuiGameEvent 187: showWaitingTimer (2 args)
+18:11:30.670 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:30.715 [INFO ] FGameClient: Client sent GuiGameEvent 17: selectButtonOk (0 args)
+18:11:32.127 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 16 ms (22550 bytes compressed)
+18:11:32.127 [INFO ] GameProtocolHandler: Received: GuiGameEvent 188: setGameView (2 args)
+18:11:32.128 [INFO ] GameProtocolHandler: Received: GuiGameEvent 189: applyDelta (1 args)
+18:11:32.139 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN1, Active=Occelot) ===
+18:11:32.139 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:32.140 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:32.149 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22523 bytes compressed)
+18:11:32.149 [INFO ] GameProtocolHandler: Received: GuiGameEvent 190: setGameView (2 args)
+18:11:32.150 [INFO ] GameProtocolHandler: Received: GuiGameEvent 191: applyDelta (1 args)
+18:11:32.154 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN1, Active=Occelot) ===
+18:11:32.155 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 16 events before delta seq=-1
+18:11:32.155 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:32.662 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22622 bytes compressed)
+18:11:32.663 [INFO ] GameProtocolHandler: Received: GuiGameEvent 192: setGameView (2 args)
+18:11:32.664 [INFO ] GameProtocolHandler: Received: GuiGameEvent 193: applyDelta (1 args)
+18:11:32.674 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN1, Active=Occelot) ===
+18:11:32.674 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:32.675 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:32.689 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22622 bytes compressed)
+18:11:32.689 [INFO ] GameProtocolHandler: Received: GuiGameEvent 194: setGameView (2 args)
+18:11:32.690 [INFO ] GameProtocolHandler: Received: GuiGameEvent 195: applyDelta (1 args)
+18:11:32.695 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN1, Active=Occelot) ===
+18:11:32.696 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 3 events before delta seq=-1
+18:11:32.696 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:32.711 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22380 bytes compressed)
+18:11:32.711 [INFO ] GameProtocolHandler: Received: GuiGameEvent 196: isUiSetToSkipPhase (2 args)
+18:11:32.713 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:32.717 [INFO ] FGameClient: Client sent Reply (196): false
+18:11:32.766 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22622 bytes compressed)
+18:11:32.766 [INFO ] GameProtocolHandler: Received: GuiGameEvent 197: setGameView (2 args)
+18:11:32.778 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21485 bytes compressed)
+18:11:32.778 [INFO ] GameProtocolHandler: Received: GuiGameEvent 198: showPromptMessage (2 args)
+18:11:32.780 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:32.803 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21433 bytes compressed)
+18:11:32.804 [INFO ] GameProtocolHandler: Received: GuiGameEvent 199: updateButtons (6 args)
+18:11:32.806 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:32.806 [INFO ] GameProtocolHandler: Received: GuiGameEvent 200: alertUser (0 args)
+18:11:33.129 [INFO ] FGameClient: Client sent GuiGameEvent 18: selectButtonOk (0 args)
+18:11:33.266 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22629 bytes compressed)
+18:11:33.267 [INFO ] GameProtocolHandler: Received: GuiGameEvent 201: setGameView (2 args)
+18:11:33.268 [INFO ] GameProtocolHandler: Received: GuiGameEvent 202: applyDelta (1 args)
+18:11:33.274 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, COMBAT_BEGIN, Active=Occelot) ===
+18:11:33.274 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:33.275 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:33.288 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22627 bytes compressed)
+18:11:33.288 [INFO ] GameProtocolHandler: Received: GuiGameEvent 203: setGameView (2 args)
+18:11:33.297 [INFO ] GameProtocolHandler: Received: GuiGameEvent 204: applyDelta (1 args)
+18:11:33.305 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, COMBAT_BEGIN, Active=Occelot) ===
+18:11:33.306 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 8 events before delta seq=-1
+18:11:33.306 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:33.315 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22388 bytes compressed)
+18:11:33.315 [INFO ] GameProtocolHandler: Received: GuiGameEvent 205: isUiSetToSkipPhase (2 args)
+18:11:33.317 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:33.319 [INFO ] FGameClient: Client sent Reply (205): false
+18:11:33.359 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22627 bytes compressed)
+18:11:33.359 [INFO ] GameProtocolHandler: Received: GuiGameEvent 206: setGameView (2 args)
+18:11:33.384 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21489 bytes compressed)
+18:11:33.385 [INFO ] GameProtocolHandler: Received: GuiGameEvent 207: showPromptMessage (2 args)
+18:11:33.387 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.397 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21431 bytes compressed)
+18:11:33.398 [INFO ] GameProtocolHandler: Received: GuiGameEvent 208: updateButtons (6 args)
+18:11:33.400 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.400 [INFO ] GameProtocolHandler: Received: GuiGameEvent 209: alertUser (0 args)
+18:11:33.445 [INFO ] FGameClient: Client sent GuiGameEvent 19: selectButtonOk (0 args)
+18:11:33.713 [INFO ] FGameClient: Client sent GuiGameEvent 20: selectButtonOk (0 args)
+18:11:33.780 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22592 bytes compressed)
+18:11:33.780 [INFO ] GameProtocolHandler: Received: GuiGameEvent 211: setGameView (2 args)
+18:11:33.791 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22400 bytes compressed)
+18:11:33.792 [INFO ] GameProtocolHandler: Received: GuiGameEvent 210: isUiSetToSkipPhase (2 args)
+18:11:33.793 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:33.794 [INFO ] GameProtocolHandler: Received: GuiGameEvent 212: applyDelta (1 args)
+18:11:33.797 [INFO ] FGameClient: Client sent Reply (210): false
+18:11:33.797 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, COMBAT_DECLARE_ATTACKERS, Active=Occelot) ===
+18:11:33.798 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 8 events before delta seq=-1
+18:11:33.798 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:33.806 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22592 bytes compressed)
+18:11:33.806 [INFO ] GameProtocolHandler: Received: GuiGameEvent 213: setGameView (2 args)
+18:11:33.819 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22592 bytes compressed)
+18:11:33.819 [INFO ] GameProtocolHandler: Received: GuiGameEvent 214: setGameView (2 args)
+18:11:33.820 [INFO ] GameProtocolHandler: Received: GuiGameEvent 215: applyDelta (1 args)
+18:11:33.824 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, COMBAT_DECLARE_ATTACKERS, Active=Occelot) ===
+18:11:33.824 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 3 events before delta seq=-1
+18:11:33.824 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:33.829 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21443 bytes compressed)
+18:11:33.830 [INFO ] GameProtocolHandler: Received: GuiGameEvent 216: showPromptMessage (2 args)
+18:11:33.831 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.843 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21446 bytes compressed)
+18:11:33.843 [INFO ] GameProtocolHandler: Received: GuiGameEvent 217: updateButtons (6 args)
+18:11:33.845 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.859 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21425 bytes compressed)
+18:11:33.860 [INFO ] GameProtocolHandler: Received: GuiGameEvent 218: showWaitingTimer (2 args)
+18:11:33.862 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.870 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22592 bytes compressed)
+18:11:33.870 [INFO ] GameProtocolHandler: Received: GuiGameEvent 219: setGameView (2 args)
+18:11:33.885 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21494 bytes compressed)
+18:11:33.886 [INFO ] GameProtocolHandler: Received: GuiGameEvent 220: showPromptMessage (2 args)
+18:11:33.890 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.901 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21441 bytes compressed)
+18:11:33.902 [INFO ] GameProtocolHandler: Received: GuiGameEvent 221: updateButtons (6 args)
+18:11:33.903 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:33.904 [INFO ] GameProtocolHandler: Received: GuiGameEvent 222: alertUser (0 args)
+18:11:34.121 [INFO ] FGameClient: Client sent GuiGameEvent 21: selectButtonOk (0 args)
+18:11:34.247 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22575 bytes compressed)
+18:11:34.247 [INFO ] GameProtocolHandler: Received: GuiGameEvent 223: setGameView (2 args)
+18:11:34.249 [INFO ] GameProtocolHandler: Received: GuiGameEvent 224: applyDelta (1 args)
+18:11:34.258 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, COMBAT_END, Active=Occelot) ===
+18:11:34.259 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 12 events before delta seq=-1
+18:11:34.260 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:34.261 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22385 bytes compressed)
+18:11:34.261 [INFO ] GameProtocolHandler: Received: GuiGameEvent 225: isUiSetToSkipPhase (2 args)
+18:11:34.263 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:34.266 [INFO ] FGameClient: Client sent Reply (225): false
+18:11:34.300 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22575 bytes compressed)
+18:11:34.301 [INFO ] GameProtocolHandler: Received: GuiGameEvent 226: setGameView (2 args)
+18:11:34.310 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21481 bytes compressed)
+18:11:34.311 [INFO ] GameProtocolHandler: Received: GuiGameEvent 227: showPromptMessage (2 args)
+18:11:34.312 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.325 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21431 bytes compressed)
+18:11:34.325 [INFO ] GameProtocolHandler: Received: GuiGameEvent 228: updateButtons (6 args)
+18:11:34.327 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.327 [INFO ] GameProtocolHandler: Received: GuiGameEvent 229: alertUser (0 args)
+18:11:34.406 [INFO ] FGameClient: Client sent GuiGameEvent 22: selectButtonOk (0 args)
+18:11:34.707 [INFO ] FGameClient: Client sent GuiGameEvent 23: selectButtonOk (0 args)
+18:11:34.751 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22620 bytes compressed)
+18:11:34.752 [INFO ] GameProtocolHandler: Received: GuiGameEvent 230: setGameView (2 args)
+18:11:34.753 [INFO ] GameProtocolHandler: Received: GuiGameEvent 231: applyDelta (1 args)
+18:11:34.760 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, MAIN2, Active=Occelot) ===
+18:11:34.761 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 10 events before delta seq=-1
+18:11:34.761 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22380 bytes compressed)
+18:11:34.761 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:34.761 [INFO ] GameProtocolHandler: Received: GuiGameEvent 232: isUiSetToSkipPhase (2 args)
+18:11:34.764 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:34.767 [INFO ] FGameClient: Client sent Reply (232): false
+18:11:34.774 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22620 bytes compressed)
+18:11:34.775 [INFO ] GameProtocolHandler: Received: GuiGameEvent 233: setGameView (2 args)
+18:11:34.794 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 10 ms (21432 bytes compressed)
+18:11:34.795 [INFO ] GameProtocolHandler: Received: GuiGameEvent 234: showPromptMessage (2 args)
+18:11:34.797 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.803 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21435 bytes compressed)
+18:11:34.803 [INFO ] GameProtocolHandler: Received: GuiGameEvent 235: updateButtons (6 args)
+18:11:34.805 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.809 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 4 ms (21414 bytes compressed)
+18:11:34.809 [INFO ] GameProtocolHandler: Received: GuiGameEvent 236: showWaitingTimer (2 args)
+18:11:34.810 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.823 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 4 ms (22620 bytes compressed)
+18:11:34.823 [INFO ] GameProtocolHandler: Received: GuiGameEvent 237: setGameView (2 args)
+18:11:34.834 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21484 bytes compressed)
+18:11:34.834 [INFO ] GameProtocolHandler: Received: GuiGameEvent 238: showPromptMessage (2 args)
+18:11:34.835 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.843 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21430 bytes compressed)
+18:11:34.843 [INFO ] GameProtocolHandler: Received: GuiGameEvent 239: updateButtons (6 args)
+18:11:34.846 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:34.846 [INFO ] GameProtocolHandler: Received: GuiGameEvent 240: alertUser (0 args)
+18:11:35.065 [INFO ] FGameClient: Client sent GuiGameEvent 24: selectButtonOk (0 args)
+18:11:35.201 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22625 bytes compressed)
+18:11:35.202 [INFO ] GameProtocolHandler: Received: GuiGameEvent 241: setGameView (2 args)
+18:11:35.203 [INFO ] GameProtocolHandler: Received: GuiGameEvent 242: applyDelta (1 args)
+18:11:35.210 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, END_OF_TURN, Active=Occelot) ===
+18:11:35.211 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22625 bytes compressed)
+18:11:35.211 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 7 events before delta seq=-1
+18:11:35.211 [INFO ] GameProtocolHandler: Received: GuiGameEvent 243: setGameView (2 args)
+18:11:35.211 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:35.212 [INFO ] GameProtocolHandler: Received: GuiGameEvent 244: applyDelta (1 args)
+18:11:35.220 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 2, END_OF_TURN, Active=Occelot) ===
+18:11:35.220 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 2 events before delta seq=-1
+18:11:35.220 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:35.225 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22387 bytes compressed)
+18:11:35.225 [INFO ] GameProtocolHandler: Received: GuiGameEvent 245: isUiSetToSkipPhase (2 args)
+18:11:35.227 [TRACE] GameClientHandler: replicated PlayerView properties - Occelot
+18:11:35.231 [INFO ] FGameClient: Client sent Reply (245): false
+18:11:35.275 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22625 bytes compressed)
+18:11:35.276 [INFO ] GameProtocolHandler: Received: GuiGameEvent 246: setGameView (2 args)
+18:11:35.287 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21472 bytes compressed)
+18:11:35.287 [INFO ] GameProtocolHandler: Received: GuiGameEvent 247: showPromptMessage (2 args)
+18:11:35.289 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:35.301 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21431 bytes compressed)
+18:11:35.302 [INFO ] GameProtocolHandler: Received: GuiGameEvent 248: updateButtons (6 args)
+18:11:35.304 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:35.304 [INFO ] GameProtocolHandler: Received: GuiGameEvent 249: alertUser (0 args)
+18:11:35.516 [INFO ] FGameClient: Client sent GuiGameEvent 25: selectButtonOk (0 args)
+18:11:35.720 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22586 bytes compressed)
+18:11:35.721 [INFO ] GameProtocolHandler: Received: GuiGameEvent 250: setGameView (2 args)
+18:11:35.722 [INFO ] GameProtocolHandler: Received: GuiGameEvent 251: applyDelta (1 args)
+18:11:35.727 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, UPKEEP, Active=2nd Occelot) ===
+18:11:35.728 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 12 events before delta seq=-1
+18:11:35.728 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:35.728 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21495 bytes compressed)
+18:11:35.728 [INFO ] GameProtocolHandler: Received: GuiGameEvent 252: isUiSetToSkipPhase (2 args)
+18:11:35.730 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:35.733 [INFO ] FGameClient: Client sent Reply (252): false
+18:11:35.775 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22586 bytes compressed)
+18:11:35.776 [INFO ] GameProtocolHandler: Received: GuiGameEvent 253: setGameView (2 args)
+18:11:35.787 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21517 bytes compressed)
+18:11:35.787 [INFO ] GameProtocolHandler: Received: GuiGameEvent 254: showPromptMessage (2 args)
+18:11:35.789 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:35.796 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21473 bytes compressed)
+18:11:35.797 [INFO ] GameProtocolHandler: Received: GuiGameEvent 255: updateButtons (6 args)
+18:11:35.798 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:35.799 [INFO ] GameProtocolHandler: Received: GuiGameEvent 256: alertUser (0 args)
+18:11:36.226 [INFO ] FGameClient: Client sent GuiGameEvent 26: selectButtonOk (0 args)
+18:11:36.341 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22667 bytes compressed)
+18:11:36.342 [INFO ] GameProtocolHandler: Received: GuiGameEvent 257: setGameView (2 args)
+18:11:36.343 [INFO ] GameProtocolHandler: Received: GuiGameEvent 258: applyDelta (1 args)
+18:11:36.350 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22667 bytes compressed)
+18:11:36.350 [INFO ] GameProtocolHandler: Received: GuiGameEvent 259: setGameView (2 args)
+18:11:36.352 [INFO ] GameProtocolHandler: Received: GuiGameEvent 260: applyDelta (1 args)
+18:11:36.353 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, UPKEEP, Active=2nd Occelot) ===
+18:11:36.353 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:36.353 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:36.361 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, UPKEEP, Active=2nd Occelot) ===
+18:11:36.362 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 3 events before delta seq=-1
+18:11:36.362 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:36.623 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (22667 bytes compressed)
+18:11:36.624 [INFO ] GameProtocolHandler: Received: GuiGameEvent 261: setGameView (2 args)
+18:11:36.637 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21439 bytes compressed)
+18:11:36.638 [INFO ] GameProtocolHandler: Received: GuiGameEvent 262: showPromptMessage (2 args)
+18:11:36.639 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:36.646 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21440 bytes compressed)
+18:11:36.646 [INFO ] GameProtocolHandler: Received: GuiGameEvent 263: updateButtons (6 args)
+18:11:36.648 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:36.653 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21420 bytes compressed)
+18:11:36.653 [INFO ] GameProtocolHandler: Received: GuiGameEvent 264: showWaitingTimer (2 args)
+18:11:36.655 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:36.862 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22745 bytes compressed)
+18:11:36.862 [INFO ] GameProtocolHandler: Received: GuiGameEvent 265: setGameView (2 args)
+18:11:36.863 [INFO ] GameProtocolHandler: Received: GuiGameEvent 266: applyDelta (1 args)
+18:11:36.870 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, DRAW, Active=2nd Occelot) ===
+18:11:36.870 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 2 events before delta seq=-1
+18:11:36.870 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:36.936 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22545 bytes compressed)
+18:11:36.937 [INFO ] GameProtocolHandler: Received: GuiGameEvent 267: setGameView (2 args)
+18:11:36.938 [INFO ] GameProtocolHandler: Received: GuiGameEvent 268: applyDelta (1 args)
+18:11:36.947 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, DRAW, Active=2nd Occelot) ===
+18:11:36.949 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 8 events before delta seq=-1
+18:11:36.949 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:36.954 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21505 bytes compressed)
+18:11:36.954 [INFO ] GameProtocolHandler: Received: GuiGameEvent 269: isUiSetToSkipPhase (2 args)
+18:11:36.957 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:36.983 [INFO ] FGameClient: Client sent Reply (269): true
+18:11:37.056 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22546 bytes compressed)
+18:11:37.056 [INFO ] GameProtocolHandler: Received: GuiGameEvent 270: setGameView (2 args)
+18:11:37.058 [INFO ] GameProtocolHandler: Received: GuiGameEvent 271: applyDelta (1 args)
+18:11:37.063 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:37.064 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 9 events before delta seq=-1
+18:11:37.064 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:37.070 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21506 bytes compressed)
+18:11:37.070 [INFO ] GameProtocolHandler: Received: GuiGameEvent 272: isUiSetToSkipPhase (2 args)
+18:11:37.072 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:37.076 [INFO ] FGameClient: Client sent Reply (272): false
+18:11:37.122 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22546 bytes compressed)
+18:11:37.123 [INFO ] GameProtocolHandler: Received: GuiGameEvent 273: setGameView (2 args)
+18:11:37.131 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21537 bytes compressed)
+18:11:37.131 [INFO ] GameProtocolHandler: Received: GuiGameEvent 274: showPromptMessage (2 args)
+18:11:37.133 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:37.140 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21486 bytes compressed)
+18:11:37.140 [INFO ] GameProtocolHandler: Received: GuiGameEvent 275: updateButtons (6 args)
+18:11:37.142 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:37.142 [INFO ] GameProtocolHandler: Received: GuiGameEvent 276: alertUser (0 args)
+18:11:38.888 [INFO ] FGameClient: Client sent GuiGameEvent 27: selectCard (3 args)
+18:11:38.897 [INFO ] CompatibleObjectEncoder: Encoded 21615 bytes (compressed) for GuiGameEvent
+18:11:39.128 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (21717 bytes compressed)
+18:11:39.129 [INFO ] GameProtocolHandler: Received: GuiGameEvent 277: getAbilityToPlay (3 args)
+18:11:39.130 [INFO ] FGameClient: Client sent Reply (277): Play land
+18:11:39.137 [INFO ] CompatibleObjectEncoder: Encoded 21590 bytes (compressed) for ReplyEvent
+18:11:39.202 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22546 bytes compressed)
+18:11:39.203 [INFO ] GameProtocolHandler: Received: GuiGameEvent 278: setGameView (2 args)
+18:11:39.204 [INFO ] GameProtocolHandler: Received: GuiGameEvent 279: applyDelta (1 args)
+18:11:39.209 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:39.209 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:39.209 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:39.318 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22594 bytes compressed)
+18:11:39.319 [INFO ] GameProtocolHandler: Received: GuiGameEvent 280: setGameView (2 args)
+18:11:39.320 [INFO ] GameProtocolHandler: Received: GuiGameEvent 281: applyDelta (1 args)
+18:11:39.324 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:39.325 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 13 events before delta seq=-1
+18:11:39.325 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:39.329 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21643 bytes compressed)
+18:11:39.329 [INFO ] GameProtocolHandler: Received: GuiGameEvent 282: getAbilityToPlay (3 args)
+18:11:39.331 [INFO ] FGameClient: Client sent Reply (282): Imprint — When Ugin's Labyrinth enters, you may exile a colorless card with mana value 7 or greater from your hand. [Zone Changer: Ugin's Labyrinth (106)]
+18:11:39.337 [INFO ] CompatibleObjectEncoder: Encoded 21580 bytes (compressed) for ReplyEvent
+18:11:39.427 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22895 bytes compressed)
+18:11:39.427 [INFO ] GameProtocolHandler: Received: GuiGameEvent 283: setGameView (2 args)
+18:11:39.429 [INFO ] GameProtocolHandler: Received: GuiGameEvent 284: applyDelta (1 args)
+18:11:39.436 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:39.436 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22895 bytes compressed)
+18:11:39.437 [INFO ] GameProtocolHandler: Received: GuiGameEvent 285: setGameView (2 args)
+18:11:39.438 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 5 events before delta seq=-1
+18:11:39.438 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (2ms, no changes) ===
+18:11:39.449 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (21505 bytes compressed)
+18:11:39.449 [INFO ] GameProtocolHandler: Received: GuiGameEvent 286: showPromptMessage (2 args)
+18:11:39.451 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:39.458 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (21446 bytes compressed)
+18:11:39.459 [INFO ] GameProtocolHandler: Received: GuiGameEvent 287: updateButtons (6 args)
+18:11:39.464 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:39.473 [INFO ] GameProtocolHandler: Received: GuiGameEvent 288: alertUser (0 args)
+18:11:40.055 [INFO ] FGameClient: Client sent GuiGameEvent 28: selectButtonOk (0 args)
+18:11:40.227 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 9 ms (22916 bytes compressed)
+18:11:40.228 [INFO ] GameProtocolHandler: Received: GuiGameEvent 289: setGameView (2 args)
+18:11:40.229 [INFO ] GameProtocolHandler: Received: GuiGameEvent 290: applyDelta (1 args)
+18:11:40.237 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22914 bytes compressed)
+18:11:40.238 [INFO ] GameProtocolHandler: Received: GuiGameEvent 291: setGameView (2 args)
+18:11:40.239 [INFO ] GameProtocolHandler: Received: GuiGameEvent 292: applyDelta (1 args)
+18:11:40.239 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:40.239 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 1 events before delta seq=-1
+18:11:40.239 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (0ms, no changes) ===
+18:11:40.250 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:40.251 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 3 events before delta seq=-1
+18:11:40.251 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:40.515 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 6 ms (22914 bytes compressed)
+18:11:40.516 [INFO ] GameProtocolHandler: Received: GuiGameEvent 293: setGameView (2 args)
+18:11:40.529 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21501 bytes compressed)
+18:11:40.529 [INFO ] GameProtocolHandler: Received: GuiGameEvent 294: showPromptMessage (2 args)
+18:11:40.531 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:40.536 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21487 bytes compressed)
+18:11:40.536 [INFO ] GameProtocolHandler: Received: GuiGameEvent 295: updateButtons (6 args)
+18:11:40.538 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:40.542 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 4 ms (21482 bytes compressed)
+18:11:40.543 [INFO ] GameProtocolHandler: Received: GuiGameEvent 296: showWaitingTimer (2 args)
+18:11:40.544 [TRACE] GameClientHandler: replicated PlayerView properties - 2nd Occelot
+18:11:40.713 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 8 ms (22914 bytes compressed)
+18:11:40.714 [INFO ] GameProtocolHandler: Received: GuiGameEvent 297: setGameView (2 args)
+18:11:40.715 [INFO ] GameProtocolHandler: Received: GuiGameEvent 298: applyDelta (1 args)
+18:11:40.723 [INFO ] NetworkGuiGame: [DeltaSync] === START applyDelta seq=-1 (Turn 3, MAIN1, Active=2nd Occelot) ===
+18:11:40.724 [INFO ] NetworkGuiGame: [DeltaSync] Pre-resolved 4 events before delta seq=-1
+18:11:40.724 [INFO ] NetworkGuiGame: [DeltaSync] === END seq=-1 (1ms, no changes) ===
+18:11:40.726 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 7 ms (22914 bytes compressed)
+18:11:40.726 [INFO ] GameProtocolHandler: Received: GuiGameEvent 299: setGameView (2 args)
+18:11:40.732 [INFO ] CompatibleObjectDecoder: Decoded GuiGameEvent in 5 ms (21681 bytes compressed)
+18:11:40.732 [INFO ] GameProtocolHandler: Received: GuiGameEvent 300: confirm (4 args)
