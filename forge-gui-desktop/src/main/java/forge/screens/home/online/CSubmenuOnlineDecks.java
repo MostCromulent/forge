@@ -1,6 +1,7 @@
 package forge.screens.home.online;
 
 import forge.Singletons;
+import forge.deck.Deck;
 import forge.deck.DeckProxy;
 import forge.gui.framework.FScreen;
 import forge.gui.framework.ICDoc;
@@ -30,8 +31,8 @@ public enum CSubmenuOnlineDecks implements ICDoc {
         view.getLstDecks().setItemActivateCommand(() -> {
             final DeckProxy deck = view.getLstDecks().getSelectedItem();
             final FScreen screen = FScreen.DECK_EDITOR_SEALED;
-            final CEditorLimited editorCtrl = new CEditorLimited(
-                    FModel.getDecks().getNetworkEventDecks(), screen,
+            final CEditorLimited<Deck> editorCtrl = new CEditorLimited<>(
+                    FModel.getDecks().getNetworkEventDecks(), Deck::new, screen,
                     CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
 
             if (!Singletons.getControl().ensureScreenActive(screen)) {

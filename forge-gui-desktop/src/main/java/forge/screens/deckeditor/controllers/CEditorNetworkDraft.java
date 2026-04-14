@@ -1,7 +1,7 @@
 package forge.screens.deckeditor.controllers;
 
 import forge.Singletons;
-import forge.deck.DeckGroup;
+import forge.deck.Deck;
 import forge.game.GameType;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gui.FDraftOverlay;
@@ -37,7 +37,7 @@ import java.util.function.Consumer;
  *
  * <br><br><i>(C at beginning of class name denotes a control class.)</i>
  */
-public class CEditorNetworkDraft extends ACEditorBase<PaperCard, DeckGroup> {
+public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
 
     private final int seatIndex;
     private final String eventId;
@@ -162,7 +162,7 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, DeckGroup> {
      *
      * @param pool the final deck group containing the drafted pool
      */
-    public void completeDraft(DeckGroup pool) {
+    public void completeDraft(Deck pool) {
         draftComplete = true;
 
         // Save the pool
@@ -183,8 +183,8 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, DeckGroup> {
 
         // Open the pool in the limited deck editor
         FScreen editScreen = FScreen.DECK_EDITOR_SEALED;
-        CEditorLimited editorCtrl = new CEditorLimited(
-                FModel.getDecks().getNetworkEventDecks(), editScreen, getCDetailPicture());
+        CEditorLimited<Deck> editorCtrl = new CEditorLimited<>(
+                FModel.getDecks().getNetworkEventDecks(), Deck::new, editScreen, getCDetailPicture());
         Singletons.getControl().setCurrentScreen(editScreen);
         CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(editorCtrl);
         editorCtrl.getDeckController().load(null, pool.getName());
@@ -199,7 +199,7 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, DeckGroup> {
     }
 
     @Override
-    public DeckController<DeckGroup> getDeckController() {
+    public DeckController<Deck> getDeckController() {
         return null;
     }
 

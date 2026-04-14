@@ -1344,7 +1344,7 @@ public class VLobby implements ILobbyView {
     }
 
     @Override
-    public void onReceiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+    public void onReceiveEventPool(String eventId, forge.deck.Deck pool) {
         javax.swing.SwingUtilities.invokeLater(() -> {
             if (networkDraftEditor != null) {
                 networkDraftEditor.completeDraft(pool);

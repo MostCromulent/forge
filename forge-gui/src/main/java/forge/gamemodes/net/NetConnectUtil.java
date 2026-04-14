@@ -95,7 +95,7 @@ public class NetConnectUtil {
                 view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
             }
             @Override
-            public void receiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+            public void receiveEventPool(String eventId, forge.deck.Deck pool) {
                 view.onReceiveEventPool(eventId, pool);
             }
         });
@@ -220,7 +220,7 @@ public class NetConnectUtil {
                 view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
             }
             @Override
-            public void receiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+            public void receiveEventPool(String eventId, forge.deck.Deck pool) {
                 view.onReceiveEventPool(eventId, pool);
             }
         });

@@ -1,6 +1,6 @@
 package forge.gui.interfaces;
 
-import forge.deck.DeckGroup;
+import forge.deck.Deck;
 import forge.gamemodes.net.draft.NetworkEventView;
 import forge.interfaces.IPlayerChangeListener;
 import forge.interfaces.IUpdateable;
@@ -19,5 +19,5 @@ public interface ILobbyView extends IUpdateable {
     /** Called when any seat in the pod picks a card. */
     default void onDraftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) { }
     /** Called when the draft is complete and the player receives their pool. */
-    default void onReceiveEventPool(String eventId, DeckGroup pool) { }
+    default void onReceiveEventPool(String eventId, Deck pool) { }
 }

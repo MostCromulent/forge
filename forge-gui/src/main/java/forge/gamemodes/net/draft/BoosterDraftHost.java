@@ -1,11 +1,9 @@
 package forge.gamemodes.net.draft;
 
 import forge.deck.Deck;
-import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.DraftPack;
-import forge.gamemodes.limited.IBoosterDraft;
 import forge.gamemodes.limited.LimitedPlayer;
 import forge.gamemodes.limited.LimitedPlayerAI;
 import forge.gamemodes.net.event.DraftPackArrivedEvent;
@@ -15,6 +13,7 @@ import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.item.PaperCard;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -239,18 +238,9 @@ public final class BoosterDraftHost {
         draft.postDraftActions();
 
         List<LimitedPlayer> players = draft.getAllPlayers();
-        String landSetCode = IBoosterDraft.LAND_SET_CODE[0] != null
-                ? IBoosterDraft.LAND_SET_CODE[0].getCode() : null;
-
         FServerManager server = FServerManager.getInstance();
 
-        // Build AI decks first (they may be referenced by multiple human pools)
-        List<Deck> aiDecks = new ArrayList<>();
-        for (LimitedPlayer player : players) {
-            if (player instanceof LimitedPlayerAI ai) {
-                aiDecks.add(ai.buildDeck(landSetCode));
-            }
-        }
+        String eventId = event.getEventId();
 
         // Send pool to each human
         for (int i = 0; i < players.size(); i++) {
@@ -264,18 +254,21 @@ public final class BoosterDraftHost {
                 continue;
             }
 
-            DeckGroup pool = new DeckGroup(participant.getName());
-            pool.setHumanDeck(player.getDeck());
-            pool.addAiDecks(aiDecks.toArray(new Deck[0]));
+            String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
+            Deck pool = new Deck(player.getDeck(), poolName);
+            pool.getTags().add("eventId:" + eventId);
+            pool.getTags().add("eventFormat:" + event.getFormat().name());
+            pool.getTags().add("eventProduct:" + event.getProductDescription());
+            pool.getTags().add("eventDate:" + LocalDate.now().toString());
 
             RemoteClient client = server.getClientByName(participant.getName());
             if (client != null) {
-                client.send(new ReceiveEventPoolEvent(event.getEventId(), pool));
+                client.send(new ReceiveEventPoolEvent(eventId, pool));
             } else {
                 // Host player — dispatch to local lobby listener
                 forge.interfaces.ILobbyListener listener = server.getLobbyListener();
                 if (listener != null) {
-                    listener.receiveEventPool(event.getEventId(), pool);
+                    listener.receiveEventPool(eventId, pool);
                 }
             }
         }
