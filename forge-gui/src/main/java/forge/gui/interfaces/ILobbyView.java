@@ -18,6 +18,8 @@ public interface ILobbyView extends IUpdateable {
             int packNumber, int pickNumber, int timerDurationSeconds) { }
     /** Called when any seat in the pod picks a card. */
     default void onDraftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) { }
+    /** Called when the server auto-picks a card for this player (timer expiry). */
+    default void onDraftAutoPicked(int seatIndex, PaperCard card, int pickNumber) { }
     /** Called when the draft is complete and the player receives their pool. */
     default void onReceiveEventPool(String eventId, Deck pool) { }
     /** Called when the host selects an event for match play. */

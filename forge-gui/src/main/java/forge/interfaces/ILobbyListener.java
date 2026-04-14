@@ -16,6 +16,7 @@ public interface ILobbyListener {
     default void draftPackArrived(int seatIndex, java.util.List<forge.item.PaperCard> pack,
             int packNumber, int pickNumber, int timerDurationSeconds) { }
     default void draftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) { }
+    default void draftAutoPicked(int seatIndex, forge.item.PaperCard card, int pickNumber) { }
     default void receiveEventPool(String eventId, forge.deck.Deck pool) { }
     default void selectEventForMatch(String eventId, boolean deckConformance) { }
 }

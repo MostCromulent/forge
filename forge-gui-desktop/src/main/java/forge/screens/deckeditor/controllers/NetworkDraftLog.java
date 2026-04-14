@@ -50,14 +50,14 @@ public final class NetworkDraftLog {
         log("-- Pack " + packNumber + " -- " + direction + " ------", COLOR_SEPARATOR);
     }
 
-    /** Log another player's pick (no card name revealed). */
+    /** Log another player's pick (no card name revealed). pickNumber is 0-based. */
     public static void logOtherPick(String playerName, int pickNumber) {
-        log(playerName + " picked (card " + pickNumber + ")", COLOR_OTHER_PICK);
+        log(playerName + " picked (card " + (pickNumber + 1) + ")", COLOR_OTHER_PICK);
     }
 
-    /** Log your own pick (card name shown). */
+    /** Log your own pick (card name shown). pickNumber is 0-based. */
     public static void logMyPick(String cardName, int pickNumber) {
-        log("You picked: " + cardName + " (card " + pickNumber + ")", COLOR_MY_PICK);
+        log("You picked: " + cardName + " (card " + (pickNumber + 1) + ")", COLOR_MY_PICK);
     }
 
     /** Log pack round completion. */

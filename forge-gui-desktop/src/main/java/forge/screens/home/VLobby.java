@@ -137,11 +137,11 @@ public class VLobby implements ILobbyView {
             ImmutableList.of("Constructed", "Draft", "Sealed"));
 
     // Event config panel (top of right panel in Draft/Sealed mode)
-    private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 10, gap 5, wrap"));
-    private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(12).build();
-    private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(12).build();
-    private final FLabel lblClientEventStatus = new FLabel.Builder().text("Waiting for host to select an event...").fontSize(12).build();
-    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text("Configure...").fontSize(12).build();
+    private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 5 10, gap 2, wrap"));
+    private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(14).build();
+    private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(14).build();
+    private final FLabel lblClientEventStatus = new FLabel.Builder().text("Waiting for host to select an event...").fontSize(14).build();
+    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text("Configure...").fontSize(14).build();
     private final FCheckBox cbDeckConformance = new FCheckBox("Deck conformance");
 
     // Split panel for right side in Draft/Sealed mode
@@ -178,7 +178,7 @@ public class VLobby implements ILobbyView {
             for (final java.awt.Component c : cboModePanel.getComponents()) {
                 c.setFont(FSkin.getBoldFont(14).getBaseFont());
             }
-            constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 2px, spanx 2, wrap");
+            constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 10px, spanx 2, wrap");
         }
 
         ////////////////////////////////////////////////////////
@@ -189,11 +189,14 @@ public class VLobby implements ILobbyView {
 
             if (lobby.hasControl()) {
                 cboEventSelect.addActionListener(e -> onEventDropdownChanged());
+                for (final java.awt.Component c : cboEventSelect.getComponents()) {
+                    c.setFont(FSkin.getBoldFont(14).getBaseFont());
+                }
                 eventConfigPanel.add(cboEventSelect, "w 100%, wrap");
                 eventConfigPanel.add(lblEventFormat, "wrap");
-                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 5");
+                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 3");
                 btnConfigure.setCommand(() -> openEventConfigDialog());
-                eventConfigPanel.add(btnConfigure, "w 120px!, h 26px!, split 2");
+                eventConfigPanel.add(btnConfigure, "w 100px!, h 24px!, split 2");
                 cbDeckConformance.setSelected(true);
                 cbDeckConformance.addActionListener(e -> onConformanceChanged());
                 eventConfigPanel.add(cbDeckConformance, "wrap");
@@ -410,7 +413,7 @@ public class VLobby implements ILobbyView {
         if (playerWithFocus >= activePlayersNum) {
             changePlayerFocus(activePlayersNum - 1);
         } else {
-            populateDeckPanel(lobby.getGameType());
+            updateRightPanelForMode();
         }
         refreshPanels(true, true);
     }
@@ -760,7 +763,7 @@ public class VLobby implements ILobbyView {
         newFocus.setFocused(true);
 
         playersScroll.getViewport().scrollRectToVisible(newFocus.getBounds());
-        populateDeckPanel(gType);
+        updateRightPanelForMode();
 
         refreshPanels(true, true);
     }
@@ -822,7 +825,7 @@ public class VLobby implements ILobbyView {
             populateDeckPanel(lobby.getGameType());
         } else {
             eventRightPanel.removeAll();
-            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap");
+            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap, gapbottom 5");
 
             if (playerWithFocus < playerPanels.size() && lobby.mayEdit(playerWithFocus)) {
                 final FDeckChooser chooser = getDeckChooser(playerWithFocus);
@@ -883,15 +886,12 @@ public class VLobby implements ILobbyView {
                 return;
             }
 
-            // Populate participants from current lobby slots
+            // Populate participants from current lobby slots, auto-filling open slots with AI
             serverLobby.populateParticipants();
+            serverLobby.fillRemainingWithAI(8);
 
             java.util.List<forge.gamemodes.net.draft.EventParticipant> participants = event.getParticipants();
             int podSize = participants.size();
-            if (podSize < 2) {
-                FOptionPane.showErrorDialog("Need at least 2 participants to start a draft.");
-                return;
-            }
 
             // Use configured pool type instead of hardcoded Full
             forge.gamemodes.limited.LimitedPoolType poolType = event.getPoolType();
@@ -1005,7 +1005,8 @@ public class VLobby implements ILobbyView {
         String format = event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
                 ? "Draft" : "Sealed";
         if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
-            format += " (" + event.getPickTimerSeconds() + "s timer)";
+            int timer = event.getPickTimerSeconds();
+            format += timer > 0 ? " (" + timer + "s timer)" : " (no timer)";
         }
         lblEventFormat.setText("Format: " + format);
 
@@ -1354,7 +1355,7 @@ public class VLobby implements ILobbyView {
     public void onDraftPackArrived(int seatIndex, java.util.List<PaperCard> pack,
             int packNumber, int pickNumber, int timerDurationSeconds) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, timerDurationSeconds);
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, pickNumber, pack.size(), timerDurationSeconds);
 
             // Log pack header on new pack round
             if (packNumber != lastPackNumber) {
@@ -1454,6 +1455,15 @@ public class VLobby implements ILobbyView {
                     }
                 }
                 forge.screens.deckeditor.controllers.NetworkDraftLog.logOtherPick(name, pickNumber);
+            }
+        });
+    }
+
+    @Override
+    public void onDraftAutoPicked(int seatIndex, PaperCard card, int pickNumber) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            if (networkDraftEditor != null) {
+                networkDraftEditor.addAutoPickedCard(card, pickNumber);
             }
         });
     }

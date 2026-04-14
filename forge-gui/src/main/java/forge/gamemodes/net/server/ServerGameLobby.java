@@ -127,7 +127,24 @@ public final class ServerGameLobby extends GameLobby {
             EventParticipant.Type pType = (slot.getType() == LobbySlotType.AI)
                     ? EventParticipant.Type.AI : EventParticipant.Type.HUMAN;
             event.addParticipant(new EventParticipant(slot.getName(), pType, seatIndex));
+            System.err.println("[ServerLobby] Participant slot=" + i + " seat=" + seatIndex + " name=" + slot.getName() + " type=" + pType + " slotType=" + slot.getType());
             seatIndex++;
+        }
+        System.err.println("[ServerLobby] Total participants: " + event.getParticipants().size());
+    }
+
+    /**
+     * Fill remaining seats up to targetSize with AI participants.
+     * AI seats are for draft pick selection only — they are not match opponents.
+     */
+    public synchronized void fillRemainingWithAI(int targetSize) {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return;
+        int currentSize = event.getParticipants().size();
+        for (int i = currentSize; i < targetSize; i++) {
+            String aiName = "Seat " + (i + 1);
+            event.addParticipant(new EventParticipant(aiName, EventParticipant.Type.AI, i));
+            System.err.println("[ServerLobby] Auto-fill AI seat=" + i + " name=" + aiName);
         }
     }
 

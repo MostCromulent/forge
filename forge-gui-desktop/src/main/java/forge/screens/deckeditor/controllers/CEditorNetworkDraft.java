@@ -111,8 +111,9 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
             pool.add(card, 1);
         }
 
-        this.getCatalogManager().setCaption(
-                localizer.getMessage("lblPackNCards", String.valueOf(packNumber)));
+        String caption = localizer.getMessage("lblPackNCards", String.valueOf(packNumber))
+                + " (Pick " + (pickNumber + 1) + " of " + pack.size() + ")";
+        this.getCatalogManager().setCaption(caption);
         this.getCatalogManager().setPool(pool);
         this.getCatalogManager().refresh();
     }
@@ -139,6 +140,16 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         this.getCatalogManager().setPool((Iterable<PaperCard>) null);
 
         // Notify the overlay
+        FDraftOverlay.SINGLETON_INSTANCE.onPickSubmitted();
+    }
+
+    /**
+     * Called when the server auto-picks a card for this player (timer expiry).
+     * Adds the card to the deck pool and logs it.
+     */
+    public void addAutoPickedCard(PaperCard card, int pickNumber) {
+        this.getDeckManager().addItem(card, 1);
+        NetworkDraftLog.logMyPick(card.getName() + " (auto)", pickNumber);
         FDraftOverlay.SINGLETON_INSTANCE.onPickSubmitted();
     }
 
@@ -214,7 +225,6 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
 
         if (VEditorLog.SINGLETON_INSTANCE.getParentCell() == null) {
             VCardCatalog.SINGLETON_INSTANCE.getParentCell().addDoc(VEditorLog.SINGLETON_INSTANCE);
-            VEditorLog.SINGLETON_INSTANCE.showView();
         }
 
         ccAddLabel = this.getBtnAdd().getText();
@@ -243,8 +253,6 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
 
         // Single-selection only
         getCatalogManager().setAllowMultipleSelections(false);
-
-        getCatalogManager().refresh();
     }
 
     @Override

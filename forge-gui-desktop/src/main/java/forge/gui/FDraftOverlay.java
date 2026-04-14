@@ -48,6 +48,7 @@ public enum FDraftOverlay {
     private boolean  leftAI,   rightAI;
     private int      mySeat;
     private int      currentPack, totalPacks;
+    private int      currentPick, currentPackSize;
     private boolean  passingRight;
     private int[]    queueDepths = new int[0];
 
@@ -55,6 +56,7 @@ public enum FDraftOverlay {
     private javax.swing.Timer countdownTimer;
     private int               secondsRemaining;
     private boolean           waitingForPack;
+    private boolean           timerDisabled;
 
     @SuppressWarnings("serial")
     private final FDialog window = new FDialog(false, true, "4") {
@@ -164,12 +166,17 @@ public enum FDraftOverlay {
      * Called when a new pack arrives for this player to pick from.
      *
      * @param packNumber   1-based pack number
+     * @param pickNumber   0-based pick number within the pack round
+     * @param packSize     number of cards in the pack
      * @param timerSeconds seconds allowed to pick (0 = no timer)
      */
-    public void onPackArrived(int packNumber, int timerSeconds) {
+    public void onPackArrived(int packNumber, int pickNumber, int packSize, int timerSeconds) {
         SwingUtilities.invokeLater(() -> {
             currentPack    = packNumber;
+            currentPick    = pickNumber + 1;
+            currentPackSize = packSize;
             waitingForPack = false;
+            timerDisabled  = (timerSeconds <= 0);
             // Pack direction: odd packs pass right, even packs pass left (conventional booster draft).
             passingRight   = (packNumber % 2 == 1);
             updateDisplay();
@@ -245,9 +252,13 @@ public enum FDraftOverlay {
     // -------------------------------------------------------------------------
 
     private void updateDisplay() {
-        // Row 1 – pack info
+        // Row 1 – pack info + pick number
         if (currentPack > 0 && totalPacks > 0) {
-            lblPackInfo.setText("Pack " + currentPack + " of " + totalPacks);
+            String text = "Pack " + currentPack + " of " + totalPacks;
+            if (currentPick > 0 && currentPackSize > 0) {
+                text += "  \u2022  Pick " + currentPick + "/" + currentPackSize;
+            }
+            lblPackInfo.setText(text);
         } else {
             lblPackInfo.setText("Draft");
         }
@@ -258,6 +269,9 @@ public enum FDraftOverlay {
             lblTimer.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
         } else if (countdownTimer != null && countdownTimer.isRunning()) {
             updateTimerLabel();
+        } else if (timerDisabled) {
+            lblTimer.setText("No timer");
+            lblTimer.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
         } else {
             lblTimer.setText("");
         }

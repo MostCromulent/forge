@@ -18,6 +18,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Server-side adapter that wraps {@link BoosterDraft} for network play.
@@ -40,6 +44,14 @@ public final class BoosterDraftHost {
 
     /** Seats that still need to submit a pick this pass. */
     private final Set<Integer> pendingHumanPicks = new HashSet<>();
+
+    /** Server-side pick timer — one per round, auto-picks on expiry. */
+    private final ScheduledExecutorService timerExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
+        Thread t = new Thread(r, "DraftPickTimer");
+        t.setDaemon(true);
+        return t;
+    });
+    private ScheduledFuture<?> pickTimerFuture;
 
     public BoosterDraftHost(BoosterDraft draft, NetworkEvent event) {
         this.draft = draft;
@@ -100,8 +112,9 @@ public final class BoosterDraftHost {
         // Broadcast that this seat picked
         broadcastSeatPicked(seatIndex);
 
-        // If all humans have picked, pass packs and advance
+        // If all humans have picked, cancel timer, pass packs and advance
         if (pendingHumanPicks.isEmpty()) {
+            cancelPickTimer();
             draft.passPacks();
             currentPickNumber++;
 
@@ -123,6 +136,7 @@ public final class BoosterDraftHost {
      */
     private void advanceDraft() {
         List<LimitedPlayer> players = draft.getAllPlayers();
+        System.err.println("[DraftHost] advanceDraft: " + players.size() + " players, pack=" + currentPackNumber + " pick=" + currentPickNumber);
 
         // Let all AI seats pick
         for (int i = 0; i < players.size(); i++) {
@@ -135,6 +149,7 @@ public final class BoosterDraftHost {
             }
             DraftPack pack = player.nextChoice();
             if (pack == null || pack.isEmpty()) {
+                System.err.println("[DraftHost] AI seat " + i + ": null/empty pack");
                 continue;
             }
 
@@ -152,16 +167,25 @@ public final class BoosterDraftHost {
             if (player instanceof LimitedPlayerAI) {
                 continue;
             }
-            if (player.shouldSkipThisPick()) {
+            boolean skip = player.shouldSkipThisPick();
+            DraftPack pack = player.nextChoice();
+            System.err.println("[DraftHost] Human seat " + i + ": skip=" + skip + " pack=" + (pack != null ? pack.size() + " cards" : "null"));
+            if (skip) {
                 continue;
             }
-            DraftPack pack = player.nextChoice();
             if (pack == null || pack.isEmpty()) {
                 continue;
             }
 
             pendingHumanPicks.add(i);
             sendPackToHuman(i, pack);
+        }
+
+        System.err.println("[DraftHost] pendingHumanPicks: " + pendingHumanPicks);
+
+        // Start pick timer if humans need to pick
+        if (!pendingHumanPicks.isEmpty()) {
+            startPickTimer();
         }
 
         // If no human picks are needed (all seats are AI, or packs empty),
@@ -184,6 +208,7 @@ public final class BoosterDraftHost {
 
     private void sendPackToHuman(int seatIndex, DraftPack pack) {
         EventParticipant participant = findParticipant(seatIndex);
+        System.err.println("[DraftHost] sendPackToHuman seat=" + seatIndex + " participant=" + (participant != null ? participant.getName() + " isAI=" + participant.isAI() : "null") + " packSize=" + pack.size());
         if (participant == null || participant.isAI()) {
             return;
         }
@@ -196,10 +221,12 @@ public final class BoosterDraftHost {
         FServerManager server = FServerManager.getInstance();
         RemoteClient client = server.getClientByName(participant.getName());
         if (client != null) {
+            System.err.println("[DraftHost] Sending pack to remote client: " + participant.getName());
             client.send(new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs));
         } else {
             // Host player — dispatch to local lobby listener
             forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+            System.err.println("[DraftHost] Dispatching pack to local host listener: " + (listener != null));
             if (listener != null) {
                 listener.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs);
             }
@@ -235,6 +262,8 @@ public final class BoosterDraftHost {
      */
     private void finishDraft() {
         finished = true;
+        cancelPickTimer();
+        timerExecutor.shutdown();
         draft.postDraftActions();
 
         List<LimitedPlayer> players = draft.getAllPlayers();
@@ -270,6 +299,72 @@ public final class BoosterDraftHost {
                 if (listener != null) {
                     listener.receiveEventPool(eventId, pool);
                 }
+            }
+        }
+    }
+
+    private void startPickTimer() {
+        cancelPickTimer();
+        int seconds = event.getPickTimerSeconds();
+        System.err.println("[DraftHost] startPickTimer: " + seconds + "s");
+        if (seconds <= 0) return;
+        pickTimerFuture = timerExecutor.schedule(this::onPickTimerExpired, seconds, TimeUnit.SECONDS);
+    }
+
+    private void cancelPickTimer() {
+        if (pickTimerFuture != null) {
+            pickTimerFuture.cancel(false);
+            pickTimerFuture = null;
+        }
+    }
+
+    /** Auto-pick the first card for all seats that haven't picked yet. */
+    private synchronized void onPickTimerExpired() {
+        if (finished || pendingHumanPicks.isEmpty()) return;
+
+        System.err.println("[DraftHost] Pick timer expired, auto-picking for seats: " + pendingHumanPicks);
+        List<LimitedPlayer> players = draft.getAllPlayers();
+
+        for (int seatIndex : new ArrayList<>(pendingHumanPicks)) {
+            LimitedPlayer player = players.get(seatIndex);
+            DraftPack pack = player.nextChoice();
+            if (pack == null || pack.isEmpty()) continue;
+
+            PaperCard autoPick = pack.get(0);
+            player.draftCard(autoPick, DeckSection.Sideboard);
+            broadcastSeatPicked(seatIndex);
+            notifyAutoPick(seatIndex, autoPick);
+        }
+        pendingHumanPicks.clear();
+
+        // Advance the draft
+        draft.passPacks();
+        currentPickNumber++;
+
+        if (draft.isRoundOver()) {
+            if (!draft.startRound()) {
+                finishDraft();
+                return;
+            }
+            currentPackNumber = draft.getRound();
+            currentPickNumber = 0;
+        }
+
+        advanceDraft();
+    }
+
+    private void notifyAutoPick(int seatIndex, PaperCard card) {
+        EventParticipant participant = findParticipant(seatIndex);
+        if (participant == null || participant.isAI()) return;
+
+        FServerManager server = FServerManager.getInstance();
+        RemoteClient client = server.getClientByName(participant.getName());
+        if (client != null) {
+            client.send(new forge.gamemodes.net.event.DraftAutoPickedEvent(seatIndex, card, currentPickNumber));
+        } else {
+            forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+            if (listener != null) {
+                listener.draftAutoPicked(seatIndex, card, currentPickNumber);
             }
         }
     }

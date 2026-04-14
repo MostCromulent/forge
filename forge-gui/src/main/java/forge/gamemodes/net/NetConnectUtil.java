@@ -95,6 +95,10 @@ public class NetConnectUtil {
                 view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
             }
             @Override
+            public void draftAutoPicked(int seatIndex, forge.item.PaperCard card, int pickNumber) {
+                view.onDraftAutoPicked(seatIndex, card, pickNumber);
+            }
+            @Override
             public void receiveEventPool(String eventId, forge.deck.Deck pool) {
                 view.onReceiveEventPool(eventId, pool);
             }
@@ -222,6 +226,10 @@ public class NetConnectUtil {
             @Override
             public void draftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) {
                 view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
+            }
+            @Override
+            public void draftAutoPicked(int seatIndex, forge.item.PaperCard card, int pickNumber) {
+                view.onDraftAutoPicked(seatIndex, card, pickNumber);
             }
             @Override
             public void receiveEventPool(String eventId, forge.deck.Deck pool) {
