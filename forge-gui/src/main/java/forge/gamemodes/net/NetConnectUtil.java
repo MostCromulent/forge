@@ -82,6 +82,10 @@ public class NetConnectUtil {
                 return null;
             }
             @Override
+            public void eventCreated(forge.gamemodes.net.draft.NetworkEventView eventView) {
+                view.onEventCreated(eventView);
+            }
+            @Override
             public void draftPackArrived(int seatIndex, java.util.List<forge.item.PaperCard> pack,
                     int packNumber, int pickNumber, int timerDurationSeconds) {
                 view.onDraftPackArrived(seatIndex, pack, packNumber, pickNumber, timerDurationSeconds);
@@ -201,6 +205,10 @@ public class NetConnectUtil {
             @Override
             public ClientGameLobby getLobby() {
                 return lobby;
+            }
+            @Override
+            public void eventCreated(forge.gamemodes.net.draft.NetworkEventView eventView) {
+                view.onEventCreated(eventView);
             }
             @Override
             public void draftPackArrived(int seatIndex, java.util.List<forge.item.PaperCard> pack,

@@ -6,6 +6,7 @@ import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.draft.BoosterDraftHost;
 import forge.gamemodes.net.draft.EventFormat;
+import forge.gamemodes.net.draft.EventParticipant;
 import forge.gamemodes.net.draft.NetworkEvent;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
@@ -107,6 +108,27 @@ public final class ServerGameLobby extends GameLobby {
         event.setProductDescription(productDescription);
         event.setDeckConformance(deckConformance);
         updateView(true);
+    }
+
+    /**
+     * Populate event participants from current lobby slots.
+     * Each non-OPEN slot becomes a participant: LOCAL and REMOTE are HUMAN, AI is AI.
+     */
+    public synchronized void populateParticipants() {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return;
+        event.getParticipants().clear();
+        int seatIndex = 0;
+        for (int i = 0; i < getNumberOfSlots(); i++) {
+            LobbySlot slot = getSlot(i);
+            if (slot.getType() == LobbySlotType.OPEN) {
+                continue;
+            }
+            EventParticipant.Type pType = (slot.getType() == LobbySlotType.AI)
+                    ? EventParticipant.Type.AI : EventParticipant.Type.HUMAN;
+            event.addParticipant(new EventParticipant(slot.getName(), pType, seatIndex));
+            seatIndex++;
+        }
     }
 
     /**

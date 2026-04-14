@@ -65,6 +65,10 @@ public enum VSubmenuOnlineLobby implements IVSubmenu<CSubmenuOnlineLobby>, IOnli
         this.client = client;
     }
 
+    public FGameClient getClient() {
+        return this.client;
+    }
+
     @Override
     public void populate() {
         final JPanel container = VHomeUI.SINGLETON_INSTANCE.getPnlDisplay();

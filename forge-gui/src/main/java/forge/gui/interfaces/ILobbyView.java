@@ -1,6 +1,7 @@
 package forge.gui.interfaces;
 
 import forge.deck.DeckGroup;
+import forge.gamemodes.net.draft.NetworkEventView;
 import forge.interfaces.IPlayerChangeListener;
 import forge.interfaces.IUpdateable;
 import forge.item.PaperCard;
@@ -10,6 +11,8 @@ import java.util.List;
 public interface ILobbyView extends IUpdateable {
     void setPlayerChangeListener(IPlayerChangeListener iPlayerChangeListener);
 
+    /** Called when a network event (draft/sealed) is created. */
+    default void onEventCreated(NetworkEventView view) { }
     /** Called when a draft pack arrives for this player. */
     default void onDraftPackArrived(int seatIndex, List<PaperCard> pack,
             int packNumber, int pickNumber, int timerDurationSeconds) { }

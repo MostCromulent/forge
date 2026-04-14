@@ -150,6 +150,11 @@ public class VLobby implements ILobbyView {
     private final FButton btnStartEvent = new FButton("Start Draft");
     private final FButton btnStartMatch = new FButton("Start Match");
 
+    // Network draft state
+    private forge.screens.deckeditor.controllers.CEditorNetworkDraft networkDraftEditor;
+    private int mySeatIndex;
+    private int lastPackNumber;
+
     // CTR
     public VLobby(final GameLobby lobby) {
         this.lobby = lobby;
@@ -762,6 +767,19 @@ public class VLobby implements ILobbyView {
 
         final boolean isLimited = (currentMode != LobbyMode.CONSTRUCTED);
 
+        // Create or clear the network event on the server lobby
+        if (lobby.hasControl() && lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby) {
+            if (isLimited) {
+                forge.gamemodes.net.draft.EventFormat format = (currentMode == LobbyMode.DRAFT)
+                        ? forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
+                        : forge.gamemodes.net.draft.EventFormat.SEALED;
+                serverLobby.createEvent(format);
+            } else {
+                serverLobby.setCurrentEvent(null);
+            }
+        }
+        updateEventConfigDisplay();
+
         // Toggle variants panel visibility — it's inside an FScrollPane
         java.awt.Container scrollPane = variantsPanel.getParent();
         while (scrollPane != null && !(scrollPane instanceof JScrollPane)) {
@@ -844,7 +862,9 @@ public class VLobby implements ILobbyView {
                 return;
             }
 
-            // Build participant info from event
+            // Populate participants from current lobby slots
+            serverLobby.populateParticipants();
+
             java.util.List<forge.gamemodes.net.draft.EventParticipant> participants = event.getParticipants();
             int podSize = participants.size();
             if (podSize < 2) {
@@ -852,10 +872,11 @@ public class VLobby implements ILobbyView {
                 return;
             }
 
-            // Create a draft with deferred initialization so we can configure seats first
+            // Use configured pool type instead of hardcoded Full
+            forge.gamemodes.limited.LimitedPoolType poolType = event.getPoolType();
+
             forge.gamemodes.limited.BoosterDraft draft =
-                    forge.gamemodes.limited.BoosterDraft.createDraftForNetwork(
-                            forge.gamemodes.limited.LimitedPoolType.Full);
+                    forge.gamemodes.limited.BoosterDraft.createDraftForNetwork(poolType);
             if (draft == null) {
                 FOptionPane.showErrorDialog("Failed to create draft.");
                 return;
@@ -877,7 +898,7 @@ public class VLobby implements ILobbyView {
             // Determine host seat index
             String hostName = forge.model.FModel.getPreferences().getPref(
                     forge.localinstance.properties.ForgePreferences.FPref.PLAYER_NAME);
-            int mySeat = 0;
+            mySeatIndex = 0;
             String[] names = new String[podSize];
             boolean[] aiFlags = new boolean[podSize];
             for (forge.gamemodes.net.draft.EventParticipant p : participants) {
@@ -886,13 +907,18 @@ public class VLobby implements ILobbyView {
                     names[seat] = p.getName();
                     aiFlags[seat] = p.isAI();
                     if (p.isHuman() && p.getName().equals(hostName)) {
-                        mySeat = seat;
+                        mySeatIndex = seat;
                     }
                 }
             }
 
             int totalPacks = draft.getNumRounds();
-            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.initDraft(mySeat, names, aiFlags, totalPacks);
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.initDraft(mySeatIndex, names, aiFlags, totalPacks);
+
+            // Log the draft start
+            forge.screens.deckeditor.controllers.NetworkDraftLog.logDraftStart(
+                    participants, totalPacks, event.getProductDescription(), mySeatIndex);
+            lastPackNumber = 0;
 
             // Start the draft — this sends packs to humans (including host via lobbyListener)
             serverLobby.startDraft(draft);
@@ -900,9 +926,74 @@ public class VLobby implements ILobbyView {
     }
 
     private void openEventConfigDialog() {
-        // TODO: Wire to existing booster/product configuration dialog
-        // For now, show a placeholder message
-        FOptionPane.showMessageDialog("Event configuration dialog will be implemented in a later stage.");
+        if (!(lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby)) {
+            return;
+        }
+        forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
+        if (event == null) {
+            FOptionPane.showErrorDialog("No event configured. Select Draft or Sealed mode first.");
+            return;
+        }
+
+        // Pool type selection — same choices as standalone draft
+        forge.gamemodes.limited.LimitedPoolType[] poolTypes =
+                forge.gamemodes.limited.LimitedPoolType.values(
+                        event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT);
+        forge.gamemodes.limited.LimitedPoolType chosen =
+                forge.gui.GuiChoose.oneOrNone("Choose draft format:", poolTypes);
+        if (chosen == null) {
+            return;
+        }
+        event.setPoolType(chosen);
+        event.setProductDescription(chosen.toString());
+
+        // Pick timer (draft only)
+        if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
+            String timerInput = FOptionPane.showInputDialog(
+                    "Pick timer (seconds per pick):", "Draft Timer",
+                    FOptionPane.QUESTION_ICON,
+                    String.valueOf(event.getPickTimerSeconds()));
+            if (timerInput != null) {
+                try {
+                    int seconds = Integer.parseInt(timerInput.trim());
+                    if (seconds > 0) {
+                        event.setPickTimerSeconds(seconds);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Keep existing timer value
+                }
+            }
+        }
+
+        event.setDeckConformance(cbDeckConformance.isSelected());
+        serverLobby.configureEvent(
+                event.getBoosterConfiguration(),
+                event.getPickTimerSeconds(),
+                event.getProductDescription(),
+                event.isDeckConformance());
+        updateEventConfigDisplay();
+    }
+
+    private void updateEventConfigDisplay() {
+        forge.gamemodes.net.draft.NetworkEvent event = lobby.getCurrentEvent();
+        if (event == null) {
+            lblEventConfig.setText("No event configured");
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
+                ? "Draft" : "Sealed");
+        sb.append(" - ");
+        String desc = event.getProductDescription();
+        if (desc != null && !desc.isEmpty()) {
+            sb.append(desc);
+        } else {
+            sb.append(event.getPoolType().toString());
+        }
+        if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
+            sb.append(" (").append(event.getPickTimerSeconds()).append("s timer)");
+        }
+        lblEventConfig.setText(sb.toString());
     }
 
     /** Saves avatar prefs for players one and two. */
@@ -1133,25 +1224,139 @@ public class VLobby implements ILobbyView {
     /////////////////////////////////////////////
     //========== ILobbyView draft callbacks (network draft/sealed)
 
+    // Stored by onEventCreated so clients can init the overlay on first pack
+    private forge.gamemodes.net.draft.NetworkEventView lastEventView;
+
+    @Override
+    public void onEventCreated(forge.gamemodes.net.draft.NetworkEventView view) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            lastEventView = view;
+            updateEventConfigDisplay();
+        });
+    }
+
     @Override
     public void onDraftPackArrived(int seatIndex, java.util.List<PaperCard> pack,
             int packNumber, int pickNumber, int timerDurationSeconds) {
-        forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, timerDurationSeconds);
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, timerDurationSeconds);
+
+            // Log pack header on new pack round
+            if (packNumber != lastPackNumber) {
+                lastPackNumber = packNumber;
+                boolean passingRight = (packNumber % 2 == 1);
+                forge.screens.deckeditor.controllers.NetworkDraftLog.logPackHeader(packNumber, passingRight);
+            }
+
+            if (networkDraftEditor == null) {
+                // First pack — create the editor and transition to draft screen
+                mySeatIndex = seatIndex;
+
+                // Initialize FDraftOverlay if not already done (client path)
+                // Host inits in startEvent(); client inits here using stored event view
+                if (lastEventView != null) {
+                    java.util.List<forge.gamemodes.net.draft.EventParticipant> participants =
+                            lastEventView.getParticipants();
+                    int totalPacks = 3; // Default; could parse from config later
+                    String[] names = new String[participants.size()];
+                    boolean[] aiFlags = new boolean[participants.size()];
+                    for (int i = 0; i < participants.size(); i++) {
+                        names[i] = participants.get(i).getName();
+                        aiFlags[i] = participants.get(i).isAI();
+                    }
+                    forge.gui.FDraftOverlay.SINGLETON_INSTANCE.initDraft(
+                            mySeatIndex, names, aiFlags, totalPacks);
+                    // Log draft start for client
+                    forge.screens.deckeditor.controllers.NetworkDraftLog.logDraftStart(
+                            participants, totalPacks,
+                            lastEventView.getProductDescription(), mySeatIndex);
+                }
+
+                // Build pick sender based on host vs client
+                java.util.function.Consumer<forge.gamemodes.net.event.DraftPickEvent> pickSender;
+                if (lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby) {
+                    pickSender = serverLobby::handleDraftPick;
+                } else {
+                    forge.gamemodes.net.client.FGameClient gameClient =
+                            forge.screens.home.online.VSubmenuOnlineLobby.SINGLETON_INSTANCE.getClient();
+                    if (gameClient == null) {
+                        System.err.println("[VLobby] No game client available for draft picks");
+                        return;
+                    }
+                    pickSender = gameClient::send;
+                }
+
+                String eventId = "";
+                if (lastEventView != null) {
+                    eventId = lastEventView.getEventId();
+                } else if (lobby instanceof forge.gamemodes.net.server.ServerGameLobby sgl) {
+                    forge.gamemodes.net.draft.NetworkEvent evt = sgl.getCurrentEvent();
+                    if (evt != null) {
+                        eventId = evt.getEventId();
+                    }
+                }
+
+                networkDraftEditor = new forge.screens.deckeditor.controllers.CEditorNetworkDraft(
+                        mySeatIndex, eventId, pickSender,
+                        forge.screens.deckeditor.CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
+                networkDraftEditor.showGui();
+
+                forge.Singletons.getControl().setCurrentScreen(
+                        forge.gui.framework.FScreen.DRAFTING_PROCESS);
+                forge.screens.deckeditor.CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(
+                        networkDraftEditor);
+            }
+
+            networkDraftEditor.showPack(pack, packNumber, pickNumber);
+        });
     }
 
     @Override
     public void onDraftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) {
-        forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onSeatPicked(seatIndex, seatQueueDepths);
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onSeatPicked(seatIndex, seatQueueDepths);
+
+            // Log other player picks (not our own)
+            if (seatIndex != mySeatIndex) {
+                String name = "Seat " + seatIndex;
+                // Try to get participant name from stored event view (works for both host and client)
+                if (lastEventView != null) {
+                    for (forge.gamemodes.net.draft.EventParticipant p : lastEventView.getParticipants()) {
+                        if (p.getSeatIndex() == seatIndex) {
+                            name = p.getDisplayName();
+                            break;
+                        }
+                    }
+                } else if (lobby instanceof forge.gamemodes.net.server.ServerGameLobby sgl) {
+                    forge.gamemodes.net.draft.NetworkEvent evt = sgl.getCurrentEvent();
+                    if (evt != null) {
+                        for (forge.gamemodes.net.draft.EventParticipant p : evt.getParticipants()) {
+                            if (p.getSeatIndex() == seatIndex) {
+                                name = p.getName();
+                                break;
+                            }
+                        }
+                    }
+                }
+                forge.screens.deckeditor.controllers.NetworkDraftLog.logOtherPick(name, pickNumber);
+            }
+        });
     }
 
     @Override
     public void onReceiveEventPool(String eventId, forge.deck.DeckGroup pool) {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            // Save the drafted pool to the network event decks storage
-            FModel.getDecks().getNetworkEventDecks().add(pool);
-            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.reset();
-            FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
-                    + pool.getName() + "'.");
+            if (networkDraftEditor != null) {
+                networkDraftEditor.completeDraft(pool);
+                networkDraftEditor = null;
+            } else {
+                // Fallback: save pool directly if no editor was created
+                FModel.getDecks().getNetworkEventDecks().add(pool);
+                forge.gui.FDraftOverlay.SINGLETON_INSTANCE.reset();
+                FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
+                        + pool.getName() + "'.");
+            }
+            lastPackNumber = 0;
         });
     }
 }

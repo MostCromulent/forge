@@ -57,6 +57,8 @@ public final class BoosterDraftHost {
      */
     public synchronized void start() {
         event.setPhase(EventPhase.DRAFTING);
+        FServerManager.getInstance().broadcast(
+                new forge.gamemodes.net.event.EventPhaseChangedEvent(EventPhase.DRAFTING));
         advanceDraft();
     }
 
