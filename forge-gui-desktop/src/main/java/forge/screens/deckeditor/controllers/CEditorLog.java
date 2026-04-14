@@ -32,6 +32,10 @@ public enum CEditorLog implements ICDoc {
         view.addLogEntry(entry);
     }
 
+    public final void addLogEntry(final String message, final java.awt.Color foreground) {
+        view.addLogEntry(message, foreground);
+    }
+
     @Override
     public void register() {
     }

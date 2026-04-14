@@ -137,6 +137,21 @@ public class GameLogPanel extends JPanel {
         addLogEntry(text, null, null);
     }
 
+    public void addLogEntry(final String text, final java.awt.Color foreground) {
+        final boolean useAlternateBackColor = (scrollablePanel.getComponents().length % 2 == 0);
+        final JTextArea tar = createNewLogEntryJTextArea(text, useAlternateBackColor);
+        if (foreground != null) {
+            tar.setForeground(foreground);
+        }
+        final String importantWidthConstraint = "w 10:100%";
+        scrollablePanel.add(tar, importantWidthConstraint);
+        if (isScrollBarVisible) {
+            isScrollBarVisible = false;
+            setVerticalScrollbarVisibility();
+        }
+        forceVerticalScrollbarToMax();
+    }
+
     public void addLogEntry(final String text, final CardView card, final Iterable<PlayerView> viewers) {
         final boolean useAlternateBackColor = (scrollablePanel.getComponents().length % 2 == 0);
         final boolean showCardImages = FModel.getPreferences().getPrefBoolean(FPref.UI_LOG_SHOW_CARD_IMAGES);
