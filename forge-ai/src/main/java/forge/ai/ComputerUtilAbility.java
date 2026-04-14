@@ -17,6 +17,7 @@ import forge.game.card.Card;
 import forge.game.card.CardCollection;
 import forge.game.card.CardCollectionView;
 import forge.game.card.CardLists;
+import forge.game.card.CardPlayOption;
 import forge.game.cost.CostPart;
 import forge.game.cost.CostPayEnergy;
 import forge.game.cost.CostPutCounter;
@@ -74,6 +75,21 @@ public class ComputerUtilAbility {
         all.addAll(player.getCardsIn(ZoneType.Graveyard));
         if (!player.getCardsIn(ZoneType.Library).isEmpty()) {
             all.add(player.getCardsIn(ZoneType.Library).get(0));
+        }
+        // Only consider opponents' library tops if the player has a zone-granting
+        // mayPlay for them (e.g. Xanathar, Windriddle Palaces). Effects like
+        // As Foretold that don't grant zone permissions must not let the AI
+        // cast from opponents' libraries.
+        for (Player p : game.getPlayers()) {
+            if (p != player && !p.getCardsIn(ZoneType.Library).isEmpty()) {
+                Card top = p.getCardsIn(ZoneType.Library).get(0);
+                for (CardPlayOption o : top.mayPlay(player)) {
+                    if (o.grantsZonePermissions()) {
+                        all.add(top);
+                        break;
+                    }
+                }
+            }
         }
         all.addAll(player.getCardsIn(ZoneType.Command));
         all.addAll(game.getCardsIn(ZoneType.Exile));
