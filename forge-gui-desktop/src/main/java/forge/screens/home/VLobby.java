@@ -41,7 +41,10 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.toolbox.FButton;
 import forge.toolbox.FCheckBox;
+import forge.toolbox.FComboBoxPanel;
+import forge.toolbox.FTabbedPane;
 import forge.toolbox.FLabel;
 import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
@@ -78,7 +81,7 @@ public class VLobby implements ILobbyView {
     private final SwingPrefBinders.ComboBox gamesInMatchBinder =
       new SwingPrefBinders.ComboBox(FPref.UI_MATCHES_PER_GAME, gamesInMatch);
     private final JPanel gamesInMatchFrame = new JPanel(new MigLayout("insets 0, gap 0, wrap 2"));
-    private final JPanel constructedFrame = new JPanel(new MigLayout("insets 0, gap 0, wrap 2")); // Main content frame
+    private final JPanel constructedFrame = new JPanel(new MigLayout("insets 0, gap 0, wrap 2, hidemode 3")); // Main content frame
 
     // Variants frame and variables
     private final FPanel variantsPanel = new FPanel(new MigLayout("insets 10, gapx 10"));
@@ -128,11 +131,59 @@ public class VLobby implements ILobbyView {
     private final Vector<Object> humanListData = new Vector<>();
     private final Vector<Object> aiListData = new Vector<>();
 
+    // Mode selector (network only)
+    public enum LobbyMode { CONSTRUCTED, DRAFT, SEALED }
+    private LobbyMode currentMode = LobbyMode.CONSTRUCTED;
+    private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>("Mode:",
+            ImmutableList.of("Constructed", "Draft", "Sealed"));
+
+    // Event config panel (shown as a tab in Draft/Sealed mode)
+    private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 10, gap 5, wrap"));
+    private final FLabel lblEventConfig = new FLabel.Builder().text("No event configured").fontSize(14).build();
+    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text("Configure...").fontSize(12).build();
+    private final FCheckBox cbDeckConformance = new FCheckBox("Deck conformance");
+
+    // Tabbed pane for right panel in Draft/Sealed mode
+    private final FTabbedPane rightTabs = new FTabbedPane();
+
+    // Action buttons for Draft/Sealed mode
+    private final FButton btnStartEvent = new FButton("Start Draft");
+    private final FButton btnStartMatch = new FButton("Start Match");
+
     // CTR
     public VLobby(final GameLobby lobby) {
         this.lobby = lobby;
 
         lblTitle.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2));
+
+        ////////////////////////////////////////////////////////
+        //////////////////// Mode Selector (network only) //////
+        if (lobby.isAllowNetworking()) {
+            cboModePanel.addActionListener(e -> onModeChanged());
+            // Set a larger font on the combo box to match/exceed the variants label
+            for (final java.awt.Component c : cboModePanel.getComponents()) {
+                c.setFont(FSkin.getBoldFont(14).getBaseFont());
+            }
+            constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 2px, spanx 2, wrap");
+        }
+
+        ////////////////////////////////////////////////////////
+        //////////////////// Event Config Panel (network only) /
+        if (lobby.isAllowNetworking()) {
+            eventConfigPanel.setOpaque(true);
+            eventConfigPanel.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2).stepColor(20).getColor());
+            eventConfigPanel.add(lblEventConfig, "wrap, gapbottom 10");
+            if (lobby.hasControl()) {
+                btnConfigure.setCommand(() -> openEventConfigDialog());
+                eventConfigPanel.add(btnConfigure, "w 120px!, h 26px!, wrap, gapbottom 5");
+            }
+            cbDeckConformance.setSelected(true);
+            cbDeckConformance.setEnabled(lobby.hasControl());
+            eventConfigPanel.add(cbDeckConformance, "wrap");
+
+            // Set tab font larger for readability
+            rightTabs.setFont(FSkin.getBoldFont(14).getBaseFont());
+        }
 
         ////////////////////////////////////////////////////////
         //////////////////// Variants Panel ////////////////////
@@ -182,6 +233,17 @@ public class VLobby implements ILobbyView {
             pnlStart.add(btnStart, "align center");
             // Start button event handling
             btnStart.addActionListener(arg0 -> {
+                Runnable startGame = lobby.startGame();
+                if (startGame != null) {
+                    startGame.run();
+                }
+            });
+        }
+        if (lobby.isAllowNetworking() && lobby.hasControl()) {
+            btnStartEvent.setFont(FSkin.getRelativeFont(18));
+            btnStartEvent.addActionListener(e -> startEvent());
+            btnStartMatch.setFont(FSkin.getRelativeFont(18));
+            btnStartMatch.addActionListener(arg0 -> {
                 Runnable startGame = lobby.startGame();
                 if (startGame != null) {
                     startGame.run();
@@ -679,6 +741,108 @@ public class VLobby implements ILobbyView {
         populateDeckPanel(gType);
 
         refreshPanels(true, true);
+    }
+
+    /////////////////////////////////////////////
+    //========== Mode selector methods (network Draft/Sealed)
+
+    public LobbyMode getCurrentMode() {
+        return currentMode;
+    }
+
+    private void onModeChanged() {
+        final String selected = cboModePanel.getSelectedItem();
+        if ("Draft".equals(selected)) {
+            currentMode = LobbyMode.DRAFT;
+        } else if ("Sealed".equals(selected)) {
+            currentMode = LobbyMode.SEALED;
+        } else {
+            currentMode = LobbyMode.CONSTRUCTED;
+        }
+
+        final boolean isLimited = (currentMode != LobbyMode.CONSTRUCTED);
+
+        // Toggle variants panel visibility — it's inside an FScrollPane
+        java.awt.Container scrollPane = variantsPanel.getParent();
+        while (scrollPane != null && !(scrollPane instanceof JScrollPane)) {
+            scrollPane = scrollPane.getParent();
+        }
+        if (scrollPane != null) {
+            scrollPane.setVisible(!isLimited);
+        }
+
+        // Update right panel content
+        updateRightPanelForMode();
+
+        // Update action buttons
+        updateActionButtons();
+
+        constructedFrame.revalidate();
+        constructedFrame.repaint();
+    }
+
+    private void updateRightPanelForMode() {
+        decksFrame.removeAll();
+        if (currentMode == LobbyMode.CONSTRUCTED) {
+            // Restore standard constructed deck chooser
+            populateDeckPanel(lobby.getGameType());
+        } else {
+            // Draft/Sealed mode: tabbed panel with Event Config (default) and Deck Select
+            rightTabs.removeAll();
+            rightTabs.addTab("Event Configuration", eventConfigPanel);
+            if (playerWithFocus < playerPanels.size() && lobby.mayEdit(playerWithFocus)) {
+                final FDeckChooser chooser = getDeckChooser(playerWithFocus);
+                if (chooser != null) {
+                    rightTabs.addTab("Deck Select", chooser);
+                }
+            }
+            rightTabs.setSelectedIndex(0); // Event Config is the default tab
+            decksFrame.add(rightTabs, "w 100%, h 100%, growy, pushy");
+        }
+        decksFrame.revalidate();
+        decksFrame.repaint();
+    }
+
+    private void updateActionButtons() {
+        final boolean isLimited = (currentMode != LobbyMode.CONSTRUCTED);
+
+        // Rebuild pnlStart layout
+        pnlStart.removeAll();
+        pnlStart.setOpaque(false);
+        if (lobby.hasControl()) {
+            if (isLimited) {
+                // In Draft/Sealed mode: event button, Start Match, games-in-match in a single row
+                pnlStart.setLayout(new MigLayout("insets 0, gap 0"));
+                final String label = (currentMode == LobbyMode.DRAFT) ? "Start Draft" : "Generate Pools";
+                btnStartEvent.setText(label);
+                pnlStart.add(btnStartEvent, "w 200px!, h 50px!, gapright 40");
+                pnlStart.add(btnStartMatch, "w 200px!, h 50px!, gapright 10");
+                pnlStart.add(gamesInMatchFrame);
+            } else {
+                // Constructed mode: Start button centered with games-in-match below
+                pnlStart.setLayout(new MigLayout("insets 0, gap 0, wrap 2"));
+                pnlStart.add(btnStart, "align center, spanx 2, wrap");
+                pnlStart.add(gamesInMatchFrame, "spanx 2, align center");
+            }
+        } else {
+            pnlStart.add(gamesInMatchFrame, "spanx 2, align center");
+        }
+        pnlStart.revalidate();
+        pnlStart.repaint();
+    }
+
+    private void startEvent() {
+        if (currentMode == LobbyMode.SEALED) {
+            // Will wire to ServerGameLobby.generateAndDistributeSealedPools()
+        } else if (currentMode == LobbyMode.DRAFT) {
+            // Will wire to ServerGameLobby.startDraft()
+        }
+    }
+
+    private void openEventConfigDialog() {
+        // TODO: Wire to existing booster/product configuration dialog
+        // For now, show a placeholder message
+        FOptionPane.showMessageDialog("Event configuration dialog will be implemented in a later stage.");
     }
 
     /** Saves avatar prefs for players one and two. */

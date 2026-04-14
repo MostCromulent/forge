@@ -14,6 +14,8 @@ import forge.game.GameView;
 import forge.game.IHasGameType;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
+import forge.gamemodes.net.draft.NetworkEvent;
+import forge.gamemodes.net.draft.NetworkEventView;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gui.GuiBase;
 import forge.gui.interfaces.IGuiGame;
@@ -37,6 +39,7 @@ public abstract class GameLobby implements IHasGameType {
     private GameLobbyData data = new GameLobbyData();
     private GameType currentGameType = GameType.Constructed;
     private int lastArchenemy = 0;
+    private NetworkEvent currentEvent;
 
     private IUpdateable listener;
 
@@ -69,6 +72,13 @@ public abstract class GameLobby implements IHasGameType {
     public void setData(final GameLobbyData data) {
         this.data = data;
         updateView(true);
+    }
+
+    public NetworkEvent getCurrentEvent() {
+        return currentEvent;
+    }
+    public void setCurrentEvent(final NetworkEvent event) {
+        this.currentEvent = event;
     }
 
     public GameType getGameType() {
@@ -332,6 +342,11 @@ public abstract class GameLobby implements IHasGameType {
 
     protected final void updateView(final boolean fullUpdate) {
         if (listener != null) {
+            if (currentEvent != null) {
+                data.setEventView(currentEvent.toView());
+            } else {
+                data.setEventView(null);
+            }
             listener.update(fullUpdate);
         }
     }
@@ -547,8 +562,16 @@ public abstract class GameLobby implements IHasGameType {
 
         private final Set<GameType> appliedVariants = EnumSet.noneOf(GameType.class);
         private final List<LobbySlot> slots = Lists.newArrayList();
+        private NetworkEventView eventView;
 
         public GameLobbyData() {
+        }
+
+        public NetworkEventView getEventView() {
+            return eventView;
+        }
+        public void setEventView(final NetworkEventView view) {
+            this.eventView = view;
         }
     }
 }

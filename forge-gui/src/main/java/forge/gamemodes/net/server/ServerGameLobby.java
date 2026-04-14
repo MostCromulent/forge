@@ -3,10 +3,14 @@ package forge.gamemodes.net.server;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.net.draft.EventFormat;
+import forge.gamemodes.net.draft.NetworkEvent;
+import forge.gamemodes.net.event.EventCreatedEvent;
 import forge.gui.interfaces.IGuiGame;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collections;
+import java.util.List;
 
 public final class ServerGameLobby extends GameLobby {
 
@@ -81,5 +85,23 @@ public final class ServerGameLobby extends GameLobby {
 
     @Override
     protected void onGameStarted() {
+    }
+
+    public synchronized void createEvent(EventFormat format) {
+        NetworkEvent event = new NetworkEvent(format);
+        setCurrentEvent(event);
+        FServerManager.getInstance().broadcast(new EventCreatedEvent(event.toView()));
+        updateView(true);
+    }
+
+    public synchronized void configureEvent(List<String> boosterConfig, int pickTimerSeconds,
+            String productDescription, boolean deckConformance) {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return;
+        event.setBoosterConfiguration(boosterConfig);
+        event.setPickTimerSeconds(pickTimerSeconds);
+        event.setProductDescription(productDescription);
+        event.setDeckConformance(deckConformance);
+        updateView(true);
     }
 }

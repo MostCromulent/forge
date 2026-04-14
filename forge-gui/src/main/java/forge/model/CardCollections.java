@@ -47,6 +47,7 @@ public class CardCollections {
     private IStorage<Deck> brawl;
     private IStorage<Deck> genetic;
     private IStorage<Deck> customStarter;
+    private IStorage<DeckGroup> networkEvent;
 
     public CardCollections() {
     }
@@ -163,5 +164,14 @@ public class CardCollections {
                     new DeckStorage(new File(ForgeConstants.CUSTOM_STARTER_DECK_DIR), ForgeConstants.USER_CUSTOM_DIR));
         }
         return customStarter;
+    }
+
+    public final IStorage<DeckGroup> getNetworkEventDecks() {
+        if (networkEvent == null) {
+            networkEvent = new StorageImmediatelySerialized<>("Network event deck sets",
+                    new DeckGroupSerializer(new File(ForgeConstants.DECK_NET_EVENT_DIR),
+                            ForgeConstants.DECK_BASE_DIR));
+        }
+        return networkEvent;
     }
 }

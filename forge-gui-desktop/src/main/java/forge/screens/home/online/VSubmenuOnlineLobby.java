@@ -106,7 +106,7 @@ public enum VSubmenuOnlineLobby implements IVSubmenu<CSubmenuOnlineLobby>, IOnli
             fdc.getDecksComboBox().addListener(ev -> lobby.focusOnAvatar());
         }
 
-        container.add(lobby.getConstructedFrame(), "gap 20px 20px 20px 0px, push, grow");
+        container.add(lobby.getConstructedFrame(), "gap 20px 20px 10px 0px, push, grow");
         container.add(lobby.getPanelStart(), "gap 0 0 3.5%! 3.5%!, ax center");
 
         if (container.isShowing()) {

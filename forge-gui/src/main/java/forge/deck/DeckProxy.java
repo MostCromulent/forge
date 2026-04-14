@@ -697,6 +697,16 @@ public class DeckProxy implements InventoryItem {
     }
 
     @SuppressWarnings("unchecked")
+    public static List<DeckProxy> getAllNetworkEventDecks() {
+        final List<DeckProxy> decks = new ArrayList<>();
+        final IStorage<DeckGroup> networkEvent = FModel.getDecks().getNetworkEventDecks();
+        for (final DeckGroup d : networkEvent) {
+            decks.add(new DeckProxy(d, "Draft", ((Function<IHasName, Deck>)(Object) (Function<DeckGroup, Deck>) DeckGroup::getHumanDeck), GameType.Draft, networkEvent));
+        }
+        return decks;
+    }
+
+    @SuppressWarnings("unchecked")
     public static List<DeckProxy> getWinstonDecks(final IStorage<DeckGroup> draft) {
         final List<DeckProxy> decks = new ArrayList<>();
         for (final DeckGroup d : draft) {

@@ -96,6 +96,15 @@ public final class FServerManager implements IHasForgeLog {
         return clients.get(ch);
     }
 
+    public RemoteClient getClientByName(String name) {
+        for (RemoteClient client : clients.values()) {
+            if (name.equals(client.getUsername())) {
+                return client;
+            }
+        }
+        return null;
+    }
+
     IGameController getController(final int index) {
         return localLobby.getController(index);
     }
@@ -874,6 +883,9 @@ public final class FServerManager implements IHasForgeLog {
                 }
             } else if (msg instanceof UpdateLobbyPlayerEvent event) {
                 updateSlot(client.getIndex(), event);
+            } else if (msg instanceof DraftPickEvent) {
+                // Will be wired to BoosterDraftHost when it's implemented
+                return;
             }
             // Note: MessageEvent is handled by MessageHandler, not here
             // to avoid duplicate display on host's chat
