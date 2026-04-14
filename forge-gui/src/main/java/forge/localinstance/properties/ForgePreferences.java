@@ -293,6 +293,7 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_ZONE_DOCK_ZONES_OTHER(""),
 
         CHAT_WINDOW_LOC(""),
+        DRAFT_OVERLAY_LOC(""),
 
         SHORTCUT_SHOWSTACK ("83"),
         SHORTCUT_SHOWCOMBAT ("67"),

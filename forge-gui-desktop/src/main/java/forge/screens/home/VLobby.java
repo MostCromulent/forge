@@ -835,7 +835,67 @@ public class VLobby implements ILobbyView {
         if (currentMode == LobbyMode.SEALED) {
             // Will wire to ServerGameLobby.generateAndDistributeSealedPools()
         } else if (currentMode == LobbyMode.DRAFT) {
-            // Will wire to ServerGameLobby.startDraft()
+            if (!(lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby)) {
+                return;
+            }
+            forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
+            if (event == null) {
+                FOptionPane.showErrorDialog("No event configured. Use Draft mode and wait for players.");
+                return;
+            }
+
+            // Build participant info from event
+            java.util.List<forge.gamemodes.net.draft.EventParticipant> participants = event.getParticipants();
+            int podSize = participants.size();
+            if (podSize < 2) {
+                FOptionPane.showErrorDialog("Need at least 2 participants to start a draft.");
+                return;
+            }
+
+            // Create a draft with deferred initialization so we can configure seats first
+            forge.gamemodes.limited.BoosterDraft draft =
+                    forge.gamemodes.limited.BoosterDraft.createDraftForNetwork(
+                            forge.gamemodes.limited.LimitedPoolType.Full);
+            if (draft == null) {
+                FOptionPane.showErrorDialog("Failed to create draft.");
+                return;
+            }
+
+            // Configure pod size and mark human seats before distributing boosters
+            if (podSize != draft.getPodSize()) {
+                draft.setPodSize(podSize);
+            }
+            java.util.Set<Integer> humanSeats = new java.util.HashSet<>();
+            for (forge.gamemodes.net.draft.EventParticipant p : participants) {
+                if (p.isHuman()) {
+                    humanSeats.add(p.getSeatIndex());
+                }
+            }
+            draft.setHumanSeats(humanSeats);
+            draft.initializeBoosters();
+
+            // Determine host seat index
+            String hostName = forge.model.FModel.getPreferences().getPref(
+                    forge.localinstance.properties.ForgePreferences.FPref.PLAYER_NAME);
+            int mySeat = 0;
+            String[] names = new String[podSize];
+            boolean[] aiFlags = new boolean[podSize];
+            for (forge.gamemodes.net.draft.EventParticipant p : participants) {
+                int seat = p.getSeatIndex();
+                if (seat >= 0 && seat < podSize) {
+                    names[seat] = p.getName();
+                    aiFlags[seat] = p.isAI();
+                    if (p.isHuman() && p.getName().equals(hostName)) {
+                        mySeat = seat;
+                    }
+                }
+            }
+
+            int totalPacks = draft.getNumRounds();
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.initDraft(mySeat, names, aiFlags, totalPacks);
+
+            // Start the draft — this sends packs to humans (including host via lobbyListener)
+            serverLobby.startDraft(draft);
         }
     }
 
@@ -1068,5 +1128,30 @@ public class VLobby implements ILobbyView {
         if (-1 == vgdList.getSelectedIndex()) {
             vgdList.setSelectedIndex(0);
         }
+    }
+
+    /////////////////////////////////////////////
+    //========== ILobbyView draft callbacks (network draft/sealed)
+
+    @Override
+    public void onDraftPackArrived(int seatIndex, java.util.List<PaperCard> pack,
+            int packNumber, int pickNumber, int timerDurationSeconds) {
+        forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, timerDurationSeconds);
+    }
+
+    @Override
+    public void onDraftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) {
+        forge.gui.FDraftOverlay.SINGLETON_INSTANCE.onSeatPicked(seatIndex, seatQueueDepths);
+    }
+
+    @Override
+    public void onReceiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            // Save the drafted pool to the network event decks storage
+            FModel.getDecks().getNetworkEventDecks().add(pool);
+            forge.gui.FDraftOverlay.SINGLETON_INSTANCE.reset();
+            FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
+                    + pool.getName() + "'.");
+        });
     }
 }

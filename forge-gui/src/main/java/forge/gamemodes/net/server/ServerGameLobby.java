@@ -1,10 +1,13 @@
 package forge.gamemodes.net.server;
 
+import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.net.draft.BoosterDraftHost;
 import forge.gamemodes.net.draft.EventFormat;
 import forge.gamemodes.net.draft.NetworkEvent;
+import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
 import forge.gui.interfaces.IGuiGame;
 import org.apache.commons.lang3.StringUtils;
@@ -13,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class ServerGameLobby extends GameLobby {
+    private BoosterDraftHost draftHost;
 
     public ServerGameLobby() {
         super(true);
@@ -103,5 +107,37 @@ public final class ServerGameLobby extends GameLobby {
         event.setProductDescription(productDescription);
         event.setDeckConformance(deckConformance);
         updateView(true);
+    }
+
+    /**
+     * Start a network draft using the given BoosterDraft instance.
+     * The draft must already have been created and initialized via
+     * {@link BoosterDraft#createDraft}.
+     *
+     * @param draft the initialized BoosterDraft
+     */
+    public synchronized void startDraft(BoosterDraft draft) {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) {
+            System.err.println("[ServerGameLobby] Cannot start draft: no event configured");
+            return;
+        }
+        draftHost = new BoosterDraftHost(draft, event);
+        draftHost.start();
+    }
+
+    /**
+     * Route an incoming draft pick from a client to the draft host.
+     */
+    public synchronized void handleDraftPick(DraftPickEvent pickEvent) {
+        if (draftHost == null) {
+            System.err.println("[ServerGameLobby] No draft in progress");
+            return;
+        }
+        draftHost.handlePick(pickEvent.getSeatIndex(), pickEvent.getCard());
+    }
+
+    public BoosterDraftHost getDraftHost() {
+        return draftHost;
     }
 }

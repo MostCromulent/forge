@@ -81,6 +81,19 @@ public class NetConnectUtil {
             public ClientGameLobby getLobby() {
                 return null;
             }
+            @Override
+            public void draftPackArrived(int seatIndex, java.util.List<forge.item.PaperCard> pack,
+                    int packNumber, int pickNumber, int timerDurationSeconds) {
+                view.onDraftPackArrived(seatIndex, pack, packNumber, pickNumber, timerDurationSeconds);
+            }
+            @Override
+            public void draftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) {
+                view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
+            }
+            @Override
+            public void receiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+                view.onReceiveEventPool(eventId, pool);
+            }
         });
         chatInterface.setGameClient(new IRemote() {
             @Override
@@ -188,6 +201,19 @@ public class NetConnectUtil {
             @Override
             public ClientGameLobby getLobby() {
                 return lobby;
+            }
+            @Override
+            public void draftPackArrived(int seatIndex, java.util.List<forge.item.PaperCard> pack,
+                    int packNumber, int pickNumber, int timerDurationSeconds) {
+                view.onDraftPackArrived(seatIndex, pack, packNumber, pickNumber, timerDurationSeconds);
+            }
+            @Override
+            public void draftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) {
+                view.onDraftSeatPicked(seatIndex, pickNumber, seatQueueDepths);
+            }
+            @Override
+            public void receiveEventPool(String eventId, forge.deck.DeckGroup pool) {
+                view.onReceiveEventPool(eventId, pool);
             }
         });
         view.setPlayerChangeListener((index, event) -> client.send(event));

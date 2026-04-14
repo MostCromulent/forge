@@ -394,6 +394,10 @@ public final class FServerManager implements IHasForgeLog {
         this.lobbyListener = listener;
     }
 
+    public ILobbyListener getLobbyListener() {
+        return lobbyListener;
+    }
+
     public void updateLobbyState() {
         final LobbyUpdateEvent event = new LobbyUpdateEvent(localLobby.getData());
         broadcast(event);
@@ -883,8 +887,10 @@ public final class FServerManager implements IHasForgeLog {
                 }
             } else if (msg instanceof UpdateLobbyPlayerEvent event) {
                 updateSlot(client.getIndex(), event);
-            } else if (msg instanceof DraftPickEvent) {
-                // Will be wired to BoosterDraftHost when it's implemented
+            } else if (msg instanceof DraftPickEvent pickEvent) {
+                if (localLobby != null) {
+                    localLobby.handleDraftPick(pickEvent);
+                }
                 return;
             }
             // Note: MessageEvent is handled by MessageHandler, not here

@@ -191,6 +191,19 @@ public class FGameClient implements IToServer, IHasForgeLog {
                     listener.receiveEventPool(event.getEventId(), event.getPool());
                 }
                 return;
+            } else if (msg instanceof DraftPackArrivedEvent event) {
+                for (final ILobbyListener listener : lobbyListeners) {
+                    listener.draftPackArrived(event.getSeatIndex(), event.getPack(),
+                            event.getPackNumber(), event.getPickNumber(),
+                            event.getTimerDurationSeconds());
+                }
+                return;
+            } else if (msg instanceof DraftSeatPickedEvent event) {
+                for (final ILobbyListener listener : lobbyListeners) {
+                    listener.draftSeatPicked(event.getSeatIndex(), event.getPickNumber(),
+                            event.getSeatQueueDepths());
+                }
+                return;
             }
             super.channelRead(ctx, msg);
         }

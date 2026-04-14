@@ -88,6 +88,22 @@ public class BoosterDraft implements IBoosterDraft {
         return draft;
     }
 
+    /**
+     * Create a draft for network play. Product is generated but boosters are NOT
+     * initialized — the caller must configure pod size and human seats, then call
+     * {@link #initializeBoosters()} manually.
+     *
+     * @param draftType the draft pool type
+     * @return a partially-initialized draft, or null if product generation fails
+     */
+    public static BoosterDraft createDraftForNetwork(final LimitedPoolType draftType) {
+        final BoosterDraft draft = new BoosterDraft(draftType);
+        if (!draft.generateProduct()) {
+            return null;
+        }
+        return draft;
+    }
+
     protected boolean generateProduct() {
         switch (this.draftFormat) {
             case Full: // Draft from all cards in Forge
@@ -347,6 +363,29 @@ public class BoosterDraft implements IBoosterDraft {
         while (this.players.size() > this.podSize) {
             this.players.remove(this.players.size() - 1);
         }
+    }
+
+    /**
+     * Replace AI players at the given seat indices with human {@link LimitedPlayer} instances.
+     * Used by network draft to mark remote human seats. Must be called before
+     * {@link #initializeBoosters()}.
+     *
+     * @param humanSeats seat indices (0-based) that should be human-controlled
+     */
+    public void setHumanSeats(java.util.Set<Integer> humanSeats) {
+        for (int seat : humanSeats) {
+            if (seat < 0 || seat >= players.size()) {
+                continue;
+            }
+            if (players.get(seat) instanceof LimitedPlayerAI) {
+                players.set(seat, new LimitedPlayer(seat, this));
+            }
+        }
+    }
+
+    /** Returns the total number of booster rounds in this draft. */
+    public int getNumRounds() {
+        return product.size();
     }
 
     public int getPodSize() {
