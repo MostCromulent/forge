@@ -20,4 +20,6 @@ public interface ILobbyView extends IUpdateable {
     default void onDraftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) { }
     /** Called when the draft is complete and the player receives their pool. */
     default void onReceiveEventPool(String eventId, Deck pool) { }
+    /** Called when the host selects an event for match play. */
+    default void onSelectEventForMatch(String eventId, boolean deckConformance) { }
 }

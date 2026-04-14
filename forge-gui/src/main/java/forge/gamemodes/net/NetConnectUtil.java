@@ -98,6 +98,10 @@ public class NetConnectUtil {
             public void receiveEventPool(String eventId, forge.deck.Deck pool) {
                 view.onReceiveEventPool(eventId, pool);
             }
+            @Override
+            public void selectEventForMatch(String eventId, boolean deckConformance) {
+                view.onSelectEventForMatch(eventId, deckConformance);
+            }
         });
         chatInterface.setGameClient(new IRemote() {
             @Override
@@ -222,6 +226,10 @@ public class NetConnectUtil {
             @Override
             public void receiveEventPool(String eventId, forge.deck.Deck pool) {
                 view.onReceiveEventPool(eventId, pool);
+            }
+            @Override
+            public void selectEventForMatch(String eventId, boolean deckConformance) {
+                view.onSelectEventForMatch(eventId, deckConformance);
             }
         });
         view.setPlayerChangeListener((index, event) -> client.send(event));

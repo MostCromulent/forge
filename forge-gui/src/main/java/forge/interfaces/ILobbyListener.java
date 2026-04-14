@@ -17,4 +17,5 @@ public interface ILobbyListener {
             int packNumber, int pickNumber, int timerDurationSeconds) { }
     default void draftSeatPicked(int seatIndex, int pickNumber, int[] seatQueueDepths) { }
     default void receiveEventPool(String eventId, forge.deck.Deck pool) { }
+    default void selectEventForMatch(String eventId, boolean deckConformance) { }
 }

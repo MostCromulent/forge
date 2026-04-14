@@ -44,7 +44,6 @@ import forge.model.FModel;
 import forge.toolbox.FButton;
 import forge.toolbox.FCheckBox;
 import forge.toolbox.FComboBoxPanel;
-import forge.toolbox.FTabbedPane;
 import forge.toolbox.FLabel;
 import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
@@ -137,14 +136,24 @@ public class VLobby implements ILobbyView {
     private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>("Mode:",
             ImmutableList.of("Constructed", "Draft", "Sealed"));
 
-    // Event config panel (shown as a tab in Draft/Sealed mode)
+    // Event config panel (top of right panel in Draft/Sealed mode)
     private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 10, gap 5, wrap"));
-    private final FLabel lblEventConfig = new FLabel.Builder().text("No event configured").fontSize(14).build();
+    private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(12).build();
+    private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(12).build();
+    private final FLabel lblClientEventStatus = new FLabel.Builder().text("Waiting for host to select an event...").fontSize(12).build();
     private final FLabel btnConfigure = new FLabel.ButtonBuilder().text("Configure...").fontSize(12).build();
     private final FCheckBox cbDeckConformance = new FCheckBox("Deck conformance");
 
-    // Tabbed pane for right panel in Draft/Sealed mode
-    private final FTabbedPane rightTabs = new FTabbedPane();
+    // Split panel for right side in Draft/Sealed mode
+    private final FPanel eventRightPanel = new FPanel(new MigLayout("insets 0, gap 0, wrap, fill"));
+
+    // Event dropdown (host selects completed events from local deck files)
+    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>("Event:");
+
+    // Active event state
+    private String activeEventId;
+    private boolean activeConformance = true;
+    private java.util.List<String> eventIdsByDropdownIndex = new java.util.ArrayList<>();
 
     // Action buttons for Draft/Sealed mode
     private final FButton btnStartEvent = new FButton("Start Draft");
@@ -177,17 +186,25 @@ public class VLobby implements ILobbyView {
         if (lobby.isAllowNetworking()) {
             eventConfigPanel.setOpaque(true);
             eventConfigPanel.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2).stepColor(20).getColor());
-            eventConfigPanel.add(lblEventConfig, "wrap, gapbottom 10");
-            if (lobby.hasControl()) {
-                btnConfigure.setCommand(() -> openEventConfigDialog());
-                eventConfigPanel.add(btnConfigure, "w 120px!, h 26px!, wrap, gapbottom 5");
-            }
-            cbDeckConformance.setSelected(true);
-            cbDeckConformance.setEnabled(lobby.hasControl());
-            eventConfigPanel.add(cbDeckConformance, "wrap");
 
-            // Set tab font larger for readability
-            rightTabs.setFont(FSkin.getBoldFont(14).getBaseFont());
+            if (lobby.hasControl()) {
+                cboEventSelect.addActionListener(e -> onEventDropdownChanged());
+                eventConfigPanel.add(cboEventSelect, "w 100%, wrap");
+                eventConfigPanel.add(lblEventFormat, "wrap");
+                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 5");
+                btnConfigure.setCommand(() -> openEventConfigDialog());
+                eventConfigPanel.add(btnConfigure, "w 120px!, h 26px!, split 2");
+                cbDeckConformance.setSelected(true);
+                cbDeckConformance.addActionListener(e -> onConformanceChanged());
+                eventConfigPanel.add(cbDeckConformance, "wrap");
+            } else {
+                eventConfigPanel.add(lblClientEventStatus, "wrap");
+                eventConfigPanel.add(lblEventFormat, "wrap");
+                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 5");
+                cbDeckConformance.setSelected(true);
+                cbDeckConformance.setEnabled(false);
+                eventConfigPanel.add(cbDeckConformance, "wrap");
+            }
         }
 
         ////////////////////////////////////////////////////////
@@ -802,20 +819,24 @@ public class VLobby implements ILobbyView {
     private void updateRightPanelForMode() {
         decksFrame.removeAll();
         if (currentMode == LobbyMode.CONSTRUCTED) {
-            // Restore standard constructed deck chooser
             populateDeckPanel(lobby.getGameType());
         } else {
-            // Draft/Sealed mode: tabbed panel with Event Config (default) and Deck Select
-            rightTabs.removeAll();
-            rightTabs.addTab("Event Configuration", eventConfigPanel);
+            eventRightPanel.removeAll();
+            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap");
+
             if (playerWithFocus < playerPanels.size() && lobby.mayEdit(playerWithFocus)) {
                 final FDeckChooser chooser = getDeckChooser(playerWithFocus);
                 if (chooser != null) {
-                    rightTabs.addTab("Deck Select", chooser);
+                    eventRightPanel.add(chooser, "w 100%, h 100%, grow, push");
                 }
             }
-            rightTabs.setSelectedIndex(0); // Event Config is the default tab
-            decksFrame.add(rightTabs, "w 100%, h 100%, growy, pushy");
+
+            decksFrame.add(eventRightPanel, "w 100%, h 100%, growy, pushy");
+
+            if (lobby.hasControl()) {
+                populateEventDropdown();
+            }
+            updateDeckListFilter();
         }
         decksFrame.revalidate();
         decksFrame.repaint();
@@ -977,23 +998,117 @@ public class VLobby implements ILobbyView {
     private void updateEventConfigDisplay() {
         forge.gamemodes.net.draft.NetworkEvent event = lobby.getCurrentEvent();
         if (event == null) {
-            lblEventConfig.setText("No event configured");
+            lblEventFormat.setText("");
+            lblEventProduct.setText("");
             return;
         }
-        StringBuilder sb = new StringBuilder();
-        sb.append(event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
-                ? "Draft" : "Sealed");
-        sb.append(" - ");
+        String format = event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
+                ? "Draft" : "Sealed";
+        if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
+            format += " (" + event.getPickTimerSeconds() + "s timer)";
+        }
+        lblEventFormat.setText("Format: " + format);
+
         String desc = event.getProductDescription();
         if (desc != null && !desc.isEmpty()) {
-            sb.append(desc);
+            lblEventProduct.setText("Product: " + desc);
         } else {
-            sb.append(event.getPoolType().toString());
+            lblEventProduct.setText("Product: " + event.getPoolType().toString());
         }
-        if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
-            sb.append(" (").append(event.getPickTimerSeconds()).append("s timer)");
+    }
+
+    private void populateEventDropdown() {
+        cboEventSelect.removeAllItems();
+        java.util.Map<String, String> eventLabels = new java.util.LinkedHashMap<>();
+
+        for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
+            String eventId = null;
+            String format = "";
+            String product = "";
+            String date = "";
+            for (String tag : d.getTags()) {
+                if (tag.startsWith("eventId:")) eventId = tag.substring(8);
+                else if (tag.startsWith("eventFormat:")) format = tag.substring(12);
+                else if (tag.startsWith("eventProduct:")) product = tag.substring(13);
+                else if (tag.startsWith("eventDate:")) date = tag.substring(10);
+            }
+            if (eventId != null && !eventLabels.containsKey(eventId)) {
+                eventLabels.put(eventId, format + " - " + product + " (" + date + ")");
+            }
         }
-        lblEventConfig.setText(sb.toString());
+
+        eventIdsByDropdownIndex = new java.util.ArrayList<>(eventLabels.keySet());
+
+        if (eventLabels.isEmpty()) {
+            cboEventSelect.addItem("No completed events");
+        } else {
+            cboEventSelect.addItem("Select event...");
+            for (String label : eventLabels.values()) {
+                cboEventSelect.addItem(label);
+            }
+        }
+    }
+
+    private void onEventDropdownChanged() {
+        int idx = cboEventSelect.getSelectedIndex();
+        if (idx <= 0 || idx > eventIdsByDropdownIndex.size()) {
+            activeEventId = null;
+            lblEventFormat.setText("");
+            lblEventProduct.setText("");
+        } else {
+            activeEventId = eventIdsByDropdownIndex.get(idx - 1);
+            updateEventInfoLabels(activeEventId);
+        }
+        updateDeckListFilter();
+        broadcastEventSelection();
+    }
+
+    private void onConformanceChanged() {
+        activeConformance = cbDeckConformance.isSelected();
+        updateDeckListFilter();
+        broadcastEventSelection();
+    }
+
+    private void broadcastEventSelection() {
+        if (lobby.hasControl()) {
+            forge.gamemodes.net.server.FServerManager.getInstance().broadcast(
+                    new forge.gamemodes.net.event.SelectEventForMatchEvent(activeEventId, activeConformance));
+        }
+    }
+
+    private void updateEventInfoLabels(String eventId) {
+        for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
+            for (String tag : d.getTags()) {
+                if (tag.equals("eventId:" + eventId)) {
+                    for (String t : d.getTags()) {
+                        if (t.startsWith("eventFormat:")) lblEventFormat.setText("Format: " + t.substring(12));
+                        if (t.startsWith("eventProduct:")) lblEventProduct.setText("Product: " + t.substring(13));
+                    }
+                    return;
+                }
+            }
+        }
+    }
+
+    private void updateDeckListFilter() {
+        if (currentMode == LobbyMode.CONSTRUCTED) return;
+        if (playerWithFocus >= playerPanels.size() || !lobby.mayEdit(playerWithFocus)) return;
+
+        final FDeckChooser chooser = getDeckChooser(playerWithFocus);
+        if (chooser == null) return;
+
+        java.util.List<DeckProxy> allDecks = new java.util.ArrayList<>(
+                DeckProxy.getAllNetworkEventDecks());
+
+        if (activeConformance && activeEventId != null) {
+            allDecks.removeIf(dp -> {
+                Deck d = dp.getDeck();
+                return d == null || !d.getTags().contains("eventId:" + activeEventId);
+            });
+        }
+
+        chooser.getLstDecks().setPool(allDecks);
+        chooser.getLstDecks().setup(forge.itemmanager.ItemManagerConfig.SEALED_DECKS);
     }
 
     /** Saves avatar prefs for players one and two. */
@@ -1350,13 +1465,45 @@ public class VLobby implements ILobbyView {
                 networkDraftEditor.completeDraft(pool);
                 networkDraftEditor = null;
             } else {
-                // Fallback: save pool directly if no editor was created
                 FModel.getDecks().getNetworkEventDecks().add(pool);
                 forge.gui.FDraftOverlay.SINGLETON_INSTANCE.reset();
                 FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
                         + pool.getName() + "'.");
             }
             lastPackNumber = 0;
+
+            activeEventId = eventId;
+            activeConformance = true;
+            if (lobby.hasControl()) {
+                populateEventDropdown();
+                for (int i = 0; i < eventIdsByDropdownIndex.size(); i++) {
+                    if (eventIdsByDropdownIndex.get(i).equals(eventId)) {
+                        cboEventSelect.setSelectedIndex(i + 1);
+                        break;
+                    }
+                }
+                broadcastEventSelection();
+            }
+            updateRightPanelForMode();
+        });
+    }
+
+    @Override
+    public void onSelectEventForMatch(String eventId, boolean deckConformance) {
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            activeEventId = eventId;
+            activeConformance = deckConformance;
+            cbDeckConformance.setSelected(deckConformance);
+
+            if (eventId != null) {
+                updateEventInfoLabels(eventId);
+                lblClientEventStatus.setText("Event selected");
+            } else {
+                lblEventFormat.setText("");
+                lblEventProduct.setText("");
+                lblClientEventStatus.setText("Waiting for host to select an event...");
+            }
+            updateDeckListFilter();
         });
     }
 }

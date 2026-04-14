@@ -38,6 +38,11 @@ public class FComboBoxPanel<E> extends JPanel {
         comboBoxCaption = comboBoxCaption0;
         flowLayout = flowLayout0;
         applyLayoutAndSkin();
+        // Create empty combo box so methods like addItem work immediately
+        if (comboBox == null) {
+            comboBox = new FComboBox<>();
+            setComboBoxLayout();
+        }
         allPanels.add(this);
     }
 
@@ -109,6 +114,22 @@ public class FComboBoxPanel<E> extends JPanel {
 
     public E getSelectedItem() {
         return comboBox.getSelectedItem();
+    }
+
+    public int getSelectedIndex() {
+        return comboBox.getSelectedIndex();
+    }
+
+    public void setSelectedIndex(final int index) {
+        comboBox.setSelectedIndex(index);
+    }
+
+    public void addItem(final E item) {
+        comboBox.addItem(item);
+    }
+
+    public void removeAllItems() {
+        comboBox.removeAllItems();
     }
 
     private void refreshSkin() {
