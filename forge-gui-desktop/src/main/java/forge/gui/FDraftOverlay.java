@@ -6,6 +6,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
 
+import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
@@ -41,7 +43,10 @@ public enum FDraftOverlay {
     // --- Swing components ---
     private final FSkin.SkinnedLabel lblPackInfo  = new FSkin.SkinnedLabel("");
     private final FSkin.SkinnedLabel lblTimer     = new FSkin.SkinnedLabel("");
-    private final FSkin.SkinnedLabel lblNeighbors = new FSkin.SkinnedLabel("");
+    private final JPanel pnlNeighbors = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 2, 0));
+
+    // Card back icon for pack indicators
+    private static javax.swing.ImageIcon cardBackIcon;
 
     // --- Draft state ---
     private String   leftName, rightName;
@@ -107,27 +112,27 @@ public enum FDraftOverlay {
 
         lblPackInfo.setFont(boldFont);
         lblTimer.setFont(boldFont);
-        lblNeighbors.setFont(boldFont);
 
         if (textColor != null) {
             lblPackInfo.setForeground(textColor);
             lblTimer.setForeground(textColor);
-            lblNeighbors.setForeground(textColor);
         }
 
         lblPackInfo.setHorizontalAlignment(SwingConstants.LEFT);
         lblTimer.setHorizontalAlignment(SwingConstants.RIGHT);
-        lblNeighbors.setHorizontalAlignment(SwingConstants.CENTER);
 
         lblPackInfo.setOpaque(false);
         lblTimer.setOpaque(false);
-        lblNeighbors.setOpaque(false);
+        pnlNeighbors.setOpaque(false);
 
         // Row 1: pack info on the left, timer on the right
         window.add(lblPackInfo,  "pushx, growx, gapleft 4");
         window.add(lblTimer,     "pushx, growx, gapright 4, al right");
         // Row 2: neighbor strip spans both columns
-        window.add(lblNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4");
+        window.add(pnlNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4");
+
+        // Load card back icon (scaled to small size)
+        loadCardBackIcon();
     }
 
     // -------------------------------------------------------------------------
@@ -225,12 +230,13 @@ public enum FDraftOverlay {
         waitingForPack = false;
         lblPackInfo.setText("");
         lblTimer.setText("");
-        lblNeighbors.setText("");
+        pnlNeighbors.removeAll();
         hide();
     }
 
     public void hide() {
         window.setVisible(false);
+        forge.screens.home.online.OnlineMenu.draftItem.setState(false);
     }
 
     public void show() {
@@ -240,11 +246,12 @@ public enum FDraftOverlay {
             window.getTitleBar().addMouseListener(new FMouseAdapter() {
                 @Override
                 public void onLeftDoubleClick(MouseEvent e) {
-                    window.setVisible(false); // hide on title-bar double-click
+                    hide();
                 }
             });
         }
         window.setVisible(true);
+        forge.screens.home.online.OnlineMenu.draftItem.setState(true);
     }
 
     // -------------------------------------------------------------------------
@@ -278,7 +285,7 @@ public enum FDraftOverlay {
 
         // Row 2 – neighbor strip
         if (leftName != null && rightName != null) {
-            lblNeighbors.setText(buildNeighborText());
+            buildNeighborPanel();
         }
 
         window.revalidate();
@@ -336,7 +343,9 @@ public enum FDraftOverlay {
      *
      * Pack icons appear on the INCOMING side of the seat they are waiting on.
      */
-    private String buildNeighborText() {
+    private void buildNeighborPanel() {
+        pnlNeighbors.removeAll();
+
         int podSize  = queueDepths.length;
         int leftIdx  = podSize > 0 ? (mySeat - 1 + podSize) % podSize : 0;
         int rightIdx = podSize > 0 ? (mySeat + 1) % podSize : 0;
@@ -347,44 +356,62 @@ public enum FDraftOverlay {
 
         String leftLabel  = leftName  + (leftAI  ? " (AI)" : "");
         String rightLabel = rightName + (rightAI ? " (AI)" : "");
-        String myLabel    = "YOU";
-
-        String arrow = passingRight ? "\u2192" : "\u2190";
-
-        // Pack icons: [P] repeated by depth; 0 depth shows nothing (pick submitted)
-        String leftPacks  = packIcons(leftDepth);
-        String myPacks    = packIcons(myDepth);
-        String rightPacks = packIcons(rightDepth);
+        String arrow = passingRight ? " \u2192 " : " \u2190 ";
 
         if (passingRight) {
-            // Packs travel: left → you → right
-            // Incoming to left = from the seat further left (not shown), outgoing shown on right of left
-            // Incoming to you  = from left (shown right of leftLabel)
-            // Incoming to right = from you (shown left of rightLabel, right of arrow)
-            return leftLabel + " " + leftPacks
-                    + "  " + arrow + "  "
-                    + myPacks + " " + myLabel
-                    + "  " + arrow + "  "
-                    + rightPacks + " " + rightLabel;
+            pnlNeighbors.add(makeTextLabel(leftLabel + " "));
+            addPackIcons(leftDepth);
+            pnlNeighbors.add(makeTextLabel(arrow));
+            addPackIcons(myDepth);
+            pnlNeighbors.add(makeTextLabel(" YOU" + arrow));
+            addPackIcons(rightDepth);
+            pnlNeighbors.add(makeTextLabel(" " + rightLabel));
         } else {
-            // Packs travel: right → you → left
-            return leftLabel + " " + leftPacks
-                    + "  " + arrow + "  "
-                    + myLabel + " " + myPacks
-                    + "  " + arrow + "  "
-                    + rightLabel + " " + rightPacks;
+            pnlNeighbors.add(makeTextLabel(leftLabel + " "));
+            addPackIcons(leftDepth);
+            pnlNeighbors.add(makeTextLabel(arrow + "YOU "));
+            addPackIcons(myDepth);
+            pnlNeighbors.add(makeTextLabel(arrow + rightLabel + " "));
+            addPackIcons(rightDepth);
+        }
+
+        pnlNeighbors.revalidate();
+        pnlNeighbors.repaint();
+    }
+
+    private static void loadCardBackIcon() {
+        if (cardBackIcon != null) return;
+        try {
+            java.awt.image.BufferedImage img = forge.ImageCache.getOriginalImage(
+                    forge.ImageKeys.getTokenKey(forge.ImageKeys.HIDDEN_CARD), true, null);
+            if (img != null) {
+                java.awt.Image scaled = img.getScaledInstance(14, 20, java.awt.Image.SCALE_SMOOTH);
+                cardBackIcon = new javax.swing.ImageIcon(scaled);
+            }
+        } catch (Exception e) {
+            // Fallback: icon stays null, text "[P]" will be used
         }
     }
 
-    /** Returns a string of [P] icons, one per pack queued. Empty string when depth is 0. */
-    private static String packIcons(int depth) {
-        if (depth <= 0) { return ""; }
-        StringBuilder sb = new StringBuilder();
+    private void addPackIcons(int depth) {
         for (int i = 0; i < depth; i++) {
-            if (i > 0) { sb.append(' '); }
-            sb.append("[P]");
+            if (cardBackIcon != null) {
+                JLabel icon = new JLabel(cardBackIcon);
+                icon.setOpaque(false);
+                pnlNeighbors.add(icon);
+            } else {
+                pnlNeighbors.add(makeTextLabel("[P]"));
+            }
         }
-        return sb.toString();
+    }
+
+    private JLabel makeTextLabel(String text) {
+        FSkin.SkinnedLabel lbl = new FSkin.SkinnedLabel(text);
+        lbl.setFont(FSkin.getBoldFont());
+        FSkin.SkinColor color = FSkin.getColor(FSkin.Colors.CLR_TEXT);
+        if (color != null) lbl.setForeground(color);
+        lbl.setOpaque(false);
+        return lbl;
     }
 
     // -------------------------------------------------------------------------

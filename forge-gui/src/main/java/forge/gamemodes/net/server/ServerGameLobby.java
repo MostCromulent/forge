@@ -1,5 +1,8 @@
 package forge.gamemodes.net.server;
 
+import forge.deck.CardPool;
+import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
@@ -10,9 +13,11 @@ import forge.gamemodes.net.draft.EventParticipant;
 import forge.gamemodes.net.draft.NetworkEvent;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
+import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
 import org.apache.commons.lang3.StringUtils;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
@@ -163,6 +168,63 @@ public final class ServerGameLobby extends GameLobby {
         }
         draftHost = new BoosterDraftHost(draft, event);
         draftHost.start();
+    }
+
+    /**
+     * Generate sealed pools and send one to each human participant.
+     * Each pool is 6 boosters opened into a CardPool, wrapped in a Deck.
+     */
+    public synchronized void generateAndDistributeSealedPools() {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) {
+            System.err.println("[ServerGameLobby] Cannot generate sealed pools: no event configured");
+            return;
+        }
+        if (event.getFormat() != EventFormat.SEALED) {
+            System.err.println("[ServerGameLobby] Event is not sealed format");
+            return;
+        }
+
+        forge.gamemodes.limited.SealedCardPoolGenerator gen = event.getSealedGenerator();
+        if (gen == null || gen.isEmpty()) {
+            System.err.println("[ServerGameLobby] No sealed generator configured — run Configure first");
+            return;
+        }
+
+        String eventId = event.getEventId();
+        FServerManager server = FServerManager.getInstance();
+
+        for (EventParticipant participant : event.getParticipants()) {
+            if (participant.isAI()) {
+                continue;
+            }
+
+            CardPool pool = gen.getCardPool(false);
+            if (pool == null) {
+                System.err.println("[ServerGameLobby] Failed to generate pool for " + participant.getName());
+                continue;
+            }
+
+            String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
+            Deck deck = new Deck(poolName);
+            deck.getOrCreate(DeckSection.Sideboard).addAll(pool);
+            deck.getTags().add("eventId:" + eventId);
+            deck.getTags().add("eventFormat:" + event.getFormat().name());
+            deck.getTags().add("eventProduct:" + event.getProductDescription());
+            deck.getTags().add("eventDate:" + LocalDate.now().toString());
+
+            RemoteClient client = server.getClientByName(participant.getName());
+            if (client != null) {
+                client.send(new ReceiveEventPoolEvent(eventId, deck));
+            } else {
+                forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+                if (listener != null) {
+                    listener.receiveEventPool(eventId, deck);
+                }
+            }
+            System.err.println("[ServerGameLobby] Sent sealed pool to " + participant.getName()
+                    + " (" + pool.countAll() + " cards)");
+        }
     }
 
     /**

@@ -1,6 +1,7 @@
 package forge.gamemodes.net.draft;
 
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.SealedCardPoolGenerator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ public final class NetworkEvent {
     private boolean deckConformance;
     private List<String> boosterConfiguration;
     private LimitedPoolType poolType;
+    private transient SealedCardPoolGenerator sealedGenerator;
 
     public NetworkEvent(EventFormat format) {
         this.eventId = UUID.randomUUID().toString().substring(0, 8);
@@ -43,6 +45,8 @@ public final class NetworkEvent {
     public void setBoosterConfiguration(List<String> config) { this.boosterConfiguration = config; }
     public LimitedPoolType getPoolType() { return poolType; }
     public void setPoolType(LimitedPoolType poolType) { this.poolType = poolType; }
+    public SealedCardPoolGenerator getSealedGenerator() { return sealedGenerator; }
+    public void setSealedGenerator(SealedCardPoolGenerator gen) { this.sealedGenerator = gen; }
 
     public void addParticipant(EventParticipant participant) {
         participants.add(participant);

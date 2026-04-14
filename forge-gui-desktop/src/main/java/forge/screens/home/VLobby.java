@@ -875,7 +875,16 @@ public class VLobby implements ILobbyView {
 
     private void startEvent() {
         if (currentMode == LobbyMode.SEALED) {
-            // Will wire to ServerGameLobby.generateAndDistributeSealedPools()
+            if (!(lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby)) {
+                return;
+            }
+            forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
+            if (event == null) {
+                FOptionPane.showErrorDialog("No event configured. Select Sealed mode first.");
+                return;
+            }
+            serverLobby.populateParticipants();
+            serverLobby.generateAndDistributeSealedPools();
         } else if (currentMode == LobbyMode.DRAFT) {
             if (!(lobby instanceof forge.gamemodes.net.server.ServerGameLobby serverLobby)) {
                 return;
@@ -967,6 +976,17 @@ public class VLobby implements ILobbyView {
         }
         event.setPoolType(chosen);
         event.setProductDescription(chosen.toString());
+
+        // For sealed: run the full configuration dialogs (choose edition, block, etc.)
+        if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.SEALED) {
+            forge.gamemodes.limited.SealedCardPoolGenerator gen =
+                    new forge.gamemodes.limited.SealedCardPoolGenerator(chosen);
+            if (gen.isEmpty()) {
+                return; // user cancelled a sub-dialog
+            }
+            event.setSealedGenerator(gen);
+            event.setProductDescription(chosen.toString());
+        }
 
         // Pick timer (draft only)
         if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {

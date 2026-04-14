@@ -160,7 +160,7 @@ public class SealedCardPoolGenerator {
      * @param poolType
      *            a {@link java.lang.String} object.
      */
-    private SealedCardPoolGenerator(final LimitedPoolType poolType) {
+    public SealedCardPoolGenerator(final LimitedPoolType poolType) {
         switch(poolType) {
             case Full:
                 // Choose number of boosters
