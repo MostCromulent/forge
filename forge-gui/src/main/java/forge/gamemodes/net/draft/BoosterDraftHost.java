@@ -19,6 +19,7 @@ import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.interfaces.ILobbyListener;
 import forge.item.PaperCard;
+import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -40,7 +41,7 @@ import java.util.function.Consumer;
  *
  * <p>All mutable state is guarded by {@code synchronized(this)}.
  */
-public final class BoosterDraftHost {
+public final class BoosterDraftHost implements IHasForgeLog {
 
     private final BoosterDraft draft;
     private final NetworkEvent event;
@@ -74,6 +75,8 @@ public final class BoosterDraftHost {
      * Called once after the BoosterDraft has been initialized.
      */
     public synchronized void start() {
+        netLog.info("Draft started — {} participants, timer={}s, product={}",
+                participants.size(), event.getPickTimerSeconds(), event.getProductDescription());
         event.setPhase(EventPhase.DRAFTING);
         FServerManager.getInstance().broadcast(
                 new EventPhaseChangedEvent(EventPhase.DRAFTING));
@@ -97,10 +100,12 @@ public final class BoosterDraftHost {
         }
         List<LimitedPlayer> players = draft.getAllPlayers();
         if (seatIndex < 0 || seatIndex >= players.size()) {
+            netLog.warn("Invalid seat index: {}", seatIndex);
             System.err.println("[DraftHost] Invalid seat index: " + seatIndex);
             return;
         }
         if (!pendingHumanPicks.contains(seatIndex)) {
+            netLog.warn("Seat {} is not pending a pick", seatIndex);
             System.err.println("[DraftHost] Seat " + seatIndex + " is not pending a pick");
             return;
         }
@@ -108,6 +113,7 @@ public final class BoosterDraftHost {
         LimitedPlayer player = players.get(seatIndex);
         DraftPack pack = player.nextChoice();
         if (pack == null || !pack.contains(card)) {
+            netLog.warn("Card not in seat {}'s pack", seatIndex);
             System.err.println("[DraftHost] Card not found in seat " + seatIndex + "'s pack: " + card);
             return;
         }
@@ -115,6 +121,7 @@ public final class BoosterDraftHost {
         // Make the pick (card is removed from pack, added to deck)
         player.draftCard(card, DeckSection.Sideboard);
         pendingHumanPicks.remove(seatIndex);
+        netLog.info("Seat {} picked (pack {} pick {})", seatIndex, currentPackNumber, currentPickNumber);
 
         // Broadcast that this seat picked
         broadcastSeatPicked(seatIndex);
@@ -262,6 +269,7 @@ public final class BoosterDraftHost {
         cancelPickTimer();
         timerExecutor.shutdown();
         draft.postDraftActions();
+        netLog.info("Draft complete — distributing pools");
 
         List<LimitedPlayer> players = draft.getAllPlayers();
         String eventId = event.getEventId();
@@ -306,6 +314,7 @@ public final class BoosterDraftHost {
     private synchronized void onPickTimerExpired() {
         if (finished || pendingHumanPicks.isEmpty()) return;
 
+        netLog.info("Pick timer expired, auto-picking for seats: {}", pendingHumanPicks);
         System.err.println("[DraftHost] Pick timer expired, auto-picking for seats: " + pendingHumanPicks);
         List<LimitedPlayer> players = draft.getAllPlayers();
 

@@ -16,12 +16,13 @@ import forge.gamemodes.net.event.EventCreatedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
 import forge.interfaces.ILobbyListener;
+import forge.util.IHasForgeLog;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collections;
 import java.util.List;
 
-public final class ServerGameLobby extends GameLobby {
+public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     private static final int DRAFT_POD_SIZE = 8;
 
     /** Returned by {@link #startDraftEvent} with the info the UI needs for overlay/log setup. */
@@ -117,6 +118,7 @@ public final class ServerGameLobby extends GameLobby {
     }
 
     public synchronized void createEvent(EventFormat format) {
+        netLog.info("Event created — format={}", format);
         NetworkEvent event = new NetworkEvent(format);
         setCurrentEvent(event);
         FServerManager.getInstance().broadcast(new EventCreatedEvent(event.toView()));
@@ -256,6 +258,10 @@ public final class ServerGameLobby extends GameLobby {
             }
         }
 
+        netLog.info("Starting draft — pod={}, humans={}, packs={}, product={}, timer={}s",
+                podSize, humanSeats.size(), totalPacks,
+                event.getProductDescription(), event.getPickTimerSeconds());
+
         draftHost = new BoosterDraftHost(draft, event);
         draftHost.start();
 
@@ -268,6 +274,7 @@ public final class ServerGameLobby extends GameLobby {
     public synchronized void startSealedEvent() {
         NetworkEvent event = getCurrentEvent();
         if (event == null) return;
+        netLog.info("Starting sealed — product={}", event.getProductDescription());
         populateParticipants();
         generateAndDistributeSealedPools();
     }
@@ -279,16 +286,19 @@ public final class ServerGameLobby extends GameLobby {
     public synchronized void generateAndDistributeSealedPools() {
         NetworkEvent event = getCurrentEvent();
         if (event == null) {
+            netLog.warn("Cannot generate sealed pools: no event configured");
             System.err.println("[ServerGameLobby] Cannot generate sealed pools: no event configured");
             return;
         }
         if (event.getFormat() != EventFormat.SEALED) {
+            netLog.warn("Event is not sealed format");
             System.err.println("[ServerGameLobby] Event is not sealed format");
             return;
         }
 
         forge.gamemodes.limited.SealedCardPoolGenerator gen = event.getSealedGenerator();
         if (gen == null || gen.isEmpty()) {
+            netLog.warn("No sealed generator configured");
             System.err.println("[ServerGameLobby] No sealed generator configured — run Configure first");
             return;
         }
@@ -303,6 +313,7 @@ public final class ServerGameLobby extends GameLobby {
 
             CardPool pool = gen.getCardPool(false);
             if (pool == null) {
+                netLog.warn("Failed to generate pool for {}", participant.getName());
                 System.err.println("[ServerGameLobby] Failed to generate pool for " + participant.getName());
                 continue;
             }
@@ -321,6 +332,7 @@ public final class ServerGameLobby extends GameLobby {
                     listener.receiveEventPool(eventId, deck);
                 }
             }
+            netLog.info("Sent sealed pool to {} ({} cards)", participant.getName(), pool.countAll());
             System.err.println("[ServerGameLobby] Sent sealed pool to " + participant.getName()
                     + " (" + pool.countAll() + " cards)");
         }
@@ -331,6 +343,7 @@ public final class ServerGameLobby extends GameLobby {
      */
     public synchronized void handleDraftPick(DraftPickEvent pickEvent) {
         if (draftHost == null) {
+            netLog.warn("Draft pick received but no draft in progress");
             System.err.println("[ServerGameLobby] No draft in progress");
             return;
         }
@@ -339,6 +352,7 @@ public final class ServerGameLobby extends GameLobby {
 
     /** Broadcast event selection to all connected clients. */
     public void selectEventForMatch(String eventId, boolean deckConformance) {
+        netLog.info("Selected event for match — eventId={}, conformance={}", eventId, deckConformance);
         FServerManager.getInstance().broadcast(
                 new forge.gamemodes.net.event.SelectEventForMatchEvent(eventId, deckConformance));
     }
