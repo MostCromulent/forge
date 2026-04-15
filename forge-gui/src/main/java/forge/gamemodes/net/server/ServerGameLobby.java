@@ -15,13 +15,18 @@ import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
+import forge.interfaces.ILobbyListener;
 import org.apache.commons.lang3.StringUtils;
 
-import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
 
 public final class ServerGameLobby extends GameLobby {
+    private static final int DRAFT_POD_SIZE = 8;
+
+    /** Returned by {@link #startDraftEvent} with the info the UI needs for overlay/log setup. */
+    public record DraftStartResult(String[] names, boolean[] aiFlags, int hostSeatIndex, int totalPacks) {}
+
     private BoosterDraftHost draftHost;
 
     public ServerGameLobby() {
@@ -172,20 +177,69 @@ public final class ServerGameLobby extends GameLobby {
     }
 
     /**
-     * Start a network draft using the given BoosterDraft instance.
-     * The draft must already have been created and initialized via
-     * {@link BoosterDraft#createDraft}.
-     *
-     * @param draft the initialized BoosterDraft
+     * Orchestrate the full draft startup: populate participants, create the BoosterDraft,
+     * configure the pod, and start. Returns UI-facing result for overlay/log setup,
+     * or null if draft creation fails or is cancelled.
      */
-    public synchronized void startDraft(BoosterDraft draft) {
+    public synchronized DraftStartResult startDraftEvent() {
         NetworkEvent event = getCurrentEvent();
-        if (event == null) {
-            System.err.println("[ServerGameLobby] Cannot start draft: no event configured");
-            return;
+        if (event == null) return null;
+
+        populateParticipants();
+        fillRemainingWithAI(DRAFT_POD_SIZE);
+        shuffleSeatPositions();
+
+        List<EventParticipant> participants = event.getParticipants();
+        int podSize = participants.size();
+
+        BoosterDraft draft = BoosterDraft.createDraftForNetwork(event.getPoolType());
+        if (draft == null) return null;
+
+        if (podSize != draft.getPodSize()) {
+            draft.setPodSize(podSize);
         }
+        java.util.Set<Integer> humanSeats = new java.util.HashSet<>();
+        for (EventParticipant p : participants) {
+            if (p.isHuman()) {
+                humanSeats.add(p.getSeatIndex());
+            }
+        }
+        draft.setHumanSeats(humanSeats);
+        draft.initializeBoosters();
+
+        int totalPacks = draft.getNumRounds();
+        event.setNumRounds(totalPacks);
+
+        // Build pod info for the UI
+        String hostName = localName();
+        int hostSeatIndex = 0;
+        String[] names = new String[podSize];
+        boolean[] aiFlags = new boolean[podSize];
+        for (EventParticipant p : participants) {
+            int seat = p.getSeatIndex();
+            if (seat >= 0 && seat < podSize) {
+                names[seat] = p.getName();
+                aiFlags[seat] = p.isAI();
+                if (p.isHuman() && p.getName().equals(hostName)) {
+                    hostSeatIndex = seat;
+                }
+            }
+        }
+
         draftHost = new BoosterDraftHost(draft, event);
         draftHost.start();
+
+        return new DraftStartResult(names, aiFlags, hostSeatIndex, totalPacks);
+    }
+
+    /**
+     * Orchestrate sealed pool generation: populate participants and distribute pools.
+     */
+    public synchronized void startSealedEvent() {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return;
+        populateParticipants();
+        generateAndDistributeSealedPools();
     }
 
     /**
@@ -226,16 +280,13 @@ public final class ServerGameLobby extends GameLobby {
             String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
             Deck deck = new Deck(poolName);
             deck.getOrCreate(DeckSection.Sideboard).addAll(pool);
-            deck.getTags().add("eventId:" + eventId);
-            deck.getTags().add("eventFormat:" + event.getFormat().name());
-            deck.getTags().add("eventProduct:" + event.getProductDescription());
-            deck.getTags().add("eventDate:" + LocalDate.now().toString());
+            NetworkEvent.setEventTags(deck, event);
 
             RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
             if (client != null) {
                 client.send(new ReceiveEventPoolEvent(eventId, deck));
             } else {
-                forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+                ILobbyListener listener = server.getLobbyListener();
                 if (listener != null) {
                     listener.receiveEventPool(eventId, deck);
                 }
@@ -254,6 +305,12 @@ public final class ServerGameLobby extends GameLobby {
             return;
         }
         draftHost.handlePick(pickEvent.getSeatIndex(), pickEvent.getCard());
+    }
+
+    /** Broadcast event selection to all connected clients. */
+    public void selectEventForMatch(String eventId, boolean deckConformance) {
+        FServerManager.getInstance().broadcast(
+                new forge.gamemodes.net.event.SelectEventForMatchEvent(eventId, deckConformance));
     }
 
     public BoosterDraftHost getDraftHost() {

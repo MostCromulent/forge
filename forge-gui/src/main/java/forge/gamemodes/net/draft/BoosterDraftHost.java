@@ -6,14 +6,17 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.DraftPack;
 import forge.gamemodes.limited.LimitedPlayer;
 import forge.gamemodes.limited.LimitedPlayerAI;
+import forge.gamemodes.net.event.DraftAutoPickedEvent;
 import forge.gamemodes.net.event.DraftPackArrivedEvent;
 import forge.gamemodes.net.event.DraftSeatPickedEvent;
+import forge.gamemodes.net.event.EventPhaseChangedEvent;
+import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.RemoteClient;
+import forge.interfaces.ILobbyListener;
 import forge.item.PaperCard;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Server-side adapter that wraps {@link BoosterDraft} for network play.
@@ -69,7 +73,7 @@ public final class BoosterDraftHost {
     public synchronized void start() {
         event.setPhase(EventPhase.DRAFTING);
         FServerManager.getInstance().broadcast(
-                new forge.gamemodes.net.event.EventPhaseChangedEvent(EventPhase.DRAFTING));
+                new EventPhaseChangedEvent(EventPhase.DRAFTING));
         advanceDraft();
     }
 
@@ -217,19 +221,10 @@ public final class BoosterDraftHost {
         int pickNum = currentPickNumber;
         int timerSecs = event.getPickTimerSeconds();
 
-        FServerManager server = FServerManager.getInstance();
-        RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
-        if (client != null) {
-            System.err.println("[DraftHost] Sending pack to remote client: " + participant.getName());
-            client.send(new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs));
-        } else {
-            // Host player — dispatch to local lobby listener
-            forge.interfaces.ILobbyListener listener = server.getLobbyListener();
-            System.err.println("[DraftHost] Dispatching pack to local host listener: " + (listener != null));
-            if (listener != null) {
-                listener.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs);
-            }
-        }
+        System.err.println("[DraftHost] Sending pack to: " + participant.getName());
+        dispatchToParticipant(participant,
+                new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs),
+                l -> l.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs));
     }
 
     private void broadcastSeatPicked(int seatIndex) {
@@ -241,7 +236,7 @@ public final class BoosterDraftHost {
         server.broadcast(pickedEvent);
         // broadcast() only dispatches MessageEvent to the local lobbyListener;
         // draft events must be forwarded explicitly to the host player.
-        forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+        ILobbyListener listener = server.getLobbyListener();
         if (listener != null) {
             listener.draftSeatPicked(seatIndex, pickNum, queueDepths);
         }
@@ -266,8 +261,6 @@ public final class BoosterDraftHost {
         draft.postDraftActions();
 
         List<LimitedPlayer> players = draft.getAllPlayers();
-        FServerManager server = FServerManager.getInstance();
-
         String eventId = event.getEventId();
 
         // Send pool to each human
@@ -284,21 +277,10 @@ public final class BoosterDraftHost {
 
             String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
             Deck pool = new Deck(player.getDeck(), poolName);
-            pool.getTags().add("eventId:" + eventId);
-            pool.getTags().add("eventFormat:" + event.getFormat().name());
-            pool.getTags().add("eventProduct:" + event.getProductDescription());
-            pool.getTags().add("eventDate:" + LocalDate.now().toString());
-
-            RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
-            if (client != null) {
-                client.send(new ReceiveEventPoolEvent(eventId, pool));
-            } else {
-                // Host player — dispatch to local lobby listener
-                forge.interfaces.ILobbyListener listener = server.getLobbyListener();
-                if (listener != null) {
-                    listener.receiveEventPool(eventId, pool);
-                }
-            }
+            NetworkEvent.setEventTags(pool, event);
+            dispatchToParticipant(participant,
+                    new ReceiveEventPoolEvent(eventId, pool),
+                    l -> l.receiveEventPool(eventId, pool));
         }
     }
 
@@ -355,15 +337,21 @@ public final class BoosterDraftHost {
     private void notifyAutoPick(int seatIndex, PaperCard card) {
         EventParticipant participant = findParticipant(seatIndex);
         if (participant == null || participant.isAI()) return;
+        dispatchToParticipant(participant,
+                new DraftAutoPickedEvent(seatIndex, card, currentPickNumber),
+                l -> l.draftAutoPicked(seatIndex, card, currentPickNumber));
+    }
 
+    private void dispatchToParticipant(EventParticipant participant, NetEvent remoteEvent,
+            Consumer<ILobbyListener> localAction) {
         FServerManager server = FServerManager.getInstance();
         RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
         if (client != null) {
-            client.send(new forge.gamemodes.net.event.DraftAutoPickedEvent(seatIndex, card, currentPickNumber));
+            client.send(remoteEvent);
         } else {
-            forge.interfaces.ILobbyListener listener = server.getLobbyListener();
+            ILobbyListener listener = server.getLobbyListener();
             if (listener != null) {
-                listener.draftAutoPicked(seatIndex, card, currentPickNumber);
+                localAction.accept(listener);
             }
         }
     }

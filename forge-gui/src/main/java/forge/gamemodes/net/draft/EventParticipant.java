@@ -2,6 +2,17 @@ package forge.gamemodes.net.draft;
 
 import java.io.Serializable;
 
+/**
+ * A player or AI in a network draft/sealed event.
+ * <p>
+ * {@code seatIndex} is the position in the draft pod's circular pack-passing order
+ * (0 to podSize-1). Randomized before draft start. Used to index into BoosterDraft
+ * player lists and determine pack-passing neighbors.
+ * <p>
+ * {@code lobbySlotIndex} is the player's position in the network lobby UI. Used to
+ * look up the RemoteClient for sending network messages. AI-fill seats that have no
+ * lobby slot use -1.
+ */
 public final class EventParticipant implements Serializable {
     private static final long serialVersionUID = 1L;
 

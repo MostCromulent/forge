@@ -2,20 +2,28 @@ package forge.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.MouseEvent;
+import java.awt.image.BufferedImage;
 
+import javax.swing.ImageIcon;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 
+import forge.ImageCache;
+import forge.ImageKeys;
 import forge.Singletons;
 import forge.gui.framework.SDisplayUtil;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.screens.home.online.OnlineMenu;
 import forge.toolbox.FMouseAdapter;
 import forge.toolbox.FSkin;
 import forge.view.FDialog;
@@ -42,9 +50,9 @@ public enum FDraftOverlay {
 
     private final FSkin.SkinnedLabel lblPackInfo  = new FSkin.SkinnedLabel("");
     private final FSkin.SkinnedLabel lblTimer     = new FSkin.SkinnedLabel("");
-    private final JPanel pnlNeighbors = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 2, 0));
+    private final JPanel pnlNeighbors = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 0));
 
-    private static javax.swing.ImageIcon cardBackIcon;
+    private static ImageIcon cardBackIcon;
 
     private String   leftName, rightName;
     private boolean  leftAI,   rightAI;
@@ -55,7 +63,7 @@ public enum FDraftOverlay {
     private int[]    queueDepths = new int[0];
 
     /** Countdown timer (client-side fire-and-forget). */
-    private javax.swing.Timer countdownTimer;
+    private Timer countdownTimer;
     private int               secondsRemaining;
     private boolean           waitingForPack;
     private boolean           timerDisabled;
@@ -229,7 +237,7 @@ public enum FDraftOverlay {
 
     public void hide() {
         window.setVisible(false);
-        forge.screens.home.online.OnlineMenu.draftItem.setState(false);
+        OnlineMenu.draftItem.setState(false);
     }
 
     public void show() {
@@ -244,7 +252,7 @@ public enum FDraftOverlay {
             });
         }
         window.setVisible(true);
-        forge.screens.home.online.OnlineMenu.draftItem.setState(true);
+        OnlineMenu.draftItem.setState(true);
     }
 
     private void updateDisplay() {
@@ -285,7 +293,7 @@ public enum FDraftOverlay {
         stopCountdown();
         secondsRemaining = seconds;
         updateTimerLabel();
-        countdownTimer = new javax.swing.Timer(1000, e -> {
+        countdownTimer = new Timer(1000, e -> {
             secondsRemaining--;
             if (secondsRemaining <= 0) {
                 secondsRemaining = 0;
@@ -371,11 +379,11 @@ public enum FDraftOverlay {
     private static void loadCardBackIcon() {
         if (cardBackIcon != null) return;
         try {
-            java.awt.image.BufferedImage img = forge.ImageCache.getOriginalImage(
-                    forge.ImageKeys.getTokenKey(forge.ImageKeys.HIDDEN_CARD), true, null);
+            BufferedImage img = ImageCache.getOriginalImage(
+                    ImageKeys.getTokenKey(ImageKeys.HIDDEN_CARD), true, null);
             if (img != null) {
-                java.awt.Image scaled = img.getScaledInstance(14, 20, java.awt.Image.SCALE_SMOOTH);
-                cardBackIcon = new javax.swing.ImageIcon(scaled);
+                Image scaled = img.getScaledInstance(14, 20, Image.SCALE_SMOOTH);
+                cardBackIcon = new ImageIcon(scaled);
             }
         } catch (Exception e) {
             // Fallback: icon stays null, text "[P]" will be used

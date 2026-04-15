@@ -1,8 +1,10 @@
 package forge.gamemodes.net.draft;
 
+import forge.deck.Deck;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -53,6 +55,13 @@ public final class NetworkEvent {
 
     public void addParticipant(EventParticipant participant) {
         participants.add(participant);
+    }
+
+    public static void setEventTags(Deck deck, NetworkEvent event) {
+        deck.getTags().add("eventId:" + event.getEventId());
+        deck.getTags().add("eventFormat:" + event.getFormat().name());
+        deck.getTags().add("eventProduct:" + event.getProductDescription());
+        deck.getTags().add("eventDate:" + LocalDate.now().toString());
     }
 
     public NetworkEventView toView() {
