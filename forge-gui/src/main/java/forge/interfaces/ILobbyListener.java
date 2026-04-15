@@ -2,8 +2,8 @@ package forge.interfaces;
 
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.net.client.ClientGameLobby;
-import forge.gamemodes.net.draft.EventPhase;
-import forge.gamemodes.net.draft.NetworkEventView;
+import forge.gamemodes.net.EventPhase;
+import forge.gamemodes.net.NetworkEventView;
 
 public interface ILobbyListener {
     void message(String source, String message);

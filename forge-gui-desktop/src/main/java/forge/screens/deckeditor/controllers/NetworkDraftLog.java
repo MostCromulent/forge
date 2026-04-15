@@ -1,14 +1,15 @@
 package forge.screens.deckeditor.controllers;
 
-import forge.gamemodes.net.draft.EventParticipant;
+import forge.gamemodes.net.EventParticipant;
 import forge.util.Localizer;
 
 import java.awt.Color;
 import java.util.List;
 
 /**
- * Utility for logging network draft events to the Editor Log tab.
- * All entries driven by protocol events — no new network messages needed.
+ * Utility for logging network draft events to the existing Editor Log tab
+ * ({@link forge.screens.deckeditor.controllers.CEditorLog} / {@link forge.screens.deckeditor.views.VEditorLog}).
+ * All entries are driven by protocol events — no new network messages needed.
  */
 public final class NetworkDraftLog {
     // Colors for draft log styling

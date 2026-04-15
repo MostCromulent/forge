@@ -1,7 +1,7 @@
 package forge.gui.interfaces;
 
 import forge.deck.Deck;
-import forge.gamemodes.net.draft.NetworkEventView;
+import forge.gamemodes.net.NetworkEventView;
 import forge.interfaces.IPlayerChangeListener;
 import forge.interfaces.IUpdateable;
 import forge.item.PaperCard;

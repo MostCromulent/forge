@@ -1,4 +1,4 @@
-package forge.gamemodes.net.draft;
+package forge.gamemodes.net;
 
 public enum EventPhase {
     LOBBY_GATHER,

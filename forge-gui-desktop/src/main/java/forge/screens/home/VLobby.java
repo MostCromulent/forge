@@ -38,10 +38,10 @@ import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.client.FGameClient;
-import forge.gamemodes.net.draft.EventFormat;
-import forge.gamemodes.net.draft.EventParticipant;
-import forge.gamemodes.net.draft.NetworkEvent;
-import forge.gamemodes.net.draft.NetworkEventView;
+import forge.gamemodes.net.EventFormat;
+import forge.gamemodes.net.EventParticipant;
+import forge.gamemodes.net.NetworkEvent;
+import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
@@ -193,8 +193,6 @@ public class VLobby implements ILobbyView {
 
         lblTitle.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2));
 
-        ////////////////////////////////////////////////////////
-        //////////////////// Mode Selector (network only) //////
         if (lobby.isAllowNetworking()) {
             cboModePanel.addActionListener(e -> onModeChanged());
             // Set a larger font on the combo box to match/exceed the variants label
@@ -204,8 +202,6 @@ public class VLobby implements ILobbyView {
             constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 10px, spanx 2, wrap");
         }
 
-        ////////////////////////////////////////////////////////
-        //////////////////// Event Config Panel (network only) /
         if (lobby.isAllowNetworking()) {
             eventConfigPanel.setOpaque(true);
             eventConfigPanel.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2).stepColor(20).getColor());
@@ -233,8 +229,6 @@ public class VLobby implements ILobbyView {
             }
         }
 
-        ////////////////////////////////////////////////////////
-        //////////////////// Variants Panel ////////////////////
         ImmutableList<VariantCheckBox> vntBoxes = null;
         if (lobby.isAllowNetworking()) {
             vntBoxes = vntBoxesNetwork;
@@ -263,9 +257,6 @@ public class VLobby implements ILobbyView {
         }
 
         constructedFrame.add(playersFrame, "gapright 10px, w 50%-5px, growy, pushy");
-
-        ////////////////////////////////////////////////////////
-        ////////////////////// Deck Panel //////////////////////
 
         populateVanguardLists();
         for (int i = 0; i < MAX_PLAYERS; i++) {
@@ -791,7 +782,6 @@ public class VLobby implements ILobbyView {
         refreshPanels(true, true);
     }
 
-    /////////////////////////////////////////////
     //========== Mode selector methods (network Draft/Sealed)
 
     public LobbyMode getCurrentMode() {
@@ -1154,7 +1144,6 @@ public class VLobby implements ILobbyView {
         return names;
     }
 
-    /////////////////////////////////////////////
     //========== Various listeners in build order
 
     @SuppressWarnings("serial") private class VariantCheckBox extends FCheckBox {
@@ -1220,7 +1209,6 @@ public class VLobby implements ILobbyView {
         nField.transferFocus();
     };
 
-    /////////////////////////////////////
     //========== METHODS FOR VARIANTS
 
     /** Gets the list of planar deck lists. */
@@ -1303,7 +1291,6 @@ public class VLobby implements ILobbyView {
         }
     }
 
-    /////////////////////////////////////////////
     //========== ILobbyView draft callbacks (network draft/sealed)
 
     // Stored by onEventCreated so clients can init the overlay on first pack

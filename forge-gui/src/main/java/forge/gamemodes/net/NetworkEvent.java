@@ -1,4 +1,4 @@
-package forge.gamemodes.net.draft;
+package forge.gamemodes.net;
 
 import forge.deck.Deck;
 import forge.gamemodes.limited.LimitedPoolType;
@@ -9,6 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Server-side mutable model for a network limited event (draft or sealed).
+ * Lives in memory only during the event session — discarded after pool distribution.
+ * Each participant's pool is persisted as a Deck with event metadata in tags.
+ * <p>
+ * Not serializable — the wire-safe representation is {@link NetworkEventView}.
+ */
 public final class NetworkEvent {
     private final String eventId;
     private final EventFormat format;

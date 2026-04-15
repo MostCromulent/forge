@@ -82,7 +82,7 @@ public class NetConnectUtil {
                 return null;
             }
             @Override
-            public void eventCreated(forge.gamemodes.net.draft.NetworkEventView eventView) {
+            public void eventCreated(forge.gamemodes.net.NetworkEventView eventView) {
                 view.onEventCreated(eventView);
             }
             @Override
@@ -215,7 +215,7 @@ public class NetConnectUtil {
                 return lobby;
             }
             @Override
-            public void eventCreated(forge.gamemodes.net.draft.NetworkEventView eventView) {
+            public void eventCreated(forge.gamemodes.net.NetworkEventView eventView) {
                 view.onEventCreated(eventView);
             }
             @Override

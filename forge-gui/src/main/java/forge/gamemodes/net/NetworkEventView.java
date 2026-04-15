@@ -1,8 +1,13 @@
-package forge.gamemodes.net.draft;
+package forge.gamemodes.net;
 
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * Immutable, serializable snapshot of a {@link NetworkEvent} for transmission to clients.
+ * Contains event metadata (format, phase, participants, timer) but not server-side
+ * state like the SealedCardPoolGenerator or BoosterDraftHost reference.
+ */
 public final class NetworkEventView implements Serializable {
     private static final long serialVersionUID = 1L;
 

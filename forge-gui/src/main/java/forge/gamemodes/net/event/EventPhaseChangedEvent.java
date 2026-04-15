@@ -1,6 +1,6 @@
 package forge.gamemodes.net.event;
 
-import forge.gamemodes.net.draft.EventPhase;
+import forge.gamemodes.net.EventPhase;
 import forge.gamemodes.net.server.RemoteClient;
 
 public final class EventPhaseChangedEvent implements NetEvent {

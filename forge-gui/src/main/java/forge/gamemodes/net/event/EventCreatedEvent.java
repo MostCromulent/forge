@@ -1,6 +1,6 @@
 package forge.gamemodes.net.event;
 
-import forge.gamemodes.net.draft.NetworkEventView;
+import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.RemoteClient;
 
 public final class EventCreatedEvent implements NetEvent {

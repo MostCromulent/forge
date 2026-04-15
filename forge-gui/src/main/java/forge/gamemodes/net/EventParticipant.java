@@ -1,4 +1,4 @@
-package forge.gamemodes.net.draft;
+package forge.gamemodes.net;
 
 import java.io.Serializable;
 
