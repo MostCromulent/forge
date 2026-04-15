@@ -5,13 +5,7 @@ import java.awt.Container;
 import java.awt.Font;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Vector;
+import java.util.*;
 import java.util.function.Consumer;
 
 import javax.swing.*;
@@ -23,13 +17,7 @@ import com.google.common.collect.Lists;
 
 import forge.Singletons;
 import forge.ai.AIOption;
-import forge.deck.CardPool;
-import forge.deck.Deck;
-import forge.deck.DeckProxy;
-import forge.deck.DeckSection;
-import forge.deck.DeckType;
-import forge.deck.DeckgenUtil;
-import forge.deck.RandomDeckGenerator;
+import forge.deck.*;
 import forge.deckchooser.FDeckChooser;
 import forge.game.GameType;
 import forge.game.card.CardView;
@@ -37,11 +25,8 @@ import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.net.*;
 import forge.gamemodes.net.client.FGameClient;
-import forge.gamemodes.net.EventFormat;
-import forge.gamemodes.net.EventParticipant;
-import forge.gamemodes.net.NetworkEvent;
-import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
@@ -62,18 +47,8 @@ import forge.screens.deckeditor.CDeckEditorUI;
 import forge.screens.deckeditor.controllers.CEditorNetworkDraft;
 import forge.screens.deckeditor.controllers.NetworkDraftLog;
 import forge.screens.home.online.VSubmenuOnlineLobby;
-import forge.toolbox.FButton;
-import forge.toolbox.FCheckBox;
-import forge.toolbox.FComboBoxPanel;
-import forge.toolbox.FLabel;
-import forge.toolbox.FList;
-import forge.toolbox.FOptionPane;
-import forge.toolbox.FPanel;
-import forge.toolbox.FScrollPane;
-import forge.toolbox.FScrollPanel;
-import forge.toolbox.FSkin;
+import forge.toolbox.*;
 import forge.toolbox.FSkin.SkinImage;
-import forge.toolbox.FTextField;
 import forge.util.*;
 import net.miginfocom.swing.MigLayout;
 
@@ -229,6 +204,8 @@ public class VLobby implements ILobbyView {
             }
         }
 
+        ////////////////////////////////////////////////////////
+        //////////////////// Variants Panel ////////////////////
         ImmutableList<VariantCheckBox> vntBoxes = null;
         if (lobby.isAllowNetworking()) {
             vntBoxes = vntBoxesNetwork;
@@ -258,6 +235,8 @@ public class VLobby implements ILobbyView {
 
         constructedFrame.add(playersFrame, "gapright 10px, w 50%-5px, growy, pushy");
 
+        ////////////////////////////////////////////////////////
+        ////////////////////// Deck Panel //////////////////////
         populateVanguardLists();
         for (int i = 0; i < MAX_PLAYERS; i++) {
             buildDeckPanels(i);
@@ -1144,6 +1123,7 @@ public class VLobby implements ILobbyView {
         return names;
     }
 
+    /////////////////////////////////////////////
     //========== Various listeners in build order
 
     @SuppressWarnings("serial") private class VariantCheckBox extends FCheckBox {
@@ -1209,6 +1189,7 @@ public class VLobby implements ILobbyView {
         nField.transferFocus();
     };
 
+    /////////////////////////////////////
     //========== METHODS FOR VARIANTS
 
     /** Gets the list of planar deck lists. */
