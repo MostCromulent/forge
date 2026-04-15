@@ -34,7 +34,6 @@ import forge.deckchooser.FDeckChooser;
 import forge.game.GameType;
 import forge.game.card.CardView;
 import forge.gamemodes.limited.LimitedPoolType;
-import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
@@ -926,67 +925,44 @@ public class VLobby implements ILobbyView {
     }
 
     private void openEventConfigDialog() {
-        if (!(lobby instanceof ServerGameLobby serverLobby)) {
-            return;
-        }
+        if (!(lobby instanceof ServerGameLobby serverLobby)) return;
         NetworkEvent event = serverLobby.getCurrentEvent();
         if (event == null) {
             FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventConfigured"));
             return;
         }
 
-        // Pool type selection — same choices as standalone draft
-        LimitedPoolType[] poolTypes =
-                LimitedPoolType.values(
-                        event.getFormat() == EventFormat.BOOSTER_DRAFT);
-        LimitedPoolType chosen =
-                GuiChoose.oneOrNone(localizer.getMessage("lblNetworkChooseDraftFormat"), poolTypes);
-        if (chosen == null) {
-            return;
-        }
-        event.setPoolType(chosen);
-        event.setProductDescription(chosen.toString());
+        // Gather user choices via UI dialogs
+        boolean isDraft = (event.getFormat() == EventFormat.BOOSTER_DRAFT);
+        LimitedPoolType[] poolTypes = LimitedPoolType.values(isDraft);
+        LimitedPoolType chosen = GuiChoose.oneOrNone(
+                localizer.getMessage("lblNetworkChooseDraftFormat"), poolTypes);
+        if (chosen == null) return;
 
-        // For sealed: run the full configuration dialogs (choose edition, block, etc.)
-        if (event.getFormat() == EventFormat.SEALED) {
-            SealedCardPoolGenerator gen =
-                    new SealedCardPoolGenerator(chosen);
-            if (gen.isEmpty()) {
-                return; // user cancelled a sub-dialog
-            }
-            event.setSealedGenerator(gen);
-            event.setProductDescription(chosen.toString());
-        }
-
-        // Pick timer (draft only)
-        if (event.getFormat() == EventFormat.BOOSTER_DRAFT) {
+        int timerSeconds = event.getPickTimerSeconds();
+        if (isDraft) {
             String timerInput = FOptionPane.showInputDialog(
-                    localizer.getMessage("lblNetworkPickTimerPrompt"), localizer.getMessage("lblNetworkPickTimerTitle"),
+                    localizer.getMessage("lblNetworkPickTimerPrompt"),
+                    localizer.getMessage("lblNetworkPickTimerTitle"),
                     FOptionPane.QUESTION_ICON,
-                    String.valueOf(event.getPickTimerSeconds()));
+                    String.valueOf(timerSeconds));
             if (timerInput != null) {
                 try {
-                    int seconds = Integer.parseInt(timerInput.trim());
-                    if (seconds > 0) {
-                        event.setPickTimerSeconds(seconds);
-                    }
-                } catch (NumberFormatException ignored) {
-                    // Keep existing timer value
-                }
+                    int parsed = Integer.parseInt(timerInput.trim());
+                    if (parsed >= 0) timerSeconds = parsed;
+                } catch (NumberFormatException ignored) { }
             }
         }
 
-        event.setDeckConformance(cbDeckConformance.isSelected());
-        serverLobby.configureEvent(
-                event.getBoosterConfiguration(),
-                event.getPickTimerSeconds(),
-                event.getProductDescription(),
-                event.isDeckConformance());
+        // Delegate all server-side configuration to ServerGameLobby
+        if (!serverLobby.configureEvent(chosen, timerSeconds, cbDeckConformance.isSelected())) {
+            return; // user cancelled a sub-dialog (e.g. sealed edition selection)
+        }
         updateEventConfigDisplay();
     }
 
     private void updateEventConfigDisplay() {
-        NetworkEvent event = lobby.getCurrentEvent();
+        NetworkEvent event = (lobby instanceof ServerGameLobby sgl) ? sgl.getCurrentEvent() : null;
         if (event == null) {
             lblEventFormat.setText("");
             lblEventProduct.setText("");

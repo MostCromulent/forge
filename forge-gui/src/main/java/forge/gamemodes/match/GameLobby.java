@@ -14,7 +14,6 @@ import forge.game.GameView;
 import forge.game.IHasGameType;
 import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
-import forge.gamemodes.net.draft.NetworkEvent;
 import forge.gamemodes.net.draft.NetworkEventView;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gui.GuiBase;
@@ -39,8 +38,6 @@ public abstract class GameLobby implements IHasGameType {
     private GameLobbyData data = new GameLobbyData();
     private GameType currentGameType = GameType.Constructed;
     private int lastArchenemy = 0;
-    private NetworkEvent currentEvent;
-
     private IUpdateable listener;
 
     private final boolean allowNetworking;
@@ -72,13 +69,6 @@ public abstract class GameLobby implements IHasGameType {
     public void setData(final GameLobbyData data) {
         this.data = data;
         updateView(true);
-    }
-
-    public NetworkEvent getCurrentEvent() {
-        return currentEvent;
-    }
-    public void setCurrentEvent(final NetworkEvent event) {
-        this.currentEvent = event;
     }
 
     public GameType getGameType() {
@@ -340,13 +330,8 @@ public abstract class GameLobby implements IHasGameType {
         return false;
     }
 
-    protected final void updateView(final boolean fullUpdate) {
+    protected void updateView(final boolean fullUpdate) {
         if (listener != null) {
-            if (currentEvent != null) {
-                data.setEventView(currentEvent.toView());
-            } else {
-                data.setEventView(null);
-            }
             listener.update(fullUpdate);
         }
     }

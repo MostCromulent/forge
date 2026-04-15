@@ -28,6 +28,20 @@ public final class ServerGameLobby extends GameLobby {
     public record DraftStartResult(String[] names, boolean[] aiFlags, int hostSeatIndex, int totalPacks) {}
 
     private BoosterDraftHost draftHost;
+    private NetworkEvent currentEvent;
+
+    public NetworkEvent getCurrentEvent() { return currentEvent; }
+    public void setCurrentEvent(NetworkEvent event) { this.currentEvent = event; }
+
+    @Override
+    protected void updateView(boolean fullUpdate) {
+        if (currentEvent != null) {
+            getData().setEventView(currentEvent.toView());
+        } else {
+            getData().setEventView(null);
+        }
+        super.updateView(fullUpdate);
+    }
 
     public ServerGameLobby() {
         super(true);
@@ -109,15 +123,31 @@ public final class ServerGameLobby extends GameLobby {
         updateView(true);
     }
 
-    public synchronized void configureEvent(List<String> boosterConfig, int pickTimerSeconds,
-            String productDescription, boolean deckConformance) {
+    /**
+     * Configure the current event with the user's chosen pool type, timer, and conformance.
+     * For sealed events, creates the SealedCardPoolGenerator (which may show sub-dialogs).
+     *
+     * @return false if the user cancelled a sub-dialog, true otherwise
+     */
+    public synchronized boolean configureEvent(forge.gamemodes.limited.LimitedPoolType poolType,
+            int pickTimerSeconds, boolean deckConformance) {
         NetworkEvent event = getCurrentEvent();
-        if (event == null) return;
-        event.setBoosterConfiguration(boosterConfig);
+        if (event == null) return false;
+
+        event.setPoolType(poolType);
+        event.setProductDescription(poolType.toString());
         event.setPickTimerSeconds(pickTimerSeconds);
-        event.setProductDescription(productDescription);
         event.setDeckConformance(deckConformance);
+
+        if (event.getFormat() == EventFormat.SEALED) {
+            forge.gamemodes.limited.SealedCardPoolGenerator gen =
+                    new forge.gamemodes.limited.SealedCardPoolGenerator(poolType);
+            if (gen.isEmpty()) return false;
+            event.setSealedGenerator(gen);
+        }
+
         updateView(true);
+        return true;
     }
 
     /**
