@@ -17,6 +17,7 @@ public final class NetworkEvent {
     private boolean deckConformance;
     private List<String> boosterConfiguration;
     private LimitedPoolType poolType;
+    private int numRounds = 3;
     private transient SealedCardPoolGenerator sealedGenerator;
 
     public NetworkEvent(EventFormat format) {
@@ -47,6 +48,8 @@ public final class NetworkEvent {
     public void setPoolType(LimitedPoolType poolType) { this.poolType = poolType; }
     public SealedCardPoolGenerator getSealedGenerator() { return sealedGenerator; }
     public void setSealedGenerator(SealedCardPoolGenerator gen) { this.sealedGenerator = gen; }
+    public int getNumRounds() { return numRounds; }
+    public void setNumRounds(int numRounds) { this.numRounds = numRounds; }
 
     public void addParticipant(EventParticipant participant) {
         participants.add(participant);
@@ -54,6 +57,6 @@ public final class NetworkEvent {
 
     public NetworkEventView toView() {
         return new NetworkEventView(eventId, format, phase,
-                participants, pickTimerSeconds, productDescription, deckConformance);
+                participants, pickTimerSeconds, productDescription, deckConformance, numRounds);
     }
 }

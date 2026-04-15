@@ -40,15 +40,12 @@ public enum FDraftOverlay {
     private final ForgePreferences prefs = FModel.getPreferences();
     private boolean hasBeenShown, locLoaded;
 
-    // --- Swing components ---
     private final FSkin.SkinnedLabel lblPackInfo  = new FSkin.SkinnedLabel("");
     private final FSkin.SkinnedLabel lblTimer     = new FSkin.SkinnedLabel("");
     private final JPanel pnlNeighbors = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 2, 0));
 
-    // Card back icon for pack indicators
     private static javax.swing.ImageIcon cardBackIcon;
 
-    // --- Draft state ---
     private String   leftName, rightName;
     private boolean  leftAI,   rightAI;
     private int      mySeat;
@@ -93,10 +90,6 @@ public enum FDraftOverlay {
         return window;
     }
 
-    // -------------------------------------------------------------------------
-    // Constructor
-    // -------------------------------------------------------------------------
-
     FDraftOverlay() {
         window.setTitle("Draft");
         window.setVisible(false);
@@ -135,10 +128,6 @@ public enum FDraftOverlay {
         loadCardBackIcon();
     }
 
-    // -------------------------------------------------------------------------
-    // Public API
-    // -------------------------------------------------------------------------
-
     /**
      * Called at draft start.
      *
@@ -148,23 +137,25 @@ public enum FDraftOverlay {
      * @param totalPacks   total number of packs in the draft
      */
     public void initDraft(int mySeat, String[] names, boolean[] aiFlags, int totalPacks) {
-        this.mySeat     = mySeat;
-        this.totalPacks = totalPacks;
-        this.queueDepths = new int[names.length];
+        SwingUtilities.invokeLater(() -> {
+            this.mySeat     = mySeat;
+            this.totalPacks = totalPacks;
+            this.queueDepths = new int[names.length];
 
-        int podSize = names.length;
-        int leftIdx  = (mySeat - 1 + podSize) % podSize;
-        int rightIdx = (mySeat + 1) % podSize;
+            int podSize = names.length;
+            int leftIdx  = (mySeat - 1 + podSize) % podSize;
+            int rightIdx = (mySeat + 1) % podSize;
 
-        leftName  = names[leftIdx];
-        rightName = names[rightIdx];
-        leftAI    = aiFlags[leftIdx];
-        rightAI   = aiFlags[rightIdx];
+            leftName  = names[leftIdx];
+            rightName = names[rightIdx];
+            leftAI    = aiFlags[leftIdx];
+            rightAI   = aiFlags[rightIdx];
 
-        waitingForPack = true;
-        currentPack = 0;
-        updateDisplay();
-        show();
+            waitingForPack = true;
+            currentPack = 0;
+            updateDisplay();
+            show();
+        });
     }
 
     /**
@@ -220,18 +211,20 @@ public enum FDraftOverlay {
 
     /** Hides the overlay and clears draft state. Call at draft end. */
     public void reset() {
-        stopCountdown();
-        leftName = rightName = null;
-        leftAI = rightAI = false;
-        mySeat = 0;
-        currentPack = totalPacks = 0;
-        passingRight = false;
-        queueDepths = new int[0];
-        waitingForPack = false;
-        lblPackInfo.setText("");
-        lblTimer.setText("");
-        pnlNeighbors.removeAll();
-        hide();
+        SwingUtilities.invokeLater(() -> {
+            stopCountdown();
+            leftName = rightName = null;
+            leftAI = rightAI = false;
+            mySeat = 0;
+            currentPack = totalPacks = 0;
+            passingRight = false;
+            queueDepths = new int[0];
+            waitingForPack = false;
+            lblPackInfo.setText("");
+            lblTimer.setText("");
+            pnlNeighbors.removeAll();
+            hide();
+        });
     }
 
     public void hide() {
@@ -253,10 +246,6 @@ public enum FDraftOverlay {
         window.setVisible(true);
         forge.screens.home.online.OnlineMenu.draftItem.setState(true);
     }
-
-    // -------------------------------------------------------------------------
-    // Internal helpers
-    // -------------------------------------------------------------------------
 
     private void updateDisplay() {
         // Row 1 – pack info + pick number
@@ -333,7 +322,7 @@ public enum FDraftOverlay {
     }
 
     /**
-     * Builds the HTML neighbor display string.
+     * Builds the neighbor display panel with text labels and card-back icons.
      *
      * Layout (passing right / odd packs):
      *   LeftName [queued packs]  →  [queued packs] YOU  →  RightName [queued packs]
@@ -413,10 +402,6 @@ public enum FDraftOverlay {
         lbl.setOpaque(false);
         return lbl;
     }
-
-    // -------------------------------------------------------------------------
-    // Position persistence  (same pattern as FNetOverlay)
-    // -------------------------------------------------------------------------
 
     private void loadLocation() {
         String value = prefs.getPref(FPref.DRAFT_OVERLAY_LOC);

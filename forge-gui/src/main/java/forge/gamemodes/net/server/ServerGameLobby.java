@@ -131,7 +131,7 @@ public final class ServerGameLobby extends GameLobby {
             }
             EventParticipant.Type pType = (slot.getType() == LobbySlotType.AI)
                     ? EventParticipant.Type.AI : EventParticipant.Type.HUMAN;
-            event.addParticipant(new EventParticipant(slot.getName(), pType, seatIndex));
+            event.addParticipant(new EventParticipant(slot.getName(), pType, seatIndex, i));
             System.err.println("[ServerLobby] Participant slot=" + i + " seat=" + seatIndex + " name=" + slot.getName() + " type=" + pType + " slotType=" + slot.getType());
             seatIndex++;
         }
@@ -148,8 +148,26 @@ public final class ServerGameLobby extends GameLobby {
         int currentSize = event.getParticipants().size();
         for (int i = currentSize; i < targetSize; i++) {
             String aiName = "Seat " + (i + 1);
-            event.addParticipant(new EventParticipant(aiName, EventParticipant.Type.AI, i));
+            event.addParticipant(new EventParticipant(aiName, EventParticipant.Type.AI, i, -1));
             System.err.println("[ServerLobby] Auto-fill AI seat=" + i + " name=" + aiName);
+        }
+    }
+
+    /**
+     * Shuffle draft seat positions randomly. Lobby slots and names stay the same —
+     * only the seat index (which determines pack-passing neighbors) is randomized.
+     */
+    public synchronized void shuffleSeatPositions() {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return;
+        List<EventParticipant> participants = event.getParticipants();
+        List<Integer> seats = new java.util.ArrayList<>();
+        for (EventParticipant p : participants) {
+            seats.add(p.getSeatIndex());
+        }
+        Collections.shuffle(seats);
+        for (int i = 0; i < participants.size(); i++) {
+            participants.get(i).setSeatIndex(seats.get(i));
         }
     }
 
@@ -213,7 +231,7 @@ public final class ServerGameLobby extends GameLobby {
             deck.getTags().add("eventProduct:" + event.getProductDescription());
             deck.getTags().add("eventDate:" + LocalDate.now().toString());
 
-            RemoteClient client = server.getClientByName(participant.getName());
+            RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
             if (client != null) {
                 client.send(new ReceiveEventPoolEvent(eventId, deck));
             } else {

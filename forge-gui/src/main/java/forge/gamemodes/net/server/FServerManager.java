@@ -105,6 +105,15 @@ public final class FServerManager implements IHasForgeLog {
         return null;
     }
 
+    public RemoteClient getClientBySlotIndex(int slotIndex) {
+        for (RemoteClient client : clients.values()) {
+            if (client.getIndex() == slotIndex) {
+                return client;
+            }
+        }
+        return null;
+    }
+
     IGameController getController(final int index) {
         return localLobby.getController(index);
     }

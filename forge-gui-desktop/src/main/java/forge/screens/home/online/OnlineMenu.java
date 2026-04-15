@@ -42,7 +42,7 @@ public final class OnlineMenu {
                 FNetOverlay.SINGLETON_INSTANCE.hide();
             }
         });
-        draftItem = new JCheckBoxMenuItem("Show Draft Panel");
+        draftItem = new JCheckBoxMenuItem(Localizer.getInstance().getMessage("lblShowDraftPanel"));
         draftItem.addActionListener(e -> {
             if (((JMenuItem)e.getSource()).isSelected()) {
                 FDraftOverlay.SINGLETON_INSTANCE.show();

@@ -133,22 +133,24 @@ public class VLobby implements ILobbyView {
     // Mode selector (network only)
     public enum LobbyMode { CONSTRUCTED, DRAFT, SEALED }
     private LobbyMode currentMode = LobbyMode.CONSTRUCTED;
-    private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>("Mode:",
-            ImmutableList.of("Constructed", "Draft", "Sealed"));
+    private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkLobbyMode"),
+            ImmutableList.of(Localizer.getInstance().getMessage("lblNetworkModeConstructed"),
+                    Localizer.getInstance().getMessage("lblNetworkModeDraft"),
+                    Localizer.getInstance().getMessage("lblNetworkModeSealed")));
 
     // Event config panel (top of right panel in Draft/Sealed mode)
     private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 5 10, gap 2, wrap"));
     private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(14).build();
     private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(14).build();
-    private final FLabel lblClientEventStatus = new FLabel.Builder().text("Waiting for host to select an event...").fontSize(14).build();
-    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text("Configure...").fontSize(14).build();
-    private final FCheckBox cbDeckConformance = new FCheckBox("Deck conformance");
+    private final FLabel lblClientEventStatus = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkWaitingForHost")).fontSize(14).build();
+    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text(Localizer.getInstance().getMessage("lblNetworkConfigure")).fontSize(14).build();
+    private final FCheckBox cbDeckConformance = new FCheckBox(Localizer.getInstance().getMessage("lblNetworkDeckConformance"));
 
     // Split panel for right side in Draft/Sealed mode
     private final FPanel eventRightPanel = new FPanel(new MigLayout("insets 0, gap 0, wrap, fill"));
 
     // Event dropdown (host selects completed events from local deck files)
-    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>("Event:");
+    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkEventLabel"));
 
     // Active event state
     private String activeEventId;
@@ -156,8 +158,8 @@ public class VLobby implements ILobbyView {
     private java.util.List<String> eventIdsByDropdownIndex = new java.util.ArrayList<>();
 
     // Action buttons for Draft/Sealed mode
-    private final FButton btnStartEvent = new FButton("Start Draft");
-    private final FButton btnStartMatch = new FButton("Start Match");
+    private final FButton btnStartEvent = new FButton(Localizer.getInstance().getMessage("lblNetworkStartDraft"));
+    private final FButton btnStartMatch = new FButton(Localizer.getInstance().getMessage("lblNetworkStartMatch"));
 
     // Network draft state
     private forge.screens.deckeditor.controllers.CEditorNetworkDraft networkDraftEditor;
@@ -855,7 +857,9 @@ public class VLobby implements ILobbyView {
             if (isLimited) {
                 // In Draft/Sealed mode: event button, Start Match, games-in-match in a single row
                 pnlStart.setLayout(new MigLayout("insets 0, gap 0"));
-                final String label = (currentMode == LobbyMode.DRAFT) ? "Start Draft" : "Generate Pools";
+                final String label = (currentMode == LobbyMode.DRAFT)
+                        ? localizer.getMessage("lblNetworkStartDraft")
+                        : localizer.getMessage("lblNetworkGeneratePools");
                 btnStartEvent.setText(label);
                 pnlStart.add(btnStartEvent, "w 200px!, h 50px!, gapright 40");
                 pnlStart.add(btnStartMatch, "w 200px!, h 50px!, gapright 10");
@@ -880,7 +884,7 @@ public class VLobby implements ILobbyView {
             }
             forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
             if (event == null) {
-                FOptionPane.showErrorDialog("No event configured. Select Sealed mode first.");
+                FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventSealed"));
                 return;
             }
             serverLobby.populateParticipants();
@@ -891,13 +895,16 @@ public class VLobby implements ILobbyView {
             }
             forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
             if (event == null) {
-                FOptionPane.showErrorDialog("No event configured. Use Draft mode and wait for players.");
+                FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventDraft"));
                 return;
             }
 
             // Populate participants from current lobby slots, auto-filling open slots with AI
             serverLobby.populateParticipants();
             serverLobby.fillRemainingWithAI(8);
+
+            // Shuffle draft seat positions for fairness (doesn't affect lobby slots)
+            serverLobby.shuffleSeatPositions();
 
             java.util.List<forge.gamemodes.net.draft.EventParticipant> participants = event.getParticipants();
             int podSize = participants.size();
@@ -908,7 +915,7 @@ public class VLobby implements ILobbyView {
             forge.gamemodes.limited.BoosterDraft draft =
                     forge.gamemodes.limited.BoosterDraft.createDraftForNetwork(poolType);
             if (draft == null) {
-                FOptionPane.showErrorDialog("Failed to create draft.");
+                FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkFailedDraft"));
                 return;
             }
 
@@ -943,6 +950,7 @@ public class VLobby implements ILobbyView {
             }
 
             int totalPacks = draft.getNumRounds();
+            event.setNumRounds(totalPacks);
             forge.gui.FDraftOverlay.SINGLETON_INSTANCE.initDraft(mySeatIndex, names, aiFlags, totalPacks);
 
             // Log the draft start
@@ -961,7 +969,7 @@ public class VLobby implements ILobbyView {
         }
         forge.gamemodes.net.draft.NetworkEvent event = serverLobby.getCurrentEvent();
         if (event == null) {
-            FOptionPane.showErrorDialog("No event configured. Select Draft or Sealed mode first.");
+            FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventConfigured"));
             return;
         }
 
@@ -970,7 +978,7 @@ public class VLobby implements ILobbyView {
                 forge.gamemodes.limited.LimitedPoolType.values(
                         event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT);
         forge.gamemodes.limited.LimitedPoolType chosen =
-                forge.gui.GuiChoose.oneOrNone("Choose draft format:", poolTypes);
+                forge.gui.GuiChoose.oneOrNone(localizer.getMessage("lblNetworkChooseDraftFormat"), poolTypes);
         if (chosen == null) {
             return;
         }
@@ -991,7 +999,7 @@ public class VLobby implements ILobbyView {
         // Pick timer (draft only)
         if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
             String timerInput = FOptionPane.showInputDialog(
-                    "Pick timer (seconds per pick):", "Draft Timer",
+                    localizer.getMessage("lblNetworkPickTimerPrompt"), localizer.getMessage("lblNetworkPickTimerTitle"),
                     FOptionPane.QUESTION_ICON,
                     String.valueOf(event.getPickTimerSeconds()));
             if (timerInput != null) {
@@ -1023,18 +1031,19 @@ public class VLobby implements ILobbyView {
             return;
         }
         String format = event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT
-                ? "Draft" : "Sealed";
+                ? localizer.getMessage("lblNetworkModeDraft") : localizer.getMessage("lblNetworkModeSealed");
         if (event.getFormat() == forge.gamemodes.net.draft.EventFormat.BOOSTER_DRAFT) {
             int timer = event.getPickTimerSeconds();
-            format += timer > 0 ? " (" + timer + "s timer)" : " (no timer)";
+            format += timer > 0 ? localizer.getMessage("lblNetworkFormatTimer", String.valueOf(timer))
+                    : localizer.getMessage("lblNetworkFormatNoTimer");
         }
-        lblEventFormat.setText("Format: " + format);
+        lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", format));
 
         String desc = event.getProductDescription();
         if (desc != null && !desc.isEmpty()) {
-            lblEventProduct.setText("Product: " + desc);
+            lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", desc));
         } else {
-            lblEventProduct.setText("Product: " + event.getPoolType().toString());
+            lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", event.getPoolType().toString()));
         }
     }
 
@@ -1061,9 +1070,9 @@ public class VLobby implements ILobbyView {
         eventIdsByDropdownIndex = new java.util.ArrayList<>(eventLabels.keySet());
 
         if (eventLabels.isEmpty()) {
-            cboEventSelect.addItem("No completed events");
+            cboEventSelect.addItem(localizer.getMessage("lblNetworkNoCompletedEvents"));
         } else {
-            cboEventSelect.addItem("Select event...");
+            cboEventSelect.addItem(localizer.getMessage("lblNetworkSelectEvent"));
             for (String label : eventLabels.values()) {
                 cboEventSelect.addItem(label);
             }
@@ -1102,8 +1111,8 @@ public class VLobby implements ILobbyView {
             for (String tag : d.getTags()) {
                 if (tag.equals("eventId:" + eventId)) {
                     for (String t : d.getTags()) {
-                        if (t.startsWith("eventFormat:")) lblEventFormat.setText("Format: " + t.substring(12));
-                        if (t.startsWith("eventProduct:")) lblEventProduct.setText("Product: " + t.substring(13));
+                        if (t.startsWith("eventFormat:")) lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", t.substring(12)));
+                        if (t.startsWith("eventProduct:")) lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", t.substring(13)));
                     }
                     return;
                 }
@@ -1393,7 +1402,7 @@ public class VLobby implements ILobbyView {
                 if (lastEventView != null) {
                     java.util.List<forge.gamemodes.net.draft.EventParticipant> participants =
                             lastEventView.getParticipants();
-                    int totalPacks = 3; // Default; could parse from config later
+                    int totalPacks = lastEventView.getNumRounds();
                     String[] names = new String[participants.size()];
                     boolean[] aiFlags = new boolean[participants.size()];
                     for (int i = 0; i < participants.size(); i++) {
@@ -1527,11 +1536,11 @@ public class VLobby implements ILobbyView {
 
             if (eventId != null) {
                 updateEventInfoLabels(eventId);
-                lblClientEventStatus.setText("Event selected");
+                lblClientEventStatus.setText(localizer.getMessage("lblNetworkEventSelected"));
             } else {
                 lblEventFormat.setText("");
                 lblEventProduct.setText("");
-                lblClientEventStatus.setText("Waiting for host to select an event...");
+                lblClientEventStatus.setText(localizer.getMessage("lblNetworkWaitingForHost"));
             }
             updateDeckListFilter();
         });

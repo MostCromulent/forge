@@ -133,75 +133,74 @@ public final class BoosterDraftHost {
 
     /**
      * Core draft advancement: AI seats pick immediately, then send packs to humans.
+     * Uses an internal loop to avoid recursion for all-AI rounds or empty packs.
      */
     private void advanceDraft() {
-        List<LimitedPlayer> players = draft.getAllPlayers();
-        System.err.println("[DraftHost] advanceDraft: " + players.size() + " players, pack=" + currentPackNumber + " pick=" + currentPickNumber);
+        while (true) {
+            List<LimitedPlayer> players = draft.getAllPlayers();
+            System.err.println("[DraftHost] advanceDraft: " + players.size() + " players, pack=" + currentPackNumber + " pick=" + currentPickNumber);
 
-        // Let all AI seats pick
-        for (int i = 0; i < players.size(); i++) {
-            LimitedPlayer player = players.get(i);
-            if (!(player instanceof LimitedPlayerAI ai)) {
-                continue;
-            }
-            if (player.shouldSkipThisPick()) {
-                continue;
-            }
-            DraftPack pack = player.nextChoice();
-            if (pack == null || pack.isEmpty()) {
-                System.err.println("[DraftHost] AI seat " + i + ": null/empty pack");
-                continue;
-            }
+            // Let all AI seats pick
+            for (int i = 0; i < players.size(); i++) {
+                LimitedPlayer player = players.get(i);
+                if (!(player instanceof LimitedPlayerAI ai)) {
+                    continue;
+                }
+                if (player.shouldSkipThisPick()) {
+                    continue;
+                }
+                DraftPack pack = player.nextChoice();
+                if (pack == null || pack.isEmpty()) {
+                    System.err.println("[DraftHost] AI seat " + i + ": null/empty pack");
+                    continue;
+                }
 
-            PaperCard aiPick = ai.chooseCard();
-            if (aiPick != null) {
-                ai.draftCard(aiPick, DeckSection.Sideboard);
-                broadcastSeatPicked(i);
-            }
-        }
-
-        // Determine which human seats need to pick and send them packs
-        pendingHumanPicks.clear();
-        for (int i = 0; i < players.size(); i++) {
-            LimitedPlayer player = players.get(i);
-            if (player instanceof LimitedPlayerAI) {
-                continue;
-            }
-            boolean skip = player.shouldSkipThisPick();
-            DraftPack pack = player.nextChoice();
-            System.err.println("[DraftHost] Human seat " + i + ": skip=" + skip + " pack=" + (pack != null ? pack.size() + " cards" : "null"));
-            if (skip) {
-                continue;
-            }
-            if (pack == null || pack.isEmpty()) {
-                continue;
+                PaperCard aiPick = ai.chooseCard();
+                if (aiPick != null) {
+                    ai.draftCard(aiPick, DeckSection.Sideboard);
+                    broadcastSeatPicked(i);
+                }
             }
 
-            pendingHumanPicks.add(i);
-            sendPackToHuman(i, pack);
-        }
+            // Determine which human seats need to pick and send them packs
+            pendingHumanPicks.clear();
+            for (int i = 0; i < players.size(); i++) {
+                LimitedPlayer player = players.get(i);
+                if (player instanceof LimitedPlayerAI) {
+                    continue;
+                }
+                boolean skip = player.shouldSkipThisPick();
+                DraftPack pack = player.nextChoice();
+                System.err.println("[DraftHost] Human seat " + i + ": skip=" + skip + " pack=" + (pack != null ? pack.size() + " cards" : "null"));
+                if (skip) {
+                    continue;
+                }
+                if (pack == null || pack.isEmpty()) {
+                    continue;
+                }
 
-        System.err.println("[DraftHost] pendingHumanPicks: " + pendingHumanPicks);
+                pendingHumanPicks.add(i);
+                sendPackToHuman(i, pack);
+            }
 
-        // Start pick timer if humans need to pick
-        if (!pendingHumanPicks.isEmpty()) {
-            startPickTimer();
-        }
+            System.err.println("[DraftHost] pendingHumanPicks: " + pendingHumanPicks);
 
-        // If no human picks are needed (all seats are AI, or packs empty),
-        // pass and continue
-        if (pendingHumanPicks.isEmpty()) {
-            // Check if we can pass packs and continue
+            // Start pick timer and return — humans need to pick
+            if (!pendingHumanPicks.isEmpty()) {
+                startPickTimer();
+                return;
+            }
+
+            // All AI or empty — advance and loop back
             if (!draft.isRoundOver()) {
                 draft.passPacks();
                 currentPickNumber++;
-                advanceDraft();
             } else if (draft.startRound()) {
                 currentPackNumber = draft.getRound();
                 currentPickNumber = 0;
-                advanceDraft();
             } else {
                 finishDraft();
+                return;
             }
         }
     }
@@ -219,7 +218,7 @@ public final class BoosterDraftHost {
         int timerSecs = event.getPickTimerSeconds();
 
         FServerManager server = FServerManager.getInstance();
-        RemoteClient client = server.getClientByName(participant.getName());
+        RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
         if (client != null) {
             System.err.println("[DraftHost] Sending pack to remote client: " + participant.getName());
             client.send(new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs));
@@ -290,7 +289,7 @@ public final class BoosterDraftHost {
             pool.getTags().add("eventProduct:" + event.getProductDescription());
             pool.getTags().add("eventDate:" + LocalDate.now().toString());
 
-            RemoteClient client = server.getClientByName(participant.getName());
+            RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
             if (client != null) {
                 client.send(new ReceiveEventPoolEvent(eventId, pool));
             } else {
@@ -358,7 +357,7 @@ public final class BoosterDraftHost {
         if (participant == null || participant.isAI()) return;
 
         FServerManager server = FServerManager.getInstance();
-        RemoteClient client = server.getClientByName(participant.getName());
+        RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
         if (client != null) {
             client.send(new forge.gamemodes.net.event.DraftAutoPickedEvent(seatIndex, card, currentPickNumber));
         } else {

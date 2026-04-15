@@ -112,7 +112,7 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         }
 
         String caption = localizer.getMessage("lblPackNCards", String.valueOf(packNumber))
-                + " (Pick " + (pickNumber + 1) + " of " + pack.size() + ")";
+                + " " + localizer.getMessage("lblPickNofM", String.valueOf(pickNumber + 1), String.valueOf(pack.size()));
         this.getCatalogManager().setCaption(caption);
         this.getCatalogManager().setPool(pool);
         this.getCatalogManager().refresh();
@@ -200,8 +200,7 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(editorCtrl);
         editorCtrl.getDeckController().load(null, pool.getName());
 
-        FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
-                + pool.getName() + "'.");
+        FOptionPane.showMessageDialog(localizer.getMessage("lblDraftCompletePoolSaved", pool.getName()));
     }
 
     @Override

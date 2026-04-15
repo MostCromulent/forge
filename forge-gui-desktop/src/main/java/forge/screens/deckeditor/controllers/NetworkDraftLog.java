@@ -1,6 +1,7 @@
 package forge.screens.deckeditor.controllers;
 
 import forge.gamemodes.net.draft.EventParticipant;
+import forge.util.Localizer;
 
 import java.awt.Color;
 import java.util.List;
@@ -16,17 +17,19 @@ public final class NetworkDraftLog {
     private static final Color COLOR_MY_PICK = new Color(50, 200, 50);      // green
     private static final Color COLOR_OTHER_PICK = new Color(180, 180, 180); // light gray
 
+    private static final Localizer localizer = Localizer.getInstance();
+
     private NetworkDraftLog() { } // utility class
 
     /** Log the draft start banner with pod information. */
     public static void logDraftStart(List<EventParticipant> participants, int totalPacks,
             String productName, int mySeatIndex) {
         log("======================================", COLOR_BANNER);
-        log("  Draft started -- " + participants.size() + " players", COLOR_BANNER);
-        log("  " + totalPacks + " packs of " + productName, COLOR_BANNER);
+        log("  " + localizer.getMessage("lblDraftLogDraftStarted", String.valueOf(participants.size())), COLOR_BANNER);
+        log("  " + localizer.getMessage("lblDraftLogPacksOf", String.valueOf(totalPacks), productName), COLOR_BANNER);
 
-        StringBuilder humans = new StringBuilder("  Players: You");
-        StringBuilder ais = new StringBuilder("  AI seats:");
+        StringBuilder humans = new StringBuilder("  " + localizer.getMessage("lblDraftLogPlayersYou"));
+        StringBuilder ais = new StringBuilder("  " + localizer.getMessage("lblDraftLogAiSeats"));
         boolean hasAI = false;
         for (EventParticipant p : participants) {
             if (p.isHuman() && p.getSeatIndex() != mySeatIndex) {
@@ -46,30 +49,31 @@ public final class NetworkDraftLog {
 
     /** Log a pack round header. */
     public static void logPackHeader(int packNumber, boolean passingRight) {
-        String direction = passingRight ? "passing right" : "passing left";
-        log("-- Pack " + packNumber + " -- " + direction + " ------", COLOR_SEPARATOR);
+        String direction = passingRight ? localizer.getMessage("lblDraftLogPassingRight")
+                : localizer.getMessage("lblDraftLogPassingLeft");
+        log(localizer.getMessage("lblDraftLogPackHeader", String.valueOf(packNumber), direction), COLOR_SEPARATOR);
     }
 
     /** Log another player's pick (no card name revealed). pickNumber is 0-based. */
     public static void logOtherPick(String playerName, int pickNumber) {
-        log(playerName + " picked (card " + (pickNumber + 1) + ")", COLOR_OTHER_PICK);
+        log(localizer.getMessage("lblDraftLogOtherPick", playerName, String.valueOf(pickNumber + 1)), COLOR_OTHER_PICK);
     }
 
     /** Log your own pick (card name shown). pickNumber is 0-based. */
     public static void logMyPick(String cardName, int pickNumber) {
-        log("You picked: " + cardName + " (card " + (pickNumber + 1) + ")", COLOR_MY_PICK);
+        log(localizer.getMessage("lblDraftLogMyPick", cardName, String.valueOf(pickNumber + 1)), COLOR_MY_PICK);
     }
 
     /** Log pack round completion. */
     public static void logPackComplete(int packNumber) {
-        log("-- Pack " + packNumber + " complete ---------------", COLOR_SEPARATOR);
+        log(localizer.getMessage("lblDraftLogPackComplete", String.valueOf(packNumber)), COLOR_SEPARATOR);
     }
 
     /** Log draft completion. */
     public static void logDraftComplete(int totalCards) {
         log("======================================", COLOR_BANNER);
-        log("  Draft complete -- " + totalCards + " cards", COLOR_BANNER);
-        log("  Building deck...", COLOR_BANNER);
+        log("  " + localizer.getMessage("lblDraftLogDraftComplete", String.valueOf(totalCards)), COLOR_BANNER);
+        log("  " + localizer.getMessage("lblDraftLogBuildingDeck"), COLOR_BANNER);
         log("======================================", COLOR_BANNER);
     }
 
