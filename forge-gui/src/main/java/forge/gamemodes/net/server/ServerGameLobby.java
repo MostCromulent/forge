@@ -10,9 +10,11 @@ import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.draft.BoosterDraftHost;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.EventParticipant;
+import forge.gamemodes.net.EventPhase;
 import forge.gamemodes.net.NetworkEvent;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
+import forge.gamemodes.net.event.EventPhaseChangedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
 import forge.interfaces.ILobbyListener;
@@ -276,6 +278,9 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         if (event == null) return;
         netLog.info("Starting sealed — product={}", event.getProductDescription());
         populateParticipants();
+        event.setPhase(EventPhase.POOL_DISTRIBUTION);
+        FServerManager.getInstance().broadcast(
+                new EventPhaseChangedEvent(EventPhase.POOL_DISTRIBUTION));
         generateAndDistributeSealedPools();
     }
 

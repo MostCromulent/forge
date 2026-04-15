@@ -44,6 +44,7 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.screens.deckeditor.CDeckEditorUI;
+import forge.screens.deckeditor.controllers.CEditorLimited;
 import forge.screens.deckeditor.controllers.CEditorNetworkDraft;
 import forge.screens.deckeditor.controllers.NetworkDraftLog;
 import forge.screens.home.online.VSubmenuOnlineLobby;
@@ -1406,10 +1407,14 @@ public class VLobby implements ILobbyView {
                 networkDraftEditor.completeDraft(pool);
                 networkDraftEditor = null;
             } else {
+                // Sealed path: save pool and open deck editor
                 FModel.getDecks().getNetworkEventDecks().add(pool);
-                FDraftOverlay.SINGLETON_INSTANCE.reset();
-                FOptionPane.showMessageDialog("Draft complete! Your pool has been saved as '"
-                        + pool.getName() + "'.");
+                CEditorLimited<Deck> editor = new CEditorLimited<>(
+                        FModel.getDecks().getNetworkEventDecks(), Deck::new,
+                        FScreen.DECK_EDITOR_SEALED, CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
+                Singletons.getControl().setCurrentScreen(FScreen.DECK_EDITOR_SEALED);
+                CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(editor);
+                editor.getDeckController().load(null, pool.getName());
             }
             lastPackNumber = 0;
 
@@ -1419,11 +1424,10 @@ public class VLobby implements ILobbyView {
                 populateEventDropdown();
                 for (int i = 0; i < eventIdsByDropdownIndex.size(); i++) {
                     if (eventIdsByDropdownIndex.get(i).equals(eventId)) {
-                        cboEventSelect.setSelectedIndex(i + 1);
+                        cboEventSelect.setSelectedIndex(i + 1); // fires onEventDropdownChanged → broadcastEventSelection
                         break;
                     }
                 }
-                broadcastEventSelection();
             }
             updateRightPanelForMode();
         });
