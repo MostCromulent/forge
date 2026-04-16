@@ -111,7 +111,7 @@ if (sa.isSpell()) {
 
 The lookup `c.mayPlay(sa.getMayPlay())` returns **null** because `c` is the LKI copy with no mayPlay data. The fallback path at line 238 was written assuming "null means this isn't a MayPlay spell at all" — but in this case it actually means "the data was lost in copying."
 
-Because `getMayPlaySpellOptions` sets `zone = null` for all MayPlay spell abilities (`GameActionUtil.java:373`), `this.getZone() == null` is always true, and the method returns `true` — bypassing the proper enforcement at line 245-260 entirely. The cast is allowed.
+Because `getMayPlaySpellOptions` sets `zone = null` for all MayPlay spell abilities (`GameActionUtil.java:373`), `this.getZone() == null` is always true, and the method returns `true` — bypassing the proper `MayPlayDontGrantZonePermissions` enforcement block at lines 245-260 entirely. The cast is allowed.
 
 ## The Fix
 
@@ -119,7 +119,7 @@ Because `getMayPlaySpellOptions` sets `zone = null` for all MayPlay spell abilit
 
 **File:** `forge-game/src/main/java/forge/game/spellability/SpellAbilityRestriction.java`
 
-When the `CardPlayOption` lookup on `c` returns null but the spell ability has a `getMayPlay()` reference, fall back to looking up the option on `sa.getHostCard()` (the original, non-LKI card). This restores access to the `mayPlay` data so the real `grantsZonePermissions` check at line 245-260 can actually run.
+When the `CardPlayOption` lookup on `c` returns null but the spell ability has a `getMayPlay()` reference, fall back to looking up the option on `sa.getHostCard()` (the original, non-LKI card). This restores access to the `mayPlay` data so the real `grantsZonePermissions` check at lines 245-260 can actually run.
 
 ```java
 if (sa.isSpell()) {
@@ -196,13 +196,13 @@ Note that `game.getCardsIn(ZoneType.Exile)` remains game-wide — many effects (
 
 ### Edge Case: Two Stacked Effects
 
-If the AI has both As Foretold (no zone perms) AND Xanathar (zone perms) for the same opponent's library card, the secondary check in `checkZoneRestrictions` at line 251 (`c.mayPlay(activator)`) still queries the LKI copy and gets an empty list. So `hasOtherGrantor` stays false, and the As Foretold free-cast can't piggyback on Xanathar's zone permission.
+If the AI has both As Foretold (no zone perms) AND Xanathar (zone perms) for the same opponent's library card, the secondary check in `checkZoneRestrictions` at line 246 (`c.mayPlay(activator)`) still queries the LKI copy and gets an empty list. So `hasOtherGrantor` stays false, and the As Foretold free-cast can't piggyback on Xanathar's zone permission.
 
 This is a pre-existing issue independent of our fix, and it's a very rare scenario requiring two specific cards in play simultaneously. The base case (Xanathar alone, or As Foretold alone) works correctly.
 
 ### `checkActivatorRestrictions` Has the Same LKI Lookup Gap
 
-`SpellAbilityRestriction.checkActivatorRestrictions()` at line 355 also calls `c.mayPlay(sa.getMayPlay())` on the LKI copy and gets null, falling through to a generic `isValid("You", controller, ...)` check that passes because the LKI copy's controller was set to the activator. This isn't exploitable on its own — the zone check (now fixed) catches it — but it's technical debt worth addressing in a future cleanup.
+`SpellAbilityRestriction.checkActivatorRestrictions()` at line 356 also calls `c.mayPlay(sa.getMayPlay())` on the LKI copy and gets null, falling through to a generic `isValid("You", controller, ...)` check that passes because the LKI copy's controller was set to the activator. This isn't exploitable on its own — the zone check (now fixed) catches it — but it's technical debt worth addressing in a future cleanup.
 
 ## Verification
 
@@ -210,5 +210,5 @@ The fixes were verified by:
 
 1. **Code analysis** of all 24 cards using `MayPlayDontGrantZonePermissions` to confirm the pattern is correctly handled
 2. **Adversarial review** to identify regression risks — surfaced the Xanathar/Windriddle issue, which led to refining Fix 2
-3. **Cross-checking** all callers of `getAvailableCards` (3 in AI code, 1 in test code) to confirm uniform impact
+3. **Cross-checking** all callers of `getAvailableCards` (3 calls across 2 AI files, plus 4 calls in `GameSimulationTest`) to confirm uniform impact
 4. **Verification** that `sa.getHostCard()` reliably returns the original card throughout `canPlayFromHost()` (it's never overwritten with the LKI copy — the LKI is only assigned to a local variable)
