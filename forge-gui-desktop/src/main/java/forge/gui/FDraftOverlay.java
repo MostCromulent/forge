@@ -317,7 +317,7 @@ public enum FDraftOverlay {
     private void updateTimerLabel() {
         int mins = secondsRemaining / 60;
         int secs = secondsRemaining % 60;
-        lblTimer.setText(String.format("\u23F1 %d:%02d", mins, secs));
+        lblTimer.setText(String.format("%d:%02d", mins, secs));
 
         // Color based on urgency
         Color timerColor;
@@ -395,8 +395,11 @@ public enum FDraftOverlay {
         }
     }
 
+    private static final int MAX_PACK_ICONS = 2;
+
     private void addPackIcons(int depth) {
-        for (int i = 0; i < depth; i++) {
+        int shown = Math.min(depth, MAX_PACK_ICONS);
+        for (int i = 0; i < shown; i++) {
             if (cardBackIcon != null) {
                 JLabel icon = new JLabel(cardBackIcon);
                 icon.setOpaque(false);
@@ -404,6 +407,9 @@ public enum FDraftOverlay {
             } else {
                 pnlNeighbors.add(makeTextLabel("[P]"));
             }
+        }
+        if (depth > MAX_PACK_ICONS) {
+            pnlNeighbors.add(makeTextLabel("+" + (depth - MAX_PACK_ICONS)));
         }
     }
 

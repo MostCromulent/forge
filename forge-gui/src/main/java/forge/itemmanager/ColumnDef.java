@@ -327,6 +327,15 @@ public enum ColumnDef {
                 String prod = toDeck(from.getKey()).getEventTag("eventProduct");
                 return prod != null ? prod : "";
             }),
+    DECK_EVENT_DATE("lblEventDate", "lblEventDate", 60, false, SortState.DESC,
+            from -> {
+                String date = toDeck(from.getKey()).getEventTag("eventDate");
+                return date != null ? date : "";
+            },
+            from -> {
+                String date = toDeck(from.getKey()).getEventTag("eventDate");
+                return date != null ? date : "";
+            }),
     DECK_AI("lblAI", "lblAIStatus", 38, true, SortState.DESC,
             from -> toDeck(from.getKey()).getAI().inMainDeck,
             from -> toDeck(from.getKey()).getAI()),

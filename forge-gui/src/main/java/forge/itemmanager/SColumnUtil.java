@@ -245,12 +245,14 @@ public final class SColumnUtil {
         colDefs.add(ColumnDef.DECK_COLOR);
         colDefs.add(ColumnDef.DECK_EVENT_TYPE);
         colDefs.add(ColumnDef.DECK_EVENT_PRODUCT);
+        colDefs.add(ColumnDef.DECK_EVENT_DATE);
         colDefs.add(ColumnDef.DECK_MAIN);
         colDefs.add(ColumnDef.DECK_SIDE);
 
         Map<ColumnDef, ItemColumnConfig> columns = getColumns(colDefs);
-        columns.get(ColumnDef.DECK_FAVORITE).setSortPriority(1);
-        columns.get(ColumnDef.NAME).setSortPriority(2);
+        columns.get(ColumnDef.DECK_EVENT_DATE).setSortPriority(1);
+        columns.get(ColumnDef.DECK_FAVORITE).setSortPriority(2);
+        columns.get(ColumnDef.NAME).setSortPriority(3);
         return columns;
     }
 
