@@ -344,6 +344,16 @@ public class DeckProxy implements InventoryItem {
         return key;
     }
 
+    public String getEventTag(String key) {
+        String prefix = key + ":";
+        for (String tag : getDeck().getTags()) {
+            if (tag.startsWith(prefix)) {
+                return tag.substring(prefix.length());
+            }
+        }
+        return null;
+    }
+
     public Set<GameFormat> getFormats() {
         if (formats == null) {
             formats = FModel.getFormats().getAllFormatsOfDeck(getDeck());

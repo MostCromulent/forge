@@ -53,6 +53,6 @@ public enum CSubmenuOnlineDecks implements ICDoc {
     public void update() {
         final VSubmenuOnlineDecks view = VSubmenuOnlineDecks.SINGLETON_INSTANCE;
         view.getLstDecks().setPool(DeckProxy.getAllNetworkEventDecks());
-        view.getLstDecks().setup(ItemManagerConfig.SEALED_DECKS);
+        view.getLstDecks().setup(ItemManagerConfig.NET_EVENT_DECKS);
     }
 }

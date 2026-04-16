@@ -128,20 +128,20 @@ public class VLobby implements ILobbyView {
     private final Vector<Object> aiListData = new Vector<>();
 
     // Mode selector (network only)
-    public enum LobbyMode { CONSTRUCTED, DRAFT, SEALED }
+    public enum LobbyMode { CONSTRUCTED, LIMITED }
     private LobbyMode currentMode = LobbyMode.CONSTRUCTED;
+    private EventFormat configuredFormat;
     private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkLobbyMode"),
             ImmutableList.of(Localizer.getInstance().getMessage("lblNetworkModeConstructed"),
-                    Localizer.getInstance().getMessage("lblNetworkModeDraft"),
-                    Localizer.getInstance().getMessage("lblNetworkModeSealed")));
+                    Localizer.getInstance().getMessage("lblNetworkModeLimited")));
 
     // Event config panel (top of right panel in Draft/Sealed mode)
-    private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 5 10, gap 2, wrap"));
+    private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 15 10, gap 2, wrap"));
     private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(14).build();
     private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(14).build();
     private final FLabel lblClientEventStatus = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkWaitingForHost")).fontSize(14).build();
     private final FLabel btnConfigure = new FLabel.ButtonBuilder().text(Localizer.getInstance().getMessage("lblNetworkConfigure")).fontSize(14).build();
-    private final FCheckBox cbDeckConformance = new FCheckBox(Localizer.getInstance().getMessage("lblNetworkDeckConformance"));
+    private final FCheckBox cbDeckConformance = new FCheckBox(Localizer.getInstance().getMessage("lblNetworkDeckFilter"));
 
     // Split panel for right side in Draft/Sealed mode
     private final FPanel eventRightPanel = new FPanel(new MigLayout("insets 0, gap 0, wrap, fill"));
@@ -770,25 +770,19 @@ public class VLobby implements ILobbyView {
 
     private void onModeChanged() {
         final String selected = cboModePanel.getSelectedItem();
-        if ("Draft".equals(selected)) {
-            currentMode = LobbyMode.DRAFT;
-        } else if ("Sealed".equals(selected)) {
-            currentMode = LobbyMode.SEALED;
+        if (localizer.getMessage("lblNetworkModeLimited").equals(selected)) {
+            currentMode = LobbyMode.LIMITED;
         } else {
             currentMode = LobbyMode.CONSTRUCTED;
         }
 
-        final boolean isLimited = (currentMode != LobbyMode.CONSTRUCTED);
+        final boolean isLimited = (currentMode == LobbyMode.LIMITED);
 
-        // Create or clear the network event on the server lobby
+        // Clear event when switching away from Limited
         if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
-            if (isLimited) {
-                EventFormat format = (currentMode == LobbyMode.DRAFT)
-                        ? EventFormat.BOOSTER_DRAFT
-                        : EventFormat.SEALED;
-                serverLobby.createEvent(format);
-            } else {
+            if (!isLimited) {
                 serverLobby.setCurrentEvent(null);
+                configuredFormat = null;
             }
         }
         updateEventConfigDisplay();
@@ -818,7 +812,7 @@ public class VLobby implements ILobbyView {
             populateDeckPanel(lobby.getGameType());
         } else {
             eventRightPanel.removeAll();
-            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap, gapbottom 5");
+            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap");
 
             if (playerWithFocus < playerPanels.size() && lobby.mayEdit(playerWithFocus)) {
                 final FDeckChooser chooser = getDeckChooser(playerWithFocus);
@@ -839,19 +833,20 @@ public class VLobby implements ILobbyView {
     }
 
     private void updateActionButtons() {
-        final boolean isLimited = (currentMode != LobbyMode.CONSTRUCTED);
+        final boolean isLimited = (currentMode == LobbyMode.LIMITED);
 
         // Rebuild pnlStart layout
         pnlStart.removeAll();
         pnlStart.setOpaque(false);
         if (lobby.hasControl()) {
             if (isLimited) {
-                // In Draft/Sealed mode: event button, Start Match, games-in-match in a single row
                 pnlStart.setLayout(new MigLayout("insets 0, gap 0"));
-                final String label = (currentMode == LobbyMode.DRAFT)
-                        ? localizer.getMessage("lblNetworkStartDraft")
-                        : localizer.getMessage("lblNetworkGeneratePools");
+                final String label = (configuredFormat == EventFormat.SEALED)
+                        ? localizer.getMessage("lblNetworkGeneratePools")
+                        : localizer.getMessage("lblNetworkStartDraft");
                 btnStartEvent.setText(label);
+                boolean isExistingEvent = activeEventId != null && cboEventSelect.getSelectedIndex() > 0;
+                btnStartEvent.setEnabled(configuredFormat != null && !isExistingEvent);
                 pnlStart.add(btnStartEvent, "w 200px!, h 50px!, gapright 40");
                 pnlStart.add(btnStartMatch, "w 200px!, h 50px!, gapright 10");
                 pnlStart.add(gamesInMatchFrame);
@@ -876,9 +871,9 @@ public class VLobby implements ILobbyView {
             return;
         }
 
-        if (currentMode == LobbyMode.SEALED) {
+        if (event.getFormat() == EventFormat.SEALED) {
             serverLobby.startSealedEvent();
-        } else if (currentMode == LobbyMode.DRAFT) {
+        } else if (event.getFormat() == EventFormat.BOOSTER_DRAFT) {
             ServerGameLobby.DraftStartResult result = serverLobby.startDraftEvent();
             if (result == null) {
                 FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkFailedDraft"));
@@ -896,19 +891,28 @@ public class VLobby implements ILobbyView {
 
     private void openEventConfigDialog() {
         if (!(lobby instanceof ServerGameLobby serverLobby)) return;
-        NetworkEvent event = serverLobby.getCurrentEvent();
-        if (event == null) {
-            FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventConfigured"));
-            return;
-        }
 
-        // Gather user choices via UI dialogs
-        boolean isDraft = (event.getFormat() == EventFormat.BOOSTER_DRAFT);
+        // Step 1: Choose event type (Draft / Sealed)
+        String[] formatNames = { localizer.getMessage("lblNetworkModeDraft"), localizer.getMessage("lblNetworkModeSealed") };
+        String chosenFormatName = GuiChoose.oneOrNone(
+                localizer.getMessage("lblNetworkChooseEventType"), formatNames);
+        if (chosenFormatName == null) return;
+        EventFormat chosenFormat = chosenFormatName.equals(formatNames[0])
+                ? EventFormat.BOOSTER_DRAFT : EventFormat.SEALED;
+
+        // Create event with chosen format
+        serverLobby.createEvent(chosenFormat);
+        configuredFormat = chosenFormat;
+        NetworkEvent event = serverLobby.getCurrentEvent();
+
+        // Step 2: Choose pool type
+        boolean isDraft = (chosenFormat == EventFormat.BOOSTER_DRAFT);
         LimitedPoolType[] poolTypes = LimitedPoolType.values(isDraft);
         LimitedPoolType chosen = GuiChoose.oneOrNone(
                 localizer.getMessage("lblNetworkChooseDraftFormat"), poolTypes);
         if (chosen == null) return;
 
+        // Step 3: Timer (draft only)
         int timerSeconds = event.getPickTimerSeconds();
         if (isDraft) {
             String timerInput = FOptionPane.showInputDialog(
@@ -924,11 +928,12 @@ public class VLobby implements ILobbyView {
             }
         }
 
-        // Delegate all server-side configuration to ServerGameLobby
+        // Delegate server-side configuration
         if (!serverLobby.configureEvent(chosen, timerSeconds, cbDeckConformance.isSelected())) {
-            return; // user cancelled a sub-dialog (e.g. sealed edition selection)
+            return;
         }
         updateEventConfigDisplay();
+        updateActionButtons();
     }
 
     private void updateEventConfigDisplay() {
@@ -971,32 +976,40 @@ public class VLobby implements ILobbyView {
                 else if (tag.startsWith("eventDate:")) date = tag.substring(10);
             }
             if (eventId != null && !eventLabels.containsKey(eventId)) {
-                eventLabels.put(eventId, format + " - " + product + " (" + date + ")");
+                String displayFormat = "BOOSTER_DRAFT".equals(format) ? "Draft" : "Sealed";
+                eventLabels.put(eventId, displayFormat + " \u2014 " + product + " \u2014 (" + date + ")");
             }
         }
 
         eventIdsByDropdownIndex = new ArrayList<>(eventLabels.keySet());
 
-        if (eventLabels.isEmpty()) {
-            cboEventSelect.addItem(localizer.getMessage("lblNetworkNoCompletedEvents"));
-        } else {
-            cboEventSelect.addItem(localizer.getMessage("lblNetworkSelectEvent"));
-            for (String label : eventLabels.values()) {
-                cboEventSelect.addItem(label);
-            }
+        cboEventSelect.addItem(localizer.getMessage("lblNetworkCreateNewEvent"));
+        for (String label : eventLabels.values()) {
+            cboEventSelect.addItem(label);
         }
     }
 
     private void onEventDropdownChanged() {
         int idx = cboEventSelect.getSelectedIndex();
+        boolean isExistingEvent;
         if (idx <= 0 || idx > eventIdsByDropdownIndex.size()) {
             activeEventId = null;
             lblEventFormat.setText("");
             lblEventProduct.setText("");
+            isExistingEvent = false;
+            // Reset configured format when switching back to "Create New"
+            if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
+                configuredFormat = null;
+                serverLobby.setCurrentEvent(null);
+            }
+            updateEventConfigDisplay();
         } else {
             activeEventId = eventIdsByDropdownIndex.get(idx - 1);
             updateEventInfoLabels(activeEventId);
+            isExistingEvent = true;
         }
+        btnConfigure.setVisible(!isExistingEvent);
+        updateActionButtons();
         updateDeckListFilter();
         broadcastEventSelection();
     }
@@ -1034,6 +1047,10 @@ public class VLobby implements ILobbyView {
         final FDeckChooser chooser = getDeckChooser(playerWithFocus);
         if (chooser == null) return;
 
+        if (chooser.getSelectedDeckType() != DeckType.NET_EVENT_DECK) {
+            chooser.setSelectedDeckType(DeckType.NET_EVENT_DECK);
+        }
+
         List<DeckProxy> allDecks = new ArrayList<>(
                 DeckProxy.getAllNetworkEventDecks());
 
@@ -1045,7 +1062,7 @@ public class VLobby implements ILobbyView {
         }
 
         chooser.getLstDecks().setPool(allDecks);
-        chooser.getLstDecks().setup(ItemManagerConfig.SEALED_DECKS);
+        chooser.getLstDecks().setup(ItemManagerConfig.NET_EVENT_DECKS);
     }
 
     /** Saves avatar prefs for players one and two. */

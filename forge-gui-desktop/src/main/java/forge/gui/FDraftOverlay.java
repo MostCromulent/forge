@@ -58,7 +58,7 @@ public enum FDraftOverlay {
     private boolean  leftAI,   rightAI;
     private int      mySeat;
     private int      currentPack, totalPacks;
-    private int      currentPick, currentPackSize;
+    private int      currentPick, currentPackSize, initialPackSize;
     private boolean  passingRight;
     private int[]    queueDepths = new int[0];
 
@@ -179,6 +179,9 @@ public enum FDraftOverlay {
             currentPack    = packNumber;
             currentPick    = pickNumber + 1;
             currentPackSize = packSize;
+            if (pickNumber == 0) {
+                initialPackSize = packSize;
+            }
             waitingForPack = false;
             timerDisabled  = (timerSeconds <= 0);
             // Pack direction: odd packs pass right, even packs pass left (conventional booster draft).
@@ -259,8 +262,8 @@ public enum FDraftOverlay {
         // Row 1 – pack info + pick number
         if (currentPack > 0 && totalPacks > 0) {
             String text = "Pack " + currentPack + " of " + totalPacks;
-            if (currentPick > 0 && currentPackSize > 0) {
-                text += "  \u2022  Pick " + currentPick + "/" + currentPackSize;
+            if (currentPick > 0 && initialPackSize > 0) {
+                text += "  \u2022  Pick " + currentPick + "/" + initialPackSize;
             }
             lblPackInfo.setText(text);
         } else {
@@ -356,20 +359,22 @@ public enum FDraftOverlay {
         String arrow = passingRight ? " \u2192 " : " \u2190 ";
 
         if (passingRight) {
-            pnlNeighbors.add(makeTextLabel(leftLabel + " "));
-            addPackIcons(leftDepth);
+            // Packs flow left → me → right
+            pnlNeighbors.add(makeTextLabel(leftLabel));
             pnlNeighbors.add(makeTextLabel(arrow));
+            addPackIcons(leftDepth);
             addPackIcons(myDepth);
             pnlNeighbors.add(makeTextLabel(" YOU" + arrow));
             addPackIcons(rightDepth);
             pnlNeighbors.add(makeTextLabel(" " + rightLabel));
         } else {
+            // Packs flow right → me → left
             pnlNeighbors.add(makeTextLabel(leftLabel + " "));
             addPackIcons(leftDepth);
             pnlNeighbors.add(makeTextLabel(arrow + "YOU "));
             addPackIcons(myDepth);
-            pnlNeighbors.add(makeTextLabel(arrow + rightLabel + " "));
             addPackIcons(rightDepth);
+            pnlNeighbors.add(makeTextLabel(arrow + rightLabel));
         }
 
         pnlNeighbors.revalidate();

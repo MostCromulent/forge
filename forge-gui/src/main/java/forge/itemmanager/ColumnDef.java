@@ -309,6 +309,24 @@ public enum ColumnDef {
                     return deckEdition.getCode();
                 return null;
             }),
+    DECK_EVENT_TYPE("lblEventType", "lblEventType", 50, false, SortState.ASC,
+            from -> {
+                String fmt = toDeck(from.getKey()).getEventTag("eventFormat");
+                return fmt != null ? fmt : "";
+            },
+            from -> {
+                String fmt = toDeck(from.getKey()).getEventTag("eventFormat");
+                return fmt != null ? fmt : "";
+            }),
+    DECK_EVENT_PRODUCT("lblProduct", "lblProduct", 80, false, SortState.ASC,
+            from -> {
+                String prod = toDeck(from.getKey()).getEventTag("eventProduct");
+                return prod != null ? prod : "";
+            },
+            from -> {
+                String prod = toDeck(from.getKey()).getEventTag("eventProduct");
+                return prod != null ? prod : "";
+            }),
     DECK_AI("lblAI", "lblAIStatus", 38, true, SortState.DESC,
             from -> toDeck(from.getKey()).getAI().inMainDeck,
             from -> toDeck(from.getKey()).getAI()),

@@ -373,12 +373,15 @@ public class BoosterDraft implements IBoosterDraft {
      * @param humanSeats seat indices (0-based) that should be human-controlled
      */
     public void setHumanSeats(java.util.Set<Integer> humanSeats) {
-        for (int seat : humanSeats) {
-            if (seat < 0 || seat >= players.size()) {
-                continue;
-            }
-            if (players.get(seat) instanceof LimitedPlayerAI) {
-                players.set(seat, new LimitedPlayer(seat, this));
+        for (int i = 0; i < players.size(); i++) {
+            if (humanSeats.contains(i)) {
+                if (players.get(i) instanceof LimitedPlayerAI) {
+                    players.set(i, new LimitedPlayer(i, this));
+                }
+            } else {
+                if (!(players.get(i) instanceof LimitedPlayerAI)) {
+                    players.set(i, new LimitedPlayerAI(i, this));
+                }
             }
         }
     }
