@@ -111,8 +111,10 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
             pool.add(card, 1);
         }
 
+        // pack.size() shrinks with each pass — add pickNumber to recover the initial pack size
+        int initialPackSize = pack.size() + pickNumber;
         String caption = localizer.getMessage("lblPackNCards", String.valueOf(packNumber))
-                + " " + localizer.getMessage("lblPickNofM", String.valueOf(pickNumber + 1), String.valueOf(pack.size()));
+                + " " + localizer.getMessage("lblPickNofM", String.valueOf(pickNumber + 1), String.valueOf(initialPackSize));
         this.getCatalogManager().setCaption(caption);
         this.getCatalogManager().setPool(pool);
         this.getCatalogManager().refresh();

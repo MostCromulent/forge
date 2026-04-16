@@ -310,8 +310,8 @@ public enum ColumnDef {
                 return null;
             }),
     DECK_EVENT_TYPE("lblEventType", "lblEventType", 50, false, SortState.ASC,
-            from -> eventTag(from.getKey(), "eventFormat"),
-            from -> eventTag(from.getKey(), "eventFormat")),
+            from -> eventFormatDisplay(eventTag(from.getKey(), "eventFormat")),
+            from -> eventFormatDisplay(eventTag(from.getKey(), "eventFormat"))),
     DECK_EVENT_PRODUCT("lblProduct", "lblProduct", 80, false, SortState.ASC,
             from -> eventTag(from.getKey(), "eventProduct"),
             from -> eventTag(from.getKey(), "eventProduct")),
@@ -455,6 +455,14 @@ public enum ColumnDef {
         if (d == null) return "";
         String v = d.getEventTag(key);
         return v != null ? v : "";
+    }
+
+    private static String eventFormatDisplay(final String rawFormat) {
+        if (rawFormat == null || rawFormat.isEmpty()) return "";
+        Localizer localizer = Localizer.getInstance();
+        return "BOOSTER_DRAFT".equals(rawFormat)
+                ? localizer.getMessage("lblNetworkModeDraft")
+                : localizer.getMessage("lblNetworkModeSealed");
     }
 
     private static ColorSet toDeckColor(final InventoryItem i) {

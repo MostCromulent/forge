@@ -42,15 +42,15 @@ public enum FDraftOverlay {
     private static final String COORD_DELIM = ",";
 
     // Default window dimensions
-    private static final int DEFAULT_WIDTH  = 400;
-    private static final int DEFAULT_HEIGHT = 70;
+    private static final int DEFAULT_WIDTH  = 420;
+    private static final int DEFAULT_HEIGHT = 90;
 
     private final ForgePreferences prefs = FModel.getPreferences();
     private boolean hasBeenShown, locLoaded;
 
     private final FSkin.SkinnedLabel lblPackInfo  = new FSkin.SkinnedLabel("");
     private final FSkin.SkinnedLabel lblTimer     = new FSkin.SkinnedLabel("");
-    private final JPanel pnlNeighbors = new JPanel(new FlowLayout(FlowLayout.CENTER, 2, 0));
+    private final JPanel pnlNeighbors = new JPanel(new FlowLayout(FlowLayout.CENTER, 4, 0));
 
     private static ImageIcon cardBackIcon;
 
@@ -108,11 +108,10 @@ public enum FDraftOverlay {
         window.setLayout(new MigLayout("insets 4, gap 0, wrap 2"));
 
         // Apply bold skin font and text color to all labels
-        FSkin.SkinFont boldFont = FSkin.getBoldFont();
         FSkin.SkinColor textColor = FSkin.getColor(FSkin.Colors.CLR_TEXT);
 
-        lblPackInfo.setFont(boldFont);
-        lblTimer.setFont(boldFont);
+        lblPackInfo.setFont(FSkin.getBoldFont(14));
+        lblTimer.setFont(FSkin.getBoldFont(16));
 
         if (textColor != null) {
             lblPackInfo.setForeground(textColor);
@@ -387,7 +386,7 @@ public enum FDraftOverlay {
             BufferedImage img = ImageCache.getOriginalImage(
                     ImageKeys.getTokenKey(ImageKeys.HIDDEN_CARD), true, null);
             if (img != null) {
-                Image scaled = img.getScaledInstance(14, 20, Image.SCALE_SMOOTH);
+                Image scaled = img.getScaledInstance(18, 26, Image.SCALE_SMOOTH);
                 cardBackIcon = new ImageIcon(scaled);
             }
         } catch (Exception e) {
@@ -415,7 +414,7 @@ public enum FDraftOverlay {
 
     private JLabel makeTextLabel(String text) {
         FSkin.SkinnedLabel lbl = new FSkin.SkinnedLabel(text);
-        lbl.setFont(FSkin.getBoldFont());
+        lbl.setFont(FSkin.getBoldFont(13));
         FSkin.SkinColor color = FSkin.getColor(FSkin.Colors.CLR_TEXT);
         if (color != null) lbl.setForeground(color);
         lbl.setOpaque(false);

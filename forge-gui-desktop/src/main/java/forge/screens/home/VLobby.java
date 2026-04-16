@@ -38,6 +38,7 @@ import forge.gui.framework.FScreen;
 import forge.gui.interfaces.ILobbyView;
 import forge.gui.util.SOptionPane;
 import forge.interfaces.IPlayerChangeListener;
+import forge.localinstance.skin.FSkinProp;
 import forge.item.PaperCard;
 import forge.itemmanager.ItemManagerConfig;
 import forge.localinstance.properties.ForgePreferences;
@@ -137,12 +138,18 @@ public class VLobby implements ILobbyView {
 
     // Event config panel (top of right panel in Draft/Sealed mode)
     private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 15 10, gap 2, wrap"));
-    private final FLabel lblEventFormat = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkFormatLabel", "\u2014")).fontSize(14).build();
-    private final FLabel lblEventProduct = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkProductLabel", "\u2014")).fontSize(14).build();
-    private final FLabel lblEventStatus = new FLabel.Builder().fontSize(14).fontStyle(Font.BOLD).build();
-    private final FLabel lblEventPickTimer = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkPickTimerLabel", "\u2014")).fontSize(14).build();
+    private final FLabel lblEventFormat = new FLabel.Builder().text("\u2014").fontSize(14).fontStyle(Font.BOLD).build();
+    private final FLabel lblEventProduct = new FLabel.Builder().text("\u2014").fontSize(14).fontStyle(Font.BOLD).build();
+    private final FLabel lblEventPanelTitle = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkEventDetailsTitle")).fontSize(15).fontStyle(Font.BOLD).build();
+    private final FLabel lblEventStatus = new FLabel.Builder().fontSize(12).fontStyle(Font.ITALIC).build();
+    private final FLabel lblEventFormatCaption = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkFormatCaption")).fontSize(13).build();
+    private final FLabel lblEventProductCaption = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkProductCaption")).fontSize(13).build();
+    private final FLabel lblEventPickTimerCaption = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkPickTimerCaption")).fontSize(13).build();
+    private final FLabel lblEventDateCaption = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkDateCaption")).fontSize(13).build();
+    private final FLabel lblEventDate = new FLabel.Builder().text("\u2014").fontSize(14).fontStyle(Font.BOLD).build();
+    private final FLabel lblEventPickTimer = new FLabel.Builder().text("\u2014").fontSize(14).fontStyle(Font.BOLD).build();
     private final FButton btnNewEvent = new FButton(Localizer.getInstance().getMessage("lblNetworkNewEventButton"));
-    private final FLabel btnDismissEvent = new FLabel.ButtonBuilder().text("\u2715").fontSize(16).fontStyle(Font.BOLD).tooltip(Localizer.getInstance().getMessage("lblNetworkDismissEventTooltip")).build();
+    private final FLabel btnDismissEvent = new FLabel.Builder().icon(FSkin.getIcon(FSkinProp.ICO_CLOSE)).iconInBackground(false).hoverable(true).tooltip(Localizer.getInstance().getMessage("lblNetworkDismissEventTooltip")).build();
     private final FCheckBox cbDeckConformance = new FCheckBox(Localizer.getInstance().getMessage("lblNetworkDeckFilter"));
 
     // Split panel for right side in Draft/Sealed mode
@@ -184,9 +191,19 @@ public class VLobby implements ILobbyView {
             eventRightPanel.setOpaque(false);
             eventConfigPanel.setOpaque(true);
             eventConfigPanel.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2).stepColor(20).getColor());
-            eventConfigPanel.setLayout(new MigLayout("insets 10, gap 4, wrap, hidemode 3"));
+            eventConfigPanel.setLayout(new MigLayout(
+                    "insets 10 14 10 14, gap 4 8, wrap 2, hidemode 3",
+                    "[110px!][grow,fill]"));
 
-            // Row 1: status label + (host only) X dismiss in the right corner
+            // Muted caption color derived from CLR_TEXT so it degrades with the theme
+            java.awt.Color captionColor = FSkin.getColor(FSkin.Colors.CLR_TEXT).stepColor(-80).getColor();
+            lblEventFormatCaption.setForeground(captionColor);
+            lblEventProductCaption.setForeground(captionColor);
+            lblEventPickTimerCaption.setForeground(captionColor);
+            lblEventDateCaption.setForeground(captionColor);
+            lblEventStatus.setForeground(captionColor);
+
+            // Row 1: title (+ X dismiss for host in right column)
             if (lobby.hasControl()) {
                 btnDismissEvent.setCommand(() -> {
                     if (lobby instanceof ServerGameLobby serverLobby) {
@@ -199,25 +216,33 @@ public class VLobby implements ILobbyView {
                     updateActionButtons();
                     updateDeckListFilter();
                 });
-                eventConfigPanel.add(lblEventStatus, "growx, pushx, split 2");
-                eventConfigPanel.add(btnDismissEvent, "w 28px!, h 28px!, wrap, gapbottom 6");
+                eventConfigPanel.add(lblEventPanelTitle, "growx, pushx");
+                eventConfigPanel.add(btnDismissEvent, "w 24px!, h 24px!, align right, wrap");
             } else {
-                eventConfigPanel.add(lblEventStatus, "growx, wrap, gapbottom 6");
+                eventConfigPanel.add(lblEventPanelTitle, "span 2, growx, wrap");
             }
 
-            // Rows 2-4: format / product / pick timer
-            eventConfigPanel.add(lblEventFormat, "wrap");
-            eventConfigPanel.add(lblEventProduct, "wrap");
-            eventConfigPanel.add(lblEventPickTimer, "wrap, gapbottom 6");
+            // Row 2: status subtitle (italic, muted)
+            eventConfigPanel.add(lblEventStatus, "span 2, growx, wrap, gapbottom 4");
 
-            // Row 5: filter checkbox
+            // Rows 3-6: caption | value pairs
+            eventConfigPanel.add(lblEventFormatCaption);
+            eventConfigPanel.add(lblEventFormat, "wrap");
+            eventConfigPanel.add(lblEventProductCaption);
+            eventConfigPanel.add(lblEventProduct, "wrap");
+            eventConfigPanel.add(lblEventPickTimerCaption);
+            eventConfigPanel.add(lblEventPickTimer, "wrap");
+            eventConfigPanel.add(lblEventDateCaption);
+            eventConfigPanel.add(lblEventDate, "wrap, gapbottom 6");
+
+            // Row 7: filter checkbox
             cbDeckConformance.setSelected(true);
             if (lobby.hasControl()) {
                 cbDeckConformance.addActionListener(e -> onConformanceChanged());
             } else {
                 cbDeckConformance.setEnabled(false);
             }
-            eventConfigPanel.add(cbDeckConformance, "wrap");
+            eventConfigPanel.add(cbDeckConformance, "span 2, wrap");
 
             updateEventPanelState();
         }
@@ -1024,40 +1049,40 @@ public class VLobby implements ILobbyView {
             btnDismissEvent.setVisible(inState1 || inState2);
         }
 
-        // Row 2 — status label (always visible, text reflects state)
-        String statusText;
+        // Row 2 — status subtitle (visible in States 0/1; hidden in State 2 since data rows speak)
+        String statusText = "";
         if (isHost) {
-            if (inState2) {
-                statusText = localizer.getMessage("lblNetworkCurrentEventStatus", getEventDisplayLabel(activeEventId));
-            } else if (inState1) {
+            if (inState1) {
                 statusText = localizer.getMessage("lblNetworkNewEventNotDrafted");
-            } else {
+            } else if (!inState2) {
                 statusText = localizer.getMessage("lblNetworkNoEventStatus");
             }
-        } else if (inState2) {
-            statusText = localizer.getMessage("lblNetworkHostSelectedEvent", getEventDisplayLabel(activeEventId));
         } else if (inState1) {
             statusText = localizer.getMessage("lblNetworkHostSettingUpEvent");
-        } else {
+        } else if (!inState2) {
             statusText = localizer.getMessage("lblNetworkWaitingForHost");
         }
         lblEventStatus.setText(statusText);
+        lblEventStatus.setVisible(!statusText.isEmpty());
 
-        // Rows 3-5 — format / product / pick timer
+        // Rows 3-6 — value cells for Format / Product / Pick timer / Date
         String formatText = "\u2014";
         String productText = "\u2014";
         String timerText = "\u2014";
+        String dateText = "\u2014";
         if (inState2) {
             for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
                 if (activeEventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
                     String f = DeckProxy.getEventTag(d, "eventFormat");
                     String p = DeckProxy.getEventTag(d, "eventProduct");
+                    String dt = DeckProxy.getEventTag(d, "eventDate");
                     if (f != null) {
                         formatText = "BOOSTER_DRAFT".equals(f)
                                 ? localizer.getMessage("lblNetworkModeDraft")
                                 : localizer.getMessage("lblNetworkModeSealed");
                     }
                     if (p != null && !p.isEmpty()) productText = p;
+                    if (dt != null && !dt.isEmpty()) dateText = dt;
                     break;
                 }
             }
@@ -1090,11 +1115,12 @@ public class VLobby implements ILobbyView {
                 timerText = localizer.getMessage("lblNetworkPickTimerNotApplicable");
             }
         }
-        lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", formatText));
-        lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", productText));
-        lblEventPickTimer.setText(localizer.getMessage("lblNetworkPickTimerLabel", timerText));
+        lblEventFormat.setText(formatText);
+        lblEventProduct.setText(productText);
+        lblEventPickTimer.setText(timerText);
+        lblEventDate.setText(dateText);
 
-        // Row 6 — filter checkbox: enabled only for host in States 0/2
+        // Row 7 — filter checkbox: enabled only for host in States 0/2
         cbDeckConformance.setEnabled(isHost && !inState1);
 
         eventConfigPanel.revalidate();
