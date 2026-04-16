@@ -137,17 +137,19 @@ public class VLobby implements ILobbyView {
 
     // Event config panel (top of right panel in Draft/Sealed mode)
     private final FPanel eventConfigPanel = new FPanel(new MigLayout("insets 5 10 15 10, gap 2, wrap"));
-    private final FLabel lblEventFormat = new FLabel.Builder().text("").fontSize(14).build();
-    private final FLabel lblEventProduct = new FLabel.Builder().text("").fontSize(14).build();
-    private final FLabel lblClientEventStatus = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkWaitingForHost")).fontSize(14).build();
-    private final FLabel btnConfigure = new FLabel.ButtonBuilder().text(Localizer.getInstance().getMessage("lblNetworkConfigure")).fontSize(14).build();
+    private final FLabel lblEventFormat = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkFormatLabel", "\u2014")).fontSize(14).build();
+    private final FLabel lblEventProduct = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkProductLabel", "\u2014")).fontSize(14).build();
+    private final FLabel lblEventStatus = new FLabel.Builder().fontSize(14).fontStyle(Font.BOLD).build();
+    private final FLabel lblEventPickTimer = new FLabel.Builder().text(Localizer.getInstance().getMessage("lblNetworkPickTimerLabel", "\u2014")).fontSize(14).build();
+    private final FButton btnNewEvent = new FButton(Localizer.getInstance().getMessage("lblNetworkNewEventButton"));
+    private final FLabel btnDismissEvent = new FLabel.ButtonBuilder().text("\u2715").fontSize(16).fontStyle(Font.BOLD).tooltip(Localizer.getInstance().getMessage("lblNetworkDismissEventTooltip")).build();
     private final FCheckBox cbDeckConformance = new FCheckBox(Localizer.getInstance().getMessage("lblNetworkDeckFilter"));
 
     // Split panel for right side in Draft/Sealed mode
     private final FPanel eventRightPanel = new FPanel(new MigLayout("insets 0, gap 0, wrap, fill"));
 
     // Event dropdown (host selects completed events from local deck files)
-    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkEventLabel"));
+    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkPastEventsLabel"));
 
     // Active event state
     private String activeEventId;
@@ -179,30 +181,45 @@ public class VLobby implements ILobbyView {
         }
 
         if (lobby.isAllowNetworking()) {
+            eventRightPanel.setOpaque(false);
             eventConfigPanel.setOpaque(true);
             eventConfigPanel.setBackground(FSkin.getColor(FSkin.Colors.CLR_THEME2).stepColor(20).getColor());
+            eventConfigPanel.setLayout(new MigLayout("insets 10, gap 4, wrap, hidemode 3"));
 
+            // Row 1: status label + (host only) X dismiss in the right corner
             if (lobby.hasControl()) {
-                cboEventSelect.addActionListener(e -> onEventDropdownChanged());
-                for (final Component c : cboEventSelect.getComponents()) {
-                    c.setFont(FSkin.getBoldFont(14).getBaseFont());
-                }
-                eventConfigPanel.add(cboEventSelect, "w 100%, wrap");
-                eventConfigPanel.add(lblEventFormat, "wrap");
-                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 3");
-                btnConfigure.setCommand(() -> openEventConfigDialog());
-                eventConfigPanel.add(btnConfigure, "w 100px!, h 24px!, split 2");
-                cbDeckConformance.setSelected(true);
-                cbDeckConformance.addActionListener(e -> onConformanceChanged());
-                eventConfigPanel.add(cbDeckConformance, "wrap");
+                btnDismissEvent.setCommand(() -> {
+                    if (lobby instanceof ServerGameLobby serverLobby) {
+                        configuredFormat = null;
+                        serverLobby.clearCurrentEvent();
+                    }
+                    activeEventId = null;
+                    broadcastEventSelection();
+                    updateEventPanelState();
+                    updateActionButtons();
+                    updateDeckListFilter();
+                });
+                eventConfigPanel.add(lblEventStatus, "growx, pushx, split 2");
+                eventConfigPanel.add(btnDismissEvent, "w 28px!, h 28px!, wrap, gapbottom 6");
             } else {
-                eventConfigPanel.add(lblClientEventStatus, "wrap");
-                eventConfigPanel.add(lblEventFormat, "wrap");
-                eventConfigPanel.add(lblEventProduct, "wrap, gapbottom 5");
-                cbDeckConformance.setSelected(true);
-                cbDeckConformance.setEnabled(false);
-                eventConfigPanel.add(cbDeckConformance, "wrap");
+                eventConfigPanel.add(lblEventStatus, "growx, wrap, gapbottom 6");
             }
+
+            // Rows 2-4: format / product / pick timer
+            eventConfigPanel.add(lblEventFormat, "wrap");
+            eventConfigPanel.add(lblEventProduct, "wrap");
+            eventConfigPanel.add(lblEventPickTimer, "wrap, gapbottom 6");
+
+            // Row 5: filter checkbox
+            cbDeckConformance.setSelected(true);
+            if (lobby.hasControl()) {
+                cbDeckConformance.addActionListener(e -> onConformanceChanged());
+            } else {
+                cbDeckConformance.setEnabled(false);
+            }
+            eventConfigPanel.add(cbDeckConformance, "wrap");
+
+            updateEventPanelState();
         }
 
         ////////////////////////////////////////////////////////
@@ -268,6 +285,8 @@ public class VLobby implements ILobbyView {
                     startGame.run();
                 }
             });
+            btnNewEvent.setFont(FSkin.getRelativeFont(18));
+            btnNewEvent.addActionListener(e -> openEventConfigDialog());
         }
         String defaultGamesInMatch = FModel.getPreferences().getPref(FPref.UI_MATCHES_PER_GAME);
         if (defaultGamesInMatch == null || defaultGamesInMatch.isEmpty()) {
@@ -417,7 +436,11 @@ public class VLobby implements ILobbyView {
     }
 
     void setReady(final int index, final boolean ready) {
-        if (ready && decks[index] == null && !vntMomirBasic.isSelected() && !vntMoJhoSto.isSelected()) {
+        // Limited mode: deck is produced by the draft/sealed flow (no pre-selection
+        // required when starting a new event) or is selected from the filtered event
+        // deck list when running a match from a past event. Skip the generic check.
+        boolean deckRequired = currentMode != LobbyMode.LIMITED;
+        if (ready && deckRequired && decks[index] == null && !vntMomirBasic.isSelected() && !vntMoJhoSto.isSelected()) {
             SOptionPane.showErrorDialog("Select a deck before readying!");
             update(false);
             return;
@@ -781,11 +804,11 @@ public class VLobby implements ILobbyView {
         // Clear event when switching away from Limited
         if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
             if (!isLimited) {
-                serverLobby.setCurrentEvent(null);
                 configuredFormat = null;
+                serverLobby.clearCurrentEvent();
             }
         }
-        updateEventConfigDisplay();
+        updateEventPanelState();
 
         // Toggle variants panel visibility — it's inside an FScrollPane
         Container scrollPane = variantsPanel.getParent();
@@ -812,7 +835,7 @@ public class VLobby implements ILobbyView {
             populateDeckPanel(lobby.getGameType());
         } else {
             eventRightPanel.removeAll();
-            eventRightPanel.add(eventConfigPanel, "w 100%, growx, wrap");
+            eventRightPanel.add(eventConfigPanel, "w 100%, growx, gapbottom 10px, wrap");
 
             if (playerWithFocus < playerPanels.size() && lobby.mayEdit(playerWithFocus)) {
                 final FDeckChooser chooser = getDeckChooser(playerWithFocus);
@@ -845,11 +868,12 @@ public class VLobby implements ILobbyView {
                         ? localizer.getMessage("lblNetworkGeneratePools")
                         : localizer.getMessage("lblNetworkStartDraft");
                 btnStartEvent.setText(label);
-                boolean isExistingEvent = activeEventId != null && cboEventSelect.getSelectedIndex() > 0;
+                boolean isExistingEvent = activeEventId != null;
                 btnStartEvent.setEnabled(configuredFormat != null && !isExistingEvent);
-                pnlStart.add(btnStartEvent, "w 200px!, h 50px!, gapright 40");
-                pnlStart.add(btnStartMatch, "w 200px!, h 50px!, gapright 10");
-                pnlStart.add(gamesInMatchFrame);
+                pnlStart.add(btnNewEvent, "cell 0 0, w 200px!, h 50px!, gapright 20");
+                pnlStart.add(btnStartEvent, "cell 1 0, w 200px!, h 50px!, gapright 20");
+                pnlStart.add(btnStartMatch, "cell 2 0, w 200px!, h 50px!");
+                pnlStart.add(gamesInMatchFrame, "cell 2 1, align center");
             } else {
                 // Constructed mode: Start button centered with games-in-match below
                 pnlStart.setLayout(new MigLayout("insets 0, gap 0, wrap 2"));
@@ -869,6 +893,16 @@ public class VLobby implements ILobbyView {
         if (event == null) {
             FOptionPane.showErrorDialog(localizer.getMessage("lblNetworkNoEventConfigured"));
             return;
+        }
+
+        // Require all non-OPEN participants to be ready before starting the draft/sealed
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            LobbySlot slot = lobby.getSlot(i);
+            if (slot == null || slot.getType() == LobbySlotType.OPEN) continue;
+            if (!slot.isReady()) {
+                SOptionPane.showMessageDialog(localizer.getMessage("lblPlayerIsNotReady", slot.getName()));
+                return;
+            }
         }
 
         if (event.getFormat() == EventFormat.SEALED) {
@@ -892,6 +926,21 @@ public class VLobby implements ILobbyView {
     private void openEventConfigDialog() {
         if (!(lobby instanceof ServerGameLobby serverLobby)) return;
 
+        // Step 0: If past events exist, offer a choice between creating new and loading one
+        if (!eventIdsByDropdownIndex.isEmpty()) {
+            String[] setupOptions = {
+                    localizer.getMessage("lblNetworkSetUpEventCreate"),
+                    localizer.getMessage("lblNetworkSetUpEventLoadPast")
+            };
+            String setupChoice = GuiChoose.oneOrNone(
+                    localizer.getMessage("lblNetworkSetUpEventPrompt"), setupOptions);
+            if (setupChoice == null) return;
+            if (setupChoice.equals(setupOptions[1])) {
+                openLoadPastEventDialog();
+                return;
+            }
+        }
+
         // Step 1: Choose event type (Draft / Sealed)
         String[] formatNames = { localizer.getMessage("lblNetworkModeDraft"), localizer.getMessage("lblNetworkModeSealed") };
         String chosenFormatName = GuiChoose.oneOrNone(
@@ -903,7 +952,6 @@ public class VLobby implements ILobbyView {
         // Create event with chosen format
         serverLobby.createEvent(chosenFormat);
         configuredFormat = chosenFormat;
-        NetworkEvent event = serverLobby.getCurrentEvent();
 
         // Step 2: Choose pool type
         boolean isDraft = (chosenFormat == EventFormat.BOOSTER_DRAFT);
@@ -911,6 +959,11 @@ public class VLobby implements ILobbyView {
         LimitedPoolType chosen = GuiChoose.oneOrNone(
                 localizer.getMessage("lblNetworkChooseDraftFormat"), poolTypes);
         if (chosen == null) return;
+
+        // Re-fetch current event after modal dialog — earlier reference may be stale
+        // if a callback (e.g. onEventCreated) has run during EDT event pump
+        NetworkEvent event = serverLobby.getCurrentEvent();
+        if (event == null) return;
 
         // Step 3: Timer (draft only)
         int timerSeconds = event.getPickTimerSeconds();
@@ -932,32 +985,136 @@ public class VLobby implements ILobbyView {
         if (!serverLobby.configureEvent(chosen, timerSeconds)) {
             return;
         }
-        updateEventConfigDisplay();
+        updateEventPanelState();
         updateActionButtons();
     }
 
-    private void updateEventConfigDisplay() {
-        NetworkEvent event = (lobby instanceof ServerGameLobby sgl) ? sgl.getCurrentEvent() : null;
-        if (event == null) {
-            lblEventFormat.setText("");
-            lblEventProduct.setText("");
-            return;
+    private void openLoadPastEventDialog() {
+        if (eventIdsByDropdownIndex.isEmpty()) return;
+        String[] labels = new String[eventIdsByDropdownIndex.size()];
+        for (int i = 0; i < eventIdsByDropdownIndex.size(); i++) {
+            labels[i] = getEventDisplayLabel(eventIdsByDropdownIndex.get(i));
         }
-        String format = event.getFormat() == EventFormat.BOOSTER_DRAFT
-                ? localizer.getMessage("lblNetworkModeDraft") : localizer.getMessage("lblNetworkModeSealed");
-        if (event.getFormat() == EventFormat.BOOSTER_DRAFT) {
-            int timer = event.getPickTimerSeconds();
-            format += timer > 0 ? localizer.getMessage("lblNetworkFormatTimer", String.valueOf(timer))
-                    : localizer.getMessage("lblNetworkFormatNoTimer");
+        String chosen = GuiChoose.oneOrNone(
+                localizer.getMessage("lblNetworkLoadPastEventPrompt"), labels);
+        if (chosen == null) return;
+        for (int i = 0; i < labels.length; i++) {
+            if (labels[i].equals(chosen)) {
+                activeEventId = eventIdsByDropdownIndex.get(i);
+                cboEventSelect.setSelectedIndex(i + 1);
+                updateEventPanelState();
+                updateActionButtons();
+                updateDeckListFilter();
+                broadcastEventSelection();
+                return;
+            }
         }
-        lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", format));
+    }
 
-        String desc = event.getProductDescription();
-        if (desc != null && !desc.isEmpty()) {
-            lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", desc));
-        } else {
-            lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", event.getPoolType().toString()));
+    private void updateEventPanelState() {
+        if (!lobby.isAllowNetworking()) return;
+
+        final boolean isHost = lobby.hasControl();
+        final NetworkEvent currentEvent = (lobby instanceof ServerGameLobby sgl) ? sgl.getCurrentEvent() : null;
+        final boolean inState2 = activeEventId != null;
+        final boolean inState1 = !inState2 && (isHost ? currentEvent != null : lastEventView != null);
+
+        // Row 1 — corner X dismiss visible for host whenever an event is active
+        if (isHost) {
+            btnDismissEvent.setVisible(inState1 || inState2);
         }
+
+        // Row 2 — status label (always visible, text reflects state)
+        String statusText;
+        if (isHost) {
+            if (inState2) {
+                statusText = localizer.getMessage("lblNetworkCurrentEventStatus", getEventDisplayLabel(activeEventId));
+            } else if (inState1) {
+                statusText = localizer.getMessage("lblNetworkNewEventNotDrafted");
+            } else {
+                statusText = localizer.getMessage("lblNetworkNoEventStatus");
+            }
+        } else if (inState2) {
+            statusText = localizer.getMessage("lblNetworkHostSelectedEvent", getEventDisplayLabel(activeEventId));
+        } else if (inState1) {
+            statusText = localizer.getMessage("lblNetworkHostSettingUpEvent");
+        } else {
+            statusText = localizer.getMessage("lblNetworkWaitingForHost");
+        }
+        lblEventStatus.setText(statusText);
+
+        // Rows 3-5 — format / product / pick timer
+        String formatText = "\u2014";
+        String productText = "\u2014";
+        String timerText = "\u2014";
+        if (inState2) {
+            for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
+                if (activeEventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                    String f = DeckProxy.getEventTag(d, "eventFormat");
+                    String p = DeckProxy.getEventTag(d, "eventProduct");
+                    if (f != null) {
+                        formatText = "BOOSTER_DRAFT".equals(f)
+                                ? localizer.getMessage("lblNetworkModeDraft")
+                                : localizer.getMessage("lblNetworkModeSealed");
+                    }
+                    if (p != null && !p.isEmpty()) productText = p;
+                    break;
+                }
+            }
+        } else if (inState1) {
+            EventFormat evFormat;
+            int timerSec;
+            String desc;
+            LimitedPoolType pool = null;
+            if (isHost) {
+                evFormat = currentEvent.getFormat();
+                timerSec = currentEvent.getPickTimerSeconds();
+                desc = currentEvent.getProductDescription();
+                pool = currentEvent.getPoolType();
+            } else {
+                evFormat = lastEventView.getFormat();
+                timerSec = lastEventView.getPickTimerSeconds();
+                desc = lastEventView.getProductDescription();
+            }
+            formatText = (evFormat == EventFormat.BOOSTER_DRAFT)
+                    ? localizer.getMessage("lblNetworkModeDraft")
+                    : localizer.getMessage("lblNetworkModeSealed");
+            if (desc != null && !desc.isEmpty()) {
+                productText = desc;
+            } else if (pool != null) {
+                productText = pool.toString();
+            }
+            if (evFormat == EventFormat.BOOSTER_DRAFT) {
+                timerText = timerSec > 0 ? timerSec + "s" : "\u2014";
+            } else {
+                timerText = localizer.getMessage("lblNetworkPickTimerNotApplicable");
+            }
+        }
+        lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", formatText));
+        lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", productText));
+        lblEventPickTimer.setText(localizer.getMessage("lblNetworkPickTimerLabel", timerText));
+
+        // Row 6 — filter checkbox: enabled only for host in States 0/2
+        cbDeckConformance.setEnabled(isHost && !inState1);
+
+        eventConfigPanel.revalidate();
+        eventConfigPanel.repaint();
+    }
+
+    private String getEventDisplayLabel(String eventId) {
+        for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
+            if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                String f = DeckProxy.getEventTag(d, "eventFormat");
+                String p = DeckProxy.getEventTag(d, "eventProduct");
+                String dt = DeckProxy.getEventTag(d, "eventDate");
+                if (f == null) f = "";
+                if (p == null) p = "";
+                if (dt == null) dt = "";
+                String displayFormat = "BOOSTER_DRAFT".equals(f) ? "Draft" : "Sealed";
+                return displayFormat + " \u2014 " + p + " \u2014 (" + dt + ")";
+            }
+        }
+        return eventId;
     }
 
     private void populateEventDropdown() {
@@ -980,35 +1137,10 @@ public class VLobby implements ILobbyView {
 
         eventIdsByDropdownIndex = new ArrayList<>(eventLabels.keySet());
 
-        cboEventSelect.addItem(localizer.getMessage("lblNetworkCreateNewEvent"));
+        cboEventSelect.addItem(localizer.getMessage("lblNetworkNoEventSelected"));
         for (String label : eventLabels.values()) {
             cboEventSelect.addItem(label);
         }
-    }
-
-    private void onEventDropdownChanged() {
-        int idx = cboEventSelect.getSelectedIndex();
-        boolean isExistingEvent;
-        if (idx <= 0 || idx > eventIdsByDropdownIndex.size()) {
-            activeEventId = null;
-            lblEventFormat.setText("");
-            lblEventProduct.setText("");
-            isExistingEvent = false;
-            // Reset configured format when switching back to "Create New"
-            if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
-                configuredFormat = null;
-                serverLobby.setCurrentEvent(null);
-            }
-            updateEventConfigDisplay();
-        } else {
-            activeEventId = eventIdsByDropdownIndex.get(idx - 1);
-            updateEventInfoLabels(activeEventId);
-            isExistingEvent = true;
-        }
-        btnConfigure.setVisible(!isExistingEvent);
-        updateActionButtons();
-        updateDeckListFilter();
-        broadcastEventSelection();
     }
 
     private void onConformanceChanged() {
@@ -1020,18 +1152,6 @@ public class VLobby implements ILobbyView {
     private void broadcastEventSelection() {
         if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
             serverLobby.selectEventForMatch(activeEventId, activeConformance);
-        }
-    }
-
-    private void updateEventInfoLabels(String eventId) {
-        for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
-            if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
-                String format = DeckProxy.getEventTag(d, "eventFormat");
-                String product = DeckProxy.getEventTag(d, "eventProduct");
-                if (format != null) lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", format));
-                if (product != null) lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", product));
-                return;
-            }
         }
     }
 
@@ -1294,7 +1414,7 @@ public class VLobby implements ILobbyView {
     public void onEventCreated(NetworkEventView view) {
         SwingUtilities.invokeLater(() -> {
             lastEventView = view;
-            updateEventConfigDisplay();
+            updateEventPanelState();
         });
     }
 
@@ -1433,12 +1553,7 @@ public class VLobby implements ILobbyView {
             activeConformance = true;
             if (lobby.hasControl()) {
                 populateEventDropdown();
-                for (int i = 0; i < eventIdsByDropdownIndex.size(); i++) {
-                    if (eventIdsByDropdownIndex.get(i).equals(eventId)) {
-                        cboEventSelect.setSelectedIndex(i + 1); // fires onEventDropdownChanged → broadcastEventSelection
-                        break;
-                    }
-                }
+                broadcastEventSelection();
             }
             updateRightPanelForMode();
         });
@@ -1450,15 +1565,7 @@ public class VLobby implements ILobbyView {
             activeEventId = eventId;
             activeConformance = deckConformance;
             cbDeckConformance.setSelected(deckConformance);
-
-            if (eventId != null) {
-                updateEventInfoLabels(eventId);
-                lblClientEventStatus.setText(localizer.getMessage("lblNetworkEventSelected"));
-            } else {
-                lblEventFormat.setText("");
-                lblEventProduct.setText("");
-                lblClientEventStatus.setText(localizer.getMessage("lblNetworkWaitingForHost"));
-            }
+            updateEventPanelState();
             updateDeckListFilter();
         });
     }

@@ -122,13 +122,15 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         netLog.info("Event created — format={}", format);
         NetworkEvent event = new NetworkEvent(format);
         setCurrentEvent(event);
-        FServerManager.getInstance().broadcast(new EventCreatedEvent(event.toView()));
         updateView(true);
+        // No broadcast yet — pool and timer are still unset. Clients see the
+        // event only after configureEvent completes with a full snapshot.
     }
 
     /**
      * Configure the current event with the user's chosen pool type and pick timer.
      * For sealed events, creates the SealedCardPoolGenerator (which may show sub-dialogs).
+     * On success, broadcasts the fully-configured event to clients.
      *
      * @return false if the user cancelled a sub-dialog, true otherwise
      */
@@ -148,8 +150,21 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
             event.setSealedGenerator(gen);
         }
 
+        FServerManager.getInstance().broadcast(new EventCreatedEvent(event.toView()));
         updateView(true);
         return true;
+    }
+
+    /**
+     * Clear the current event and notify clients. Used when the host dismisses an
+     * in-progress new event via the panel's close control, or when switching lobby modes.
+     */
+    public synchronized void clearCurrentEvent() {
+        if (getCurrentEvent() == null) return;
+        netLog.info("Event cleared by host");
+        setCurrentEvent(null);
+        FServerManager.getInstance().broadcast(new EventCreatedEvent(null));
+        updateView(true);
     }
 
     /**
