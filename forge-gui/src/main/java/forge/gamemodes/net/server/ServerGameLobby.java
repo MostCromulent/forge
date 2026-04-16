@@ -17,7 +17,6 @@ import forge.gamemodes.net.event.EventCreatedEvent;
 import forge.gamemodes.net.event.EventPhaseChangedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
-import forge.interfaces.ILobbyListener;
 import forge.util.IHasForgeLog;
 import org.apache.commons.lang3.StringUtils;
 
@@ -128,20 +127,19 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     }
 
     /**
-     * Configure the current event with the user's chosen pool type, timer, and conformance.
+     * Configure the current event with the user's chosen pool type and pick timer.
      * For sealed events, creates the SealedCardPoolGenerator (which may show sub-dialogs).
      *
      * @return false if the user cancelled a sub-dialog, true otherwise
      */
     public synchronized boolean configureEvent(forge.gamemodes.limited.LimitedPoolType poolType,
-            int pickTimerSeconds, boolean deckConformance) {
+            int pickTimerSeconds) {
         NetworkEvent event = getCurrentEvent();
         if (event == null) return false;
 
         event.setPoolType(poolType);
         event.setProductDescription(poolType.toString());
         event.setPickTimerSeconds(pickTimerSeconds);
-        event.setDeckConformance(deckConformance);
 
         if (event.getFormat() == EventFormat.SEALED) {
             forge.gamemodes.limited.SealedCardPoolGenerator gen =
@@ -171,10 +169,8 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
             EventParticipant.Type pType = (slot.getType() == LobbySlotType.AI)
                     ? EventParticipant.Type.AI : EventParticipant.Type.HUMAN;
             event.addParticipant(new EventParticipant(slot.getName(), pType, seatIndex, i));
-            System.err.println("[ServerLobby] Participant slot=" + i + " seat=" + seatIndex + " name=" + slot.getName() + " type=" + pType + " slotType=" + slot.getType());
             seatIndex++;
         }
-        System.err.println("[ServerLobby] Total participants: " + event.getParticipants().size());
     }
 
     /**
@@ -188,7 +184,6 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         for (int i = currentSize; i < targetSize; i++) {
             String aiName = "Seat " + (i + 1);
             event.addParticipant(new EventParticipant(aiName, EventParticipant.Type.AI, i, -1));
-            System.err.println("[ServerLobby] Auto-fill AI seat=" + i + " name=" + aiName);
         }
     }
 
@@ -292,19 +287,16 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         NetworkEvent event = getCurrentEvent();
         if (event == null) {
             netLog.warn("Cannot generate sealed pools: no event configured");
-            System.err.println("[ServerGameLobby] Cannot generate sealed pools: no event configured");
             return;
         }
         if (event.getFormat() != EventFormat.SEALED) {
             netLog.warn("Event is not sealed format");
-            System.err.println("[ServerGameLobby] Event is not sealed format");
             return;
         }
 
         forge.gamemodes.limited.SealedCardPoolGenerator gen = event.getSealedGenerator();
         if (gen == null || gen.isEmpty()) {
             netLog.warn("No sealed generator configured");
-            System.err.println("[ServerGameLobby] No sealed generator configured — run Configure first");
             return;
         }
 
@@ -319,7 +311,6 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
             CardPool pool = gen.getCardPool(false);
             if (pool == null) {
                 netLog.warn("Failed to generate pool for {}", participant.getName());
-                System.err.println("[ServerGameLobby] Failed to generate pool for " + participant.getName());
                 continue;
             }
 
@@ -328,18 +319,10 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
             deck.getOrCreate(DeckSection.Sideboard).addAll(pool);
             NetworkEvent.setEventTags(deck, event);
 
-            RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
-            if (client != null) {
-                client.send(new ReceiveEventPoolEvent(eventId, deck));
-            } else {
-                ILobbyListener listener = server.getLobbyListener();
-                if (listener != null) {
-                    listener.receiveEventPool(eventId, deck);
-                }
-            }
+            server.sendToSlot(participant.getLobbySlotIndex(),
+                    new ReceiveEventPoolEvent(eventId, deck),
+                    l -> l.receiveEventPool(eventId, deck));
             netLog.info("Sent sealed pool to {} ({} cards)", participant.getName(), pool.countAll());
-            System.err.println("[ServerGameLobby] Sent sealed pool to " + participant.getName()
-                    + " (" + pool.countAll() + " cards)");
         }
     }
 
@@ -349,7 +332,6 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     public synchronized void handleDraftPick(DraftPickEvent pickEvent) {
         if (draftHost == null) {
             netLog.warn("Draft pick received but no draft in progress");
-            System.err.println("[ServerGameLobby] No draft in progress");
             return;
         }
         draftHost.handlePick(pickEvent.getSeatIndex(), pickEvent.getCard());

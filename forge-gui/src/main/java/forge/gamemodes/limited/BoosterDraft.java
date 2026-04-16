@@ -368,20 +368,14 @@ public class BoosterDraft implements IBoosterDraft {
     /**
      * Replace AI players at the given seat indices with human {@link LimitedPlayer} instances.
      * Used by network draft to mark remote human seats. Must be called before
-     * {@link #initializeBoosters()}.
+     * {@link #initializeBoosters()} on a freshly-created draft (all seats initially AI).
      *
      * @param humanSeats seat indices (0-based) that should be human-controlled
      */
     public void setHumanSeats(java.util.Set<Integer> humanSeats) {
-        for (int i = 0; i < players.size(); i++) {
-            if (humanSeats.contains(i)) {
-                if (players.get(i) instanceof LimitedPlayerAI) {
-                    players.set(i, new LimitedPlayer(i, this));
-                }
-            } else {
-                if (!(players.get(i) instanceof LimitedPlayerAI)) {
-                    players.set(i, new LimitedPlayerAI(i, this));
-                }
+        for (int seat : humanSeats) {
+            if (seat >= 0 && seat < players.size() && players.get(seat) instanceof LimitedPlayerAI) {
+                players.set(seat, new LimitedPlayer(seat, this));
             }
         }
     }

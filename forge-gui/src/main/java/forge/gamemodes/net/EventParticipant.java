@@ -37,8 +37,4 @@ public final class EventParticipant implements Serializable {
     public int getLobbySlotIndex() { return lobbySlotIndex; }
     public boolean isHuman() { return type == Type.HUMAN; }
     public boolean isAI() { return type == Type.AI; }
-
-    public String getDisplayName() {
-        return isAI() ? name + " (AI)" : name;
-    }
 }

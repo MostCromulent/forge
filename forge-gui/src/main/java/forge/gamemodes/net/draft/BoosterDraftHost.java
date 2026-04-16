@@ -13,10 +13,8 @@ import forge.gamemodes.net.event.DraftAutoPickedEvent;
 import forge.gamemodes.net.event.DraftPackArrivedEvent;
 import forge.gamemodes.net.event.DraftSeatPickedEvent;
 import forge.gamemodes.net.event.EventPhaseChangedEvent;
-import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gamemodes.net.server.FServerManager;
-import forge.gamemodes.net.server.RemoteClient;
 import forge.interfaces.ILobbyListener;
 import forge.item.PaperCard;
 import forge.util.IHasForgeLog;
@@ -29,7 +27,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 /**
  * Server-side adapter that wraps {@link BoosterDraft} for network play.
@@ -101,12 +98,10 @@ public final class BoosterDraftHost implements IHasForgeLog {
         List<LimitedPlayer> players = draft.getAllPlayers();
         if (seatIndex < 0 || seatIndex >= players.size()) {
             netLog.warn("Invalid seat index: {}", seatIndex);
-            System.err.println("[DraftHost] Invalid seat index: " + seatIndex);
             return;
         }
         if (!pendingHumanPicks.contains(seatIndex)) {
             netLog.warn("Seat {} is not pending a pick", seatIndex);
-            System.err.println("[DraftHost] Seat " + seatIndex + " is not pending a pick");
             return;
         }
 
@@ -114,7 +109,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
         DraftPack pack = player.nextChoice();
         if (pack == null || !pack.contains(card)) {
             netLog.warn("Card not in seat {}'s pack", seatIndex);
-            System.err.println("[DraftHost] Card not found in seat " + seatIndex + "'s pack: " + card);
             return;
         }
 
@@ -152,7 +146,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
     private void advanceDraft() {
         while (true) {
             List<LimitedPlayer> players = draft.getAllPlayers();
-            System.err.println("[DraftHost] advanceDraft: " + players.size() + " players, pack=" + currentPackNumber + " pick=" + currentPickNumber);
 
             // Let all AI seats pick
             for (int i = 0; i < players.size(); i++) {
@@ -165,7 +158,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
                 }
                 DraftPack pack = player.nextChoice();
                 if (pack == null || pack.isEmpty()) {
-                    System.err.println("[DraftHost] AI seat " + i + ": null/empty pack");
                     continue;
                 }
 
@@ -183,12 +175,10 @@ public final class BoosterDraftHost implements IHasForgeLog {
                 if (player instanceof LimitedPlayerAI) {
                     continue;
                 }
-                boolean skip = player.shouldSkipThisPick();
-                DraftPack pack = player.nextChoice();
-                System.err.println("[DraftHost] Human seat " + i + ": skip=" + skip + " pack=" + (pack != null ? pack.size() + " cards" : "null"));
-                if (skip) {
+                if (player.shouldSkipThisPick()) {
                     continue;
                 }
+                DraftPack pack = player.nextChoice();
                 if (pack == null || pack.isEmpty()) {
                     continue;
                 }
@@ -196,8 +186,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
                 pendingHumanPicks.add(i);
                 sendPackToHuman(i, pack);
             }
-
-            System.err.println("[DraftHost] pendingHumanPicks: " + pendingHumanPicks);
 
             // Start pick timer and return — humans need to pick
             if (!pendingHumanPicks.isEmpty()) {
@@ -221,7 +209,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
 
     private void sendPackToHuman(int seatIndex, DraftPack pack) {
         EventParticipant participant = findParticipant(seatIndex);
-        System.err.println("[DraftHost] sendPackToHuman seat=" + seatIndex + " participant=" + (participant != null ? participant.getName() + " isAI=" + participant.isAI() : "null") + " packSize=" + pack.size());
         if (participant == null || participant.isAI()) {
             return;
         }
@@ -231,8 +218,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
         int pickNum = currentPickNumber;
         int timerSecs = event.getPickTimerSeconds();
 
-        System.err.println("[DraftHost] Sending pack to: " + participant.getName());
-        dispatchToParticipant(participant,
+        FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
                 new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs),
                 l -> l.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs));
     }
@@ -289,7 +275,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
             String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
             Deck pool = new Deck(player.getDeck(), poolName);
             NetworkEvent.setEventTags(pool, event);
-            dispatchToParticipant(participant,
+            FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
                     new ReceiveEventPoolEvent(eventId, pool),
                     l -> l.receiveEventPool(eventId, pool));
         }
@@ -298,7 +284,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
     private void startPickTimer() {
         cancelPickTimer();
         int seconds = event.getPickTimerSeconds();
-        System.err.println("[DraftHost] startPickTimer: " + seconds + "s");
         if (seconds <= 0) return;
         pickTimerFuture = timerExecutor.schedule(this::onPickTimerExpired, seconds, TimeUnit.SECONDS);
     }
@@ -315,7 +300,6 @@ public final class BoosterDraftHost implements IHasForgeLog {
         if (finished || pendingHumanPicks.isEmpty()) return;
 
         netLog.info("Pick timer expired, auto-picking for seats: {}", pendingHumanPicks);
-        System.err.println("[DraftHost] Pick timer expired, auto-picking for seats: " + pendingHumanPicks);
         List<LimitedPlayer> players = draft.getAllPlayers();
 
         for (int seatIndex : new ArrayList<>(pendingHumanPicks)) {
@@ -349,23 +333,9 @@ public final class BoosterDraftHost implements IHasForgeLog {
     private void notifyAutoPick(int seatIndex, PaperCard card) {
         EventParticipant participant = findParticipant(seatIndex);
         if (participant == null || participant.isAI()) return;
-        dispatchToParticipant(participant,
+        FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
                 new DraftAutoPickedEvent(seatIndex, card, currentPickNumber),
                 l -> l.draftAutoPicked(seatIndex, card, currentPickNumber));
-    }
-
-    private void dispatchToParticipant(EventParticipant participant, NetEvent remoteEvent,
-            Consumer<ILobbyListener> localAction) {
-        FServerManager server = FServerManager.getInstance();
-        RemoteClient client = server.getClientBySlotIndex(participant.getLobbySlotIndex());
-        if (client != null) {
-            client.send(remoteEvent);
-        } else {
-            ILobbyListener listener = server.getLobbyListener();
-            if (listener != null) {
-                localAction.accept(listener);
-            }
-        }
     }
 
     private EventParticipant findParticipant(int seatIndex) {

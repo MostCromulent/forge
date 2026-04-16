@@ -345,8 +345,12 @@ public class DeckProxy implements InventoryItem {
     }
 
     public String getEventTag(String key) {
+        return getEventTag(getDeck(), key);
+    }
+
+    public static String getEventTag(Deck deck, String key) {
         String prefix = key + ":";
-        for (String tag : getDeck().getTags()) {
+        for (String tag : deck.getTags()) {
             if (tag.startsWith(prefix)) {
                 return tag.substring(prefix.length());
             }

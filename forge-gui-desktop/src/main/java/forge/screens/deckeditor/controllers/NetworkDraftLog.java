@@ -65,11 +65,6 @@ public final class NetworkDraftLog {
         log(localizer.getMessage("lblDraftLogMyPick", cardName, String.valueOf(pickNumber + 1)), COLOR_MY_PICK);
     }
 
-    /** Log pack round completion. */
-    public static void logPackComplete(int packNumber) {
-        log(localizer.getMessage("lblDraftLogPackComplete", String.valueOf(packNumber)), COLOR_SEPARATOR);
-    }
-
     /** Log draft completion. */
     public static void logDraftComplete(int totalCards) {
         log("======================================", COLOR_BANNER);

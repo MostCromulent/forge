@@ -56,6 +56,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 public final class FServerManager implements IHasForgeLog {
@@ -96,15 +97,6 @@ public final class FServerManager implements IHasForgeLog {
         return clients.get(ch);
     }
 
-    public RemoteClient getClientByName(String name) {
-        for (RemoteClient client : clients.values()) {
-            if (name.equals(client.getUsername())) {
-                return client;
-            }
-        }
-        return null;
-    }
-
     public RemoteClient getClientBySlotIndex(int slotIndex) {
         for (RemoteClient client : clients.values()) {
             if (client.getIndex() == slotIndex) {
@@ -112,6 +104,20 @@ public final class FServerManager implements IHasForgeLog {
             }
         }
         return null;
+    }
+
+    /**
+     * Send an event to the given slot. If the slot is a remote client, sends
+     * the NetEvent over the wire; otherwise invokes {@code localAction} on the
+     * local lobby listener (the host's own path).
+     */
+    public void sendToSlot(int slotIndex, NetEvent remoteEvent, Consumer<ILobbyListener> localAction) {
+        RemoteClient client = getClientBySlotIndex(slotIndex);
+        if (client != null) {
+            client.send(remoteEvent);
+        } else if (lobbyListener != null) {
+            localAction.accept(lobbyListener);
+        }
     }
 
     IGameController getController(final int index) {

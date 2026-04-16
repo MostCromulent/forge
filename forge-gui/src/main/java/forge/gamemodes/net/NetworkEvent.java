@@ -23,8 +23,6 @@ public final class NetworkEvent {
     private final List<EventParticipant> participants;
     private int pickTimerSeconds;
     private String productDescription;
-    private boolean deckConformance;
-    private List<String> boosterConfiguration;
     private LimitedPoolType poolType;
     private int numRounds = 3;
     private transient SealedCardPoolGenerator sealedGenerator;
@@ -35,7 +33,6 @@ public final class NetworkEvent {
         this.phase = EventPhase.LOBBY_GATHER;
         this.participants = new ArrayList<>();
         this.pickTimerSeconds = 60;
-        this.deckConformance = true;
         this.productDescription = "";
         this.poolType = LimitedPoolType.Full;
     }
@@ -49,10 +46,6 @@ public final class NetworkEvent {
     public void setPickTimerSeconds(int seconds) { this.pickTimerSeconds = seconds; }
     public String getProductDescription() { return productDescription; }
     public void setProductDescription(String desc) { this.productDescription = desc; }
-    public boolean isDeckConformance() { return deckConformance; }
-    public void setDeckConformance(boolean value) { this.deckConformance = value; }
-    public List<String> getBoosterConfiguration() { return boosterConfiguration; }
-    public void setBoosterConfiguration(List<String> config) { this.boosterConfiguration = config; }
     public LimitedPoolType getPoolType() { return poolType; }
     public void setPoolType(LimitedPoolType poolType) { this.poolType = poolType; }
     public SealedCardPoolGenerator getSealedGenerator() { return sealedGenerator; }
@@ -73,6 +66,6 @@ public final class NetworkEvent {
 
     public NetworkEventView toView() {
         return new NetworkEventView(eventId, format, phase,
-                participants, pickTimerSeconds, productDescription, deckConformance, numRounds);
+                participants, pickTimerSeconds, productDescription, numRounds);
     }
 }

@@ -929,7 +929,7 @@ public class VLobby implements ILobbyView {
         }
 
         // Delegate server-side configuration
-        if (!serverLobby.configureEvent(chosen, timerSeconds, cbDeckConformance.isSelected())) {
+        if (!serverLobby.configureEvent(chosen, timerSeconds)) {
             return;
         }
         updateEventConfigDisplay();
@@ -965,16 +965,13 @@ public class VLobby implements ILobbyView {
         Map<String, String> eventLabels = new LinkedHashMap<>();
 
         for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
-            String eventId = null;
-            String format = "";
-            String product = "";
-            String date = "";
-            for (String tag : d.getTags()) {
-                if (tag.startsWith("eventId:")) eventId = tag.substring(8);
-                else if (tag.startsWith("eventFormat:")) format = tag.substring(12);
-                else if (tag.startsWith("eventProduct:")) product = tag.substring(13);
-                else if (tag.startsWith("eventDate:")) date = tag.substring(10);
-            }
+            String eventId = DeckProxy.getEventTag(d, "eventId");
+            String format = DeckProxy.getEventTag(d, "eventFormat");
+            String product = DeckProxy.getEventTag(d, "eventProduct");
+            String date = DeckProxy.getEventTag(d, "eventDate");
+            if (format == null) format = "";
+            if (product == null) product = "";
+            if (date == null) date = "";
             if (eventId != null && !eventLabels.containsKey(eventId)) {
                 String displayFormat = "BOOSTER_DRAFT".equals(format) ? "Draft" : "Sealed";
                 eventLabels.put(eventId, displayFormat + " \u2014 " + product + " \u2014 (" + date + ")");
@@ -1028,14 +1025,12 @@ public class VLobby implements ILobbyView {
 
     private void updateEventInfoLabels(String eventId) {
         for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
-            for (String tag : d.getTags()) {
-                if (tag.equals("eventId:" + eventId)) {
-                    for (String t : d.getTags()) {
-                        if (t.startsWith("eventFormat:")) lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", t.substring(12)));
-                        if (t.startsWith("eventProduct:")) lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", t.substring(13)));
-                    }
-                    return;
-                }
+            if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                String format = DeckProxy.getEventTag(d, "eventFormat");
+                String product = DeckProxy.getEventTag(d, "eventProduct");
+                if (format != null) lblEventFormat.setText(localizer.getMessage("lblNetworkFormatLabel", format));
+                if (product != null) lblEventProduct.setText(localizer.getMessage("lblNetworkProductLabel", product));
+                return;
             }
         }
     }
@@ -1354,7 +1349,6 @@ public class VLobby implements ILobbyView {
             FGameClient gameClient =
                     VSubmenuOnlineLobby.SINGLETON_INSTANCE.getClient();
             if (gameClient == null) {
-                System.err.println("[VLobby] No game client available for draft picks");
                 return;
             }
             pickSender = gameClient::send;
@@ -1382,7 +1376,7 @@ public class VLobby implements ILobbyView {
     private String resolveParticipantName(int seatIndex) {
         if (lastEventView != null) {
             for (EventParticipant p : lastEventView.getParticipants()) {
-                if (p.getSeatIndex() == seatIndex) return p.getDisplayName();
+                if (p.getSeatIndex() == seatIndex) return p.isAI() ? p.getName() + " (AI)" : p.getName();
             }
         }
         if (lobby instanceof ServerGameLobby sgl) {
