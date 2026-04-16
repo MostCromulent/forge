@@ -43,7 +43,7 @@ public enum FDraftOverlay {
 
     // Default window dimensions
     private static final int DEFAULT_WIDTH  = 420;
-    private static final int DEFAULT_HEIGHT = 90;
+    private static final int DEFAULT_HEIGHT = 105;
 
     private final ForgePreferences prefs = FModel.getPreferences();
     private boolean hasBeenShown, locLoaded;
@@ -66,7 +66,6 @@ public enum FDraftOverlay {
     private Timer countdownTimer;
     private int               secondsRemaining;
     private boolean           waitingForPack;
-    private boolean           timerDisabled;
 
     @SuppressWarnings("serial")
     private final FDialog window = new FDialog(false, true, "4") {
@@ -111,7 +110,7 @@ public enum FDraftOverlay {
         FSkin.SkinColor textColor = FSkin.getColor(FSkin.Colors.CLR_TEXT);
 
         lblPackInfo.setFont(FSkin.getBoldFont(14));
-        lblTimer.setFont(FSkin.getBoldFont(16));
+        lblTimer.setFont(FSkin.getBoldFont(14));
 
         if (textColor != null) {
             lblPackInfo.setForeground(textColor);
@@ -129,7 +128,7 @@ public enum FDraftOverlay {
         window.add(lblPackInfo,  "pushx, growx, gapleft 4");
         window.add(lblTimer,     "pushx, growx, gapright 4, al right");
         // Row 2: neighbor strip spans both columns
-        window.add(pnlNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4");
+        window.add(pnlNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4, gaptop 6");
 
         // Load card back icon (scaled to small size)
         loadCardBackIcon();
@@ -182,7 +181,6 @@ public enum FDraftOverlay {
                 initialPackSize = packSize;
             }
             waitingForPack = false;
-            timerDisabled  = (timerSeconds <= 0);
             // Pack direction: odd packs pass right, even packs pass left (conventional booster draft).
             passingRight   = (packNumber % 2 == 1);
             updateDisplay();
@@ -271,13 +269,10 @@ public enum FDraftOverlay {
 
         // Row 1 – timer
         if (waitingForPack) {
-            lblTimer.setText("Waiting for packs...");
+            lblTimer.setText("Waiting for pack...");
             lblTimer.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
         } else if (countdownTimer != null && countdownTimer.isRunning()) {
             updateTimerLabel();
-        } else if (timerDisabled) {
-            lblTimer.setText("No timer");
-            lblTimer.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
         } else {
             lblTimer.setText("");
         }
@@ -414,7 +409,7 @@ public enum FDraftOverlay {
 
     private JLabel makeTextLabel(String text) {
         FSkin.SkinnedLabel lbl = new FSkin.SkinnedLabel(text);
-        lbl.setFont(FSkin.getBoldFont(13));
+        lbl.setFont(FSkin.getBoldFont(14));
         FSkin.SkinColor color = FSkin.getColor(FSkin.Colors.CLR_TEXT);
         if (color != null) lbl.setForeground(color);
         lbl.setOpaque(false);
@@ -431,6 +426,7 @@ public enum FDraftOverlay {
                     int y = Integer.parseInt(coords[1]);
                     int w = Integer.parseInt(coords[2]);
                     int h = Integer.parseInt(coords[3]);
+                    if (h < DEFAULT_HEIGHT) h = DEFAULT_HEIGHT;
 
                     // Ensure the window center is on an accessible screen
                     int centerX = x + w / 2;

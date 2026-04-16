@@ -183,6 +183,8 @@ public class VLobby implements ILobbyView {
             // Set a larger font on the combo box to match/exceed the variants label
             for (final Component c : cboModePanel.getComponents()) {
                 c.setFont(FSkin.getBoldFont(14).getBaseFont());
+                // Client follows host's mode — display only, not selectable.
+                if (!lobby.hasControl()) c.setEnabled(false);
             }
             constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 10px, spanx 2, wrap");
         }
@@ -368,6 +370,17 @@ public class VLobby implements ILobbyView {
     public void update(final boolean fullUpdate) {
         activePlayersNum = lobby.getNumberOfSlots();
         addPlayerBtn.setEnabled(activePlayersNum < MAX_PLAYERS);
+
+        // Client: sync lobby mode from host's state.
+        if (lobby.isAllowNetworking() && !lobby.hasControl() && lobby.getData() != null) {
+            boolean hostIsLimited = lobby.getData().getEventView() != null;
+            LobbyMode desired = hostIsLimited ? LobbyMode.LIMITED : LobbyMode.CONSTRUCTED;
+            if (currentMode != desired) {
+                String label = localizer.getMessage(
+                        hostIsLimited ? "lblNetworkModeLimited" : "lblNetworkModeConstructed");
+                cboModePanel.setSelectedItem(label);
+            }
+        }
 
         final boolean allowNetworking = lobby.isAllowNetworking();
 
@@ -895,6 +908,7 @@ public class VLobby implements ILobbyView {
                 btnStartEvent.setText(label);
                 boolean isExistingEvent = activeEventId != null;
                 btnStartEvent.setEnabled(configuredFormat != null && !isExistingEvent);
+                btnStartMatch.setEnabled(isExistingEvent);
                 pnlStart.add(btnNewEvent, "cell 0 0, w 200px!, h 50px!, gapright 20");
                 pnlStart.add(btnStartEvent, "cell 1 0, w 200px!, h 50px!, gapright 20");
                 pnlStart.add(btnStartMatch, "cell 2 0, w 200px!, h 50px!");
@@ -1469,7 +1483,12 @@ public class VLobby implements ILobbyView {
         mySeatIndex = seatIndex;
 
         // Initialize FDraftOverlay if not already done (client path)
-        // Host inits in startEvent(); client inits here using stored event view
+        // Host inits in startEvent(); client inits here using stored event view.
+        // Fall back to lobby state if the EventCreatedEvent broadcast was missed
+        // (e.g. client joined after host configured the event).
+        if (lastEventView == null && lobby.getData() != null) {
+            lastEventView = lobby.getData().getEventView();
+        }
         if (lastEventView != null) {
             List<EventParticipant> participants = lastEventView.getParticipants();
             int totalPacks = lastEventView.getNumRounds();
@@ -1582,6 +1601,8 @@ public class VLobby implements ILobbyView {
                 broadcastEventSelection();
             }
             updateRightPanelForMode();
+            updateEventPanelState();
+            updateActionButtons();
         });
     }
 
