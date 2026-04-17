@@ -206,32 +206,64 @@ public class YieldPerfTest {
 
             printVariantTable(group, totalCalls);
             printPhaseBreakdown(group);
+            printExitZoneBreakdown(group);
             printBoardStateContext(group);
         }
     }
 
     private static void printVariantTable(List<GameResult> group, long totalCalls) {
         System.out.println();
-        System.out.printf("  %-20s  %10s  %10s  %10s  %10s  %10s  %10s  %10s%n",
-                "Variant", "Total ms", "Avg ms", "Max ms", "vs base", "canAfford", "validTgt", "Timeouts");
+        System.out.printf("  %-20s  %10s  %10s  %10s  %10s  %10s  %8s  %8s  %8s  %9s%n",
+                "Variant", "Total ms", "Per-game", "Avg/call", "Max/call", "vs base",
+                "Found %", "Disagree", "Timeouts", "canAfford");
         double baselineTotalMs = aggregateMs(group, Variant.BASELINE);
+        int gameCount = group.size();
         for (Variant v : Variant.values()) {
             double total = 0, max = 0;
-            long canAfford = 0, validTargets = 0, timeouts = 0;
+            long canAfford = 0, timeouts = 0, found = 0, disagreements = 0, calls = 0;
             for (GameResult r : group) {
                 for (InstrumentedPlayerController ctrl : r.controllers) {
                     VariantAggregate a = ctrl.getAggregate(v);
                     total += a.getTotalMs();
                     if (a.getMaxCallMs() > max) max = a.getMaxCallMs();
                     canAfford += a.canAffordCalls;
-                    validTargets += a.validTargetsCalls;
                     timeouts += a.timeouts;
+                    found += a.foundAction;
+                    disagreements += a.disagreements;
+                    calls += a.calls;
                 }
             }
-            double avg = totalCalls > 0 ? total / totalCalls : 0;
+            double perGame = gameCount > 0 ? total / gameCount : 0;
+            double avgCall = totalCalls > 0 ? total / totalCalls : 0;
             double ratio = baselineTotalMs > 0 ? total / baselineTotalMs : 0;
-            System.out.printf("  %-20s  %10.1f  %10.4f  %10.2f  %10.2fx  %10d  %10d  %10d%n",
-                    v.name(), total, avg, max, ratio, canAfford, validTargets, timeouts);
+            double foundPct = calls > 0 ? 100.0 * found / calls : 0;
+            System.out.printf("  %-20s  %10.1f  %10.1f  %10.4f  %10.2f  %10.2fx  %7.1f%%  %8d  %8d  %9d%n",
+                    v.name(), total, perGame, avgCall, max, ratio,
+                    foundPct, disagreements, timeouts, canAfford);
+        }
+    }
+
+    private static void printExitZoneBreakdown(List<GameResult> group) {
+        System.out.println();
+        System.out.printf("  %-20s  %8s  %8s  %8s  %8s  %8s%n",
+                "Exit-zone %", "Hand", "Battlfld", "External", "None", "Timeout");
+        for (Variant v : Variant.values()) {
+            long hand = 0, bf = 0, ext = 0, none = 0, timeout = 0, calls = 0;
+            for (GameResult r : group) {
+                for (InstrumentedPlayerController ctrl : r.controllers) {
+                    VariantAggregate a = ctrl.getAggregate(v);
+                    hand += a.exitHand;
+                    bf += a.exitBattlefield;
+                    ext += a.exitExternal;
+                    none += a.exitNone;
+                    timeout += a.exitTimeout;
+                    calls += a.calls;
+                }
+            }
+            double denom = calls > 0 ? 100.0 / calls : 0;
+            System.out.printf("  %-20s  %7.1f%%  %7.1f%%  %7.1f%%  %7.1f%%  %7.1f%%%n",
+                    v.name(),
+                    hand * denom, bf * denom, ext * denom, none * denom, timeout * denom);
         }
     }
 

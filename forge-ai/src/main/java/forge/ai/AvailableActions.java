@@ -21,6 +21,10 @@ public final class AvailableActions {
         FLASHBACK_SORTED
     }
 
+    public enum ExitZone {
+        HAND, BATTLEFIELD, EXTERNAL, NONE, TIMEOUT
+    }
+
     public static final class Stats {
         public long handNanos;
         public long battlefieldNanos;
@@ -29,6 +33,9 @@ public final class AvailableActions {
         public long canAffordCalls;
         public long validTargetsCalls;
         public long timeouts;
+        public ExitZone exitZone;
+        public Card foundOnCard;
+        public SpellAbility foundOnSa;
     }
 
     private AvailableActions() {}
@@ -47,21 +54,32 @@ public final class AvailableActions {
 
         try {
             long phaseStart = stats != null ? System.nanoTime() : 0L;
-            if (checkHand(player, deadlineNanos, timeoutMs, stats, sorted)) return true;
+            boolean handFound = checkHand(player, deadlineNanos, timeoutMs, stats, sorted);
             if (stats != null) stats.handNanos += System.nanoTime() - phaseStart;
-
-            phaseStart = stats != null ? System.nanoTime() : 0L;
-            if (checkBattlefield(player, deadlineNanos, timeoutMs, stats, sorted)) return true;
-            if (stats != null) stats.battlefieldNanos += System.nanoTime() - phaseStart;
-
-            phaseStart = stats != null ? System.nanoTime() : 0L;
-            if (flashback) {
-                if (checkFlashbackZone(player, deadlineNanos, timeoutMs, stats, sorted)) return true;
-            } else {
-                if (checkExternalZones(player, deadlineNanos, timeoutMs, stats, sorted)) return true;
+            if (handFound) {
+                if (stats != null) stats.exitZone = stats.timeouts > 0 ? ExitZone.TIMEOUT : ExitZone.HAND;
+                return true;
             }
-            if (stats != null) stats.externalZonesNanos += System.nanoTime() - phaseStart;
 
+            phaseStart = stats != null ? System.nanoTime() : 0L;
+            boolean bfFound = checkBattlefield(player, deadlineNanos, timeoutMs, stats, sorted);
+            if (stats != null) stats.battlefieldNanos += System.nanoTime() - phaseStart;
+            if (bfFound) {
+                if (stats != null) stats.exitZone = stats.timeouts > 0 ? ExitZone.TIMEOUT : ExitZone.BATTLEFIELD;
+                return true;
+            }
+
+            phaseStart = stats != null ? System.nanoTime() : 0L;
+            boolean extFound = flashback
+                    ? checkFlashbackZone(player, deadlineNanos, timeoutMs, stats, sorted)
+                    : checkExternalZones(player, deadlineNanos, timeoutMs, stats, sorted);
+            if (stats != null) stats.externalZonesNanos += System.nanoTime() - phaseStart;
+            if (extFound) {
+                if (stats != null) stats.exitZone = stats.timeouts > 0 ? ExitZone.TIMEOUT : ExitZone.EXTERNAL;
+                return true;
+            }
+
+            if (stats != null) stats.exitZone = ExitZone.NONE;
             return false;
         } finally {
             if (stats != null) stats.totalNanos += System.nanoTime() - callStart;
@@ -75,9 +93,11 @@ public final class AvailableActions {
                 if (checkTimeout(deadlineNanos, timeoutMs, stats)) return true;
                 if (sa.isSpell()) {
                     if (canAfford(sa, player, stats) && hasValidTargets(sa, stats)) {
+                        if (stats != null) { stats.foundOnCard = card; stats.foundOnSa = sa; }
                         return true;
                     }
                 } else if (sa.isLandAbility()) {
+                    if (stats != null) { stats.foundOnCard = card; stats.foundOnSa = sa; }
                     return true;
                 }
             }
@@ -91,6 +111,7 @@ public final class AvailableActions {
             for (SpellAbility sa : abilitiesOf(card, player, sorted)) {
                 if (checkTimeout(deadlineNanos, timeoutMs, stats)) return true;
                 if (!sa.isManaAbility() && canAfford(sa, player, stats) && hasValidTargets(sa, stats)) {
+                    if (stats != null) { stats.foundOnCard = card; stats.foundOnSa = sa; }
                     return true;
                 }
             }
@@ -119,6 +140,7 @@ public final class AvailableActions {
             for (SpellAbility sa : abilitiesOf(card, player, sorted)) {
                 if (checkTimeout(deadlineNanos, timeoutMs, stats)) return true;
                 if (!sa.isManaAbility() && canAfford(sa, player, stats) && hasValidTargets(sa, stats)) {
+                    if (stats != null) { stats.foundOnCard = card; stats.foundOnSa = sa; }
                     return true;
                 }
             }

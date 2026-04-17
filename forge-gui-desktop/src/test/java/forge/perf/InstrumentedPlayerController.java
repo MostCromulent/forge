@@ -6,6 +6,7 @@ import forge.ai.AvailableActions.Stats;
 import forge.ai.AvailableActions.Variant;
 import forge.ai.PlayerControllerAi;
 import forge.game.Game;
+import forge.game.card.Card;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
@@ -20,7 +21,10 @@ import java.util.List;
  */
 public class InstrumentedPlayerController extends PlayerControllerAi {
 
-    private static final long TIMEOUT_MS = 60_000L;
+    // Matches PlayerControllerHuman.computeAvailableActionsBudgetMs — Dynamic formula.
+    private static final long BUDGET_FLOOR_MS = 50;
+    private static final long BUDGET_CEILING_MS = 1500;
+    private static final long BUDGET_PER_CARD_MS = 50;
 
     private final boolean evaluate;
 
@@ -65,11 +69,55 @@ public class InstrumentedPlayerController extends PlayerControllerAi {
         totalFlashbackSize += p.getCardsIn(ZoneType.Flashback).size();
         evalCount++;
 
+        long budgetMs = computeBudgetMs(p);
+
+        // Baseline first so other variants can check agreement against it.
+        Stats baselineStats = new Stats();
+        boolean baselineResult = AvailableActions.compute(p, budgetMs, baselineStats, Variant.BASELINE);
+        perVariant.get(Variant.BASELINE).accept(baselineStats, baselineResult, true);
+
         for (Variant v : Variant.values()) {
+            if (v == Variant.BASELINE) continue;
             Stats stats = new Stats();
-            boolean hasAction = AvailableActions.compute(p, TIMEOUT_MS, stats, v);
-            perVariant.get(v).accept(stats, hasAction);
+            boolean result = AvailableActions.compute(p, budgetMs, stats, v);
+            boolean agreesWithBaseline = (result == baselineResult);
+            perVariant.get(v).accept(stats, result, agreesWithBaseline);
+
+            if (!agreesWithBaseline && v == Variant.FLASHBACK) {
+                dumpDisagreement(p, baselineResult, result, stats);
+            }
         }
+    }
+
+    private void dumpDisagreement(Player p, boolean baselineResult, boolean flashbackResult, Stats flashbackStats) {
+        System.err.println("--- DISAGREEMENT: baseline=" + baselineResult
+                + " flashback=" + flashbackResult
+                + " player=" + p.getName() + " ---");
+        if (flashbackStats.foundOnCard != null) {
+            Card fc = flashbackStats.foundOnCard;
+            System.err.println("  FLASHBACK found: " + fc.getName()
+                    + " in zone=" + fc.getZone()
+                    + " controlled by=" + (fc.getController() != null ? fc.getController().getName() : "?")
+                    + " (is own? " + (fc.getController() == p) + ")"
+                    + " via SA=" + flashbackStats.foundOnSa);
+        }
+        System.err.println("  BASELINE-scanned zones (own Graveyard/Exile/Command):");
+        int baselineVisibleCount = 0;
+        for (ZoneType zone : new ZoneType[]{ZoneType.Graveyard, ZoneType.Exile, ZoneType.Command}) {
+            for (Card card : p.getCardsIn(zone)) {
+                baselineVisibleCount++;
+                int saCount = card.getAllPossibleAbilities(p, true).size();
+                System.err.println("    [" + zone + "] " + card.getName() + " (SAs=" + saCount + ")");
+            }
+        }
+        System.err.println("  Baseline-visible cards: " + baselineVisibleCount);
+    }
+
+    private static long computeBudgetMs(Player p) {
+        int cardCount = p.getCardsIn(ZoneType.Hand).size()
+                      + p.getCardsIn(ZoneType.Battlefield).size()
+                      + p.getCardsIn(ZoneType.Flashback).size();
+        return Math.min(BUDGET_CEILING_MS, Math.max(BUDGET_FLOOR_MS, BUDGET_PER_CARD_MS * cardCount));
     }
 
     public long getEvalCount() { return evalCount; }
@@ -96,8 +144,14 @@ public class InstrumentedPlayerController extends PlayerControllerAi {
         public long timeouts;
         public long foundAction;
         public long noActionFound;
+        public long disagreements;
+        public long exitHand;
+        public long exitBattlefield;
+        public long exitExternal;
+        public long exitNone;
+        public long exitTimeout;
 
-        void accept(Stats s, boolean hasAction) {
+        void accept(Stats s, boolean hasAction, boolean agreesWithBaseline) {
             calls++;
             totalNanos += s.totalNanos;
             handNanos += s.handNanos;
@@ -111,6 +165,16 @@ public class InstrumentedPlayerController extends PlayerControllerAi {
             if (s.battlefieldNanos > maxBattlefieldNanos) maxBattlefieldNanos = s.battlefieldNanos;
             if (s.externalZonesNanos > maxExternalZonesNanos) maxExternalZonesNanos = s.externalZonesNanos;
             if (hasAction) foundAction++; else noActionFound++;
+            if (!agreesWithBaseline) disagreements++;
+            if (s.exitZone != null) {
+                switch (s.exitZone) {
+                    case HAND: exitHand++; break;
+                    case BATTLEFIELD: exitBattlefield++; break;
+                    case EXTERNAL: exitExternal++; break;
+                    case NONE: exitNone++; break;
+                    case TIMEOUT: exitTimeout++; break;
+                }
+            }
         }
 
         public double getTotalMs() { return totalNanos / 1_000_000.0; }
