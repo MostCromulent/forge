@@ -1027,24 +1027,46 @@ public class VLobby implements ILobbyView {
         NetworkEvent event = serverLobby.getCurrentEvent();
         if (event == null) return;
 
-        // Step 3: Timer (draft only)
+        // Step 3: Pick timer + disconnect grace period (draft only, combined prompt)
         int timerSeconds = event.getPickTimerSeconds();
+        int graceSeconds = event.getDisconnectGraceSeconds();
         if (isDraft) {
-            String timerInput = FOptionPane.showInputDialog(
-                    localizer.getMessage("lblNetworkPickTimerPrompt"),
-                    localizer.getMessage("lblNetworkPickTimerTitle"),
-                    FOptionPane.QUESTION_ICON,
-                    String.valueOf(timerSeconds));
-            if (timerInput != null) {
+            FTextField pickField = new FTextField.Builder().text(String.valueOf(timerSeconds)).build();
+            FTextField graceField = new FTextField.Builder().text(String.valueOf(graceSeconds)).build();
+            FLabel pickLbl = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkPickTimerPrompt")).build();
+            FLabel graceLbl1 = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkGraceTimerPromptLine1")).build();
+            FLabel graceLbl2 = new FLabel.Builder().fontSize(12).text(localizer.getMessage("lblNetworkGraceTimerPromptLine2")).build();
+
+            JPanel panel = new JPanel(new MigLayout("insets 4, gap 2 4, wrap 1"));
+            panel.setOpaque(false);
+            panel.add(pickLbl);
+            panel.add(pickField, "w 80!");
+            panel.add(graceLbl1, "gaptop 10");
+            panel.add(graceLbl2);
+            panel.add(graceField, "w 80!");
+
+            int result = FOptionPane.showOptionDialog(
+                    null,
+                    localizer.getMessage("lblNetworkDraftTimersTitle"),
+                    null,
+                    panel,
+                    java.util.Arrays.asList(
+                            localizer.getMessage("lblOK"),
+                            localizer.getMessage("lblCancel")));
+            if (result == 0) {
                 try {
-                    int parsed = Integer.parseInt(timerInput.trim());
+                    int parsed = Integer.parseInt(pickField.getText().trim());
                     if (parsed >= 0) timerSeconds = parsed;
+                } catch (NumberFormatException ignored) { }
+                try {
+                    int parsed = Integer.parseInt(graceField.getText().trim());
+                    if (parsed >= 0) graceSeconds = parsed;
                 } catch (NumberFormatException ignored) { }
             }
         }
 
         // Delegate server-side configuration
-        if (!serverLobby.configureEvent(chosen, timerSeconds)) {
+        if (!serverLobby.configureEvent(chosen, timerSeconds, graceSeconds)) {
             return;
         }
         updateEventPanelState();

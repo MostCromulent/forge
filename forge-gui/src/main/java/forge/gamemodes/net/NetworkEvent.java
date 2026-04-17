@@ -22,6 +22,7 @@ public final class NetworkEvent {
     private EventPhase phase;
     private final List<EventParticipant> participants;
     private int pickTimerSeconds;
+    private int disconnectGraceSeconds;
     private String productDescription;
     private LimitedPoolType poolType;
     private int numRounds = 3;
@@ -33,6 +34,7 @@ public final class NetworkEvent {
         this.phase = EventPhase.LOBBY_GATHER;
         this.participants = new ArrayList<>();
         this.pickTimerSeconds = 60;
+        this.disconnectGraceSeconds = 120;
         this.productDescription = "";
         this.poolType = LimitedPoolType.Full;
     }
@@ -44,6 +46,8 @@ public final class NetworkEvent {
     public List<EventParticipant> getParticipants() { return participants; }
     public int getPickTimerSeconds() { return pickTimerSeconds; }
     public void setPickTimerSeconds(int seconds) { this.pickTimerSeconds = seconds; }
+    public int getDisconnectGraceSeconds() { return disconnectGraceSeconds; }
+    public void setDisconnectGraceSeconds(int seconds) { this.disconnectGraceSeconds = seconds; }
     public String getProductDescription() { return productDescription; }
     public void setProductDescription(String desc) { this.productDescription = desc; }
     public LimitedPoolType getPoolType() { return poolType; }

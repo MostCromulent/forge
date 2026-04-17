@@ -143,13 +143,14 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
      * @return false if the user cancelled a sub-dialog, true otherwise
      */
     public synchronized boolean configureEvent(forge.gamemodes.limited.LimitedPoolType poolType,
-            int pickTimerSeconds) {
+            int pickTimerSeconds, int disconnectGraceSeconds) {
         NetworkEvent event = getCurrentEvent();
         if (event == null) return false;
 
         event.setPoolType(poolType);
         event.setProductDescription(poolType.toString());
         event.setPickTimerSeconds(pickTimerSeconds);
+        event.setDisconnectGraceSeconds(disconnectGraceSeconds);
 
         if (event.getFormat() == EventFormat.SEALED) {
             forge.gamemodes.limited.SealedCardPoolGenerator gen =

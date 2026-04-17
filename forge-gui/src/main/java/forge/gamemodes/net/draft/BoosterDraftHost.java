@@ -12,12 +12,14 @@ import forge.gamemodes.limited.LimitedPlayerAI;
 import forge.gamemodes.net.event.DraftAutoPickedEvent;
 import forge.gamemodes.net.event.DraftPackArrivedEvent;
 import forge.gamemodes.net.event.DraftSeatPickedEvent;
+import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.item.PaperCard;
 import forge.util.IHasForgeLog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,15 @@ import java.util.concurrent.TimeUnit;
  */
 public final class BoosterDraftHost implements IHasForgeLog {
 
+    /**
+     * Per-seat connection state. A disconnected seat enters {@code IN_GRACE} for
+     * {@link NetworkEvent#getDisconnectGraceSeconds()}; if no reconnect happens in
+     * that window it transitions to {@code POST_GRACE_AUTO} where all future packs
+     * auto-pick first-card on arrival. Reconnect at any point returns the seat to
+     * {@code LIVE}. A grace value of zero skips IN_GRACE entirely.
+     */
+    private enum SeatConnectionState { LIVE, IN_GRACE, POST_GRACE_AUTO }
+
     private final BoosterDraft draft;
     private final NetworkEvent event;
     private final List<EventParticipant> participants;
@@ -51,8 +62,14 @@ public final class BoosterDraftHost implements IHasForgeLog {
     /** Whether a human seat currently has a pack notification in flight (waiting for pick). */
     private final boolean[] inFlight;
 
+    /** Per-seat connection state — initialized LIVE; transitioned by disconnect/reconnect. */
+    private final SeatConnectionState[] seatState;
+
     /** Per-seat pick timers. Started when a pack is sent, cancelled on pick. */
     private final Map<Integer, ScheduledFuture<?>> seatTimers = new HashMap<>();
+
+    /** Per-seat grace timers — scheduled on disconnect, cancelled on reconnect. */
+    private final Map<Integer, ScheduledFuture<?>> graceTimers = new HashMap<>();
 
     private final ScheduledExecutorService timerExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
         Thread t = new Thread(r, "DraftPickTimer");
@@ -66,7 +83,10 @@ public final class BoosterDraftHost implements IHasForgeLog {
         this.participants = event.getParticipants();
         this.currentPackNumber = draft.getRound();
         this.finished = false;
-        this.inFlight = new boolean[draft.getAllPlayers().size()];
+        int podSize = draft.getAllPlayers().size();
+        this.inFlight = new boolean[podSize];
+        this.seatState = new SeatConnectionState[podSize];
+        Arrays.fill(this.seatState, SeatConnectionState.LIVE);
     }
 
     /**
@@ -99,6 +119,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
     public synchronized void shutdown() {
         finished = true;
         cancelAllSeatTimers();
+        cancelAllGraceTimers();
         timerExecutor.shutdown();
     }
 
@@ -199,10 +220,32 @@ public final class BoosterDraftHost implements IHasForgeLog {
             }
             if (aiProgressed) continue;
 
-            // No AI work left — notify any humans with a fresh pack
+            // Drain any seat that has timed out its grace window — same pattern
+            // as the AI loop above: one pick per pass, then restart.
+            boolean autoPicked = false;
             for (int i = 0; i < players.size(); i++) {
                 LimitedPlayer p = players.get(i);
                 if (p instanceof LimitedPlayerAI) continue;
+                if (seatState[i] != SeatConnectionState.POST_GRACE_AUTO) continue;
+                DraftPack head = p.nextChoice();
+                if (head == null || head.isEmpty()) continue;
+
+                PaperCard autoPick = head.get(0);
+                netLog.info("Seat {} disconnected past grace — auto-picking {}", i, autoPick.getName());
+                applyPickAndPass(p, i, autoPick);
+                addBroadcastSeatPicked(dispatches, i, seatPickCount(p));
+                autoPicked = true;
+                break;
+            }
+            if (autoPicked) continue;
+
+            // No AI/auto work left — notify any live humans with a fresh pack.
+            // Seats in IN_GRACE hold their packs silently until they reconnect
+            // or grace expires; POST_GRACE_AUTO is already handled above.
+            for (int i = 0; i < players.size(); i++) {
+                LimitedPlayer p = players.get(i);
+                if (p instanceof LimitedPlayerAI) continue;
+                if (seatState[i] != SeatConnectionState.LIVE) continue;
                 DraftPack head = p.nextChoice();
                 if (head == null || head.isEmpty()) continue;
                 if (inFlight[i]) continue;
@@ -327,11 +370,145 @@ public final class BoosterDraftHost implements IHasForgeLog {
         seatTimers.clear();
     }
 
+    // --- Disconnect / reconnect handling ---
+
+    /**
+     * Notify the host that a drafting client's channel has been lost. The seat's
+     * pick timer is cancelled and a {@value #GRACE_SECONDS}s grace window opens;
+     * if no reconnect arrives in that window the seat switches to permanent
+     * auto-pick mode until the draft ends or the player returns.
+     *
+     * <p>No-op for AI seats (not tied to channels) and for seats not currently
+     * {@code LIVE} (idempotent against repeated disconnect signals).
+     */
+    public void onSeatDisconnected(int seatIndex) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished || seatIndex < 0 || seatIndex >= seatState.length) return;
+            if (seatState[seatIndex] != SeatConnectionState.LIVE) return;
+            if (isAiSeat(seatIndex)) return;
+
+            cancelSeatTimer(seatIndex);
+            // Clear inFlight so the grace-expiry auto-pick path in advanceDraft
+            // isn't blocked by a stale flag from the pack we sent pre-disconnect.
+            inFlight[seatIndex] = false;
+
+            int graceSeconds = event.getDisconnectGraceSeconds();
+            dispatches = new ArrayList<>();
+            addBroadcastDisconnect(dispatches, seatIndex);
+            if (graceSeconds > 0) {
+                seatState[seatIndex] = SeatConnectionState.IN_GRACE;
+                graceTimers.put(seatIndex, timerExecutor.schedule(
+                        () -> onGraceExpired(seatIndex), graceSeconds, TimeUnit.SECONDS));
+                netLog.info("Seat {} disconnected — {}s grace started", seatIndex, graceSeconds);
+            } else {
+                // Zero-grace config — skip IN_GRACE and start auto-picking immediately.
+                seatState[seatIndex] = SeatConnectionState.POST_GRACE_AUTO;
+                netLog.info("Seat {} disconnected — grace disabled, auto-picking immediately", seatIndex);
+                advanceDraft(dispatches);
+            }
+        }
+        run(dispatches);
+    }
+
+    /**
+     * Notify the host that a previously-disconnected seat has reconnected. If a
+     * pack is currently at the head of the seat's queue it's re-sent to the
+     * client and the pick timer restarts; otherwise the next pack to arrive will
+     * be sent via the normal {@code advanceDraft} path.
+     */
+    public void onSeatReconnected(int seatIndex) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished || seatIndex < 0 || seatIndex >= seatState.length) return;
+            if (seatState[seatIndex] == SeatConnectionState.LIVE) return;
+
+            cancelGraceTimer(seatIndex);
+            seatState[seatIndex] = SeatConnectionState.LIVE;
+
+            dispatches = new ArrayList<>();
+            LimitedPlayer player = draft.getAllPlayers().get(seatIndex);
+            DraftPack head = player.nextChoice();
+            if (head != null && !head.isEmpty()) {
+                addSendPackToHuman(dispatches, seatIndex, head);
+                inFlight[seatIndex] = true;
+                startSeatTimer(seatIndex);
+            }
+            addBroadcastReconnect(dispatches, seatIndex);
+            netLog.info("Seat {} reconnected", seatIndex);
+        }
+        run(dispatches);
+    }
+
+    /** Grace timer callback — transition to POST_GRACE_AUTO and drain held/queued packs. */
+    private void onGraceExpired(int seatIndex) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished || seatState[seatIndex] != SeatConnectionState.IN_GRACE) return;
+            seatState[seatIndex] = SeatConnectionState.POST_GRACE_AUTO;
+            graceTimers.remove(seatIndex);
+
+            netLog.info("Seat {} grace expired — switching to auto-pick", seatIndex);
+            dispatches = new ArrayList<>();
+            addBroadcastGraceExpired(dispatches, seatIndex);
+            advanceDraft(dispatches);
+        }
+        run(dispatches);
+    }
+
+    private boolean isAiSeat(int seatIndex) {
+        EventParticipant p = findParticipant(seatIndex);
+        return p == null || p.isAI();
+    }
+
+    private void cancelGraceTimer(int seatIndex) {
+        ScheduledFuture<?> f = graceTimers.remove(seatIndex);
+        if (f != null) f.cancel(false);
+    }
+
+    private void cancelAllGraceTimers() {
+        for (ScheduledFuture<?> f : graceTimers.values()) {
+            if (f != null) f.cancel(false);
+        }
+        graceTimers.clear();
+    }
+
+    private void addBroadcastDisconnect(List<Runnable> dispatches, int seatIndex) {
+        EventParticipant participant = findParticipant(seatIndex);
+        if (participant == null) return;
+        String name = participant.getName();
+        int graceSeconds = event.getDisconnectGraceSeconds();
+        String msg = graceSeconds > 0
+                ? String.format("%s disconnected from draft — %ds to reconnect before auto-picking starts.",
+                        name, graceSeconds)
+                : String.format("%s disconnected from draft — auto-picking remaining packs.", name);
+        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(msg)));
+    }
+
+    private void addBroadcastReconnect(List<Runnable> dispatches, int seatIndex) {
+        EventParticipant participant = findParticipant(seatIndex);
+        if (participant == null) return;
+        String name = participant.getName();
+        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(
+                String.format("%s reconnected — picking live again.", name))));
+    }
+
+    private void addBroadcastGraceExpired(List<Runnable> dispatches, int seatIndex) {
+        EventParticipant participant = findParticipant(seatIndex);
+        if (participant == null) return;
+        String name = participant.getName();
+        dispatches.add(() -> FServerManager.getInstance().broadcast(new MessageEvent(
+                String.format("%s grace period expired — auto-picking remaining packs.", name))));
+    }
+
     /** Auto-pick the first card for a single seat that timed out. */
     private void onSeatTimerExpired(int seatIndex) {
         List<Runnable> dispatches;
         synchronized (this) {
-            if (finished || !inFlight[seatIndex]) return;
+            // Defensive: a disconnected seat's pick timer is cancelled on disconnect,
+            // but guard against the runnable firing between cancel scheduling and the
+            // monitor being acquired.
+            if (finished || !inFlight[seatIndex] || seatState[seatIndex] != SeatConnectionState.LIVE) return;
 
             List<LimitedPlayer> players = draft.getAllPlayers();
             LimitedPlayer player = players.get(seatIndex);
