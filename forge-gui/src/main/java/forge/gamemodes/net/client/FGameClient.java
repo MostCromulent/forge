@@ -181,11 +181,6 @@ public class FGameClient implements IToServer, IHasForgeLog {
                     listener.eventCreated(event.getView());
                 }
                 return;
-            } else if (msg instanceof EventPhaseChangedEvent event) {
-                for (final ILobbyListener listener : lobbyListeners) {
-                    listener.eventPhaseChanged(event.getPhase());
-                }
-                return;
             } else if (msg instanceof ReceiveEventPoolEvent event) {
                 for (final ILobbyListener listener : lobbyListeners) {
                     listener.receiveEventPool(event.getEventId(), event.getPool());

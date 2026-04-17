@@ -276,10 +276,33 @@ public final class FServerManager implements IHasForgeLog {
     }
 
     public void broadcast(final NetEvent event) {
-        if (event instanceof MessageEvent msgEvent) {
-            lobbyListener.message(msgEvent.getSource(), msgEvent.getMessage());
-        }
+        dispatchToLocalListener(event);
         broadcastTo(event, clients.values());
+    }
+
+    /**
+     * Dispatch a broadcast event to the host's local listener — the host does
+     * not receive its own broadcasts over the network, so we mirror them here.
+     * Kept in sync with {@code FGameClient.LobbyUpdateHandler}.
+     */
+    private void dispatchToLocalListener(final NetEvent event) {
+        if (lobbyListener == null) return;
+        if (event instanceof MessageEvent e) {
+            lobbyListener.message(e.getSource(), e.getMessage());
+        } else if (event instanceof EventCreatedEvent e) {
+            lobbyListener.eventCreated(e.getView());
+        } else if (event instanceof ReceiveEventPoolEvent e) {
+            lobbyListener.receiveEventPool(e.getEventId(), e.getPool());
+        } else if (event instanceof SelectEventForMatchEvent e) {
+            lobbyListener.selectEventForMatch(e.getEventId(), e.isDeckConformance());
+        } else if (event instanceof DraftAutoPickedEvent e) {
+            lobbyListener.draftAutoPicked(e.getSeatIndex(), e.getCard(), e.getPickNumber());
+        } else if (event instanceof DraftPackArrivedEvent e) {
+            lobbyListener.draftPackArrived(e.getSeatIndex(), e.getPack(),
+                    e.getPackNumber(), e.getPickNumber(), e.getTimerDurationSeconds());
+        } else if (event instanceof DraftSeatPickedEvent e) {
+            lobbyListener.draftSeatPicked(e.getSeatIndex(), e.getPickNumber(), e.getSeatQueueDepths());
+        }
     }
 
     public String formatAfkTimeoutMessage() {
@@ -904,7 +927,7 @@ public final class FServerManager implements IHasForgeLog {
                 updateSlot(client.getIndex(), event);
             } else if (msg instanceof DraftPickEvent pickEvent) {
                 if (localLobby != null) {
-                    localLobby.handleDraftPick(pickEvent);
+                    localLobby.handleDraftPick(pickEvent, client.getIndex());
                 }
                 return;
             }

@@ -13,6 +13,7 @@ import forge.screens.home.LblHeader;
 import forge.screens.home.VHomeUI;
 import forge.screens.home.VHomeUI.PnlDisplay;
 import forge.toolbox.FSkin;
+import forge.util.Localizer;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -26,9 +27,9 @@ public enum VSubmenuOnlineDecks implements IVSubmenu<CSubmenuOnlineDecks> {
 
     // Fields used with interface IVDoc
     private DragCell parentCell;
-    private final DragTab tab = new DragTab("Draft/Sealed Decks");
+    private final DragTab tab = new DragTab(Localizer.getInstance().getMessage("lblNetEventDecks"));
 
-    private final LblHeader lblTitle = new LblHeader("Draft/Sealed Decks");
+    private final LblHeader lblTitle = new LblHeader(Localizer.getInstance().getMessage("lblNetEventDecks"));
 
     private final DeckManager lstDecks = new DeckManager(GameType.Sealed, CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
 
@@ -49,7 +50,7 @@ public enum VSubmenuOnlineDecks implements IVSubmenu<CSubmenuOnlineDecks> {
      */
     @Override
     public String getMenuTitle() {
-        return "Draft/Sealed Decks";
+        return Localizer.getInstance().getMessage("lblNetEventDecks");
     }
 
     /* (non-Javadoc)

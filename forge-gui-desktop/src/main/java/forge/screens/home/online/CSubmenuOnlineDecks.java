@@ -38,10 +38,12 @@ public enum CSubmenuOnlineDecks implements ICDoc {
             if (!Singletons.getControl().ensureScreenActive(screen)) {
                 return;
             }
-            CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(editorCtrl);
+            // Confirm before installing the new controller so a Cancel doesn't
+            // clobber the previous editor's unsaved state.
             if (!SEditorIO.confirmSaveChanges(screen, true)) {
                 return;
             }
+            CDeckEditorUI.SINGLETON_INSTANCE.setEditorController(editorCtrl);
             if (deck != null) {
                 CDeckEditorUI.SINGLETON_INSTANCE.getCurrentEditorController()
                         .getDeckController().load(deck.getPath(), deck.getName());

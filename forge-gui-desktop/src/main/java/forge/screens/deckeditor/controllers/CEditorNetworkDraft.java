@@ -26,6 +26,7 @@ import forge.toolbox.FOptionPane;
 import forge.util.ItemPool;
 import forge.util.Localizer;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Consumer;
@@ -40,12 +41,13 @@ import java.util.function.Consumer;
 public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
 
     private final int seatIndex;
-    private final String eventId;
     private final Consumer<DraftPickEvent> pickSender;
+    private final Runnable onLeave;
     private final Localizer localizer = Localizer.getInstance();
 
     private int currentPackNumber;
     private int currentPickNumber;
+    private int myPickCount;  // total cards I've drafted so far (1-based after the pick)
     private boolean draftComplete;
 
     // Saved tab parents for cleanup
@@ -59,19 +61,22 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
 
     /**
      * @param seatIndex   this player's seat in the draft pod
-     * @param eventId     the network event ID
      * @param pickSender  callback to send picks; for the host this calls
      *                    ServerGameLobby.handleDraftPick directly, for
      *                    clients it sends via FGameClient
+     * @param onLeave     callback fired when the user confirms "Leave" on the
+     *                    mid-draft exit prompt — lets the lobby drop its
+     *                    reference and dismiss the overlay
      * @param cDetailPicture0 the shared detail picture controller
      */
-    public CEditorNetworkDraft(int seatIndex, String eventId,
-            Consumer<DraftPickEvent> pickSender, CDetailPicture cDetailPicture0) {
+    public CEditorNetworkDraft(int seatIndex,
+            Consumer<DraftPickEvent> pickSender, Runnable onLeave,
+            CDetailPicture cDetailPicture0) {
         super(FScreen.DRAFTING_PROCESS, cDetailPicture0, GameType.Draft);
 
         this.seatIndex = seatIndex;
-        this.eventId = eventId;
         this.pickSender = pickSender;
+        this.onLeave = onLeave;
 
         final CardManager catalogManager = new CardManager(cDetailPicture0, false, false, true);
         final CardManager deckManager = new CardManager(cDetailPicture0, false, false, true);
@@ -127,7 +132,9 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         }
 
         // Draft one card at a time
-        PaperCard card = items.iterator().next().getKey();
+        Iterator<Entry<PaperCard, Integer>> it = items.iterator();
+        if (!it.hasNext()) return;
+        PaperCard card = it.next().getKey();
 
         // Add to the picks pool
         this.getDeckManager().addItem(card, 1);
@@ -135,8 +142,9 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
         // Send pick to server
         pickSender.accept(new DraftPickEvent(seatIndex, card));
 
-        // Log the pick
-        NetworkDraftLog.logMyPick(card.getName(), currentPickNumber);
+        // Log the pick — use our own running count (1-based after this pick)
+        myPickCount++;
+        NetworkDraftLog.logMyPick(card.getName(), myPickCount);
 
         // Clear the catalog — waiting for next pack
         this.getCatalogManager().setPool((Iterable<PaperCard>) null);
@@ -151,7 +159,10 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
      */
     public void addAutoPickedCard(PaperCard card, int pickNumber) {
         this.getDeckManager().addItem(card, 1);
-        NetworkDraftLog.logMyPick(card.getName() + " (auto)", pickNumber);
+        // pickNumber from the server is our 1-based seat pick count; keep local
+        // counter in sync in case the user picks manually after some auto-picks.
+        myPickCount = pickNumber;
+        NetworkDraftLog.logMyPick(card.getName() + " (auto)", myPickCount);
         FDraftOverlay.SINGLETON_INSTANCE.onPickSubmitted();
     }
 
@@ -260,10 +271,12 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
     public boolean canSwitchAway(boolean isClosing) {
         if (isClosing && !draftComplete) {
             String userPrompt = localizer.getMessage("lblEndDraftConfirm");
-            return FOptionPane.showConfirmDialog(userPrompt,
+            boolean leaving = FOptionPane.showConfirmDialog(userPrompt,
                     localizer.getMessage("lblLeaveDraft"),
                     localizer.getMessage("lblLeave"),
                     localizer.getMessage("lblCancel"), false);
+            if (leaving && onLeave != null) onLeave.run();
+            return leaving;
         }
         return true;
     }

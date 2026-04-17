@@ -258,7 +258,6 @@ public enum FDraftOverlay {
 
     public void show() {
         if (!hasBeenShown) {
-            hasBeenShown = true;
             loadLocation();
             window.getTitleBar().addMouseListener(new FMouseAdapter() {
                 @Override

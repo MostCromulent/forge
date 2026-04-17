@@ -101,7 +101,7 @@ public enum VEditorLog implements IVDoc<CEditorLog> {
     }
 
     public void addLogEntry(String entry, java.awt.Color foreground) {
-        editorLogEntries.add(entry);
         gameLog.addLogEntry(entry, foreground);
+        this.editorLogEntries.add(entry);
     }
 }

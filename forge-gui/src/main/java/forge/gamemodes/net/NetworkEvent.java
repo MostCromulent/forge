@@ -25,7 +25,7 @@ public final class NetworkEvent {
     private String productDescription;
     private LimitedPoolType poolType;
     private int numRounds = 3;
-    private transient SealedCardPoolGenerator sealedGenerator;
+    private SealedCardPoolGenerator sealedGenerator;
 
     public NetworkEvent(EventFormat format) {
         this.eventId = UUID.randomUUID().toString().substring(0, 8);
@@ -62,6 +62,11 @@ public final class NetworkEvent {
         deck.getTags().add("eventFormat:" + event.getFormat().name());
         deck.getTags().add("eventProduct:" + event.getProductDescription());
         deck.getTags().add("eventDate:" + LocalDate.now().toString());
+    }
+
+    /** Conventional pool name for a participant in this event — "Name-eventId". */
+    public static String poolNameFor(EventParticipant participant, NetworkEvent event) {
+        return participant.getName() + "-" + event.getEventId();
     }
 
     public NetworkEventView toView() {

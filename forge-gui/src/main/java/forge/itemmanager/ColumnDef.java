@@ -23,6 +23,7 @@ import forge.deck.DeckProxy;
 import forge.deck.io.DeckPreferences;
 import forge.game.GameFormat;
 import forge.gamemodes.limited.CardRanker;
+import forge.gamemodes.net.EventFormat;
 import forge.gui.card.CardPreferences;
 import forge.item.IPaperCard;
 import forge.item.InventoryItem;
@@ -460,9 +461,13 @@ public enum ColumnDef {
     private static String eventFormatDisplay(final String rawFormat) {
         if (rawFormat == null || rawFormat.isEmpty()) return "";
         Localizer localizer = Localizer.getInstance();
-        return "BOOSTER_DRAFT".equals(rawFormat)
-                ? localizer.getMessage("lblNetworkModeDraft")
-                : localizer.getMessage("lblNetworkModeSealed");
+        if (EventFormat.BOOSTER_DRAFT.name().equals(rawFormat)) {
+            return localizer.getMessage("lblNetworkModeDraft");
+        }
+        if (EventFormat.SEALED.name().equals(rawFormat)) {
+            return localizer.getMessage("lblNetworkModeSealed");
+        }
+        return rawFormat;
     }
 
     private static ColorSet toDeckColor(final InventoryItem i) {

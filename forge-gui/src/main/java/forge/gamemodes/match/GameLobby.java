@@ -330,6 +330,12 @@ public abstract class GameLobby implements IHasGameType {
         return false;
     }
 
+    /**
+     * Notify the view listener that state has changed. Subclasses that override
+     * to mutate lobby data (e.g. {@link forge.gamemodes.net.server.ServerGameLobby}
+     * populating the event view) MUST call {@code super.updateView(fullUpdate)}
+     * after their mutations, otherwise the listener never fires.
+     */
     protected void updateView(final boolean fullUpdate) {
         if (listener != null) {
             listener.update(fullUpdate);

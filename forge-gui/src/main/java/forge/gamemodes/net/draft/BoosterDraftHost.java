@@ -12,10 +12,8 @@ import forge.gamemodes.limited.LimitedPlayerAI;
 import forge.gamemodes.net.event.DraftAutoPickedEvent;
 import forge.gamemodes.net.event.DraftPackArrivedEvent;
 import forge.gamemodes.net.event.DraftSeatPickedEvent;
-import forge.gamemodes.net.event.EventPhaseChangedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gamemodes.net.server.FServerManager;
-import forge.interfaces.ILobbyListener;
 import forge.item.PaperCard;
 import forge.util.IHasForgeLog;
 
@@ -37,7 +35,9 @@ import java.util.concurrent.TimeUnit;
  * packs while waiting for slower seats. Each human pick has its own timer,
  * reset whenever a new pack reaches the head of the queue.
  *
- * <p>All mutable state is guarded by {@code synchronized(this)}.
+ * <p>Mutable state is guarded by {@code synchronized(this)}, but all network
+ * dispatch is deferred to a list and run outside the monitor — otherwise a slow
+ * client's {@code channel.writeAndFlush().sync()} would block the entire pod.
  */
 public final class BoosterDraftHost implements IHasForgeLog {
 
@@ -46,7 +46,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
     private final List<EventParticipant> participants;
     private int currentPackNumber;  // 1-based round number — used to decide pass direction
     private int initialPackSize;    // pack size at start of current round, for pick-number display
-    private boolean finished;
+    private volatile boolean finished;
 
     /** Whether a human seat currently has a pack notification in flight (waiting for pick). */
     private final boolean[] inFlight;
@@ -73,14 +73,17 @@ public final class BoosterDraftHost implements IHasForgeLog {
      * Start the draft: set phase and distribute initial packs.
      * Called once after the BoosterDraft has been initialized.
      */
-    public synchronized void start() {
-        netLog.info("Draft started — {} participants, timer={}s, product={}",
-                participants.size(), event.getPickTimerSeconds(), event.getProductDescription());
-        event.setPhase(EventPhase.DRAFTING);
-        FServerManager.getInstance().broadcast(
-                new EventPhaseChangedEvent(EventPhase.DRAFTING));
-        captureInitialPackSize();
-        distributeActive();
+    public void start() {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            netLog.info("Draft started — {} participants, timer={}s, product={}",
+                    participants.size(), event.getPickTimerSeconds(), event.getProductDescription());
+            event.setPhase(EventPhase.DRAFTING);
+            captureInitialPackSize();
+            dispatches = new ArrayList<>();
+            advanceDraft(dispatches);
+        }
+        run(dispatches);
     }
 
     /** Whether the draft has completed all rounds. */
@@ -89,51 +92,81 @@ public final class BoosterDraftHost implements IHasForgeLog {
     }
 
     /**
+     * Stop the draft and release timer resources. Safe to call multiple times.
+     * Does not distribute pools — call before the draft has legitimately finished
+     * (e.g. host cleared the event mid-draft, lobby shutting down).
+     */
+    public synchronized void shutdown() {
+        finished = true;
+        cancelAllSeatTimers();
+        timerExecutor.shutdown();
+    }
+
+    /**
      * Handle an incoming pick from a human client.
      *
      * @param seatIndex the seat that made the pick
      * @param card      the chosen card
      */
-    public synchronized void handlePick(int seatIndex, PaperCard card) {
-        if (finished) return;
-        List<LimitedPlayer> players = draft.getAllPlayers();
-        if (seatIndex < 0 || seatIndex >= players.size()) {
-            netLog.warn("Invalid seat index: {}", seatIndex);
-            return;
-        }
-        LimitedPlayer player = players.get(seatIndex);
-        DraftPack headPack = player.nextChoice();
-        if (headPack == null || !headPack.contains(card)) {
-            netLog.warn("Seat {} picked a card not in the current pack", seatIndex);
-            return;
-        }
+    public void handlePick(int seatIndex, PaperCard card) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished) return;
+            List<LimitedPlayer> players = draft.getAllPlayers();
+            if (seatIndex < 0 || seatIndex >= players.size()) {
+                netLog.warn("Invalid seat index: {}", seatIndex);
+                return;
+            }
+            LimitedPlayer player = players.get(seatIndex);
+            DraftPack headPack = player.nextChoice();
+            if (headPack == null || !headPack.contains(card)) {
+                netLog.warn("Seat {} picked a card not in the current pack", seatIndex);
+                return;
+            }
 
-        // Remove the card from the pack (still at head of queue) and add to pool
-        player.draftCard(card, DeckSection.Sideboard);
-        cancelSeatTimer(seatIndex);
-        inFlight[seatIndex] = false;
+            dispatches = new ArrayList<>();
+            applyPickAndPass(player, seatIndex, card);
+            cancelSeatTimer(seatIndex);
+            inFlight[seatIndex] = false;
 
-        // Dequeue the pack from this seat and pass to the next in direction
-        DraftPack passed = player.passPack();
-        if (passed != null && !passed.isEmpty()) {
-            passToNext(seatIndex, passed);
+            // Pick number reported in the broadcast reflects how many cards this
+            // seat has drafted so far (after this pick) — 1 for their first pick
+            // ever, 16 for the first pick of round 2, etc.
+            int seatPickNumber = seatPickCount(player);
+            netLog.info("Seat {} picked from pack {}", seatIndex, currentPackNumber);
+            addBroadcastSeatPicked(dispatches, seatIndex, seatPickNumber);
+            advanceDraft(dispatches);
         }
+        run(dispatches);
+    }
 
-        netLog.info("Seat {} picked from pack {}", seatIndex, currentPackNumber);
-        broadcastSeatPicked(seatIndex);
-        distributeActive();
+    /**
+     * Apply a pick and, if the card's effect passes the pack, dequeue it from
+     * the picker's queue and route it to the next seat in direction. Conspiracy
+     * cards such as Agent of Acquisitions cause {@code draftCard} to return
+     * {@code false}, meaning the picker keeps the pack for another pick.
+     */
+    private void applyPickAndPass(LimitedPlayer player, int seatIndex, PaperCard card) {
+        Boolean passPack = player.draftCard(card, DeckSection.Sideboard);
+        if (!Boolean.FALSE.equals(passPack)) {
+            DraftPack passed = player.passPack();
+            if (passed != null && !passed.isEmpty()) {
+                passToNext(seatIndex, passed);
+            }
+        }
     }
 
     /**
      * Core distribution loop: advance rounds, let AI pick, notify humans of
-     * packs at the head of their queue.
+     * packs at the head of their queue. Collects network dispatches into
+     * {@code dispatches} to be run outside the monitor.
      */
-    private void distributeActive() {
+    private void advanceDraft(List<Runnable> dispatches) {
         while (!finished) {
             // Round advancement — all queues drained means the round is over
             if (draft.isRoundOver()) {
                 if (!draft.startRound()) {
-                    finishDraft();
+                    addFinishDraft(dispatches);
                     return;
                 }
                 currentPackNumber = draft.getRound();
@@ -159,10 +192,8 @@ public final class BoosterDraftHost implements IHasForgeLog {
 
                 PaperCard choice = ai.chooseCard();
                 if (choice == null) continue;
-                ai.draftCard(choice, DeckSection.Sideboard);
-                DraftPack passed = ai.passPack();
-                if (passed != null && !passed.isEmpty()) passToNext(i, passed);
-                broadcastSeatPicked(i);
+                applyPickAndPass(ai, i, choice);
+                addBroadcastSeatPicked(dispatches, i, seatPickCount(ai));
                 aiProgressed = true;
                 break;
             }
@@ -176,7 +207,7 @@ public final class BoosterDraftHost implements IHasForgeLog {
                 if (head == null || head.isEmpty()) continue;
                 if (inFlight[i]) continue;
 
-                sendPackToHuman(i, head);
+                addSendPackToHuman(dispatches, i, head);
                 inFlight[i] = true;
                 startSeatTimer(i);
             }
@@ -205,32 +236,35 @@ public final class BoosterDraftHost implements IHasForgeLog {
         }
     }
 
-    private void sendPackToHuman(int seatIndex, DraftPack pack) {
+    /** Pick number (0-based) within the current pack, derived from cards remaining. */
+    private int pickNumberFor(DraftPack pack) {
+        return pack == null ? 0 : Math.max(0, initialPackSize - pack.size());
+    }
+
+    /** Total cards this seat has drafted so far (1-based — 1 means "just made pick 1"). */
+    private static int seatPickCount(LimitedPlayer player) {
+        return player.getDeck().get(DeckSection.Sideboard).countAll();
+    }
+
+    private void addSendPackToHuman(List<Runnable> dispatches, int seatIndex, DraftPack pack) {
         EventParticipant participant = findParticipant(seatIndex);
         if (participant == null || participant.isAI()) return;
 
         List<PaperCard> packCards = new ArrayList<>(pack);
         int packNum = currentPackNumber;
-        int pickNum = Math.max(0, initialPackSize - pack.size());
+        int pickNum = pickNumberFor(pack);
         int timerSecs = event.getPickTimerSeconds();
+        int slot = participant.getLobbySlotIndex();
 
-        FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
+        dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
                 new DraftPackArrivedEvent(seatIndex, packCards, packNum, pickNum, timerSecs),
-                l -> l.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs));
+                l -> l.draftPackArrived(seatIndex, packCards, packNum, pickNum, timerSecs)));
     }
 
-    private void broadcastSeatPicked(int seatIndex) {
+    private void addBroadcastSeatPicked(List<Runnable> dispatches, int seatIndex, int pickNumber) {
         int[] queueDepths = computeQueueDepths();
-        DraftSeatPickedEvent pickedEvent = new DraftSeatPickedEvent(
-                seatIndex, 0, queueDepths);
-        FServerManager server = FServerManager.getInstance();
-        server.broadcast(pickedEvent);
-        // broadcast() only dispatches MessageEvent to the local lobbyListener;
-        // draft events must be forwarded explicitly to the host player.
-        ILobbyListener listener = server.getLobbyListener();
-        if (listener != null) {
-            listener.draftSeatPicked(seatIndex, 0, queueDepths);
-        }
+        dispatches.add(() -> FServerManager.getInstance().broadcast(
+                new DraftSeatPickedEvent(seatIndex, pickNumber, queueDepths)));
     }
 
     private int[] computeQueueDepths() {
@@ -243,9 +277,10 @@ public final class BoosterDraftHost implements IHasForgeLog {
     }
 
     /**
-     * Build pools and send them to each human participant.
+     * Build pools and queue sends to each human participant. Called from inside
+     * the monitor; the actual network dispatch happens after release.
      */
-    private void finishDraft() {
+    private void addFinishDraft(List<Runnable> dispatches) {
         finished = true;
         cancelAllSeatTimers();
         timerExecutor.shutdown();
@@ -255,24 +290,19 @@ public final class BoosterDraftHost implements IHasForgeLog {
         List<LimitedPlayer> players = draft.getAllPlayers();
         String eventId = event.getEventId();
 
-        // Send pool to each human
         for (int i = 0; i < players.size(); i++) {
             LimitedPlayer player = players.get(i);
-            if (player instanceof LimitedPlayerAI) {
-                continue;
-            }
+            if (player instanceof LimitedPlayerAI) continue;
 
             EventParticipant participant = findParticipant(i);
-            if (participant == null) {
-                continue;
-            }
+            if (participant == null) continue;
 
-            String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
-            Deck pool = new Deck(player.getDeck(), poolName);
+            Deck pool = new Deck(player.getDeck(), NetworkEvent.poolNameFor(participant, event));
             NetworkEvent.setEventTags(pool, event);
-            FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
+            int slot = participant.getLobbySlotIndex();
+            dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
                     new ReceiveEventPoolEvent(eventId, pool),
-                    l -> l.receiveEventPool(eventId, pool));
+                    l -> l.receiveEventPool(eventId, pool)));
         }
     }
 
@@ -298,35 +328,38 @@ public final class BoosterDraftHost implements IHasForgeLog {
     }
 
     /** Auto-pick the first card for a single seat that timed out. */
-    private synchronized void onSeatTimerExpired(int seatIndex) {
-        if (finished || !inFlight[seatIndex]) return;
+    private void onSeatTimerExpired(int seatIndex) {
+        List<Runnable> dispatches;
+        synchronized (this) {
+            if (finished || !inFlight[seatIndex]) return;
 
-        List<LimitedPlayer> players = draft.getAllPlayers();
-        LimitedPlayer player = players.get(seatIndex);
-        DraftPack pack = player.nextChoice();
-        if (pack == null || pack.isEmpty()) return;
+            List<LimitedPlayer> players = draft.getAllPlayers();
+            LimitedPlayer player = players.get(seatIndex);
+            DraftPack pack = player.nextChoice();
+            if (pack == null || pack.isEmpty()) return;
 
-        PaperCard autoPick = pack.get(0);
-        netLog.info("Pick timer expired for seat {} — auto-picking {}", seatIndex, autoPick.getName());
-        player.draftCard(autoPick, DeckSection.Sideboard);
-        inFlight[seatIndex] = false;
+            PaperCard autoPick = pack.get(0);
+            netLog.info("Pick timer expired for seat {} — auto-picking {}", seatIndex, autoPick.getName());
 
-        DraftPack passed = player.passPack();
-        if (passed != null && !passed.isEmpty()) {
-            passToNext(seatIndex, passed);
+            dispatches = new ArrayList<>();
+            applyPickAndPass(player, seatIndex, autoPick);
+            inFlight[seatIndex] = false;
+
+            int seatPickNumber = seatPickCount(player);
+            addBroadcastSeatPicked(dispatches, seatIndex, seatPickNumber);
+            addNotifyAutoPick(dispatches, seatIndex, autoPick, seatPickNumber);
+            advanceDraft(dispatches);
         }
-
-        broadcastSeatPicked(seatIndex);
-        notifyAutoPick(seatIndex, autoPick);
-        distributeActive();
+        run(dispatches);
     }
 
-    private void notifyAutoPick(int seatIndex, PaperCard card) {
+    private void addNotifyAutoPick(List<Runnable> dispatches, int seatIndex, PaperCard card, int pickNumber) {
         EventParticipant participant = findParticipant(seatIndex);
         if (participant == null || participant.isAI()) return;
-        FServerManager.getInstance().sendToSlot(participant.getLobbySlotIndex(),
-                new DraftAutoPickedEvent(seatIndex, card, 0),
-                l -> l.draftAutoPicked(seatIndex, card, 0));
+        int slot = participant.getLobbySlotIndex();
+        dispatches.add(() -> FServerManager.getInstance().sendToSlot(slot,
+                new DraftAutoPickedEvent(seatIndex, card, pickNumber),
+                l -> l.draftAutoPicked(seatIndex, card, pickNumber)));
     }
 
     private EventParticipant findParticipant(int seatIndex) {
@@ -336,5 +369,9 @@ public final class BoosterDraftHost implements IHasForgeLog {
             }
         }
         return null;
+    }
+
+    private static void run(List<Runnable> dispatches) {
+        for (Runnable r : dispatches) r.run();
     }
 }

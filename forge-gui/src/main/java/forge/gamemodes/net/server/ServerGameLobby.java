@@ -14,7 +14,6 @@ import forge.gamemodes.net.EventPhase;
 import forge.gamemodes.net.NetworkEvent;
 import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.EventCreatedEvent;
-import forge.gamemodes.net.event.EventPhaseChangedEvent;
 import forge.gamemodes.net.event.ReceiveEventPoolEvent;
 import forge.gui.interfaces.IGuiGame;
 import forge.util.IHasForgeLog;
@@ -124,13 +123,16 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     protected void onGameStarted() {
     }
 
+    /**
+     * Create the in-memory event. Does not broadcast — clients see the event
+     * only after {@link #configureEvent} completes successfully. If the user
+     * cancels a sub-dialog during configure, the event is discarded without
+     * ever being visible to remote clients.
+     */
     public synchronized void createEvent(EventFormat format) {
         netLog.info("Event created — format={}", format);
         NetworkEvent event = new NetworkEvent(format);
         setCurrentEvent(event);
-        updateView(true);
-        // No broadcast yet — pool and timer are still unset. Clients see the
-        // event only after configureEvent completes with a full snapshot.
     }
 
     /**
@@ -171,6 +173,10 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     public synchronized void clearCurrentEvent() {
         if (getCurrentEvent() == null) return;
         netLog.info("Event cleared by host");
+        if (draftHost != null) {
+            draftHost.shutdown();
+            draftHost = null;
+        }
         setCurrentEvent(null);
         FServerManager.getInstance().broadcast(new EventCreatedEvent(null));
         updateView(true);
@@ -301,10 +307,8 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         netLog.info("Starting sealed — product={}", event.getProductDescription());
         populateParticipants();
         event.setPhase(EventPhase.POOL_DISTRIBUTION);
-        // Broadcast the now-populated event before phase changes flow to clients.
+        // Broadcast the now-populated event so clients see the phase change.
         updateView(true);
-        FServerManager.getInstance().broadcast(
-                new EventPhaseChangedEvent(EventPhase.POOL_DISTRIBUTION));
         generateAndDistributeSealedPools();
     }
 
@@ -343,8 +347,7 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
                 continue;
             }
 
-            String poolName = participant.getName() + "-" + eventId.substring(0, Math.min(8, eventId.length()));
-            Deck deck = new Deck(poolName);
+            Deck deck = new Deck(NetworkEvent.poolNameFor(participant, event));
             deck.getOrCreate(DeckSection.Sideboard).addAll(pool);
             NetworkEvent.setEventTags(deck, event);
 
@@ -356,14 +359,42 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
     }
 
     /**
-     * Route an incoming draft pick from a client to the draft host.
+     * Route an incoming draft pick from a client to the draft host. When the
+     * pick came over the wire, {@code expectedLobbySlot} identifies the
+     * submitting client's lobby slot so we can verify it owns the seat —
+     * otherwise any client could submit picks for anyone. Host-local picks
+     * (where the host is the picker) pass -1 to skip the slot check.
      */
-    public synchronized void handleDraftPick(DraftPickEvent pickEvent) {
+    public synchronized void handleDraftPick(DraftPickEvent pickEvent, int expectedLobbySlot) {
         if (draftHost == null) {
             netLog.warn("Draft pick received but no draft in progress");
             return;
         }
-        draftHost.handlePick(pickEvent.getSeatIndex(), pickEvent.getCard());
+        int seat = pickEvent.getSeatIndex();
+        if (expectedLobbySlot >= 0) {
+            int ownerSlot = findLobbySlotForSeat(seat);
+            if (ownerSlot != expectedLobbySlot) {
+                netLog.warn("Rejecting pick from lobby slot {} for seat {} (owner slot {})",
+                        expectedLobbySlot, seat, ownerSlot);
+                return;
+            }
+        }
+        draftHost.handlePick(seat, pickEvent.getCard());
+    }
+
+    /** Host-local entry point — skips the slot-ownership check. */
+    public synchronized void handleDraftPick(DraftPickEvent pickEvent) {
+        handleDraftPick(pickEvent, -1);
+    }
+
+    /** Lobby slot of the participant occupying the given seat, or -1 if none. */
+    public synchronized int findLobbySlotForSeat(int seatIndex) {
+        NetworkEvent event = getCurrentEvent();
+        if (event == null) return -1;
+        for (EventParticipant p : event.getParticipants()) {
+            if (p.getSeatIndex() == seatIndex) return p.getLobbySlotIndex();
+        }
+        return -1;
     }
 
     /** Broadcast event selection to all connected clients. */

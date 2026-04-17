@@ -58,7 +58,7 @@ public class BoosterDraft implements IBoosterDraft {
 
     int podSize;
     private final List<LimitedPlayer> players = new ArrayList<>();
-    private final LimitedPlayer localPlayer;
+    private LimitedPlayer localPlayer;
     private boolean readyForComputerPick = false;
 
     private IDraftLog draftLog = null;
@@ -378,7 +378,7 @@ public class BoosterDraft implements IBoosterDraft {
      *
      * @param humanSeats seat indices (0-based) that should be human-controlled
      */
-    public void setHumanSeats(java.util.Set<Integer> humanSeats) {
+    public void setHumanSeats(Set<Integer> humanSeats) {
         for (int seat = 0; seat < players.size(); seat++) {
             boolean shouldBeHuman = humanSeats.contains(seat);
             LimitedPlayer current = players.get(seat);
@@ -388,6 +388,8 @@ public class BoosterDraft implements IBoosterDraft {
                 players.set(seat, new LimitedPlayerAI(seat, this));
             }
         }
+        // Keep localPlayer consistent with whatever occupies seat 0 now.
+        this.localPlayer = players.get(0);
     }
 
     /** Returns the total number of booster rounds in this draft. */

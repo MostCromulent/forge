@@ -131,6 +131,7 @@ public class VLobby implements ILobbyView {
     // Mode selector (network only)
     public enum LobbyMode { CONSTRUCTED, LIMITED }
     private LobbyMode currentMode = LobbyMode.CONSTRUCTED;
+    private boolean suppressModeListener;
     private EventFormat configuredFormat;
     private final FComboBoxPanel<String> cboModePanel = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkLobbyMode"),
             ImmutableList.of(Localizer.getInstance().getMessage("lblNetworkModeConstructed"),
@@ -156,7 +157,6 @@ public class VLobby implements ILobbyView {
     private final FPanel eventRightPanel = new FPanel(new MigLayout("insets 0, gap 0, wrap, fill"));
 
     // Event dropdown (host selects completed events from local deck files)
-    private final FComboBoxPanel<String> cboEventSelect = new FComboBoxPanel<>(Localizer.getInstance().getMessage("lblNetworkPastEventsLabel"));
 
     // Active event state
     private String activeEventId;
@@ -370,11 +370,20 @@ public class VLobby implements ILobbyView {
         addPlayerBtn.setEnabled(activePlayersNum < MAX_PLAYERS);
 
         // Client: sync lobby mode from host's state. Items are [Constructed, Limited].
+        // Suppress the mode-change listener — we'll do the UI refresh ourselves
+        // below (updateRightPanelForMode) rather than letting onModeChanged
+        // rebuild the panel and the outer update() rebuild it a second time.
         if (lobby.isAllowNetworking() && !lobby.hasControl() && lobby.getData() != null) {
             boolean hostIsLimited = lobby.getData().isLimitedMode();
             int desiredIndex = hostIsLimited ? 1 : 0;
             if (cboModePanel.getSelectedIndex() != desiredIndex) {
-                cboModePanel.setSelectedIndex(desiredIndex);
+                suppressModeListener = true;
+                try {
+                    cboModePanel.setSelectedIndex(desiredIndex);
+                    currentMode = hostIsLimited ? LobbyMode.LIMITED : LobbyMode.CONSTRUCTED;
+                } finally {
+                    suppressModeListener = false;
+                }
             }
         }
 
@@ -826,6 +835,10 @@ public class VLobby implements ILobbyView {
     }
 
     private void onModeChanged() {
+        // update() uses this flag to refresh the combo silently — the outer
+        // update() path handles the panel rebuild, so skip the work here.
+        if (suppressModeListener) return;
+
         // Client: mode is host-controlled. If a user click diverges from the synced
         // value, revert via setSelectedIndex (which re-fires this listener). Only
         // return early when we actually revert — otherwise fall through so the rest
@@ -896,7 +909,7 @@ public class VLobby implements ILobbyView {
             decksFrame.add(eventRightPanel, "w 100%, h 100%, growy, pushy");
 
             if (lobby.hasControl()) {
-                populateEventDropdown();
+                scanAvailableEvents();
             }
             updateDeckListFilter();
         }
@@ -1050,7 +1063,6 @@ public class VLobby implements ILobbyView {
         for (int i = 0; i < labels.length; i++) {
             if (labels[i].equals(chosen)) {
                 activeEventId = eventIdsByDropdownIndex.get(i);
-                cboEventSelect.setSelectedIndex(i + 1);
                 updateEventPanelState();
                 updateActionButtons();
                 updateDeckListFilter();
@@ -1103,7 +1115,7 @@ public class VLobby implements ILobbyView {
                     String p = DeckProxy.getEventTag(d, "eventProduct");
                     String dt = DeckProxy.getEventTag(d, "eventDate");
                     if (f != null) {
-                        formatText = "BOOSTER_DRAFT".equals(f)
+                        formatText = EventFormat.BOOSTER_DRAFT.name().equals(f)
                                 ? localizer.getMessage("lblNetworkModeDraft")
                                 : localizer.getMessage("lblNetworkModeSealed");
                     }
@@ -1163,37 +1175,20 @@ public class VLobby implements ILobbyView {
                 if (f == null) f = "";
                 if (p == null) p = "";
                 if (dt == null) dt = "";
-                String displayFormat = "BOOSTER_DRAFT".equals(f) ? "Draft" : "Sealed";
+                String displayFormat = EventFormat.BOOSTER_DRAFT.name().equals(f) ? "Draft" : "Sealed";
                 return displayFormat + " \u2014 " + p + " \u2014 (" + dt + ")";
             }
         }
         return eventId;
     }
 
-    private void populateEventDropdown() {
-        cboEventSelect.removeAllItems();
-        Map<String, String> eventLabels = new LinkedHashMap<>();
-
+    private void scanAvailableEvents() {
+        LinkedHashMap<String, String> eventIds = new LinkedHashMap<>();
         for (Deck d : FModel.getDecks().getNetworkEventDecks()) {
             String eventId = DeckProxy.getEventTag(d, "eventId");
-            String format = DeckProxy.getEventTag(d, "eventFormat");
-            String product = DeckProxy.getEventTag(d, "eventProduct");
-            String date = DeckProxy.getEventTag(d, "eventDate");
-            if (format == null) format = "";
-            if (product == null) product = "";
-            if (date == null) date = "";
-            if (eventId != null && !eventLabels.containsKey(eventId)) {
-                String displayFormat = "BOOSTER_DRAFT".equals(format) ? "Draft" : "Sealed";
-                eventLabels.put(eventId, displayFormat + " \u2014 " + product + " \u2014 (" + date + ")");
-            }
+            if (eventId != null) eventIds.putIfAbsent(eventId, eventId);
         }
-
-        eventIdsByDropdownIndex = new ArrayList<>(eventLabels.keySet());
-
-        cboEventSelect.addItem(localizer.getMessage("lblNetworkNoEventSelected"));
-        for (String label : eventLabels.values()) {
-            cboEventSelect.addItem(label);
-        }
+        eventIdsByDropdownIndex = new ArrayList<>(eventIds.keySet());
     }
 
     private void onConformanceChanged() {
@@ -1513,9 +1508,14 @@ public class VLobby implements ILobbyView {
             int totalPacks = lastEventView.getNumRounds();
             String[] names = new String[participants.size()];
             boolean[] aiFlags = new boolean[participants.size()];
-            for (int i = 0; i < participants.size(); i++) {
-                names[i] = participants.get(i).getName();
-                aiFlags[i] = participants.get(i).isAI();
+            // Index by seat, not list position — seats are shuffled server-side
+            // so list order and seat order diverge.
+            for (EventParticipant p : participants) {
+                int seat = p.getSeatIndex();
+                if (seat >= 0 && seat < names.length) {
+                    names[seat] = p.getName();
+                    aiFlags[seat] = p.isAI();
+                }
             }
             FDraftOverlay.SINGLETON_INSTANCE.initDraft(
                     mySeatIndex, names, aiFlags, totalPacks);
@@ -1538,18 +1538,8 @@ public class VLobby implements ILobbyView {
             pickSender = gameClient::send;
         }
 
-        String eventId = "";
-        if (lastEventView != null) {
-            eventId = lastEventView.getEventId();
-        } else if (lobby instanceof ServerGameLobby sgl) {
-            NetworkEvent evt = sgl.getCurrentEvent();
-            if (evt != null) {
-                eventId = evt.getEventId();
-            }
-        }
-
         networkDraftEditor = new CEditorNetworkDraft(
-                mySeatIndex, eventId, pickSender,
+                mySeatIndex, pickSender, this::cancelActiveDraft,
                 CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture());
         networkDraftEditor.showGui();
 
@@ -1595,6 +1585,17 @@ public class VLobby implements ILobbyView {
         });
     }
 
+    /**
+     * Abort any active network draft: release the push-model editor reference
+     * and hide the floating overlay. Called on disconnect / stop lobby / when
+     * the user manually leaves the draft screen. Safe to call when no draft
+     * is in progress.
+     */
+    public void cancelActiveDraft() {
+        networkDraftEditor = null;
+        FDraftOverlay.SINGLETON_INSTANCE.reset();
+    }
+
     @Override
     public void onReceiveEventPool(String eventId, Deck pool) {
         SwingUtilities.invokeLater(() -> {
@@ -1616,7 +1617,7 @@ public class VLobby implements ILobbyView {
             activeEventId = eventId;
             activeConformance = true;
             if (lobby.hasControl()) {
-                populateEventDropdown();
+                scanAvailableEvents();
                 broadcastEventSelection();
             }
             updateRightPanelForMode();

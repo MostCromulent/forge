@@ -18,6 +18,8 @@ public final class NetworkDraftLog {
     private static final Color COLOR_MY_PICK = new Color(50, 200, 50);      // green
     private static final Color COLOR_OTHER_PICK = new Color(180, 180, 180); // light gray
 
+    private static final String BANNER = "======================================";
+
     private static final Localizer localizer = Localizer.getInstance();
 
     private NetworkDraftLog() { } // utility class
@@ -25,7 +27,7 @@ public final class NetworkDraftLog {
     /** Log the draft start banner with pod information. */
     public static void logDraftStart(List<EventParticipant> participants, int totalPacks,
             String productName, int mySeatIndex) {
-        log("======================================", COLOR_BANNER);
+        log(BANNER, COLOR_BANNER);
         log("  " + localizer.getMessage("lblDraftLogDraftStarted", String.valueOf(participants.size())), COLOR_BANNER);
         log("  " + localizer.getMessage("lblDraftLogPacksOf", String.valueOf(totalPacks), productName), COLOR_BANNER);
 
@@ -45,7 +47,7 @@ public final class NetworkDraftLog {
             // Trim trailing comma
             log(ais.substring(0, ais.length() - 1), COLOR_BANNER);
         }
-        log("======================================", COLOR_BANNER);
+        log(BANNER, COLOR_BANNER);
     }
 
     /** Log a pack round header. */
@@ -55,22 +57,22 @@ public final class NetworkDraftLog {
         log(localizer.getMessage("lblDraftLogPackHeader", String.valueOf(packNumber), direction), COLOR_SEPARATOR);
     }
 
-    /** Log another player's pick (no card name revealed). pickNumber is 0-based. */
+    /** Log another player's pick (no card name revealed). pickNumber is 1-based seat pick count. */
     public static void logOtherPick(String playerName, int pickNumber) {
-        log(localizer.getMessage("lblDraftLogOtherPick", playerName, String.valueOf(pickNumber + 1)), COLOR_OTHER_PICK);
+        log(localizer.getMessage("lblDraftLogOtherPick", playerName, String.valueOf(pickNumber)), COLOR_OTHER_PICK);
     }
 
-    /** Log your own pick (card name shown). pickNumber is 0-based. */
+    /** Log your own pick (card name shown). pickNumber is 1-based seat pick count. */
     public static void logMyPick(String cardName, int pickNumber) {
-        log(localizer.getMessage("lblDraftLogMyPick", cardName, String.valueOf(pickNumber + 1)), COLOR_MY_PICK);
+        log(localizer.getMessage("lblDraftLogMyPick", cardName, String.valueOf(pickNumber)), COLOR_MY_PICK);
     }
 
     /** Log draft completion. */
     public static void logDraftComplete(int totalCards) {
-        log("======================================", COLOR_BANNER);
+        log(BANNER, COLOR_BANNER);
         log("  " + localizer.getMessage("lblDraftLogDraftComplete", String.valueOf(totalCards)), COLOR_BANNER);
         log("  " + localizer.getMessage("lblDraftLogBuildingDeck"), COLOR_BANNER);
-        log("======================================", COLOR_BANNER);
+        log(BANNER, COLOR_BANNER);
     }
 
     private static void log(String message, Color color) {
