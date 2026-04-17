@@ -183,8 +183,6 @@ public class VLobby implements ILobbyView {
             // Set a larger font on the combo box to match/exceed the variants label
             for (final Component c : cboModePanel.getComponents()) {
                 c.setFont(FSkin.getBoldFont(14).getBaseFont());
-                // Client follows host's mode — display only, not selectable.
-                if (!lobby.hasControl()) c.setEnabled(false);
             }
             constructedFrame.add(cboModePanel, "w 100%, h 28px!, gapbottom 10px, spanx 2, wrap");
         }
@@ -371,14 +369,12 @@ public class VLobby implements ILobbyView {
         activePlayersNum = lobby.getNumberOfSlots();
         addPlayerBtn.setEnabled(activePlayersNum < MAX_PLAYERS);
 
-        // Client: sync lobby mode from host's state.
+        // Client: sync lobby mode from host's state. Items are [Constructed, Limited].
         if (lobby.isAllowNetworking() && !lobby.hasControl() && lobby.getData() != null) {
-            boolean hostIsLimited = lobby.getData().getEventView() != null;
-            LobbyMode desired = hostIsLimited ? LobbyMode.LIMITED : LobbyMode.CONSTRUCTED;
-            if (currentMode != desired) {
-                String label = localizer.getMessage(
-                        hostIsLimited ? "lblNetworkModeLimited" : "lblNetworkModeConstructed");
-                cboModePanel.setSelectedItem(label);
+            boolean hostIsLimited = lobby.getData().isLimitedMode();
+            int desiredIndex = hostIsLimited ? 1 : 0;
+            if (cboModePanel.getSelectedIndex() != desiredIndex) {
+                cboModePanel.setSelectedIndex(desiredIndex);
             }
         }
 
@@ -830,6 +826,20 @@ public class VLobby implements ILobbyView {
     }
 
     private void onModeChanged() {
+        // Client: mode is host-controlled. If a user click diverges from the synced
+        // value, revert via setSelectedIndex (which re-fires this listener). Only
+        // return early when we actually revert — otherwise fall through so the rest
+        // of the UI (right panel, action buttons) updates with the new mode.
+        // (setEnabled(false) breaks FComboBox rendering, so we intercept here.)
+        if (lobby.isAllowNetworking() && !lobby.hasControl()) {
+            boolean hostIsLimited = lobby.getData() != null && lobby.getData().isLimitedMode();
+            int desiredIndex = hostIsLimited ? 1 : 0;
+            if (cboModePanel.getSelectedIndex() != desiredIndex) {
+                cboModePanel.setSelectedIndex(desiredIndex);
+                return;
+            }
+        }
+
         final String selected = cboModePanel.getSelectedItem();
         if (localizer.getMessage("lblNetworkModeLimited").equals(selected)) {
             currentMode = LobbyMode.LIMITED;
@@ -839,12 +849,13 @@ public class VLobby implements ILobbyView {
 
         final boolean isLimited = (currentMode == LobbyMode.LIMITED);
 
-        // Clear event when switching away from Limited
+        // Clear event when switching away from Limited, and broadcast the new mode.
         if (lobby.hasControl() && lobby instanceof ServerGameLobby serverLobby) {
             if (!isLimited) {
                 configuredFormat = null;
                 serverLobby.clearCurrentEvent();
             }
+            serverLobby.setLimitedMode(isLimited);
         }
         updateEventPanelState();
 
@@ -919,9 +930,8 @@ public class VLobby implements ILobbyView {
                 pnlStart.add(btnStart, "align center, spanx 2, wrap");
                 pnlStart.add(gamesInMatchFrame, "spanx 2, align center");
             }
-        } else {
-            pnlStart.add(gamesInMatchFrame, "spanx 2, align center");
         }
+        // Non-host: nothing to show here — match controls are host-only.
         pnlStart.revalidate();
         pnlStart.repaint();
     }
@@ -1134,7 +1144,8 @@ public class VLobby implements ILobbyView {
         lblEventPickTimer.setText(timerText);
         lblEventDate.setText(dateText);
 
-        // Row 7 — filter checkbox: enabled only for host in States 0/2
+        // Row 7 — filter checkbox: visible only when an event is loaded (State 2).
+        cbDeckConformance.setVisible(inState2);
         cbDeckConformance.setEnabled(isHost && !inState1);
 
         eventConfigPanel.revalidate();
@@ -1206,14 +1217,18 @@ public class VLobby implements ILobbyView {
             chooser.setSelectedDeckType(DeckType.NET_EVENT_DECK);
         }
 
-        List<DeckProxy> allDecks = new ArrayList<>(
-                DeckProxy.getAllNetworkEventDecks());
-
-        if (activeConformance && activeEventId != null) {
+        List<DeckProxy> allDecks;
+        if (activeEventId == null) {
+            // No event loaded — there are no valid decks for a limited match yet.
+            allDecks = new ArrayList<>();
+        } else if (activeConformance) {
+            allDecks = new ArrayList<>(DeckProxy.getAllNetworkEventDecks());
             allDecks.removeIf(dp -> {
                 Deck d = dp.getDeck();
                 return d == null || !d.getTags().contains("eventId:" + activeEventId);
             });
+        } else {
+            allDecks = new ArrayList<>(DeckProxy.getAllNetworkEventDecks());
         }
 
         chooser.getLstDecks().setPool(allDecks);
@@ -1462,6 +1477,11 @@ public class VLobby implements ILobbyView {
     public void onDraftPackArrived(int seatIndex, List<PaperCard> pack,
             int packNumber, int pickNumber, int timerDurationSeconds) {
         SwingUtilities.invokeLater(() -> {
+            // Init overlay/editor BEFORE processing pack info so pod names are set first.
+            if (networkDraftEditor == null) {
+                initDraftEditor(seatIndex);
+            }
+
             FDraftOverlay.SINGLETON_INSTANCE.onPackArrived(packNumber, pickNumber, pack.size(), timerDurationSeconds);
 
             // Log pack header on new pack round
@@ -1471,10 +1491,6 @@ public class VLobby implements ILobbyView {
                 NetworkDraftLog.logPackHeader(packNumber, passingRight);
             }
 
-            if (networkDraftEditor == null) {
-                initDraftEditor(seatIndex);
-            }
-
             networkDraftEditor.showPack(pack, packNumber, pickNumber);
         });
     }
@@ -1482,11 +1498,12 @@ public class VLobby implements ILobbyView {
     private void initDraftEditor(int seatIndex) {
         mySeatIndex = seatIndex;
 
-        // Initialize FDraftOverlay if not already done (client path)
-        // Host inits in startEvent(); client inits here using stored event view.
-        // Fall back to lobby state if the EventCreatedEvent broadcast was missed
-        // (e.g. client joined after host configured the event).
-        if (lastEventView == null && lobby.getData() != null) {
+        // Initialize FDraftOverlay if not already done (client path).
+        // Always prefer the latest state's eventView over the cached copy — the
+        // EventCreatedEvent broadcast fires during configureEvent() with empty
+        // participants; only the subsequent state broadcast from startDraftEvent
+        // carries the populated pod.
+        if (lobby.getData() != null && lobby.getData().getEventView() != null) {
             lastEventView = lobby.getData().getEventView();
         }
         if (lastEventView != null) {

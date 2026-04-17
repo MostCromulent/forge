@@ -43,7 +43,7 @@ public enum FDraftOverlay {
 
     // Default window dimensions
     private static final int DEFAULT_WIDTH  = 420;
-    private static final int DEFAULT_HEIGHT = 105;
+    private static final int DEFAULT_HEIGHT = 95;
 
     private final ForgePreferences prefs = FModel.getPreferences();
     private boolean hasBeenShown, locLoaded;
@@ -103,8 +103,10 @@ public enum FDraftOverlay {
         window.setBackground(FSkin.getColor(FSkin.Colors.CLR_ZEBRA));
         window.setBorder(new FSkin.LineSkinBorder(FSkin.getColor(FSkin.Colors.CLR_BORDERS)));
 
-        // Two-row layout: [pack info | timer] then [neighbor strip spanning both columns]
-        window.setLayout(new MigLayout("insets 4, gap 0, wrap 2"));
+        // Two-row layout: [pack info | timer] then [neighbor strip spanning both columns].
+        // Second row grows to fill remaining vertical space so the neighbor strip
+        // centers between the info row and the bottom of the window.
+        window.setLayout(new MigLayout("insets 4, gap 0, wrap 2", "", "[][grow]"));
 
         // Apply bold skin font and text color to all labels
         FSkin.SkinColor textColor = FSkin.getColor(FSkin.Colors.CLR_TEXT);
@@ -127,8 +129,8 @@ public enum FDraftOverlay {
         // Row 1: pack info on the left, timer on the right
         window.add(lblPackInfo,  "pushx, growx, gapleft 4");
         window.add(lblTimer,     "pushx, growx, gapright 4, al right");
-        // Row 2: neighbor strip spans both columns
-        window.add(pnlNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4, gaptop 6");
+        // Row 2: neighbor strip spans both columns, vertically centered in its cell.
+        window.add(pnlNeighbors, "span 2, pushx, growx, gapleft 4, gapright 4, ay center");
 
         // Load card back icon (scaled to small size)
         loadCardBackIcon();
@@ -144,9 +146,19 @@ public enum FDraftOverlay {
      */
     public void initDraft(int mySeat, String[] names, boolean[] aiFlags, int totalPacks) {
         SwingUtilities.invokeLater(() -> {
+            if (names.length == 0) {
+                // Stale pre-participants event view — skip. A later call with
+                // populated participants will reinitialize properly.
+                return;
+            }
             this.mySeat     = mySeat;
             this.totalPacks = totalPacks;
+            // At draft start each seat holds exactly one pack (the one they're
+            // picking from). The server's subsequent SeatPicked broadcasts overwrite
+            // these as picks are made, but showing 1s up front gives every seat a
+            // visible pack indicator on pack 1 / pick 1.
             this.queueDepths = new int[names.length];
+            for (int i = 0; i < queueDepths.length; i++) queueDepths[i] = 1;
 
             int podSize = names.length;
             int leftIdx  = (mySeat - 1 + podSize) % podSize;
@@ -157,8 +169,11 @@ public enum FDraftOverlay {
             leftAI    = aiFlags[leftIdx];
             rightAI   = aiFlags[rightIdx];
 
-            waitingForPack = true;
-            currentPack = 0;
+            // Only show "waiting" if no pack has arrived yet — otherwise preserve
+            // state set by onPackArrived() which may have run before us.
+            if (currentPack == 0) {
+                waitingForPack = true;
+            }
             updateDisplay();
             show();
         });

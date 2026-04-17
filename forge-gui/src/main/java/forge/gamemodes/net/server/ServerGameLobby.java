@@ -45,6 +45,12 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         super.updateView(fullUpdate);
     }
 
+    /** Set the lobby's declared mode (Constructed / Limited) and broadcast to clients. */
+    public void setLimitedMode(boolean limited) {
+        getData().setLimitedMode(limited);
+        updateView(true);
+    }
+
     public ServerGameLobby() {
         super(true);
         addSlot(new LobbySlot(LobbySlotType.LOCAL, localName(), localAvatarIndices()[0], localSleeveIndices()[0],0, true, false, Collections.emptySet()));
@@ -275,6 +281,9 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
                 event.getProductDescription(), event.getPickTimerSeconds());
 
         draftHost = new BoosterDraftHost(draft, event);
+        // Broadcast the fully-populated event (with participants and numRounds) so
+        // clients can initialize their overlay with pod names before the first pack.
+        updateView(true);
         draftHost.start();
 
         return new DraftStartResult(names, aiFlags, hostSeatIndex, totalPacks);
@@ -289,6 +298,8 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         netLog.info("Starting sealed — product={}", event.getProductDescription());
         populateParticipants();
         event.setPhase(EventPhase.POOL_DISTRIBUTION);
+        // Broadcast the now-populated event before phase changes flow to clients.
+        updateView(true);
         FServerManager.getInstance().broadcast(
                 new EventPhaseChangedEvent(EventPhase.POOL_DISTRIBUTION));
         generateAndDistributeSealedPools();

@@ -548,6 +548,7 @@ public abstract class GameLobby implements IHasGameType {
         private final Set<GameType> appliedVariants = EnumSet.noneOf(GameType.class);
         private final List<LobbySlot> slots = Lists.newArrayList();
         private NetworkEventView eventView;
+        private boolean limitedMode;
 
         public GameLobbyData() {
         }
@@ -557,6 +558,12 @@ public abstract class GameLobby implements IHasGameType {
         }
         public void setEventView(final NetworkEventView view) {
             this.eventView = view;
+        }
+        public boolean isLimitedMode() {
+            return limitedMode;
+        }
+        public void setLimitedMode(final boolean limited) {
+            this.limitedMode = limited;
         }
     }
 }
