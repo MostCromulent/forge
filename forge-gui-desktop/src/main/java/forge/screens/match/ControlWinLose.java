@@ -2,11 +2,9 @@ package forge.screens.match;
 
 import javax.swing.JButton;
 
-import forge.Singletons;
 import forge.game.GameView;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gui.SOverlayUtils;
-import forge.gui.framework.FScreen;
 import forge.interfaces.IGameController;
 
 /** 
@@ -54,7 +52,6 @@ public class ControlWinLose {
     /** Action performed when "quit" button is pressed in default win/lose UI. */
     public void actionOnQuit() {
         nextGameAction(NextGameDecision.QUIT);
-        Singletons.getControl().setCurrentScreen(FScreen.HOME_SCREEN);
     }
 
     private void nextGameAction(final NextGameDecision decision) {

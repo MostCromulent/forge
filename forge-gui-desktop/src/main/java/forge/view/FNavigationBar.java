@@ -52,6 +52,7 @@ public class FNavigationBar extends FTitleBarBase {
     private final FDigitalClock clock = new FDigitalClock();
     private final JPanel pnlReveal = new JPanel();
     private NavigationTab selectedTab;
+    private NavigationTab previousTab;
     private int revealDir = 0;
     private long timeMenuHidden = 0;
     private Timer incrementRevealTimer, checkForRevealChangeTimer;
@@ -147,6 +148,7 @@ public class FNavigationBar extends FTitleBarBase {
 
         if (selectedTab != null) {
             selectedTab.setSelected(false);
+            previousTab = selectedTab;
         }
         tab.setSelected(true);
         selectedTab = tab;
@@ -168,11 +170,15 @@ public class FNavigationBar extends FTitleBarBase {
         if (tab == null) { return; }
         if (!tab.screen.onClosing()) { return; } //give screen a chance to perform special close handling and/or cancel closing tab
 
+        if (tab == previousTab) {
+            previousTab = null;
+        }
+
         if (tab.selected) {
-            //return to Home screen if selected tab closed
-            //TODO: support navigation history and go to previous tab instead
+            final NavigationTab fallback = previousTab != null ? previousTab : getTab(FScreen.HOME_SCREEN);
             this.selectedTab = null; //prevent raising onSwitching for tab being closed
-            Singletons.getControl().setCurrentScreen(FScreen.HOME_SCREEN, true);
+            this.previousTab = null;
+            Singletons.getControl().setCurrentScreen(fallback.screen, true);
         }
         final int index = tabs.indexOf(tab);
         if (index != -1) {
