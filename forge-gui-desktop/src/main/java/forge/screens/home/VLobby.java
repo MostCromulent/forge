@@ -1077,7 +1077,9 @@ public class VLobby implements ILobbyView {
         String statusText = "";
         if (isHost) {
             if (inState1) {
-                statusText = localizer.getMessage("lblNetworkNewEventNotDrafted");
+                boolean isSealed = currentEvent != null && currentEvent.getFormat() == EventFormat.SEALED;
+                statusText = localizer.getMessage(
+                        isSealed ? "lblNetworkNewEventNoPools" : "lblNetworkNewEventNotDrafted");
             } else if (!inState2) {
                 statusText = localizer.getMessage("lblNetworkNoEventStatus");
             }

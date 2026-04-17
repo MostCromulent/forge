@@ -2,6 +2,7 @@ package forge.gui;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Image;
 import java.awt.Point;
@@ -344,13 +345,16 @@ public enum FDraftOverlay {
     /**
      * Builds the neighbor display panel with text labels and card-back icons.
      *
-     * Layout (passing right / odd packs):
-     *   LeftName [queued packs]  →  [queued packs] YOU  →  RightName [queued packs]
+     * Layout (passing right / odd packs — packs flow left→right, so they arrive
+     * on the LEFT side of each seat):
+     *   [packs]LeftName  →  [packs]YOU  →  [packs]RightName
      *
-     * Layout (passing left / even packs):
-     *   LeftName [queued packs]  ←  [queued packs] YOU  ←  RightName [queued packs]
+     * Layout (passing left / even packs — packs flow right→left, so they arrive
+     * on the RIGHT side of each seat):
+     *   LeftName[packs]  ←  YOU[packs]  ←  RightName[packs]
      *
-     * Pack icons appear on the INCOMING side of the seat they are waiting on.
+     * Icons always sit on the incoming side of their seat — the side the next
+     * pack will arrive from.
      */
     private void buildNeighborPanel() {
         pnlNeighbors.removeAll();
@@ -368,22 +372,21 @@ public enum FDraftOverlay {
         String arrow = passingRight ? " \u2192 " : " \u2190 ";
 
         if (passingRight) {
-            // Packs flow left → me → right
-            pnlNeighbors.add(makeTextLabel(leftLabel));
-            pnlNeighbors.add(makeTextLabel(arrow));
+            // Incoming side is the LEFT of each name — icons before the name.
             addPackIcons(leftDepth);
+            pnlNeighbors.add(makeTextLabel(leftLabel + arrow));
             addPackIcons(myDepth);
-            pnlNeighbors.add(makeTextLabel(" YOU" + arrow));
+            pnlNeighbors.add(makeTextLabel("YOU" + arrow));
             addPackIcons(rightDepth);
-            pnlNeighbors.add(makeTextLabel(" " + rightLabel));
+            pnlNeighbors.add(makeTextLabel(rightLabel));
         } else {
-            // Packs flow right → me → left
-            pnlNeighbors.add(makeTextLabel(leftLabel + " "));
+            // Incoming side is the RIGHT of each name — icons after the name.
+            pnlNeighbors.add(makeTextLabel(leftLabel));
             addPackIcons(leftDepth);
-            pnlNeighbors.add(makeTextLabel(arrow + "YOU "));
+            pnlNeighbors.add(makeTextLabel(arrow + "YOU"));
             addPackIcons(myDepth);
-            addPackIcons(rightDepth);
             pnlNeighbors.add(makeTextLabel(arrow + rightLabel));
+            addPackIcons(rightDepth);
         }
 
         pnlNeighbors.revalidate();
@@ -418,7 +421,16 @@ public enum FDraftOverlay {
             }
         }
         if (depth > MAX_PACK_ICONS) {
-            pnlNeighbors.add(makeTextLabel("+" + (depth - MAX_PACK_ICONS)));
+            FSkin.SkinnedLabel plus = new FSkin.SkinnedLabel("+" + (depth - MAX_PACK_ICONS));
+            plus.setFont(FSkin.getBoldFont(10));
+            FSkin.SkinColor color = FSkin.getColor(FSkin.Colors.CLR_TEXT);
+            if (color != null) plus.setForeground(color);
+            plus.setOpaque(false);
+            // Top-align the text against the card-back's top edge.
+            plus.setVerticalAlignment(SwingConstants.TOP);
+            Dimension pref = plus.getPreferredSize();
+            plus.setPreferredSize(new Dimension(pref.width, 26));
+            pnlNeighbors.add(plus);
         }
     }
 

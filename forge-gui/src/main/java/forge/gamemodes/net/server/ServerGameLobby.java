@@ -154,6 +154,9 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
                     new forge.gamemodes.limited.SealedCardPoolGenerator(poolType);
             if (gen.isEmpty()) return false;
             event.setSealedGenerator(gen);
+            if (gen.getProductName() != null) {
+                event.setProductDescription(poolType + ": " + gen.getProductName());
+            }
         }
 
         FServerManager.getInstance().broadcast(new EventCreatedEvent(event.toView()));
