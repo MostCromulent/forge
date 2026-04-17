@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Yield Perf Test" type="Application" factoryName="Application" singleton="false">
+    <option name="ALTERNATIVE_JRE_PATH" value="25" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="MAIN_CLASS_NAME" value="forge.perf.YieldPerfTest" />
+    <module name="forge-gui-desktop" />
+    <option name="VM_PARAMETERS" value="-Xms768m -XX:+UseParallelGC -Djfr.enabled=true -Dperf.games=10" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/forge-gui-desktop" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
