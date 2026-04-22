@@ -16,7 +16,10 @@ import forge.perf.tokenheavy.InstrumentedController.VariantSlot;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,23 +30,47 @@ import java.util.concurrent.TimeoutException;
 public class TokenPerfTest {
 
     private static final int TIMEOUT_SECONDS = 120;
-    private static final String DEFAULT_FIXTURE =
-        "perf/fixtures/tokenheavy/empty-board-commander.txt";
+    private static final String FIXTURE_DIR = "perf/fixtures/tokenheavy";
+    private static final String DEFAULT_FIXTURE = FIXTURE_DIR + "/empty-board-commander.txt";
 
     @BeforeClass
     public void setup() { TestUtils.ensureFModelInitialized(); }
 
-    @Test(description = "Run via -Dhypothesis=H000_Noop (or H<id>_<name>); default fixture empty-board")
+    @Test(description = "Run via -Dhypothesis=H000_Noop (or H<id>_<name>); sweeps all fixtures by default, or -Dfixture=<path> for one")
     public void runHypothesis() throws Exception {
         String hypothesisId = System.getProperty("hypothesis", "H000_Noop");
-        String fixtureRes = System.getProperty("fixture", DEFAULT_FIXTURE);
-
         OptimizationContext variantCtx = loadVariant(hypothesisId);
 
+        List<String> fixtures = resolveFixtures();
+        System.out.println("Running " + hypothesisId + " against " + fixtures.size() + " fixture(s):");
+        for (String f : fixtures) System.out.println("  " + f);
+
+        String branch = System.getProperty("branch", "unknown");
+        for (String fixtureRes : fixtures) {
+            runOneHypothesis(hypothesisId, variantCtx, fixtureRes, branch);
+        }
+    }
+
+    // Run hypothesis against one fixture. Each fixture gets its own warmup
+    // pass (same game, counters off, slot timings discarded) before the
+    // measured pass so JIT state is roughly equal between baseline and variant
+    // slots from the first decision.
+    private void runOneHypothesis(String hypothesisId, OptimizationContext variantCtx,
+                                  String fixtureRes, String branch) throws Exception {
+        // --- Warmup pass (discarded) ---
+        {
+            List<VariantSlot> warmupSlots = new ArrayList<>();
+            warmupSlots.add(new VariantSlot("BASELINE", OptimizationContext.BASELINE));
+            warmupSlots.add(new VariantSlot(hypothesisId, variantCtx));
+            LobbyPlayerInstrumented warmupLobby =
+                new LobbyPlayerInstrumented("AI-1", Mode.QUERY, warmupSlots);
+            runOneFixture(fixtureRes, warmupLobby);
+        }
+
+        // --- Measured pass ---
         List<VariantSlot> slots = new ArrayList<>();
         slots.add(new VariantSlot("BASELINE", OptimizationContext.BASELINE));
         slots.add(new VariantSlot(hypothesisId, variantCtx));
-
         LobbyPlayerInstrumented lobby =
             new LobbyPlayerInstrumented("AI-1", Mode.QUERY, slots);
 
@@ -77,9 +104,33 @@ public class TokenPerfTest {
         String json = ReportGenerator.renderJson(
             hypothesisId, fixtureRes, baseline, variant,
             baselineCounters, variantCounters, divergences, verdict);
-        String branch = System.getProperty("branch", "unknown");
         HypothesisLog.appendJsonl(
             HypothesisLog.branchNotesPath(branch).resolve("hypotheses.jsonl"), json);
+    }
+
+    // Resolve fixture list: -Dfixture=<path> overrides (single); otherwise
+    // enumerate all .txt resources under perf/fixtures/tokenheavy/.
+    private List<String> resolveFixtures() throws Exception {
+        String override = System.getProperty("fixture");
+        if (override != null && !override.isBlank()) {
+            return Collections.singletonList(override);
+        }
+        URL url = getClass().getClassLoader().getResource(FIXTURE_DIR);
+        if (url == null) {
+            return Collections.singletonList(DEFAULT_FIXTURE);
+        }
+        File dir = new File(url.toURI());
+        if (!dir.isDirectory()) {
+            return Collections.singletonList(DEFAULT_FIXTURE);
+        }
+        File[] files = dir.listFiles((d, name) -> name.endsWith(".txt"));
+        if (files == null || files.length == 0) {
+            return Collections.singletonList(DEFAULT_FIXTURE);
+        }
+        List<String> out = new ArrayList<>();
+        for (File f : files) out.add(FIXTURE_DIR + "/" + f.getName());
+        Collections.sort(out);
+        return out;
     }
 
     private OptimizationContext loadVariant(String hypothesisId) throws Exception {
