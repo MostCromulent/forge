@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 public final class HypothesisLog {
@@ -15,7 +16,19 @@ public final class HypothesisLog {
     }
 
     public static Path branchNotesPath(String branch) {
-        return Path.of(".claude", "notes", branch);
+        return repoRoot().resolve(".claude").resolve("notes").resolve(branch);
+    }
+
+    // Surefire's cwd is the module dir, so naked relative paths would scatter
+    // logs under each module. Walk up to the repo root (marker: .git) so a
+    // single hypotheses.jsonl aggregates runs regardless of module invocation.
+    private static Path repoRoot() {
+        Path cur = Paths.get("").toAbsolutePath();
+        while (cur != null) {
+            if (Files.exists(cur.resolve(".git"))) return cur;
+            cur = cur.getParent();
+        }
+        return Paths.get("").toAbsolutePath();
     }
 
     private HypothesisLog() {}

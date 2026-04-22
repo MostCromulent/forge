@@ -16,7 +16,6 @@ import forge.perf.tokenheavy.InstrumentedController.VariantSlot;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -80,7 +79,7 @@ public class TokenPerfTest {
             baselineCounters, variantCounters, divergences, verdict);
         String branch = System.getProperty("branch", "unknown");
         HypothesisLog.appendJsonl(
-            Path.of(".claude", "notes", branch, "hypotheses.jsonl"), json);
+            HypothesisLog.branchNotesPath(branch).resolve("hypotheses.jsonl"), json);
     }
 
     private OptimizationContext loadVariant(String hypothesisId) throws Exception {
@@ -110,13 +109,15 @@ public class TokenPerfTest {
 
         Match match = new Match(rules, players, "TokenPerfTest");
         Game game = match.createGame();
+
         state.applyToGame(game);
+        game.setAge(forge.game.GameStage.Play);
 
         try {
             forge.view.TimeLimitedCodeBlock.runWithTimeout(
-                () -> match.startGame(game), TIMEOUT_SECONDS, TimeUnit.SECONDS);
+                () -> game.getPhaseHandler().mainGameLoop(), TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException ignored) {
-            // OK — short fixtures time out by design; we measure decisions made so far.
+            // OK — scripted fixtures are expected to time out; we measure decisions made so far.
         } catch (Exception | StackOverflowError e) {
             System.err.println("Harness error: " + e.getMessage());
         } finally {
