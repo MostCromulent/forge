@@ -1,26 +1,22 @@
 [metadata]
 Name:Delina Goldrager - 40 Faerie Dragon Tokens (defending)
-Goal:Perf fixture — 40 identical token blockers for dedupeCards hot path
+Goal:Instrumented AI on p0 defends with 40 Faerie Dragons against attackers from p1 — stresses AiBlockController.assignBlockers. 2-player because GameState.handleCombat relies on getSingleOpponent.
 
 [state]
 turn=5
-activeplayer=p1
-activephase=COMBAT_DECLARE_BLOCKERS
+activeplayer=ai
+activephase=COMBAT_DECLARE_ATTACKERS
 removesummoningsickness=true
 
-p0life=40
-p1life=40
-p2life=40
-p3life=40
+humanLife=40
+aiLife=40
 
-p0hand=Island;Island;Island;Island;Island;Island;Island
-p1hand=Island;Island;Island;Island;Island;Island;Island
-p2hand=Island;Island;Island;Island;Island;Island;Island
-p3hand=Island;Island;Island;Island;Island;Island;Island
+humanhand=Island;Island;Island;Island;Island
+aihand=Island;Island;Island;Island;Island
 
-p0library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
-p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
-p2library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
-p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+humanlibrary=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+ailibrary=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
 
-p1battlefield=T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying
+humanbattlefield=T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying
+
+aibattlefield=T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying

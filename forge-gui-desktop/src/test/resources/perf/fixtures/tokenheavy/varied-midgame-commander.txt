@@ -1,0 +1,32 @@
+[metadata]
+Name:Varied midgame — 4-player Commander, diverse permanents
+Goal:Stress non-token-heavy decision paths — activated abilities, ETB triggers, enchantments, equipment, planeswalkers, targeted instants in hand
+
+[state]
+turn=7
+activeplayer=p0
+activephase=MAIN1
+removesummoningsickness=true
+
+p0life=35
+p1life=32
+p2life=37
+p3life=29
+
+p0hand=Lightning Bolt;Counterspell;Swords to Plowshares;Cultivate;Sol Ring;Island;Forest
+p1hand=Path to Exile;Doom Blade;Mana Leak;Disenchant;Mountain;Plains;Swamp
+p2hand=Shock;Negate;Giant Growth;Preordain;Forest;Island;Island
+p3hand=Terminate;Naturalize;Hypnotic Specter;Go for the Throat;Plains;Swamp;Swamp
+
+p0library=Island;Forest;Plains;Mountain;Swamp;Island;Forest;Plains;Mountain;Swamp
+p1library=Plains;Mountain;Plains;Mountain;Plains;Mountain;Plains;Mountain;Plains;Mountain
+p2library=Island;Forest;Island;Forest;Island;Forest;Island;Forest;Island;Forest
+p3library=Swamp;Plains;Swamp;Plains;Swamp;Plains;Swamp;Plains;Swamp;Plains
+
+p0battlefield=Island;Island;Forest;Forest;Plains;Llanowar Elves;Birds of Paradise;Wall of Omens;Prodigal Sorcerer;Solemn Simulacrum;Sol Ring;Oblivion Ring
+
+p1battlefield=Plains;Plains;Mountain;Mountain;Mountain;Soul Warden;Savannah Lions;Grizzly Bears;Serra Angel;Kor Outfitter;Bonesplitter;Mind Stone
+
+p2battlefield=Island;Island;Island;Forest;Forest;Coiling Oracle;Wall of Frost;Sakura-Tribe Elder;Elvish Archdruid;Mulldrifter;Rancor;Sensei's Divining Top
+
+p3battlefield=Swamp;Swamp;Swamp;Plains;Plains;Blood Artist;Bloodghast;Dark Confidant;Reassembling Skeleton;Nightsky Mimic;Thornbite Staff;Phyrexian Arena

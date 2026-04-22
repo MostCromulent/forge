@@ -158,10 +158,13 @@ public class TokenPerfTest {
         rules.setManaBurn(false);
         rules.setSimTimeout(TIMEOUT_SECONDS);
 
+        int playerCount = detectPlayerCount(fixtureRes);
         List<RegisteredPlayer> players = new ArrayList<>();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < playerCount; i++) {
             Deck deck = TestDeckLoader.getRandomPrecon();
             RegisteredPlayer rp = new RegisteredPlayer(deck);
+            // In 2-player fixtures the AI-under-test uses human* keys, so it
+            // becomes p0 (index 0). Otherwise instrument p0 as before.
             rp.setPlayer(i == 0 ? lobby : new forge.ai.LobbyPlayerAi("AI-" + (i + 1), java.util.Set.of()));
             players.add(rp);
         }
@@ -182,6 +185,33 @@ public class TokenPerfTest {
             e.printStackTrace(System.err);
         } finally {
             if (!game.isGameOver()) game.setGameOver(GameEndReason.Draw);
+        }
+    }
+
+    // Peek at the fixture to decide how many RegisteredPlayers to create.
+    // Rule: if any p2/p3 keys appear, it's 4-player; if any human/ai keys
+    // appear (but no p2/p3), it's 2-player; else default 4.
+    private int detectPlayerCount(String fixtureRes) throws java.io.IOException {
+        try (java.io.InputStream in = getClass().getClassLoader().getResourceAsStream(fixtureRes)) {
+            if (in == null) return 4;
+            try (java.io.BufferedReader br = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(in))) {
+                int maxP = -1;
+                boolean sawHumanAi = false;
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String lower = line.trim().toLowerCase();
+                    if (lower.startsWith("p") && lower.length() > 1 && Character.isDigit(lower.charAt(1))) {
+                        int idx = Character.digit(lower.charAt(1), 10);
+                        if (idx > maxP) maxP = idx;
+                    } else if (lower.startsWith("human") || lower.startsWith("ai")) {
+                        sawHumanAi = true;
+                    }
+                }
+                if (maxP >= 0) return maxP + 1;
+                if (sawHumanAi) return 2;
+                return 4;
+            }
         }
     }
 

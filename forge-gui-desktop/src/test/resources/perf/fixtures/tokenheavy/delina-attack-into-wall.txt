@@ -1,6 +1,6 @@
 [metadata]
-Name:Delina Goldrager - 40 Faerie Dragon Tokens (attacking into defended boards)
-Goal:AI on p0 declares attackers from 40 identical tokens; p1/p2/p3 each have defenders so shouldAttack has non-trivial blocker evaluations
+Name:Delina - 40 Faerie Dragons attacking into dense defender rows
+Goal:Maximum stress on shouldAttack / SpellAbilityFactors — 40 attackers evaluating blockers across 10 defenders per opponent (30 total)
 
 [state]
 turn=5
@@ -13,10 +13,10 @@ p1life=40
 p2life=40
 p3life=40
 
-p0hand=Island;Island;Island;Island;Island;Island;Island
-p1hand=Island;Island;Island;Island;Island;Island;Island
-p2hand=Island;Island;Island;Island;Island;Island;Island
-p3hand=Island;Island;Island;Island;Island;Island;Island
+p0hand=Island;Island;Island;Island;Island
+p1hand=Island;Island;Island;Island;Island
+p2hand=Island;Island;Island;Island;Island
+p3hand=Island;Island;Island;Island;Island
 
 p0library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
 p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
@@ -25,6 +25,6 @@ p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
 
 p0battlefield=T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying
 
-p1battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender
-p2battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender
-p3battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender
+p1battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender;T:c_0_4_wall_defender;T:c_0_4_wall_defender
+p2battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender;T:c_0_4_wall_defender;T:c_0_4_wall_defender
+p3battlefield=T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:b_2_2_bird_flying;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:c_0_4_wall_defender;T:c_0_4_wall_defender;T:c_0_4_wall_defender
