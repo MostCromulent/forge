@@ -2048,7 +2048,7 @@ public class ComputerUtilCard {
                 deduped.add(c);
             }
         }
-        return deduped;
+        return forge.game.perf.OptimizationContext.current().filterDuplicateBattlefieldTokens(deduped);
     }
 
     // Determine if the AI has an AI:RemoveDeck:All or an AI:RemoveDeck:Random hint specified.

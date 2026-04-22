@@ -1,0 +1,26 @@
+[metadata]
+Name:Delina Goldrager - 40 Faerie Dragon Tokens (attacking)
+Goal:Perf fixture — 40 identical token attackers for dedupeCards hot path
+
+[state]
+turn=5
+activeplayer=p0
+activephase=COMBAT_DECLARE_ATTACKERS
+removesummoningsickness=true
+
+p0life=40
+p1life=40
+p2life=40
+p3life=40
+
+p0hand=Island;Island;Island;Island;Island;Island;Island
+p1hand=Island;Island;Island;Island;Island;Island;Island
+p2hand=Island;Island;Island;Island;Island;Island;Island
+p3hand=Island;Island;Island;Island;Island;Island;Island
+
+p0library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p2library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+
+p0battlefield=T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying;T:u_1_1_faerie_dragon_flying

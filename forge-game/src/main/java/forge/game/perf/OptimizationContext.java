@@ -17,4 +17,14 @@ public class OptimizationContext {
 
     // Strategy read points are added incrementally by subsequent hypotheses.
     // Baseline implementations return input unchanged / absent / null.
+
+    /**
+     * Extension point for hypothesis H001+: filter duplicate battlefield tokens
+     * out of the dedupeCards result. Baseline returns the input unchanged.
+     * Variants override to return a smaller collection.
+     */
+    public forge.game.card.CardCollection filterDuplicateBattlefieldTokens(
+            forge.game.card.CardCollection cards) {
+        return cards;
+    }
 }

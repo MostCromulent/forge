@@ -1,0 +1,26 @@
+[metadata]
+Name:Krenko Mob Boss - Mixed Goblin Tokens (over-dedup guard)
+Goal:Perf fixture — mix of goblin tokens with differing state so a same-name dedup over-collapses
+
+[state]
+turn=5
+activeplayer=p0
+activephase=COMBAT_DECLARE_ATTACKERS
+removesummoningsickness=true
+
+p0life=40
+p1life=40
+p2life=40
+p3life=40
+
+p0hand=Island;Island;Island;Island;Island;Island;Island
+p1hand=Island;Island;Island;Island;Island;Island;Island
+p2hand=Island;Island;Island;Island;Island;Island;Island
+p3hand=Island;Island;Island;Island;Island;Island;Island
+
+p0library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p2library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+
+p0battlefield=T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin;T:r_1_1_goblin|Counters:P1P1=1;T:r_1_1_goblin|Counters:P1P1=1;T:r_1_1_goblin|Counters:P1P1=1;T:r_1_1_goblin|Counters:P1P1=1;T:r_1_1_goblin|Counters:P1P1=1;T:r_1_1_goblin|Tapped;T:r_1_1_goblin|Tapped;T:r_1_1_goblin|Tapped;T:r_1_1_goblin|Tapped;T:r_1_1_goblin|Tapped
