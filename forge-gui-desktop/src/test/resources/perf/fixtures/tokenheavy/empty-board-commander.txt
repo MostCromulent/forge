@@ -1,0 +1,23 @@
+[metadata]
+Name:Empty Commander Board (4 players)
+Goal:Perf baseline — zero tokens, 4 players, turn 1
+
+[state]
+turn=1
+activeplayer=p0
+activephase=UPKEEP
+
+p0life=40
+p1life=40
+p2life=40
+p3life=40
+
+p0hand=Island;Island;Island;Island;Island;Island;Island
+p1hand=Island;Island;Island;Island;Island;Island;Island
+p2hand=Island;Island;Island;Island;Island;Island;Island
+p3hand=Island;Island;Island;Island;Island;Island;Island
+
+p0library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p2library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
