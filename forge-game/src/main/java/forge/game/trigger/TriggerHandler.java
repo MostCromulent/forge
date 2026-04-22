@@ -29,6 +29,7 @@ import forge.game.ability.AbilityFactory;
 import forge.game.ability.AbilityKey;
 import forge.game.ability.AbilityUtils;
 import forge.game.card.*;
+import forge.game.perf.PerfCounters;
 import forge.game.player.Player;
 import forge.game.spellability.AbilitySub;
 import forge.game.spellability.SpellAbility;
@@ -186,6 +187,9 @@ public class TriggerHandler {
         resetActiveTriggers(true, null);
     }
     public final void resetActiveTriggers(boolean collect, CardCollectionView lastStateBattlefield) {
+        PerfCounters.time("TriggerHandler.resetActiveTriggers", () -> resetActiveTriggersImpl(collect, lastStateBattlefield));
+    }
+    private void resetActiveTriggersImpl(boolean collect, CardCollectionView lastStateBattlefield) {
         if (collect) {
             collectTriggerForWaiting();
         }

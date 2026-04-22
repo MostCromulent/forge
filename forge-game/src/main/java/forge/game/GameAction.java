@@ -36,6 +36,7 @@ import forge.game.extrahands.BackupPlanService;
 import forge.game.keyword.Keyword;
 import forge.game.keyword.KeywordInterface;
 import forge.game.mulligan.MulliganService;
+import forge.game.perf.PerfCounters;
 import forge.game.player.*;
 import forge.game.replacement.ReplacementEffect;
 import forge.game.replacement.ReplacementResult;
@@ -1072,6 +1073,9 @@ public class GameAction {
         checkStaticAbilities(runEvents, Sets.newHashSet(), CardCollection.EMPTY);
     }
     public final void checkStaticAbilities(final boolean runEvents, final Set<Card> affectedCards, final CardCollectionView preList) {
+        PerfCounters.time("GameAction.checkStaticAbilities", () -> checkStaticAbilitiesImpl(runEvents, affectedCards, preList));
+    }
+    private void checkStaticAbilitiesImpl(final boolean runEvents, final Set<Card> affectedCards, final CardCollectionView preList) {
         if (isCheckingStaticAbilitiesOnHold()) {
             return;
         }
@@ -1399,6 +1403,9 @@ public class GameAction {
         return checkStateEffects(runEvents, Sets.newHashSet());
     }
     public boolean checkStateEffects(final boolean runEvents, final Set<Card> affectedCards) {
+        return PerfCounters.time("GameAction.checkStateEffects", () -> checkStateEffectsImpl(runEvents, affectedCards));
+    }
+    private boolean checkStateEffectsImpl(final boolean runEvents, final Set<Card> affectedCards) {
         // sol(10/29) added for Phase updates, state effects shouldn't be
         // checked during Spell Resolution (except when persist-returning
         if (game.getStack().isResolving()) {

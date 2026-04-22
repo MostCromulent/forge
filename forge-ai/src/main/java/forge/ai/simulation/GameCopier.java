@@ -16,6 +16,7 @@ import forge.game.card.CounterType;
 import forge.game.card.token.TokenInfo;
 import forge.game.combat.Combat;
 import forge.game.mana.Mana;
+import forge.game.perf.PerfCounters;
 import forge.game.phase.PhaseHandler;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
@@ -68,6 +69,9 @@ public class GameCopier {
         return makeCopy(null, null);
     }
     public Game makeCopy(PhaseType advanceToPhase, Player aiPlayer) {
+        return PerfCounters.time("GameCopier.makeCopy", () -> makeCopyImpl(advanceToPhase, aiPlayer));
+    }
+    private Game makeCopyImpl(PhaseType advanceToPhase, Player aiPlayer) {
         if (origGame.EXPERIMENTAL_RESTORE_SNAPSHOT) {
             // How do we advance to phase when using restores?
             return snapshot.makeCopy();
