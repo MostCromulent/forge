@@ -74,17 +74,37 @@ public class TokenPerfTest {
         LobbyPlayerInstrumented lobby =
             new LobbyPlayerInstrumented("AI-1", Mode.QUERY, slots);
 
+        // JFR needs several hundred samples to produce a useful flame graph;
+        // short fixtures only yield ~20 samples per run. When -Djfr.loops=N is
+        // set, we re-run the measured game N times so JFR accumulates samples
+        // from all runs. Decision and counter data come from the LAST iteration
+        // so totals stay comparable. Default = 1 (no loop).
+        int loops = Math.max(1, Integer.getInteger("jfr.loops", 1));
         PerfCounters.resetAll();
         PerfCounters.enabled = true;
         jdk.jfr.Recording jfr = startJfrIfEnabled(hypothesisId, fixtureRes);
         long gameT0 = System.nanoTime();
         try {
-            runOneFixture(fixtureRes, lobby);
+            for (int i = 0; i < loops; i++) {
+                if (i > 0) {
+                    // Reset inter-iteration state: clear counters, clear slot
+                    // timings/decisions so the final report reflects just one run.
+                    PerfCounters.resetAll();
+                    for (VariantSlot vs : slots) {
+                        vs.decisions.clear();
+                        vs.totalNanos = 0;
+                    }
+                }
+                runOneFixture(fixtureRes, lobby);
+            }
         } finally {
             PerfCounters.enabled = false;
             stopJfr(jfr);
         }
-        long gameWallNanos = System.nanoTime() - gameT0;
+        long gameWallNanos = (System.nanoTime() - gameT0) / loops;
+        if (loops > 1) {
+            System.out.println("JFR loop: " + loops + " iterations, reporting last");
+        }
 
         VariantSlot baseline = slots.get(0);
         VariantSlot variant = slots.get(1);
