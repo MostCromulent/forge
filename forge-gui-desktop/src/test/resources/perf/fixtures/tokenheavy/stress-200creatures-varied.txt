@@ -1,0 +1,30 @@
+[metadata]
+Name:Stress — 200 creatures, varied complex abilities
+Goal:Far-outer-bound scaling probe. 50 each of Llanowar Elves (mana tap), Prodigal Sorcerer (targeted tap), Wall of Omens (ETB trigger + static), Savannah Lions (vanilla). Exercises activated abilities, target selection at scale, ETB triggers, and engine-layer O(n) / O(n^2) hot paths (resetActiveTriggers, checkStateEffects, checkStaticAbilities).
+
+[state]
+turn=5
+activeplayer=p0
+activephase=MAIN1
+removesummoningsickness=true
+
+p0life=40
+p1life=40
+p2life=40
+p3life=40
+
+p0hand=Island;Island;Forest;Plains;Swamp
+p1hand=Island;Island;Island;Island;Island
+p2hand=Island;Island;Island;Island;Island
+p3hand=Island;Island;Island;Island;Island
+
+p0library=Island;Forest;Plains;Mountain;Swamp;Island;Forest;Plains;Mountain;Swamp
+p1library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p2library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+p3library=Island;Island;Island;Island;Island;Island;Island;Island;Island;Island
+
+p0battlefield=Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Llanowar Elves;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Prodigal Sorcerer;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Wall of Omens;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions;Savannah Lions
+
+p1battlefield=T:b_2_2_bird_flying;T:c_0_4_wall_defender
+p2battlefield=T:b_2_2_bird_flying;T:c_0_4_wall_defender
+p3battlefield=T:b_2_2_bird_flying;T:c_0_4_wall_defender
