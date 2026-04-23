@@ -49,30 +49,64 @@ public final class CanBlockCache {
     public long misses() { return misses; }
     public int size() { return entries.size(); }
 
-    // --- Pure-form cache for canBlock(attacker, blocker, boolean nextTurn) ---
-    // No combat state — genuinely pure over card properties. Lives for the
-    // lifetime of the cache instance (not per-combat scoped) because card
-    // properties don't change mid-decision.
+    // --- State-aware cache for canBlock(attacker, blocker, boolean nextTurn) ---
+    // The method is pure over (card state, nextTurn). Card state includes
+    // keywords and tap state, which mutate via auras/equipment/triggered
+    // pumps even within a single AI decision call. Key includes a state
+    // fingerprint on both cards so state-changed re-queries get a fresh
+    // compute instead of a stale hit.
 
-    private final Map<Long, Boolean> pureEntries = new HashMap<>();
+    private final Map<StateKey, Boolean> pureEntries = new HashMap<>();
     private long pureHits;
     private long pureMisses;
 
-    private static long pureKey(int attackerId, int blockerId, boolean nextTurn) {
-        long base = ((long) attackerId << 33) | ((long)(blockerId & 0xFFFFFFFFL) << 1);
-        return nextTurn ? base | 1L : base;
+    private static int stateHash(forge.game.card.Card c) {
+        int h = c.isTapped() ? 1 : 0;
+        h = h * 31 + (c.hasSickness() ? 1 : 0);
+        for (forge.game.keyword.KeywordInterface kw : c.getKeywords()) {
+            h = h * 31 + kw.getOriginal().hashCode();
+        }
+        return h;
+    }
+
+    private static final class StateKey {
+        final int aid, bid;
+        final boolean nextTurn;
+        final int aState, bState;
+        final int hash;
+        StateKey(Card a, Card b, boolean nt) {
+            this.aid = a.getId();
+            this.bid = b.getId();
+            this.nextTurn = nt;
+            this.aState = stateHash(a);
+            this.bState = stateHash(b);
+            // Mix all fields into a stable hash.
+            int h = aid;
+            h = h * 31 + bid;
+            h = h * 31 + (nt ? 1 : 0);
+            h = h * 31 + aState;
+            h = h * 31 + bState;
+            this.hash = h;
+        }
+        @Override public int hashCode() { return hash; }
+        @Override public boolean equals(Object o) {
+            if (!(o instanceof StateKey)) return false;
+            StateKey k = (StateKey) o;
+            return aid == k.aid && bid == k.bid && nextTurn == k.nextTurn
+                    && aState == k.aState && bState == k.bState;
+        }
     }
 
     public Boolean getPure(Card attacker, Card blocker, boolean nextTurn) {
         if (attacker == null || blocker == null) return null;
-        Boolean v = pureEntries.get(pureKey(attacker.getId(), blocker.getId(), nextTurn));
+        Boolean v = pureEntries.get(new StateKey(attacker, blocker, nextTurn));
         if (v == null) pureMisses++; else pureHits++;
         return v;
     }
 
     public void putPure(Card attacker, Card blocker, boolean nextTurn, boolean result) {
         if (attacker == null || blocker == null) return;
-        pureEntries.put(pureKey(attacker.getId(), blocker.getId(), nextTurn), result);
+        pureEntries.put(new StateKey(attacker, blocker, nextTurn), result);
     }
 
     public long pureHits() { return pureHits; }
