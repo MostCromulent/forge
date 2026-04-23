@@ -422,6 +422,24 @@ public class TokenPerfTest {
         printRealGamesReport(results, batchNanos);
         printRealGamesCounters();
 
+        // H005 verify: shouldAttack cache stats.
+        if (variantCtx instanceof forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify) {
+            forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify v =
+                (forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify) variantCtx;
+            forge.game.perf.ShouldAttackCache c = v.getCacheForReport();
+            System.out.println();
+            System.out.println("=== H005 VERIFY STATS ===");
+            System.out.printf("  divergences:    %d%n",
+                forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify.divergenceCount());
+            System.out.printf("  cache hits:     %d%n", c.hits());
+            System.out.printf("  cache misses:   %d%n", c.misses());
+            System.out.printf("  cache size:     %d%n", c.size());
+            long total = c.hits() + c.misses();
+            if (total > 0) {
+                System.out.printf("  hit rate:       %.1f%%%n", 100.0 * c.hits() / total);
+            }
+        }
+
         // H002 verify: surface cache hit/miss stats + divergences so absence of
         // error output doesn't hide an unused-cache false positive.
         if (variantCtx instanceof forge.perf.tokenheavy.variants.H002_CanBlockCache_Verify) {

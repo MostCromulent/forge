@@ -60,4 +60,18 @@ public class OptimizationContext {
     // equivalence class was already evaluated, reuse the result instead of
     // re-running canBlock/canDestroy. Defender-side analogue of H003.
     public boolean useIdenticalBlockerBatching() { return false; }
+
+    // H005: cache AiAttackController.shouldAttack results within a single
+    // declareAttackers call. Guarded at the read-site by an Exalted-check.
+    public ShouldAttackCache shouldAttackCache() { return null; }
+
+    // H005 verify: compute fresh AND consult cache every call; log
+    // divergences. Game runs under baseline semantics (fresh result governs).
+    public boolean verifyShouldAttack() { return false; }
+
+    public void reportShouldAttackDivergence(forge.game.card.Card attacker,
+                                             boolean cachedResult,
+                                             boolean freshResult) {
+        // Baseline: no-op. Verify variants override to log.
+    }
 }

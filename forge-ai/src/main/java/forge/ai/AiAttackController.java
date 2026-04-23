@@ -913,13 +913,17 @@ public class AiAttackController {
      * @return a {@link forge.game.combat.Combat} object.
      */
     public final int declareAttackers(final Combat combat) {
-        forge.game.perf.CanBlockCache cbc = forge.game.perf.OptimizationContext.current().canBlockCache();
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        forge.game.perf.CanBlockCache cbc = ctx.canBlockCache();
+        forge.game.perf.ShouldAttackCache sac = ctx.shouldAttackCache();
         if (cbc != null) cbc.enterDecision();
+        if (sac != null) sac.enterDecision();
         try {
             return forge.game.perf.PerfCounters.time("AiAttackController.declareAttackers",
                 () -> declareAttackersImpl(combat));
         } finally {
             if (cbc != null) cbc.exitDecision();
+            if (sac != null) sac.exitDecision();
         }
     }
 
@@ -1570,6 +1574,56 @@ public class AiAttackController {
      * @return a boolean.
      */
     public final boolean shouldAttack(final Card attacker, final List<Card> defenders, final Combat combat, final GameEntity defender) {
+        // H005: equivalence-keyed cache around the whole shouldAttack body.
+        // Guarded by countExaltedBonus == 0 (the main combat-state-dependent
+        // path in shouldAttack's callees is predictPowerBonusOfAttacker's
+        // Exalted check). For AI lacking Exalted sources, the result is a
+        // pure function of (attacker-equivalence, defender-id, defenders-list
+        // identity). Cache is entered/exited by declareAttackers.
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        forge.game.perf.ShouldAttackCache cache = ctx.shouldAttackCache();
+        boolean guardHolds = cache != null && countExaltedBonus(ai) == 0;
+        String cacheKey = guardHolds ? shouldAttackCacheKey(attacker, defender) : null;
+
+        if (guardHolds) {
+            if (ctx.verifyShouldAttack()) {
+                boolean fresh = shouldAttackImpl(attacker, defenders, combat, defender);
+                Boolean prior = cache.get(cacheKey);
+                if (prior != null && prior.booleanValue() != fresh) {
+                    ctx.reportShouldAttackDivergence(attacker, prior.booleanValue(), fresh);
+                }
+                cache.put(cacheKey, fresh);
+                return fresh;
+            }
+            Boolean cached = cache.get(cacheKey);
+            if (cached != null) return cached.booleanValue();
+            boolean result = shouldAttackImpl(attacker, defenders, combat, defender);
+            cache.put(cacheKey, result);
+            return result;
+        }
+        return shouldAttackImpl(attacker, defenders, combat, defender);
+    }
+
+    private static String shouldAttackCacheKey(final Card attacker, final GameEntity defender) {
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(attacker.getName()).append('|');
+        sb.append(attacker.getNetPower()).append('/').append(attacker.getNetToughness()).append('|');
+        sb.append(attacker.isTapped() ? 'T' : 'u').append(attacker.hasSickness() ? 'S' : 'r').append('|');
+        sb.append(attacker.getDamage()).append('|');
+        // Keyword fingerprint: XOR of getOriginal().hashCode() is order-independent
+        // and ~free given we already iterate these in the AI's combat math.
+        int kwHash = 0;
+        for (forge.game.keyword.KeywordInterface k : attacker.getKeywords()) {
+            kwHash ^= k.getOriginal().hashCode();
+        }
+        sb.append(kwHash).append('|');
+        // Counter map string is stable per-card; cheap.
+        sb.append(attacker.getCounters()).append('|');
+        sb.append('#').append(System.identityHashCode(defender));
+        return sb.toString();
+    }
+
+    private boolean shouldAttackImpl(final Card attacker, final List<Card> defenders, final Combat combat, final GameEntity defender) {
         // Is it a creature that has a more valuable ability with a tap cost than what it can do by attacking?
         if (attacker.hasSVar("NonCombatPriority") && !attacker.hasKeyword(Keyword.VIGILANCE)) {
             // For each level of priority, enemy has to have life as much as the creature's power
