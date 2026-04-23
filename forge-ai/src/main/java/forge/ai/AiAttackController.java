@@ -133,14 +133,22 @@ public class AiAttackController {
         if (a.getDamage() != b.getDamage()) return false;
         // Counters affect P/T but also modify combat math more broadly.
         if (!a.getCounters().equals(b.getCounters())) return false;
-        // Keyword sets — use size + per-keyword compare.
+        // Keyword sets — sorted-sequence compare (avoids XOR-hash collisions).
         List<forge.game.keyword.KeywordInterface> ak = a.getKeywords();
         List<forge.game.keyword.KeywordInterface> bk = b.getKeywords();
-        if (ak.size() != bk.size()) return false;
-        int ah = 0, bh = 0;
-        for (forge.game.keyword.KeywordInterface k : ak) ah ^= k.getOriginal().hashCode();
-        for (forge.game.keyword.KeywordInterface k : bk) bh ^= k.getOriginal().hashCode();
-        return ah == bh;
+        int n = ak.size();
+        if (n != bk.size()) return false;
+        if (n == 0) return true;
+        String[] aStr = new String[n];
+        String[] bStr = new String[n];
+        for (int i = 0; i < n; i++) aStr[i] = ak.get(i).getOriginal();
+        for (int i = 0; i < n; i++) bStr[i] = bk.get(i).getOriginal();
+        java.util.Arrays.sort(aStr);
+        java.util.Arrays.sort(bStr);
+        for (int i = 0; i < n; i++) {
+            if (!aStr[i].equals(bStr[i])) return false;
+        }
+        return true;
     }
 
     // Mirrors the original per-blocker damage computation for non-aggro
@@ -528,8 +536,26 @@ public class AiAttackController {
                         int dmgPerToken = perAttackerDmg(c, thresholdMod);
                         int totalDelta = Math.abs(lifeAll - lastAcceptableBaselineLife);
                         if (totalDelta > dmgPerToken * groupSize) {
-                            // Trade fails aggregate — remove all, try next group.
+                            // Aggregate trade failed. Fall back to per-token release
+                            // within this group to match baseline's partial-accept
+                            // behavior (baseline may accept some and reject later ones
+                            // when cumulative delta passes the threshold mid-group).
                             for (int j = 0; j < groupSize; j++) notNeededAsBlockers.remove(blockers.get(i + j));
+                            for (int j = 0; j < groupSize; j++) {
+                                Card cj = blockers.get(i + j);
+                                notNeededAsBlockers.add(cj);
+                                int lifej = ComputerUtil.predictNextCombatsRemainingLife(ai, playAggro, pilotsNonAggroDeck, 0, notNeededAsBlockers);
+                                if (lifej == Integer.MIN_VALUE) {
+                                    notNeededAsBlockers.remove(cj);
+                                    break outerLoop;
+                                }
+                                if (Math.abs(lifej - lastAcceptableBaselineLife) > dmgPerToken) {
+                                    notNeededAsBlockers.remove(cj);
+                                    // continue to next blocker in group; lastAcceptable unchanged
+                                } else {
+                                    lastAcceptableBaselineLife = lifej;
+                                }
+                            }
                             i = groupEnd;
                             continue;
                         }

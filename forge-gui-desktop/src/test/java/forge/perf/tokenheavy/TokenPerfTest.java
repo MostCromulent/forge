@@ -565,14 +565,18 @@ public class TokenPerfTest {
     // Pick a deck from TestDeckLoader with optional name-substring filter.
     // Falls back to unfiltered random pick if the filter matches nothing.
     private Deck pickDeck(String deckFilter) {
-        if (deckFilter.isEmpty()) return TestDeckLoader.getRandomPrecon();
+        boolean useCommander = "commander".equalsIgnoreCase(System.getProperty("perf.format", ""));
+        java.util.function.Supplier<Deck> source = useCommander
+            ? TestDeckLoader::getRandomCommanderPrecon
+            : TestDeckLoader::getRandomPrecon;
+        if (deckFilter.isEmpty()) return source.get();
         // Try up to 20 random picks looking for a deck whose name contains the filter.
         for (int i = 0; i < 20; i++) {
-            Deck d = TestDeckLoader.getRandomPrecon();
+            Deck d = source.get();
             if (d.getName().toLowerCase().contains(deckFilter)) return d;
         }
         // Filter too restrictive; fall back to unfiltered.
-        return TestDeckLoader.getRandomPrecon();
+        return source.get();
     }
 
     private jdk.jfr.Recording startRealGamesJfr() {

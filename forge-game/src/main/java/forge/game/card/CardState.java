@@ -378,6 +378,10 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         return cachedKeywords.getValues();
     }
 
+    public final KeywordCollection getCachedKeywordCollection() {
+        return cachedKeywords;
+    }
+
     public final Collection<KeywordInterface> getCachedKeyword(final Keyword keyword) {
         return cachedKeywords.getValues(keyword);
     }
@@ -683,6 +687,14 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     }
 
     public final FCollectionView<Trigger> getTriggers() {
+        forge.game.perf.OptimizationContext perfCtx = forge.game.perf.OptimizationContext.current();
+        boolean fastPathApplicable = false;
+        if (perfCtx.useGetTriggersFastPath() || perfCtx.verifyGetTriggersFastPath()) {
+            fastPathApplicable = canUseTriggersFastPath();
+            if (perfCtx.useGetTriggersFastPath() && fastPathApplicable) {
+                return FCollection.getEmpty();
+            }
+        }
         FCollection<Trigger> result = new FCollection<>(triggers);
         if (getStateName().equals(CardStateName.Original)) {
             if (getCard().hasState(CardStateName.LeftSplit))
@@ -691,7 +703,20 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
                 result.addAll(getCard().getState(CardStateName.RightSplit).triggers);
         }
         card.updateTriggers(result, this);
+        if (fastPathApplicable && !result.isEmpty()) {
+            perfCtx.reportGetTriggersDivergence(card,
+                "fast-path said empty but slow path returned " + result.size() + " triggers");
+        }
         return result;
+    }
+
+    private boolean canUseTriggersFastPath() {
+        if (!triggers.isEmpty()) return false;
+        if (card.hasState(CardStateName.LeftSplit)) return false;
+        if (card.hasState(CardStateName.RightSplit)) return false;
+        if (cachedKeywords.hasTriggerKeyword()) return false;
+        if (!card.hasNoTraitOverlays()) return false;
+        return true;
     }
 
     public final boolean hasTrigger(final Trigger t) {
@@ -712,6 +737,14 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
     }
 
     public final FCollectionView<StaticAbility> getStaticAbilities() {
+        forge.game.perf.OptimizationContext perfCtx = forge.game.perf.OptimizationContext.current();
+        boolean fastPathApplicable = false;
+        if (perfCtx.useGetStaticAbilitiesFastPath() || perfCtx.verifyGetStaticAbilitiesFastPath()) {
+            fastPathApplicable = canUseStaticAbilitiesFastPath();
+            if (perfCtx.useGetStaticAbilitiesFastPath() && fastPathApplicable) {
+                return FCollection.getEmpty();
+            }
+        }
         FCollection<StaticAbility> result = new FCollection<>(staticAbilities);
         if (getStateName().equals(CardStateName.Original)) {
             if (getCard().hasState(CardStateName.LeftSplit))
@@ -720,7 +753,20 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
                 result.addAll(getCard().getState(CardStateName.RightSplit).staticAbilities);
         }
         card.updateStaticAbilities(result, this);
+        if (fastPathApplicable && !result.isEmpty()) {
+            perfCtx.reportGetStaticAbilitiesDivergence(card,
+                "fast-path said empty but slow path returned " + result.size() + " statics");
+        }
         return result;
+    }
+
+    private boolean canUseStaticAbilitiesFastPath() {
+        if (!staticAbilities.isEmpty()) return false;
+        if (card.hasState(CardStateName.LeftSplit)) return false;
+        if (card.hasState(CardStateName.RightSplit)) return false;
+        if (cachedKeywords.hasStaticAbilityKeyword()) return false;
+        if (!card.hasNoTraitOverlays()) return false;
+        return true;
     }
     public final boolean addStaticAbility(StaticAbility stab) {
         return staticAbilities.add(stab);
@@ -733,6 +779,14 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
         return getReplacementEffects(true);
     }
     public FCollectionView<ReplacementEffect> getReplacementEffects(boolean rulesHost) {
+        forge.game.perf.OptimizationContext perfCtx = forge.game.perf.OptimizationContext.current();
+        boolean fastPathApplicable = false;
+        if (perfCtx.useGetReplacementEffectsFastPath() || perfCtx.verifyGetReplacementEffectsFastPath()) {
+            fastPathApplicable = canUseReplacementEffectsFastPath(rulesHost);
+            if (perfCtx.useGetReplacementEffectsFastPath() && fastPathApplicable) {
+                return FCollection.getEmpty();
+            }
+        }
         FCollection<ReplacementEffect> result = new FCollection<>(replacementEffects);
         // add Split to Original
         if (getStateName().equals(CardStateName.Original)) {
@@ -781,7 +835,30 @@ public class CardState implements GameObject, IHasSVars, ITranslatable {
             result.add(omenRep);
         }
 
+        if (fastPathApplicable && !result.isEmpty()) {
+            perfCtx.reportGetReplacementEffectsDivergence(card,
+                "fast-path said empty but slow path returned " + result.size() + " REs (rulesHost=" + rulesHost + ")");
+        }
+
         return result;
+    }
+
+    private boolean canUseReplacementEffectsFastPath(boolean rulesHost) {
+        if (!replacementEffects.isEmpty()) return false;
+        if (card.hasState(CardStateName.LeftSplit)) return false;
+        if (card.hasState(CardStateName.RightSplit)) return false;
+        if (cachedKeywords.hasReplacementEffectKeyword()) return false;
+        if (!card.hasNoTraitOverlays()) return false;
+        CardTypeView type = getTypeWithChanges();
+        if (type.isPlaneswalker() || type.isBattle()) return false;
+        if (type.isSaga() && !hasKeyword(Keyword.READ_AHEAD)) return false;
+        if (rulesHost) {
+            if (type.hasSubtype("Adventure") || type.hasSubtype("Omen")) return false;
+            if (card.getCounters(CounterEnumType.SHIELD) > 0) return false;
+            if (card.getCounters(CounterEnumType.STUN) > 0) return false;
+            if (card.getCounters(CounterEnumType.FINALITY) > 0) return false;
+        }
+        return true;
     }
     public boolean addReplacementEffect(final ReplacementEffect replacementEffect) {
         return replacementEffects.add(replacementEffect);

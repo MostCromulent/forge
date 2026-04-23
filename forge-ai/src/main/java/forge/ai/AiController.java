@@ -1350,7 +1350,7 @@ public class AiController {
 
     public List<SpellAbility> chooseSpellAbilityToPlay() {
         forge.game.perf.CostCache costCache = forge.game.perf.OptimizationContext.current().costCache();
-        if (costCache != null) costCache.enterDecision();
+        if (costCache != null) costCache.enterDecision(player);
         try {
             return chooseSpellAbilityToPlayImpl();
         } finally {
@@ -1597,12 +1597,15 @@ public class AiController {
         if (all == null || all.isEmpty())
             return null;
 
+        forge.game.perf.OptimizationContext perfCtx = forge.game.perf.OptimizationContext.current();
+        final List<SpellAbility> list = perfCtx.useSaEquivalenceDedupe() ? dedupeSaByEquivalence(all) : all;
+
         try {
-            all.sort(ComputerUtilAbility.saEvaluator); // put best spells first
-            ComputerUtilAbility.sortCreatureSpells(all);
+            list.sort(ComputerUtilAbility.saEvaluator); // put best spells first
+            ComputerUtilAbility.sortCreatureSpells(list);
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
-            String assertex = ComparatorUtil.verifyTransitivity(ComputerUtilAbility.saEvaluator, all);
+            String assertex = ComparatorUtil.verifyTransitivity(ComputerUtilAbility.saEvaluator, list);
             Sentry.captureMessage(ex.getMessage() + "\nAssertionError [verifyTransitivity]: " + assertex);
         }
 
@@ -1612,7 +1615,7 @@ public class AiController {
         FutureTask<SpellAbility> future = new FutureTask<>(() -> {
             //avoid ComputerUtil.aiLifeInDanger in loops as it slows down a lot.. call this outside loops will generally be fast...
             boolean isLifeInDanger = useLivingEnd && ComputerUtil.aiLifeInDanger(player, true, 0);
-            for (final SpellAbility sa : ComputerUtilAbility.getOriginalAndAltCostAbilities(all, player)) {
+            for (final SpellAbility sa : ComputerUtilAbility.getOriginalAndAltCostAbilities(list, player)) {
                 // Don't add Counterspells to the "normal" playcard lookups
                 if (skipCounter && sa.getApi() == ApiType.Counter) {
                     continue;
@@ -1709,6 +1712,43 @@ public class AiController {
             }
             return null;
         }
+    }
+
+    // H008: group SAs by equivalence so N identical tokens with K abilities
+    // score + canPlay-check 1×K SAs instead of N×K.
+    private static List<SpellAbility> dedupeSaByEquivalence(final List<SpellAbility> in) {
+        if (in.size() <= 1) return in;
+        java.util.HashSet<String> seen = new java.util.HashSet<>(in.size() * 2);
+        List<SpellAbility> out = Lists.newArrayListWithCapacity(in.size());
+        for (SpellAbility sa : in) {
+            if (seen.add(saEquivalenceKey(sa))) out.add(sa);
+        }
+        return out;
+    }
+
+    private static String saEquivalenceKey(SpellAbility sa) {
+        StringBuilder sb = new StringBuilder(96);
+        Card host = sa.getHostCard();
+        if (host == null) {
+            sb.append("null|");
+        } else {
+            sb.append(host.getName()).append('|');
+            sb.append(host.getController() == null ? -1 : host.getController().getId()).append('|');
+            sb.append(host.getNetPower()).append('/').append(host.getNetToughness()).append('|');
+            sb.append(host.isTapped() ? '1' : '0');
+            sb.append(host.hasSickness() ? '1' : '0').append('|');
+            sb.append(host.getCounters()).append('|');
+            sb.append(host.getKeywords()).append('|');
+            if (host.getZone() != null) sb.append(host.getZone().getZoneType());
+            sb.append('|');
+        }
+        sb.append(sa.getDescription()).append('|');
+        sb.append(sa.getApi()).append('|');
+        sb.append(sa.getPayCosts() == null ? "null" : sa.getPayCosts().toString()).append('|');
+        for (forge.game.spellability.OptionalCost oc : sa.getOptionalCosts()) {
+            sb.append(oc.ordinal()).append(',');
+        }
+        return sb.toString();
     }
 
     public CardCollection chooseCardsToDelve(int genericCost, CardCollection grave) {

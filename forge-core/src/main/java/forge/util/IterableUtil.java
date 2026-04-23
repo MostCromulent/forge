@@ -14,6 +14,11 @@ import java.util.stream.StreamSupport;
  */
 public class IterableUtil {
 
+    // H016 perf gate: when true, any/all use a plain for-loop instead of
+    // StreamSupport.stream(...).anyMatch/allMatch. Set by perf testbed
+    // variants; baseline keeps the Stream-based implementation.
+    public static volatile boolean USE_FOR_LOOP = false;
+
 
     /**
      * Merges a collection of predicates into a single predicate,
@@ -51,10 +56,22 @@ public class IterableUtil {
     }
 
     public static <T> boolean any(Iterable<T> iterable, Predicate<? super T> test) {
+        if (USE_FOR_LOOP) {
+            for (T t : iterable) {
+                if (test.test(t)) return true;
+            }
+            return false;
+        }
         return StreamSupport.stream(iterable.spliterator(), false).anyMatch(test);
     }
 
     public static <T> boolean all(Iterable<T> iterable, Predicate<? super T> test) {
+        if (USE_FOR_LOOP) {
+            for (T t : iterable) {
+                if (!test.test(t)) return false;
+            }
+            return true;
+        }
         return StreamSupport.stream(iterable.spliterator(), false).allMatch(test);
     }
 

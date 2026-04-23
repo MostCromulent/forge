@@ -3441,6 +3441,23 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public boolean hasRemoveIntrinsic() {
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        if (ctx.verifyHasRemoveIntrinsicFastPath()) {
+            boolean allEmpty = changedCardTypesByText.isEmpty()
+                    && changedCardTypesCharacterDefining.isEmpty()
+                    && changedCardTypes.isEmpty();
+            boolean slowResult = IterableUtil.any(getChangedCardTypes(), ICardChangedType::isRemoveLandTypes);
+            if (allEmpty && slowResult) {
+                ctx.reportHasRemoveIntrinsicDivergence(this);
+            }
+            return slowResult;
+        }
+        if (ctx.useHasRemoveIntrinsicFastPath()
+                && changedCardTypesByText.isEmpty()
+                && changedCardTypesCharacterDefining.isEmpty()
+                && changedCardTypes.isEmpty()) {
+            return false;
+        }
         return IterableUtil.any(getChangedCardTypes(), ICardChangedType::isRemoveLandTypes);
     }
 
@@ -4989,11 +5006,37 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
 
     public Iterable<ICardTraitChanges> getChangedCardTraitsList(CardState state) {
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        if (ctx.verifyEmptyOverlayFastPath()) {
+            boolean bothEmpty = changedCardTraitsByText.isEmpty() && changedCardTraits.isEmpty();
+            java.util.List<ICardTraitChanges> slow = com.google.common.collect.Lists.newArrayList(
+                Iterables.<ICardTraitChanges>concat(
+                    changedCardTraitsByText.values(),
+                    ImmutableList.of(state.getLandTraitChanges()),
+                    changedCardTraits.values()
+                ));
+            if (bothEmpty && (slow.size() != 1 || slow.get(0) != state.getLandTraitChanges())) {
+                ctx.reportEmptyOverlayDivergence(this,
+                    "fast-path would return singleton(land) but slow-path size=" + slow.size());
+            }
+            return slow;
+        }
+        if (ctx.useEmptyOverlayFastPath()
+                && changedCardTraitsByText.isEmpty() && changedCardTraits.isEmpty()) {
+            return ImmutableList.of(state.getLandTraitChanges());
+        }
         return Iterables.<ICardTraitChanges>concat(
             changedCardTraitsByText.values(), // Layer 3
             ImmutableList.of(state.getLandTraitChanges()), // Layer 4
             changedCardTraits.values() // Layer 6
         );
+    }
+
+    // H020 helper: fast check for the empty-overlay condition used by
+    // several fast paths. Both tables are TreeBasedTables so isEmpty()
+    // is O(1).
+    public final boolean hasNoTraitOverlays() {
+        return changedCardTraitsByText.isEmpty() && changedCardTraits.isEmpty();
     }
 
     public final Table<Long, Long, ICardTraitChanges> getChangedCardTraits() {
@@ -5260,6 +5303,10 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         // remove Can't have keywords
         for (Keyword k : getCantHaveKeyword()) {
             keywords.removeAll(k);
+        }
+
+        if (forge.game.perf.OptimizationContext.current().useEagerKeywordTraitFlags()) {
+            keywords.computeTraitFlagsNow();
         }
 
         state.setCachedKeywords(keywords);
@@ -5781,45 +5828,42 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     // Takes one argument like Permanent.Blue+withFlying
     @Override
     public final boolean isValid(final String restriction, final Player sourceController, final Card source, CardTraitBase spellAbility) {
-        // Inclusive restrictions are Card types
-        final String[] incR = restriction.split("\\.", 2);
-
-        boolean testFailed = false;
-        if (incR[0].startsWith("!")) {
-            testFailed = true; // a bit counter logical))
-            incR[0] = incR[0].substring(1); // consume negation sign
-        }
+        final ParsedRestriction p = forge.game.perf.OptimizationContext.current().useParsedRestrictionCache()
+            ? ParsedRestriction.of(restriction)
+            : ParsedRestriction.parse(restriction);
+        final boolean testFailed = p.typeNegated;
+        final String typeStr = p.typeStr;
 
         // need to filter out prepared spells for other cards
         if (getCurrentStateName() == CardStateName.PreparedSpell && isInZone(ZoneType.Exile)) {
             return testFailed;
         }
 
-        if (incR[0].equals("Spell")) {
+        if (typeStr.equals("Spell")) {
             if (!isSpell()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("Permanent")) {
+        } else if (typeStr.equals("Permanent")) {
             if (!isPermanent()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("Effect")) {
+        } else if (typeStr.equals("Effect")) {
             if (!isImmutable()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("Emblem")) {
+        } else if (typeStr.equals("Emblem")) {
             if (!isEmblem()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("Boon")) {
+        } else if (typeStr.equals("Boon")) {
             if (!isBoon()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("card") || incR[0].equals("Card")) {
+        } else if (typeStr.equals("card") || typeStr.equals("Card")) {
             if (isImmutable()) {
                 return testFailed;
             }
-        } else if (incR[0].equals("Any")) {
+        } else if (typeStr.equals("Any")) {
             if (!(isCreature() || isPlaneswalker() || isBattle())) {
                 return false;
             }
@@ -5829,17 +5873,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             ApiType apiType = ((SpellAbility) spellAbility).getApi();
             if (!(ApiType.DealDamage.equals(apiType) || ApiType.PreventDamage.equals(apiType)))
                 return false;*/
-        } else if (!getType().hasStringType(incR[0])) {
+        } else if (!getType().hasStringType(typeStr)) {
             return testFailed; // Check for wrong type
         }
 
-        if (incR.length > 1) {
-            final String excR = incR[1];
-            final String[] exRs = excR.split("\\+"); // Exclusive Restrictions are ...
-            for (String exR : exRs) {
-                if (!hasProperty(exR, sourceController, source, spellAbility)) {
-                    return testFailed;
-                }
+        for (String exR : p.exclusives) {
+            if (!hasProperty(exR, sourceController, source, spellAbility)) {
+                return testFailed;
             }
         }
         return !testFailed;
@@ -7116,8 +7156,24 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         }
 
         // keywords are already sorted by Layer
-        for (KeywordInterface kw : getUnhiddenKeywords(state)) {
-            kw.applyStaticAbility(list);
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        if (ctx.verifyKeywordTraitBitmask()) {
+            boolean bitmaskSaidEmpty = !state.getCachedKeywordCollection().hasStaticAbilityKeyword();
+            int before = list.size();
+            for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                kw.applyStaticAbility(list);
+            }
+            int added = list.size() - before;
+            if (bitmaskSaidEmpty && added > 0) {
+                ctx.reportKeywordBitmaskDivergence(this, "static", added);
+            }
+            return;
+        }
+        boolean useBitmask = ctx.useKeywordTraitBitmask();
+        if (!useBitmask || state.getCachedKeywordCollection().hasStaticAbilityKeyword()) {
+            for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                kw.applyStaticAbility(list);
+            }
         }
     }
 
@@ -7155,8 +7211,24 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         }
 
         // Keywords are already sorted by Layer
-        for (KeywordInterface kw : getUnhiddenKeywords(state)) {
-            kw.applyTrigger(list);
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        if (ctx.verifyKeywordTraitBitmask()) {
+            boolean bitmaskSaidEmpty = !state.getCachedKeywordCollection().hasTriggerKeyword();
+            int before = list.size();
+            for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                kw.applyTrigger(list);
+            }
+            int added = list.size() - before;
+            if (bitmaskSaidEmpty && added > 0) {
+                ctx.reportKeywordBitmaskDivergence(this, "trigger", added);
+            }
+            return;
+        }
+        boolean useBitmask = ctx.useKeywordTraitBitmask();
+        if (!useBitmask || state.getCachedKeywordCollection().hasTriggerKeyword()) {
+            for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                kw.applyTrigger(list);
+            }
         }
     }
 
@@ -7176,8 +7248,24 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         }
 
         // Keywords are already sorted by Layer
-        for (KeywordInterface kw : getUnhiddenKeywords(state)) {
-            kw.applyReplacementEffect(list);
+        forge.game.perf.OptimizationContext replCtx = forge.game.perf.OptimizationContext.current();
+        if (replCtx.verifyKeywordTraitBitmask()) {
+            boolean bitmaskSaidEmpty = !state.getCachedKeywordCollection().hasReplacementEffectKeyword();
+            int before = list.size();
+            for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                kw.applyReplacementEffect(list);
+            }
+            int added = list.size() - before;
+            if (bitmaskSaidEmpty && added > 0) {
+                replCtx.reportKeywordBitmaskDivergence(this, "replacement", added);
+            }
+        } else {
+            boolean useBitmask = replCtx.useKeywordTraitBitmask();
+            if (!useBitmask || state.getCachedKeywordCollection().hasReplacementEffectKeyword()) {
+                for (KeywordInterface kw : getUnhiddenKeywords(state)) {
+                    kw.applyReplacementEffect(list);
+                }
+            }
         }
 
         if (!rulesHost) {

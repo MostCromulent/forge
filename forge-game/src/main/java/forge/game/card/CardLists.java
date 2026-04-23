@@ -185,11 +185,17 @@ public class CardLists {
     }
 
     public static CardCollection getValidCards(Iterable<Card> cardList, String restriction, Player sourceController, Card source, CardTraitBase sa) {
-        return CardLists.filter(cardList, CardPredicates.restriction(restriction.split(","), sourceController, source, sa));
+        String[] parts = forge.game.perf.OptimizationContext.current().useParsedRestrictionCache()
+            ? ParsedRestriction.commaSplit(restriction)
+            : restriction.split(",");
+        return CardLists.filter(cardList, CardPredicates.restriction(parts, sourceController, source, sa));
     }
 
     public static List<Card> getValidCardsAsList(Iterable<Card> cardList, String restriction, Player sourceController, Card source, CardTraitBase sa) {
-        return CardLists.filterAsList(cardList, CardPredicates.restriction(restriction.split(","), sourceController, source, sa));
+        String[] parts = forge.game.perf.OptimizationContext.current().useParsedRestrictionCache()
+            ? ParsedRestriction.commaSplit(restriction)
+            : restriction.split(",");
+        return CardLists.filterAsList(cardList, CardPredicates.restriction(parts, sourceController, source, sa));
     }
 
     public static int getValidCardCount(Iterable<Card> cardList, String restriction, Player sourceController, Card source, CardTraitBase sa) {
@@ -331,14 +337,39 @@ public class CardLists {
      *         criteria; may be empty, but never null.
      */
     public static CardCollection filter(Iterable<Card> cardList, Predicate<Card> filt) {
+        if (forge.game.perf.OptimizationContext.current().useDirectCardListsFilter()) {
+            CardCollection out = new CardCollection();
+            for (Card c : cardList) {
+                if (filt.test(c)) out.add(c);
+            }
+            return out;
+        }
         return new CardCollection(IterableUtil.filter(cardList, filt));
     }
 
     public static CardCollection filter(Iterable<Card> cardList, Predicate<Card> f1, Predicate<Card> f2) {
+        if (forge.game.perf.OptimizationContext.current().useDirectCardListsFilter()) {
+            CardCollection out = new CardCollection();
+            for (Card c : cardList) {
+                if (f1.test(c) && f2.test(c)) out.add(c);
+            }
+            return out;
+        }
         return new CardCollection(IterableUtil.filter(cardList, f1.and(f2)));
     }
 
     public static CardCollection filter(Iterable<Card> cardList, Iterable<Predicate<Card>> filt) {
+        if (forge.game.perf.OptimizationContext.current().useDirectCardListsFilter()) {
+            CardCollection out = new CardCollection();
+            outer:
+            for (Card c : cardList) {
+                for (Predicate<Card> p : filt) {
+                    if (!p.test(c)) continue outer;
+                }
+                out.add(c);
+            }
+            return out;
+        }
         return new CardCollection(IterableUtil.filter(cardList, IterableUtil.and(filt)));
     }
 

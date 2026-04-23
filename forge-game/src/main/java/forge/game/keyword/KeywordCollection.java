@@ -17,8 +17,57 @@ public class KeywordCollection implements Iterable<KeywordInterface> {
     private final Multimap<Keyword, KeywordInterface> map = MultimapBuilder.hashKeys()
             .linkedHashSetValues().build();
 
+    // H019 trait bitmask: lazily computed, invalidated on mutation.
+    // Tracks whether any contained keyword contributes triggers /
+    // replacement effects / static abilities. Lets Card.update* skip
+    // the keyword iteration loop when the flags are false.
+    private transient boolean traitFlagsDirty = true;
+    private transient boolean hasReplacementKw;
+    private transient boolean hasTriggerKw;
+    private transient boolean hasStaticKw;
+
     public KeywordCollection() {
         super();
+    }
+
+    private void invalidateTraitFlags() { traitFlagsDirty = true; }
+
+    private void computeTraitFlagsIfDirty() {
+        if (!traitFlagsDirty) return;
+        boolean hRE = false, hTr = false, hSA = false;
+        for (KeywordInterface kw : map.values()) {
+            if (!hRE && !kw.getReplacements().isEmpty()) hRE = true;
+            if (!hTr && !kw.getTriggers().isEmpty()) hTr = true;
+            if (!hSA && !kw.getStaticAbilities().isEmpty()) hSA = true;
+            if (hRE && hTr && hSA) break;
+        }
+        hasReplacementKw = hRE;
+        hasTriggerKw = hTr;
+        hasStaticKw = hSA;
+        traitFlagsDirty = false;
+    }
+
+    public boolean hasReplacementEffectKeyword() {
+        computeTraitFlagsIfDirty();
+        return hasReplacementKw;
+    }
+
+    public boolean hasTriggerKeyword() {
+        computeTraitFlagsIfDirty();
+        return hasTriggerKw;
+    }
+
+    public boolean hasStaticAbilityKeyword() {
+        computeTraitFlagsIfDirty();
+        return hasStaticKw;
+    }
+
+    // H020d: eager precompute entry point. Called at the end of
+    // Card.updateKeywordsCache (when the collection is fully built)
+    // so subsequent bitmask queries are single-field reads instead
+    // of triggering a lazy walk.
+    public void computeTraitFlagsNow() {
+        computeTraitFlagsIfDirty();
     }
 
     public boolean contains(Keyword keyword) {
@@ -53,6 +102,7 @@ public class KeywordCollection implements Iterable<KeywordInterface> {
         Collection<KeywordInterface> list = map.get(keyword);
         if (list.isEmpty() || !inst.redundant(list)) {
             list.add(inst);
+            invalidateTraitFlags();
             return true;
         }
         return false;
@@ -86,15 +136,20 @@ public class KeywordCollection implements Iterable<KeywordInterface> {
             }
         }
 
+        if (result) invalidateTraitFlags();
         return result;
     }
 
     public boolean remove(KeywordInterface keyword) {
-        return map.remove(keyword.getKeyword(), keyword);
+        boolean r = map.remove(keyword.getKeyword(), keyword);
+        if (r) invalidateTraitFlags();
+        return r;
     }
 
     public boolean removeAll(Keyword kenum) {
-        return !map.removeAll(kenum).isEmpty();
+        boolean r = !map.removeAll(kenum).isEmpty();
+        if (r) invalidateTraitFlags();
+        return r;
     }
 
     public boolean removeAll(Iterable<String> keywords) {
@@ -114,11 +169,13 @@ public class KeywordCollection implements Iterable<KeywordInterface> {
                 result = true;
             }
         }
+        if (result) invalidateTraitFlags();
         return result;
     }
 
     public void clear() {
         map.clear();
+        invalidateTraitFlags();
     }
 
     public boolean contains(String keyword) {

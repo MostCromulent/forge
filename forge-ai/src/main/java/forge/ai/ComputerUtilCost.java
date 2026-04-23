@@ -530,8 +530,8 @@ public class ComputerUtilCost {
     public static boolean canPayCost(final Cost cost, final SpellAbility sa, final Player payer, final boolean effect) {
         forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
         forge.game.perf.CostCache cache = ctx.costCache();
-        if (cache != null) {
-            String key = buildCostCacheKey(cost, sa, payer, effect);
+        if (cache != null && cache.isScoped(payer)) {
+            String key = buildCostCacheKey(cost, sa, effect, cache);
             if (ctx.verifyCostCache()) {
                 boolean fresh = canPayCostImpl(cost, sa, payer, effect);
                 Boolean prior = cache.get(key);
@@ -550,30 +550,18 @@ public class ComputerUtilCost {
         return canPayCostImpl(cost, sa, payer, effect);
     }
 
-    private static String buildCostCacheKey(final Cost cost, final SpellAbility sa, final Player payer, final boolean effect) {
+    private static String buildCostCacheKey(final Cost cost, final SpellAbility sa, final boolean effect, final forge.game.perf.CostCache cache) {
         StringBuilder sb = new StringBuilder(96);
-        // Cost/SA identity — SA instance identity is the most specific, but
-        // two separate SAs with identical host-card + description produce the
-        // same canPayCost answer under the same mana pool. Use host+desc for
-        // cross-SA sharing.
         forge.game.card.Card host = sa.getHostCard();
         sb.append(host == null ? "null" : host.getName()).append('|');
         sb.append(sa.getDescription()).append('|');
         sb.append(cost == null ? "null" : cost.toString()).append('|');
         sb.append(effect ? 'E' : 'n').append('|');
-        // Optional costs (kicker, buyback, etc.) change the effective cost.
         for (forge.game.spellability.OptionalCost oc : sa.getOptionalCosts()) {
             sb.append(oc.ordinal()).append(',');
         }
         sb.append('|');
-        // Payer mana-pool fingerprint: life (for Phyrexian) + mana pool +
-        // untapped mana sources' ids and tap states.
-        sb.append(payer.getLife()).append('|');
-        sb.append(payer.getManaPool().toString()).append('|');
-        for (forge.game.card.Card c : payer.getCardsIn(forge.game.zone.ZoneType.Battlefield)) {
-            if (c.getManaAbilities().isEmpty()) continue;
-            sb.append(c.getId()).append(':').append(c.isTapped() ? '0' : '1').append(';');
-        }
+        sb.append(cache.getManaFingerprint());
         return sb.toString();
     }
 
