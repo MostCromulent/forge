@@ -7166,6 +7166,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public ReplacementEffect addReplacementEffect(final ReplacementEffect replacementEffect) {
         currentState.addReplacementEffect(replacementEffect);
+        if (game != null) game.registerCardHasReplacement(this);
         return replacementEffect;
     }
 

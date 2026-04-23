@@ -116,6 +116,22 @@ public class Game {
     private Map<Player, Card> topLibsCast = Maps.newHashMap();
     private Map<Card, Integer> facedownWhileCasting = Maps.newHashMap();
 
+    // H006: index of cards that have ever had a replacement effect added.
+    // Conservative (never removes; card that once had an RE and lost it is
+    // still visited). Used by ReplacementHandler when the perf testbed
+    // enables useReplacementIndexFastPath, to iterate only this set instead
+    // of forEachCardInGame.
+    private final java.util.Set<Card> cardsWithReplacements =
+        java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+
+    public void registerCardHasReplacement(Card c) {
+        if (c != null) cardsWithReplacements.add(c);
+    }
+
+    public java.util.Set<Card> getCardsWithReplacements() {
+        return cardsWithReplacements;
+    }
+
     private Player initiative;
     private Player monarch;
     private Player monarchBeginTurn;

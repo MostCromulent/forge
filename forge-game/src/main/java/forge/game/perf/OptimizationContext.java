@@ -74,4 +74,21 @@ public class OptimizationContext {
                                              boolean freshResult) {
         // Baseline: no-op. Verify variants override to log.
     }
+
+    // H006: in ReplacementHandler.getReplacementList, iterate
+    // game.getCardsWithReplacements() (a precomputed index) instead of
+    // forEachCardInGame. Correctness depends on the index capturing every
+    // card that could contribute a replacement effect — currently hooks
+    // only Card.addReplacementEffect, so auras/static-abilities that grant
+    // dynamic REs may be missed. Verify variant validates empirically.
+    public boolean useReplacementIndexFastPath() { return false; }
+
+    // H006 verify: run both old (forEachCardInGame) and new (indexed)
+    // iterations; compare result multisets; log any replacement effect
+    // produced by one but not the other.
+    public boolean verifyReplacementIndex() { return false; }
+
+    public void reportReplacementIndexDivergence(String description) {
+        // Baseline: no-op. Verify variants override.
+    }
 }

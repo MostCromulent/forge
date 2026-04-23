@@ -98,8 +98,9 @@ public class ReplacementHandler {
 
         final List<ReplacementEffect> possibleReplacers = Lists.newArrayList();
 
-        // Round up Static replacement effects
-        game.forEachCardInGame(new Visitor<Card>() {
+        // H006: visitor callback extracted so we can drive it over either
+        // forEachCardInGame (default) or the precomputed index (variant).
+        final Visitor<Card> visitor = new Visitor<Card>() {
             @Override
             public boolean visit(Card crd) {
                 Card c = preList.get(crd);
@@ -132,8 +133,31 @@ public class ReplacementHandler {
                 }
                 return true;
             }
+        };
 
-        }, affectedCard != null && affectedCard.isInZone(ZoneType.Sideboard));
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        if (ctx.verifyReplacementIndex()) {
+            // Verify mode: run old and new paths, compare multisets.
+            List<ReplacementEffect> oldResult = Lists.newArrayList(possibleReplacers);
+            game.forEachCardInGame(visitor, affectedCard != null && affectedCard.isInZone(ZoneType.Sideboard));
+            List<ReplacementEffect> afterFull = Lists.newArrayList(possibleReplacers);
+            // Now reset and run indexed path on top of `oldResult`
+            possibleReplacers.clear();
+            possibleReplacers.addAll(oldResult);
+            for (Card c : game.getCardsWithReplacements()) visitor.visit(c);
+            List<ReplacementEffect> afterIndex = Lists.newArrayList(possibleReplacers);
+            if (!afterFull.equals(afterIndex)) {
+                ctx.reportReplacementIndexDivergence(
+                    "event=" + event + " full=" + afterFull.size() + " indexed=" + afterIndex.size());
+            }
+            // Use the authoritative (full) result to govern game semantics.
+            possibleReplacers.clear();
+            possibleReplacers.addAll(afterFull);
+        } else if (ctx.useReplacementIndexFastPath()) {
+            for (Card c : game.getCardsWithReplacements()) visitor.visit(c);
+        } else {
+            game.forEachCardInGame(visitor, affectedCard != null && affectedCard.isInZone(ZoneType.Sideboard));
+        }
 
         if (affectedLKI != null) {
             // need to set the Host Card there so it is not connected to LKI anymore?
