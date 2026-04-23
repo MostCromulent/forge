@@ -47,4 +47,10 @@ public class OptimizationContext {
                                          boolean freshResult) {
         // Baseline: no-op. Verify variants override to log.
     }
+
+    // H003: use binary search over identical-equivalence-class blocker groups
+    // in AiAttackController.notNeededAsBlockers. Under EQUIVALENCE oracle —
+    // specific card released may differ from baseline but equivalence class
+    // + count must match. Default baseline: false (original per-blocker loop).
+    public boolean useBinarySearchNotNeeded() { return false; }
 }

@@ -118,6 +118,45 @@ public class AiAttackController {
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate single specified attacker
 
+    // H003: two cards are interchangeable for the notNeededAsBlockers
+    // batch-release test iff they have identical AI-relevant state. All
+    // blockers here are from ai.getCreaturesInPlay() so controller is
+    // always the same — no need to check.
+    private static boolean isAiEquivalentBlocker(Card a, Card b) {
+        if (a.getName() == null || b.getName() == null) return false;
+        if (!a.getName().equals(b.getName())) return false;
+        if (a.getNetPower() != b.getNetPower()) return false;
+        if (a.getNetToughness() != b.getNetToughness()) return false;
+        if (a.isTapped() != b.isTapped()) return false;
+        if (a.hasSickness() != b.hasSickness()) return false;
+        if (!a.getAttachedCards().isEmpty() || !b.getAttachedCards().isEmpty()) return false;
+        if (a.getDamage() != b.getDamage()) return false;
+        // Counters affect P/T but also modify combat math more broadly.
+        if (!a.getCounters().equals(b.getCounters())) return false;
+        // Keyword sets — use size + per-keyword compare.
+        List<forge.game.keyword.KeywordInterface> ak = a.getKeywords();
+        List<forge.game.keyword.KeywordInterface> bk = b.getKeywords();
+        if (ak.size() != bk.size()) return false;
+        int ah = 0, bh = 0;
+        for (forge.game.keyword.KeywordInterface k : ak) ah ^= k.getOriginal().hashCode();
+        for (forge.game.keyword.KeywordInterface k : bk) bh ^= k.getOriginal().hashCode();
+        return ah == bh;
+    }
+
+    // Mirrors the original per-blocker damage computation for non-aggro
+    // decks' life-trade check.
+    private int perAttackerDmg(Card c, int thresholdMod) {
+        int dmg = c.getNetCombatDamage();
+        if (c.toughnessAssignsDamage()) {
+            dmg += ComputerUtilCombat.predictToughnessBonusOfAttacker(c, null, null, true);
+        } else {
+            dmg += ComputerUtilCombat.predictPowerBonusOfAttacker(c, null, null, true);
+        }
+        if (c.hasDoubleStrike()) dmg *= 2;
+        dmg += thresholdMod;
+        return dmg;
+    }
+
     private void refreshCombatants(GameEntity defender) {
         if (defender instanceof Card card && card.isBattle()) {
             this.oppList = getOpponentCreatures(card.getProtectingPlayer());
@@ -414,42 +453,112 @@ public class AiAttackController {
             // try to use strongest as attacker first
             CardLists.sortByPowerDesc(blockers);
 
-            for (Card c : blockers) {
+            final boolean useBinarySearch = forge.game.perf.OptimizationContext.current().useBinarySearchNotNeeded();
+
+            int i = 0;
+            outerLoop:
+            while (i < blockers.size()) {
+                Card c = blockers.get(i);
                 if (vigilantes.contains(c)) {
                     // TODO predict the chance it might die if attacking
+                    i++;
                     continue;
                 }
+
+                // H003: detect a contiguous run of identical-equivalence-class blockers
+                // starting at i. Process the whole group in a single batch predict +
+                // optional binary search on MIN_VALUE. Reduces predict calls from
+                // group-size N to 1 (best case) or 1+log2(N) (bisect case).
+                int groupEnd = i + 1;
+                if (useBinarySearch) {
+                    while (groupEnd < blockers.size()
+                            && !vigilantes.contains(blockers.get(groupEnd))
+                            && isAiEquivalentBlocker(c, blockers.get(groupEnd))) {
+                        groupEnd++;
+                    }
+                }
+
+                if (useBinarySearch && groupEnd - i > 1) {
+                    int groupSize = groupEnd - i;
+                    // Optimistic: try adding all N to exclusion at once.
+                    for (int j = 0; j < groupSize; j++) notNeededAsBlockers.add(blockers.get(i + j));
+                    int lifeAll = ComputerUtil.predictNextCombatsRemainingLife(ai, playAggro, pilotsNonAggroDeck, 0, notNeededAsBlockers);
+
+                    if (lifeAll == Integer.MIN_VALUE) {
+                        // Bisect to find max safe K (0..groupSize-1).
+                        for (int j = 0; j < groupSize; j++) notNeededAsBlockers.remove(blockers.get(i + j));
+                        int lo = 0, hi = groupSize - 1;
+                        int safeK = 0;
+                        int safeLife = lastAcceptableBaselineLife;
+                        while (lo <= hi) {
+                            int mid = (lo + hi) / 2;
+                            for (int j = 0; j < mid; j++) notNeededAsBlockers.add(blockers.get(i + j));
+                            int probeLife = ComputerUtil.predictNextCombatsRemainingLife(ai, playAggro, pilotsNonAggroDeck, 0, notNeededAsBlockers);
+                            for (int j = 0; j < mid; j++) notNeededAsBlockers.remove(blockers.get(i + j));
+                            if (probeLife != Integer.MIN_VALUE) {
+                                safeK = mid;
+                                safeLife = probeLife;
+                                lo = mid + 1;
+                            } else {
+                                hi = mid - 1;
+                            }
+                        }
+                        // Apply safe-K. Same damage-trade rule as original, but aggregated
+                        // over the K identical tokens.
+                        if (safeK > 0) {
+                            boolean tradeOk = true;
+                            if (pilotsNonAggroDeck) {
+                                int dmgPerToken = perAttackerDmg(c, thresholdMod);
+                                int totalDelta = Math.abs(safeLife - lastAcceptableBaselineLife);
+                                if (totalDelta > dmgPerToken * safeK) {
+                                    tradeOk = false;
+                                }
+                            }
+                            if (tradeOk) {
+                                for (int j = 0; j < safeK; j++) notNeededAsBlockers.add(blockers.get(i + j));
+                                if (pilotsNonAggroDeck) lastAcceptableBaselineLife = safeLife;
+                            }
+                        }
+                        // MIN_VALUE path mirrors original "break" — cannot release more beyond this point.
+                        break outerLoop;
+                    }
+
+                    // Survivable. Check damage-trade for the whole group (aggregate).
+                    if (pilotsNonAggroDeck) {
+                        int dmgPerToken = perAttackerDmg(c, thresholdMod);
+                        int totalDelta = Math.abs(lifeAll - lastAcceptableBaselineLife);
+                        if (totalDelta > dmgPerToken * groupSize) {
+                            // Trade fails aggregate — remove all, try next group.
+                            for (int j = 0; j < groupSize; j++) notNeededAsBlockers.remove(blockers.get(i + j));
+                            i = groupEnd;
+                            continue;
+                        }
+                        lastAcceptableBaselineLife = lifeAll;
+                    }
+                    // All accepted — advance past group.
+                    i = groupEnd;
+                    continue;
+                }
+
+                // Singleton path — identical to original loop body.
                 notNeededAsBlockers.add(c);
                 int currentBaselineLife = ComputerUtil.predictNextCombatsRemainingLife(ai, playAggro, pilotsNonAggroDeck, 0, notNeededAsBlockers);
-                // AI doesn't know from what it will lose, so it might still keep an unnecessary blocker back sometimes
                 if (currentBaselineLife == Integer.MIN_VALUE) {
                     notNeededAsBlockers.remove(c);
                     break;
                 }
-
-                // in Aggro Decks AI wants to deal as much damage as it can
                 if (pilotsNonAggroDeck) {
-                    int ownAttackerDmg = c.getNetCombatDamage();
-                    // TODO maybe add performance switch to skip these predictions?
-                    if (c.toughnessAssignsDamage()) {
-                        ownAttackerDmg += ComputerUtilCombat.predictToughnessBonusOfAttacker(c, null, null, true);
-                    } else {
-                        ownAttackerDmg += ComputerUtilCombat.predictPowerBonusOfAttacker(c, null, null, true);
-                    }
-                    if (c.hasDoubleStrike()) {
-                        ownAttackerDmg *= 2;
-                    }
-                    ownAttackerDmg += thresholdMod;
-                    // bail if it would cause AI more life loss from counterattack than the damage it provides as attacker
+                    int ownAttackerDmg = perAttackerDmg(c, thresholdMod);
                     if (Math.abs(currentBaselineLife - lastAcceptableBaselineLife) > ownAttackerDmg) {
                         notNeededAsBlockers.remove(c);
-                        // try find more
+                        i++;
                         continue;
                     } else if (Math.abs(currentBaselineLife - lastAcceptableBaselineLife) == ownAttackerDmg) {
                         // TODO add non sim-AI property for life trade chance that scales down with amount and when difference increases
                     }
                     lastAcceptableBaselineLife = currentBaselineLife;
                 }
+                i++;
             }
         }
 
