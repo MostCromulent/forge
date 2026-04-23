@@ -804,6 +804,11 @@ public class AiAttackController {
      * @return a {@link forge.game.combat.Combat} object.
      */
     public final int declareAttackers(final Combat combat) {
+        return forge.game.perf.PerfCounters.time("AiAttackController.declareAttackers",
+            () -> declareAttackersImpl(combat));
+    }
+
+    private int declareAttackersImpl(final Combat combat) {
         // something prevents attacking, try another
         if (this.attackers.isEmpty() && ai.getOpponents().size() > 1) {
             final PlayerCollection opps = ai.getOpponents();

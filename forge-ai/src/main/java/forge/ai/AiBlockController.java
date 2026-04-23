@@ -998,12 +998,14 @@ public class AiBlockController {
         assignBlockersForCombat(combat, null);
     }
     public void assignBlockersForCombat(final Combat combat, final CardCollection exludedBlockers) {
-        List<Card> possibleBlockers = ai.getCreaturesInPlay();
-        if (exludedBlockers != null && !exludedBlockers.isEmpty()) {
-            possibleBlockers.removeAll(exludedBlockers);
-        }
-        attackers = sortPotentialAttackers(combat);
-        assignBlockers(combat, possibleBlockers);
+        forge.game.perf.PerfCounters.time("AiBlockController.assignBlockersForCombat", () -> {
+            List<Card> possibleBlockers = ai.getCreaturesInPlay();
+            if (exludedBlockers != null && !exludedBlockers.isEmpty()) {
+                possibleBlockers.removeAll(exludedBlockers);
+            }
+            attackers = sortPotentialAttackers(combat);
+            assignBlockers(combat, possibleBlockers);
+        });
     }
     /**
      * assignBlockersForCombat() with additional and possibly "virtual" blockers.

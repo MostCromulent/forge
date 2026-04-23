@@ -3112,6 +3112,11 @@ public class ComputerUtil {
                 List.of(AiCache::identity, Objects::equals, Objects::equals), ai, serious, payment);
     }
     public static int predictNextCombatsRemainingLife(Player ai, boolean serious, boolean checkDiff, int payment, final CardCollection excludedBlockers) {
+        return forge.game.perf.PerfCounters.time("ComputerUtil.predictNextCombatsRemainingLife",
+            () -> predictNextCombatsRemainingLifeImpl(ai, serious, checkDiff, payment, excludedBlockers));
+    }
+
+    private static int predictNextCombatsRemainingLifeImpl(Player ai, boolean serious, boolean checkDiff, int payment, final CardCollection excludedBlockers) {
         // life won't change
         int remainingLife = Integer.MAX_VALUE;
 
