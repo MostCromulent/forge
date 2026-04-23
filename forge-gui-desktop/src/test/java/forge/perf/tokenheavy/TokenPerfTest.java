@@ -350,4 +350,195 @@ public class TokenPerfTest {
         runOneFixture(DEFAULT_FIXTURE, lobby);
         return slots.get(0).decisions;
     }
+
+    // --- Real-games discovery-mode profiling -------------------------------
+    //
+    // Complementary to the fixture-based hypothesis A/B workflow: run N full
+    // 4-player AI-vs-AI games to natural completion (or timeout) under a single
+    // JFR recording. No instrumentation, no oracle — pure profile collection
+    // to validate that fixture-based hot paths reflect real-gameplay hot paths.
+    //
+    // Run: mvn -pl forge-gui-desktop -am test -Dtest=TokenPerfTest#profileRealGames
+    //        [-Dperf.games=5] [-Dperf.warmup=1] [-Dperf.maxSecondsPerGame=180]
+    //        [-Dperf.decks=tokenish]   # filter precon names containing substring
+    //
+    // Gated by "stress" group same as the rest of the class; not run in CI.
+
+    private static final int REAL_GAMES_DEFAULT = 5;
+    private static final int REAL_GAMES_WARMUP = 1;
+    private static final int REAL_GAMES_PLAYERS = 4;
+
+    @Test(description = "Discovery mode — JFR profile N full AI-vs-AI games with random precons")
+    public void profileRealGames() throws Exception {
+        int games = Math.max(1, Integer.getInteger("perf.games", REAL_GAMES_DEFAULT));
+        int warmup = Math.max(0, Integer.getInteger("perf.warmup", REAL_GAMES_WARMUP));
+        int perGameTimeoutSec = Math.max(30, Integer.getInteger("perf.maxSecondsPerGame", 180));
+        String deckFilter = System.getProperty("perf.decks", "").toLowerCase();
+
+        System.out.println("=== Real-games profile: " + games + " games ("
+            + warmup + " warmup), " + REAL_GAMES_PLAYERS + " players each, timeout "
+            + perGameTimeoutSec + "s/game"
+            + (deckFilter.isEmpty() ? "" : ", deck filter: '" + deckFilter + "'") + " ===");
+
+        // Seed RNGs so the whole batch is repeatable. Different seed per game
+        // so games differ from each other but the batch as a whole is stable.
+        seedRandoms(0xF0D6L);
+
+        // Warmup (not profiled, not reported — just absorbs JVM startup / JIT)
+        for (int i = 0; i < warmup; i++) {
+            runOneRealGame(i + 1, perGameTimeoutSec, deckFilter, true);
+        }
+
+        jdk.jfr.Recording jfr = startRealGamesJfr();
+        long batchT0 = System.nanoTime();
+        List<RealGameResult> results = new ArrayList<>();
+        try {
+            for (int i = 0; i < games; i++) {
+                results.add(runOneRealGame(i + 1, perGameTimeoutSec, deckFilter, false));
+            }
+        } finally {
+            stopJfr(jfr);
+        }
+        long batchNanos = System.nanoTime() - batchT0;
+
+        printRealGamesReport(results, batchNanos);
+    }
+
+    private static final class RealGameResult {
+        int gameNum;
+        long gameMs;
+        int turns;
+        int totalBoard;
+        String winner;
+        List<String> deckNames;
+        String status;   // "ok" | "timeout" | "error:<msg>"
+    }
+
+    private RealGameResult runOneRealGame(int gameNum, int timeoutSec, String deckFilter, boolean warmup) {
+        GameRules rules = new GameRules(GameType.Constructed);
+        rules.setPlayForAnte(false);
+        rules.setMatchAnteRarity(false);
+        rules.setGamesPerMatch(1);
+        rules.setManaBurn(false);
+        rules.setSimTimeout(timeoutSec);
+
+        List<RegisteredPlayer> players = new ArrayList<>();
+        List<String> deckNames = new ArrayList<>();
+        for (int i = 0; i < REAL_GAMES_PLAYERS; i++) {
+            Deck deck = pickDeck(deckFilter);
+            deckNames.add(deck.getName());
+            RegisteredPlayer rp = new RegisteredPlayer(deck);
+            rp.setPlayer(new forge.ai.LobbyPlayerAi("AI-" + (i + 1), java.util.Set.of()));
+            players.add(rp);
+        }
+
+        Match match = new Match(rules, players, "TokenPerfTest-RealGames");
+        Game game = match.createGame();
+
+        RealGameResult r = new RealGameResult();
+        r.gameNum = gameNum;
+        r.deckNames = deckNames;
+        r.status = "ok";
+
+        org.apache.commons.lang3.time.StopWatch sw = new org.apache.commons.lang3.time.StopWatch();
+        sw.start();
+        try {
+            forge.view.TimeLimitedCodeBlock.runWithTimeout(
+                () -> match.startGame(game), timeoutSec, TimeUnit.SECONDS);
+        } catch (TimeoutException e) {
+            r.status = "timeout";
+        } catch (Exception | StackOverflowError e) {
+            r.status = "error:" + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName());
+        } finally {
+            if (sw.isStarted()) sw.stop();
+            if (!game.isGameOver()) game.setGameOver(GameEndReason.Draw);
+        }
+
+        r.gameMs = sw.getTime();
+        r.turns = game.getPhaseHandler().getTurn();
+        try {
+            int board = 0;
+            for (forge.game.player.Player p : game.getPlayers()) {
+                board += p.getCardsIn(forge.game.zone.ZoneType.Battlefield).size();
+            }
+            r.totalBoard = board;
+        } catch (Exception ignored) { r.totalBoard = -1; }
+        try {
+            r.winner = game.getOutcome().isDraw() ? "Draw"
+                : game.getOutcome().getWinningLobbyPlayer().getName();
+        } catch (Exception e) { r.winner = "?"; }
+
+        String prefix = warmup ? "  [warmup] " : "  ";
+        System.out.printf("%sGame %d: %dms, %d turns, board=%d, winner=%s, status=%s%n    decks=%s%n",
+            prefix, r.gameNum, r.gameMs, r.turns, r.totalBoard, r.winner, r.status,
+            String.join(" | ", r.deckNames));
+        return r;
+    }
+
+    // Pick a deck from TestDeckLoader with optional name-substring filter.
+    // Falls back to unfiltered random pick if the filter matches nothing.
+    private Deck pickDeck(String deckFilter) {
+        if (deckFilter.isEmpty()) return TestDeckLoader.getRandomPrecon();
+        // Try up to 20 random picks looking for a deck whose name contains the filter.
+        for (int i = 0; i < 20; i++) {
+            Deck d = TestDeckLoader.getRandomPrecon();
+            if (d.getName().toLowerCase().contains(deckFilter)) return d;
+        }
+        // Filter too restrictive; fall back to unfiltered.
+        return TestDeckLoader.getRandomPrecon();
+    }
+
+    private jdk.jfr.Recording startRealGamesJfr() {
+        try {
+            jdk.jfr.Recording r = new jdk.jfr.Recording(
+                jdk.jfr.Configuration.getConfiguration("profile"));
+            long periodMs = Long.getLong("jfr.periodMs", 10L);  // default 10ms for long runs
+            r.enable("jdk.ExecutionSample").withPeriod(java.time.Duration.ofMillis(periodMs));
+            r.enable("jdk.NativeMethodSample").withPeriod(java.time.Duration.ofMillis(periodMs));
+            r.setName("tokenperf-realgames");
+            String ts = java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+            java.nio.file.Path out = HypothesisLog.repoRoot()
+                .resolve("target").resolve("perf").resolve("realgames-" + ts + ".jfr");
+            java.nio.file.Files.createDirectories(out.getParent());
+            r.setDestination(out);
+            r.start();
+            System.out.println("JFR recording: " + out + " (exec-sample period=" + periodMs + "ms)");
+            return r;
+        } catch (Exception e) {
+            System.err.println("JFR start failed: " + e);
+            return null;
+        }
+    }
+
+    private void seedRandoms(long seed) throws Exception {
+        java.lang.reflect.Field randField = TestDeckLoader.class.getDeclaredField("random");
+        randField.setAccessible(true);
+        ((java.util.Random) randField.get(null)).setSeed(seed);
+        forge.util.MyRandom.setRandom(new java.util.Random(seed));
+    }
+
+    private void printRealGamesReport(List<RealGameResult> results, long batchNanos) {
+        System.out.println();
+        System.out.println("=== REAL-GAMES RESULTS ===");
+        long sumMs = 0;
+        int sumTurns = 0;
+        int sumBoard = 0;
+        int okCount = 0;
+        for (RealGameResult r : results) {
+            sumMs += r.gameMs;
+            sumTurns += r.turns;
+            if (r.totalBoard > 0) sumBoard += r.totalBoard;
+            if ("ok".equals(r.status)) okCount++;
+        }
+        int n = results.size();
+        System.out.printf("  Games: %d  (ok: %d, non-ok: %d)%n", n, okCount, n - okCount);
+        System.out.printf("  Batch wall: %.1fs  (avg per game: %.1fs)%n",
+            batchNanos / 1e9, n > 0 ? batchNanos / 1e9 / n : 0.0);
+        System.out.printf("  Avg game length: %d turns, final board: %d permanents%n",
+            n > 0 ? sumTurns / n : 0, n > 0 ? sumBoard / n : 0);
+        System.out.println();
+        System.out.println("  Render flame graph:");
+        System.out.println("    pushd target && java ../.claude/tools/JfrFlameGraph.java perf/realgames-*.jfr && popd");
+    }
 }
