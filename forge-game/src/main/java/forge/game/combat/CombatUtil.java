@@ -987,6 +987,28 @@ public class CombatUtil {
      * @return a boolean.
      */
     public static boolean canBlock(final Card attacker, final Card blocker, final boolean nextTurn) {
+        forge.game.perf.OptimizationContext ctx = forge.game.perf.OptimizationContext.current();
+        forge.game.perf.CanBlockCache cache = ctx.canBlockCache();
+        if (cache != null) {
+            if (ctx.verifyCanBlock()) {
+                boolean fresh = canBlockPureImpl(attacker, blocker, nextTurn);
+                Boolean prior = cache.getPure(attacker, blocker, nextTurn);
+                if (prior != null && prior.booleanValue() != fresh) {
+                    ctx.reportCanBlockDivergence(attacker, blocker, prior.booleanValue(), fresh);
+                }
+                cache.putPure(attacker, blocker, nextTurn, fresh);
+                return fresh;
+            }
+            Boolean cached = cache.getPure(attacker, blocker, nextTurn);
+            if (cached != null) return cached.booleanValue();
+            boolean result = canBlockPureImpl(attacker, blocker, nextTurn);
+            cache.putPure(attacker, blocker, nextTurn, result);
+            return result;
+        }
+        return canBlockPureImpl(attacker, blocker, nextTurn);
+    }
+
+    private static boolean canBlockPureImpl(final Card attacker, final Card blocker, final boolean nextTurn) {
         if (attacker == null || blocker == null || !blocker.isCreature()) {
             return false;
         }

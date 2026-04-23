@@ -368,40 +368,92 @@ public class TokenPerfTest {
     private static final int REAL_GAMES_WARMUP = 1;
     private static final int REAL_GAMES_PLAYERS = 4;
 
-    @Test(description = "Discovery mode — JFR profile N full AI-vs-AI games with random precons")
+    @Test(description = "Discovery mode — JFR profile N full AI-vs-AI games with random precons; optionally under a variant context via -Dhypothesis=<name>")
     public void profileRealGames() throws Exception {
         int games = Math.max(1, Integer.getInteger("perf.games", REAL_GAMES_DEFAULT));
         int warmup = Math.max(0, Integer.getInteger("perf.warmup", REAL_GAMES_WARMUP));
         int perGameTimeoutSec = Math.max(30, Integer.getInteger("perf.maxSecondsPerGame", 180));
         String deckFilter = System.getProperty("perf.decks", "").toLowerCase();
+        String hypothesisId = System.getProperty("hypothesis", "");
+
+        OptimizationContext variantCtx = OptimizationContext.BASELINE;
+        if (!hypothesisId.isEmpty()) {
+            variantCtx = loadVariant(hypothesisId);
+        }
 
         System.out.println("=== Real-games profile: " + games + " games ("
             + warmup + " warmup), " + REAL_GAMES_PLAYERS + " players each, timeout "
             + perGameTimeoutSec + "s/game"
-            + (deckFilter.isEmpty() ? "" : ", deck filter: '" + deckFilter + "'") + " ===");
+            + (deckFilter.isEmpty() ? "" : ", deck filter: '" + deckFilter + "'")
+            + (hypothesisId.isEmpty() ? " [BASELINE context]" : " [variant: " + hypothesisId + "]")
+            + " ===");
 
         // Seed RNGs so the whole batch is repeatable. Different seed per game
         // so games differ from each other but the batch as a whole is stable.
         seedRandoms(0xF0D6L);
 
         // Warmup (not profiled, not reported — just absorbs JVM startup / JIT)
-        for (int i = 0; i < warmup; i++) {
-            runOneRealGame(i + 1, perGameTimeoutSec, deckFilter, true);
+        OptimizationContext.set(variantCtx);
+        try {
+            for (int i = 0; i < warmup; i++) {
+                runOneRealGame(i + 1, perGameTimeoutSec, deckFilter, true);
+            }
+        } finally {
+            OptimizationContext.reset();
         }
 
+        PerfCounters.resetAll();
+        PerfCounters.enabled = true;
         jdk.jfr.Recording jfr = startRealGamesJfr();
         long batchT0 = System.nanoTime();
         List<RealGameResult> results = new ArrayList<>();
+        OptimizationContext.set(variantCtx);
         try {
             for (int i = 0; i < games; i++) {
                 results.add(runOneRealGame(i + 1, perGameTimeoutSec, deckFilter, false));
             }
         } finally {
+            OptimizationContext.reset();
+            PerfCounters.enabled = false;
             stopJfr(jfr);
         }
         long batchNanos = System.nanoTime() - batchT0;
 
         printRealGamesReport(results, batchNanos);
+        printRealGamesCounters();
+
+        // H002 verify: surface cache hit/miss stats + divergences so absence of
+        // error output doesn't hide an unused-cache false positive.
+        if (variantCtx instanceof forge.perf.tokenheavy.variants.H002_CanBlockCache_Verify) {
+            forge.perf.tokenheavy.variants.H002_CanBlockCache_Verify v =
+                (forge.perf.tokenheavy.variants.H002_CanBlockCache_Verify) variantCtx;
+            forge.game.perf.CanBlockCache c = v.getCacheForReport();
+            System.out.println();
+            System.out.println("=== H002 VERIFY STATS ===");
+            System.out.printf("  divergences:    %d%n",
+                forge.perf.tokenheavy.variants.H002_CanBlockCache_Verify.divergenceCount());
+            System.out.printf("  cache hits:     %d%n", c.pureHits());
+            System.out.printf("  cache misses:   %d%n", c.pureMisses());
+            System.out.printf("  cache size:     %d%n", c.pureSize());
+            long total = c.pureHits() + c.pureMisses();
+            if (total > 0) {
+                System.out.printf("  hit rate:       %.1f%%%n", 100.0 * c.pureHits() / total);
+            }
+        }
+    }
+
+    private void printRealGamesCounters() {
+        System.out.println();
+        System.out.println("=== ENGINE / AI COUNTERS (batch totals) ===");
+        java.util.Map<String, forge.game.perf.PerfCounters.Counter> snap = PerfCounters.snapshot();
+        if (snap.isEmpty()) {
+            System.out.println("  (no counters fired)");
+            return;
+        }
+        snap.entrySet().stream()
+            .sorted((a, b) -> Long.compare(b.getValue().nanos(), a.getValue().nanos()))
+            .forEach(e -> System.out.printf("  %-55s %10d calls %8d ms%n",
+                e.getKey(), e.getValue().calls(), e.getValue().nanos() / 1_000_000));
     }
 
     private static final class RealGameResult {
