@@ -78,4 +78,26 @@ public final class CanBlockCache {
     public long pureHits() { return pureHits; }
     public long pureMisses() { return pureMisses; }
     public int pureSize() { return pureEntries.size(); }
+
+    // --- Decision-boundary scoping ----------------------------------------
+    // Card state is stable within a single AI decision call but can change
+    // between calls (tap/untap, keyword gain/loss, zone moves). We clear the
+    // cache at the outermost decision entry so cached answers never outlive
+    // a state-stable window. Depth counter lets nested calls (e.g. declareA
+    // -> predictNext -> assignBlockers) share the outermost call's cache.
+    private int decisionDepth;
+
+    public void enterDecision() {
+        if (decisionDepth == 0) {
+            pureEntries.clear();
+            entries.clear();
+            scope = null;
+        }
+        decisionDepth++;
+    }
+
+    public void exitDecision() {
+        decisionDepth--;
+        if (decisionDepth < 0) decisionDepth = 0; // defensive
+    }
 }

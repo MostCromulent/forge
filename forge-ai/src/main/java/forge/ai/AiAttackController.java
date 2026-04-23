@@ -804,8 +804,14 @@ public class AiAttackController {
      * @return a {@link forge.game.combat.Combat} object.
      */
     public final int declareAttackers(final Combat combat) {
-        return forge.game.perf.PerfCounters.time("AiAttackController.declareAttackers",
-            () -> declareAttackersImpl(combat));
+        forge.game.perf.CanBlockCache cbc = forge.game.perf.OptimizationContext.current().canBlockCache();
+        if (cbc != null) cbc.enterDecision();
+        try {
+            return forge.game.perf.PerfCounters.time("AiAttackController.declareAttackers",
+                () -> declareAttackersImpl(combat));
+        } finally {
+            if (cbc != null) cbc.exitDecision();
+        }
     }
 
     private int declareAttackersImpl(final Combat combat) {
