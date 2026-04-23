@@ -1349,6 +1349,16 @@ public class AiController {
     }
 
     public List<SpellAbility> chooseSpellAbilityToPlay() {
+        forge.game.perf.CostCache costCache = forge.game.perf.OptimizationContext.current().costCache();
+        if (costCache != null) costCache.enterDecision();
+        try {
+            return chooseSpellAbilityToPlayImpl();
+        } finally {
+            if (costCache != null) costCache.exitDecision();
+        }
+    }
+
+    private List<SpellAbility> chooseSpellAbilityToPlayImpl() {
         AiCache.clear();
         // Reset cached predicted combat, as it may be stale. It will be
         // re-created if needed and used for any AI logic that needs it.

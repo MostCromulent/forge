@@ -422,6 +422,23 @@ public class TokenPerfTest {
         printRealGamesReport(results, batchNanos);
         printRealGamesCounters();
 
+        // H007 verify: canPayCost cache stats.
+        if (variantCtx instanceof forge.perf.tokenheavy.variants.H007_CostCache_Verify) {
+            forge.perf.tokenheavy.variants.H007_CostCache_Verify v =
+                (forge.perf.tokenheavy.variants.H007_CostCache_Verify) variantCtx;
+            forge.game.perf.CostCache c = v.getCacheForReport();
+            System.out.println();
+            System.out.println("=== H007 VERIFY STATS ===");
+            System.out.printf("  divergences:    %d%n",
+                forge.perf.tokenheavy.variants.H007_CostCache_Verify.divergenceCount());
+            System.out.printf("  cache hits:     %d%n", c.hits());
+            System.out.printf("  cache misses:   %d%n", c.misses());
+            long total = c.hits() + c.misses();
+            if (total > 0) {
+                System.out.printf("  hit rate:       %.1f%%%n", 100.0 * c.hits() / total);
+            }
+        }
+
         // H005 verify: shouldAttack cache stats.
         if (variantCtx instanceof forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify) {
             forge.perf.tokenheavy.variants.H005_ShouldAttackCache_Verify v =

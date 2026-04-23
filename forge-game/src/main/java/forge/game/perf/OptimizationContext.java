@@ -91,4 +91,19 @@ public class OptimizationContext {
     public void reportReplacementIndexDivergence(String description) {
         // Baseline: no-op. Verify variants override.
     }
+
+    // H007: cache ComputerUtilCost.canPayCost results within a single
+    // chooseSpellAbilityToPlay call. Key includes payer mana-pool
+    // fingerprint so state changes invalidate naturally.
+    public CostCache costCache() { return null; }
+
+    // H007 verify: compute fresh + consult cache every call; log
+    // divergences. Game runs under baseline semantics.
+    public boolean verifyCostCache() { return false; }
+
+    public void reportCostCacheDivergence(forge.game.spellability.SpellAbility sa,
+                                          boolean cachedResult,
+                                          boolean freshResult) {
+        // Baseline: no-op.
+    }
 }
