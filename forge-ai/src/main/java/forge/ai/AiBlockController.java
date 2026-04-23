@@ -81,10 +81,39 @@ public class AiBlockController {
     // finds the creatures able to block the attacker
     private static List<Card> getPossibleBlockers(final Combat combat, final Card attacker, final List<Card> blockersLeft, final boolean solo) {
         final List<Card> blockers = new ArrayList<>();
+        final boolean batch = forge.game.perf.OptimizationContext.current().useIdenticalBlockerBatching()
+                && blockersLeft.size() >= 4;
+        // Equivalence cache: seenReps and seenCanBlock are parallel lists;
+        // each new blocker is checked against seen reps by AI-equivalence
+        // before invoking canBlock, collapsing repeated work across identical
+        // tokens. Only engaged when blockersLeft is big enough to justify.
+        final List<Card> seenReps = batch ? new ArrayList<>() : null;
+        final java.util.BitSet seenCanBlock = batch ? new java.util.BitSet() : null;
 
         for (final Card blocker : blockersLeft) {
+            boolean canBlock;
+            if (batch) {
+                int hit = -1;
+                for (int k = 0; k < seenReps.size(); k++) {
+                    if (AiAttackController.isAiEquivalentBlocker(blocker, seenReps.get(k))) {
+                        hit = k;
+                        break;
+                    }
+                }
+                if (hit >= 0) {
+                    canBlock = seenCanBlock.get(hit);
+                } else {
+                    canBlock = CombatUtil.canBlock(attacker, blocker, combat);
+                    int idx = seenReps.size();
+                    seenReps.add(blocker);
+                    if (canBlock) seenCanBlock.set(idx);
+                }
+            } else {
+                canBlock = CombatUtil.canBlock(attacker, blocker, combat);
+            }
+
             // if the blocker can block a creature with lure it can't block a creature without
-            if (CombatUtil.canBlock(attacker, blocker, combat)) {
+            if (canBlock) {
                 boolean cantBlockAlone = blocker.hasKeyword("CARDNAME can't attack or block alone.") || blocker.hasKeyword("CARDNAME can't block alone.");
                 if (solo && cantBlockAlone) {
                     continue;
@@ -99,13 +128,33 @@ public class AiBlockController {
     // finds blockers that won't be destroyed
     private List<Card> getSafeBlockers(final Combat combat, final Card attacker, final List<Card> blockersLeft) {
         final List<Card> blockers = new ArrayList<>();
+        final boolean batch = forge.game.perf.OptimizationContext.current().useIdenticalBlockerBatching()
+                && blockersLeft.size() >= 4;
+        final List<Card> seenReps = batch ? new ArrayList<>() : null;
+        final java.util.BitSet seenSafe = batch ? new java.util.BitSet() : null;
+        final boolean inCombat = attacker.getGame().getPhaseHandler().inCombat();
 
         // Usually don't check attacker static abilities at this point since the attackers have already attacked and, thus,
         // their P/T modifiers are active and are counted as a part of getNetPower/getNetToughness unless we're simulating an outcome outside of real combat
         for (final Card b : blockersLeft) {
-            if (!ComputerUtilCombat.canDestroyBlocker(ai, b, attacker, combat, false, attacker.getGame().getPhaseHandler().inCombat())) {
-                blockers.add(b);
+            boolean safe;
+            if (batch) {
+                int hit = -1;
+                for (int k = 0; k < seenReps.size(); k++) {
+                    if (AiAttackController.isAiEquivalentBlocker(b, seenReps.get(k))) { hit = k; break; }
+                }
+                if (hit >= 0) {
+                    safe = seenSafe.get(hit);
+                } else {
+                    safe = !ComputerUtilCombat.canDestroyBlocker(ai, b, attacker, combat, false, inCombat);
+                    int idx = seenReps.size();
+                    seenReps.add(b);
+                    if (safe) seenSafe.set(idx);
+                }
+            } else {
+                safe = !ComputerUtilCombat.canDestroyBlocker(ai, b, attacker, combat, false, inCombat);
             }
+            if (safe) blockers.add(b);
         }
         return blockers;
     }
@@ -113,13 +162,33 @@ public class AiBlockController {
     // finds blockers that destroy the attacker
     private List<Card> getKillingBlockers(final Combat combat, final Card attacker, final List<Card> blockersLeft) {
         final List<Card> blockers = new ArrayList<>();
+        final boolean batch = forge.game.perf.OptimizationContext.current().useIdenticalBlockerBatching()
+                && blockersLeft.size() >= 4;
+        final List<Card> seenReps = batch ? new ArrayList<>() : null;
+        final java.util.BitSet seenKills = batch ? new java.util.BitSet() : null;
+        final boolean inCombat = attacker.getGame().getPhaseHandler().inCombat();
 
         // Usually don't check attacker static abilities at this point since the attackers have already attacked and, thus,
         // their P/T modifiers are active and are counted as a part of getNetPower/getNetToughness unless we're simulating an outcome outside of real combat
         for (final Card b : blockersLeft) {
-            if (ComputerUtilCombat.canDestroyAttacker(ai, attacker, b, combat, false, attacker.getGame().getPhaseHandler().inCombat())) {
-                blockers.add(b);
+            boolean kills;
+            if (batch) {
+                int hit = -1;
+                for (int k = 0; k < seenReps.size(); k++) {
+                    if (AiAttackController.isAiEquivalentBlocker(b, seenReps.get(k))) { hit = k; break; }
+                }
+                if (hit >= 0) {
+                    kills = seenKills.get(hit);
+                } else {
+                    kills = ComputerUtilCombat.canDestroyAttacker(ai, attacker, b, combat, false, inCombat);
+                    int idx = seenReps.size();
+                    seenReps.add(b);
+                    if (kills) seenKills.set(idx);
+                }
+            } else {
+                kills = ComputerUtilCombat.canDestroyAttacker(ai, attacker, b, combat, false, inCombat);
             }
+            if (kills) blockers.add(b);
         }
 
         return blockers;

@@ -118,11 +118,11 @@ public class AiAttackController {
         this.canUseTimeout = ai.getGame().canUseTimeout();
     } // overloaded constructor to evaluate single specified attacker
 
-    // H003: two cards are interchangeable for the notNeededAsBlockers
-    // batch-release test iff they have identical AI-relevant state. All
-    // blockers here are from ai.getCreaturesInPlay() so controller is
-    // always the same — no need to check.
-    private static boolean isAiEquivalentBlocker(Card a, Card b) {
+    // H003/H004: two cards are interchangeable for block-decision purposes
+    // iff they have identical AI-relevant state. Callers assume both cards
+    // have the same controller (always true when both come from one player's
+    // creatures-in-play).
+    public static boolean isAiEquivalentBlocker(Card a, Card b) {
         if (a.getName() == null || b.getName() == null) return false;
         if (!a.getName().equals(b.getName())) return false;
         if (a.getNetPower() != b.getNetPower()) return false;

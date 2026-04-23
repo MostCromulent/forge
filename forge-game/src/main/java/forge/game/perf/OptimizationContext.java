@@ -53,4 +53,11 @@ public class OptimizationContext {
     // specific card released may differ from baseline but equivalence class
     // + count must match. Default baseline: false (original per-blocker loop).
     public boolean useBinarySearchNotNeeded() { return false; }
+
+    // H004: in AiBlockController's filter methods (getPossibleBlockers,
+    // getSafeBlockers, getKillingBlockers), collapse redundant predicate
+    // evaluations by maintaining a local equivalence-cache — when the same
+    // equivalence class was already evaluated, reuse the result instead of
+    // re-running canBlock/canDestroy. Defender-side analogue of H003.
+    public boolean useIdenticalBlockerBatching() { return false; }
 }
