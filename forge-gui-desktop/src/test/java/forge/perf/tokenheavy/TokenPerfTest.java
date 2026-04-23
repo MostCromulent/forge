@@ -76,34 +76,47 @@ public class TokenPerfTest {
 
         PerfCounters.resetAll();
         PerfCounters.enabled = true;
+        long gameT0 = System.nanoTime();
         try {
             runOneFixture(fixtureRes, lobby);
         } finally {
             PerfCounters.enabled = false;
         }
+        long gameWallNanos = System.nanoTime() - gameT0;
 
         VariantSlot baseline = slots.get(0);
         VariantSlot variant = slots.get(1);
         int divergences = compareDecisions(baseline.decisions, variant.decisions);
 
-        Map<String, Long> baselineCounters = new HashMap<>();
-        Map<String, Long> variantCounters = new HashMap<>();
+        Map<String, Long> baselineCalls = new HashMap<>();
+        Map<String, Long> variantCalls = new HashMap<>();
+        Map<String, Long> baselineNanos = new HashMap<>();
+        Map<String, Long> variantNanos = new HashMap<>();
+        // QUERY mode: the live game runs under baseline context only, so
+        // engine counters reflect baseline's totals. Variant slot counters
+        // are populated from the same snapshot for the oracle — the variant
+        // context's influence on engine counts isn't observable in QUERY mode
+        // (it would be in RUN mode, where the variant drives a separate game).
         PerfCounters.snapshot().forEach((k, v) -> {
-            baselineCounters.put(k, v.calls());
-            variantCounters.put(k, v.calls());   // in QUERY mode the real game only runs baseline
+            baselineCalls.put(k, v.calls());
+            variantCalls.put(k, v.calls());
+            baselineNanos.put(k, v.nanos());
+            variantNanos.put(k, v.nanos());
         });
 
         VerdictEvaluator.Verdict verdict = VerdictEvaluator.evaluate(
             baseline.totalNanos, variant.totalNanos,
-            baselineCounters, variantCounters, divergences);
+            baselineCalls, variantCalls, divergences);
 
         System.out.println(ReportGenerator.renderText(
-            hypothesisId, fixtureRes, baseline, variant,
-            baselineCounters, variantCounters, divergences, verdict));
+            hypothesisId, fixtureRes, baseline, variant, gameWallNanos,
+            baselineCalls, variantCalls, baselineNanos, variantNanos,
+            divergences, verdict));
 
         String json = ReportGenerator.renderJson(
-            hypothesisId, fixtureRes, baseline, variant,
-            baselineCounters, variantCounters, divergences, verdict);
+            hypothesisId, fixtureRes, baseline, variant, gameWallNanos,
+            baselineCalls, variantCalls, baselineNanos, variantNanos,
+            divergences, verdict);
         HypothesisLog.appendJsonl(
             HypothesisLog.branchNotesPath(branch).resolve("hypotheses.jsonl"), json);
     }

@@ -1,15 +1,23 @@
 package forge.perf.tokenheavy;
 
+import com.google.common.base.Supplier;
 import forge.LobbyPlayer;
+import forge.ai.AiCardMemory;
 import forge.ai.PlayerControllerAi;
 import forge.game.Game;
+import forge.game.card.Card;
 import forge.game.combat.Combat;
 import forge.game.perf.OptimizationContext;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * PlayerControllerAi subclass that captures AI decisions at four hook points
@@ -84,9 +92,12 @@ public class InstrumentedController extends PlayerControllerAi {
             return result;
         }
 
-        // Query mode: baseline first, capture its result; then each variant.
-        T baselineResult = null;
-        for (int i = 0; i < slots.size(); i++) {
+        // Query mode: snapshot AI memory, run each variant (slots 1..N) against
+        // the snapshot, then run baseline (slot 0) LAST so its post-call memory
+        // state is what the game inherits for subsequent decisions.
+        Map<AiCardMemory.MemorySet, Set<Card>> preState = snapshotMemory();
+        for (int i = 1; i < slots.size(); i++) {
+            restoreMemory(preState);
             VariantSlot s = slots.get(i);
             OptimizationContext.set(s.context);
             long t0 = System.nanoTime();
@@ -94,10 +105,59 @@ public class InstrumentedController extends PlayerControllerAi {
             long dt = System.nanoTime() - t0;
             s.totalNanos += dt;
             s.decisions.add(buildRecord(hookName, result));
-            if (i == 0) baselineResult = result;
             OptimizationContext.reset();
         }
+
+        restoreMemory(preState);
+        VariantSlot baseline = slots.get(0);
+        OptimizationContext.set(baseline.context);
+        long t0 = System.nanoTime();
+        T baselineResult = baselineCall.run();
+        long dt = System.nanoTime() - t0;
+        baseline.totalNanos += dt;
+        baseline.decisions.add(buildRecord(hookName, baselineResult));
+        OptimizationContext.reset();
         return baselineResult;
+    }
+
+    // --- AiCardMemory snapshot/restore (reflection, test-only) ---
+
+    private static Field memoryMapField;
+    static {
+        try {
+            memoryMapField = AiCardMemory.class.getDeclaredField("memoryMap");
+            memoryMapField.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            memoryMapField = null;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<AiCardMemory.MemorySet, Set<Card>> snapshotMemory() {
+        if (memoryMapField == null) return new EnumMap<>(AiCardMemory.MemorySet.class);
+        try {
+            AiCardMemory mem = getAi().getCardMemory();
+            Supplier<Map<AiCardMemory.MemorySet, Set<Card>>> s =
+                (Supplier<Map<AiCardMemory.MemorySet, Set<Card>>>) memoryMapField.get(mem);
+            Map<AiCardMemory.MemorySet, Set<Card>> live = s.get();
+            Map<AiCardMemory.MemorySet, Set<Card>> copy = new EnumMap<>(AiCardMemory.MemorySet.class);
+            for (Map.Entry<AiCardMemory.MemorySet, Set<Card>> e : live.entrySet()) {
+                copy.put(e.getKey(), new HashSet<>(e.getValue()));
+            }
+            return copy;
+        } catch (IllegalAccessException e) {
+            return new EnumMap<>(AiCardMemory.MemorySet.class);
+        }
+    }
+
+    private void restoreMemory(Map<AiCardMemory.MemorySet, Set<Card>> snapshot) {
+        AiCardMemory mem = getAi().getCardMemory();
+        mem.clearAllRemembered();
+        for (Map.Entry<AiCardMemory.MemorySet, Set<Card>> e : snapshot.entrySet()) {
+            for (Card c : e.getValue()) {
+                mem.rememberCard(c, e.getKey());
+            }
+        }
     }
 
     private void runHookedVoid(String hookName, Runnable baselineCall) {
