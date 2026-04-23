@@ -22,7 +22,7 @@ public final class HypothesisLog {
     // Surefire's cwd is the module dir, so naked relative paths would scatter
     // logs under each module. Walk up to the repo root (marker: .git) so a
     // single hypotheses.jsonl aggregates runs regardless of module invocation.
-    private static Path repoRoot() {
+    public static Path repoRoot() {
         Path cur = Paths.get("").toAbsolutePath();
         while (cur != null) {
             if (Files.exists(cur.resolve(".git"))) return cur;

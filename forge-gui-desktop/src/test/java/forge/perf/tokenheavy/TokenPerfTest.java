@@ -76,11 +76,13 @@ public class TokenPerfTest {
 
         PerfCounters.resetAll();
         PerfCounters.enabled = true;
+        jdk.jfr.Recording jfr = startJfrIfEnabled(hypothesisId, fixtureRes);
         long gameT0 = System.nanoTime();
         try {
             runOneFixture(fixtureRes, lobby);
         } finally {
             PerfCounters.enabled = false;
+            stopJfr(jfr);
         }
         long gameWallNanos = System.nanoTime() - gameT0;
 
@@ -144,6 +146,41 @@ public class TokenPerfTest {
         for (File f : files) out.add(FIXTURE_DIR + "/" + f.getName());
         Collections.sort(out);
         return out;
+    }
+
+    // Start a JFR recording around the measured run when -Djfr=on is set.
+    // Output lands at target/perf/<hypothesis>-<fixture-stem>.jfr, one file
+    // per (hypothesis, fixture) pair. Render via .claude/tools/JfrFlameGraph.java.
+    private jdk.jfr.Recording startJfrIfEnabled(String hypothesisId, String fixtureRes) {
+        String flag = System.getProperty("jfr", "");
+        if (!(flag.equalsIgnoreCase("on") || flag.equalsIgnoreCase("true"))) return null;
+        try {
+            jdk.jfr.Recording r = new jdk.jfr.Recording(
+                jdk.jfr.Configuration.getConfiguration("profile"));
+            r.setName("tokenperf-" + hypothesisId);
+            String stem = fixtureRes.replaceAll(".*/", "").replaceAll("\\.txt$", "");
+            java.nio.file.Path out = HypothesisLog.repoRoot()
+                .resolve("target").resolve("perf")
+                .resolve(hypothesisId + "-" + stem + ".jfr");
+            java.nio.file.Files.createDirectories(out.getParent());
+            r.setDestination(out);
+            r.start();
+            System.out.println("JFR recording: " + out);
+            return r;
+        } catch (Exception e) {
+            System.err.println("JFR start failed: " + e);
+            return null;
+        }
+    }
+
+    private void stopJfr(jdk.jfr.Recording r) {
+        if (r == null) return;
+        try {
+            r.stop();
+            r.close();
+        } catch (Exception e) {
+            System.err.println("JFR stop failed: " + e);
+        }
     }
 
     private OptimizationContext loadVariant(String hypothesisId) throws Exception {
