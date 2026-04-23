@@ -177,6 +177,12 @@ public class TokenPerfTest {
         try {
             jdk.jfr.Recording r = new jdk.jfr.Recording(
                 jdk.jfr.Configuration.getConfiguration("profile"));
+            // Override default 10ms execution-sample period to 1ms so short
+            // fixtures (~50-300ms) yield dense enough data for a useful flame
+            // graph without needing -Djfr.loops.
+            long periodMs = Long.getLong("jfr.periodMs", 1L);
+            r.enable("jdk.ExecutionSample").withPeriod(java.time.Duration.ofMillis(periodMs));
+            r.enable("jdk.NativeMethodSample").withPeriod(java.time.Duration.ofMillis(periodMs));
             r.setName("tokenperf-" + hypothesisId);
             String stem = fixtureRes.replaceAll(".*/", "").replaceAll("\\.txt$", "");
             java.nio.file.Path out = HypothesisLog.repoRoot()
@@ -185,7 +191,7 @@ public class TokenPerfTest {
             java.nio.file.Files.createDirectories(out.getParent());
             r.setDestination(out);
             r.start();
-            System.out.println("JFR recording: " + out);
+            System.out.println("JFR recording: " + out + " (exec-sample period=" + periodMs + "ms)");
             return r;
         } catch (Exception e) {
             System.err.println("JFR start failed: " + e);
