@@ -31,6 +31,7 @@ import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.screens.match.VMatchUI;
 import forge.screens.match.views.VHand;
+import forge.view.arcane.FloatingZone;
 import forge.toolbox.FButton;
 import forge.toolbox.FCheckBox;
 import forge.toolbox.FScrollPane;
@@ -54,10 +55,11 @@ public final class LayoutMenu {
     private FScreen currentScreen;
     private static final ForgePreferences prefs = FModel.getPreferences();
     private final boolean showIcons = false;
+    private static final Localizer localizer = Localizer.getInstance();
 
     public JMenu getMenu() {
         currentScreen = Singletons.getControl().getCurrentScreen();
-        final Localizer localizer = Localizer.getInstance();
+
         final JMenu menu = new JMenu(localizer.getMessage("lblLayout"));
         menu.setMnemonic(KeyEvent.VK_L);
         if (currentScreen != FScreen.HOME_SCREEN) {
@@ -79,9 +81,20 @@ public final class LayoutMenu {
     }
 
     private JMenu getMenu_ViewOptions() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblView"));
         menu.add(getMenuItem_ShowTabs());
+
+        final JCheckBoxMenuItem newCountItem = createStayOpenCheckBox(
+                localizer.getMessage("lblNewCardCountInTab"));
+        newCountItem.setState(prefs.getPrefBoolean(FPref.UI_ZONE_TAB_NEW_COUNT));
+        newCountItem.addActionListener(e -> {
+            prefs.setPref(FPref.UI_ZONE_TAB_NEW_COUNT, newCountItem.getState());
+            prefs.save();
+            FloatingZone.refreshAll();
+            refreshHandCards();
+        });
+        menu.add(newCountItem);
+
         if (currentScreen != null && currentScreen.isMatchScreen()) {
             menu.add(getMenuItem_ShowBackgroundImage());
 
@@ -99,7 +112,6 @@ public final class LayoutMenu {
     }
 
     private JMenu getMenu_FileOptions() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblFile"));
         menu.add(getMenuItem_OpenLayout());
         menu.add(getMenuItem_SaveLayout());
@@ -107,7 +119,6 @@ public final class LayoutMenu {
     }
 
     private static JMenu getMenu_ThemeOptions() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblTheme"));
         JRadioButtonMenuItem menuItem;
         final ButtonGroup group = new ButtonGroup();
@@ -132,7 +143,6 @@ public final class LayoutMenu {
     };
 
     private static JMenuItem getMenuItem_ShowBackgroundImage() {
-        final Localizer localizer = Localizer.getInstance();
         final JCheckBoxMenuItem menuItem = new JCheckBoxMenuItem(localizer.getMessage("lblBackgroundImage"));
         menuItem.setState(prefs.getPrefBoolean(FPref.UI_MATCH_IMAGE_VISIBLE));
         menuItem.addActionListener(getShowBackgroundImageAction(menuItem));
@@ -160,7 +170,6 @@ public final class LayoutMenu {
     }
 
     private static JMenu getMenu_HandOptions() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblHandPanel"));
 
         // Order Hand by CMC and Color
@@ -295,7 +304,6 @@ public final class LayoutMenu {
 
     private static JCheckBoxMenuItem getMenuItem_SortMultiplayerFields(
             final JMenu layoutMenu, final JMenu panelsMenu) {
-        final Localizer localizer = Localizer.getInstance();
         final boolean enabled = !"OFF".equals(prefs.getPref(FPref.UI_MULTIPLAYER_FIELD_LAYOUT));
         final JCheckBoxMenuItem menuItem = createStayOpenCheckBox(
                 localizer.getMessage("lblSortMultiplayerFields"));
@@ -315,7 +323,6 @@ public final class LayoutMenu {
     }
 
     private static JMenu getMenu_MultiplayerFieldLayout() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblMultiplayerFieldLayout"));
         final ButtonGroup group = new ButtonGroup();
         final String current = prefs.getPref(FPref.UI_MULTIPLAYER_FIELD_LAYOUT);
@@ -342,7 +349,6 @@ public final class LayoutMenu {
     }
 
     private static JMenu getMenu_MultiplayerFieldPanels() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblMultiplayerFieldPanels"));
         final ButtonGroup group = new ButtonGroup();
         final String current = prefs.getPref(FPref.UI_MULTIPLAYER_FIELD_PANELS);
@@ -379,7 +385,6 @@ public final class LayoutMenu {
     }
 
     private static JMenu getMenu_LogPane() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenu menu = new JMenu(localizer.getMessage("lblLogPanel"));
         final ButtonGroup group = new ButtonGroup();
         final GameLogVerbosity currentVerbosity = GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE));
@@ -443,7 +448,6 @@ public final class LayoutMenu {
     }
 
     public static void showCustomLogCategoriesDialog() {
-        final Localizer localizer = Localizer.getInstance();
         final FDialog dlg = new FDialog();
         dlg.setTitle(localizer.getMessage("lblCustomLogSettings"));
 
@@ -479,7 +483,6 @@ public final class LayoutMenu {
     }
 
     private static JMenuItem getMenuItem_ShowTabs() {
-        final Localizer localizer = Localizer.getInstance();
         final JCheckBoxMenuItem menuItem = new JCheckBoxMenuItem(localizer.getMessage("lblPanelTabs"));
         final KeyStroke ks = KeyboardShortcuts.getKeyStrokeForPref(FPref.SHORTCUT_PANELTABS);
         if (ks != null) { menuItem.setAccelerator(ks); }
@@ -497,7 +500,6 @@ public final class LayoutMenu {
     }
 
     private JMenuItem getMenuItem_SaveLayout() {
-        final Localizer localizer = Localizer.getInstance();
         final SkinnedMenuItem menuItem = new SkinnedMenuItem(localizer.getMessage("lblSaveCurrentLayout"));
         menuItem.setIcon((showIcons ? MenuUtil.getMenuIcon(FSkinProp.ICO_SAVELAYOUT) : null));
         menuItem.addActionListener(getSaveLayoutAction());
@@ -509,7 +511,6 @@ public final class LayoutMenu {
     }
 
     private JMenuItem getMenuItem_OpenLayout() {
-        final Localizer localizer = Localizer.getInstance();
         final SkinnedMenuItem menuItem = new SkinnedMenuItem(localizer.getMessage("lblOpen") +"..");
         menuItem.setIcon((showIcons ? MenuUtil.getMenuIcon(FSkinProp.ICO_OPENLAYOUT) : null));
         menuItem.addActionListener(getOpenLayoutAction());
@@ -521,7 +522,6 @@ public final class LayoutMenu {
     }
 
     private JMenuItem getMenuItem_RevertLayout() {
-        final Localizer localizer = Localizer.getInstance();
         final SkinnedMenuItem menuItem = new SkinnedMenuItem(localizer.getMessage("lblRefresh"));
         menuItem.setIcon((showIcons ? MenuUtil.getMenuIcon(FSkinProp.ICO_REVERTLAYOUT) : null));
         menuItem.addActionListener(getRevertLayoutAction());
@@ -533,7 +533,6 @@ public final class LayoutMenu {
     }
 
     private static JMenuItem getMenuItem_SetWindowSize() {
-        final Localizer localizer = Localizer.getInstance();
         final JMenuItem menuItem = new JMenuItem(localizer.getMessage("lblSetWindowSize"));
         menuItem.addActionListener(getSetWindowSizeAction());
         return menuItem;
@@ -542,7 +541,6 @@ public final class LayoutMenu {
     private static ActionListener getSetWindowSizeAction() {
         return e -> {
             final String[] options = {"800x600", "1024x768", "1280x720", "1600x900", "1920x1080", "2560x1440", "3840x2160"};
-            final Localizer localizer = Localizer.getInstance();
             final String choice = GuiChoose.oneOrNone(localizer.getMessage("lblChooseNewWindowSize"), options);
             if (choice != null) {
                 final String[] dims = choice.split("x");
@@ -553,11 +551,9 @@ public final class LayoutMenu {
 
     private static JMenuItem fullScreenItem;
     public static void updateFullScreenItemText() {
-        final Localizer localizer = Localizer.getInstance();
         fullScreenItem.setText(Singletons.getView().getFrame().isFullScreen() ? localizer.getMessage("lblExitFullScreen") : localizer.getMessage("lblFullScreen"));
     }
     private static JMenuItem getMenuItem_FullScreen() {
-        final Localizer localizer = Localizer.getInstance();
         fullScreenItem = new JMenuItem(localizer.getMessage("lblFullScreen"));
         updateFullScreenItemText();
         fullScreenItem.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F11, 0));

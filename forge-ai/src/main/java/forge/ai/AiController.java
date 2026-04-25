@@ -931,11 +931,10 @@ public class AiController {
                 ManaCost mana = payCosts.getTotalMana();
                 if (mana.countX() > 0) {
                     // Set PayX here to maximum value.
-                    final int xPay = ComputerUtilCost.getMaxXValue(sa, player, sa.isTrigger());
+                    final int xPay = ComputerUtilCost.setMaxXValue(sa, player, sa.isTrigger());
                     if (xPay <= 0) {
                         return AiPlayDecision.CantAffordX;
                     }
-                    sa.setXManaCostPaid(xPay);
                 } else if (mana.isZero()) {
                     // if mana is zero, but card mana cost does have X, then something is wrong
                     ManaCost cardCost = card.getManaCost();
@@ -1236,11 +1235,6 @@ public class AiController {
     }
 
     public boolean confirmAction(SpellAbility sa, PlayerActionConfirmMode mode, String message, Map<String, Object> params) {
-        if (mode == PlayerActionConfirmMode.ChangeZoneToAltDestination) {
-            System.err.printf("Overriding AI confirmAction decision for %s, defaulting to true.\n", mode);
-            return true;
-        }
-
         ApiType api = sa == null ? null : sa.getApi();
 
         // Abilities without api may also use this routine, However they should provide a unique mode value ?? How could this work?
@@ -1355,6 +1349,7 @@ public class AiController {
     }
 
     public List<SpellAbility> chooseSpellAbilityToPlay() {
+        AiCache.clear();
         // Reset cached predicted combat, as it may be stale. It will be
         // re-created if needed and used for any AI logic that needs it.
         predictedCombat = null;
