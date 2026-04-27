@@ -18,10 +18,16 @@
 package forge.gamemodes.match;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
 import com.google.common.collect.Sets;
+import forge.game.GameEntityView;
 import forge.game.GameView;
 import forge.game.card.CardView;
+import forge.game.event.GameEvent;
+import forge.game.event.GameEventAttackersDeclared;
+import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.player.PlayerView;
+import forge.game.spellability.StackItemView;
 import forge.gui.interfaces.IGuiGame;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
@@ -82,6 +88,11 @@ public class YieldController {
 
     private final Map<PlayerView, YieldState> yieldStates = Maps.newConcurrentMap();
 
+    // Set on event arrival, consumed once per priority pass in mayAutoPass.
+    // Lets a single interrupt event fire exactly one break, instead of polling
+    // a state-holds condition every priority pass.
+    private final Set<PlayerView> breakNextPriorityPass = Sets.newConcurrentHashSet();
+
     public YieldController(IGuiGame gui) {
         this.gui = gui;
     }
@@ -105,6 +116,26 @@ public class YieldController {
 
     public boolean mayAutoPass(PlayerView player) {
         player = TrackableTypes.PlayerViewType.lookup(player);
+
+        // Single-shot break flag from interrupt events: consumed once per priority pass.
+        if (breakNextPriorityPass.remove(player)) {
+            // Active yield always breaks on a fresh interrupt event.
+            YieldState state = yieldStates.get(player);
+            if (state != null && !state.isEmpty()) {
+                boolean hadMarker = state.marker != null;
+                yieldStates.remove(player);
+                gui.refreshYieldUi(player);
+                if (hadMarker) {
+                    gui.syncYieldMarkerCleared(player);
+                }
+                promptCleared(player);
+            }
+            // APINA breaks only when the user opted in.
+            if (getInterruptPref(ForgePreferences.FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS)) {
+                return false;
+            }
+        }
+
         // Yield states self-clear when their stop condition fires.
         // Must run before isAutoPassingNoActions or that short-circuits and the state never clears.
         if (shouldAutoYieldForPlayer(player)) {
@@ -122,12 +153,8 @@ public class YieldController {
         if (!prefValue) {
             return false;
         }
-        // Interrupts only break through when the player has opted in. Without an action to take,
-        // stopping on interrupts becomes a "press OK to continue" ceremony with no decision.
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS)
-                && shouldInterruptYield(player)) {
-            return false;
-        }
+        // Interrupt-driven breaks are handled by the event-driven break flag in mayAutoPass —
+        // this method only governs the steady-state "no actions available" condition.
         // Respect phase-skip settings: pass through unmarked phases even if
         // the player has actions. Auto-pass should be additive to phase-skip,
         // not cause stops at phases the user explicitly set to skip.
@@ -206,17 +233,16 @@ public class YieldController {
         final PlayerView key = TrackableTypes.PlayerViewType.lookup(player);
         // Setting a marker takes priority over the legacy auto-pass set.
         autoPassUntilEndOfTurn.remove(key);
-        // If activating while priority is already at the marker location, we must
-        // first leave that phase before the marker can fire (otherwise it would
-        // trigger immediately on the same activation moment). Otherwise treat
-        // the marker as already "left" so the next reach to its location fires.
-        final boolean atMarkerNow = marker != null && isPriorityAt(marker);
+        // If priority is already at, or past, the marker location in its owner's current turn,
+        // require a full cycle before firing — otherwise the next priority pass would observe
+        // pastTarget and fire immediately in the activation phase, which is never what the user wants.
+        final boolean atOrPastMarkerNow = marker != null && isPriorityAtOrPastMarker(marker);
         yieldStates.compute(key, (p, prev) -> {
             YieldState base = (prev == null) ? YieldState.empty() : prev;
             YieldState next = base.withMarker(
                     marker,
-                    marker == null ? false : !atMarkerNow,
-                    marker != null && atMarkerNow);
+                    marker == null ? false : !atOrPastMarkerNow,
+                    marker != null && atOrPastMarkerNow);
             return next.isEmpty() ? null : next;
         });
         if (notifyGui) {
@@ -224,16 +250,17 @@ public class YieldController {
         }
     }
 
-    private boolean isPriorityAt(YieldMarker marker) {
+    private boolean isPriorityAtOrPastMarker(YieldMarker marker) {
         GameView gv = gui.getGameView();
         if (gv == null) {
             return false;
         }
         PlayerView turnPlayer = gv.getPlayerTurn();
         forge.game.phase.PhaseType phase = gv.getPhase();
-        return turnPlayer != null
-                && turnPlayer.equals(marker.getPhaseOwner())
-                && phase == marker.getPhase();
+        if (turnPlayer == null || phase == null || !turnPlayer.equals(marker.getPhaseOwner())) {
+            return false;
+        }
+        return phase == marker.getPhase() || phase.isAfter(marker.getPhase());
     }
 
     public void setStackYield(PlayerView player, boolean active) {
@@ -284,17 +311,7 @@ public class YieldController {
             return false;
         }
 
-        if (shouldInterruptYield(key)) {
-            // Interrupt cancels both marker and stack-yield; mirror to the client.
-            boolean hadMarker = state.marker != null;
-            yieldStates.remove(key);
-            gui.refreshYieldUi(key);
-            if (hadMarker) {
-                gui.syncYieldMarkerCleared(key);
-            }
-            promptCleared(key);
-            return false;
-        }
+        // Interrupt-driven cancellation is handled by the event-driven break flag in mayAutoPass.
 
         GameView gameView = gui.getGameView();
         if (gameView == null) {
@@ -375,88 +392,101 @@ public class YieldController {
         gui.awaitNextInput();
     }
 
-    private boolean shouldInterruptYield(final PlayerView player) {
+    /** Forwarded from AbstractGuiGame.handleGameEvent. */
+    public void onGameEvent(GameEvent event) {
+        if (!isYieldExperimentalEnabled()) {
+            return;
+        }
+        if (event instanceof GameEventAttackersDeclared ev) {
+            onAttackersDeclared(ev);
+        } else if (event instanceof GameEventSpellAbilityCast ev) {
+            onSpellAbilityCast(ev);
+        }
+    }
+
+    private void onAttackersDeclared(GameEventAttackersDeclared event) {
+        if (!getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_ATTACKERS)) {
+            return;
+        }
         GameView gameView = gui.getGameView();
         if (gameView == null) {
-            return false;
+            return;
         }
+        Multimap<GameEntityView, CardView> attackers = event.attackersMap();
+        if (attackers == null || attackers.isEmpty()) {
+            return;
+        }
+        for (PlayerView p : gameView.getPlayers()) {
+            if (isAttackerAgainstPlayer(attackers, p)) {
+                breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
+            }
+        }
+    }
 
-        forge.game.phase.PhaseType phase = gameView.getPhase();
-        forge.game.combat.CombatView combatView = gameView.getCombat();
-
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_ATTACKERS)) {
-            if (phase == forge.game.phase.PhaseType.COMBAT_DECLARE_ATTACKERS &&
-                combatView != null && isBeingAttacked(combatView, player)) {
+    private static boolean isAttackerAgainstPlayer(Multimap<GameEntityView, CardView> attackers, PlayerView player) {
+        for (GameEntityView defender : attackers.keySet()) {
+            if (player.equals(defender)) {
+                return true;
+            }
+            if (defender instanceof CardView cv && player.equals(cv.getController())) {
                 return true;
             }
         }
-
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_TARGETING)) {
-            forge.util.collect.FCollectionView<forge.game.spellability.StackItemView> stack = gameView.getStack();
-            if (stack != null) {
-                for (forge.game.spellability.StackItemView si : stack) {
-                    if (targetsPlayerOrPermanents(si, player)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL)) {
-            forge.game.spellability.StackItemView topItem = gameView.peekStack();
-            if (topItem != null) {
-                PlayerView activatingPlayer = topItem.getActivatingPlayer();
-                boolean isOpponent = activatingPlayer != null && !activatingPlayer.equals(player);
-                if (isOpponent && targetsPlayerOrPermanents(topItem, player)) {
-                    return true;
-                }
-            }
-        }
-
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL)) {
-            if (hasMassRemovalOnStack(gameView, player)) {
-                return true;
-            }
-        }
-
-        if (getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_TRIGGERS)) {
-            forge.util.collect.FCollectionView<forge.game.spellability.StackItemView> stack = gameView.getStack();
-            if (stack != null) {
-                for (forge.game.spellability.StackItemView si : stack) {
-                    if (si.isTrigger()) {
-                        return true;
-                    }
-                }
-            }
-        }
-
         return false;
     }
 
-    private boolean isBeingAttacked(forge.game.combat.CombatView combatView, PlayerView player) {
-        if (combatView == null) {
-            return false;
+    private void onSpellAbilityCast(GameEventSpellAbilityCast event) {
+        StackItemView si = event.si();
+        if (si == null) {
+            return;
         }
-
-        forge.util.collect.FCollection<CardView> attackersOfPlayer = combatView.getAttackersOf(player);
-        if (attackersOfPlayer != null && !attackersOfPlayer.isEmpty()) {
-            return true;
+        GameView gameView = gui.getGameView();
+        if (gameView == null) {
+            return;
         }
+        boolean prefTargeting    = getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_TARGETING);
+        boolean prefOpponent     = getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL);
+        boolean prefMassRemoval  = getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL);
+        boolean prefTriggers     = getInterruptPref(ForgePreferences.FPref.YIELD_INTERRUPT_ON_TRIGGERS);
+        if (!prefTargeting && !prefOpponent && !prefMassRemoval && !prefTriggers) {
+            return;
+        }
+        // Mass-removal detection needs the engine-side stack instance (StackItemView lacks API).
+        // Resolve once per event by ID lookup rather than walking the stack per-player.
+        boolean isMassRemoval = prefMassRemoval && isMassRemovalForStackItem(si, gameView);
+        boolean isTrigger = si.isTrigger();
+        PlayerView activator = si.getActivatingPlayer();
 
-        // Check planeswalkers / battles controlled by the player.
-        for (forge.game.GameEntityView defender : combatView.getDefenders()) {
-            if (defender instanceof CardView) {
-                CardView cardDefender = (CardView) defender;
-                PlayerView controller = cardDefender.getController();
-                if (controller != null && controller.equals(player)) {
-                    forge.util.collect.FCollection<CardView> attackers = combatView.getAttackersOf(defender);
-                    if (attackers != null && !attackers.isEmpty()) {
-                        return true;
-                    }
-                }
+        for (PlayerView p : gameView.getPlayers()) {
+            if (prefTriggers && isTrigger) {
+                breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
+                continue;
+            }
+            boolean isOpponent = activator != null && !activator.equals(p);
+            if (prefTargeting && targetsPlayerOrPermanents(si, p)) {
+                breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
+                continue;
+            }
+            if (isOpponent && prefOpponent && targetsPlayerOrPermanents(si, p)) {
+                breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
+                continue;
+            }
+            if (isOpponent && isMassRemoval) {
+                breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
             }
         }
+    }
 
+    private boolean isMassRemovalForStackItem(StackItemView siv, GameView gameView) {
+        forge.game.Game game = gameView.getGame();
+        if (game == null) {
+            return false;
+        }
+        for (forge.game.spellability.SpellAbilityStackInstance si : game.getStack()) {
+            if (si.getId() == siv.getId()) {
+                return isMassRemovalInstance(si);
+            }
+        }
         return false;
     }
 
@@ -484,24 +514,6 @@ public class YieldController {
             return true;
         }
 
-        return false;
-    }
-
-    /** Host-only: walks live engine stack via gameView.getGame(). Opponent spells only. */
-    private boolean hasMassRemovalOnStack(GameView gameView, PlayerView player) {
-        forge.game.Game game = gameView.getGame();
-        if (game == null) {
-            return false; // host-only path; defensive
-        }
-        for (forge.game.spellability.SpellAbilityStackInstance si : game.getStack()) {
-            forge.game.player.Player activator = si.getActivatingPlayer();
-            if (activator == null || activator.getView().equals(player)) {
-                continue;
-            }
-            if (isMassRemovalInstance(si)) {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -537,6 +549,7 @@ public class YieldController {
     public void reset() {
         autoPassUntilEndOfTurn.clear();
         yieldStates.clear();
+        breakNextPriorityPass.clear();
     }
 
 }

@@ -150,6 +150,9 @@ public class FControlGameEventHandler extends IGameEventVisitor.Base<Void> {
     public void receiveGameEvent(final GameEvent ev) {
         ev.visit(this);
         SoundSystem.instance.receiveEvent(ev);
+        if (matchController instanceof forge.gamemodes.match.AbstractGuiGame agg) {
+            agg.notifyYieldEvent(ev);
+        }
     }
 
     private Void processEvent() {

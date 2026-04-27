@@ -814,6 +814,7 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         if (localEventHandler == null) {
             localEventHandler = new FControlGameEventHandler(this);
         }
+        // localEventHandler.receiveGameEvent already calls notifyYieldEvent.
         localEventHandler.receiveGameEvent(event);
 
         // Feed forwarded events to the local GameLog so remote clients
@@ -826,6 +827,12 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
                 gameLog.getEventVisitor().recieve(event);
             }
         }
+    }
+
+    /** Arm yield interrupt break flags for the relevant players. Called by both
+     *  the local EventBus subscriber and the remote-client handleGameEvent path. */
+    public void notifyYieldEvent(GameEvent event) {
+        getYieldController().onGameEvent(event);
     }
 
     @Override
