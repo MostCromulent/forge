@@ -37,6 +37,10 @@ public class GameEventForwarder implements Observer {
 
     @Subscribe
     public void receiveGameEvent(GameEvent ev) {
+        // Arm host's RCGG YieldController for remote players — wire-forwarding alone bypasses it.
+        if (gui instanceof forge.gamemodes.match.AbstractGuiGame agg) {
+            agg.notifyYieldEvent(ev);
+        }
         pendingEvents.add(ev);
         boolean sizeThreshold = pendingEvents.size() >= FLUSH_SIZE_THRESHOLD;
         boolean timeThreshold = (System.nanoTime() - lastFlushTime) >= FLUSH_INTERVAL_NS;
