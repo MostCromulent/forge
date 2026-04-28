@@ -1,15 +1,16 @@
 package forge.game.event;
 
+import forge.game.ability.ApiType;
 import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.spellability.SpellAbilityView;
 import forge.game.spellability.StackItemView;
 import forge.game.spellability.TargetChoices;
 
-public record GameEventSpellAbilityCast(SpellAbilityView sa, StackItemView si, int stackIndex, String targetDescription) implements GameEvent {
+public record GameEventSpellAbilityCast(SpellAbilityView sa, StackItemView si, int stackIndex, String targetDescription, boolean isMassRemoval) implements GameEvent {
 
     public GameEventSpellAbilityCast(SpellAbility sa, SpellAbilityStackInstance si, int stackIndex) {
-        this(SpellAbilityView.get(sa), StackItemView.get(si), stackIndex, computeTargetDescription(sa));
+        this(SpellAbilityView.get(sa), StackItemView.get(si), stackIndex, computeTargetDescription(sa), classifyMassRemoval(si));
     }
 
     private static String computeTargetDescription(SpellAbility sa) {
@@ -19,6 +20,22 @@ public record GameEventSpellAbilityCast(SpellAbilityView sa, StackItemView si, i
             if (ch != null) { if (sb.length() > 0) sb.append(" "); sb.append(ch); }
         }
         return sb.length() == 0 ? null : sb.toString();
+    }
+
+    // Recurses sub-instances so modal cards (e.g. Farewell) classify when the destructive mode is a sub-ability.
+    private static boolean classifyMassRemoval(SpellAbilityStackInstance si) {
+        if (si == null) return false;
+        SpellAbility sa = si.getSpellAbility();
+        if (sa != null) {
+            ApiType api = sa.getApi();
+            if (api == ApiType.DestroyAll
+                    || api == ApiType.DamageAll
+                    || api == ApiType.SacrificeAll
+                    || api == ApiType.ChangeZoneAll) {
+                return true;
+            }
+        }
+        return classifyMassRemoval(si.getSubInstance());
     }
 
     /* (non-Javadoc)

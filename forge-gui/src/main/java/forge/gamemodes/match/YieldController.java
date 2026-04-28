@@ -451,9 +451,9 @@ public class YieldController {
         if (!prefTargeting && !prefOpponent && !prefMassRemoval && !prefTriggers) {
             return;
         }
-        // Mass-removal detection needs the engine-side stack instance (StackItemView lacks API).
-        // Resolve once per event by ID lookup rather than walking the stack per-player.
-        boolean isMassRemoval = prefMassRemoval && isMassRemovalForStackItem(si, gameView);
+        // Mass-removal classification is computed once on the host at event emission and shipped on the event,
+        // so this works on remote clients (where gameView.getGame() is null and a stack lookup wouldn't resolve).
+        boolean isMassRemoval = prefMassRemoval && event.isMassRemoval();
         boolean isTrigger = si.isTrigger();
         PlayerView activator = si.getActivatingPlayer();
 
@@ -475,19 +475,6 @@ public class YieldController {
                 breakNextPriorityPass.add(TrackableTypes.PlayerViewType.lookup(p));
             }
         }
-    }
-
-    private boolean isMassRemovalForStackItem(StackItemView siv, GameView gameView) {
-        forge.game.Game game = gameView.getGame();
-        if (game == null) {
-            return false;
-        }
-        for (forge.game.spellability.SpellAbilityStackInstance si : game.getStack()) {
-            if (si.getId() == siv.getId()) {
-                return isMassRemovalInstance(si);
-            }
-        }
-        return false;
     }
 
     /** Recurses into sub-instances (e.g. Oona, where targeting is in a sub-ability). */
@@ -515,26 +502,6 @@ public class YieldController {
         }
 
         return false;
-    }
-
-    /** Recurses into sub-instances for modal spells like Farewell. */
-    private boolean isMassRemovalInstance(forge.game.spellability.SpellAbilityStackInstance si) {
-        forge.game.spellability.SpellAbility sa = si.getSpellAbility();
-        if (sa != null && isMassRemovalApi(sa.getApi())) {
-            return true;
-        }
-        forge.game.spellability.SpellAbilityStackInstance subInstance = si.getSubInstance();
-        if (subInstance != null && isMassRemovalInstance(subInstance)) {
-            return true;
-        }
-        return false;
-    }
-
-    private boolean isMassRemovalApi(forge.game.ability.ApiType api) {
-        return api == forge.game.ability.ApiType.DestroyAll
-            || api == forge.game.ability.ApiType.DamageAll
-            || api == forge.game.ability.ApiType.SacrificeAll
-            || api == forge.game.ability.ApiType.ChangeZoneAll;
     }
 
     private boolean isYieldExperimentalEnabled() {
