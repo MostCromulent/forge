@@ -2,6 +2,8 @@ package forge.ai;
 
 import forge.game.card.Card;
 import forge.game.card.CardLists;
+import forge.game.combat.CombatUtil;
+import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.spellability.SpellAbility;
 import forge.game.zone.ZoneType;
@@ -17,6 +19,15 @@ public final class AvailableActions {
 
     public static boolean compute(Player player, long timeoutMs) {
         long deadlineNanos = System.nanoTime() + timeoutMs * 1_000_000L;
+
+        // During the active player's declare-attackers step, having a legal attacker is itself an action.
+        if (player.getGame().getPhaseHandler().isPlayerTurn(player)
+                && player.getGame().getPhaseHandler().getPhase() == PhaseType.COMBAT_DECLARE_ATTACKERS) {
+            for (Card card : player.getCreaturesInPlay()) {
+                if (checkTimeout(deadlineNanos, timeoutMs)) return true;
+                if (CombatUtil.canAttack(card)) return true;
+            }
+        }
 
         for (Card card : sortedCardsIn(player, ZoneType.Hand)) {
             for (SpellAbility sa : card.getAllPossibleAbilities(player, true)) {
