@@ -1470,6 +1470,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public void declareAttackers(final Player attackingPlayer, final Combat combat) {
+        // Refresh hasAvailableActions for this step — the cached value is from the prior
+        // priority window (begin-combat) and predates the declare-attackers TBA.
+        if (!yieldController.isYieldActive() && needsAvailableActions()) {
+            long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
+            getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
+        }
         if (mayAutoPass()) {
             if (CombatUtil.validateAttackers(combat)) {
                 return; // don't prompt to declare attackers if user chose to
