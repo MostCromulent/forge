@@ -20,7 +20,8 @@ public final class AvailableActions {
     public static boolean compute(Player player, long timeoutMs) {
         long deadlineNanos = System.nanoTime() + timeoutMs * 1_000_000L;
 
-        // During the active player's declare-attackers step, having a legal attacker is itself an action.
+        // Declare-attackers: having a legal attacker is itself an action. No declare-blockers
+        // counterpart — that step always prompts (no mayAutoPass gate) so there's nothing to skip.
         if (player.getGame().getPhaseHandler().isPlayerTurn(player)
                 && player.getGame().getPhaseHandler().getPhase() == PhaseType.COMBAT_DECLARE_ATTACKERS) {
             for (Card card : player.getCreaturesInPlay()) {

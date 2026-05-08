@@ -1470,12 +1470,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public void declareAttackers(final Player attackingPlayer, final Combat combat) {
-        // Refresh hasAvailableActions: this turn-based action runs before the declare-attackers
-        // priority window opens, so the cache reflects the prior begin-combat window — wrong phase
-        // for the "legal attackers count as an action" branch in AvailableActions, plus stale for
-        // any phase-gated abilities that only activate during declare-attackers.
-        // declareBlockers() doesn't need this — it always prompts via InputBlock.showAndWait()
-        // with no mayAutoPass gate, so there's nothing to interrupt.
+        // TBA runs before the declare-attackers priority window — refresh the prior-window cache.
         if (!yieldController.isYieldActive() && needsAvailableActions()) {
             long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
             getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
