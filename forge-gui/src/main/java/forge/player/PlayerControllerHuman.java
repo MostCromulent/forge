@@ -1470,16 +1470,11 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public void declareAttackers(final Player attackingPlayer, final Combat combat) {
-        // TBA runs before the declare-attackers priority window — refresh the prior-window cache.
-        if (!yieldController.isYieldActive() && needsAvailableActions()) {
-            long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
-            getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
-        }
-        if (mayAutoPass()) {
-            if (CombatUtil.validateAttackers(combat)) {
-                return; // don't prompt to declare attackers if user chose to
-                // end the turn and not attacking is legal
-            }
+        // PhaseHandler only invokes this when the player has a legal attacker, so APINA must
+        // never skip — the call's existence is itself the available action. Explicit auto-yield
+        // still skips when not-attacking is legal (legacy parity).
+        if (yieldController.shouldAutoYield() && CombatUtil.validateAttackers(combat)) {
+            return;
         }
 
         // This input should not modify combat object itself, but should return user choice
