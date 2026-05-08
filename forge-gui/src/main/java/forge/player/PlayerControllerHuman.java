@@ -1470,9 +1470,10 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public void declareAttackers(final Player attackingPlayer, final Combat combat) {
-        // PhaseHandler only invokes this when the player has a legal attacker, so APINA must
-        // never skip — the call's existence is itself the available action. Explicit auto-yield
-        // still skips when not-attacking is legal (legacy parity).
+        // PhaseHandler.declareAttackersTurnBasedAction's CombatUtil.canAttack gate ensures we
+        // only get here when the player has a legal attacker, so APINA must never skip — the
+        // invocation itself is the available action. A user-initiated yield (pass until end
+        // of turn, per-ability) still skips when not-attacking is legal.
         if (yieldController.shouldAutoYield() && CombatUtil.validateAttackers(combat)) {
             return;
         }
