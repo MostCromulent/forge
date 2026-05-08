@@ -1470,11 +1470,15 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     @Override
     public void declareAttackers(final Player attackingPlayer, final Combat combat) {
-        // CombatUtil.canAttack ensures we only get here when the player has a legal attacker,
+        // CombatUtil.canAttack ensures we only get here when the player has a legal attacker
         // so APINA must never skip - the invocation itself is the available action. User
         // initiated yields (pass until end of turn) still skip when not-attacking is legal.
-        if (yieldController.shouldAutoYield() && CombatUtil.validateAttackers(combat)) {
-            return;
+        if (yieldController.shouldAutoYield()) {
+            if (CombatUtil.validateAttackers(combat)) {
+                return;
+            }
+            // if forced to prompt (must-attack/goad) clear the yield like any other interrupt
+            yieldController.applyInterrupt();
         }
 
         // This input should not modify combat object itself, but should return user choice
