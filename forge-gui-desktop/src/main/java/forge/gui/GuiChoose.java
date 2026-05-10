@@ -234,29 +234,62 @@ public class GuiChoose {
             final List<T> sourceChoices, final List<T> destChoices, final CardView referenceCard, final boolean sideboardingMode, final CMatchUI matchUI) {
         // An input box for handling the order of choices.
 
-        final Callable<List<T>> callable = () -> {
-            final DualListBox<T> dual = new DualListBox<>(remainingObjectsMin, remainingObjectsMax, sourceChoices, destChoices, matchUI);
-            dual.setSecondColumnLabelText(top);
+        // CardView lists outside sideboard mode get the horizontal full-card layout — but only up to
+        // HORIZONTAL_CARD_CAP entries. Past that, horizontal scroll fatigue outweighs the visual benefit
+        // and DualListBox's dense vertical list is faster to scan. Trigger orderings (SpellAbilityView),
+        // sideboarding (PaperCard), and any non-CardView pool also fall back to DualListBox.
+        final int totalCards = (sourceChoices != null ? sourceChoices.size() : 0)
+                + (destChoices != null ? destChoices.size() : 0);
+        final boolean useHorizontal = !sideboardingMode
+                && allCardViews(sourceChoices) && allCardViews(destChoices)
+                && totalCards > 0
+                && totalCards <= HORIZONTAL_CARD_CAP;
 
-            dual.setSideboardMode(sideboardingMode);
-
-            dual.setTitle(title);
-            dual.pack();
-            dual.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-            if (matchUI != null && referenceCard != null) {
-                matchUI.setCard(referenceCard);
-                // MARKED FOR UPDATE
-            }
-            dual.setVisible(true);
-
-            final List<T> objects = dual.getOrderedList();
-
-            dual.dispose();
-            if (matchUI != null) {
-                matchUI.clearPanelSelections();
-            }
-            return objects;
-        };
+        final Callable<List<T>> callable;
+        if (useHorizontal) {
+            callable = () -> {
+                @SuppressWarnings("unchecked")
+                final List<CardView> srcCv = (List<CardView>) (List<?>) sourceChoices;
+                @SuppressWarnings("unchecked")
+                final List<CardView> dstCv = (List<CardView>) (List<?>) destChoices;
+                final HorizontalOrderingDialog dlg = new HorizontalOrderingDialog(
+                        remainingObjectsMin, remainingObjectsMax, srcCv, dstCv, matchUI);
+                dlg.setSecondColumnLabelText(top);
+                dlg.setTitle(title);
+                dlg.pack();
+                dlg.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+                if (matchUI != null && referenceCard != null) {
+                    matchUI.setCard(referenceCard);
+                }
+                dlg.setVisible(true);
+                @SuppressWarnings("unchecked")
+                final List<T> objects = (List<T>) (List<?>) dlg.getOrderedList();
+                dlg.dispose();
+                if (matchUI != null) {
+                    matchUI.clearPanelSelections();
+                }
+                return objects;
+            };
+        } else {
+            callable = () -> {
+                final DualListBox<T> dual = new DualListBox<>(remainingObjectsMin, remainingObjectsMax, sourceChoices, destChoices, matchUI);
+                dual.setSecondColumnLabelText(top);
+                dual.setSideboardMode(sideboardingMode);
+                dual.setTitle(title);
+                dual.pack();
+                dual.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+                if (matchUI != null && referenceCard != null) {
+                    matchUI.setCard(referenceCard);
+                }
+                dual.setVisible(true);
+                final List<T> objects = dual.getOrderedList();
+                dual.dispose();
+                if (matchUI != null) {
+                    matchUI.clearPanelSelections();
+                }
+                return objects;
+            };
+        }
 
         final FutureTask<List<T>> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);
@@ -266,6 +299,20 @@ public class GuiChoose {
             e.printStackTrace();
         }
         return null;
+    }
+
+    // Past this many CardViews, horizontal scroll fatigue outweighs the visual benefit; fall back
+    // to DualListBox's denser vertical list.
+    private static final int HORIZONTAL_CARD_CAP = 10;
+
+    private static boolean allCardViews(final List<?> list) {
+        if (list == null || list.isEmpty()) {
+            return true; // empty side is fine; the other side determines the type.
+        }
+        for (final Object o : list) {
+            if (!(o instanceof CardView)) return false;
+        }
+        return true;
     }
 
     public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, 
