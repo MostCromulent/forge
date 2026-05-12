@@ -1,6 +1,5 @@
 package forge.gamemodes.net;
 
-import forge.gui.GuiBase;
 import forge.trackable.Tracker;
 import forge.util.IHasForgeLog;
 import io.netty.buffer.ByteBuf;
@@ -37,14 +36,9 @@ public class CompatibleObjectDecoder extends LengthFieldBasedFrameDecoder implem
         int frameSize = frame.readableBytes();
         long startMs = System.currentTimeMillis();
 
-        ObjectInputStream ois;
-        if (GuiBase.hasPropertyConfig()) {
-            ois = tracker != null
-                    ? new TrackableSerializer.ResolvingInputStream(new LZ4BlockInputStream(new ByteBufInputStream(frame, true)), tracker)
-                    : new ObjectInputStream(new LZ4BlockInputStream(new ByteBufInputStream(frame, true)));
-        } else {
-            ois = new CObjectInputStream(new LZ4BlockInputStream(new ByteBufInputStream(frame, true)), this.classResolver, tracker);
-        }
+        ObjectInputStream ois = new CObjectInputStream(
+                new LZ4BlockInputStream(new ByteBufInputStream(frame, true)),
+                this.classResolver, tracker);
 
         Object var5 = null;
         try {
