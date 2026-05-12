@@ -1,6 +1,7 @@
 package forge.gamemodes.net;
 
 import forge.gamemodes.net.event.GuiGameEvent;
+import forge.trackable.Tracker;
 import forge.util.IHasForgeLog;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -16,21 +17,26 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
     private final NetworkByteTracker byteTracker;
+    private volatile Tracker tracker;
 
     public CompatibleObjectEncoder(NetworkByteTracker byteTracker) {
         this.byteTracker = byteTracker;
     }
 
+    public void setTracker(Tracker tracker) {
+        this.tracker = tracker;
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
-        encodeInto(msg, out, this.byteTracker);
+        encodeInto(msg, out, this.tracker, this.byteTracker);
     }
 
     /** Caller passes the returned buffer to writeAndFlush, which takes ownership. */
     public ByteBuf encodeToBuf(Serializable msg, ByteBufAllocator alloc) throws Exception {
         ByteBuf out = alloc.buffer();
         try {
-            encodeInto(msg, out, this.byteTracker);
+            encodeInto(msg, out, this.tracker, this.byteTracker);
         } catch (Exception e) {
             out.release();
             throw e;
@@ -38,7 +44,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
         return out;
     }
 
-    private static void encodeInto(Serializable msg, ByteBuf out,
+    private static void encodeInto(Serializable msg, ByteBuf out, Tracker tracker,
                                    NetworkByteTracker byteTracker) throws Exception {
         int startIdx = out.writerIndex();
         ByteBufOutputStream bout = new ByteBufOutputStream(out);
@@ -48,7 +54,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
         try {
             bout.write(LENGTH_PLACEHOLDER);
-            oout = new CObjectOutputStream(new LZ4BlockOutputStream(bout), replace);
+            oout = new CObjectOutputStream(new LZ4BlockOutputStream(bout), replace, tracker);
             oout.writeObject(msg);
             oout.flush();
         } finally {

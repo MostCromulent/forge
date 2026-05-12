@@ -4,6 +4,7 @@ import forge.game.*;
 import forge.game.card.CardView;
 import forge.game.player.PlayerView;
 import forge.gamemodes.net.CompatibleObjectDecoder;
+import forge.gamemodes.net.CompatibleObjectEncoder;
 import forge.gamemodes.net.GameProtocolHandler;
 import forge.gui.GuiBase;
 import forge.util.IHasForgeLog;
@@ -74,6 +75,13 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
                 if (args.length > 0 && args[0] instanceof GameView gameView) {
                     if (this.tracker == null) {
                         this.tracker = new Tracker();
+                        // Encoder uses the tracker to emit IdRef for client→server CardView args
+                        // (presence check only — stale detection is server-only).
+                        // Ephemerals absent from the tracker serialize as full objects in both directions.
+                        CompatibleObjectEncoder encoder = ctx.pipeline().get(CompatibleObjectEncoder.class);
+                        if (encoder != null) {
+                            encoder.setTracker(this.tracker);
+                        }
                         CompatibleObjectDecoder decoder = ctx.pipeline().get(CompatibleObjectDecoder.class);
                         if (decoder != null) {
                             decoder.setTracker(this.tracker);

@@ -1,5 +1,7 @@
 package forge.gamemodes.net;
 
+import forge.trackable.Tracker;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
@@ -8,8 +10,11 @@ import java.io.OutputStream;
 public class CObjectOutputStream extends ObjectOutputStream {
     static final int TYPE_THIN_DESCRIPTOR = 1;
 
-    CObjectOutputStream(OutputStream out, boolean replaceTrackables) throws IOException {
+    private final Tracker tracker;
+
+    CObjectOutputStream(OutputStream out, boolean replaceTrackables, Tracker tracker) throws IOException {
         super(out);
+        this.tracker = tracker;
         if (replaceTrackables) {
             enableReplaceObject(true);
         }
@@ -24,6 +29,6 @@ public class CObjectOutputStream extends ObjectOutputStream {
 
     @Override
     protected Object replaceObject(Object obj) throws IOException {
-        return TrackableSerializer.replace(obj, null, false);
+        return TrackableSerializer.replace(obj, tracker, false);
     }
 }

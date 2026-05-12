@@ -178,6 +178,10 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         if (codecTracker == null || ch == null) {
             return;
         }
+        CompatibleObjectEncoder encoder = ch.pipeline().get(CompatibleObjectEncoder.class);
+        if (encoder != null) {
+            encoder.setTracker(codecTracker);
+        }
         CompatibleObjectDecoder decoder = ch.pipeline().get(CompatibleObjectDecoder.class);
         if (decoder != null) {
             decoder.setTracker(codecTracker);
