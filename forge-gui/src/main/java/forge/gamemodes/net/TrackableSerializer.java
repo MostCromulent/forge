@@ -24,7 +24,7 @@ import java.util.List;
  * encoding and resolves them back from the Tracker during decoding.
  *
  * <p>Used by the Netty encoder/decoder pipeline ({@link CompatibleObjectEncoder},
- * {@link CompatibleObjectDecoder}) and the mobile codec path
+ * {@link CompatibleObjectDecoder}) via the underlying object streams
  * ({@link CObjectOutputStream}, {@link CObjectInputStream}).
  */
 public final class TrackableSerializer {
