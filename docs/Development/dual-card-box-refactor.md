@@ -463,3 +463,269 @@ in a working state with the new infrastructure available but inactive.
 - Simultaneously ordered destination piles.
 - Migration of `orderBlockers` / `orderAttackers` / `orderMoveToZoneList`.
 - Pure single-pane reorder mode (a future use case for the same widget).
+
+## Long-term consolidation arc
+
+This section describes the broader consolidation that becomes possible
+*after* `DualCardBox` lands. It is not part of the v1 PR. It is recorded
+here so the v1 design can be evaluated against the longer-term shape, and
+so the boundaries between v1 and follow-up work are explicit.
+
+The premise is that every multi-card choice in `PlayerControllerHuman`
+that today routes to a dialog is partition-shaped: pick zero or more
+cards from a source list, distribute them across one or more labeled
+destinations, optionally with per-destination ordering. The `chooseCards
+Piles` primitive expresses all of them. Once the widget is stable and
+the migration pattern is proven, the rest of the dialog-shaped choices
+can be folded onto the same primitive.
+
+### `IGuiGame` surface that could eventually collapse
+
+| Method (today) | Today's role | Subsumed shape |
+|---|---|---|
+| `many(title, chosenLabel, min, max, src, dest, ref)` | dialog multi-pick | two piles, dest unordered |
+| `many(title, chosenLabel, max, items, ref)` | overload | same |
+| `order(title, top, src, ref)` | single-pile ordered | one pile, ordered |
+| `order(title, top, min, max, src, dest, ref, sideboardMode)` | dual-list ordered | one pile, ordered, pre-populated |
+| `insertInList(title, card, list)` | insert one into list | one ordered pile pre-populated, single new element |
+| `manipulateCardList(title, cards, manipulable, toTop, toBottom, toAnywhere)` | partial reorder | one pile with positional constraints |
+
+That is roughly **five to seven `IGuiGame` methods** that could be
+removed once their call sites are migrated. The corresponding
+`ProtocolMethod` entries collapse from four (`many`, `order`,
+`insertInList`, `manipulateCardList`) to one (`chooseCardPiles`).
+
+`DualListBox` itself does not need to be removed; it continues to back
+the libgdx and headless paths via the default fallback. It just stops
+being directly named by the engine.
+
+### `IGuiGame` surface that does *not* collapse
+
+- `one` / `oneOrNone` / `getChoices`: single-card pickers with text-list
+  preview, often used for non-card payloads (counter types, color
+  choices, replacement-effect ordering). Different interaction model.
+- `chooseSingleEntityForEffect`: has `delayedReveal` semantics and
+  entity-not-card payloads (players + cards). Partial overlap, but the
+  reveal handling is enough complexity to justify keeping it separate.
+- `chooseEntitiesForEffect`: same considerations as above, multi-pick
+  variant.
+- `InputSelectCardsFromList` / `InputSelectEntitiesFromList`: a different
+  mechanism entirely. In-zone clicks on existing zone displays. Not
+  partition-shaped and not on `IGuiGame`.
+- `tempShowCards` / `endTempShowCards`: visibility plumbing, orthogonal.
+- `setCard` / `setPanelSelection` / `setSelectables`: UI state, not
+  choice elicitation.
+
+### Engine-side simplifications enabled
+
+Each migrated call site collapses some combination of
+`tempShowCards` + `many` + `order` + `GameEntityViewMap` boilerplate
+into a single `chooseCardPiles` call.
+
+| Site | Today's pattern | After |
+|---|---|---|
+| `arrangeForScry` | two `GameEntityViewMap`s, `many` then `order` | one request, one map |
+| `arrangeForSurveil` | same | same |
+| `arrangeForMove` | `manipulateCardList` + post-processing | one request |
+| `chooseCardsForEffect` fallback | `many` + map | one request |
+| `chooseCardsToDiscardFrom` fallback | `many` + map | one request |
+| `chooseCardsToDiscardUnlessType` fallback | same | one request |
+| `chooseContraptionsToCrank` | `many` with pre-population | one request |
+| `manipulateCardList` callers | direct call to the GUI method | one request |
+
+The scry/surveil sites are the largest individual wins because they
+collapse from two sequential dialogs into one widget. Other sites are
+modest line-count reductions but contribute to the property that
+*every multi-card partition choice in Forge speaks one protocol*.
+
+### Single-pane (pure-reorder) future use
+
+Once the widget is in place, `getGui().order(...)` for blocker ordering,
+exert / enlist, `orderMoveToZoneList`, simultaneous-trigger ordering,
+and similar single-pile ordered choices can also migrate. The widget
+needs a layout mode where the pool pane is collapsed or hidden, leaving
+only the ordered destination pane plus reorder controls. This is a
+configuration of the existing widget, not a new widget.
+
+Ordering choices are spread across many call sites in
+`PlayerControllerHuman` (around 10–12 sites). Migrating them is
+mechanical but expands PR scope significantly, so this is its own
+follow-up.
+
+### Sequencing of the broader arc
+
+A reasonable phased order, each phase independently shippable:
+
+1. **v1 (this proposal)**: `DualCardBox` + `chooseCardPiles`; migrate
+   scry, surveil, contraption crank, the `many`-based dialog fallbacks.
+2. **v2**: cross-pane drag-and-drop.
+3. **v3**: migrate `manipulateCardList` once the context-cards question
+   is resolved.
+4. **v4**: pure-reorder mode; migrate `orderBlockers`, `orderAttackers`,
+   `orderMoveToZoneList`, and the simultaneous-trigger ordering at
+   `PlayerControllerHuman` around line 2000.
+5. **v5**: deprecate and remove the now-unused `IGuiGame` methods
+   (`many` overloads, `order` overloads, `insertInList`,
+   `manipulateCardList`) and their `ProtocolMethod` entries; collapse
+   the default fallback implementations they backed.
+
+Phases 2–5 are independent and can be reordered or dropped based on
+observed value after v1.
+
+### Cumulative effect
+
+If the full arc lands, the engine-side picture is roughly:
+
+- One `IGuiGame` method (`chooseCardPiles`) for every multi-card
+  partition choice.
+- One `ProtocolMethod` entry for the same.
+- One widget on desktop, one fallback path on libgdx/headless.
+- Roughly 200–300 lines of engine code removed across the migrated
+  call sites, replaced by declarative `ChoiceRequest` construction.
+- No change to in-zone selection, single-card pickers, or non-card
+  choice paths.
+
+The v1 PR commits to step 1 only. Subsequent steps are decided based on
+the maintenance experience with v1.
+
+## Appendix A: visual mockups
+
+The mockups below stand in for the actual rendered widget. Each "card"
+in ASCII represents a real `CardPanel` rendering of card art; the layout
+and chrome are accurate.
+
+### Scry 3, mid-decision
+
+Initial state: three cards revealed from the top of the library, all in
+the left pane. The user has moved Island and Brainstorm to the
+destination pile (in that order) and is deciding whether to keep Forest
+on top or send it to the bottom.
+
+```
++============================================================================+
+|  Scry 3 - Cosima, God of the Voyage                                [_][][X]|
++============================================================================+
+|                                                                            |
+|  +- Available (1) ---[ search... ][Sort A-Z]-+    +- Top of library 2/3 -+ |
+|  |                                           |    |                      | |
+|  |   +-------------------+                   |    |  +----------------+  | |
+|  |   |       FOREST      |                   |    |  |[1]    ISLAND   |  | |
+|  |   |    Basic Land     |          [  >  ]  |    |  |   Basic Land   |  | |
+|  |   |                   |                   |    |  |                |  | |
+|  |   |     {T}: add {G}  |          [  <  ]  |    |  |    {T}: add {U}|  | |
+|  |   |                   |                   |    |  +----------------+  | |
+|  |   +-------------------+          [  ^  ]  |    |                      | |
+|  |                                           |    |  +----------------+  | |
+|  |                                  [  v  ]  |    |  |[2]  BRAINSTORM |  | |
+|  |                                           |    |  |    Instant     |  | |
+|  |                                           |    |  |  Draw three    |  | |
+|  |                                           |    |  |  cards, then.. |  | |
+|  |                                           |    |  +----------------+  | |
+|  |                                           |    |                      | |
+|  +-------------------------------------------+    +----------------------+ |
+|                                                                            |
++============================================================================+
+|  Move 0 or more cards to the top in any order. The rest go to the bottom. |
+|                                                                            |
+|  Selected: 2 / 3                                  [  OK  ]    [ Cancel  ] |
++============================================================================+
+```
+
+Element-by-element:
+
+- **Title bar**: `ChoiceRequest.title`, standard `FDialog` chrome.
+- **Left pane header** (`PoolPane`): `Available (n)` + search field +
+  sort toggle. Click a card to move to the destination pile, or select
+  and use `>`.
+- **Center control column**: `>` / `<` for cross-pane move; `^` / `v`
+  for reorder within the destination (only present when at least one
+  pile is ordered).
+- **Right pane header** (`DestPane`): `<pile.label> (count / max)`.
+  Bracketed numbers `[1]` `[2]` are the order-position badges, suggested
+  red color to distinguish from selection-hotkey badges.
+- **Footer prompt line**: contextual instructions derived from the
+  spell ability.
+- **Selection counter**: live `n / totalMax` (or per-pile count when no
+  global constraint is set).
+- **OK** disabled until every pile's `min` / `max` is satisfied; **Cancel**
+  hidden or disabled when `ChoiceRequest.cancelable` is false.
+
+### Fact-or-Fiction-style, one unordered destination
+
+The pile is unordered (`Pile.ordered = false`), so order badges and
+reorder buttons are absent.
+
+```
++============================================================================+
+|  Fact or Fiction - choose cards to put into your hand              [_][][X]|
++============================================================================+
+|                                                                            |
+|  +- Available (3) ----[ search... ][Sort]-+   +- Into your hand (2) ----+ |
+|  |                                        |   |                         | |
+|  |   +-------------------+                |   |  +-------------------+  | |
+|  |   |   COUNTERSPELL    |        [  >  ] |   |  |     SOL RING      |  | |
+|  |   |     Instant       |                |   |  |     Artifact      |  | |
+|  |   |   {U}{U}: counter |        [  <  ] |   |  |    {T}: add {C}{C}|  | |
+|  |   +-------------------+                |   |  +-------------------+  | |
+|  |                                        |   |                         | |
+|  |   +-------------------+                |   |  +-------------------+  | |
+|  |   |    DARK RITUAL    |                |   |  |     SWORDS TO     |  | |
+|  |   |     Instant       |                |   |  |    PLOWSHARES     |  | |
+|  |   +-------------------+                |   |  |     Instant       |  | |
+|  |                                        |   |  +-------------------+  | |
+|  |   +-------------------+                |   |                         | |
+|  |   |      LIGHTNING    |                |   |                         | |
+|  |   |        BOLT       |                |   |                         | |
+|  |   +-------------------+                |   |                         | |
+|  +----------------------------------------+   +-------------------------+ |
+|                                                                            |
++============================================================================+
+|  Your opponent will put the remaining cards into your graveyard.          |
+|                                                                            |
+|  Selected: 2                                      [  OK  ]    [ Cancel  ] |
++============================================================================+
+```
+
+### Pre-populated destination (contraption crank)
+
+`Pile.initial` is non-empty. Contraptions previously cranked open in the
+destination pane; the user can move cards either direction before
+confirming.
+
+```
++============================================================================+
+|  Choose contraptions to crank this turn                            [_][][X]|
++============================================================================+
+|                                                                            |
+|  +- Available (2) -------------------------+   +- Cranked (1) -----------+ |
+|  |                                         |   |                         | |
+|  |   +-------------------+        [  >  ]  |   |  +-------------------+  | |
+|  |   |   STEAM-POWERED   |                 |   |  |    CLOCKWORK      |  | |
+|  |   |     KETTLE        |        [  <  ]  |   |  |     CONTRAPTION   |  | |
+|  |   +-------------------+                 |   |  +-------------------+  | |
+|  |                                         |   |                         | |
+|  |   +-------------------+                 |   |     (last turn's       | |
+|  |   |   PHLOGISTON      |                 |   |      cranked set,      | |
+|  |   |     SPARK CHAMBER |                 |   |      pre-selected)     | |
+|  |   +-------------------+                 |   |                         | |
+|  |                                         |   |                         | |
+|  +-----------------------------------------+   +-------------------------+ |
+|                                                                            |
++============================================================================+
+|                                                   [  OK  ]    [ Cancel  ] |
++============================================================================+
+```
+
+### Behaviour notes covering layout edge cases
+
+- **Long pool, short destination**: each pane scrolls independently;
+  center column remains vertically centered in the gap.
+- **Pool larger than viewport**: scroll within the pane, sort/search in
+  the header help the user navigate.
+- **Selected count violates `totalMin`**: OK disabled; counter reads
+  `Selected: 1 / 3 (need at least 2)` or similar contextual hint.
+- **Single-card pool**: widget still opens. A degraded confirm-style
+  dialog could be substituted at the call site when `pool.size() == 1`,
+  but that is per-site logic, not widget logic.
+- **All cards moved to destination**: pool pane empty but visible; the
+  `<` button still works for moving cards back.
