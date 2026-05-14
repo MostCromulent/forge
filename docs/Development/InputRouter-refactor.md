@@ -224,9 +224,13 @@ Implementations:
   Exile, Flashback, Command, Sideboard).
 - **`MatchController` (mobile)** — true only when every zone is
   Battlefield or own Hand. The libgdx UI cannot point at other zones.
-- **`PlayerControllerForTests`, `HeadlessNetworkGuiGame`,
-  `RemoteClientGuiGame`** — false. Tests and headless network paths don't
-  do click selection.
+- **`PlayerControllerForTests`, `HeadlessNetworkGuiGame`** — false. Tests
+  and headless paths don't do click selection.
+- **`RemoteClientGuiGame`** — computes the predicate locally against the
+  cached `client.isLibgdx()` flag, which is already established at lobby
+  handshake time. Same logic shape as the desktop/mobile impls, just
+  parameterized by the remote client's announced platform. No new protocol
+  traffic.
 
 Existing `chooseSingleEntityForEffect` and `chooseEntitiesForEffect` keep
 their signatures. Their implementations change:
@@ -339,9 +343,8 @@ selection dialog to fold the reveal into.
 - `forge-gui-desktop/src/test/java/forge/net/HeadlessNetworkGuiGame.java` —
   same.
 - `forge-gui/src/main/java/forge/gamemodes/net/server/RemoteClientGuiGame.java` —
-  proxy `supportsCardClickSelection` over the network protocol.
-- `forge-gui/src/main/java/forge/gamemodes/net/ProtocolMethod.java` — new
-  protocol method for `supportsCardClickSelection`.
+  implement `supportsCardClickSelection` against the cached
+  `client.isLibgdx()` from the lobby handshake. No protocol change.
 - `forge-game/src/main/java/forge/game/player/PlayerController.java` — add
   `DelayedReveal` parameter to `chooseCardsToDiscardFrom`.
 - `forge-ai/src/main/java/forge/ai/PlayerControllerAi.java` — accept and
@@ -383,13 +386,11 @@ cards specialization is still used directly by paths outside the router
 (e.g. `chooseTargets`, the discard-your-own-hand flow). Both classes
 continue to exist.
 
-**Network protocol surface grows by one method.** `supportsCardClickSelection`
-needs to be representable in the protocol. Cleanest answer: cache the
-remote client's capability at connection time so per-call protocol traffic
-is unchanged. Mitigation if that's too invasive: have `RemoteClientGuiGame`
-return a conservative default (false) — the server-side router falls back
-to dialog selection for network clients, which matches today's behavior
-when network play is involved.
+**Network capability is already handled at lobby handshake.** Mobile
+clients announce themselves as libgdx ports during lobby handshake, and the
+server caches that on `RemoteClient.isLibgdx()`. `RemoteClientGuiGame`
+computes `supportsCardClickSelection` locally against that cached flag with
+no protocol round-trip and no new protocol method.
 
 **`DiscardEffect` change touches a hot path.** `RevealYouChoose` is on
 Inquisition, Thoughtseize, Mind Warp, and similar high-frequency cards.
@@ -432,9 +433,6 @@ volume) is exercised in test runs before merging.
   supports a real multi-mode or only single. Probably needs a small
   widget-level change; size is unknown until someone reads the mobile
   toolbox more carefully.
-- **Network capability caching: at connection setup, or lazily?** Eager is
-  simpler; lazy is more robust to mid-game reconnect. Default to eager,
-  fall back to lazy if reconnect cases break.
 - **Should `OrderRequest` and `ManipulateRequest` share a base class?**
   They have overlapping fields (`title`, reference card). Probably not
   worth abstracting until a third order-like request appears.
