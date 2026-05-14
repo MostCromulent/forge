@@ -2,16 +2,33 @@
 
 ## Summary
 
-Extract human-player input routing out of `PlayerControllerHuman` (PCH) into a
-dedicated `InputRouter` layer, finish the `DelayedReveal` (DR) contract on both
-GUI implementations, and push platform-specific UI decisions (`isLibgdxPort`,
-`UI_SELECT_FROM_CARD_DISPLAYS`) down into the `IGuiGame` impls where they
-belong.
+`PlayerControllerHuman` (PCH) is 3572 lines and mixes several unrelated
+concerns. The most tangled of them is that PCH simultaneously decides
+**what input the rules engine needs from the player** (a game-logic
+question) and **how the UI should display that prompt** (a presentation
+question — card-click selection vs dialog selection, desktop vs mobile,
+which preferences apply). These decisions are co-located in the same
+methods, with 14 platform/preference checks and 157 `getGui()` calls
+scattered through the file.
+
+The original PR discussion that motivated this work asked for a small UX
+fix: stop showing a separate reveal popup before opponent-hand discard.
+Tracing that fix made the layering problem visible — `DelayedReveal` is the
+mechanism that should let the engine ask "reveal these cards as part of
+the upcoming selection," but three of four `IGuiGame` implementations
+don't actually honor that contract, because the controller never gave
+them a clean way to.
+
+This refactor extracts the input-vs-display split into a dedicated
+`InputRouter` layer, finishes the `DelayedReveal` contract on both GUI
+implementations, and pushes platform-specific UI decisions
+(`isLibgdxPort`, `UI_SELECT_FROM_CARD_DISPLAYS`) down into the `IGuiGame`
+impls where they belong.
 
 This is one PR. It is large but its scope is bounded: only the selection /
-order / manipulate surface of PCH is touched. The Input subsystem, mulligan
-flow, attack/block flow, mana payment, replacement effects, and dev-mode
-tooling are out of scope.
+order / manipulate surface of PCH is touched. The Input subsystem,
+mulligan flow, attack/block flow, mana payment, replacement effects, and
+dev-mode tooling are out of scope.
 
 ## Motivation
 
