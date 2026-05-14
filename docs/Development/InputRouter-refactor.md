@@ -246,10 +246,16 @@ their signatures. Their implementations change:
   `//TODO: Merge this into search dialog` comments). The FloatingZone now
   has a prompt header and card display; DR cards are shown alongside the
   selectable set in the same UI surface, with the same OK/cancel.
-- **`MatchController`** — `chooseEntitiesForEffect` mirrors what
-  `chooseSingleEntityForEffect` already does: tabbed `GameEntityPicker`
-  with a reveal tab. The existing `GameEntityPicker` is reused; only the
-  multi-select tab variant needs adding (uses `FChoiceList` in multi mode).
+- **`MatchController`** — `chooseEntitiesForEffect` routes to
+  `GameEntityPicker` (today it bypasses it entirely and calls
+  `SGuiChoose.order`, which is why DR is dropped). `FChoiceList` already
+  supports multi-select natively via its `minChoices` / `maxChoices` /
+  `selectedIndices` fields, and `PickerTab` already threads `maxChoices`
+  through. The change is small: extend `GameEntityPicker`'s constructor
+  to take `min` / `max` and a `Consumer<List<GameEntityView>>` callback,
+  have the OK button call `list.getSelectedItems()` instead of
+  `getSelectedItem()`. The DR tab works unchanged; the search filter works
+  unchanged.
 
 ### PCH changes
 
@@ -339,8 +345,10 @@ selection dialog to fold the reveal into.
 - `forge-gui-mobile/src/forge/screens/match/MatchController.java` —
   implement `supportsCardClickSelection`; honor DR in
   `chooseEntitiesForEffect` via tabbed `GameEntityPicker`.
-- `forge-gui-mobile/src/forge/card/GameEntityPicker.java` — add multi-select
-  tab variant (extension of existing single-select pattern).
+- `forge-gui-mobile/src/forge/card/GameEntityPicker.java` — extend
+  callback shape to accept a multi-select result (`FChoiceList` already
+  supports multi-select; only the wrapper's callback signature is
+  single-item-shaped today).
 - `forge-gui/src/main/java/forge/player/PlayerControllerHuman.java` —
   selection methods shrink to router calls; `useSelectCardsInput` deleted;
   manual tempShow pairs replaced.
@@ -405,13 +413,13 @@ volume) is exercised in test runs before merging.
 |---|---|---|
 | 7 new files in `forge.gui.input.router` (value objects + router) | ~400 | 0 |
 | `CMatchUI` DR rendering (resolves both TODOs) | ~50–100 | ~10 |
-| Mobile `GameEntityPicker` multi-select tab + `MatchController` DR honoring | ~40–70 | ~5 |
+| Mobile `GameEntityPicker` callback shape + `MatchController` routing | ~15–25 | ~5 |
 | `IGuiGame` interface + capability impls on all five `IGuiGame` classes | ~30 | 0 |
 | PCH selection/order/manipulate methods | ~60–90 | ~300–500 |
 | Engine-side (`PlayerController`, `PlayerControllerAi`, `DiscardEffect`) | ~15 | ~5 |
 
-Rough totals: **~600–700 lines added, ~320–520 lines removed, net delta
-~+200 to +300, 12–14 files touched** (7 new, 5–7 modified).
+Rough totals: **~570–670 lines added, ~320–520 lines removed, net delta
+~+150 to +300, 12–14 files touched** (7 new, 5–7 modified).
 
 Most of the line count is boilerplate — value objects with named fields,
 ceremonial signature updates across `IGuiGame` implementors. The
@@ -420,17 +428,6 @@ substantive review surface is small: `HumanInputRouter` (~100 lines), the
 multi-select picker, and the `DiscardEffect` engine-side change. Plan for
 a medium-large refactor PR; expect reviewer time to concentrate on those
 four areas.
-
-## Open questions
-
-- **Should `GameEntityPicker` multi-select reuse the same `FChoiceList`
-  widget as single-select, or extend?** Depends on whether `FChoiceList`
-  supports a real multi-mode or only single. Probably needs a small
-  widget-level change; size is unknown until someone reads the mobile
-  toolbox more carefully.
-- **Should `OrderRequest` and `ManipulateRequest` share a base class?**
-  They have overlapping fields (`title`, reference card). Probably not
-  worth abstracting until a third order-like request appears.
 
 ## Follow-up work
 
