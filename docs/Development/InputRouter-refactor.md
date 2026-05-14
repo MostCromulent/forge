@@ -39,8 +39,11 @@ The mixing has concrete costs:
   `tempShowCards(...) / build Input / showAndWait / endTempShowCards()`
   pattern repeated across `chooseCardsForEffect`,
   `chooseSingleEntityForEffect`, `chooseEntitiesForEffect`,
-  `chooseCardsToDiscardFrom`. The `chooseCardsToDiscardFrom` self-discard
-  branch silently forgets the `tempShowCards` call.
+  `chooseCardsToDiscardFrom`. Each instance hand-rolls the temp-show
+  pairing, and the pairings aren't uniform across methods (e.g.
+  `chooseCardsToDiscardFrom`'s self-discard branch skips the temp-show
+  call — defensible today because the cards are in own hand, fragile
+  if the call site is ever extended to non-self cases).
 - `DelayedReveal` advertises (in its Javadoc) that it lets revealed cards
   appear in the same dialog as cards being selected. In practice, three of
   the four `IGuiGame` selection implementations don't honor that — they
@@ -64,7 +67,8 @@ The mixing has concrete costs:
   out of PCH into the `IGuiGame` implementations.
 - Collapse the repeated tempShow/Input/dialog boilerplate in PCH onto one
   helper.
-- Eliminate the asymmetric tempShow usage that's a latent source of bugs.
+- Make the temp-show contract uniform across selection methods so the
+  asymmetric patterns can't drift further.
 
 ## Non-Goals
 
@@ -118,10 +122,14 @@ public final class SelectionRequest<T extends GameEntity> {
 }
 ```
 
-`OrderRequest` — covers `arrangeForScry`, `arrangeForSurveil`,
-`orderMoveToZoneList`, the order-the-blockers flow. Fields:
-`sourceCards`, `destCards`, `title`, `topCaption`, top/bottom/anywhere
-flags, optional reference card.
+`OrderRequest` — covers the simple ordering case (the order-the-blockers
+flow, sideboard ordering, etc.). Fields: `sourceCards`, `destCards`,
+`title`, `topCaption`, optional reference card.
+
+`arrangeForScry`, `arrangeForSurveil`, and `orderMoveToZoneList` do
+**not** route through `OrderRequest` — they chain selection, ordering,
+and preference branches in ways that don't usefully flatten. See "PCH
+changes" below for how those are handled (partial migration).
 
 `ManipulateRequest` — covers `manipulateCardList` and `arrangeForMove`.
 Fields: `title`, `cards`, `manipulable`, `toTop`, `toBottom`, `toAnywhere`.
@@ -143,17 +151,36 @@ public final class TempReveal implements AutoCloseable {
     public static TempReveal open(PlayerControllerHuman pch,
                                    Iterable<? extends GameEntity> options,
                                    DelayedReveal dr) {
+        List<Card> outerScope = pch.snapshotTempShown();
         pch.tempShow(options);
         if (dr != null) pch.tempShow(dr.getCards());
-        return new TempReveal(pch);
+        return new TempReveal(pch, outerScope);
     }
-    @Override public void close() { pch.endTempShowCards(); }
+    @Override public void close() {
+        pch.endTempShowCards();
+        pch.restoreTempShown(outerScope);
+    }
 }
 ```
 
 Replaces every manual `tempShowCards(...) / endTempShowCards()` pair.
-Try-with-resources makes the asymmetric `chooseCardsToDiscardFrom`
-self-discard bug structurally impossible.
+Try-with-resources gives a structurally enforced pair.
+
+**Important:** `PCH.tempShownCards` (`:156`) is a single flat
+`ArrayList`, and `PCH.endTempShowCards()` (`:185-193`) clears it
+unconditionally. Engine effects outside the selection path also call
+`tempShowCards` on the controller (see e.g. `ChangeZoneEffect`,
+`PlayEffect`, `DigEffect`). If a router selection runs while an outer
+engine scope has live temp-shown cards, a naive `close()` that just
+called `endTempShowCards()` would wipe the outer scope too. The
+snapshot/restore in the sketch above prevents that. The supporting
+`snapshotTempShown()` / `restoreTempShown(...)` helpers are added to PCH
+as part of this PR.
+
+(A more invasive fix — turning `tempShownCards` into a counted set or
+true stack — is a cleaner long-term shape and would let PCH-side and
+engine-side callers freely nest. Out of scope here; snapshot/restore is
+sufficient for the selection paths the router touches.)
 
 ### Router
 
@@ -243,19 +270,39 @@ Existing `chooseSingleEntityForEffect` and `chooseEntitiesForEffect` keep
 their signatures. Their implementations change:
 
 - **`CMatchUI`** — render DR cards inside the picker (resolves the two
-  `//TODO: Merge this into search dialog` comments). The FloatingZone now
-  has a prompt header and card display; DR cards are shown alongside the
-  selectable set in the same UI surface, with the same OK/cancel.
+  `//TODO: Merge this into search dialog` comments). Note these refer to
+  the modal `GuiChoose` dialog (Swing `JOptionPane`-style), **not**
+  `FloatingZone`. The two desktop selection paths need separate treatment:
+  - **Dialog selection path** (`GuiChoose.order` / `one` / `oneOrNone`):
+    add a DR cards panel to the existing modal. This is the
+    straightforward read of the TODO comments and the smaller of the two
+    changes.
+  - **Card-click selection path** (FloatingZone + `InputSelectEntitiesFromList`):
+    DR cards need to be visible somewhere the chooser will see them
+    during selection. `FloatingZone.java` today has no prompt header,
+    OK/cancel, or selection-state surface — it's just a card display. The
+    options are (a) display DR cards in a separate FloatingZone alongside
+    the selectable one, distinguished by zone title, or (b) extend
+    FloatingZone with prompt + button surface. Option (a) is much smaller
+    and is the recommended approach.
 - **`MatchController`** — `chooseEntitiesForEffect` routes to
   `GameEntityPicker` (today it bypasses it entirely and calls
-  `SGuiChoose.order`, which is why DR is dropped). `FChoiceList` already
-  supports multi-select natively via its `minChoices` / `maxChoices` /
-  `selectedIndices` fields, and `PickerTab` already threads `maxChoices`
-  through. The change is small: extend `GameEntityPicker`'s constructor
-  to take `min` / `max` and a `Consumer<List<GameEntityView>>` callback,
-  have the OK button call `list.getSelectedItems()` instead of
-  `getSelectedItem()`. The DR tab works unchanged; the search filter works
-  unchanged.
+  `SGuiChoose.order`, which is why DR is dropped). `FChoiceList` supports
+  multi-select natively via its `minChoices` / `maxChoices` /
+  `selectedIndices` fields, but `GameEntityPicker`'s current
+  single-select form has tap-to-confirm interaction wired in:
+  `PickerTab`'s inner `FChoiceList` overrides `onItemActivate` to call
+  `parentScreen.optionPane.setResult(0)` immediately when `maxChoices > 0`
+  (`GameEntityPicker.java:123-126`). Multi-select needs different
+  semantics: tap toggles selection, OK button confirms. The wrapper has
+  to be extended to (a) take `min` / `max` and a
+  `Consumer<List<GameEntityView>>` callback, (b) gate the auto-confirm
+  on `maxChoices == 1`, (c) enable the OK button only when
+  `selectedIndices.size()` is within bounds. This is a real mobile UX
+  shift — the chooser's interaction model changes from "tap a card to
+  pick" (today's `SGuiChoose.order`-style ordering, and today's
+  single-select picker) to "tap-toggle, then OK". Worth a quick mobile
+  UX review even though the code change is contained.
 
 ### PCH changes
 
@@ -280,18 +327,38 @@ public <T extends GameEntity> T chooseSingleEntityForEffect(
 
 Methods affected:
 
+Full router migration (selection methods):
+
 - `chooseCardsForEffect` (`:471`)
 - `chooseSingleEntityForEffect` (`:585`)
 - `chooseEntitiesForEffect` (`:629`)
 - `chooseCardsToDiscardFrom` (`:1142`)
 - `chooseCardsToDiscard` self-discard (`:1556`)
-- `chooseContraptionsToCrank` (`:514`) — keeps custom logic for the
-  cranked/uncranked column split, but the `tempShowCards`/`endTempShowCards`
-  pair goes through `TempReveal`
-- `arrangeForScry` (`:967`)
-- `arrangeForSurveil` (`:1012`)
-- `orderMoveToZoneList` (`:1068`)
-- `manipulateCardList` (`:944`) / `arrangeForMove` (`:951`)
+
+Partial migration (`TempReveal` only, custom logic stays):
+
+- `chooseContraptionsToCrank` (`:514`) — cranked/uncranked column split is
+  too specialized for `SelectionRequest`.
+- `arrangeForScry` (`:967`), `arrangeForSurveil` (`:1012`),
+  `orderMoveToZoneList` (`:1068`) — these chain selection → ordering →
+  preference branches in a way `OrderRequest` doesn't usefully flatten.
+  `arrangeForScry` for example branches on `UI_SELECT_FROM_CARD_DISPLAYS`,
+  special-cases `topN.size() == 1` with `willPutCardOnTop`, and chains
+  `arrangeForMove` → `many` → `order`. `arrangeForSurveil` further
+  special-cases size==1 with `InputConfirm.confirm` (a card-anchored
+  confirm). `orderMoveToZoneList` has a 12-way `ZoneType` switch with
+  preference-driven graveyard early-return and `topOfDeck` reverse
+  logic. The router can't usefully consume any of these as a single
+  `OrderRequest`; pushing each through would require many fields on
+  `OrderRequest` (zone, top/bottom, preference resolver) and lose the
+  per-effect specialization that makes them readable.
+
+  For this PR, these methods stay in PCH but use `TempReveal` and route
+  their inner `getGui().order(...)` / `getGui().many(...)` calls
+  through a thinner helper that calls `gui.supportsCardClickSelection`
+  itself. They do NOT become `OrderRequest`-shaped.
+- `manipulateCardList` (`:944`) / `arrangeForMove` (`:951`) — fit
+  `ManipulateRequest` cleanly; keep as full migration.
 
 Helpers that are removed:
 
@@ -309,18 +376,38 @@ below.
 
 ### Engine-side change
 
-`DiscardEffect` (`forge-game/.../ability/effects/DiscardEffect.java:244-261`)
-drops its explicit `game.getAction().reveal(dPHand, p)` call for the
-`RevealYouChoose` / `RevealTgtChoose` modes. Instead, it constructs a
-`DelayedReveal` for the hand and passes it to `chooseCardsToDiscardFrom`.
+`game.getAction().reveal(dPHand, p)` (`DiscardEffect.java:245`) fans out
+to **every** player's controller (`GameAction.java:2243-2248` iterates
+`game.getPlayers()`), not just the chooser's. The reveal popup that
+appears for opponents and spectators is part of public game information
+— it shows up in replays and is visible to network observers. We cannot
+simply drop the engine reveal call when consolidating the chooser's UX.
+
+The engine-side change is therefore two-part:
+
+1. Add a chooser-aware variant to `GameAction.reveal(...)` that excludes
+   one player from the fan-out (the chooser, who will see the cards
+   inline via DR):
+   ```java
+   public void reveal(CardCollectionView cards, ZoneType zt, Player owner,
+                      boolean dontRevealToOwner, String messagePrefix,
+                      boolean msgAddSuffix, Player skipChooser);
+   ```
+   Existing overloads remain. `skipChooser == null` preserves current
+   behavior.
+2. `DiscardEffect` for `RevealYouChoose` / `RevealTgtChoose` (`:244-261`)
+   uses the new overload with `skipChooser = chooser` and passes a
+   `DelayedReveal` to `chooseCardsToDiscardFrom`. Opponents and spectators
+   still see the public reveal popup; the chooser sees the cards inline
+   in their selection dialog.
 
 This requires adding a `DelayedReveal` parameter to
 `PlayerController.chooseCardsToDiscardFrom` (the abstract method). AI impl
 ignores the parameter (it doesn't render). Test controllers ignore it.
 
-`RevealDiscardAll` (`:209-225`) keeps its explicit reveal call — the
-"reveal everything, then discard all of it" flow has no follow-up
-selection dialog to fold the reveal into.
+`RevealDiscardAll` (`:209-225`) keeps its existing reveal call unchanged —
+the "reveal everything, then discard all of it" flow has no follow-up
+selection dialog to fold the chooser's view into.
 
 ## File-by-file change list
 
@@ -345,10 +432,12 @@ selection dialog to fold the reveal into.
 - `forge-gui-mobile/src/forge/screens/match/MatchController.java` —
   implement `supportsCardClickSelection`; honor DR in
   `chooseEntitiesForEffect` via tabbed `GameEntityPicker`.
-- `forge-gui-mobile/src/forge/card/GameEntityPicker.java` — extend
-  callback shape to accept a multi-select result (`FChoiceList` already
-  supports multi-select; only the wrapper's callback signature is
-  single-item-shaped today).
+- `forge-gui-mobile/src/forge/card/GameEntityPicker.java` — add
+  multi-select support: `min` / `max` constructor params,
+  `Consumer<List<GameEntityView>>` callback, tap-toggle interaction
+  (gate the current auto-confirm on `maxChoices == 1`), OK-button
+  enable/disable based on selection bounds. Underlying `FChoiceList`
+  multi-select state is already in place.
 - `forge-gui/src/main/java/forge/player/PlayerControllerHuman.java` —
   selection methods shrink to router calls; `useSelectCardsInput` deleted;
   manual tempShow pairs replaced.
@@ -366,34 +455,53 @@ selection dialog to fold the reveal into.
 - `forge-ai/src/main/java/forge/ai/PlayerControllerAi.java` — accept and
   ignore the new `DelayedReveal` parameter.
 - `forge-game/src/main/java/forge/game/ability/effects/DiscardEffect.java` —
-  drop explicit `game.getAction().reveal()` for `RevealYouChoose` /
-  `RevealTgtChoose`; pass DR to `chooseCardsToDiscardFrom`.
+  switch `RevealYouChoose` / `RevealTgtChoose` to the chooser-aware
+  reveal overload and pass DR to `chooseCardsToDiscardFrom`.
+- `forge-game/src/main/java/forge/game/GameAction.java` — add the
+  chooser-aware `reveal(...)` overload that excludes one player from the
+  fan-out.
 
 ## Behavior compatibility
 
-Behavior is intended to be identical except in two cases:
+Behavior is intended to be identical for opponents, spectators, replay
+viewers, and network observers — they still see the same public reveal
+popup they see today. The only change is to the chooser's own UX:
 
-1. **`RevealYouChoose` / `RevealTgtChoose` discard on desktop with
-   `UI_SELECT_FROM_CARD_DISPLAYS` on** — the separate reveal popup with OK
-   button is gone. Revealed hand appears in the FloatingZone alongside the
-   selection prompt. Net effect: one user click removed, no information
-   loss.
-2. **Same flow on mobile** — the separate reveal popup is gone. Revealed
-   hand appears as a tab in the `GameEntityPicker`, alongside the
-   selectable cards. Net effect: one tap removed, no information loss.
+1. **`RevealYouChoose` / `RevealTgtChoose` discard on the chooser's
+   desktop with `UI_SELECT_FROM_CARD_DISPLAYS` on** — the chooser no
+   longer sees a separate reveal popup. The revealed hand appears in the
+   chooser's selection dialog. Net effect: one user click removed for the
+   chooser, no information loss anywhere.
+2. **Same flow on the chooser's mobile** — the chooser no longer sees a
+   separate reveal popup. The revealed hand appears as a tab in the
+   chooser's `GameEntityPicker`. Net effect: one tap removed for the
+   chooser, no information loss anywhere.
 
-Everywhere else, the goal is byte-identical UX. If users notice anything
-besides the discard-flow change, treat it as a bug.
+Everywhere else, the goal is byte-identical UX. If observers notice any
+change to the public reveal, or if users notice anything besides the
+chooser-side popup removal, treat it as a bug.
 
 ## Risks
 
-**The `CMatchUI` DR rendering change is the highest-risk piece.** The
-existing FloatingZone needs to host both the selectable set and the DR
-cards in a way that's visually clear about which is which. Mitigation:
-render DR cards in a separate FloatingZone tile (re-using the
-already-extended FloatingZone with prompt headers from the prior PR), or as
-a labeled section within the same window. Decide based on what reads more
-naturally in playtesting.
+**The `CMatchUI` DR rendering change is the highest-risk piece.** Two
+distinct UI surfaces need to honor DR on desktop:
+
+- **The modal dialog path** (`GuiChoose.order` / `one` / `oneOrNone`):
+  the two `//TODO: Merge this into search dialog` comments at
+  `CMatchUI.java:1252, :1263` have been there for years. Adding a DR
+  panel to the existing Swing modal is mechanically straightforward but
+  needs visual design (where in the dialog, how distinguished from
+  selectable cards) and has been deferred this long for a reason — likely
+  no one has had a clean place to put it. Mitigation: prototype the panel
+  early in the PR so review can iterate on it before the surrounding
+  refactor lands.
+- **The FloatingZone path** (card-click selection): `FloatingZone.java`
+  has no prompt header, OK/cancel, or selection-state surface today —
+  contrary to what an earlier draft of this spec assumed. The recommended
+  approach is to open a separate FloatingZone for the DR cards, labeled
+  by zone, alongside the selectable one. The chooser interacts with the
+  selectable FloatingZone as normal; the DR FloatingZone is read-only.
+  Avoids adding prompt/button infrastructure to FloatingZone in this PR.
 
 **`InputSelectEntitiesFromList` is generic over `<T extends GameEntity>` but
 some current callers use `InputSelectCardsFromList` (the `<Card>`-typed
@@ -401,6 +509,25 @@ specialization).** The router uses the entities variant uniformly; the
 cards specialization is still used directly by paths outside the router
 (e.g. `chooseTargets`, the discard-your-own-hand flow). Both classes
 continue to exist.
+
+**DR cards are not always a subset of selectable options.** The router
+contract has to handle two distinct shapes:
+
+- **DR-as-options-equivalent** (the common case, including the
+  `RevealYouChoose` discard scenario this PR motivates): the cards being
+  shown for reveal ARE the cards being selected from. DR can be folded
+  into the selection display as a unified set.
+- **DR-as-context** (`DigEffect.java:201`, `ChangeZoneEffect.java:1057`,
+  `ChooseCardEffect.java:257`): DR cards are deliberately a disjoint
+  set, shown alongside the selectable options so the chooser has full
+  context. For example, in `DigEffect`, the chooser might be picking
+  from a `valid`-filtered subset of `top`, with the unfiltered `top` as
+  DR context. Card-click selection mode needs to render DR cards as
+  visible-but-not-selectable. Mitigation: the FloatingZone approach
+  recommended above (separate, read-only DR FloatingZone) handles this
+  naturally — DR cards live in their own window and there's no question
+  about which set is selectable. The dialog path likewise renders DR as
+  a separate panel.
 
 **`DiscardEffect` change touches a hot path.** `RevealYouChoose` is on
 Inquisition, Thoughtseize, Mind Warp, and similar high-frequency cards.
@@ -412,22 +539,26 @@ volume) is exercised in test runs before merging.
 | Area | Lines added | Lines removed |
 |---|---|---|
 | 7 new files in `forge.gui.input.router` (value objects + router) | ~400 | 0 |
-| `CMatchUI` DR rendering (resolves both TODOs) | ~50–100 | ~10 |
-| Mobile `GameEntityPicker` callback shape + `MatchController` routing | ~15–25 | ~5 |
-| `IGuiGame` interface + capability impls on all five `IGuiGame` classes | ~30 | 0 |
-| PCH selection/order/manipulate methods | ~60–90 | ~300–500 |
-| Engine-side (`PlayerController`, `PlayerControllerAi`, `DiscardEffect`) | ~15 | ~5 |
+| `CMatchUI` — DR panel in `GuiChoose` dialog + DR FloatingZone in card-click path | ~120–180 | ~10 |
+| Mobile `GameEntityPicker` multi-select (tap-toggle + OK gating) + `MatchController` routing | ~40–60 | ~5 |
+| `IGuiGame` interface + `supportsCardClickSelection` impls on all five `IGuiGame` classes | ~30 | 0 |
+| PCH selection methods (full router migration) | ~50–80 | ~200–300 |
+| PCH partial-migration methods (scry / surveil / orderMoveToZoneList / contraptions, `TempReveal` only) | ~30 | ~30 |
+| PCH `tempShownCards` snapshot/restore helpers | ~20 | 0 |
+| Engine-side: `GameAction.reveal` chooser-aware overload, `PlayerController.chooseCardsToDiscardFrom` signature, `PlayerControllerAi`, `DiscardEffect` | ~40 | ~10 |
 
-Rough totals: **~570–670 lines added, ~320–520 lines removed, net delta
-~+150 to +300, 12–14 files touched** (7 new, 5–7 modified).
+Rough totals: **~730–840 lines added, ~255–355 lines removed, net delta
+~+450 to +550, 13–15 files touched** (7 new, 6–8 modified).
 
-Most of the line count is boilerplate — value objects with named fields,
-ceremonial signature updates across `IGuiGame` implementors. The
-substantive review surface is small: `HumanInputRouter` (~100 lines), the
-`CMatchUI` DR rendering integration with FloatingZone, the mobile
-multi-select picker, and the `DiscardEffect` engine-side change. Plan for
-a medium-large refactor PR; expect reviewer time to concentrate on those
-four areas.
+The substantive review surface is concentrated in four places, in order
+of risk: the `CMatchUI` DR rendering work (both the `GuiChoose` panel
+and the DR FloatingZone, neither of which has precedent in the
+codebase), the `GameAction.reveal` chooser-aware overload (because it
+touches a network-visible game-state primitive), `HumanInputRouter` and
+the `TempReveal` snapshot/restore semantics, and the mobile multi-select
+interaction model. Plan for a large refactor PR — the line count is
+moderate but several pieces are genuinely new behavior and should be
+prototyped early so review can iterate on them.
 
 ## Follow-up work
 
