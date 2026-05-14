@@ -306,11 +306,10 @@ Helpers that are removed:
   `tempShow(...)` overloads on PCH stay (they're still called by
   `TempReveal` and by non-selection paths).
 
-`isLibgdxPort()` checks at `:811, :1439, :1559, :1707, :1866` — these are
+`isLibgdxPort()` checks at `:811, :1439, :1707, :1866, :2216` — these are
 **not** in the selection path. They stay in PCH for this PR. Removing them
-requires per-call analysis of what the mobile-specific behavior actually is
-and pushing it into the relevant `IGuiGame` method default. That's
-follow-up work, not part of this refactor.
+is the subject of the "Follow-up: confirm-against-card primitive" section
+below.
 
 ### Engine-side change
 
@@ -463,7 +462,50 @@ volume) is exercised in test runs before merging.
   method. Would let `many` and `chooseEntitiesForEffect` collapse into one
   GUI surface. Sensible follow-up; out of scope here.
 - Removing the remaining `isLibgdxPort()` checks in PCH outside the
-  selection path. Each needs per-call analysis.
+  selection path. See "Follow-up" below.
 - Adding prose Javadoc on `DelayedReveal`, `TempReveal`, the router types,
   and the surviving PCH entry points. Should follow this PR while the
   context is fresh.
+
+## Follow-up: confirm-against-card primitive
+
+After this PR, five `isLibgdxPort()` references remain in PCH:
+
+| Line | Method | Pattern |
+|---|---|---|
+| `:811` | trigger confirm dialog | mobile: card-anchored confirm; desktop: `InputConfirm.confirm` |
+| `:1439` | `confirmReplacementEffect` | same |
+| `:1707` | `notifyOfValue` | mobile: card-anchored confirm with OK; desktop: `getGui().message(...)` |
+| `:1866` | `confirmPayment` | same as `:811` / `:1439` |
+| `:2216` | `revealAISkipCards` | mobile: render unplayable list as card images (libgdx can't zoom name lists); desktop: name-list dialog |
+
+Four of the five (`:811`, `:1439`, `:1707`, `:1866`) are doing literally
+the same thing: "wrap a confirm or notification in a card-anchored dialog
+on mobile, fall back to a generic dialog on desktop." That's a single
+missing primitive on `IGuiGame`:
+
+```java
+boolean confirmAgainstCard(CardView card, String question,
+                            String yesLabel, String noLabel, boolean defaultYes);
+void notifyAgainstCard(CardView card, String message);
+```
+
+Each `IGuiGame` impl picks how to render: mobile uses its existing
+card-anchored layout, desktop renders the equivalent of `InputConfirm`.
+PCH's four call sites collapse to one-liners that no longer mention
+`isLibgdxPort`.
+
+`:2216` (`revealAISkipCards`) is the odd one out — it's not "render the
+same dialog differently," it's "represent the same data differently"
+because of a libgdx capability gap (no zoom on text lists). Same fix
+shape, different signature: add `gui.revealUnplayableCards(message,
+unplayable)` and let each impl choose between rendering a name list and
+rendering card images.
+
+Suggested scope: one follow-up PR introducing `confirmAgainstCard` and
+`notifyAgainstCard`, migrating the four matching call sites. `:2216`
+either rides along (it's small) or gets its own tiny PR.
+
+After both follow-ups, PCH has zero `isLibgdxPort` references. Every
+platform decision lives in the `IGuiGame` impl that needs it, which is
+the end state the InputRouter refactor was structuring toward.
