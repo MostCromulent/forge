@@ -21,7 +21,7 @@ no value objects** — a private helper plus a small `AutoCloseable`.
 
 Two adjacent pieces of work do the rendering this spec depends on:
 
-- **PR #10660 (merged): opponent-hand reveal+discard via FloatingZone.**
+- **PR 10660 (merged): opponent-hand reveal+discard via FloatingZone.**
   The card-click selection path on desktop already shows DR cards as a
   consequence of FloatingZone being a passive zone display:
   `InputSelectEntitiesFromList` is the selection gate, FloatingZone
@@ -64,7 +64,7 @@ Concrete costs of the current mixing:
 - The engine emits its own `game.getAction().reveal(...)` before each
   `RevealYouChoose` / `RevealTgtChoose` selection, producing a two-stage
   UX. With DualCardBox honoring DR inline on the dialog path and PR
-  #10660 already covering the card-click path, the engine no longer
+  10660 already covering the card-click path, the engine no longer
   needs to issue a separate chooser-facing reveal for these effects on
   desktop.
 - 14 `isLibgdxPort()` / preference reads inside PCH; 157 `getGui()`
@@ -295,7 +295,7 @@ No new files. All changes are modifications:
 
 - `IGuiGame.java` — add `supportsCardClickSelection`.
 - `CMatchUI.java` — implement predicate. (No DR rendering work here —
-  PR #10660 covers card-click; DualCardBox covers the dialog widget.)
+  PR 10660 covers card-click; DualCardBox covers the dialog widget.)
 - `MatchController.java` — implement predicate.
 - `PlayerControllerHuman.java` — add `dispatchSelection`,
   `TempReveal` (private static), `snapshotTempShown` /
