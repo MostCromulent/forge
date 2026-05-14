@@ -399,35 +399,6 @@ Inquisition, Thoughtseize, Mind Warp, and similar high-frequency cards.
 Mitigation: ensure the AI controller path (which is most of the test
 volume) is exercised in test runs before merging.
 
-## Test plan
-
-- Existing test suite under
-  `forge-gui-desktop/src/test/java/forge/gamesimulationtests/` should pass
-  unchanged. `PlayerControllerForTests` returning false for
-  `supportsCardClickSelection` means tests go through the dialog path,
-  which is what they already do.
-- Manual play test on desktop:
-  - Cast Inquisition / Thoughtseize / Mind Warp on opponent. Confirm: no
-    separate reveal popup; hand appears in FloatingZone; selection works
-    by clicking; Ctrl+1-9 hotkeys work; cancel/ok behave correctly.
-  - Cast an effect using DR (Demonic Tutor, fetchlands, scry-and-search
-    effects). Confirm DR cards appear in the selection dialog rather than
-    a separate popup.
-  - Scry / Surveil / Reorder graveyard. Confirm no regression.
-  - Discard from own hand. Confirm no regression.
-  - Toggle `UI_SELECT_FROM_CARD_DISPLAYS` off. Confirm fallback to dialog
-    selection for non-default zones.
-- Manual play test on mobile:
-  - Same Inquisition-style flow. Confirm hand appears as a tab in
-    `GameEntityPicker`; selection works; OK/cancel behave correctly.
-  - DR-using effects: confirm DR cards appear as a tab in the picker.
-  - Cast self-affecting effects (own discard, scry, surveil). Confirm no
-    regression.
-- Network play smoke test:
-  - One desktop client, one network client. Run a discard effect. Confirm
-    no protocol errors; confirm the network client gets a usable prompt
-    even if its capability defaults to dialog selection.
-
 ## Estimated diff size
 
 | Area | Lines added | Lines removed |
