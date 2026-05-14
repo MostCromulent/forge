@@ -43,9 +43,10 @@ Concrete costs of the current mixing:
 
 ## Goals
 
-- Make `DelayedReveal` a contract every `IGuiGame` implementation
-  honors. The engine then never issues a separate chooser-facing
-  `reveal(...)`.
+- Make `DelayedReveal` a contract that desktop honors fully (both
+  card-click and dialog paths). Mobile single-pick already honors DR via
+  `GameEntityPicker`'s tab; mobile multi-pick continues to fall back to a
+  public reveal in this PR (see Non-Goals).
 - Move the card-click-vs-dialog decision out of PCH into an `InputRouter`
   that asks the GUI a single capability question.
 - Push every selection-related `isLibgdxPort()` check and preference read
@@ -58,6 +59,13 @@ Concrete costs of the current mixing:
 - Shrinking PCH overall. The refactor removes ~200–300 lines of selection
   boilerplate; lifecycle, network sync, mana payment, mulligan, etc. are
   untouched.
+- **Honoring DR for mobile multi-pick.** The libgdx order widget would
+  need a new surface for DR cards alongside its source/dest columns, and
+  that's a mobile UX change with no obvious right answer. Mobile keeps
+  the current two-stage popup-then-picker for `RevealYouChoose` /
+  `RevealTgtChoose` discard; the chooser-aware engine reveal is gated on
+  `!isLibgdxPort()` so mobile users don't lose information. Listed as
+  follow-up work.
 - Renaming `Input*` classes. The subsystem keeps its current names.
 - Changing the AI controller. `PlayerControllerAi` doesn't go through the
   router; `PlayerController` abstract shape is unchanged.
@@ -195,16 +203,14 @@ signatures. Implementations change to actually honor DR:
     separate read-only DR FloatingZone alongside the selectable one,
     labeled by zone. Both are passive displays; the chooser interacts
     with whichever card they want, the selection auto-resolves.
-- **`MatchController`** — route `chooseEntitiesForEffect` to
-  `GameEntityPicker` (today bypasses it and calls `SGuiChoose.order`,
-  which drops DR). `FChoiceList` supports multi-select natively, but
-  `GameEntityPicker`'s current single-select form is tap-to-confirm
-  (`:123-126` calls `optionPane.setResult(0)` on activate). Multi-select
-  needs tap-toggle + OK-button semantics: extend the constructor to take
-  `min`/`max` and a `Consumer<List<GameEntityView>>` callback, gate the
-  auto-confirm on `maxChoices == 1`, enable OK based on selection
-  bounds. Real interaction-model shift; worth mobile UX review even
-  though the code change is contained.
+- **`MatchController`** — implements `supportsCardClickSelection` and
+  nothing else. `chooseEntitiesForEffect` keeps routing to
+  `SGuiChoose.order(...)`; the libgdx order widget continues not to
+  display DR cards. Mobile users see the existing two-stage UX (separate
+  reveal popup, then picker) for `RevealYouChoose` / `RevealTgtChoose`.
+  Adding DR honoring to the libgdx order widget is follow-up work; see
+  Non-Goals. The single-pick path (`chooseSingleEntityForEffect` →
+  `GameEntityPicker` with DR tab) already honors DR and is unchanged.
 
 ### PCH changes
 
@@ -261,9 +267,16 @@ public void reveal(CardCollectionView cards, ZoneType zt, Player owner,
 
 Existing overloads remain; `skipChooser == null` preserves current
 behavior. `DiscardEffect` for `RevealYouChoose` / `RevealTgtChoose`
-(`:244-261`) uses the overload with `skipChooser = chooser` and passes
-DR to `chooseCardsToDiscardFrom`. Opponents and spectators still see the
-popup; the chooser sees the cards inline.
+(`:244-261`) uses the overload with `skipChooser = chooser` **only when
+the chooser is on desktop** (`!chooser.getController().getGui().isLibgdxPort()`).
+For mobile choosers, the existing reveal-everyone path is used and
+mobile sees today's two-stage UX. The check is a single conditional in
+`DiscardEffect`; not worth a capability predicate since it degenerates
+to the platform check after the mobile-DR descope.
+
+In both cases DR is passed to `chooseCardsToDiscardFrom`. Desktop
+chooser sees the cards inline (no popup). Mobile chooser sees the popup
+(and the DR is ignored by mobile multi-pick).
 
 Adds a `DelayedReveal` parameter to `PlayerController.chooseCardsToDiscardFrom`
 (abstract). AI and test impls ignore it.
@@ -283,10 +296,8 @@ selection dialog to fold the chooser's view into.
 - `CMatchUI.java` — implement predicate; DR rendering in
   `chooseSingleEntityForEffect`/`chooseEntitiesForEffect` (dialog +
   FloatingZone paths).
-- `MatchController.java` — implement predicate; route
-  `chooseEntitiesForEffect` through `GameEntityPicker`.
-- `GameEntityPicker.java` — multi-select support (`min`/`max`, callback
-  shape, tap-toggle + OK semantics).
+- `MatchController.java` — implement predicate only. No DR-routing
+  change (out of scope; see Non-Goals).
 - `PlayerControllerHuman.java` — router migration; delete
   `useSelectCardsInput`; replace tempShow pairs with `TempReveal`; add
   `snapshotTempShown` / `restoreTempShown`.
@@ -297,18 +308,20 @@ selection dialog to fold the chooser's view into.
 - `PlayerController.java` — DR param on `chooseCardsToDiscardFrom`.
 - `PlayerControllerAi.java` — accept and ignore the new param.
 - `DiscardEffect.java` — `RevealYouChoose`/`RevealTgtChoose` use the
-  chooser-aware reveal and pass DR.
+  chooser-aware reveal (gated on `!isLibgdxPort()`) and pass DR.
 - `GameAction.java` — chooser-aware `reveal(...)` overload.
 
 ## Behavior compatibility
 
 Opponents, spectators, replay viewers, and network observers see
-byte-identical behavior — same public reveal popup as today. The only
-change is the chooser's UX: in `RevealYouChoose` / `RevealTgtChoose`
-discard, the chooser no longer sees a separate reveal popup; revealed
-cards appear inline in the chooser's selection dialog (desktop) or as a
-picker tab (mobile). One click/tap removed for the chooser, no
-information loss anywhere. Any other UX change is a bug.
+byte-identical behavior — same public reveal popup as today. Mobile
+choosers also see today's behavior unchanged (two-stage reveal popup
+then picker for `RevealYouChoose` / `RevealTgtChoose`). The only change
+is desktop chooser UX: in `RevealYouChoose` / `RevealTgtChoose` discard,
+the desktop chooser no longer sees a separate reveal popup; revealed
+cards appear inline in the selection dialog (or sibling FloatingZone for
+the card-click path). One click removed for desktop, no information
+loss anywhere. Any other UX change is a bug.
 
 ## Risks
 
@@ -342,24 +355,28 @@ information loss anywhere. Any other UX change is a bug.
 |---|---|---|
 | 7 new files (value objects + router) | ~400 | 0 |
 | `CMatchUI` DR rendering (GuiChoose panel — bulk; DR FloatingZone — small, since FloatingZone is already a passive display) | ~70–120 | ~10 |
-| Mobile multi-select (`GameEntityPicker` + `MatchController`) | ~40–60 | ~5 |
+| Mobile `MatchController` (predicate only) | ~5 | 0 |
 | `IGuiGame` interface + 5 impls of `supportsCardClickSelection` | ~30 | 0 |
 | PCH full router migration | ~50–80 | ~200–300 |
 | PCH partial migration (scry / surveil / orderMoveToZoneList / contraptions) | ~30 | ~30 |
 | PCH `tempShownCards` snapshot/restore | ~20 | 0 |
 | Engine-side (`GameAction.reveal` overload, `PlayerController`, `PlayerControllerAi`, `DiscardEffect`) | ~40 | ~10 |
 
-Rough totals: **~680–780 added, ~255–355 removed, net ~+400 to +500,
-13–15 files** (7 new, 6–8 modified).
+Rough totals: **~645–705 added, ~250–350 removed, net ~+350 to +450,
+12–14 files** (7 new, 5–7 modified).
 
-Substantive review surface concentrates in four places, by risk:
+Substantive review surface concentrates in three places, by risk:
 `CMatchUI` DR rendering, the `GameAction.reveal` chooser-aware overload
 (network-visible primitive), `HumanInputRouter` + `TempReveal`
-reentrancy, mobile multi-select interaction model. Prototype these
-early so review can iterate.
+reentrancy. Prototype these early so review can iterate.
 
 ## Follow-up work
 
+- **Honor DR in mobile multi-pick.** Extend the libgdx order widget (or
+  a wrapper) to display DR cards alongside its source/dest columns —
+  third column, popover, or "Revealed" toggle. After that lands,
+  `DiscardEffect`'s `!isLibgdxPort()` gate can be dropped and mobile
+  choosers see the same single-stage UX as desktop.
 - **Prose Javadoc** on `DelayedReveal`, `TempReveal`, the router types,
   and surviving PCH entry points. Should follow immediately while
   context is fresh.
