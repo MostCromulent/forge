@@ -2,22 +2,13 @@
 
 ## Summary
 
-`PlayerControllerHuman` (PCH) is 3572 lines and mixes several unrelated
-concerns. The most tangled of them is that PCH simultaneously decides
-**what input the rules engine needs from the player** (a game-logic
-question) and **how the UI should display that prompt** (a presentation
-question — card-click selection vs dialog selection, desktop vs mobile,
-which preferences apply). These decisions are co-located in the same
-methods, with 14 platform/preference checks and 157 `getGui()` calls
-scattered through the file.
-
-The original PR discussion that motivated this work asked for a small UX
-fix: stop showing a separate reveal popup before opponent-hand discard.
-Tracing that fix made the layering problem visible — `DelayedReveal` is the
-mechanism that should let the engine ask "reveal these cards as part of
-the upcoming selection," but three of four `IGuiGame` implementations
-don't actually honor that contract, because the controller never gave
-them a clean way to.
+`PlayerControllerHuman` (PCH) tangles three concerns in the same methods:
+what input the rules engine needs from the player, how the UI should
+present that prompt (card-click vs dialog), and where the platform-specific
+branches live. The PR discussion about consolidating opponent-hand
+reveal+discard surfaced the symptom: `DelayedReveal` advertises an
+"inline-reveal-into-the-selection" contract that three of four `IGuiGame`
+implementations don't honor, because PCH never gave them a clean way to.
 
 This refactor extracts the input-vs-display split into a dedicated
 `InputRouter` layer, finishes the `DelayedReveal` contract on both GUI
@@ -25,10 +16,9 @@ implementations, and pushes platform-specific UI decisions
 (`isLibgdxPort`, `UI_SELECT_FROM_CARD_DISPLAYS`) down into the `IGuiGame`
 impls where they belong.
 
-This is one PR. It is large but its scope is bounded: only the selection /
-order / manipulate surface of PCH is touched. The Input subsystem,
-mulligan flow, attack/block flow, mana payment, replacement effects, and
-dev-mode tooling are out of scope.
+Scope is one PR, bounded to the selection / order / manipulate surface of
+PCH. The `Input*` subsystem, mulligan, attack/block, mana payment,
+replacement effects, and dev-mode tooling are out of scope.
 
 ## Motivation
 
@@ -360,7 +350,9 @@ selection dialog to fold the reveal into.
   same.
 - `forge-gui/src/main/java/forge/gamemodes/net/server/RemoteClientGuiGame.java` —
   implement `supportsCardClickSelection` against the cached
-  `client.isLibgdx()` from the lobby handshake. No protocol change.
+  `client.isLibgdx()` from the lobby handshake. No protocol change
+  required — mobile clients already announce their platform at handshake
+  time.
 - `forge-game/src/main/java/forge/game/player/PlayerController.java` — add
   `DelayedReveal` parameter to `chooseCardsToDiscardFrom`.
 - `forge-ai/src/main/java/forge/ai/PlayerControllerAi.java` — accept and
@@ -402,12 +394,6 @@ cards specialization is still used directly by paths outside the router
 (e.g. `chooseTargets`, the discard-your-own-hand flow). Both classes
 continue to exist.
 
-**Network capability is already handled at lobby handshake.** Mobile
-clients announce themselves as libgdx ports during lobby handshake, and the
-server caches that on `RemoteClient.isLibgdx()`. `RemoteClientGuiGame`
-computes `supportsCardClickSelection` locally against that cached flag with
-no protocol round-trip and no new protocol method.
-
 **`DiscardEffect` change touches a hot path.** `RevealYouChoose` is on
 Inquisition, Thoughtseize, Mind Warp, and similar high-frequency cards.
 Mitigation: ensure the AI controller path (which is most of the test
@@ -442,6 +428,28 @@ volume) is exercised in test runs before merging.
     no protocol errors; confirm the network client gets a usable prompt
     even if its capability defaults to dialog selection.
 
+## Estimated diff size
+
+| Area | Lines added | Lines removed |
+|---|---|---|
+| 7 new files in `forge.gui.input.router` (value objects + router) | ~400 | 0 |
+| `CMatchUI` DR rendering (resolves both TODOs) | ~50–100 | ~10 |
+| Mobile `GameEntityPicker` multi-select tab + `MatchController` DR honoring | ~40–70 | ~5 |
+| `IGuiGame` interface + capability impls on all five `IGuiGame` classes | ~30 | 0 |
+| PCH selection/order/manipulate methods | ~60–90 | ~300–500 |
+| Engine-side (`PlayerController`, `PlayerControllerAi`, `DiscardEffect`) | ~15 | ~5 |
+
+Rough totals: **~600–700 lines added, ~320–520 lines removed, net delta
+~+200 to +300, 12–14 files touched** (7 new, 5–7 modified).
+
+Most of the line count is boilerplate — value objects with named fields,
+ceremonial signature updates across `IGuiGame` implementors. The
+substantive review surface is small: `HumanInputRouter` (~100 lines), the
+`CMatchUI` DR rendering integration with FloatingZone, the mobile
+multi-select picker, and the `DiscardEffect` engine-side change. Plan for
+a medium-large refactor PR; expect reviewer time to concentrate on those
+four areas.
+
 ## Open questions
 
 - **Should `GameEntityPicker` multi-select reuse the same `FChoiceList`
@@ -453,21 +461,24 @@ volume) is exercised in test runs before merging.
   They have overlapping fields (`title`, reference card). Probably not
   worth abstracting until a third order-like request appears.
 
-## Out of scope (future work)
+## Follow-up work
 
-- Renaming `Input*` classes to align with `CardClickSelection` vocabulary.
-  Mechanical, deferred.
-- Generalizing the chooser dialog path (`many` / `order` /
-  `chooseEntitiesForEffect`) into a single `IGuiGame.openChooserDialog`
-  method. Would let `many` and `chooseEntitiesForEffect` collapse into one
-  GUI surface. Sensible follow-up; out of scope here.
-- Removing the remaining `isLibgdxPort()` checks in PCH outside the
-  selection path. See "Follow-up" below.
-- Adding prose Javadoc on `DelayedReveal`, `TempReveal`, the router types,
-  and the surviving PCH entry points. Should follow this PR while the
+Several adjacent cleanups become trivial after this PR lands and are
+called out explicitly so they don't get lost:
+
+- **Prose Javadoc** on `DelayedReveal`, `TempReveal`, the router types,
+  and the surviving PCH entry points. Should follow immediately while the
   context is fresh.
+- **Rename `Input*` classes** to align with the `CardClickSelection`
+  vocabulary. Mechanical.
+- **Generalize the chooser dialog path** (`many` / `order` /
+  `chooseEntitiesForEffect`) into a single `IGuiGame.openChooserDialog`
+  method, collapsing `many` and `chooseEntitiesForEffect` into one GUI
+  surface.
+- **Confirm-against-card primitive** (below) — removes the rest of the
+  `isLibgdxPort()` checks from PCH.
 
-## Follow-up: confirm-against-card primitive
+### Confirm-against-card primitive
 
 After this PR, five `isLibgdxPort()` references remain in PCH:
 
