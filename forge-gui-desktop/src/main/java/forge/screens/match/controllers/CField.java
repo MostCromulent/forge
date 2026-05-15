@@ -37,7 +37,7 @@ import forge.screens.match.ZoneAction;
 import forge.screens.match.views.VField;
 import forge.toolbox.MouseTriggerEvent;
 import forge.util.Localizer;
-import forge.view.arcane.FloatingZone;
+import forge.view.arcane.FloatingZoneRegistry;
 
 /**
  * Controls Swing components of a player's field instance.
@@ -86,7 +86,7 @@ public class CField implements ICDoc {
             final JPopupMenu popup = new JPopupMenu();
             final ButtonGroup group = new ButtonGroup();
             final boolean isOwn = matchUI.isLocalPlayer(player);
-            final boolean currentlyTabMode = FloatingZone.isTabMode(zone, isOwn);
+            final boolean currentlyTabMode = FloatingZoneRegistry.isTabMode(zone, isOwn);
 
             final JRadioButtonMenuItem windowItem = new JRadioButtonMenuItem(localizer.getMessage("lblOpenInWindow"));
             final JRadioButtonMenuItem tabItem = new JRadioButtonMenuItem(localizer.getMessage("lblAddTabToHandPanel"));
@@ -97,16 +97,16 @@ public class CField implements ICDoc {
 
             windowItem.addActionListener(evt -> {
                 if (currentlyTabMode) {
-                    FloatingZone.setTabMode(zone, false, isOwn);
-                    FloatingZone.closeExisting(matchUI, player, zone);
-                    FloatingZone.showOrHide(matchUI, player, zone);
+                    FloatingZoneRegistry.setTabMode(zone, false, isOwn);
+                    FloatingZoneRegistry.closeExisting(matchUI, player, zone);
+                    FloatingZoneRegistry.showOrHide(matchUI, player, zone);
                 }
             });
             tabItem.addActionListener(evt -> {
                 if (!currentlyTabMode) {
-                    FloatingZone.setTabMode(zone, true, isOwn);
-                    FloatingZone.closeExisting(matchUI, player, zone);
-                    FloatingZone.showOrHide(matchUI, player, zone);
+                    FloatingZoneRegistry.setTabMode(zone, true, isOwn);
+                    FloatingZoneRegistry.closeExisting(matchUI, player, zone);
+                    FloatingZoneRegistry.showOrHide(matchUI, player, zone);
                 }
             });
 

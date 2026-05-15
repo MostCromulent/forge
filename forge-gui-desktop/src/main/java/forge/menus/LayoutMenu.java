@@ -32,7 +32,7 @@ import forge.model.FModel;
 import forge.screens.match.VMatchUI;
 import forge.screens.match.views.VField;
 import forge.screens.match.views.VHand;
-import forge.view.arcane.FloatingZone;
+import forge.view.arcane.FloatingZoneRegistry;
 import forge.toolbox.FButton;
 import forge.toolbox.FCheckBox;
 import forge.toolbox.FScrollPane;
@@ -92,7 +92,7 @@ public final class LayoutMenu {
         newCountItem.addActionListener(e -> {
             prefs.setPref(FPref.UI_ZONE_TAB_NEW_COUNT, newCountItem.getState());
             prefs.save();
-            FloatingZone.refreshAll();
+            FloatingZoneRegistry.refreshAll();
             refreshHandCards();
             refreshFieldTabLabels();
         });

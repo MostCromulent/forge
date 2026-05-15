@@ -27,7 +27,6 @@ import forge.toolbox.FOptionPane;
 import forge.util.FSerializableFunction;
 import forge.util.IHasName;
 import forge.util.Localizer;
-import forge.view.arcane.ListCardArea;
 
 public class GuiChoose {
 
@@ -268,27 +267,30 @@ public class GuiChoose {
         return null;
     }
 
-    public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, 
-						    final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-	gui.setSelectables(manipulable);
-	@SuppressWarnings("Convert2Lambda") // Avoid lambdas to maintain compatibility with Android 5 API
-    final Callable<List<CardView>> callable = new Callable<List<CardView>>() {
-        @Override
-        public List<CardView> call()  {
-            ListCardArea tempArea = ListCardArea.show(gui,title,cards,manipulable,toTop,toBottom,toAnywhere);
-
-            //		tempArea.pack();
-            tempArea.setVisible(true);
-            return tempArea.getCards();
-        }
-    };
-	final FutureTask<List<CardView>> ft = new FutureTask<>(callable);
+    public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable,
+                                                    final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
+        gui.setSelectables(manipulable);
+        final java.util.ArrayList<CardView> all = new java.util.ArrayList<>();
+        for (final CardView c : cards) all.add(c);
+        final java.util.ArrayList<CardView> moveable = new java.util.ArrayList<>();
+        for (final CardView c : manipulable) moveable.add(c);
+        @SuppressWarnings("Convert2Lambda")
+        final Callable<List<CardView>> callable = new Callable<List<CardView>>() {
+            @Override
+            public List<CardView> call() {
+                final forge.view.arcane.FloatingCardWindow window =
+                        forge.view.arcane.FloatingCardWindow.forManipulation(
+                                gui, title, all, moveable, toTop, toBottom, toAnywhere);
+                window.showWindow();
+                return window.getDestList();
+            }
+        };
+        final FutureTask<List<CardView>> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);
-	gui.clearSelectables();
+        gui.clearSelectables();
         try {
-            List<CardView> result = ft.get();
-            return result;
-        } catch (final Exception e) { // we have waited enough
+            return ft.get();
+        } catch (final Exception e) {
             e.printStackTrace();
         }
         return null;

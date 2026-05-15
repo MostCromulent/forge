@@ -131,7 +131,7 @@ import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
 import forge.view.FView;
 import forge.view.arcane.CardPanel;
-import forge.view.arcane.FloatingZone;
+import forge.view.arcane.FloatingZoneRegistry;
 
 import net.miginfocom.layout.LinkHandler;
 import net.miginfocom.swing.MigLayout;
@@ -510,11 +510,11 @@ public final class CMatchUI
                 case Hand:
                     updateHand = true;
                     updateZones = true;
-                    FloatingZone.refresh(owner, zone);
+                    FloatingZoneRegistry.refresh(owner, zone);
                     break;
                 default:
                     updateZones = true;
-                    FloatingZone.refresh(owner, zone);
+                    FloatingZoneRegistry.refresh(owner, zone);
                     break;
                 }
             }
@@ -563,7 +563,7 @@ public final class CMatchUI
                             break;
                         case Hand:  // controller hand always shown
                             if (controller != player) {
-                                if (FloatingZone.show(this,player,zone)) {
+                                if (FloatingZoneRegistry.show(this,player,zone)) {
                                     updatedPlayerZones.add(update);
                                 }
                             }
@@ -571,7 +571,7 @@ public final class CMatchUI
                         default:
                             if(!FLOATING_ZONE_TYPES.contains(zone))
                                 break;
-                            if (FloatingZone.show(this,player,zone)) {
+                            if (FloatingZoneRegistry.show(this,player,zone)) {
                                 updatedPlayerZones.add(update);
                             }
                             break;
@@ -588,7 +588,7 @@ public final class CMatchUI
                 final PlayerView player = update.getPlayer();
                 for (final ZoneType zone : update.getZones()) {
                     if (FLOATING_ZONE_TYPES.contains(zone) || (zone == ZoneType.Hand && controller != player)) {
-                        FloatingZone.hide(this, player, zone);
+                        FloatingZoneRegistry.hide(this, player, zone);
                     }
                 }
             }
@@ -640,11 +640,11 @@ public final class CMatchUI
                         cp.repaintOverlays();
                     }
                 }
-                // VHand only covers the local hand; opponent hands shown in a FloatingZone need an explicit refresh.
-                FloatingZone.refresh(c.getController(), zone);
+                // VHand only covers the local hand; opponent hands shown in a floating window need an explicit refresh.
+                FloatingZoneRegistry.refresh(c.getController(), zone);
                 break;
             default:
-                FloatingZone.refresh(c.getController(),zone); // in case the card is visible in the zone
+                FloatingZoneRegistry.refresh(c.getController(),zone); // in case the card is visible in the zone
                 break;
             }
         }
@@ -663,7 +663,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Hand).threadSafeIterable() : p.getCards(ZoneType.Hand));
                 }
             }
-            FloatingZone.refreshAll();
+            FloatingZoneRegistry.refreshAll();
         });
     }
 
@@ -680,7 +680,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Hand).threadSafeIterable() : p.getCards(ZoneType.Hand));
                 }
             }
-            FloatingZone.refreshAll();
+            FloatingZoneRegistry.refreshAll();
         });
     }
 
@@ -693,7 +693,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Battlefield).threadSafeIterable() : p.getCards(ZoneType.Battlefield));
                 }
             }
-            FloatingZone.refreshAll();
+            FloatingZoneRegistry.refreshAll();
         });
     }
 
@@ -726,7 +726,7 @@ public final class CMatchUI
     @Override
     public void initialize() {
         Singletons.getControl().getForgeMenu().setProvider(this);
-        FloatingZone.closeAll();
+        FloatingZoneRegistry.closeAll();
         updatePlayerControl();
         KeyboardShortcuts.attachKeyboardShortcuts(this);
         for (final IVDoc<? extends ICDoc> view : myDocs.values()) {
@@ -795,7 +795,7 @@ public final class CMatchUI
             }
         }
         else if (FLOATING_ZONE_TYPES.contains(zone))
-            return FloatingZone.getCardPanel(this, card);
+            return FloatingZoneRegistry.getCardPanel(this, card);
         return null;
     }
 
@@ -879,9 +879,9 @@ public final class CMatchUI
     @Override
     public void updatePlayerControl() {
         initHandViews();
-        FloatingZone.registerZoneDocs(this, getLocalPlayers());
+        FloatingZoneRegistry.registerZoneDocs(this, getLocalPlayers());
         SLayoutIO.loadLayout(null);
-        FloatingZone.pruneUnparentedDocks();
+        FloatingZoneRegistry.pruneUnparentedDocks();
         view.populate();
         final PlayerZoneUpdates zones = new PlayerZoneUpdates();
         for (final PlayerView p : sortedPlayers) {
@@ -902,7 +902,7 @@ public final class CMatchUI
 
     @Override
     public void finishGame() {
-        FloatingZone.closeAll(); //ensure floating card areas cleared and closed after the game
+        FloatingZoneRegistry.closeAll(); //ensure floating card areas cleared and closed after the game
         if (isNetGame()) {
             writeMatchPreferences();
         }
@@ -1018,7 +1018,7 @@ public final class CMatchUI
             } else {
                 final ZoneType zone = hostCard.getZone();
                 if (ImmutableList.of(ZoneType.Command, ZoneType.Exile, ZoneType.Graveyard, ZoneType.Library).contains(zone)) {
-                    FloatingZone.show(this, hostCard.getController(), zone);
+                    FloatingZoneRegistry.show(this, hostCard.getController(), zone);
                 }
                 menuParent = panel.getParent();
                 x = triggerEvent.getX();
@@ -1078,7 +1078,7 @@ public final class CMatchUI
         }
         lastPromptMessage = message;
         if (isSelecting()) {
-            FloatingZone.refreshSelectionPrompts();
+            FloatingZoneRegistry.refreshSelectionPrompts();
         }
     }
 
@@ -1253,11 +1253,50 @@ public final class CMatchUI
 
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final List<T> choices, final List<T> selected, final FSerializableFunction<T, String> display) {
-        /*if ((choices != null && !choices.isEmpty() && choices.iterator().next() instanceof GameObject) || selected instanceof GameObject) {
-            System.err.println("Warning: GameObject passed to GUI! Printing stack trace.");
-            Thread.dumpStack();
-        }*/
+        final List<T> ephemeralPick = tryPickEphemeralCard(message, min, max, choices);
+        if (ephemeralPick != null) return ephemeralPick;
         return GuiChoose.getChoices(message, min, max, choices, selected, display, this);
+    }
+
+    /**
+     * If the choices are all zone-less CardViews and the caller wants a single pick,
+     * present them in a FloatingCardWindow (full card art) instead of a text ListChooser.
+     * Returns null when the inputs don't match — caller falls back to the default path.
+     */
+    @SuppressWarnings("unchecked")
+    private <T> List<T> tryPickEphemeralCard(final String message, final int min, final int max, final List<T> choices) {
+        if (max != 1) return null;
+        if (choices == null || choices.isEmpty()) return null;
+        for (final T item : choices) {
+            if (!(item instanceof CardView)) return null;
+            if (((CardView) item).getZone() != null) return null;
+        }
+        final List<CardView> cardChoices = new ArrayList<>();
+        for (final T item : choices) cardChoices.add((CardView) item);
+        final boolean isOptional = min == 0;
+        final String priorPrompt = lastPromptMessage;
+        // Set the cPrompt so the player knows what's being asked (mirrors what
+        // InputBase.showMessage does for the in-board picker path). The next game
+        // event restores it; we also explicitly restore on close as a safety net.
+        showPromptMessage(getCurrentPlayer(), message);
+        final java.util.concurrent.atomic.AtomicReference<CardView> picked = new java.util.concurrent.atomic.AtomicReference<>();
+        final java.util.concurrent.Callable<Void> callable = () -> {
+            final forge.view.arcane.FloatingCardWindow window =
+                    forge.view.arcane.FloatingCardWindow.forChoice(this, message, cardChoices, isOptional, picked::set);
+            window.showWindow();
+            return null;
+        };
+        final java.util.concurrent.FutureTask<Void> ft = new java.util.concurrent.FutureTask<>(callable);
+        FThreads.invokeInEdtAndWait(ft);
+        try { ft.get(); } catch (final Exception e) { e.printStackTrace(); }
+        if (priorPrompt != null) {
+            cPrompt.setMessage(priorPrompt);
+        }
+        final CardView chosen = picked.get();
+        if (chosen == null) return new ArrayList<>();
+        final List<T> result = new ArrayList<>();
+        result.add((T) chosen);
+        return result;
     }
 
     @Override

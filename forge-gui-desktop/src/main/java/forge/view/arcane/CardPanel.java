@@ -128,6 +128,7 @@ public class CardPanel extends SkinnedPanel implements CardContainer, IDisposabl
     private CachedCardImage cachedImage;
     private int groupCount;
     private int hotkeyDigit; // 1..9 paints a numbered badge for Ctrl+digit selection; 0 hides
+    private boolean interactive = true; // false → painted dimmed to signal non-selectable
     private Font badgeFont;
     private int badgeFontCardWidth; // cardWidth when badgeFont was last computed
 
@@ -298,13 +299,30 @@ public class CardPanel extends SkinnedPanel implements CardContainer, IDisposabl
             super.validate();
         }
         Graphics2D g2d = (Graphics2D) g;
-        if (getTappedAngle() > 0) {
+        final boolean dimmed = !interactive;
+        final boolean rotated = getTappedAngle() > 0;
+        if (dimmed || rotated) {
             g2d = (Graphics2D) g2d.create();
+        }
+        if (rotated) {
             final float edgeOffset = cardWidth / 2f;
             g2d.rotate(getTappedAngle(), cardXOffset + edgeOffset, (cardYOffset + cardHeight)
                     - edgeOffset);
         }
+        if (dimmed) {
+            g2d.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
+        }
         super.paint(g2d);
+    }
+
+    public boolean isInteractive() {
+        return interactive;
+    }
+
+    public void setInteractive(final boolean interactive0) {
+        if (interactive == interactive0) return;
+        interactive = interactive0;
+        repaint();
     }
 
     @Override
