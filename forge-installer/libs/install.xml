@@ -32,7 +32,10 @@
 
 	<listeners>
 		<listener classname="ChmodInstallerListener" stage="install"/>
+		<listener classname="forge.installer.ForgeCleanInstallListener" stage="install"/>
 	</listeners>
+
+	<jar src="$project.build.finalName$-custom.jar" stage="install"/>
 
 	<resources>
 		<res id="packsLang.xml" src="eng.xml"/>
@@ -47,11 +50,12 @@
 
 	<variables>
 		<variable name="InstallerFrame.logfilePath" value="Default"/>
+		<variable name="forge.wipe.previous.install" value="false"/>
 	</variables>
 
 	<panels>
 		<panel classname="HTMLInfoPanel" id="welcome"/>
-		<panel classname="TargetPanel" id="install_dir"/>
+		<panel classname="forge.installer.ForgeTargetPanel" id="install_dir"/>
 		<panel classname="PacksPanel" id="sdk_pack_select"/>
 		<panel classname="InstallPanel" id="install"/>
 		<panel classname="FinishPanel" id="finish"/>
