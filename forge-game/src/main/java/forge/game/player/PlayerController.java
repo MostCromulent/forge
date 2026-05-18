@@ -185,6 +185,12 @@ public abstract class PlayerController {
     }
     public abstract void reveal(List<CardView> cards, ZoneType zone, PlayerView owner, String messagePrefix, boolean addMsgSuffix);
 
+    /** Called on the chooser before a selection step that re-displays the same cards.
+     *  Implementations may suppress redundant display; default delegates to {@link #reveal}. */
+    public void revealBeforeSelection(CardCollectionView cards, ZoneType zone, Player owner) {
+        reveal(cards, zone, owner, null, true);
+    }
+
     /** Shows message to player to reveal chosen cardName, creatureType, number etc. AI must analyze API to understand what that is */
     public abstract void notifyOfValue(SpellAbility saSource, GameObject realtedTarget, String value);
 

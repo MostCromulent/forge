@@ -959,6 +959,18 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         }
     }
 
+    @Override
+    public void revealBeforeSelection(CardCollectionView cards, ZoneType zone, Player owner) {
+        boolean canSuppress = zone == ZoneType.Hand
+                && owner != player
+                && FModel.getPreferences().getPrefBoolean(FPref.UI_SELECT_FROM_CARD_DISPLAYS)
+                && !getGui().isLibgdxPort();
+        if (canSuppress) {
+            return;
+        }
+        reveal(cards, zone, owner, null, true);
+    }
+
     public List<Card> manipulateCardList(final String title, final Iterable<Card> cards, final Iterable<Card> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
         GameEntityViewMap<Card, CardView> gameCacheManipulate = GameEntityView.getMap(cards);
         gameCacheManipulate.putAll(manipulable);

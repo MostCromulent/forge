@@ -242,10 +242,11 @@ public class DiscardEffect extends SpellAbilityEffect {
                 }
 
                 if (mode.startsWith("Reveal")) {
-                    game.getAction().reveal(dPHand, p);
+                    game.getAction().reveal(dPHand, ZoneType.Hand, p, true, null, true, chooser);
+                    chooser.getController().revealBeforeSelection(dPHand, ZoneType.Hand, p);
                 }
                 if (mode.startsWith("Look") && p != chooser) {
-                    game.getAction().revealTo(dPHand, chooser);
+                    chooser.getController().revealBeforeSelection(dPHand, ZoneType.Hand, p);
                 }
 
                 if (!p.canDiscardBy(sa, true)) {

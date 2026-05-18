@@ -2240,8 +2240,14 @@ public class GameAction {
         reveal(cards, zt, cardOwner, dontRevealToOwner, messagePrefix, true);
     }
     public void reveal(CardCollectionView cards, ZoneType zt, Player cardOwner, boolean dontRevealToOwner, String messagePrefix, boolean msgAddSuffix) {
+        reveal(cards, zt, cardOwner, dontRevealToOwner, messagePrefix, msgAddSuffix, null);
+    }
+    public void reveal(CardCollectionView cards, ZoneType zt, Player cardOwner, boolean dontRevealToOwner, String messagePrefix, boolean msgAddSuffix, Player playerExcept) {
         for (Player p : game.getPlayers()) {
             if (dontRevealToOwner && cardOwner == p) {
+                continue;
+            }
+            if (playerExcept == p) {
                 continue;
             }
             p.getController().reveal(cards, zt, cardOwner, messagePrefix, msgAddSuffix);
