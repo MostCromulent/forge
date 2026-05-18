@@ -2,12 +2,10 @@ package forge.screens.match;
 
 import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
-import forge.view.arcane.FloatingZoneRegistry;
 
 /**
  * Receives click and programmatic requests for viewing data stacks in the
  * "zones" of a player field: hand, library, etc.
- *
  */
 public final class ZoneAction implements Runnable {
     private final CMatchUI matchUI;
@@ -27,6 +25,6 @@ public final class ZoneAction implements Runnable {
 
     @Override
     public void run() {
-        FloatingZoneRegistry.showOrHide(matchUI, player, zone);
+        matchUI.showOrHideZone(player, zone);
     }
 }

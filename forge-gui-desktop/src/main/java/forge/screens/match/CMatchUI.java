@@ -19,18 +19,25 @@ package forge.screens.match;
 
 import java.awt.*;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.image.BufferedImage;
 import java.util.*;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.swing.BorderFactory;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JMenu;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 
@@ -85,7 +92,9 @@ import forge.gui.framework.FScreen;
 import forge.gui.framework.ICDoc;
 import forge.gui.framework.IVDoc;
 import forge.gui.framework.SDisplayUtil;
+import forge.gui.framework.SLayoutConstants;
 import forge.gui.framework.SLayoutIO;
+import forge.gui.framework.SRearrangingUtil;
 import forge.gui.framework.VEmptyDoc;
 import forge.gui.util.SOptionPane;
 import forge.item.InventoryItem;
@@ -110,6 +119,7 @@ import forge.screens.match.controllers.CStack;
 import forge.screens.match.menus.CMatchUIMenus;
 import forge.screens.match.views.VField;
 import forge.screens.match.views.VHand;
+import forge.screens.match.views.VZone;
 import forge.toolbox.FButton;
 import forge.toolbox.FLabel;
 import forge.toolbox.FOptionPane;
@@ -131,7 +141,7 @@ import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
 import forge.view.FView;
 import forge.view.arcane.CardPanel;
-import forge.view.arcane.FloatingZoneRegistry;
+import forge.view.arcane.FloatingCardWindow;
 
 import net.miginfocom.layout.LinkHandler;
 import net.miginfocom.swing.MigLayout;
@@ -151,6 +161,34 @@ public final class CMatchUI
     public static final EnumSet<ZoneType> FLOATING_ZONE_TYPES = EnumSet.of(ZoneType.Library, ZoneType.Graveyard, ZoneType.Exile,
             ZoneType.Flashback, ZoneType.Command, ZoneType.Ante, ZoneType.Sideboard, ZoneType.PlanarDeck,
             ZoneType.SchemeDeck, ZoneType.AttractionDeck, ZoneType.ContraptionDeck, ZoneType.Junkyard);
+
+    public static final Comparator<CardView> ZONE_ORDER_COMPARATOR =
+            Comparator.comparingInt((CardView cv) -> zoneOrder(cv.getZone()))
+                    .thenComparingInt(cv -> cv.getCurrentState().getManaCost().getCMC())
+                    .thenComparing(cv -> cv.getCurrentState().getColors().getOrderWeight())
+                    .thenComparing(cv -> cv.getCurrentState().getName());
+
+    private static int zoneOrder(final ZoneType zone) {
+        if (zone == null) return 99;
+        switch (zone) {
+            case Command:   return 0;
+            case Graveyard: return 1;
+            case Exile:     return 2;
+            case Library:   return 3;
+            case Sideboard: return 4;
+            default:        return 5;
+        }
+    }
+
+    private static final Border DOCK_HIGHLIGHT_BORDER =
+            BorderFactory.createLineBorder(new Color(70, 130, 230), 2);
+
+    private final Map<Integer, FloatingCardWindow> floatingZones = new HashMap<>();
+    private final Map<Integer, VZone> dockedZones = new HashMap<>();
+
+    private static int floatingZoneKey(final PlayerView player, final ZoneType zone) {
+        return 40 * player.getId() + zone.hashCode();
+    }
 
     private final FScreen screen;
     private final VMatchUI view;
@@ -510,11 +548,11 @@ public final class CMatchUI
                 case Hand:
                     updateHand = true;
                     updateZones = true;
-                    FloatingZoneRegistry.refresh(owner, zone);
+                    refreshZone(owner, zone);
                     break;
                 default:
                     updateZones = true;
-                    FloatingZoneRegistry.refresh(owner, zone);
+                    refreshZone(owner, zone);
                     break;
                 }
             }
@@ -563,7 +601,7 @@ public final class CMatchUI
                             break;
                         case Hand:  // controller hand always shown
                             if (controller != player) {
-                                if (FloatingZoneRegistry.show(this,player,zone)) {
+                                if (showZone(player, zone)) {
                                     updatedPlayerZones.add(update);
                                 }
                             }
@@ -571,7 +609,7 @@ public final class CMatchUI
                         default:
                             if(!FLOATING_ZONE_TYPES.contains(zone))
                                 break;
-                            if (FloatingZoneRegistry.show(this,player,zone)) {
+                            if (showZone(player, zone)) {
                                 updatedPlayerZones.add(update);
                             }
                             break;
@@ -588,7 +626,7 @@ public final class CMatchUI
                 final PlayerView player = update.getPlayer();
                 for (final ZoneType zone : update.getZones()) {
                     if (FLOATING_ZONE_TYPES.contains(zone) || (zone == ZoneType.Hand && controller != player)) {
-                        FloatingZoneRegistry.hide(this, player, zone);
+                        hideZone(player, zone);
                     }
                 }
             }
@@ -641,10 +679,10 @@ public final class CMatchUI
                     }
                 }
                 // VHand only covers the local hand; opponent hands shown in a floating window need an explicit refresh.
-                FloatingZoneRegistry.refresh(c.getController(), zone);
+                refreshZone(c.getController(), zone);
                 break;
             default:
-                FloatingZoneRegistry.refresh(c.getController(),zone); // in case the card is visible in the zone
+                refreshZone(c.getController(), zone); // in case the card is visible in the zone
                 break;
             }
         }
@@ -663,7 +701,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Hand).threadSafeIterable() : p.getCards(ZoneType.Hand));
                 }
             }
-            FloatingZoneRegistry.refreshAll();
+            refreshAllZones();
         });
     }
 
@@ -680,7 +718,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Hand).threadSafeIterable() : p.getCards(ZoneType.Hand));
                 }
             }
-            FloatingZoneRegistry.refreshAll();
+            refreshAllZones();
         });
     }
 
@@ -693,7 +731,7 @@ public final class CMatchUI
                     updateCards(isNetGame() ? p.getCards(ZoneType.Battlefield).threadSafeIterable() : p.getCards(ZoneType.Battlefield));
                 }
             }
-            FloatingZoneRegistry.refreshAll();
+            refreshAllZones();
         });
     }
 
@@ -726,7 +764,7 @@ public final class CMatchUI
     @Override
     public void initialize() {
         Singletons.getControl().getForgeMenu().setProvider(this);
-        FloatingZoneRegistry.closeAll();
+        closeAllZones();
         updatePlayerControl();
         KeyboardShortcuts.attachKeyboardShortcuts(this);
         for (final IVDoc<? extends ICDoc> view : myDocs.values()) {
@@ -795,7 +833,7 @@ public final class CMatchUI
             }
         }
         else if (FLOATING_ZONE_TYPES.contains(zone))
-            return FloatingZoneRegistry.getCardPanel(this, card);
+            return getZoneCardPanel(card);
         return null;
     }
 
@@ -879,15 +917,308 @@ public final class CMatchUI
     @Override
     public void updatePlayerControl() {
         initHandViews();
-        FloatingZoneRegistry.registerZoneDocs(this, getLocalPlayers());
+        registerZoneDocs();
         SLayoutIO.loadLayout(null);
-        FloatingZoneRegistry.pruneUnparentedDocks();
+        pruneUnparentedDocks();
         view.populate();
         final PlayerZoneUpdates zones = new PlayerZoneUpdates();
         for (final PlayerView p : sortedPlayers) {
         	zones.add(new PlayerZoneUpdate(p, ZoneType.Hand));
         }
         updateZones(zones);
+    }
+
+    public boolean isTabZone(final ZoneType zone, final boolean isOwn) {
+        final FPref prefKey = isOwn ? FPref.UI_ZONE_DOCK_ZONES : FPref.UI_ZONE_DOCK_ZONES_OTHER;
+        final String pref = FModel.getPreferences().getPref(prefKey);
+        if (pref == null || pref.isEmpty()) return false;
+        for (final String s : pref.split(",")) {
+            if (s.trim().equals(zone.name())) return true;
+        }
+        return false;
+    }
+
+    public void setTabZone(final ZoneType zone, final boolean tabMode, final boolean isOwn) {
+        final ForgePreferences fprefs = FModel.getPreferences();
+        final FPref prefKey = isOwn ? FPref.UI_ZONE_DOCK_ZONES : FPref.UI_ZONE_DOCK_ZONES_OTHER;
+        final String current = fprefs.getPref(prefKey);
+        final LinkedHashSet<String> zones = new LinkedHashSet<>();
+        if (current != null && !current.isEmpty()) {
+            for (final String s : current.split(",")) {
+                final String trimmed = s.trim();
+                if (!trimmed.isEmpty()) zones.add(trimmed);
+            }
+        }
+        if (tabMode) zones.add(zone.name());
+        else zones.remove(zone.name());
+        fprefs.setPref(prefKey, String.join(",", zones));
+        fprefs.save();
+    }
+
+    private FloatingCardWindow getOrCreateFloatingZone(final PlayerView player, final ZoneType zone) {
+        final int key = floatingZoneKey(player, zone);
+        FloatingCardWindow window = floatingZones.get(key);
+        if (window == null) {
+            window = new FloatingCardWindow(this, new LiveZoneSource(this, player, zone), new BrowseInteraction(this));
+            installDockDetection(window);
+            floatingZones.put(key, window);
+        } else {
+            ((LiveZoneSource) window.getSource()).setPlayer(player);
+        }
+        return window;
+    }
+
+    public void showOrHideZone(final PlayerView player, final ZoneType zone) {
+        if (zone == ZoneType.Hand && isTabZone(zone, isLocalPlayer(player))) {
+            final VHand existingHand = getHandFor(player);
+            if (existingHand != null && existingHand.getParentCell() != null) {
+                SDisplayUtil.showTab(existingHand);
+                return;
+            }
+        }
+
+        final int key = floatingZoneKey(player, zone);
+        final VZone docked = dockedZones.get(key);
+        if (docked != null) {
+            final DragCell cell = docked.getParentCell();
+            if (cell != null) {
+                cell.removeDoc(docked);
+                if (cell.getDocs().isEmpty()) {
+                    SRearrangingUtil.fillGap(cell);
+                    FView.SINGLETON_INSTANCE.removeDragCell(cell);
+                }
+                docked.setParentCell(null);
+            } else {
+                showDockedTab(docked);
+            }
+            return;
+        }
+
+        if (isTabZone(zone, isLocalPlayer(player))) {
+            showAsTab(player, zone);
+            return;
+        }
+
+        getOrCreateFloatingZone(player, zone).showOrHideWindow();
+    }
+
+    private boolean showZone(final PlayerView player, final ZoneType zone) {
+        final FloatingCardWindow window = getOrCreateFloatingZone(player, zone);
+        if (window.isVisible()) return false;
+        FThreads.invokeInEdtNowOrLater(window::showWindow);
+        return true;
+    }
+
+    private boolean hideZone(final PlayerView player, final ZoneType zone) {
+        final FloatingCardWindow window = getOrCreateFloatingZone(player, zone);
+        if (!window.isVisible()) return false;
+        FThreads.invokeInEdtNowOrLater(window::hideWindow);
+        return true;
+    }
+
+    public void closeZone(final PlayerView player, final ZoneType zone) {
+        final int key = floatingZoneKey(player, zone);
+        final VZone docked = dockedZones.get(key);
+        if (docked != null) removeDocked(docked);
+        final FloatingCardWindow floating = floatingZones.get(key);
+        if (floating != null && floating.isVisible()) {
+            floating.hideWindow();
+            floatingZones.remove(key);
+        }
+    }
+
+    private void refreshZone(final PlayerView player, final ZoneType zone) {
+        final int key = floatingZoneKey(player, zone);
+        final FloatingCardWindow window = floatingZones.get(key);
+        if (window != null) {
+            ((LiveZoneSource) window.getSource()).setPlayer(player);
+            window.refresh();
+        }
+        final VZone docked = dockedZones.get(key);
+        if (docked != null) docked.refresh();
+
+        switch (zone) {
+            case Graveyard:
+            case Library:
+            case Exile:
+            case Command:
+                refreshZone(player, ZoneType.Flashback);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void closeAllZones() {
+        for (final FloatingCardWindow window : floatingZones.values()) {
+            window.getWindow().setVisible(false);
+        }
+        floatingZones.clear();
+        for (final VZone vZone : dockedZones.values()) {
+            detachVZoneFromCell(vZone);
+        }
+        dockedZones.clear();
+    }
+
+    private void detachVZoneFromCell(final VZone vZone) {
+        final DragCell cell = vZone.getParentCell();
+        if (cell != null) {
+            cell.removeDoc(vZone);
+            if (cell.getDocs().isEmpty()) {
+                SRearrangingUtil.fillGap(cell);
+                FView.SINGLETON_INSTANCE.removeDragCell(cell);
+            }
+        }
+        final EDocID docID = vZone.getDocumentID();
+        if (docID != null) docID.setDoc(null);
+    }
+
+    public void refreshAllZones() {
+        for (final FloatingCardWindow window : floatingZones.values()) window.refresh();
+        for (final VZone vZone : dockedZones.values()) vZone.refresh();
+    }
+
+    private CardPanel getZoneCardPanel(final CardView card) {
+        final int key = floatingZoneKey(card.getController(), card.getZone());
+        final VZone docked = dockedZones.get(key);
+        if (docked != null) {
+            final CardPanel panel = docked.getCardPanel(card);
+            if (panel != null) return panel;
+        }
+        return getOrCreateFloatingZone(card.getController(), card.getZone()).getCardPanel(card.getId());
+    }
+
+    private void registerZoneDocs() {
+        for (final PlayerView player : getLocalPlayers()) {
+            for (final ZoneType zone : FLOATING_ZONE_TYPES) {
+                final EDocID docID = EDocID.fromZoneType(zone);
+                if (docID != null) {
+                    final VZone vZone = new VZone(this, player, zone);
+                    docID.setDoc(vZone);
+                    dockedZones.put(floatingZoneKey(player, zone), vZone);
+                }
+            }
+            break; // Only the first local player's zones
+        }
+    }
+
+    private void pruneUnparentedDocks() {
+        dockedZones.values().removeIf(vZone -> vZone.getParentCell() == null);
+    }
+
+    public void undockZone(final VZone vZone) {
+        detachVZoneFromCell(vZone);
+        dockedZones.remove(floatingZoneKey(vZone.getPlayer(), vZone.getZone()));
+        SLayoutIO.saveLayout(null);
+        showZone(vZone.getPlayer(), vZone.getZone());
+    }
+
+    private void showAsTab(final PlayerView player, final ZoneType zone) {
+        final EDocID docID = EDocID.fromZoneType(zone);
+        if (docID == null) return;
+        final VZone vZone = new VZone(this, player, zone);
+        docID.setDoc(vZone);
+        dockedZones.put(floatingZoneKey(player, zone), vZone);
+        showDockedTab(vZone);
+    }
+
+    private void showDockedTab(final VZone vZone) {
+        DragCell target = null;
+        final IVDoc<? extends ICDoc> handDoc = EDocID.HAND_0.getDoc();
+        if (handDoc != null) target = handDoc.getParentCell();
+        if (target == null) {
+            final List<DragCell> cells = FView.SINGLETON_INSTANCE.getDragCells();
+            if (!cells.isEmpty()) target = cells.get(0);
+        }
+        if (target != null) {
+            target.addDoc(vZone);
+            target.setSelected(vZone);
+            vZone.refresh();
+        }
+    }
+
+    private void removeDocked(final VZone vZone) {
+        detachVZoneFromCell(vZone);
+        dockedZones.remove(floatingZoneKey(vZone.getPlayer(), vZone.getZone()));
+        SLayoutIO.saveLayout(null);
+    }
+
+    private void installDockDetection(final FloatingCardWindow window) {
+        final DockTracker tracker = new DockTracker();
+        window.getWindow().getTitleBar().addMouseListener(new MouseAdapter() {
+            @Override public void mouseReleased(final MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) return;
+                if (tracker.dockTargetCell != null) {
+                    tracker.clearHighlight();
+                    dockIntoCell(window, tracker.dockTargetCell);
+                    tracker.dockTargetCell = null;
+                }
+            }
+        });
+        window.getWindow().getTitleBar().addMouseMotionListener(new MouseMotionAdapter() {
+            @Override public void mouseDragged(final MouseEvent e) {
+                if (!SwingUtilities.isLeftMouseButton(e)) return;
+                tracker.detectTarget(e);
+            }
+        });
+    }
+
+    private void dockIntoCell(final FloatingCardWindow window, final DragCell targetCell) {
+        final LiveZoneSource src = (LiveZoneSource) window.getSource();
+        final EDocID docID = EDocID.fromZoneType(src.getZone());
+        if (docID == null) return;
+        final VZone vZone = new VZone(this, src.getPlayer(), src.getZone());
+        docID.setDoc(vZone);
+        final int key = floatingZoneKey(src.getPlayer(), src.getZone());
+        dockedZones.put(key, vZone);
+        window.hideWindow();
+        floatingZones.remove(key);
+
+        targetCell.addDoc(vZone);
+        targetCell.setSelected(vZone);
+        vZone.refresh();
+        SLayoutIO.saveLayout(null);
+    }
+
+    private static final class DockTracker {
+        DragCell dockTargetCell;
+        DragCell highlightedCell;
+        Border dockOriginalBorder;
+
+        void detectTarget(final MouseEvent e) {
+            final int ex = (int) e.getLocationOnScreen().getX();
+            final int ey = (int) e.getLocationOnScreen().getY();
+            DragCell newTarget = null;
+            for (final DragCell cell : FView.SINGLETON_INSTANCE.getDragCells()) {
+                final int cx = cell.getAbsX();
+                final int cy = cell.getAbsY();
+                final int cw = cell.getW();
+                if (ex >= cx && ey >= cy && ex <= cx + cw && ey <= cy + SLayoutConstants.HEAD_H * 3 / 2) {
+                    newTarget = cell;
+                    break;
+                }
+            }
+            if (newTarget != dockTargetCell) {
+                clearHighlight();
+                dockTargetCell = newTarget;
+                if (dockTargetCell != null) applyHighlight();
+            }
+        }
+
+        void applyHighlight() {
+            if (dockTargetCell == null) return;
+            highlightedCell = dockTargetCell;
+            dockOriginalBorder = dockTargetCell.getBody().getBorder();
+            dockTargetCell.getBody().setBorder(DOCK_HIGHLIGHT_BORDER);
+        }
+
+        void clearHighlight() {
+            if (highlightedCell != null) {
+                highlightedCell.getBody().setBorder(dockOriginalBorder);
+                highlightedCell = null;
+            }
+            dockOriginalBorder = null;
+        }
     }
 
     @Override
@@ -902,7 +1233,7 @@ public final class CMatchUI
 
     @Override
     public void finishGame() {
-        FloatingZoneRegistry.closeAll(); //ensure floating card areas cleared and closed after the game
+        closeAllZones(); //ensure floating card areas cleared and closed after the game
         if (isNetGame()) {
             writeMatchPreferences();
         }
@@ -1018,7 +1349,7 @@ public final class CMatchUI
             } else {
                 final ZoneType zone = hostCard.getZone();
                 if (ImmutableList.of(ZoneType.Command, ZoneType.Exile, ZoneType.Graveyard, ZoneType.Library).contains(zone)) {
-                    FloatingZoneRegistry.show(this, hostCard.getController(), zone);
+                    showZone(hostCard.getController(), zone);
                 }
                 menuParent = panel.getParent();
                 x = triggerEvent.getX();
@@ -1078,7 +1409,7 @@ public final class CMatchUI
         }
         lastPromptMessage = message;
         if (isSelecting()) {
-            FloatingZoneRegistry.refreshSelectionPrompts();
+            FloatingCardWindow.refreshAllSelectionPrompts();
         }
     }
 
@@ -1275,25 +1606,20 @@ public final class CMatchUI
         for (final T item : choices) cardChoices.add((CardView) item);
         final boolean isOptional = min == 0;
         final String priorPrompt = lastPromptMessage;
-        // Set the cPrompt so the player knows what's being asked (mirrors what
-        // InputBase.showMessage does for the in-board picker path). The next game
-        // event restores it; we also explicitly restore on close as a safety net.
         showPromptMessage(getCurrentPlayer(), message);
-        final java.util.concurrent.atomic.AtomicReference<CardView> picked = new java.util.concurrent.atomic.AtomicReference<>();
-        final java.util.concurrent.Callable<Void> callable = () -> {
-            final forge.view.arcane.FloatingCardWindow window =
-                    forge.view.arcane.FloatingCardWindow.forChoice(this, message, cardChoices, isOptional, picked::set);
-            window.showWindow();
+        final AtomicReference<CardView> picked = new AtomicReference<>();
+        final Callable<Void> callable = () -> {
+            FloatingCardWindow.forChoice(this, message, cardChoices, isOptional, picked::set).showWindow();
             return null;
         };
-        final java.util.concurrent.FutureTask<Void> ft = new java.util.concurrent.FutureTask<>(callable);
+        final FutureTask<Void> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);
         try { ft.get(); } catch (final Exception e) { e.printStackTrace(); }
         if (priorPrompt != null) {
             cPrompt.setMessage(priorPrompt);
         }
         final CardView chosen = picked.get();
-        if (chosen == null) return new ArrayList<>();
+        if (chosen == null) return isOptional ? new ArrayList<>() : null;
         final List<T> result = new ArrayList<>();
         result.add((T) chosen);
         return result;

@@ -26,7 +26,6 @@ import forge.util.collect.FCollectionView;
 import forge.view.arcane.CardArea;
 import forge.util.Localizer;
 import forge.view.arcane.CardPanel;
-import forge.view.arcane.FloatingZoneRegistry;
 import net.miginfocom.swing.MigLayout;
 
 /**
@@ -71,7 +70,7 @@ public class VZone implements IVDoc<CZone> {
 
                     final Localizer localizer = Localizer.getInstance();
                     final JMenuItem undockItem = new JMenuItem(localizer.getMessage("lblUndock"));
-                    undockItem.addActionListener(ev -> FloatingZoneRegistry.undockZone(VZone.this));
+                    undockItem.addActionListener(ev -> matchUI.undockZone(VZone.this));
                     menu.add(undockItem);
 
                     final JMenuItem sortItem = new JMenuItem(sortedByName ? localizer.getMessage("lblUnsort") : localizer.getMessage("lblSortByName"));
@@ -79,7 +78,7 @@ public class VZone implements IVDoc<CZone> {
                     menu.add(sortItem);
 
                     final JMenuItem closeItem = new JMenuItem(Localizer.getInstance().getMessage("lblClose"));
-                    closeItem.addActionListener(ev -> FloatingZoneRegistry.showOrHide(matchUI, player, zone));
+                    closeItem.addActionListener(ev -> matchUI.showOrHideZone(player, zone));
                     menu.add(closeItem);
 
                     menu.show(tab, e.getX(), e.getY());
@@ -101,7 +100,7 @@ public class VZone implements IVDoc<CZone> {
             if (sortedByName) {
                 cardList.sort(Comparator.comparing(CardView::getName));
             } else if (zone == ZoneType.Flashback) {
-                cardList.sort(FloatingZoneRegistry.ZONE_ORDER_COMPARATOR);
+                cardList.sort(CMatchUI.ZONE_ORDER_COMPARATOR);
             }
             for (final CardView card : cardList) {
                 CardPanel cardPanel = cardArea.getCardPanel(card.getId());
@@ -180,10 +179,6 @@ public class VZone implements IVDoc<CZone> {
     @Override
     public CZone getLayoutControl() { return control; }
 
-    /**
-     * Inner CardArea subclass that routes mouse events to CMatchUI,
-     * identical to how FloatingCardWindow handles them.
-     */
     private static class ZoneCardArea extends CardArea {
         ZoneCardArea(final CMatchUI matchUI, final FScrollPane scrollPane) {
             super(matchUI, scrollPane);

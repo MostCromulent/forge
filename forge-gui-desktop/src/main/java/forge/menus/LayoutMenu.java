@@ -32,7 +32,6 @@ import forge.model.FModel;
 import forge.screens.match.VMatchUI;
 import forge.screens.match.views.VField;
 import forge.screens.match.views.VHand;
-import forge.view.arcane.FloatingZoneRegistry;
 import forge.toolbox.FButton;
 import forge.toolbox.FCheckBox;
 import forge.toolbox.FScrollPane;
@@ -92,7 +91,7 @@ public final class LayoutMenu {
         newCountItem.addActionListener(e -> {
             prefs.setPref(FPref.UI_ZONE_TAB_NEW_COUNT, newCountItem.getState());
             prefs.save();
-            FloatingZoneRegistry.refreshAll();
+            refreshMatchScreenZones();
             refreshHandCards();
             refreshFieldTabLabels();
         });
@@ -254,6 +253,16 @@ public final class LayoutMenu {
                 for (final VHand h : vmu.getControl().getHandViews()) {
                     h.getLayoutControl().updateHand();
                 }
+            }
+        }
+    }
+
+    private static void refreshMatchScreenZones() {
+        final FScreen screen = Singletons.getControl().getCurrentScreen();
+        if (screen != null && screen.isMatchScreen()) {
+            final IVTopLevelUI view = screen.getView();
+            if (view instanceof VMatchUI vmu) {
+                vmu.getControl().refreshAllZones();
             }
         }
     }

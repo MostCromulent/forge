@@ -27,6 +27,7 @@ import forge.toolbox.FOptionPane;
 import forge.util.FSerializableFunction;
 import forge.util.IHasName;
 import forge.util.Localizer;
+import forge.view.arcane.FloatingCardWindow;
 
 public class GuiChoose {
 
@@ -270,20 +271,15 @@ public class GuiChoose {
     public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable,
                                                     final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
         gui.setSelectables(manipulable);
-        final java.util.ArrayList<CardView> all = new java.util.ArrayList<>();
+        final ArrayList<CardView> all = new ArrayList<>();
         for (final CardView c : cards) all.add(c);
-        final java.util.ArrayList<CardView> moveable = new java.util.ArrayList<>();
+        final ArrayList<CardView> moveable = new ArrayList<>();
         for (final CardView c : manipulable) moveable.add(c);
-        @SuppressWarnings("Convert2Lambda")
-        final Callable<List<CardView>> callable = new Callable<List<CardView>>() {
-            @Override
-            public List<CardView> call() {
-                final forge.view.arcane.FloatingCardWindow window =
-                        forge.view.arcane.FloatingCardWindow.forManipulation(
-                                gui, title, all, moveable, toTop, toBottom, toAnywhere);
-                window.showWindow();
-                return window.getDestList();
-            }
+        final Callable<List<CardView>> callable = () -> {
+            final FloatingCardWindow window = FloatingCardWindow.forManipulation(
+                    gui, title, all, moveable, toTop, toBottom, toAnywhere);
+            window.showWindow();
+            return window.getDestList();
         };
         final FutureTask<List<CardView>> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);

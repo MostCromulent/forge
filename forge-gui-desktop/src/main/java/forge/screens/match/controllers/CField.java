@@ -37,7 +37,6 @@ import forge.screens.match.ZoneAction;
 import forge.screens.match.views.VField;
 import forge.toolbox.MouseTriggerEvent;
 import forge.util.Localizer;
-import forge.view.arcane.FloatingZoneRegistry;
 
 /**
  * Controls Swing components of a player's field instance.
@@ -86,7 +85,7 @@ public class CField implements ICDoc {
             final JPopupMenu popup = new JPopupMenu();
             final ButtonGroup group = new ButtonGroup();
             final boolean isOwn = matchUI.isLocalPlayer(player);
-            final boolean currentlyTabMode = FloatingZoneRegistry.isTabMode(zone, isOwn);
+            final boolean currentlyTabMode = matchUI.isTabZone(zone, isOwn);
 
             final JRadioButtonMenuItem windowItem = new JRadioButtonMenuItem(localizer.getMessage("lblOpenInWindow"));
             final JRadioButtonMenuItem tabItem = new JRadioButtonMenuItem(localizer.getMessage("lblAddTabToHandPanel"));
@@ -97,16 +96,16 @@ public class CField implements ICDoc {
 
             windowItem.addActionListener(evt -> {
                 if (currentlyTabMode) {
-                    FloatingZoneRegistry.setTabMode(zone, false, isOwn);
-                    FloatingZoneRegistry.closeExisting(matchUI, player, zone);
-                    FloatingZoneRegistry.showOrHide(matchUI, player, zone);
+                    matchUI.setTabZone(zone, false, isOwn);
+                    matchUI.closeZone(player, zone);
+                    matchUI.showOrHideZone(player, zone);
                 }
             });
             tabItem.addActionListener(evt -> {
                 if (!currentlyTabMode) {
-                    FloatingZoneRegistry.setTabMode(zone, true, isOwn);
-                    FloatingZoneRegistry.closeExisting(matchUI, player, zone);
-                    FloatingZoneRegistry.showOrHide(matchUI, player, zone);
+                    matchUI.setTabZone(zone, true, isOwn);
+                    matchUI.closeZone(player, zone);
+                    matchUI.showOrHideZone(player, zone);
                 }
             });
 

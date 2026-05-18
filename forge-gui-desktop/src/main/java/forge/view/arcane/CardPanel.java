@@ -17,6 +17,7 @@
  */
 package forge.view.arcane;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -310,13 +311,9 @@ public class CardPanel extends SkinnedPanel implements CardContainer, IDisposabl
                     - edgeOffset);
         }
         if (dimmed) {
-            g2d.setComposite(java.awt.AlphaComposite.getInstance(java.awt.AlphaComposite.SRC_OVER, 0.45f));
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.45f));
         }
         super.paint(g2d);
-    }
-
-    public boolean isInteractive() {
-        return interactive;
     }
 
     public void setInteractive(final boolean interactive0) {
