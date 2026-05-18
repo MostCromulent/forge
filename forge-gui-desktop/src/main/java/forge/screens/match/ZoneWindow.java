@@ -16,6 +16,7 @@
  */
 package forge.screens.match;
 
+import java.awt.event.MouseEvent;
 import java.util.Comparator;
 
 import forge.game.card.CardView;
@@ -23,32 +24,32 @@ import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
+import forge.toolbox.MouseTriggerEvent;
 import forge.toolbox.special.PlayerDetailsPanel;
 import forge.util.Localizer;
 import forge.util.collect.FCollectionView;
 import forge.view.arcane.CardPanel;
 import forge.view.arcane.FloatingCardWindow;
 
-/** Live source backing a floating window with a player's zone cards. */
-final class LiveZoneSource implements FloatingCardWindow.Source {
-    private final CMatchUI matchUI;
+/** Non-modal window showing a player's live zone. Clicks route to the game controller. */
+public final class ZoneWindow extends FloatingCardWindow {
     private final ZoneType zone;
     private PlayerView player;
     private FPref locPref;
 
-    LiveZoneSource(final CMatchUI matchUI, final PlayerView player, final ZoneType zone) {
-        this.matchUI = matchUI;
+    public ZoneWindow(final CMatchUI matchUI, final PlayerView player, final ZoneType zone) {
+        super(matchUI, false, null);
         this.zone = zone;
         setPlayer(player);
     }
 
-    PlayerView getPlayer() { return player; }
-    ZoneType getZone() { return zone; }
+    public PlayerView getPlayer() { return player; }
+    public ZoneType getZone() { return zone; }
 
-    void setPlayer(final PlayerView player0) {
-        if (player == player0) return;
-        player = player0;
-        final boolean isAi = player0.isAI();
+    public void setPlayer(final PlayerView newPlayer) {
+        if (player == newPlayer) return;
+        player = newPlayer;
+        final boolean isAi = newPlayer.isAI();
         switch (zone) {
             case Exile:     locPref = isAi ? FPref.ZONE_LOC_AI_EXILE     : FPref.ZONE_LOC_HUMAN_EXILE; break;
             case Graveyard: locPref = isAi ? FPref.ZONE_LOC_AI_GRAVEYARD : FPref.ZONE_LOC_HUMAN_GRAVEYARD; break;
@@ -63,14 +64,14 @@ final class LiveZoneSource implements FloatingCardWindow.Source {
     }
 
     @Override
-    public Iterable<CardView> getCards() {
+    protected Iterable<CardView> getCards() {
         final FCollectionView<CardView> zoneCards = player.getCards(zone);
         if (zoneCards == null) return null;
-        return matchUI.isNetGame() ? zoneCards.threadSafeIterable() : zoneCards;
+        return getMatchUI().isNetGame() ? zoneCards.threadSafeIterable() : zoneCards;
     }
 
     @Override
-    public String getTitle(final int shown, final int total, final boolean sortedByName) {
+    protected String getTitle(final int shown, final int total, final boolean sortedByName) {
         final Localizer loc = Localizer.getInstance();
         final String sortHint = loc.getMessage(sortedByName ? "lblRightClickToUnSort" : "lblRightClickToSort");
         if (shown == total) {
@@ -82,35 +83,44 @@ final class LiveZoneSource implements FloatingCardWindow.Source {
                 String.valueOf(shown), String.valueOf(total), sortHint);
     }
 
-    @Override public FPref getLocPref() { return locPref; }
-    @Override public boolean supportsSortToggle() { return true; }
+    // Legality is checked by the game controller, not the widget — every panel stays clickable.
+    @Override protected boolean isCardClickable(final CardView c) { return true; }
+    @Override protected boolean supportsSortToggle() { return true; }
+    @Override protected boolean supportsHotkeys() { return true; }
+    @Override protected boolean showsSelectionPrompt() { return true; }
+    @Override protected FPref getLocPref() { return locPref; }
+    @Override protected FSkinProp getIconSkinProp() { return PlayerDetailsPanel.iconFromZone(zone); }
 
     @Override
-    public void decoratePanel(final CardPanel panel, final CardView card) {
-        if (zone != ZoneType.Flashback) return;
-        final ZoneType cardZone = card.getZone();
-        if (cardZone != null) {
-            panel.setZoneBanner(cardZone.getTranslatedName().toUpperCase(), cardZone);
-        }
+    protected Comparator<CardView> defaultComparator() {
+        return zone == ZoneType.Flashback ? CMatchUI.ZONE_ORDER_COMPARATOR : null;
     }
 
     @Override
-    public Comparator<CardView> defaultComparator() {
-        if (zone == ZoneType.Flashback) return CMatchUI.ZONE_ORDER_COMPARATOR;
-        return null;
-    }
-
-    @Override
-    public Comparator<CardView> sortedComparator() {
+    protected Comparator<CardView> sortedComparator() {
         return (lhs, rhs) -> {
-            if (!matchUI.mayView(lhs)) return matchUI.mayView(rhs) ? 1 : 0;
-            if (!matchUI.mayView(rhs)) return -1;
+            if (!getMatchUI().mayView(lhs)) return getMatchUI().mayView(rhs) ? 1 : 0;
+            if (!getMatchUI().mayView(rhs)) return -1;
             return lhs.getName().compareTo(rhs.getName());
         };
     }
 
     @Override
-    public FSkinProp getIconSkinProp() {
-        return PlayerDetailsPanel.iconFromZone(zone);
+    protected void handleLeftClick(final CardView c, final MouseEvent e) {
+        getMatchUI().getGameController().selectCard(c, null, new MouseTriggerEvent(e));
+    }
+
+    @Override
+    protected void handleRightClick(final CardView c, final MouseEvent e) {
+        getMatchUI().getGameController().selectCard(c, null, new MouseTriggerEvent(e));
+    }
+
+    @Override
+    protected void decoratePanel(final CardPanel panel, final CardView card) {
+        if (zone != ZoneType.Flashback) return;
+        final ZoneType cardZone = card.getZone();
+        if (cardZone != null) {
+            panel.setZoneBanner(cardZone.getTranslatedName().toUpperCase(), cardZone);
+        }
     }
 }

@@ -31,7 +31,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.ScrollPaneConstants;
@@ -64,49 +63,11 @@ import forge.view.FFrame;
 import forge.view.arcane.util.CardPanelMouseAdapter;
 
 /**
- * Floating window for a list of {@link CardView}s, parameterised by a
- * {@link Source} (what to show) and an {@link Interaction} (what clicks do).
+ * Abstract base for floating windows that display a list of {@link CardView}s.
+ * Subclasses choose the cards, the title, and what clicks do.
  */
 @SuppressWarnings("serial")
-public final class FloatingCardWindow extends CardArea {
-
-    /** What cards to show, how to title, where to persist location, how to decorate panels. */
-    public interface Source {
-        Iterable<CardView> getCards();
-
-        /** Title for the current refresh. */
-        String getTitle(int shown, int total, boolean sortedByName);
-
-        default FPref getLocPref() { return null; }
-        default boolean supportsSortToggle() { return false; }
-        default Comparator<CardView> defaultComparator() { return null; }
-        default Comparator<CardView> sortedComparator() { return null; }
-        default FSkinProp getIconSkinProp() { return null; }
-
-        /** Per-refresh hook to apply source-specific overlays (e.g. Flashback zone banner). */
-        default void decoratePanel(CardPanel panel, CardView card) {}
-    }
-
-    /** What the user can do with the cards. */
-    public interface Interaction {
-        default boolean canClick(FloatingCardWindow w, CardView c) { return false; }
-        default void onLeftClick(FloatingCardWindow w, CardView c, MouseEvent e) {}
-        default void onRightClick(FloatingCardWindow w, CardView c, MouseEvent e) {}
-        default boolean canDrag(FloatingCardWindow w, CardView c) { return false; }
-        default void onDragEnd(FloatingCardWindow w, CardView c, int newIndex) {}
-        default boolean isModal() { return false; }
-        /** null = no Done button. */
-        default String getDoneButtonLabel() { return null; }
-        default boolean showsSelectionPrompt() { return false; }
-        default boolean supportsHotkeys() { return false; }
-        /** False blocks the title-bar X for mandatory game-rules dialogs. */
-        default boolean allowsCancel() { return true; }
-
-        /** Whether {@code c} counts as selectable for hotkey / prompt purposes. */
-        default boolean isSelectable(FloatingCardWindow w, CardView c) {
-            return w.getMatchUI().isSelectable(c);
-        }
-    }
+public abstract class FloatingCardWindow extends CardArea {
 
     private static final Set<FloatingCardWindow> ALL_VISIBLE = new LinkedHashSet<>();
     private static boolean hotkeyDispatcherInstalled;
@@ -122,7 +83,7 @@ public final class FloatingCardWindow extends CardArea {
         if (e.getKeyCode() == KeyEvent.VK_CONTROL) {
             for (final FloatingCardWindow fz : ALL_VISIBLE) {
                 if (!fz.isVisible()) continue;
-                if (!fz.interaction.supportsHotkeys()) continue;
+                if (!fz.supportsHotkeys()) continue;
                 if (e.getID() == KeyEvent.KEY_RELEASED) {
                     fz.assignOwnHotkeyDigits(true);
                 } else if (e.getID() == KeyEvent.KEY_PRESSED) {
@@ -148,10 +109,10 @@ public final class FloatingCardWindow extends CardArea {
         if (digit < 1 || digit > 9) return false;
         for (final FloatingCardWindow fz : ALL_VISIBLE) {
             if (!fz.isVisible()) continue;
-            if (!fz.interaction.supportsHotkeys()) continue;
+            if (!fz.supportsHotkeys()) continue;
             final CardPanel target = fz.findPanelByHotkeyDigit(digit);
             if (target == null) continue;
-            fz.interaction.onLeftClick(fz, target.getCard(),
+            fz.handleLeftClick(target.getCard(),
                     new MouseEvent(fz, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(),
                             0, 0, 0, 1, false, MouseEvent.BUTTON1));
             return true;
@@ -162,7 +123,7 @@ public final class FloatingCardWindow extends CardArea {
     /** Called by external observers when the selection prompt changes. */
     public static void refreshAllSelectionPrompts() {
         for (final FloatingCardWindow fz : ALL_VISIBLE) {
-            if (fz.isVisible() && fz.interaction.showsSelectionPrompt()) {
+            if (fz.isVisible() && fz.showsSelectionPrompt()) {
                 fz.updatePromptVisibility();
             }
         }
@@ -171,8 +132,6 @@ public final class FloatingCardWindow extends CardArea {
     private static final String COORD_DELIM = ",";
     private static final ForgePreferences prefs = FModel.getPreferences();
 
-    private final Source source;
-    private final Interaction interaction;
     private boolean sortedByName = false;
     private boolean hasBeenShown, locLoaded;
 
@@ -188,14 +147,12 @@ public final class FloatingCardWindow extends CardArea {
     private FButton doneButton;
     private String filter = "";
 
-    private final FDialog window;
+    protected final FDialog window;
 
-    public FloatingCardWindow(final CMatchUI matchUI, final Source source, final Interaction interaction) {
+    protected FloatingCardWindow(final CMatchUI matchUI, final boolean modal, final String doneButtonLabel) {
         super(matchUI, new FScrollPane(false, ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER));
-        this.source = source;
-        this.interaction = interaction;
-        this.window = new FDialog(interaction.isModal(), true, "0") {
+        this.window = new FDialog(modal, true, "0") {
             @Override
             public void setLocationRelativeTo(Component c) {
                 if (hasBeenShown || locLoaded) return;
@@ -205,8 +162,9 @@ public final class FloatingCardWindow extends CardArea {
             @Override
             public void setVisible(boolean b0) {
                 if (isVisible() == b0) return;
-                if (!b0 && hasBeenShown && source.getLocPref() != null) {
-                    prefs.setPref(source.getLocPref(),
+                final FPref locPref = getLocPref();
+                if (!b0 && hasBeenShown && locPref != null) {
+                    prefs.setPref(locPref,
                             getX() + COORD_DELIM + getY() + COORD_DELIM +
                                     getWidth() + COORD_DELIM + getHeight());
                 }
@@ -234,34 +192,64 @@ public final class FloatingCardWindow extends CardArea {
         hotkeyHint.setVisible(false);
         window.add(hotkeyHint, "growx, wrap");
 
-        if (interaction.getDoneButtonLabel() != null) {
-            doneButton = new FButton(interaction.getDoneButtonLabel());
+        if (doneButtonLabel != null) {
+            doneButton = new FButton(doneButtonLabel);
             doneButton.addActionListener(e -> window.setVisible(false));
             window.add(doneButton, "growx");
         }
 
-        // Mandatory game-rules dialogs swallow X/Esc; the player must pick.
-        window.setDefaultCloseOperation(interaction.allowsCancel()
-                ? WindowConstants.DISPOSE_ON_CLOSE
-                : WindowConstants.DO_NOTHING_ON_CLOSE);
         getScrollPane().setViewportView(this);
         setOpaque(false);
-        if (source.getIconSkinProp() != null) {
-            window.setIconImage(FSkin.getImage(source.getIconSkinProp()));
-        }
         setVertical(true);
         setDragEnabled(true);
     }
 
-    public Source getSource() { return source; }
+    // ===================== Subclass hooks =====================
+
+    /** Cards to display. May be re-queried on every refresh (live sources). */
+    protected abstract Iterable<CardView> getCards();
+
+    /** Title for the current refresh. */
+    protected abstract String getTitle(int shown, int total, boolean sortedByName);
+
+    protected void handleLeftClick(final CardView card, final MouseEvent e) {}
+    protected void handleRightClick(final CardView card, final MouseEvent e) {}
+    protected void onCardDragged(final CardView card, final int newIndex) {}
+
+    protected boolean isCardClickable(final CardView card) { return false; }
+    protected boolean isCardDraggable(final CardView card) { return false; }
+
+    /** Whether {@code c} counts as selectable for hotkey / prompt purposes. */
+    protected boolean isCardSelectable(final CardView c) { return getMatchUI().isSelectable(c); }
+
+    protected boolean supportsSortToggle() { return false; }
+    protected boolean supportsHotkeys() { return false; }
+    protected boolean showsSelectionPrompt() { return false; }
+    /** False blocks the title-bar X for mandatory game-rules dialogs. */
+    protected boolean allowsCancel() { return true; }
+
+    protected Comparator<CardView> defaultComparator() { return null; }
+    protected Comparator<CardView> sortedComparator() { return null; }
+
+    protected FPref getLocPref() { return null; }
+    protected FSkinProp getIconSkinProp() { return null; }
+
+    /** Per-refresh hook to apply source-specific overlays (e.g. Flashback zone banner). */
+    protected void decoratePanel(final CardPanel panel, final CardView card) {}
+
+    // ===================== Public window API =====================
+
     public boolean isVisible() { return window.isVisible(); }
     public FDialog getWindow() { return window; }
 
     public void showWindow() {
         ensureHotkeyDispatcherInstalled();
         onShow();
+        window.setDefaultCloseOperation(allowsCancel()
+                ? WindowConstants.DISPOSE_ON_CLOSE
+                : WindowConstants.DO_NOTHING_ON_CLOSE);
         window.setFocusableWindowState(true);
-        if (interaction.showsSelectionPrompt() && getMatchUI().isSelecting()) {
+        if (showsSelectionPrompt() && getMatchUI().isSelecting()) {
             window.setDefaultFocus(searchField);
         }
         window.setVisible(true);
@@ -281,15 +269,26 @@ public final class FloatingCardWindow extends CardArea {
         else showWindow();
     }
 
+    public void refresh() {
+        if (!window.isVisible()) return;
+        doRefresh();
+    }
+
+    // ===================== Internals =====================
+
     private void onShow() {
         if (!hasBeenShown) {
             loadLocation();
+            final FSkinProp iconProp = getIconSkinProp();
+            if (iconProp != null) {
+                window.setIconImage(FSkin.getImage(iconProp));
+            }
             window.getTitleBar().addMouseListener(new FMouseAdapter() {
                 @Override public void onLeftDoubleClick(final MouseEvent e) {
-                    if (interaction.allowsCancel()) window.setVisible(false);
+                    if (allowsCancel()) window.setVisible(false);
                 }
                 @Override public void onRightClick(final MouseEvent e) {
-                    if (source.supportsSortToggle()) toggleSorted();
+                    if (supportsSortToggle()) toggleSorted();
                 }
             });
             if (doneButton != null) {
@@ -309,12 +308,12 @@ public final class FloatingCardWindow extends CardArea {
 
     @Override
     protected boolean cardPanelDraggable(final CardPanel panel) {
-        return interaction.canDrag(this, panel.getCard());
+        return isCardDraggable(panel.getCard());
     }
 
     private void onCardDragEnd(final CardPanel dragPanel) {
         final int index = getCardPanels().indexOf(dragPanel);
-        interaction.onDragEnd(this, dragPanel.getCard(), index);
+        onCardDragged(dragPanel.getCard(), index);
         refresh();
     }
 
@@ -326,22 +325,22 @@ public final class FloatingCardWindow extends CardArea {
 
     @Override
     public final void mouseLeftClicked(final CardPanel panel, final MouseEvent evt) {
-        if (interaction.canClick(this, panel.getCard())) {
-            interaction.onLeftClick(this, panel.getCard(), evt);
+        if (isCardClickable(panel.getCard())) {
+            handleLeftClick(panel.getCard(), evt);
         }
         super.mouseLeftClicked(panel, evt);
     }
 
     @Override
     public final void mouseRightClicked(final CardPanel panel, final MouseEvent evt) {
-        if (interaction.canClick(this, panel.getCard())) {
-            interaction.onRightClick(this, panel.getCard(), evt);
+        if (isCardClickable(panel.getCard())) {
+            handleRightClick(panel.getCard(), evt);
         }
         super.mouseRightClicked(panel, evt);
     }
 
     private void loadLocation() {
-        final FPref locPref = source.getLocPref();
+        final FPref locPref = getLocPref();
         if (locPref != null) {
             final String value = prefs.getPref(locPref);
             if (value != null && value.length() > 0) {
@@ -380,11 +379,6 @@ public final class FloatingCardWindow extends CardArea {
         window.setSize(mainFrame.getWidth() / 5, mainFrame.getHeight() / 2);
     }
 
-    public void refresh() {
-        if (!window.isVisible()) return;
-        doRefresh();
-    }
-
     private static final class ResolvedCards {
         final FCollection<CardView> cards;
         final int total;
@@ -395,13 +389,11 @@ public final class FloatingCardWindow extends CardArea {
     }
 
     private ResolvedCards resolveCards() {
-        final Iterable<CardView> raw = source.getCards();
+        final Iterable<CardView> raw = getCards();
         if (raw == null) return new ResolvedCards(null, 0);
         final FCollection<CardView> list = new FCollection<>(raw);
         final int total = list.size();
-        final Comparator<CardView> sortComp = sortedByName
-                ? source.sortedComparator()
-                : source.defaultComparator();
+        final Comparator<CardView> sortComp = sortedByName ? sortedComparator() : defaultComparator();
         if (sortComp != null) list.sort(sortComp);
         if (!filter.isEmpty()) {
             final String needle = filter.toLowerCase(Locale.ROOT);
@@ -423,13 +415,13 @@ public final class FloatingCardWindow extends CardArea {
                 } else {
                     panel.setCard(card);
                 }
-                panel.setInteractive(interaction.canClick(this, card) || interaction.canDrag(this, card));
-                source.decoratePanel(panel, card);
+                panel.setInteractive(isCardClickable(card) || isCardDraggable(card));
+                decoratePanel(panel, card);
                 cardPanels.add(panel);
             }
         }
         setCardPanels(cardPanels);
-        window.setTitle(source.getTitle(cardPanels.size(), resolved.total, sortedByName));
+        window.setTitle(getTitle(cardPanels.size(), resolved.total, sortedByName));
         updatePromptVisibility(resolved.cards);
     }
 
@@ -449,12 +441,12 @@ public final class FloatingCardWindow extends CardArea {
     }
 
     private void updatePromptVisibility(final Iterable<CardView> cards) {
-        if (!interaction.showsSelectionPrompt()) {
+        if (!showsSelectionPrompt()) {
             promptLabel.setVisible(false);
             return;
         }
         final boolean show = cards != null
-                && StreamUtil.stream(cards).anyMatch(c -> interaction.isSelectable(this, c));
+                && StreamUtil.stream(cards).anyMatch(this::isCardSelectable);
         final String prompt = show ? getMatchUI().getPromptMessage() : null;
         if (prompt != null && !prompt.isEmpty()) {
             promptLabel.setText(FSkin.encodeSymbols(prompt, false));
@@ -476,7 +468,7 @@ public final class FloatingCardWindow extends CardArea {
     private void assignOwnHotkeyDigits(final boolean clear) {
         int next = 1;
         for (final CardPanel panel : getCardPanels()) {
-            if (!clear && next <= 9 && interaction.isSelectable(this, panel.getCard())) {
+            if (!clear && next <= 9 && isCardSelectable(panel.getCard())) {
                 panel.setHotkeyDigit(next++);
             } else {
                 panel.setHotkeyDigit(0);
@@ -501,152 +493,4 @@ public final class FloatingCardWindow extends CardArea {
             FloatingCardWindow.super.doLayout();
         }
     });
-
-    /** Manipulation window: drag/click cards to top/bottom/anywhere. Modal with Done button. */
-    public static FloatingCardWindow forManipulation(final CMatchUI matchUI,
-                                                      final String title,
-                                                      final List<CardView> cardList,
-                                                      final List<CardView> moveableCards,
-                                                      final boolean toTop,
-                                                      final boolean toBottom,
-                                                      final boolean toAnywhere) {
-        final ManipulationState state = new ManipulationState(cardList, moveableCards, toTop, toBottom, toAnywhere);
-        final Source src = new Source() {
-            @Override public Iterable<CardView> getCards() { return state.cardList; }
-            @Override public String getTitle(final int shown, final int total, final boolean sorted) { return title; }
-        };
-        final Interaction inter = new ManipulationInteraction(state);
-        return new FloatingCardWindow(matchUI, src, inter);
-    }
-
-    /** Ephemeral pick: click a card to commit. {@code isOptional=false} disables the X. */
-    public static FloatingCardWindow forChoice(final CMatchUI matchUI,
-                                                final String title,
-                                                final Iterable<CardView> cards,
-                                                final boolean isOptional,
-                                                final Consumer<CardView> onPick) {
-        final List<CardView> snapshot = new ArrayList<>();
-        for (final CardView cv : cards) snapshot.add(cv);
-        final Source src = new Source() {
-            @Override public Iterable<CardView> getCards() { return snapshot; }
-            @Override public String getTitle(final int shown, final int total, final boolean sorted) {
-                return title + " (" + shown + ")";
-            }
-            @Override public boolean supportsSortToggle() { return true; }
-            @Override public Comparator<CardView> sortedComparator() {
-                return Comparator.comparing(CardView::getName);
-            }
-        };
-        final Interaction inter = new ChoiceInteraction(onPick, isOptional);
-        return new FloatingCardWindow(matchUI, src, inter);
-    }
-
-    private static final class ManipulationState {
-        final List<CardView> cardList;
-        final List<CardView> moveableCards;
-        final boolean toTop, toBottom, toAnywhere;
-        ManipulationState(final List<CardView> all, final List<CardView> moveable,
-                          final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-            this.cardList = new ArrayList<>(all);
-            this.moveableCards = new ArrayList<>();
-            for (final CardView c : moveable) if (this.cardList.contains(c)) this.moveableCards.add(c);
-            this.toTop = toTop;
-            this.toBottom = toBottom;
-            this.toAnywhere = toAnywhere;
-        }
-
-        boolean validIndex(final CardView card, final int newIndex) {
-            if (toAnywhere) return true;
-            final int oldIndex = cardList.indexOf(card);
-            boolean topMove = true;
-            for (int i = 0; i < newIndex + (oldIndex < newIndex ? 1 : 0); i++) {
-                if (!moveableCards.contains(cardList.get(i))) { topMove = false; break; }
-            }
-            if (toTop && topMove) return true;
-            boolean bottomMove = true;
-            for (int i = newIndex + 1 - (oldIndex > newIndex ? 1 : 0); i < cardList.size(); i++) {
-                if (!moveableCards.contains(cardList.get(i))) { bottomMove = false; break; }
-            }
-            return toBottom && bottomMove;
-        }
-    }
-
-    public List<CardView> getDestList() {
-        if (interaction instanceof ManipulationInteraction) {
-            return new ArrayList<>(((ManipulationInteraction) interaction).state.cardList);
-        }
-        return null;
-    }
-
-    private static final class ManipulationInteraction implements Interaction {
-        final ManipulationState state;
-        ManipulationInteraction(final ManipulationState s) { this.state = s; }
-        @Override public boolean isModal() { return true; }
-        @Override public String getDoneButtonLabel() {
-            return Localizer.getInstance().getMessage("lblDone");
-        }
-        @Override public boolean canDrag(final FloatingCardWindow w, final CardView c) {
-            return state.moveableCards.contains(c);
-        }
-        @Override public boolean canClick(final FloatingCardWindow w, final CardView c) {
-            return state.moveableCards.contains(c) && (state.toTop || state.toBottom);
-        }
-        @Override public void onDragEnd(final FloatingCardWindow w, final CardView c, final int newIndex) {
-            if (!state.moveableCards.contains(c)) return;
-            if (!state.validIndex(c, newIndex)) return;
-            state.cardList.remove(c);
-            state.cardList.add(newIndex, c);
-        }
-        @Override public void onLeftClick(final FloatingCardWindow w, final CardView c, final MouseEvent e) {
-            if (!state.toTop && !state.toBottom) return;
-            state.cardList.remove(c);
-            int position;
-            if (state.toTop) {
-                position = 0;
-            } else {
-                for (position = state.cardList.size();
-                     position > 0 && state.moveableCards.contains(state.cardList.get(position - 1));
-                     position--) {}
-            }
-            state.cardList.add(position, c);
-            w.refresh();
-        }
-        @Override public void onRightClick(final FloatingCardWindow w, final CardView c, final MouseEvent e) {
-            if (!state.toTop && !state.toBottom) return;
-            state.cardList.remove(c);
-            int position;
-            if (state.toBottom) {
-                position = state.cardList.size();
-            } else {
-                for (position = 0;
-                     position < state.cardList.size() && state.moveableCards.contains(state.cardList.get(position));
-                     position++) {}
-            }
-            state.cardList.add(position, c);
-            w.refresh();
-        }
-    }
-
-    private static final class ChoiceInteraction implements Interaction {
-        final Consumer<CardView> onPick;
-        final boolean isOptional;
-        ChoiceInteraction(final Consumer<CardView> onPick, final boolean isOptional) {
-            this.onPick = onPick;
-            this.isOptional = isOptional;
-        }
-        @Override public boolean isModal() { return true; }
-        @Override public boolean showsSelectionPrompt() { return true; }
-        @Override public boolean supportsHotkeys() { return true; }
-        @Override public boolean allowsCancel() { return isOptional; }
-        @Override public boolean canClick(final FloatingCardWindow w, final CardView c) { return true; }
-        @Override public boolean isSelectable(final FloatingCardWindow w, final CardView c) { return true; }
-        @Override public void onLeftClick(final FloatingCardWindow w, final CardView c, final MouseEvent e) {
-            onPick.accept(c);
-            w.hideWindow();
-        }
-        @Override public void onRightClick(final FloatingCardWindow w, final CardView c, final MouseEvent e) {
-            onPick.accept(c);
-            w.hideWindow();
-        }
-    }
 }

@@ -25,9 +25,9 @@ import forge.model.FModel;
 import forge.screens.match.CMatchUI;
 import forge.toolbox.FOptionPane;
 import forge.util.FSerializableFunction;
+import forge.screens.match.ManipulationWindow;
 import forge.util.IHasName;
 import forge.util.Localizer;
-import forge.view.arcane.FloatingCardWindow;
 
 public class GuiChoose {
 
@@ -276,7 +276,7 @@ public class GuiChoose {
         final ArrayList<CardView> moveable = new ArrayList<>();
         for (final CardView c : manipulable) moveable.add(c);
         final Callable<List<CardView>> callable = () -> {
-            final FloatingCardWindow window = FloatingCardWindow.forManipulation(
+            final ManipulationWindow window = new ManipulationWindow(
                     gui, title, all, moveable, toTop, toBottom, toAnywhere);
             window.showWindow();
             return window.getDestList();

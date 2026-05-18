@@ -183,7 +183,7 @@ public final class CMatchUI
     private static final Border DOCK_HIGHLIGHT_BORDER =
             BorderFactory.createLineBorder(new Color(70, 130, 230), 2);
 
-    private final Map<Integer, FloatingCardWindow> floatingZones = new HashMap<>();
+    private final Map<Integer, ZoneWindow> floatingZones = new HashMap<>();
     private final Map<Integer, VZone> dockedZones = new HashMap<>();
 
     private static int floatingZoneKey(final PlayerView player, final ZoneType zone) {
@@ -955,15 +955,15 @@ public final class CMatchUI
         fprefs.save();
     }
 
-    private FloatingCardWindow getOrCreateFloatingZone(final PlayerView player, final ZoneType zone) {
+    private ZoneWindow getOrCreateFloatingZone(final PlayerView player, final ZoneType zone) {
         final int key = floatingZoneKey(player, zone);
-        FloatingCardWindow window = floatingZones.get(key);
+        ZoneWindow window = floatingZones.get(key);
         if (window == null) {
-            window = new FloatingCardWindow(this, new LiveZoneSource(this, player, zone), new BrowseInteraction(this));
+            window = new ZoneWindow(this, player, zone);
             installDockDetection(window);
             floatingZones.put(key, window);
         } else {
-            ((LiveZoneSource) window.getSource()).setPlayer(player);
+            window.setPlayer(player);
         }
         return window;
     }
@@ -1003,14 +1003,14 @@ public final class CMatchUI
     }
 
     private boolean showZone(final PlayerView player, final ZoneType zone) {
-        final FloatingCardWindow window = getOrCreateFloatingZone(player, zone);
+        final ZoneWindow window = getOrCreateFloatingZone(player, zone);
         if (window.isVisible()) return false;
         FThreads.invokeInEdtNowOrLater(window::showWindow);
         return true;
     }
 
     private boolean hideZone(final PlayerView player, final ZoneType zone) {
-        final FloatingCardWindow window = getOrCreateFloatingZone(player, zone);
+        final ZoneWindow window = getOrCreateFloatingZone(player, zone);
         if (!window.isVisible()) return false;
         FThreads.invokeInEdtNowOrLater(window::hideWindow);
         return true;
@@ -1020,7 +1020,7 @@ public final class CMatchUI
         final int key = floatingZoneKey(player, zone);
         final VZone docked = dockedZones.get(key);
         if (docked != null) removeDocked(docked);
-        final FloatingCardWindow floating = floatingZones.get(key);
+        final ZoneWindow floating = floatingZones.get(key);
         if (floating != null && floating.isVisible()) {
             floating.hideWindow();
             floatingZones.remove(key);
@@ -1029,9 +1029,9 @@ public final class CMatchUI
 
     private void refreshZone(final PlayerView player, final ZoneType zone) {
         final int key = floatingZoneKey(player, zone);
-        final FloatingCardWindow window = floatingZones.get(key);
+        final ZoneWindow window = floatingZones.get(key);
         if (window != null) {
-            ((LiveZoneSource) window.getSource()).setPlayer(player);
+            window.setPlayer(player);
             window.refresh();
         }
         final VZone docked = dockedZones.get(key);
@@ -1050,7 +1050,7 @@ public final class CMatchUI
     }
 
     private void closeAllZones() {
-        for (final FloatingCardWindow window : floatingZones.values()) {
+        for (final ZoneWindow window : floatingZones.values()) {
             window.getWindow().setVisible(false);
         }
         floatingZones.clear();
@@ -1074,7 +1074,7 @@ public final class CMatchUI
     }
 
     public void refreshAllZones() {
-        for (final FloatingCardWindow window : floatingZones.values()) window.refresh();
+        for (final ZoneWindow window : floatingZones.values()) window.refresh();
         for (final VZone vZone : dockedZones.values()) vZone.refresh();
     }
 
@@ -1143,7 +1143,7 @@ public final class CMatchUI
         SLayoutIO.saveLayout(null);
     }
 
-    private void installDockDetection(final FloatingCardWindow window) {
+    private void installDockDetection(final ZoneWindow window) {
         final DockTracker tracker = new DockTracker();
         window.getWindow().getTitleBar().addMouseListener(new MouseAdapter() {
             @Override public void mouseReleased(final MouseEvent e) {
@@ -1163,13 +1163,12 @@ public final class CMatchUI
         });
     }
 
-    private void dockIntoCell(final FloatingCardWindow window, final DragCell targetCell) {
-        final LiveZoneSource src = (LiveZoneSource) window.getSource();
-        final EDocID docID = EDocID.fromZoneType(src.getZone());
+    private void dockIntoCell(final ZoneWindow window, final DragCell targetCell) {
+        final EDocID docID = EDocID.fromZoneType(window.getZone());
         if (docID == null) return;
-        final VZone vZone = new VZone(this, src.getPlayer(), src.getZone());
+        final VZone vZone = new VZone(this, window.getPlayer(), window.getZone());
         docID.setDoc(vZone);
-        final int key = floatingZoneKey(src.getPlayer(), src.getZone());
+        final int key = floatingZoneKey(window.getPlayer(), window.getZone());
         dockedZones.put(key, vZone);
         window.hideWindow();
         floatingZones.remove(key);
@@ -1609,7 +1608,7 @@ public final class CMatchUI
         showPromptMessage(getCurrentPlayer(), message);
         final AtomicReference<CardView> picked = new AtomicReference<>();
         final Callable<Void> callable = () -> {
-            FloatingCardWindow.forChoice(this, message, cardChoices, isOptional, picked::set).showWindow();
+            new ChoiceWindow(this, message, cardChoices, isOptional, picked::set).showWindow();
             return null;
         };
         final FutureTask<Void> ft = new FutureTask<>(callable);
