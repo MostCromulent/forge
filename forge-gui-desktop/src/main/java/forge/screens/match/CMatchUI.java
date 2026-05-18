@@ -689,8 +689,8 @@ public final class CMatchUI
     }
 
     @Override
-    public void setSelectables(final Iterable<CardView> cards) {
-        super.setSelectables(cards);
+    public void setSelectables(final Iterable<CardView> cards, final int min, final int max) {
+        super.setSelectables(cards, min, max);
         // update zones on tabletop and floating zones - non-selectable cards may be rendered differently
         FThreads.invokeInEdtNowOrLater(() -> {
             for (final PlayerView p : getGameView().getPlayers()) {
@@ -719,7 +719,16 @@ public final class CMatchUI
                 }
             }
             refreshAllZones();
+            FloatingCardWindow.clearAllHotkeyAffordance();
         });
+    }
+
+    @Override
+    public void setHighlighted(final GameEntityView pv, final boolean b) {
+        super.setHighlighted(pv, b);
+        if (isSelecting()) {
+            FThreads.invokeInEdtNowOrLater(FloatingCardWindow::refreshAllSelectionPrompts);
+        }
     }
 
     @Override

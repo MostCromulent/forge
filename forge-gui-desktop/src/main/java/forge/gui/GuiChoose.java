@@ -270,7 +270,7 @@ public class GuiChoose {
 
     public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable,
                                                     final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-        gui.setSelectables(manipulable);
+        gui.setSelectables(manipulable, 0, 0);
         final ArrayList<CardView> all = new ArrayList<>();
         for (final CardView c : cards) all.add(c);
         final ArrayList<CardView> moveable = new ArrayList<>();

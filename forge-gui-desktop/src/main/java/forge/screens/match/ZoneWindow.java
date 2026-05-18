@@ -87,6 +87,7 @@ public final class ZoneWindow extends FloatingCardWindow {
     @Override protected boolean isCardClickable(final CardView c) { return true; }
     @Override protected boolean supportsSortToggle() { return true; }
     @Override protected boolean supportsHotkeys() { return true; }
+    @Override protected boolean supportsSelectMin() { return true; }
     @Override protected boolean showsSelectionPrompt() { return true; }
     @Override protected FPref getLocPref() { return locPref; }
     @Override protected FSkinProp getIconSkinProp() { return PlayerDetailsPanel.iconFromZone(zone); }

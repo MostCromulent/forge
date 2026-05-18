@@ -55,6 +55,7 @@ import forge.toolbox.FMouseAdapter;
 import forge.toolbox.FScrollPane;
 import forge.toolbox.FSkin;
 import forge.toolbox.FTextField;
+import forge.toolbox.MouseTriggerEvent;
 import forge.util.Localizer;
 import forge.util.StreamUtil;
 import forge.util.collect.FCollection;
@@ -106,7 +107,14 @@ public abstract class FloatingCardWindow extends CardArea {
         }
         if (!e.isControlDown() || e.isAltDown() || e.isMetaDown()) return false;
         final int digit = e.getKeyCode() - KeyEvent.VK_0;
-        if (digit < 1 || digit > 9) return false;
+        if (digit < 0 || digit > 9) return false;
+        if (digit == 0) {
+            for (final FloatingCardWindow fz : ALL_VISIBLE) {
+                if (!fz.isVisible() || !fz.supportsSelectMin()) continue;
+                if (fz.runSelectMin()) return true;
+            }
+            return false;
+        }
         for (final FloatingCardWindow fz : ALL_VISIBLE) {
             if (!fz.isVisible()) continue;
             if (!fz.supportsHotkeys()) continue;
@@ -120,11 +128,47 @@ public abstract class FloatingCardWindow extends CardArea {
         return false;
     }
 
+    /**
+     * Ctrl+0: batches the first N still-unpicked selectables into one selectCard
+     * call. Batched (not N calls) so the server processes atomically — separate
+     * messages race because each spawns a thread.
+     */
+    private boolean runSelectMin() {
+        final int min = getMatchUI().getSelectionMin();
+        if (min < 1) return false;
+        final int need = Math.max(0, min - getMatchUI().countPickedSelectables());
+        if (need < 1) return false;
+        final List<CardView> picks = new ArrayList<>(need);
+        for (final CardPanel panel : new ArrayList<>(getCardPanels())) {
+            if (picks.size() >= need) break;
+            final CardView cv = panel.getCard();
+            if (!getMatchUI().isSelectable(cv)) continue;
+            if (getMatchUI().isHighlighted(cv)) continue;
+            picks.add(cv);
+        }
+        if (picks.isEmpty()) return false;
+        // ArrayList.subList() returns a non-Serializable view; copy for wire safety.
+        final List<CardView> others = picks.size() > 1
+                ? new ArrayList<>(picks.subList(1, picks.size())) : null;
+        getMatchUI().getGameController().selectCard(picks.get(0), others,
+                new MouseTriggerEvent(MouseEvent.BUTTON1, 0, 0));
+        return true;
+    }
+
     /** Called by external observers when the selection prompt changes. */
     public static void refreshAllSelectionPrompts() {
         for (final FloatingCardWindow fz : ALL_VISIBLE) {
             if (fz.isVisible() && fz.showsSelectionPrompt()) {
                 fz.updatePromptVisibility();
+            }
+        }
+    }
+
+    /** Clears hotkey digits on every visible window (e.g. when the selection set changes). */
+    public static void clearAllHotkeyAffordance() {
+        for (final FloatingCardWindow fz : ALL_VISIBLE) {
+            if (fz.isVisible() && fz.supportsHotkeys()) {
+                fz.assignOwnHotkeyDigits(true);
             }
         }
     }
@@ -224,6 +268,8 @@ public abstract class FloatingCardWindow extends CardArea {
 
     protected boolean supportsSortToggle() { return false; }
     protected boolean supportsHotkeys() { return false; }
+    /** Whether Ctrl+0 should batch-pick the first N still-unpicked selectables in this window. */
+    protected boolean supportsSelectMin() { return false; }
     protected boolean showsSelectionPrompt() { return false; }
     /** False blocks the title-bar X for mandatory game-rules dialogs. */
     protected boolean allowsCancel() { return true; }
