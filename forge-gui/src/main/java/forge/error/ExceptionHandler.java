@@ -189,15 +189,7 @@ public class ExceptionHandler implements UncaughtExceptionHandler {
     /** {@inheritDoc} */
     @Override
     public final void uncaughtException(final Thread t, final Throwable ex) {
-        try {
-            BugReporter.reportException(ex);
-        } catch (Throwable handlerEx) {
-            // Safety net: if BugReporter fails, at least print the original exception
-            System.err.println("FATAL: Original exception in thread " + t.getName() + ":");
-            ex.printStackTrace(System.err);
-            System.err.println("FATAL: BugReporter also failed with:");
-            handlerEx.printStackTrace(System.err);
-        }
+        BugReporter.reportException(ex);
     }
 
     /**

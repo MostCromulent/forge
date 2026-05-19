@@ -171,6 +171,13 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+              Emits target/mobile-dev-classpath.txt for AdventureDesktopLauncher
+              (forge-gui-desktop) to read at runtime when spawning this module's
+              forge.app.Main in a separate JVM as part of the Desktop Adventure
+              Mode integration. Avoids the launcher having to guess transitive
+              dependencies from ~/.m2 when no fat jar has been packaged.
+            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
