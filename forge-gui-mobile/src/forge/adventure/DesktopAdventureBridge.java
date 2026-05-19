@@ -35,8 +35,6 @@ public final class DesktopAdventureBridge {
             final IAdventureBattleHost.BattleRequest request = buildRequest(params);
             request.write();
 
-            System.out.println("Desktop Adventure: Battle request written, waiting for desktop to complete battle...");
-
             waitingOverlay = new LoadingOverlay("Waiting for desktop to resolve battle...", true);
             waitingOverlay.show();
             listener.onWaitStart();
@@ -87,29 +85,14 @@ public final class DesktopAdventureBridge {
 
     private static void waitForResult(final BattleParams params, final BattleResultListener listener) {
         try {
-            System.out.println("Desktop Adventure: Polling for battle_complete at: " + IAdventureBattleHost.getBattleCompleteSignalPath());
-            int pollCount = 0;
             while (!IAdventureBattleHost.isBattleComplete()) {
                 Thread.sleep(500);
-                if (++pollCount % 20 == 0) {
-                    System.out.println("Desktop Adventure: Still waiting... (poll #" + pollCount + ")");
-                }
             }
 
             final IAdventureBattleHost.BattleResult result = IAdventureBattleHost.BattleResult.read();
-            System.out.println("Desktop Adventure: Battle complete! Winner: " + (result.humanWon ? "Human" : "AI"));
 
             if (params.allowsShards) {
                 Current.player().setShards(result.shardsAfterBattle);
-            }
-
-            if (!result.cardsWon.isEmpty() || !result.cardsLost.isEmpty()) {
-                for (final String card : result.cardsWon) {
-                    System.out.println("Won card: " + card);
-                }
-                for (final String card : result.cardsLost) {
-                    System.out.println("Lost card: " + card);
-                }
             }
 
             IAdventureBattleHost.clearBattleCompleteSignal();

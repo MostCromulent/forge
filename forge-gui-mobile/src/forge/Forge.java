@@ -135,14 +135,9 @@ public class Forge implements ApplicationListener {
     public static ApplicationListener getApp(HWInfo hwInfo, Clipboard clipboard0, IDeviceAdapter deviceAdapter0, String assetDir0, boolean androidOrientation, boolean isTablet, int AndroidAPI) {
         if (app == null) {
             app = new Forge();
-            // Always set deviceAdapter and clipboard when provided
-            if (deviceAdapter0 != null) {
-                deviceAdapter = deviceAdapter0;
-            }
-            if (clipboard0 != null) {
-                clipboard = clipboard0;
-            }
             if (GuiBase.getInterface() == null) {
+                clipboard = clipboard0;
+                deviceAdapter = deviceAdapter0;
                 //obb directory on android uses the package name as entrypoint
                 GuiBase.setUsingAppDirectory(assetDir0.contains("forge.app"));
                 GuiBase.setInterface(new GuiMobile(assetDir0));
@@ -157,9 +152,7 @@ public class Forge implements ApplicationListener {
                     scope.getContexts().setOperatingSystem(hwInfo.os());
                 });
             }
-            if (deviceAdapter != null) {
-                GuiBase.setDeviceInfo(hwInfo, AndroidAPI, deviceAdapter.getDownloadsDir());
-            }
+            GuiBase.setDeviceInfo(hwInfo, AndroidAPI, deviceAdapter.getDownloadsDir());
         }
         return app;
     }

@@ -32,7 +32,6 @@ public class AdventureDesktopLauncher {
      */
     public static boolean launch() {
         if (isRunning) {
-            System.out.println("Adventure Mode is already running");
             return false;
         }
 
@@ -50,8 +49,6 @@ public class AdventureDesktopLauncher {
                 cleanup();
                 return false;
             }
-
-            System.out.println("Launching Adventure Mode with command: " + String.join(" ", command));
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.inheritIO();  // Redirect IO to parent process for debugging
@@ -74,7 +71,9 @@ public class AdventureDesktopLauncher {
             new Thread(() -> {
                 try {
                     int exitCode = adventureProcess.waitFor();
-                    System.out.println("Adventure Mode exited with code: " + exitCode);
+                    if (exitCode != 0) {
+                        System.err.println("Adventure Mode exited with code: " + exitCode);
+                    }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } finally {
@@ -82,7 +81,6 @@ public class AdventureDesktopLauncher {
                 }
             }, "Adventure-Monitor").start();
 
-            System.out.println("Adventure Mode launched successfully");
             return true;
 
         } catch (IOException e) {
@@ -135,12 +133,10 @@ public class AdventureDesktopLauncher {
         // Try to find the fat jar first (most reliable approach)
         File fatJar = findFatJar();
         if (fatJar != null) {
-            System.out.println("Using fat jar: " + fatJar.getAbsolutePath());
             command.add("-jar");
             command.add(fatJar.getAbsolutePath());
         } else {
             // Fall back to classpath approach
-            System.out.println("Fat jar not found, using classpath approach");
             String classpath = buildFullClasspath();
 
             // Use argument file to avoid Windows command line limits
@@ -215,7 +211,6 @@ public class AdventureDesktopLauncher {
                 try {
                     String mavenCp = Files.readString(cpFile.toPath()).trim();
                     if (!mavenCp.isEmpty()) {
-                        System.out.println("Using Maven-generated classpath from " + cpFile.getName());
                         StringBuilder cp = new StringBuilder();
                         // Add mobile-dev classes (the module itself isn't in its own dependency list)
                         addIfExists(cp, "", projectRoot, "forge-gui-mobile-dev/target/classes");

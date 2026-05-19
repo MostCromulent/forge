@@ -47,12 +47,9 @@ public class DesktopAdventureBattleHost {
         IAdventureBattleHost.cleanupIpcFiles();
 
         monitorThread = new Thread(() -> {
-            System.out.println("DesktopAdventureBattleHost: Started monitoring for battle requests");
-
             while (running.get()) {
                 try {
                     if (IAdventureBattleHost.isBattlePending() && !battleInProgress.get()) {
-                        System.out.println("DesktopAdventureBattleHost: Battle request detected!");
                         handleBattleRequest();
                     }
                     Thread.sleep(500);  // Check every 500ms
@@ -64,8 +61,6 @@ public class DesktopAdventureBattleHost {
                     e.printStackTrace();
                 }
             }
-
-            System.out.println("DesktopAdventureBattleHost: Stopped monitoring");
         }, "AdventureBattle-Monitor");
         monitorThread.setDaemon(true);
         monitorThread.start();
@@ -106,8 +101,6 @@ public class DesktopAdventureBattleHost {
             // Read the battle request
             BattleRequest request = BattleRequest.read();
 
-            System.out.println("DesktopAdventureBattleHost: Starting battle against " + request.enemyName);
-
             if (onBattleStarting != null) {
                 javax.swing.SwingUtilities.invokeLater(onBattleStarting);
             }
@@ -117,8 +110,6 @@ public class DesktopAdventureBattleHost {
 
             // Write the result
             result.write();
-
-            System.out.println("DesktopAdventureBattleHost: Battle complete, result written");
 
             if (onBattleEnded != null) {
                 javax.swing.SwingUtilities.invokeLater(onBattleEnded);
