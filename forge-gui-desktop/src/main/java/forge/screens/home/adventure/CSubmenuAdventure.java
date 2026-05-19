@@ -5,7 +5,7 @@ import java.util.List;
 
 import javax.swing.JMenu;
 
-import forge.adventure.AdventureDesktopLauncher;
+import forge.adventure.DesktopAdventureLauncher;
 import forge.gui.framework.ICDoc;
 import forge.gui.util.SOptionPane;
 import forge.localinstance.skin.FSkinProp;
@@ -34,8 +34,7 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
     @Override
     public void update() {
         MenuUtil.setMenuProvider(this);
-        // Update button state based on whether Adventure is already running
-        view.getBtnStart().setEnabled(!AdventureDesktopLauncher.isRunning());
+        view.getBtnStart().setEnabled(!DesktopAdventureLauncher.isRunning());
     }
 
     @Override
@@ -47,7 +46,7 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
      * Launches Adventure Mode in a separate LWJGL window.
      */
     private void launchAdventureMode() {
-        if (AdventureDesktopLauncher.isRunning()) {
+        if (DesktopAdventureLauncher.isRunning()) {
             SOptionPane.showMessageDialog(
                 Localizer.getInstance().getMessage("lblAdventureAlreadyRunning"),
                 Localizer.getInstance().getMessage("lblAdventureMode"),
@@ -55,10 +54,7 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
             return;
         }
 
-        // Launch Adventure Mode
-        AdventureDesktopLauncher.launch();
-
-        // Update button state
+        DesktopAdventureLauncher.launch();
         view.getBtnStart().setEnabled(false);
     }
 }

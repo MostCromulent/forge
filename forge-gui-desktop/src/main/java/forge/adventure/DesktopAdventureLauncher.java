@@ -19,7 +19,7 @@ import java.util.List;
  * When a battle starts in Adventure, the battle is hosted by this desktop
  * process using the native Swing CMatchUI through IPC (inter-process communication).
  */
-public class AdventureDesktopLauncher {
+public class DesktopAdventureLauncher {
     private static Process adventureProcess;
     private static volatile boolean isRunning = false;
     private static Path argFile = null;
@@ -37,11 +37,8 @@ public class AdventureDesktopLauncher {
 
         try {
             DesktopAdventureMode.activate();
-
-            // Start the battle monitor to handle battles with desktop UI
             DesktopAdventureBattleHost.startMonitoring();
 
-            // Build the command to launch Adventure
             List<String> command = buildLaunchCommand();
 
             if (command == null) {
@@ -51,9 +48,9 @@ public class AdventureDesktopLauncher {
             }
 
             ProcessBuilder pb = new ProcessBuilder(command);
-            pb.inheritIO();  // Redirect IO to parent process for debugging
+            pb.inheritIO();
 
-            // Set working directory to a module subdir so ../forge-gui/ resolves to the resources
+            // Working dir is the mobile-dev module so ../forge-gui/ resolves to the resources
             File workDir = new File(System.getProperty("user.dir"));
             File projectRoot = findProjectRoot(workDir.getAbsolutePath());
             if (projectRoot != null) {
@@ -61,13 +58,11 @@ public class AdventureDesktopLauncher {
             }
             pb.directory(workDir);
 
-            // Set environment variable to indicate desktop adventure mode
             pb.environment().put("FORGE_DESKTOP_ADVENTURE", "true");
 
             adventureProcess = pb.start();
             isRunning = true;
 
-            // Monitor for process exit
             new Thread(() -> {
                 try {
                     int exitCode = adventureProcess.waitFor();
@@ -99,7 +94,6 @@ public class AdventureDesktopLauncher {
     private static List<String> buildLaunchCommand() {
         List<String> command = new ArrayList<>();
 
-        // Find Java executable
         String javaHome = System.getProperty("java.home");
         String javaBin = javaHome + File.separator + "bin" + File.separator + "java";
         if (System.getProperty("os.name").toLowerCase().contains("win")) {
@@ -107,7 +101,7 @@ public class AdventureDesktopLauncher {
         }
         command.add(javaBin);
 
-        // JVM arguments — must match mandatory.java.args from forge-gui-mobile-dev pom.xml
+        // Must match mandatory.java.args from forge-gui-mobile-dev pom.xml
         command.add("-Xmx4g");
         command.add("-DFORGE_DESKTOP_ADVENTURE=true");
         command.add("-Dio.netty.tryReflectionSetAccessible=true");
@@ -130,16 +124,14 @@ public class AdventureDesktopLauncher {
             command.add(opens + "=ALL-UNNAMED");
         }
 
-        // Try to find the fat jar first (most reliable approach)
         File fatJar = findFatJar();
         if (fatJar != null) {
             command.add("-jar");
             command.add(fatJar.getAbsolutePath());
         } else {
-            // Fall back to classpath approach
             String classpath = buildFullClasspath();
 
-            // Use argument file to avoid Windows command line limits
+            // Argument file avoids Windows command line length limits
             try {
                 argFile = Files.createTempFile("forge-adventure-args", ".txt");
                 Files.writeString(argFile, "-cp\n" + classpath + "\nforge.app.Main\n");
@@ -176,13 +168,11 @@ public class AdventureDesktopLauncher {
             return null;
         }
 
-        // Look for *-jar-with-dependencies.jar
         File[] jars = targetDir.listFiles((dir, name) ->
             name.startsWith("forge-gui-mobile-dev-") &&
             name.endsWith("-jar-with-dependencies.jar"));
 
         if (jars != null && jars.length > 0) {
-            // Return the most recently modified one
             File newest = jars[0];
             for (File jar : jars) {
                 if (jar.lastModified() > newest.lastModified()) {
@@ -205,14 +195,13 @@ public class AdventureDesktopLauncher {
         File projectRoot = findProjectRoot(workingDir);
 
         if (projectRoot != null) {
-            // Try Maven-generated classpath (complete — includes all forge modules + dependencies)
             File cpFile = new File(projectRoot, "forge-gui-mobile-dev/target/mobile-dev-classpath.txt");
             if (cpFile.isFile()) {
                 try {
                     String mavenCp = Files.readString(cpFile.toPath()).trim();
                     if (!mavenCp.isEmpty()) {
                         StringBuilder cp = new StringBuilder();
-                        // Add mobile-dev classes (the module itself isn't in its own dependency list)
+                        // mobile-dev classes aren't in its own dependency list
                         addIfExists(cp, "", projectRoot, "forge-gui-mobile-dev/target/classes");
                         cp.append(File.pathSeparator).append(mavenCp);
                         return cp.toString();
@@ -223,7 +212,7 @@ public class AdventureDesktopLauncher {
             }
         }
 
-        // Fallback: desktop classpath + manual deps (less reliable)
+        // Fallback: walking ~/.m2 if no classpath file was generated
         StringBuilder cp = new StringBuilder(System.getProperty("java.class.path"));
         String pathSep = File.pathSeparator;
 
@@ -270,7 +259,6 @@ public class AdventureDesktopLauncher {
     private static void addMavenDependencies(StringBuilder cp, String pathSep) {
         String m2Repo = System.getProperty("user.home") + File.separator + ".m2" + File.separator + "repository";
 
-        // LibGDX core dependencies
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx", null);
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-backend-lwjgl3", null);
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-platform", "natives-desktop");
@@ -279,11 +267,9 @@ public class AdventureDesktopLauncher {
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-box2d", null);
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-box2d-platform", "natives-desktop");
 
-        // Controllers
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx-controllers", "gdx-controllers-core", null);
         addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx-controllers", "gdx-controllers-desktop", null);
 
-        // LWJGL3 jars and platform natives
         String[] lwjglModules = {"lwjgl", "lwjgl-glfw", "lwjgl-opengl", "lwjgl-openal", "lwjgl-stb", "lwjgl-jemalloc"};
         String nativesClassifier = getNativesClassifier();
         for (String module : lwjglModules) {
@@ -293,15 +279,11 @@ public class AdventureDesktopLauncher {
             }
         }
 
-        // OSHI for hardware info (requires JNA)
         addMavenArtifact(cp, pathSep, m2Repo, "com/github/oshi", "oshi-core", null);
         addMavenArtifact(cp, pathSep, m2Repo, "net/java/dev/jna", "jna", null);
         addMavenArtifact(cp, pathSep, m2Repo, "net/java/dev/jna", "jna-platform", null);
 
-        // Commons CLI
         addMavenArtifact(cp, pathSep, m2Repo, "commons-cli", "commons-cli", null);
-
-        // SLF4J (logging facade used by various dependencies)
         addMavenArtifact(cp, pathSep, m2Repo, "org/slf4j", "slf4j-api", null);
     }
 
@@ -357,10 +339,8 @@ public class AdventureDesktopLauncher {
         DesktopAdventureMode.deactivate();
         DesktopAdventureBattleHost.stopMonitoring();
         IAdventureBattleHost.cleanupIpcFiles();
-        // Re-enable the Start Adventure button on the EDT
         SwingUtilities.invokeLater(() ->
             VSubmenuAdventure.SINGLETON_INSTANCE.getBtnStart().setEnabled(true));
-        // Clean up argument file
         if (argFile != null) {
             try {
                 Files.deleteIfExists(argFile);

@@ -17,7 +17,6 @@ import java.util.List;
  */
 public class IAdventureBattleHost {
 
-    // File paths for IPC
     private static final String IPC_DIR = System.getProperty("java.io.tmpdir") + File.separator + "forge_adventure_ipc";
     private static final String BATTLE_REQUEST_FILE = "battle_request.dat";
     private static final String BATTLE_RESULT_FILE = "battle_result.dat";
@@ -66,7 +65,6 @@ public class IAdventureBattleHost {
             Files.deleteIfExists(getBattleResultPath());
             Files.deleteIfExists(getBattlePendingSignalPath());
             Files.deleteIfExists(getBattleCompleteSignalPath());
-            // Clean up deck files
             Files.deleteIfExists(getHumanDeckPath());
             for (int i = 0; i < 8; i++) {
                 Files.deleteIfExists(getAiDeckPath(i));
@@ -120,23 +118,20 @@ public class IAdventureBattleHost {
     public static class BattleRequest implements Serializable {
         private static final long serialVersionUID = 2L;
 
-        // Human player data
         public String humanPlayerName;
         public int humanStartingLife;
         public int humanManaShards;
         public int humanAvatarIndex;
 
-        // AI player(s) data - count indicates how many AI decks to load
+        // aiPlayers.size() also tells the desktop how many AI deck files to load
         public List<AIPlayerData> aiPlayers = new ArrayList<>();
 
-        // Game settings
-        public String gameType = "Adventure";  // GameType name
+        public String gameType = "Adventure";
         public int gamesPerMatch = 1;
         public boolean playForAnte = false;
         public boolean matchAnteRarity = false;
         public boolean isBossBattle = false;
 
-        // Enemy info for display
         public String enemyName;
 
         /**
@@ -170,10 +165,10 @@ public class IAdventureBattleHost {
         private static final long serialVersionUID = 2L;
 
         public String name;
-        public int deckIndex;  // Index for loadAiDeck()
+        public int deckIndex;
         public int startingLife;
         public int teamNumber;
-        public String aiType;  // "Default", "Reckless", "Cautious", "Experimental", or ""
+        public String aiType;  // one of "Default", "Reckless", "Cautious", "Experimental", or ""
     }
 
     /**
@@ -185,9 +180,8 @@ public class IAdventureBattleHost {
         public boolean humanWon;
         public int shardsAfterBattle;
 
-        // Ante results (if ante was enabled)
-        public List<String> cardsWon = new ArrayList<>();  // Card names
-        public List<String> cardsLost = new ArrayList<>();  // Card names
+        public List<String> cardsWon = new ArrayList<>();
+        public List<String> cardsLost = new ArrayList<>();
 
         /**
          * Writes this result to the IPC file.
@@ -198,7 +192,6 @@ public class IAdventureBattleHost {
                     new FileOutputStream(getBattleResultPath().toFile()))) {
                 oos.writeObject(this);
             }
-            // Delete pending signal, create complete signal
             Files.deleteIfExists(getBattlePendingSignalPath());
             Files.createFile(getBattleCompleteSignalPath());
         }

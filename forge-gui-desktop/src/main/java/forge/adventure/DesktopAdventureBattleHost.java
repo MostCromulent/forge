@@ -29,7 +29,6 @@ public class DesktopAdventureBattleHost {
     private static final AtomicBoolean running = new AtomicBoolean(false);
     private static final AtomicBoolean battleInProgress = new AtomicBoolean(false);
 
-    // Callback to notify when a battle is starting (can be used to minimize Adventure window focus)
     private static Runnable onBattleStarting;
     private static Runnable onBattleEnded;
 
@@ -43,7 +42,7 @@ public class DesktopAdventureBattleHost {
 
         running.set(true);
 
-        // Clean up any stale IPC files from previous sessions
+        // Stale IPC files from a previous session would trigger a phantom battle
         IAdventureBattleHost.cleanupIpcFiles();
 
         monitorThread = new Thread(() -> {
@@ -52,7 +51,7 @@ public class DesktopAdventureBattleHost {
                     if (IAdventureBattleHost.isBattlePending() && !battleInProgress.get()) {
                         handleBattleRequest();
                     }
-                    Thread.sleep(500);  // Check every 500ms
+                    Thread.sleep(500);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     break;
@@ -98,17 +97,13 @@ public class DesktopAdventureBattleHost {
         battleInProgress.set(true);
 
         try {
-            // Read the battle request
             BattleRequest request = BattleRequest.read();
 
             if (onBattleStarting != null) {
                 javax.swing.SwingUtilities.invokeLater(onBattleStarting);
             }
 
-            // Host the battle
             BattleResult result = hostBattle(request);
-
-            // Write the result
             result.write();
 
             if (onBattleEnded != null) {
@@ -119,7 +114,7 @@ public class DesktopAdventureBattleHost {
             System.err.println("DesktopAdventureBattleHost: Error handling battle: " + e.getMessage());
             e.printStackTrace();
 
-            // Write a default loss result so Adventure can continue
+            // Write a default loss result so Adventure does not hang waiting
             try {
                 BattleResult result = new BattleResult();
                 result.humanWon = false;
@@ -140,7 +135,6 @@ public class DesktopAdventureBattleHost {
         BattleResult result = new BattleResult();
 
         try {
-            // Parse the game type
             GameType gameType;
             try {
                 gameType = GameType.valueOf(request.gameType);
@@ -151,10 +145,8 @@ public class DesktopAdventureBattleHost {
             Set<GameType> appliedVariants = EnumSet.of(gameType);
             int playerCount = 1 + request.aiPlayers.size();
 
-            // Load human player's deck from IPC file
             Deck humanDeck = IAdventureBattleHost.loadHumanDeck();
 
-            // Create human player
             RegisteredPlayer humanPlayer = RegisteredPlayer.forVariants(playerCount, appliedVariants, humanDeck, null, false, null, null);
             LobbyPlayer humanLobby = GamePlayerUtil.getGuiPlayer();
             humanPlayer.setPlayer(humanLobby);
@@ -164,7 +156,6 @@ public class DesktopAdventureBattleHost {
 
             List<RegisteredPlayer> players = new ArrayList<>();
 
-            // Create AI players
             for (AIPlayerData aiData : request.aiPlayers) {
                 Deck aiDeck = IAdventureBattleHost.loadAiDeck(aiData.deckIndex);
                 RegisteredPlayer aiPlayer = RegisteredPlayer.forVariants(playerCount, appliedVariants, aiDeck, null, false, null, null);
@@ -179,7 +170,6 @@ public class DesktopAdventureBattleHost {
 
             players.add(humanPlayer);
 
-            // Prepare game rules (can be done on background thread)
             GameRules rules = new GameRules(gameType);
             rules.setGamesPerMatch(request.gamesPerMatch);
             rules.setPlayForAnte(request.playForAnte);
@@ -189,19 +179,17 @@ public class DesktopAdventureBattleHost {
 
             MusicPlaylist playlist = request.isBossBattle ? MusicPlaylist.BOSS : MusicPlaylist.MATCH;
 
-            // Arrays to capture values from EDT (lambdas require effectively final variables)
+            // Holders let the EDT lambdas pass values back: lambdas require effectively final locals.
             final HostedMatch[] hostedMatchHolder = new HostedMatch[1];
             final IGuiGame[] guiHolder = new IGuiGame[1];
             final RegisteredPlayer humanPlayerFinal = humanPlayer;
 
-            // Start the match on the EDT (required for Swing UI initialization)
+            // Match start must happen on the EDT for Swing UI initialization
             javax.swing.SwingUtilities.invokeAndWait(() -> {
-                // Set up GUI
                 guiHolder[0] = GuiBase.getInterface().getNewGuiGame();
                 Map<RegisteredPlayer, IGuiGame> guiMap = new HashMap<>();
                 guiMap.put(humanPlayerFinal, guiHolder[0]);
 
-                // Create and start the match
                 hostedMatchHolder[0] = GuiBase.getInterface().hostMatch();
                 hostedMatchHolder[0].startMatch(rules, appliedVariants, players, guiMap, playlist);
             });
@@ -209,7 +197,7 @@ public class DesktopAdventureBattleHost {
             HostedMatch hostedMatch = hostedMatchHolder[0];
             IGuiGame gui = guiHolder[0];
 
-            // Set up the human controller (also on EDT since it interacts with Swing)
+            // Controller wiring also touches Swing, so also on the EDT
             javax.swing.SwingUtilities.invokeAndWait(() -> {
                 for (Player p : hostedMatch.getGame().getPlayers()) {
                     if (p.getController() instanceof PlayerControllerHuman) {
@@ -221,24 +209,18 @@ public class DesktopAdventureBattleHost {
                 }
             });
 
-            // Wait for the match to complete (safe to poll from background thread)
             while (!hostedMatch.getGame().isGameOver()) {
                 Thread.sleep(100);
             }
 
-            // Gather results
             result.humanWon = humanPlayer == hostedMatch.getGame().getMatch().getWinner();
 
-            // Get shards after battle (if the player controller tracked them)
             List<PlayerControllerHuman> humans = hostedMatch.getHumanControllers();
             if (!humans.isEmpty()) {
                 result.shardsAfterBattle = humans.get(0).getPlayer().getNumManaShards();
             } else {
                 result.shardsAfterBattle = request.humanManaShards;
             }
-
-            // TODO: Handle ante card transfers
-            // For now, ante results are left empty
 
         } catch (Exception e) {
             System.err.println("DesktopAdventureBattleHost: Error in hostBattle: " + e.getMessage());
