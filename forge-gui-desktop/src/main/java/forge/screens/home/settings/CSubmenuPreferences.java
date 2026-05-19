@@ -21,6 +21,7 @@ import forge.menus.LayoutMenu;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 import forge.screens.deckeditor.CDeckEditorUI;
+import forge.screens.home.VHomeUI;
 import forge.screens.deckeditor.controllers.CEditorTokenViewer;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
@@ -91,6 +92,11 @@ public enum CSubmenuPreferences implements ICDoc {
             prefs.save();
         });
 
+        view.getCbEnableAdventureMode().addItemListener(arg0 -> {
+            if (updating) { return; }
+            VHomeUI.SINGLETON_INSTANCE.setAdventureMenuVisible(view.getCbEnableAdventureMode().isSelected());
+        });
+
         // This updates background track immediately and is not standard
         view.getCbEnableMusic().addItemListener(arg0 -> {
             if (updating) { return; }
@@ -136,6 +142,7 @@ public enum CSubmenuPreferences implements ICDoc {
         lstControls.add(Pair.of(view.getCbUiForTouchScreen(), FPref.UI_FOR_TOUCHSCREN));
         lstControls.add(Pair.of(view.getCbTimedTargOverlay(), FPref.UI_TIMED_TARGETING_OVERLAY_UPDATES));
         lstControls.add(Pair.of(view.getCbCompactMainMenu(), FPref.UI_COMPACT_MAIN_MENU));
+        lstControls.add(Pair.of(view.getCbEnableAdventureMode(), FPref.UI_ENABLE_ADVENTURE_MODE));
         lstControls.add(Pair.of(view.getCbUseSentry(), FPref.USE_SENTRY));
         lstControls.add(Pair.of(view.getCbCheckSnapshot(), FPref.CHECK_SNAPSHOT_AT_STARTUP));
         lstControls.add(Pair.of(view.getCbPauseWhileMinimized(), FPref.UI_PAUSE_WHILE_MINIMIZED));

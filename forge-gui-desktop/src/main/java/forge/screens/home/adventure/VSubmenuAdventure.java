@@ -27,10 +27,9 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
     private final FButton btnStart = new FButton(localizer.getMessage("lblStartAdventure"));
     private final FLabel lblDescription = new FLabel.Builder()
             .text("<html><div style='text-align:center'>" +
-                  "Adventure Mode lets you explore a fantasy world, " +
-                  "collect cards, build decks, and battle enemies.<br><br>" +
-                  "The adventure map opens in a separate window using the mobile interface. " +
-                  "When a battle starts, it will be played here in the desktop interface." +
+                  localizer.getMessage("lblAdventureModeDescPara1") + "<br><br>" +
+                  localizer.getMessage("lblAdventureModeDescPara2") + "<br><br>" +
+                  "<b>" + localizer.getMessage("lblAdventureModeDescPara3Warning") + "</b>" +
                   "</div></html>")
             .fontSize(14)
             .build();
@@ -96,7 +95,7 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
                 .build();
 
         container.add(lblTitle, "w 80%, h 40px!, gap 0 0 40px 20px, al center");
-        container.add(lblDescription, "w 60%, h 100px!, gap 0 0 20px 20px, al center");
+        container.add(lblDescription, "w 60%, h 220px!, gap 0 0 20px 20px, al center");
         container.add(btnStart, "w 300!, h 75!, gap 0 0 30px 0, al center");
 
         if (container.isShowing()) {

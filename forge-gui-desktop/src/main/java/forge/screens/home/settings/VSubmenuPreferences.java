@@ -101,6 +101,7 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
     private final JCheckBox cbUiForTouchScreen = new OptionsCheckBox(localizer.getMessage("cbUiForTouchScreen"));
     private final JCheckBox cbTimedTargOverlay = new OptionsCheckBox(localizer.getMessage("cbTimedTargOverlay"));
     private final JCheckBox cbCompactMainMenu = new OptionsCheckBox(localizer.getMessage("cbCompactMainMenu"));
+    private final JCheckBox cbEnableAdventureMode = new OptionsCheckBox(localizer.getMessage("cbEnableAdventureMode"));
     private final JCheckBox cbDetailedPaymentDesc = new OptionsCheckBox(localizer.getMessage("cbDetailedPaymentDesc"));
     private final JCheckBox cbGrayText = new OptionsCheckBox(localizer.getMessage("cbGrayText"));
     private final JCheckBox cbPauseWhileMinimized = new OptionsCheckBox(localizer.getMessage("cbPauseWhileMinimized"));
@@ -206,6 +207,9 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
 
         pnlPrefs.add(cbCompactMainMenu, titleConstraints);
         pnlPrefs.add(new NoteLabel(localizer.getMessage("nlCompactMainMenu")), descriptionConstraints);
+
+        pnlPrefs.add(cbEnableAdventureMode, titleConstraints);
+        pnlPrefs.add(new NoteLabel(localizer.getMessage("nlEnableAdventureMode")), descriptionConstraints);
 
         pnlPrefs.add(cbUseSentry, titleConstraints);
         pnlPrefs.add(new NoteLabel(localizer.getMessage("nlUseSentry")), descriptionConstraints);
@@ -685,6 +689,11 @@ public enum VSubmenuPreferences implements IVSubmenu<CSubmenuPreferences> {
     /** @return {@link javax.swing.JCheckBox} */
     public final JCheckBox getCbCompactMainMenu() {
         return cbCompactMainMenu;
+    }
+
+    /** @return {@link javax.swing.JCheckBox} */
+    public final JCheckBox getCbEnableAdventureMode() {
+        return cbEnableAdventureMode;
     }
 
     /** @return {@link javax.swing.JCheckBox} */

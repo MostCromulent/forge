@@ -88,6 +88,7 @@ public enum VHomeUI implements IVTopLevelUI {
     private final List<IVSubmenu<? extends ICDoc>> allSubmenus = new ArrayList<>();
     private final Map<EDocID, LblMenuItem> allSubmenuLabels = new HashMap<>();
     private final Map<EMenuGroup, LblGroup> allGroupLabels = new HashMap<>();
+    private final SortedMap<EMenuGroup, JPanel> allGroupPanels = new TreeMap<>();
 
     private final PnlMenu pnlMenu = new PnlMenu();
     private final PnlDisplay pnlDisplay = new PnlDisplay();
@@ -150,7 +151,6 @@ public enum VHomeUI implements IVTopLevelUI {
         allSubmenus.add(VSubmenuReleaseNotes.SINGLETON_INSTANCE);
 
         // For each group: init its panel
-        final SortedMap<EMenuGroup, JPanel> allGroupPanels = new TreeMap<>();
         for (final EMenuGroup e : EMenuGroup.values()) {
             allGroupPanels.put(e, new PnlGroup());
             allGroupPanels.get(e).setVisible(false);
@@ -179,6 +179,21 @@ public enum VHomeUI implements IVTopLevelUI {
 
         pnlMenu.add(pnlSubmenus, "w 100%!, h 100% - " + pnlMainMenuHeight + "px!");
         pnlDisplay.setBackground(l00.alphaColor(100));
+
+        setAdventureMenuVisible(FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ADVENTURE_MODE));
+    }
+
+    public void setAdventureMenuVisible(final boolean visible) {
+        final LblGroup groupLabel = allGroupLabels.get(EMenuGroup.ADVENTURE);
+        final JPanel groupPanel = allGroupPanels.get(EMenuGroup.ADVENTURE);
+        if (groupLabel != null) {
+            groupLabel.setVisible(visible);
+        }
+        if (groupPanel != null && !visible) {
+            groupPanel.setVisible(false);
+        }
+        pnlSubmenus.revalidate();
+        pnlSubmenus.repaint();
     }
 
     /** @return {@link javax.swing.JPanel} */

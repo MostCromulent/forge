@@ -77,6 +77,7 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_MATCHES_PER_GAME("3"),
         UI_APPLIED_VARIANTS(""),
         UI_COMPACT_MAIN_MENU ("false"),
+        UI_ENABLE_ADVENTURE_MODE ("false"),
         UI_RANDOM_FOIL ("false"),
         UI_ENABLE_AI_CHEATS ("false"),
         UI_AVATARS ("0,1"),
