@@ -128,6 +128,7 @@ public class Forge implements ApplicationListener {
     private static Cursor cursor0, cursor1, cursor2, cursorA0, cursorA1, cursorA2;
     public static boolean forcedEnglishonCJKMissing = false;
     public static boolean createNewAdventureMap = false;
+    public static boolean forceAdventureMode = false;
     private static Localizer localizer;
     private static boolean desktopAutoOrientation = true;
 
@@ -432,18 +433,14 @@ public class Forge implements ApplicationListener {
                 //load Drafts
                 preloadBoosterDrafts();
                 FThreads.invokeInEdtLater(() -> {
-                    if (selector.equals("Adventure") || GuiBase.isDesktopAdventureMode()) {
+                    if (selector.equals("Adventure") || forceAdventureMode) {
                         //preload adventure resources to speedup startup if selector is adventure. Needs in edt when setting up worldstage
                         loadAdventureResources(false);
                         isMobileAdventureMode = true;
                     }
                     //selection transition
                     setTransitionScreen(new TransitionScreen(() -> {
-                        if (createNewAdventureMap) {
-                            openAdventure();
-                            clearSplashScreen();
-                        } else if (GuiBase.isDesktopAdventureMode()) {
-                            // Launched from desktop — skip mode selector, go straight to adventure
+                        if (createNewAdventureMap || forceAdventureMode) {
                             openAdventure();
                             clearSplashScreen();
                         } else {

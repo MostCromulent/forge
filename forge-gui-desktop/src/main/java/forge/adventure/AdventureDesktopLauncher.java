@@ -1,6 +1,5 @@
 package forge.adventure;
 
-import forge.gui.GuiBase;
 import forge.screens.home.adventure.VSubmenuAdventure;
 
 import javax.swing.SwingUtilities;
@@ -38,8 +37,7 @@ public class AdventureDesktopLauncher {
         }
 
         try {
-            // Set the flag to indicate desktop adventure mode is active
-            GuiBase.setDesktopAdventureMode(true);
+            DesktopAdventureMode.activate();
 
             // Start the battle monitor to handle battles with desktop UI
             DesktopAdventureBattleHost.startMonitoring();
@@ -361,7 +359,7 @@ public class AdventureDesktopLauncher {
     private static void cleanup() {
         isRunning = false;
         adventureProcess = null;
-        GuiBase.setDesktopAdventureMode(false);
+        DesktopAdventureMode.deactivate();
         DesktopAdventureBattleHost.stopMonitoring();
         IAdventureBattleHost.cleanupIpcFiles();
         // Re-enable the Start Adventure button on the EDT

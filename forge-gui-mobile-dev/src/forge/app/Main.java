@@ -1,7 +1,8 @@
 package forge.app;
 
 import com.badlogic.gdx.Gdx;
-import forge.gui.GuiBase;
+import forge.Forge;
+import forge.adventure.DesktopAdventureMode;
 import forge.interfaces.IDeviceAdapter;
 import forge.util.*;
 import org.apache.commons.lang3.tuple.Pair;
@@ -25,7 +26,8 @@ public class Main {
         // Check if launched from desktop GUI for Adventure mode with desktop battle UI
         if ("true".equals(System.getProperty("FORGE_DESKTOP_ADVENTURE")) ||
             "true".equals(System.getenv("FORGE_DESKTOP_ADVENTURE"))) {
-            GuiBase.setDesktopAdventureMode(true);
+            DesktopAdventureMode.activate();
+            Forge.forceAdventureMode = true;
             System.out.println("Adventure Mode: Running in desktop adventure mode (battles use desktop UI)");
         }
 

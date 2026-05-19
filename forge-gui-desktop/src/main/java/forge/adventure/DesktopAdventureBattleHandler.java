@@ -1,7 +1,5 @@
 package forge.adventure;
 
-import forge.gui.GuiBase;
-
 /**
  * Handles tracking of Adventure Mode state when launched from Desktop.
  * Since Adventure runs as a separate process, this class primarily
@@ -20,6 +18,6 @@ public class DesktopAdventureBattleHandler {
      * @return true if desktop adventure mode flag is set
      */
     public static boolean isDesktopAdventureMode() {
-        return GuiBase.isDesktopAdventureMode();
+        return DesktopAdventureMode.isActive();
     }
 }
