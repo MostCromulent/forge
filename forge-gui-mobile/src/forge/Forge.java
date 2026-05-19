@@ -131,7 +131,7 @@ public class Forge implements ApplicationListener {
     private static Localizer localizer;
     private static boolean desktopAutoOrientation = true;
 
-    public static ApplicationListener getApp(HWInfo hwInfo, Clipboard clipboard0, IDeviceAdapter deviceAdapter0, String assetDir0, boolean propertyConfig, boolean androidOrientation, boolean isTablet, int AndroidAPI) {
+    public static ApplicationListener getApp(HWInfo hwInfo, Clipboard clipboard0, IDeviceAdapter deviceAdapter0, String assetDir0, boolean androidOrientation, boolean isTablet, int AndroidAPI) {
         if (app == null) {
             app = new Forge();
             // Always set deviceAdapter and clipboard when provided
@@ -145,7 +145,6 @@ public class Forge implements ApplicationListener {
                 //obb directory on android uses the package name as entrypoint
                 GuiBase.setUsingAppDirectory(assetDir0.contains("forge.app"));
                 GuiBase.setInterface(new GuiMobile(assetDir0));
-                GuiBase.enablePropertyConfig(propertyConfig);
                 isPortraitMode = androidOrientation;
                 isTabletDevice = isTablet;
                 androidVersion = AndroidAPI;
