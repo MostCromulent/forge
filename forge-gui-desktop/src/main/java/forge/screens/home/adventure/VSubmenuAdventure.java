@@ -100,12 +100,12 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 
         final FLabel lblTitle = new FLabel.Builder()
-                .text(localizer.getMessage("lblAdventureMode"))
+                .text(localizer.getMessage("lblAdventureModeDesktopBridgeTitle"))
                 .fontSize(22).fontAlign(SwingConstants.CENTER).build();
 
         infoBox.add(lblTitle, "ax center, gap 0 0 0 15");
         infoBox.add(lblDescription, "ax center, w 600!, gap 0 0 0 25");
-        infoBox.add(btnStart, "ax center, w 300!, h 75!");
+        infoBox.add(btnStart, "ax center, w 200!, h 50!");
 
         container.setLayout(new BorderLayout());
         final JPanel wrapper = new JPanel(new MigLayout("ax center, ay center"));
