@@ -38,6 +38,16 @@ public class DesktopAdventureLauncher {
         try {
             DesktopAdventureMode.activate();
             DesktopAdventureBattleHost.startMonitoring();
+            DesktopAdventureBattleHost.setOnBattleStarting(() -> {
+                final java.awt.Frame frame = forge.Singletons.getView().getFrame();
+                if (frame != null) {
+                    if (frame.getState() == java.awt.Frame.ICONIFIED) {
+                        frame.setState(java.awt.Frame.NORMAL);
+                    }
+                    frame.toFront();
+                    frame.requestFocus();
+                }
+            });
 
             List<String> command = buildLaunchCommand();
 

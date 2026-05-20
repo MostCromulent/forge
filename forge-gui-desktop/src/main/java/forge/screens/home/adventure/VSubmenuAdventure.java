@@ -1,6 +1,11 @@
 package forge.screens.home.adventure;
 
+import java.awt.BorderLayout;
+import java.awt.Color;
+
+import javax.swing.BorderFactory;
 import javax.swing.JPanel;
+import javax.swing.SwingConstants;
 
 import forge.gui.framework.DragCell;
 import forge.gui.framework.DragTab;
@@ -87,16 +92,26 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
         final JPanel container = VHomeUI.SINGLETON_INSTANCE.getPnlDisplay();
 
         container.removeAll();
-        container.setLayout(new MigLayout("insets 0, gap 0, wrap 1, ax center, ay center"));
 
-        FLabel lblTitle = new FLabel.Builder()
+        final JPanel infoBox = new JPanel(new MigLayout("insets 30 40 20 40, gap 0, wrap 1, ax center"));
+        infoBox.setBackground(new Color(40, 40, 40));
+        infoBox.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(100, 100, 100), 1),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+        final FLabel lblTitle = new FLabel.Builder()
                 .text(localizer.getMessage("lblAdventureMode"))
-                .fontSize(20)
-                .build();
+                .fontSize(22).fontAlign(SwingConstants.CENTER).build();
 
-        container.add(lblTitle, "w 80%, h 40px!, gap 0 0 40px 20px, al center");
-        container.add(lblDescription, "w 60%, h 220px!, gap 0 0 20px 20px, al center");
-        container.add(btnStart, "w 300!, h 75!, gap 0 0 30px 0, al center");
+        infoBox.add(lblTitle, "ax center, gap 0 0 0 15");
+        infoBox.add(lblDescription, "ax center, w 600!, gap 0 0 0 25");
+        infoBox.add(btnStart, "ax center, w 300!, h 75!");
+
+        container.setLayout(new BorderLayout());
+        final JPanel wrapper = new JPanel(new MigLayout("ax center, ay center"));
+        wrapper.setOpaque(false);
+        wrapper.add(infoBox);
+        container.add(wrapper, BorderLayout.CENTER);
 
         if (container.isShowing()) {
             container.validate();

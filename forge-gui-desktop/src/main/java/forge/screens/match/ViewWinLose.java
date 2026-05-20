@@ -167,7 +167,9 @@ public class ViewWinLose implements IWinLoseView<FButton> {
 
         final String constraints = "w 300px!, h 50px!, gap 0 0 20px 0";
         pnlButtons.add(btnContinue, constraints);
-        pnlButtons.add(btnRestart, constraints);
+        if (game0.getGameType() != forge.game.GameType.Adventure) {
+            pnlButtons.add(btnRestart, constraints);
+        }
         pnlButtons.add(btnQuit, constraints);
         pnlLeft.add(pnlButtons, "w 100%!");
 

@@ -99,6 +99,7 @@ public final class DesktopAdventureBridge {
 
             Gdx.app.postRunnable(() -> {
                 hideOverlay();
+                DesktopAdventureMode.requestFocus();
                 listener.onComplete(result.humanWon);
             });
         } catch (Throwable e) {

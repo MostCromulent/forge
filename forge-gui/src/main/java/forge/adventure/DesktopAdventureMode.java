@@ -8,6 +8,7 @@ package forge.adventure;
  */
 public final class DesktopAdventureMode {
     private static boolean active = false;
+    private static Runnable focusRequest;
 
     private DesktopAdventureMode() {}
 
@@ -21,5 +22,15 @@ public final class DesktopAdventureMode {
 
     public static void deactivate() {
         active = false;
+    }
+
+    public static void setFocusRequest(Runnable r) {
+        focusRequest = r;
+    }
+
+    public static void requestFocus() {
+        if (focusRequest != null) {
+            focusRequest.run();
+        }
     }
 }

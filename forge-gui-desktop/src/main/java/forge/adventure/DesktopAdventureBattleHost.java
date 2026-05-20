@@ -1,6 +1,7 @@
 package forge.adventure;
 
 import forge.LobbyPlayer;
+import forge.Singletons;
 import forge.adventure.IAdventureBattleHost.AIPlayerData;
 import forge.adventure.IAdventureBattleHost.BattleRequest;
 import forge.adventure.IAdventureBattleHost.BattleResult;
@@ -11,6 +12,7 @@ import forge.game.player.Player;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.GuiBase;
+import forge.gui.framework.FScreen;
 import forge.gui.interfaces.IGuiGame;
 import forge.player.GamePlayerUtil;
 import forge.player.PlayerControllerHuman;
@@ -209,7 +211,12 @@ public class DesktopAdventureBattleHost {
                 }
             });
 
-            while (!hostedMatch.getGame().isGameOver()) {
+            while (!hostedMatch.getGame().getMatch().isMatchOver()) {
+                Thread.sleep(100);
+            }
+
+            // Hold the result until Quit Match returns the screen to HOME_SCREEN — that click is the focus-handoff cue.
+            while (Singletons.getControl().getCurrentScreen() != FScreen.HOME_SCREEN) {
                 Thread.sleep(100);
             }
 

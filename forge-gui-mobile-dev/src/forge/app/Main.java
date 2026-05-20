@@ -1,6 +1,7 @@
 package forge.app;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
 import forge.Forge;
 import forge.adventure.DesktopAdventureMode;
 import forge.interfaces.IDeviceAdapter;
@@ -28,6 +29,11 @@ public class Main {
             "true".equals(System.getenv("FORGE_DESKTOP_ADVENTURE"))) {
             DesktopAdventureMode.activate();
             Forge.forceAdventureMode = true;
+            DesktopAdventureMode.setFocusRequest(() -> {
+                if (Gdx.graphics instanceof Lwjgl3Graphics) {
+                    ((Lwjgl3Graphics) Gdx.graphics).getWindow().focusWindow();
+                }
+            });
             System.out.println("Adventure Mode: Running in desktop adventure mode (battles use desktop UI)");
         }
 
