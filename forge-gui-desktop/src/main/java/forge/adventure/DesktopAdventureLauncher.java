@@ -23,6 +23,22 @@ public class DesktopAdventureLauncher {
     private static Process adventureProcess;
     private static volatile boolean isRunning = false;
     private static Path argFile = null;
+    private static String ipcDir = null;
+
+    // Only needed for the no-manifest classpath fallback below: the fat jar carries Add-Opens in its
+    // manifest. This list mirrors mandatory.java.args in forge-gui-mobile-dev/pom.xml.
+    private static final String[] ADD_OPENS = {
+        "java.desktop/java.beans", "java.desktop/javax.swing.border",
+        "java.desktop/javax.swing.event", "java.desktop/sun.swing",
+        "java.desktop/java.awt.image", "java.desktop/java.awt.color",
+        "java.desktop/sun.awt.image", "java.desktop/javax.swing",
+        "java.desktop/java.awt", "java.base/java.util",
+        "java.base/java.lang", "java.base/java.lang.reflect",
+        "java.base/java.text", "java.desktop/java.awt.font",
+        "java.base/jdk.internal.misc", "java.base/sun.nio.ch",
+        "java.base/java.nio", "java.base/java.math",
+        "java.base/java.util.concurrent", "java.base/java.net"
+    };
 
     /**
      * Launches Adventure Mode as a separate process.
@@ -37,6 +53,11 @@ public class DesktopAdventureLauncher {
 
         try {
             DesktopAdventureMode.activate();
+
+            // Private per-launch IPC directory, shared with the spawned process via the environment.
+            ipcDir = IAdventureBattleHost.newLaunchDir();
+            IAdventureBattleHost.setIpcDir(ipcDir);
+
             DesktopAdventureBattleHost.startMonitoring();
             DesktopAdventureBattleHost.setOnBattleStarting(() -> {
                 final java.awt.Frame frame = forge.Singletons.getView().getFrame();
@@ -49,7 +70,8 @@ public class DesktopAdventureLauncher {
                 }
             });
 
-            List<String> command = buildLaunchCommand();
+            File fatJar = findFatJar();
+            List<String> command = buildLaunchCommand(fatJar);
 
             if (command == null) {
                 System.err.println("Failed to build Adventure launch command");
@@ -59,16 +81,10 @@ public class DesktopAdventureLauncher {
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.inheritIO();
-
-            // Working dir is the mobile-dev module so ../forge-gui/ resolves to the resources
-            File workDir = new File(System.getProperty("user.dir"));
-            File projectRoot = findProjectRoot(workDir.getAbsolutePath());
-            if (projectRoot != null) {
-                workDir = new File(projectRoot, "forge-gui-mobile-dev");
-            }
-            pb.directory(workDir);
+            pb.directory(resolveWorkingDir(fatJar));
 
             pb.environment().put("FORGE_DESKTOP_ADVENTURE", "true");
+            pb.environment().put(IAdventureBattleHost.IPC_DIR_ENV, ipcDir);
 
             adventureProcess = pb.start();
             isRunning = true;
@@ -101,7 +117,7 @@ public class DesktopAdventureLauncher {
      * Prefers using the fat jar (jar-with-dependencies) for reliability.
      * Falls back to classpath approach if fat jar is not found.
      */
-    private static List<String> buildLaunchCommand() {
+    private static List<String> buildLaunchCommand(File fatJar) {
         List<String> command = new ArrayList<>();
 
         String javaHome = System.getProperty("java.home");
@@ -111,131 +127,160 @@ public class DesktopAdventureLauncher {
         }
         command.add(javaBin);
 
-        // Must match mandatory.java.args from forge-gui-mobile-dev pom.xml
+        // -Xmx and -D flags can't live in the jar manifest, so they're always passed here.
         command.add("-Xmx4g");
         command.add("-DFORGE_DESKTOP_ADVENTURE=true");
         command.add("-Dio.netty.tryReflectionSetAccessible=true");
         command.add("-Dfile.encoding=UTF-8");
-        // --add-opens required for LWJGL, LibGDX, XStream on JDK 17+
-        String[] addOpens = {
-            "java.desktop/java.beans", "java.desktop/javax.swing.border",
-            "java.desktop/javax.swing.event", "java.desktop/sun.swing",
-            "java.desktop/java.awt.image", "java.desktop/java.awt.color",
-            "java.desktop/sun.awt.image", "java.desktop/javax.swing",
-            "java.desktop/java.awt", "java.base/java.util",
-            "java.base/java.lang", "java.base/java.lang.reflect",
-            "java.base/java.text", "java.desktop/java.awt.font",
-            "java.base/jdk.internal.misc", "java.base/sun.nio.ch",
-            "java.base/java.nio", "java.base/java.math",
-            "java.base/java.util.concurrent", "java.base/java.net"
-        };
-        for (String opens : addOpens) {
+
+        if (fatJar != null) {
+            // The fat jar's manifest supplies Add-Opens and Main-Class, so no --add-opens needed here.
+            command.add("-jar");
+            command.add(fatJar.getAbsolutePath());
+            return command;
+        }
+
+        // No fat jar (running from a dev build): launch via classpath. Without a manifest the JDK 17+
+        // --add-opens must be supplied explicitly.
+        for (String opens : ADD_OPENS) {
             command.add("--add-opens");
             command.add(opens + "=ALL-UNNAMED");
         }
 
-        File fatJar = findFatJar();
-        if (fatJar != null) {
-            command.add("-jar");
-            command.add(fatJar.getAbsolutePath());
-        } else {
-            String classpath = buildFullClasspath();
+        String classpath = buildClasspathFromMavenFile();
+        if (classpath == null) {
+            System.err.println("Adventure launch: no fat jar found and no forge-gui-mobile-dev/target/mobile-dev-classpath.txt. "
+                + "Build forge-gui-mobile-dev first (mvn -pl forge-gui-mobile-dev -am install).");
+            return null;
+        }
 
-            // Argument file avoids Windows command line length limits
-            try {
-                argFile = Files.createTempFile("forge-adventure-args", ".txt");
-                Files.writeString(argFile, "-cp\n" + classpath + "\nforge.app.Main\n");
-                argFile.toFile().deleteOnExit();
-                command.add("@" + argFile.toAbsolutePath());
-            } catch (IOException e) {
-                System.err.println("Failed to create argument file, falling back to direct args: " + e.getMessage());
-                command.add("-cp");
-                command.add(classpath);
-                command.add("forge.app.Main");
-            }
+        // Argument file avoids Windows command line length limits
+        try {
+            argFile = Files.createTempFile("forge-adventure-args", ".txt");
+            Files.writeString(argFile, "-cp\n" + classpath + "\nforge.app.Main\n");
+            argFile.toFile().deleteOnExit();
+            command.add("@" + argFile.toAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("Failed to create argument file, falling back to direct args: " + e.getMessage());
+            command.add("-cp");
+            command.add(classpath);
+            command.add("forge.app.Main");
         }
 
         return command;
     }
 
     /**
-     * Finds the forge-gui-mobile-dev fat jar (jar-with-dependencies).
-     * This jar bundles all dependencies including LibGDX, making it the most reliable
-     * way to launch Adventure Mode.
+     * Finds the forge-gui-mobile-dev fat jar (jar-with-dependencies), which bundles LibGDX and the rest of
+     * Adventure's dependencies. Looks in both layouts: a source checkout (forge-gui-mobile-dev/target) and an
+     * installer build, where the installer drops the jar in the application directory next to the desktop jar.
      *
-     * @return the fat jar File, or null if not found
+     * @return the newest matching fat jar, or null if none is found
      */
     private static File findFatJar() {
-        String workingDir = System.getProperty("user.dir");
-        File projectRoot = findProjectRoot(workingDir);
+        List<File> candidates = new ArrayList<>();
 
+        File projectRoot = findProjectRoot(System.getProperty("user.dir"));
+        if (projectRoot != null) {
+            candidates.add(new File(projectRoot, "forge-gui-mobile-dev" + File.separator + "target"));
+        }
+        File appDir = applicationDir();
+        if (appDir != null) {
+            candidates.add(appDir);
+        }
+        candidates.add(new File(System.getProperty("user.dir")));
+
+        File newest = null;
+        for (File dir : candidates) {
+            File jar = newestFatJarIn(dir);
+            if (jar != null && (newest == null || jar.lastModified() > newest.lastModified())) {
+                newest = jar;
+            }
+        }
+        return newest;
+    }
+
+    private static File newestFatJarIn(File dir) {
+        if (dir == null || !dir.isDirectory()) {
+            return null;
+        }
+        File[] jars = dir.listFiles((d, name) ->
+            name.startsWith("forge-gui-mobile-dev-") &&
+            name.endsWith("-jar-with-dependencies.jar"));
+        if (jars == null || jars.length == 0) {
+            return null;
+        }
+        File newest = jars[0];
+        for (File jar : jars) {
+            if (jar.lastModified() > newest.lastModified()) {
+                newest = jar;
+            }
+        }
+        return newest;
+    }
+
+    /**
+     * The directory the running desktop app lives in. In an installer build the desktop jar and the
+     * mobile-dev fat jar sit side by side here; in a source checkout this is the target dir (no fat jar) and
+     * findFatJar falls back to the module path. Derived from the code source so it doesn't depend on the cwd.
+     */
+    private static File applicationDir() {
+        try {
+            File codeSource = new File(DesktopAdventureLauncher.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            return codeSource.isFile() ? codeSource.getParentFile() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Working directory for the spawned Adventure process, chosen so the game resources (res/) resolve.
+     * From a source target dir, run from the module so ../forge-gui/res resolves; from an installer build, run
+     * from the application directory where res/ sits alongside the jar; with no jar (dev classpath launch),
+     * run from the mobile-dev module.
+     */
+    private static File resolveWorkingDir(File fatJar) {
+        if (fatJar != null) {
+            File jarDir = fatJar.getParentFile();
+            return "target".equals(jarDir.getName()) ? jarDir.getParentFile() : jarDir;
+        }
+        File projectRoot = findProjectRoot(System.getProperty("user.dir"));
+        return projectRoot != null
+                ? new File(projectRoot, "forge-gui-mobile-dev")
+                : new File(System.getProperty("user.dir"));
+    }
+
+    /**
+     * Builds the classpath from the Maven-generated dependency list (forge-gui-mobile-dev's
+     * dependency:build-classpath execution). Returns null if that file is absent, so the caller can
+     * fall back to the fat jar or fail loudly rather than guessing transitive dependencies.
+     */
+    private static String buildClasspathFromMavenFile() {
+        File projectRoot = findProjectRoot(System.getProperty("user.dir"));
         if (projectRoot == null) {
             return null;
         }
 
-        File targetDir = new File(projectRoot, "forge-gui-mobile-dev" + File.separator + "target");
-        if (!targetDir.isDirectory()) {
+        File cpFile = new File(projectRoot, "forge-gui-mobile-dev/target/mobile-dev-classpath.txt");
+        if (!cpFile.isFile()) {
             return null;
         }
 
-        File[] jars = targetDir.listFiles((dir, name) ->
-            name.startsWith("forge-gui-mobile-dev-") &&
-            name.endsWith("-jar-with-dependencies.jar"));
-
-        if (jars != null && jars.length > 0) {
-            File newest = jars[0];
-            for (File jar : jars) {
-                if (jar.lastModified() > newest.lastModified()) {
-                    newest = jar;
-                }
+        try {
+            String mavenCp = Files.readString(cpFile.toPath()).trim();
+            if (mavenCp.isEmpty()) {
+                return null;
             }
-            return newest;
+            StringBuilder cp = new StringBuilder();
+            // mobile-dev's own classes aren't in its dependency list
+            addIfExists(cp, "", projectRoot, "forge-gui-mobile-dev/target/classes");
+            cp.append(File.pathSeparator).append(mavenCp);
+            return cp.toString();
+        } catch (IOException e) {
+            System.err.println("Failed to read classpath file: " + e.getMessage());
+            return null;
         }
-
-        return null;
-    }
-
-    /**
-     * Builds the full classpath including mobile modules and their dependencies.
-     * Prefers the Maven-generated classpath file (created by dependency:build-classpath
-     * during forge-gui-mobile-dev build) for accurate transitive dependency resolution.
-     */
-    private static String buildFullClasspath() {
-        String workingDir = System.getProperty("user.dir");
-        File projectRoot = findProjectRoot(workingDir);
-
-        if (projectRoot != null) {
-            File cpFile = new File(projectRoot, "forge-gui-mobile-dev/target/mobile-dev-classpath.txt");
-            if (cpFile.isFile()) {
-                try {
-                    String mavenCp = Files.readString(cpFile.toPath()).trim();
-                    if (!mavenCp.isEmpty()) {
-                        StringBuilder cp = new StringBuilder();
-                        // mobile-dev classes aren't in its own dependency list
-                        addIfExists(cp, "", projectRoot, "forge-gui-mobile-dev/target/classes");
-                        cp.append(File.pathSeparator).append(mavenCp);
-                        return cp.toString();
-                    }
-                } catch (IOException e) {
-                    System.err.println("Failed to read classpath file: " + e.getMessage());
-                }
-            }
-        }
-
-        // Fallback: walking ~/.m2 if no classpath file was generated
-        StringBuilder cp = new StringBuilder(System.getProperty("java.class.path"));
-        String pathSep = File.pathSeparator;
-
-        if (projectRoot != null) {
-            addIfExists(cp, pathSep, projectRoot, "forge-gui-mobile/target/classes");
-            addIfExists(cp, pathSep, projectRoot, "forge-gui-mobile-dev/target/classes");
-            addIfExists(cp, pathSep, projectRoot, "forge-gui-mobile-dev/src/main/resources");
-        }
-
-        System.out.println("WARNING: Maven classpath file not found, using manual dependency resolution");
-        addMavenDependencies(cp, pathSep);
-
-        return cp.toString();
     }
 
     /**
@@ -264,83 +309,6 @@ public class DesktopAdventureLauncher {
     }
 
     /**
-     * Adds Maven dependencies required by mobile modules (LibGDX, LWJGL, etc.)
-     */
-    private static void addMavenDependencies(StringBuilder cp, String pathSep) {
-        String m2Repo = System.getProperty("user.home") + File.separator + ".m2" + File.separator + "repository";
-
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-backend-lwjgl3", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-platform", "natives-desktop");
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-freetype", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-freetype-platform", "natives-desktop");
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-box2d", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx", "gdx-box2d-platform", "natives-desktop");
-
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx-controllers", "gdx-controllers-core", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "com/badlogicgames/gdx-controllers", "gdx-controllers-desktop", null);
-
-        String[] lwjglModules = {"lwjgl", "lwjgl-glfw", "lwjgl-opengl", "lwjgl-openal", "lwjgl-stb", "lwjgl-jemalloc"};
-        String nativesClassifier = getNativesClassifier();
-        for (String module : lwjglModules) {
-            addMavenArtifact(cp, pathSep, m2Repo, "org/lwjgl", module, null);
-            if (nativesClassifier != null) {
-                addMavenArtifact(cp, pathSep, m2Repo, "org/lwjgl", module, nativesClassifier);
-            }
-        }
-
-        addMavenArtifact(cp, pathSep, m2Repo, "com/github/oshi", "oshi-core", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "net/java/dev/jna", "jna", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "net/java/dev/jna", "jna-platform", null);
-
-        addMavenArtifact(cp, pathSep, m2Repo, "commons-cli", "commons-cli", null);
-        addMavenArtifact(cp, pathSep, m2Repo, "org/slf4j", "slf4j-api", null);
-    }
-
-    /**
-     * Finds and adds a Maven artifact jar to the classpath by discovering whatever version is installed.
-     * This avoids hardcoding version strings that can drift from transitive dependency versions.
-     *
-     * @param classifier optional classifier (e.g. "natives-desktop"), or null for the main jar
-     */
-    private static void addMavenArtifact(StringBuilder cp, String pathSep, String m2Repo,
-                                          String groupPath, String artifactId, String classifier) {
-        File artifactDir = new File(m2Repo, groupPath + File.separator + artifactId);
-        if (!artifactDir.isDirectory()) return;
-
-        // Find the newest version directory
-        File[] versionDirs = artifactDir.listFiles(File::isDirectory);
-        if (versionDirs == null || versionDirs.length == 0) return;
-
-        File versionDir = versionDirs[0];
-        for (File d : versionDirs) {
-            if (d.lastModified() > versionDir.lastModified()) {
-                versionDir = d;
-            }
-        }
-
-        String version = versionDir.getName();
-        String jarName = classifier != null
-                ? artifactId + "-" + version + "-" + classifier + ".jar"
-                : artifactId + "-" + version + ".jar";
-        File jar = new File(versionDir, jarName);
-        if (jar.exists()) {
-            cp.append(pathSep).append(jar.getAbsolutePath());
-        }
-    }
-
-    /**
-     * Returns the LWJGL natives classifier for the current OS (e.g. "natives-windows").
-     */
-    private static String getNativesClassifier() {
-        String os = System.getProperty("os.name").toLowerCase();
-        if (os.contains("win")) return "natives-windows";
-        if (os.contains("mac")) return "natives-macos";
-        if (os.contains("linux")) return "natives-linux";
-        return null;
-    }
-
-    /**
      * Cleanup when Adventure mode closes.
      */
     private static void cleanup() {
@@ -348,7 +316,7 @@ public class DesktopAdventureLauncher {
         adventureProcess = null;
         DesktopAdventureMode.deactivate();
         DesktopAdventureBattleHost.stopMonitoring();
-        IAdventureBattleHost.cleanupIpcFiles();
+        IAdventureBattleHost.purgeIpcDir();
         SwingUtilities.invokeLater(() ->
             VSubmenuAdventure.SINGLETON_INSTANCE.getBtnStart().setEnabled(true));
         if (argFile != null) {

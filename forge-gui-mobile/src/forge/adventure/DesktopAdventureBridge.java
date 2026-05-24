@@ -1,5 +1,6 @@
 package forge.adventure;
 
+import java.io.IOException;
 import java.util.List;
 
 import com.badlogic.gdx.Gdx;
@@ -23,6 +24,10 @@ import forge.screens.LoadingOverlay;
 public final class DesktopAdventureBridge {
 
     private static LoadingOverlay waitingOverlay;
+
+    // Last-resort cap so a dead or orphaned desktop host can't pin the waiter thread forever. Far longer than
+    // any real match, so it never fires during normal play — the desktop signals completion long before this.
+    private static final long MAX_BATTLE_WAIT_MS = 6L * 60 * 60 * 1000;
 
     private DesktopAdventureBridge() {}
 
@@ -85,7 +90,11 @@ public final class DesktopAdventureBridge {
 
     private static void waitForResult(final BattleParams params, final BattleResultListener listener) {
         try {
+            long deadline = System.currentTimeMillis() + MAX_BATTLE_WAIT_MS;
             while (!IAdventureBattleHost.isBattleComplete()) {
+                if (System.currentTimeMillis() > deadline) {
+                    throw new IOException("Timed out waiting for desktop to resolve battle");
+                }
                 Thread.sleep(500);
             }
 

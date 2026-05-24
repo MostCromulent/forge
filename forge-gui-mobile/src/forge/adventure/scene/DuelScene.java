@@ -49,7 +49,6 @@ import forge.sound.SoundSystem;
 import forge.toolbox.FCardPanel;
 import forge.toolbox.FDisplayObject;
 import forge.toolbox.FOptionPane;
-import forge.toolbox.FOverlay;
 import forge.trackable.TrackableCollection;
 import forge.util.Aggregates;
 import forge.util.StreamUtil;
@@ -103,17 +102,11 @@ public class DuelScene extends ForgeScene {
         if (!waitingForExternalOperation) {
             return; // normal battles render through MatchController
         }
-        // ForgeScene.render() is a no-op; iterate global overlays so the waiting message shows.
+        // ForgeScene.render() is a no-op; draw the global overlays directly so the waiting message shows.
         Gdx.gl.glClear(com.badlogic.gdx.graphics.GL20.GL_COLOR_BUFFER_BIT);
         float w = Forge.getScreenWidth(), h = Forge.getScreenHeight();
         Forge.getGraphics().begin(w, h);
-        for (FOverlay overlay : FOverlay.getOverlays()) {
-            if (overlay.isVisibleOnScreen(getScreen())) {
-                overlay.screenPos.setSize(w, h);
-                overlay.setSize(w, h);
-                overlay.draw(Forge.getGraphics());
-            }
-        }
+        Forge.drawOverlays(Forge.getGraphics(), getScreen(), w, h);
         Forge.getGraphics().end();
     }
 

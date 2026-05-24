@@ -311,6 +311,24 @@ public class Forge implements ApplicationListener {
     public static Graphics getGraphics() {
         return graphics;
     }
+
+    // Draws the active global overlays. Shared by the main render loop and by scenes that must keep an
+    // overlay visible while rendering on their own (e.g. a wait spinner during an external operation).
+    public static void drawOverlays(Graphics graphics, FScreen screen, float width, float height) {
+        for (FOverlay overlay : FOverlay.getOverlays()) {
+            if (overlay.isVisibleOnScreen(screen)) {
+                overlay.screenPos.setSize(width, height);
+                overlay.setSize(width, height); //update overlay sizes as they're rendered
+                if (overlay.getRotate180()) {
+                    graphics.startRotateTransform(width / 2f, height / 2f, 180);
+                }
+                overlay.draw(graphics);
+                if (overlay.getRotate180()) {
+                    graphics.endTransform();
+                }
+            }
+        }
+    }
     public static SplashScreen getSplashScreen() {
         if (splashScreen == null)
             splashScreen = new SplashScreen();
@@ -965,19 +983,7 @@ public class Forge implements ApplicationListener {
             if (screen.getRotate180()) {
                 graphics.endTransform();
             }
-            for (FOverlay overlay : FOverlay.getOverlays()) {
-                if (overlay.isVisibleOnScreen(currentScreen)) {
-                    overlay.screenPos.setSize(screenWidth, screenHeight);
-                    overlay.setSize(screenWidth, screenHeight); //update overlay sizes as they're rendered
-                    if (overlay.getRotate180()) {
-                        graphics.startRotateTransform(screenWidth / 2f, screenHeight / 2f, 180);
-                    }
-                    overlay.draw(graphics);
-                    if (overlay.getRotate180()) {
-                        graphics.endTransform();
-                    }
-                }
-            }
+            drawOverlays(graphics, currentScreen, screenWidth, screenHeight);
             //update here
             if (needsUpdate) {
                 if (getAssets().manager().update())

@@ -31,6 +31,10 @@ public class DesktopAdventureBattleHost {
     private static final AtomicBoolean running = new AtomicBoolean(false);
     private static final AtomicBoolean battleInProgress = new AtomicBoolean(false);
 
+    // The match is already decided once it's over; this only waits for the UI to return home as a focus
+    // cue, so a stalled navigation shouldn't pin the result forever.
+    private static final long POST_MATCH_NAV_TIMEOUT_MS = 60_000;
+
     private static Runnable onBattleStarting;
     private static Runnable onBattleEnded;
 
@@ -43,9 +47,6 @@ public class DesktopAdventureBattleHost {
         }
 
         running.set(true);
-
-        // Stale IPC files from a previous session would trigger a phantom battle
-        IAdventureBattleHost.cleanupIpcFiles();
 
         monitorThread = new Thread(() -> {
             while (running.get()) {
@@ -211,12 +212,16 @@ public class DesktopAdventureBattleHost {
                 }
             });
 
+            // Unbounded on purpose: this is paced by the human actually playing the match out.
             while (!hostedMatch.getGame().getMatch().isMatchOver()) {
                 Thread.sleep(100);
             }
 
-            // Hold the result until Quit Match returns the screen to HOME_SCREEN — that click is the focus-handoff cue.
-            while (Singletons.getControl().getCurrentScreen() != FScreen.HOME_SCREEN) {
+            // Hold the result until Quit Match returns the screen to HOME_SCREEN — that click is the focus-handoff
+            // cue. Bounded so a navigation that never reaches home doesn't hang the host (and the waiting Adventure).
+            long navDeadline = System.currentTimeMillis() + POST_MATCH_NAV_TIMEOUT_MS;
+            while (Singletons.getControl().getCurrentScreen() != FScreen.HOME_SCREEN
+                    && System.currentTimeMillis() < navDeadline) {
                 Thread.sleep(100);
             }
 

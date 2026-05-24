@@ -2,11 +2,15 @@ package forge.adventure;
 
 import forge.deck.Deck;
 import forge.deck.io.DeckSerializer;
+import forge.util.FileUtil;
 
 import java.io.*;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,7 +21,7 @@ import java.util.List;
  */
 public class IAdventureBattleHost {
 
-    private static final String IPC_DIR = System.getProperty("java.io.tmpdir") + File.separator + "forge_adventure_ipc";
+    private static final String IPC_SUBDIR = "forge_adventure_ipc";
     private static final String BATTLE_REQUEST_FILE = "battle_request.dat";
     private static final String BATTLE_RESULT_FILE = "battle_result.dat";
     private static final String BATTLE_PENDING_SIGNAL = "battle_pending";
@@ -25,24 +29,52 @@ public class IAdventureBattleHost {
     private static final String HUMAN_DECK_FILE = "human_deck.dck";
     private static final String AI_DECK_PREFIX = "ai_deck_";
 
+    /** Env var the desktop launcher uses to hand its private per-launch IPC directory to the spawned Adventure process. */
+    public static final String IPC_DIR_ENV = "FORGE_ADVENTURE_IPC_DIR";
+
+    // Resolved once from the launcher-supplied env var (spawned process) or the default temp path (standalone).
+    // The launcher overrides it in its own process via setIpcDir so both sides agree on a private directory.
+    private static volatile String ipcDir = resolveInitialDir();
+
+    private static String defaultBaseDir() {
+        return System.getProperty("java.io.tmpdir") + File.separator + IPC_SUBDIR;
+    }
+
+    private static String resolveInitialDir() {
+        String fromEnv = System.getenv(IPC_DIR_ENV);
+        return (fromEnv != null && !fromEnv.isEmpty()) ? fromEnv : defaultBaseDir();
+    }
+
+    /** A fresh, unique IPC directory for one launch, so stale files from a prior or concurrent session can't bleed in. */
+    public static String newLaunchDir() {
+        return defaultBaseDir() + File.separator + "launch_" + ProcessHandle.current().pid() + "_" + System.nanoTime();
+    }
+
+    /** Points both the launcher and its spawned process at the same private per-launch directory. */
+    public static void setIpcDir(String dir) {
+        if (dir != null && !dir.isEmpty()) {
+            ipcDir = dir;
+        }
+    }
+
     public static String getIpcDir() {
-        return IPC_DIR;
+        return ipcDir;
     }
 
     public static Path getBattleRequestPath() {
-        return Paths.get(IPC_DIR, BATTLE_REQUEST_FILE);
+        return Paths.get(ipcDir, BATTLE_REQUEST_FILE);
     }
 
     public static Path getBattleResultPath() {
-        return Paths.get(IPC_DIR, BATTLE_RESULT_FILE);
+        return Paths.get(ipcDir, BATTLE_RESULT_FILE);
     }
 
     public static Path getBattlePendingSignalPath() {
-        return Paths.get(IPC_DIR, BATTLE_PENDING_SIGNAL);
+        return Paths.get(ipcDir, BATTLE_PENDING_SIGNAL);
     }
 
     public static Path getBattleCompleteSignalPath() {
-        return Paths.get(IPC_DIR, BATTLE_COMPLETE_SIGNAL);
+        return Paths.get(ipcDir, BATTLE_COMPLETE_SIGNAL);
     }
 
     /**
@@ -50,36 +82,48 @@ public class IAdventureBattleHost {
      */
     public static void ensureIpcDir() {
         try {
-            Files.createDirectories(Paths.get(IPC_DIR));
+            Files.createDirectories(Paths.get(ipcDir));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     /**
-     * Cleans up all IPC files.
+     * Removes the entire per-launch IPC directory tree. Called on launcher shutdown.
      */
-    public static void cleanupIpcFiles() {
+    public static void purgeIpcDir() {
+        FileUtil.deleteDirectory(Paths.get(ipcDir).toFile());
+    }
+
+    // Creates the file if absent; a signal left over from a prior battle is fine, its existence is all that matters.
+    private static void touch(Path path) throws IOException {
         try {
-            Files.deleteIfExists(getBattleRequestPath());
-            Files.deleteIfExists(getBattleResultPath());
-            Files.deleteIfExists(getBattlePendingSignalPath());
-            Files.deleteIfExists(getBattleCompleteSignalPath());
-            Files.deleteIfExists(getHumanDeckPath());
-            for (int i = 0; i < 8; i++) {
-                Files.deleteIfExists(getAiDeckPath(i));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+            Files.createFile(path);
+        } catch (FileAlreadyExistsException ignored) {
+        }
+    }
+
+    // Writes to a temp sibling then moves it onto the target so a reader never observes a half-written object,
+    // and a stale target from a prior battle is replaced rather than colliding.
+    private static void writeObjectAtomic(Path target, Serializable obj) throws IOException {
+        ensureIpcDir();
+        Path tmp = target.resolveSibling(target.getFileName() + ".tmp");
+        try (ObjectOutputStream oos = new ObjectOutputStream(Files.newOutputStream(tmp))) {
+            oos.writeObject(obj);
+        }
+        try {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
     public static Path getHumanDeckPath() {
-        return Paths.get(IPC_DIR, HUMAN_DECK_FILE);
+        return Paths.get(ipcDir, HUMAN_DECK_FILE);
     }
 
     public static Path getAiDeckPath(int index) {
-        return Paths.get(IPC_DIR, AI_DECK_PREFIX + index + ".dck");
+        return Paths.get(ipcDir, AI_DECK_PREFIX + index + ".dck");
     }
 
     /**
@@ -138,13 +182,8 @@ public class IAdventureBattleHost {
          * Writes this request to the IPC file.
          */
         public void write() throws IOException {
-            ensureIpcDir();
-            try (ObjectOutputStream oos = new ObjectOutputStream(
-                    new FileOutputStream(getBattleRequestPath().toFile()))) {
-                oos.writeObject(this);
-            }
-            // Create pending signal
-            Files.createFile(getBattlePendingSignalPath());
+            writeObjectAtomic(getBattleRequestPath(), this);
+            touch(getBattlePendingSignalPath());
         }
 
         /**
@@ -187,13 +226,9 @@ public class IAdventureBattleHost {
          * Writes this result to the IPC file.
          */
         public void write() throws IOException {
-            ensureIpcDir();
-            try (ObjectOutputStream oos = new ObjectOutputStream(
-                    new FileOutputStream(getBattleResultPath().toFile()))) {
-                oos.writeObject(this);
-            }
+            writeObjectAtomic(getBattleResultPath(), this);
             Files.deleteIfExists(getBattlePendingSignalPath());
-            Files.createFile(getBattleCompleteSignalPath());
+            touch(getBattleCompleteSignalPath());
         }
 
         /**
