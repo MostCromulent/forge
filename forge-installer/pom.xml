@@ -8,19 +8,28 @@
     </parent>
 
     <artifactId>forge-installer</artifactId>
-    <packaging>jar</packaging>
+    <packaging>pom</packaging>
     <name>Forge Installer</name>
 
     <build>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
+                <artifactId>maven-compiler-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>default-jar</id>
-                        <phase>none</phase>
+                        <id>compile-custom-panels</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
                     </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
                     <execution>
                         <id>custom-panels-jar</id>
                         <phase>package</phase>
