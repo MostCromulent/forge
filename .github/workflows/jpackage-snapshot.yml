@@ -42,12 +42,18 @@ jobs:
         if: matrix.platform == 'linux'
         run: command -v Xvfb >/dev/null 2>&1 || { sudo apt update && sudo apt install -y xvfb; }
 
-      # Builds the desktop fat jar, and on Linux the .tar.bz2 we keep shipping.
-      - name: Build fat jar (+ tarball)
+      # Linux builds forge-installer too (for the .tar.bz2 we keep); Windows/mac
+      # build only the three fat jars, avoiding IzPack (which Path C drops and
+      # which fails on Windows over a Unicode docs filename).
+      - name: Build fat jars (+ tarball on Linux)
         shell: bash
         run: |
-          if [ "${{ matrix.platform }}" = "linux" ]; then export DISPLAY=":1"; Xvfb :1 -screen 0 800x600x8 & fi
-          mvn -U -B -P windows-linux -pl forge-installer,adventure-editor -am clean install -DskipTests -T 1C
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            export DISPLAY=":1"; Xvfb :1 -screen 0 800x600x8 &
+            mvn -U -B -P windows-linux -pl forge-installer,adventure-editor -am clean install -DskipTests -T 1C
+          else
+            mvn -U -B -pl forge-gui-desktop,forge-gui-mobile-dev,adventure-editor -am clean install -DskipTests -T 1C
+          fi
 
       - name: Assemble jpackage input (three fat jars + res)
         shell: bash

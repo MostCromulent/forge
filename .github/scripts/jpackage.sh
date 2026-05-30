@@ -28,8 +28,9 @@ jpackage --type app-image --name Forge --app-version "$VERSION" --input "$INPUT"
 
 # 2. Isolate each launcher's classpath + main class to its own jar.
 case "$PLATFORM" in
-  mac) APPCFG="$IMG/Forge.app/Contents/app"; IMAGEPATH="$IMG/Forge.app" ;;
-  *)   APPCFG="$IMG/Forge/app";              IMAGEPATH="$IMG/Forge" ;;
+  mac)     APPCFG="$IMG/Forge.app/Contents/app"; IMAGEPATH="$IMG/Forge.app" ;;
+  linux)   APPCFG="$IMG/Forge/lib/app";          IMAGEPATH="$IMG/Forge" ;;
+  windows) APPCFG="$IMG/Forge/app";              IMAGEPATH="$IMG/Forge" ;;
 esac
 "$PYTHON" .github/scripts/isolate_cfg.py "$APPCFG" \
   "Forge=$DESKTOP_JAR=forge.view.Main" \
