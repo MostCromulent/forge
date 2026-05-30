@@ -13,6 +13,8 @@ name: Conveyor Desktop Snapshot (prototype)
 #                  will see Gatekeeper / SmartScreen warnings.
 
 on:
+  push:
+    branches: [conveyor-snapshot-prototype]
   workflow_dispatch:
 
 jobs:
