@@ -1,0 +1,72 @@
+name: Conveyor Desktop Snapshot (prototype)
+
+# Prototype: package the desktop client into native Windows / macOS / Linux
+# downloads from a single Linux runner using Hydraulic Conveyor, and publish
+# them to the rolling "daily-snapshots" GitHub prerelease (the same channel
+# snapshot-both-pc-android.yml already uses).
+#
+# Requires one new repository secret:
+#   SIGNING_KEY  - a Conveyor root signing key. Generate locally with
+#                  `conveyor keys generate` and paste the printed key in.
+#                  For this self-signed prototype that is the only key needed;
+#                  no Apple Developer ID or Windows cert is involved, so users
+#                  will see Gatekeeper / SmartScreen warnings.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install virtual framebuffer to allow building GUI module headless
+        run: command -v Xvfb >/dev/null 2>&1 || { sudo apt update && sudo apt install -y xvfb; }
+
+      - name: Build desktop fat jar
+        run: |
+          export DISPLAY=":1"
+          Xvfb :1 -screen 0 800x600x8 &
+          mvn -U -B -pl forge-gui-desktop -am clean install -DskipTests -T 1C
+
+      - name: Stage fat jar under stable name
+        run: cp forge-gui-desktop/target/forge-gui-desktop-*-jar-with-dependencies.jar forge-gui-desktop/target/forge.jar
+
+      - name: Package Win/Mac/Linux with Conveyor
+        uses: hydraulic-software/conveyor/actions/build@v20.0
+        with:
+          command: make site
+          signing_key: ${{ secrets.SIGNING_KEY }}
+          agree_to_license: 1
+          # Point the build at whatever repo it runs in (works on forks), and pin
+          # the update site to the fixed daily-snapshots prerelease tag rather than
+          # /releases/latest/download (which resolves to the latest *stable* release).
+          extra_flags: >-
+            -Kapp.vcs-url=github.com/${{ github.repository }}
+            -Kapp.site.base-url=https://github.com/${{ github.repository }}/releases/download/daily-snapshots
+
+      - name: Move rolling daily-snapshots tag
+        run: |
+          git tag -f daily-snapshots "$GITHUB_SHA"
+          git push origin -f daily-snapshots
+
+      - name: Publish to daily-snapshots prerelease
+        uses: ncipollo/release-action@v1
+        with:
+          name: Conveyor Daily Snapshot
+          tag: daily-snapshots
+          prerelease: true
+          artifacts: output/*
+          allowUpdates: true
+          removeArtifacts: true
