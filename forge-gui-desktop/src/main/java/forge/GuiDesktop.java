@@ -85,9 +85,21 @@ public class GuiDesktop implements IGuiBase {
 
     @Override
     public String getAssetsDir() {
-        return StringUtils.containsIgnoreCase(BuildInfo.getVersionString(), "git") ?
-                // FIXME: replace this hardcoded value!!
-                "../forge-gui/" : "";
+        if (StringUtils.containsIgnoreCase(BuildInfo.getVersionString(), "git")) {
+            // FIXME: replace this hardcoded value!!
+            return "../forge-gui/";
+        }
+        // Native packaging (jpackage) launches with an arbitrary working directory, so locate
+        // res/ next to the running jar rather than relative to the cwd.
+        try {
+            File dir = new File(GuiDesktop.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
+            if (dir != null && new File(dir, "res").isDirectory()) {
+                return dir.getAbsolutePath() + File.separator;
+            }
+        } catch (Exception e) {
+            // fall through to cwd-relative lookup
+        }
+        return "";
     }
 
     @Override
