@@ -1,0 +1,103 @@
+name: jpackage Desktop Snapshot (prototype)
+
+# Prototype: build native desktop installers with jpackage on each platform's own
+# runner (Windows .exe, macOS .dmg, Linux .deb), each bundling a JRE, and keep the
+# existing portable .tar.bz2 alongside them. No IzPack jar is published here.
+#
+# Publishing is additive (removeArtifacts: false) so a parallel Android workflow's
+# APK + version.txt/build.txt on the same daily-snapshots release stay intact.
+
+on:
+  push:
+    branches: [conveyor-snapshot-prototype]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+          - os: windows-latest
+            platform: windows
+          - os: macos-latest
+            platform: mac
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Install WiX (jpackage's Windows installer backend)
+        if: matrix.platform == 'windows'
+        run: choco install wixtoolset -y
+
+      - name: Install virtual framebuffer (headless GUI build on Linux)
+        if: matrix.platform == 'linux'
+        run: command -v Xvfb >/dev/null 2>&1 || { sudo apt update && sudo apt install -y xvfb; }
+
+      # Builds the desktop fat jar, and on Linux the .tar.bz2 we keep shipping.
+      - name: Build fat jar (+ tarball)
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "linux" ]; then export DISPLAY=":1"; Xvfb :1 -screen 0 800x600x8 & fi
+          mvn -U -B -P windows-linux -pl forge-installer -am clean install -DskipTests -T 1C
+
+      - name: Assemble jpackage input (three fat jars + res)
+        shell: bash
+        run: |
+          mkdir -p jpkg/input
+          cp forge-gui-desktop/target/forge-gui-desktop-*-jar-with-dependencies.jar jpkg/input/
+          cp forge-gui-mobile-dev/target/forge-gui-mobile-dev-*-jar-with-dependencies.jar jpkg/input/
+          cp adventure-editor/target/adventure-editor-jar-with-dependencies.jar jpkg/input/
+          cp -r forge-gui/res jpkg/input/res
+
+      - name: jpackage
+        shell: bash
+        run: bash .github/scripts/jpackage.sh ${{ matrix.platform }}
+
+      - name: Stage artifacts
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp jpkg/out/* dist/ 2>/dev/null || true
+          if [ "${{ matrix.platform }}" = "linux" ]; then cp forge-installer/target/*.tar.bz2 dist/ 2>/dev/null || true; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform }}
+          path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Move rolling daily-snapshots tag
+        run: |
+          git tag -f daily-snapshots "$GITHUB_SHA"
+          git push origin -f daily-snapshots
+
+      - name: Publish installers + tarball to daily-snapshots
+        uses: ncipollo/release-action@v1
+        with:
+          name: jpackage Daily Snapshot
+          tag: daily-snapshots
+          prerelease: true
+          artifacts: dist/**/*
+          allowUpdates: true
+          removeArtifacts: false
+          replacesArtifacts: true
