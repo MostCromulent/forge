@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           if [ "${{ matrix.platform }}" = "linux" ]; then export DISPLAY=":1"; Xvfb :1 -screen 0 800x600x8 & fi
-          mvn -U -B -P windows-linux -pl forge-installer -am clean install -DskipTests -T 1C
+          mvn -U -B -P windows-linux -pl forge-installer,adventure-editor -am clean install -DskipTests -T 1C
 
       - name: Assemble jpackage input (three fat jars + res)
         shell: bash
