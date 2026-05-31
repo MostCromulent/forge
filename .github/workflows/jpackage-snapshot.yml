@@ -7,9 +7,10 @@ name: jpackage Desktop Snapshot
 # Versioning is deliberately split (see the `version` job):
 #   * app-version  = 2.0.<YYDDD>  -- an invisible, monotonic MSI/deb upgrade key, so each
 #                    day's install cleanly upgrades the previous one.
-#   * human version = 2.0.13-SNAPSHOT-<YYYYMMDD>  -- keeps the release anchor + a readable
-#                    date; used for the installer filenames and version.txt. The app itself
-#                    already reports 2.0.13-SNAPSHOT from its jar manifest, untouched.
+#   * human version = 2.0.13-SNAPSHOT  -- the release anchor; used for the installer filenames
+#                    and version.txt. Stable across a release cycle, so each run replaces the
+#                    previous file (no accumulation). The app already reports this from its jar
+#                    manifest, untouched.
 #
 # Each runner builds the fat jars (Linux also builds forge-installer for the tarball), then
 # .github/scripts/jpackage.sh produces the installer and renames it to the human version.
@@ -36,8 +37,9 @@ jobs:
           VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
           # Invisible monotonic upgrade key: <major>.<minor>.<YYDDD> (each field <= 65535, MSI-legal).
           echo "app=${VC%.*}.$(date -u +%y%j)" >> "$GITHUB_OUTPUT"
-          # Human-facing version: release anchor + full date.
-          echo "human=${VC}-SNAPSHOT-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          # Human-facing version = the release anchor. Stable across a release cycle, so each
+          # run replaces the previous installer (no accumulation on the rolling release).
+          echo "human=${VC}-SNAPSHOT" >> "$GITHUB_OUTPUT"
 
   build:
     needs: version

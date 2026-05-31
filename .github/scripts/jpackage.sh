@@ -15,12 +15,12 @@
 set -euo pipefail
 
 PLATFORM="$1"
-# VERSION is the invisible monotonic upgrade key (major.minor.YYDDD, MSI-legal); HUMAN keeps the
-# release anchor + date for the filename. The workflow passes both; the fallbacks derive from the
+# VERSION is the invisible monotonic upgrade key (major.minor.YYDDD, MSI-legal); HUMAN is the
+# release anchor used for the filename. The workflow passes both; the fallbacks derive from the
 # pom versionCode for local runs. The app reports 2.0.13-SNAPSHOT from its jar manifest regardless.
 VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
 VERSION="${FORGE_VERSION:-${VC%.*}.$(date -u +%y%j)}"
-HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT-$(date -u +%Y%m%d)}"
+HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT}"
 VENDOR="Card Forge"
 DESCRIPTION="Forge - an open-source Magic: The Gathering rules engine"
 INPUT="jpkg/input"; IMG="jpkg/image"; OUT="jpkg/out"
