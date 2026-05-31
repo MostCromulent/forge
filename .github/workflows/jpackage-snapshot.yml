@@ -7,10 +7,10 @@ name: jpackage Desktop Snapshot
 # Versioning is deliberately split (see the `version` job):
 #   * app-version  = <major>.<minor>.<YYDDD>  -- an invisible, monotonic MSI/deb upgrade key,
 #                    so each day's install cleanly upgrades the previous one.
-#   * human version = <release>-SNAPSHOT  -- the release anchor; used for the installer filenames
-#                    and version.txt. Stable across a release cycle, so each run replaces the
-#                    previous file (no accumulation). The app already reports this from its jar
-#                    manifest, untouched.
+#   * human version = <release>-SNAPSHOT-<MM.dd>  -- matches Forge's snapshot filename convention
+#                    (forge-installer-<release>-SNAPSHOT-<MM.dd>); used for the installer filenames
+#                    and version.txt. The app reports its -SNAPSHOT version from its jar manifest,
+#                    untouched.
 #
 # Each runner builds the fat jars (Linux also builds forge-installer for the tarball), then
 # .github/scripts/jpackage.sh produces the installer and renames it to the human version.
@@ -38,9 +38,9 @@ jobs:
           VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
           # Invisible monotonic upgrade key: <major>.<minor>.<YYDDD> (each field <= 65535, MSI-legal).
           echo "app=${VC%.*}.$(date -u +%y%j)" >> "$GITHUB_OUTPUT"
-          # Human-facing version = the release anchor. Stable across a release cycle, so each
-          # run replaces the previous installer (no accumulation on the rolling release).
-          echo "human=${VC}-SNAPSHOT" >> "$GITHUB_OUTPUT"
+          # Human version = release anchor + MM.dd, matching Forge's snapshot filename convention
+          # (forge-installer-<release>-SNAPSHOT-<MM.dd>); removeArtifacts wipes yesterday's set.
+          echo "human=${VC}-SNAPSHOT-$(date -u +%m.%d)" >> "$GITHUB_OUTPUT"
 
   build:
     needs: version
@@ -117,7 +117,8 @@ jobs:
           # The tarball and the build timestamp (for the updater) only need to come from one
           # runner; the Linux job already builds forge-installer.
           if [ "${{ matrix.platform }}" = "linux" ]; then
-            cp forge-installer/target/*.tar.bz2 dist/ 2>/dev/null || true
+            # Match the dated convention: forge-installer-<release>-SNAPSHOT-<MM.dd>.tar.bz2
+            cp forge-installer/target/forge-installer-*.tar.bz2 "dist/forge-installer-${FORGE_HUMAN_VERSION}.tar.bz2" 2>/dev/null || true
             cp forge-gui-desktop/target/classes/build.txt dist/ 2>/dev/null || true
           fi
 

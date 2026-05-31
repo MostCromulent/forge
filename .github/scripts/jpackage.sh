@@ -16,11 +16,13 @@ set -euo pipefail
 
 PLATFORM="$1"
 # VERSION is the invisible monotonic upgrade key (major.minor.YYDDD, MSI-legal); HUMAN is the
-# release anchor used for the filename. The workflow passes both; the fallbacks derive from the
-# pom versionCode for local runs. The app reports its -SNAPSHOT version from its jar manifest regardless.
+# release anchor + MM.dd date for the filename, matching Forge's snapshot convention
+# (forge-installer-<release>-SNAPSHOT-<MM.dd>). The workflow passes both; the fallbacks derive
+# from the pom versionCode for local runs. The app reports its -SNAPSHOT version from its jar
+# manifest regardless.
 VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
 VERSION="${FORGE_VERSION:-${VC%.*}.$(date -u +%y%j)}"
-HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT}"
+HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT-$(date -u +%m.%d)}"
 VENDOR="Card Forge"
 DESCRIPTION="Forge - an open-source Magic: The Gathering rules engine"
 INPUT="jpkg/input"; IMG="jpkg/image"; OUT="jpkg/out"
@@ -80,11 +82,12 @@ esac
 # EXTRA_ARGS may be empty (mac); guard the expansion for macOS's bash 3.2 under `set -u`.
 jpackage --type "$TYPE" --app-image "$IMAGEPATH" --name Forge "${COMMON_ARGS[@]}" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} --dest "$OUT"
 
-# Rename the installer to the human version. The MSI/deb internal version stays VERSION (the
-# monotonic upgrade key); only the filename carries the readable, release-anchored name.
+# Rename to Forge's snapshot convention: forge-installer-<release>-SNAPSHOT-<MM.dd>.<ext>. The
+# MSI/deb internal version stays VERSION (the monotonic upgrade key); only the filename carries
+# the readable, release-anchored name.
 case "$PLATFORM" in
-  windows) mv "$OUT"/Forge-*.exe       "$OUT/Forge-$HUMAN.exe" ;;
-  mac)     mv "$OUT"/Forge-*.dmg       "$OUT/Forge-$HUMAN.dmg" ;;
-  linux)   mv "$OUT"/forge_*_amd64.deb "$OUT/forge_${HUMAN}_amd64.deb" ;;
+  windows) mv "$OUT"/Forge-*.exe       "$OUT/forge-installer-$HUMAN.exe" ;;
+  mac)     mv "$OUT"/Forge-*.dmg       "$OUT/forge-installer-$HUMAN.dmg" ;;
+  linux)   mv "$OUT"/forge_*_amd64.deb "$OUT/forge-installer-$HUMAN.deb" ;;
 esac
 ls -lh "$OUT"

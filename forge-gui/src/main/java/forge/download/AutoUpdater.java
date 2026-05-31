@@ -164,16 +164,16 @@ public class AutoUpdater {
         }
     }
 
-    // The snapshot installers are published under the human version from version.txt
-    // (the release-anchored -SNAPSHOT version): Forge-<v>.exe, Forge-<v>.dmg, forge_<v>_amd64.deb
+    // Snapshot installers follow Forge's naming, forge-installer-<version>.<ext>, where version
+    // (from version.txt) is the release-anchored -SNAPSHOT-<MM.dd> string.
     private String snapshotInstallerName() {
         String v = version.trim();
         if (OperatingSystem.isWindows()) {
-            return "Forge-" + v + ".exe";
+            return "forge-installer-" + v + ".exe";
         } else if (OperatingSystem.isMac()) {
-            return "Forge-" + v + ".dmg";
+            return "forge-installer-" + v + ".dmg";
         }
-        return "forge_" + v + "_amd64.deb";
+        return "forge-installer-" + v + ".deb";
     }
 
     private void extractVersionFromMavenRelease() throws MalformedURLException {
