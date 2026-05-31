@@ -90,7 +90,7 @@ public class GuiDesktop implements IGuiBase {
             return "../forge-gui/";
         }
         // Native packaging (jpackage) launches with an arbitrary working directory, so locate
-        // res/ next to the running jar rather than relative to the cwd.
+        // res/ next to the running jar rather than relative to the cwd
         try {
             File dir = new File(GuiDesktop.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getParentFile();
             if (dir != null && new File(dir, "res").isDirectory()) {

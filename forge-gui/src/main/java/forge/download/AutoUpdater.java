@@ -164,8 +164,8 @@ public class AutoUpdater {
         }
     }
 
-    // The snapshot channel now ships native jpackage installers, named with the numeric
-    // version (jpackage strips -SNAPSHOT): Forge-<v>.exe / Forge-<v>.dmg / forge_<v>-1_amd64.deb.
+    // The snapshot channel ships native jpackage installers named with the numeric version
+    // (jpackage strips -SNAPSHOT): Forge-<v>.exe, Forge-<v>.dmg, forge_<v>-1_amd64.deb
     private String snapshotInstallerName() {
         String v = version.replaceAll("-SNAPSHOT.*$", "").trim();
         if (OperatingSystem.isWindows()) {

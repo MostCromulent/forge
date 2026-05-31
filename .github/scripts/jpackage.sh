@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Build a native Forge installer bundling all three launchers, each isolated to
-# its own uber-jar (matching Forge's per-app `java -jar X` model).
-# Usage: jpackage.sh <linux|windows|mac>
-# Expects jpkg/input to already contain the three uber-jars + res/.
+# Build a native Forge installer (Windows .exe / macOS .dmg / Linux .deb) that bundles
+# all three launchers -- Forge, Forge Adventure, Adventure Editor -- plus a JRE.
+#
+# Usage: jpackage.sh <linux|windows|mac>   (run on a matching OS runner; jpackage cannot
+# cross-build). Expects jpkg/input to already hold the three uber-jars + res/.
+#
+# Done in three steps because of a jpackage quirk: --add-launcher puts EVERY jar in
+# --input on EVERY launcher's classpath, and added launchers inherit the primary's
+# main-class. Forge's three apps are independent shaded uber-jars, so a shared classpath
+# would collide. So we:
+#   1. build an app-image with all three launchers (classpath shared at this point),
+#   2. rewrite each launcher's .cfg to load only its own uber-jar + main-class (isolate_cfg.py),
+#   3. wrap that corrected app-image into the native installer.
 set -euo pipefail
 
 PLATFORM="$1"
@@ -29,7 +38,8 @@ EDITOR_JAR="$(cd "$INPUT" && ls adventure-editor-jar-with-dependencies.jar)"
 sed -e "s|PLACEHOLDER_ADV_JAR|$ADV_JAR|"       -e "s|PLACEHOLDER_ICON|$ICON|" .github/scripts/launchers/adventure.properties > jpkg/adventure.properties
 sed -e "s|PLACEHOLDER_EDITOR_JAR|$EDITOR_JAR|" -e "s|PLACEHOLDER_ICON|$ICON|" .github/scripts/launchers/editor.properties    > jpkg/editor.properties
 
-# 1. App-image with the three launchers (jpackage shares the classpath here; fixed in step 2).
+# 1. App-image with the three launchers. All three uber-jars land on every launcher's
+#    classpath here (jpackage limitation); step 2 corrects that.
 jpackage --type app-image --name Forge --app-version "$VERSION" --input "$INPUT" \
   --vendor "$VENDOR" --description "$DESCRIPTION" --copyright "$VENDOR" --icon "$ICON" \
   --main-jar "$DESKTOP_JAR" --main-class forge.view.Main \

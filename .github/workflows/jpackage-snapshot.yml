@@ -1,15 +1,17 @@
-name: jpackage Desktop Snapshot (prototype)
+name: jpackage Desktop Snapshot
 
-# Prototype: build native desktop installers with jpackage on each platform's own
-# runner (Windows .exe, macOS .dmg, Linux .deb), each bundling a JRE, and keep the
-# existing portable .tar.bz2 alongside them. No IzPack jar is published here.
+# Builds native desktop installers with jpackage on each platform's own runner
+# (Windows .exe, macOS .dmg, Linux .deb), each bundling a JRE, and keeps the existing
+# portable .tar.bz2 alongside them. No IzPack jar is published here.
 #
-# Publishing is additive (removeArtifacts: false) so a parallel Android workflow's
-# APK + version.txt/build.txt on the same daily-snapshots release stay intact.
+# Each runner builds the fat jars (Linux also builds forge-installer for the tarball),
+# then .github/scripts/jpackage.sh turns them into the native installer. Publishing is
+# additive (removeArtifacts: false) so a parallel Android workflow's APK +
+# version.txt/build.txt on the same daily-snapshots release are left intact.
 
 on:
   push:
-    branches: [conveyor-snapshot-prototype]
+    branches: [jpackage-desktop-installers]
   workflow_dispatch:
 
 jobs:
