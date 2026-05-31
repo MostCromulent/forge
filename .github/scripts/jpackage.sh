@@ -62,5 +62,6 @@ case "$PLATFORM" in
     TYPE=dmg
     EXTRA_ARGS=() ;;
 esac
-jpackage --type "$TYPE" --app-image "$IMAGEPATH" --name Forge "${COMMON_ARGS[@]}" "${EXTRA_ARGS[@]}" --dest "$OUT"
+# EXTRA_ARGS may be empty (mac); guard the expansion for macOS's bash 3.2 under `set -u`.
+jpackage --type "$TYPE" --app-image "$IMAGEPATH" --name Forge "${COMMON_ARGS[@]}" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} --dest "$OUT"
 ls -lh "$OUT"
