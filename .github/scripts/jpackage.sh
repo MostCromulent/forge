@@ -17,7 +17,7 @@ set -euo pipefail
 PLATFORM="$1"
 # VERSION is the invisible monotonic upgrade key (major.minor.YYDDD, MSI-legal); HUMAN is the
 # release anchor used for the filename. The workflow passes both; the fallbacks derive from the
-# pom versionCode for local runs. The app reports 2.0.13-SNAPSHOT from its jar manifest regardless.
+# pom versionCode for local runs. The app reports its -SNAPSHOT version from its jar manifest regardless.
 VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
 VERSION="${FORGE_VERSION:-${VC%.*}.$(date -u +%y%j)}"
 HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT}"

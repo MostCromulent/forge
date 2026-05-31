@@ -5,9 +5,9 @@ name: jpackage Desktop Snapshot
 # portable .tar.bz2 alongside them. No IzPack jar is published here.
 #
 # Versioning is deliberately split (see the `version` job):
-#   * app-version  = 2.0.<YYDDD>  -- an invisible, monotonic MSI/deb upgrade key, so each
-#                    day's install cleanly upgrades the previous one.
-#   * human version = 2.0.13-SNAPSHOT  -- the release anchor; used for the installer filenames
+#   * app-version  = <major>.<minor>.<YYDDD>  -- an invisible, monotonic MSI/deb upgrade key,
+#                    so each day's install cleanly upgrades the previous one.
+#   * human version = <release>-SNAPSHOT  -- the release anchor; used for the installer filenames
 #                    and version.txt. Stable across a release cycle, so each run replaces the
 #                    previous file (no accumulation). The app already reports this from its jar
 #                    manifest, untouched.

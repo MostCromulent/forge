@@ -165,7 +165,7 @@ public class AutoUpdater {
     }
 
     // The snapshot installers are published under the human version from version.txt
-    // (e.g. 2.0.13-SNAPSHOT-20260531): Forge-<v>.exe, Forge-<v>.dmg, forge_<v>_amd64.deb
+    // (the release-anchored -SNAPSHOT version): Forge-<v>.exe, Forge-<v>.dmg, forge_<v>_amd64.deb
     private String snapshotInstallerName() {
         String v = version.trim();
         if (OperatingSystem.isWindows()) {
