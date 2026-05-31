@@ -14,9 +14,10 @@ name: jpackage Desktop Snapshot
 #
 # Each runner builds the fat jars (Linux also builds forge-installer for the tarball), then
 # .github/scripts/jpackage.sh produces the installer and renames it to the human version.
-# Publishing is additive (removeArtifacts: false). NOTE: we now publish version.txt/build.txt
-# for the in-app updater -- in production these must be merged with the Android workflow's
-# copies in a single combined publish rather than overwriting each other.
+# The publish wipes and re-adds the rolling release each run (removeArtifacts: true), matching
+# today's snapshot workflow, so it always holds exactly the latest set. version.txt/build.txt
+# are published for the in-app updater. NOTE: in production this must be a single combined
+# desktop+Android publish (as snapshot-both-pc-android.yml is today) so the wipe re-adds the APK.
 
 on:
   push:
@@ -153,5 +154,4 @@ jobs:
           prerelease: true
           artifacts: dist/**/*
           allowUpdates: true
-          removeArtifacts: false
-          replacesArtifacts: true
+          removeArtifacts: true
