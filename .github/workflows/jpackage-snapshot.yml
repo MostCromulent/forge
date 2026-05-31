@@ -55,14 +55,22 @@ jobs:
             mvn -U -B -pl forge-gui-desktop,forge-gui-mobile-dev,adventure-editor -am clean install -DskipTests -T 1C
           fi
 
-      - name: Assemble jpackage input (three fat jars + res)
+      - name: Assemble jpackage input (three fat jars + res, cardsfolder zipped)
         shell: bash
         run: |
-          mkdir -p jpkg/input
+          REPO="$PWD"
+          mkdir -p jpkg/input/res/cardsfolder
           cp forge-gui-desktop/target/forge-gui-desktop-*-jar-with-dependencies.jar jpkg/input/
           cp forge-gui-mobile-dev/target/forge-gui-mobile-dev-*-jar-with-dependencies.jar jpkg/input/
           cp adventure-editor/target/adventure-editor-jar-with-dependencies.jar jpkg/input/
-          cp -r forge-gui/res jpkg/input/res
+          # Ship cardsfolder as a single zip (matches the IzPack/dmg builds; Forge reads
+          # res/cardsfolder/cardsfolder.zip). Removes ~30k loose files that dominate
+          # jpackage packaging time on macOS/Windows.
+          for item in forge-gui/res/*; do
+            [ "$(basename "$item")" = "cardsfolder" ] && continue
+            cp -r "$item" jpkg/input/res/
+          done
+          ( cd forge-gui/res/cardsfolder && jar cMf "$REPO/jpkg/input/res/cardsfolder/cardsfolder.zip" . )
 
       - name: jpackage
         shell: bash
