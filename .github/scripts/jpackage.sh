@@ -6,7 +6,9 @@
 set -euo pipefail
 
 PLATFORM="$1"
-VERSION="${FORGE_VERSION:-2.0.13}"   # jpackage requires a clean numeric version (no -SNAPSHOT)
+# jpackage needs a clean numeric version; derive from the pom versionCode so the installer
+# filename matches what the in-app updater computes (it strips -SNAPSHOT from version.txt).
+VERSION="${FORGE_VERSION:-$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)}"
 VENDOR="Card Forge"
 DESCRIPTION="Forge - an open-source Magic: The Gathering rules engine"
 INPUT="jpkg/input"; IMG="jpkg/image"; OUT="jpkg/out"

@@ -160,8 +160,20 @@ public class AutoUpdater {
         if (updateChannel.equalsIgnoreCase(localizer.getMessageorUseDefault("lblRelease", "Release"))) {
             packageUrl = RELEASE_URL + "forge/forge-gui-desktop/" + version + "/forge-gui-desktop-" + version + ".tar.bz2";
         } else {
-            packageUrl = GITHUB_SNAPSHOT_URL + "forge-installer-" + version + ".jar";
+            packageUrl = GITHUB_SNAPSHOT_URL + snapshotInstallerName();
         }
+    }
+
+    // The snapshot channel now ships native jpackage installers, named with the numeric
+    // version (jpackage strips -SNAPSHOT): Forge-<v>.exe / Forge-<v>.dmg / forge_<v>-1_amd64.deb.
+    private String snapshotInstallerName() {
+        String v = version.replaceAll("-SNAPSHOT.*$", "").trim();
+        if (OperatingSystem.isWindows()) {
+            return "Forge-" + v + ".exe";
+        } else if (OperatingSystem.isMac()) {
+            return "Forge-" + v + ".dmg";
+        }
+        return "forge_" + v + "-1_amd64.deb";
     }
 
     private void extractVersionFromMavenRelease() throws MalformedURLException {
@@ -215,7 +227,7 @@ public class AutoUpdater {
                 GuiBase.getInterface().download(new GuiDownloadZipService("Auto Updater", localizer.getMessage("lblNewVersionDownloading"), packageUrl, System.getProperty("user.home") + "/Downloads/", null, null) {
                     @Override
                     public void downloadAndUnzip() {
-                        packagePath = download(version + "-upgrade.jar");
+                        packagePath = download(packageUrl.substring(packageUrl.lastIndexOf('/') + 1));
                         if (packagePath != null) {
                             restartAndUpdate(packagePath);
                         }
@@ -235,7 +247,8 @@ public class AutoUpdater {
                 try {
                     File installer = new File(packagePath);
                     if (installer.exists()) {
-                        if (packagePath.endsWith(".jar")) {
+                        String lower = packagePath.toLowerCase();
+                        if (lower.endsWith(".exe") || lower.endsWith(".dmg") || lower.endsWith(".deb") || lower.endsWith(".jar")) {
                             installer.setExecutable(true, false);
                             desktop.open(installer);
                         } else {
