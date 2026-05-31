@@ -4,10 +4,18 @@ name: jpackage Desktop Snapshot
 # (Windows .exe, macOS .dmg, Linux .deb), each bundling a JRE, and keeps the existing
 # portable .tar.bz2 alongside them. No IzPack jar is published here.
 #
-# Each runner builds the fat jars (Linux also builds forge-installer for the tarball),
-# then .github/scripts/jpackage.sh turns them into the native installer. Publishing is
-# additive (removeArtifacts: false) so a parallel Android workflow's APK +
-# version.txt/build.txt on the same daily-snapshots release are left intact.
+# Versioning is deliberately split (see the `version` job):
+#   * app-version  = 2.0.<YYDDD>  -- an invisible, monotonic MSI/deb upgrade key, so each
+#                    day's install cleanly upgrades the previous one.
+#   * human version = 2.0.13-SNAPSHOT-<YYYYMMDD>  -- keeps the release anchor + a readable
+#                    date; used for the installer filenames and version.txt. The app itself
+#                    already reports 2.0.13-SNAPSHOT from its jar manifest, untouched.
+#
+# Each runner builds the fat jars (Linux also builds forge-installer for the tarball), then
+# .github/scripts/jpackage.sh produces the installer and renames it to the human version.
+# Publishing is additive (removeArtifacts: false). NOTE: we now publish version.txt/build.txt
+# for the in-app updater -- in production these must be merged with the Android workflow's
+# copies in a single combined publish rather than overwriting each other.
 
 on:
   push:
@@ -15,7 +23,24 @@ on:
   workflow_dispatch:
 
 jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      app: ${{ steps.v.outputs.app }}
+      human: ${{ steps.v.outputs.human }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        shell: bash
+        run: |
+          VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
+          # Invisible monotonic upgrade key: <major>.<minor>.<YYDDD> (each field <= 65535, MSI-legal).
+          echo "app=${VC%.*}.$(date -u +%y%j)" >> "$GITHUB_OUTPUT"
+          # Human-facing version: release anchor + full date.
+          echo "human=${VC}-SNAPSHOT-$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: version
     strategy:
       fail-fast: false
       matrix:
@@ -27,6 +52,9 @@ jobs:
           - os: macos-latest
             platform: mac
     runs-on: ${{ matrix.os }}
+    env:
+      FORGE_VERSION: ${{ needs.version.outputs.app }}
+      FORGE_HUMAN_VERSION: ${{ needs.version.outputs.human }}
     steps:
       - uses: actions/checkout@v4
 
@@ -83,7 +111,12 @@ jobs:
         run: |
           mkdir -p dist
           cp jpkg/out/* dist/ 2>/dev/null || true
-          if [ "${{ matrix.platform }}" = "linux" ]; then cp forge-installer/target/*.tar.bz2 dist/ 2>/dev/null || true; fi
+          # The tarball and the build timestamp (for the updater) only need to come from one
+          # runner; the Linux job already builds forge-installer.
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            cp forge-installer/target/*.tar.bz2 dist/ 2>/dev/null || true
+            cp forge-gui-desktop/target/classes/build.txt dist/ 2>/dev/null || true
+          fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -91,7 +124,7 @@ jobs:
           path: dist/
 
   publish:
-    needs: build
+    needs: [version, build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -101,6 +134,9 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
+
+      - name: Write version.txt (human version the in-app updater resolves)
+        run: echo "${{ needs.version.outputs.human }}" > dist/version.txt
 
       - name: Move rolling daily-snapshots tag
         run: |

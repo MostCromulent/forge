@@ -15,9 +15,12 @@
 set -euo pipefail
 
 PLATFORM="$1"
-# jpackage needs a clean numeric version; derive from the pom versionCode so the installer
-# filename matches what the in-app updater computes (it strips -SNAPSHOT from version.txt).
-VERSION="${FORGE_VERSION:-$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)}"
+# VERSION is the invisible monotonic upgrade key (major.minor.YYDDD, MSI-legal); HUMAN keeps the
+# release anchor + date for the filename. The workflow passes both; the fallbacks derive from the
+# pom versionCode for local runs. The app reports 2.0.13-SNAPSHOT from its jar manifest regardless.
+VC=$(sed -n 's/.*<versionCode>\(.*\)<\/versionCode>.*/\1/p' pom.xml | head -1)
+VERSION="${FORGE_VERSION:-${VC%.*}.$(date -u +%y%j)}"
+HUMAN="${FORGE_HUMAN_VERSION:-${VC}-SNAPSHOT-$(date -u +%Y%m%d)}"
 VENDOR="Card Forge"
 DESCRIPTION="Forge - an open-source Magic: The Gathering rules engine"
 INPUT="jpkg/input"; IMG="jpkg/image"; OUT="jpkg/out"
@@ -76,4 +79,12 @@ case "$PLATFORM" in
 esac
 # EXTRA_ARGS may be empty (mac); guard the expansion for macOS's bash 3.2 under `set -u`.
 jpackage --type "$TYPE" --app-image "$IMAGEPATH" --name Forge "${COMMON_ARGS[@]}" ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"} --dest "$OUT"
+
+# Rename the installer to the human version. The MSI/deb internal version stays VERSION (the
+# monotonic upgrade key); only the filename carries the readable, release-anchored name.
+case "$PLATFORM" in
+  windows) mv "$OUT"/Forge-*.exe       "$OUT/Forge-$HUMAN.exe" ;;
+  mac)     mv "$OUT"/Forge-*.dmg       "$OUT/Forge-$HUMAN.dmg" ;;
+  linux)   mv "$OUT"/forge_*_amd64.deb "$OUT/forge_${HUMAN}_amd64.deb" ;;
+esac
 ls -lh "$OUT"
