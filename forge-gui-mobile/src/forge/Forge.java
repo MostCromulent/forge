@@ -161,7 +161,7 @@ public class Forge implements ApplicationListener {
     }
 
     private ForgePreferences getForgePreferences() {
-        return GuiBase.getForgePrefs();
+        return FModel.getPreferences();
     }
     public static Localizer getLocalizer() {
         if (localizer == null)

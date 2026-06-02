@@ -110,6 +110,8 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_TOKENS_IN_SEPARATE_ROW("false"),
         UI_SCALE_LARGER ("true"),
         UI_RENDER_BLACK_BORDERS ("true"),
+        UI_SHOW_ACTIONABLE_HIGHLIGHTS ("false"),
+        UI_ACTIONABLE_HIGHLIGHT_COLOR ("66CCFF"),
         UI_LARGE_CARD_VIEWERS ("false"),
         UI_RANDOM_ART_IN_POOLS ("true"),
         UI_COMPACT_PROMPT ("false"),
@@ -256,10 +258,11 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         PRELOAD_CUSTOM_DRAFTS ("false"),
 
         DECK_DEFAULT_CARD_LIMIT ("4"),
+        DECKGEN_CARDBASED ("true"),
         DECKGEN_SINGLETONS ("false"),
         DECKGEN_ARTIFACTS ("false"),
         DECKGEN_NOSMALL ("false"),
-        DECKGEN_CARDBASED ("true"),
+        DECKGEN_MAXIMUM_COMMANDER_BRACKET("5"),
 
         PHASE_AI_UPKEEP ("false"),
         PHASE_AI_DRAW ("false"),
@@ -286,7 +289,6 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         PHASE_HUMAN_MAIN2 ("true"),
         PHASE_HUMAN_EOT ("false"),
         PHASE_HUMAN_CLEANUP ("false"),
-        PROMPT_FOR_AUTOSELL ("true"),
 
         ZONE_LOC_HUMAN_HAND(""),
         ZONE_LOC_HUMAN_LIBRARY(""),
@@ -332,7 +334,10 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         SHORTCUT_PANELTABS("17 84"),
         SHORTCUT_CARDOVERLAYS("17 79"),
 
-        LAST_IMPORTED_CUBE_ID("");
+        LAST_IMPORTED_CUBE_ID(""),
+
+        PROMPT_FOR_AUTOSELL ("true"),
+        ADV_COMMANDER_AUTOSELL_VARIANT("true");
 
         private final String strDefaultVal;
 
