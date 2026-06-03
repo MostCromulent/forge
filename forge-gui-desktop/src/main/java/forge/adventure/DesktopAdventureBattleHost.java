@@ -228,7 +228,8 @@ public class DesktopAdventureBattleHost {
             });
 
             // Unbounded on purpose: this is paced by the human actually playing the match out.
-            while (!hostedMatch.getGame().getMatch().isMatchOver()) {
+            // Read through getMatch(), not getGame(): returning to home clears the current game, but the Match persists.
+            while (!hostedMatch.getMatch().isMatchOver()) {
                 Thread.sleep(100);
             }
 
@@ -240,7 +241,7 @@ public class DesktopAdventureBattleHost {
                 Thread.sleep(100);
             }
 
-            result.humanWon = humanPlayer == hostedMatch.getGame().getMatch().getWinner();
+            result.humanWon = humanPlayer == hostedMatch.getMatch().getWinner();
 
             List<PlayerControllerHuman> humans = hostedMatch.getHumanControllers();
             if (!humans.isEmpty()) {

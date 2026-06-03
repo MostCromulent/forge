@@ -13,6 +13,7 @@ import javax.swing.SwingUtilities;
 import forge.gui.GuiBase;
 import org.apache.commons.lang3.StringUtils;
 
+import forge.adventure.DesktopAdventureBattleHost;
 import forge.game.GameLogEntry;
 import forge.game.GameLogEntryType;
 import forge.game.GameView;
@@ -125,6 +126,8 @@ public class ViewWinLose implements IWinLoseView<FButton> {
         btnQuit.setText(localizer.getMessage("btnQuitMatch"));
         btnQuit.setFont(FSkin.getRelativeFont(22));
         btnContinue.setEnabled(!game0.isMatchOver());
+        // The desktop only hosts a single battle for the Adventure process; starting a new match would strand it.
+        btnRestart.setEnabled(!DesktopAdventureBattleHost.isBattleInProgress());
 
         // Assemble game log scroller.
         final FTextArea txtLog = new FTextArea();
@@ -167,9 +170,7 @@ public class ViewWinLose implements IWinLoseView<FButton> {
 
         final String constraints = "w 300px!, h 50px!, gap 0 0 20px 0";
         pnlButtons.add(btnContinue, constraints);
-        if (game0.getGameType() != forge.game.GameType.Adventure) {
-            pnlButtons.add(btnRestart, constraints);
-        }
+        pnlButtons.add(btnRestart, constraints);
         pnlButtons.add(btnQuit, constraints);
         pnlLeft.add(pnlButtons, "w 100%!");
 
