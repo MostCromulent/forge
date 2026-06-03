@@ -38,7 +38,8 @@ import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
 import forge.game.zone.ZoneType;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.game.VoteKind;
+import forge.gamemodes.match.VoteTally;
 import forge.gamemodes.match.YieldMarker;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.match.HostedMatch;
@@ -105,9 +106,16 @@ public class MatchController extends NetworkGuiGame {
     private VDrawOfferDialog drawOfferDialog;
 
     @Override
-    public void updateDrawOffer(final DrawOfferMessage.Status update) {
+    public void updateVoteTally(final VoteTally update) {
+        if (update.kind() == VoteKind.NEXT_GAME) {
+            final ViewWinLose winLose = view.getViewWinLose();
+            if (winLose != null) {
+                winLose.getControl().updateNextGameTally(update);
+            }
+            return;
+        }
         FThreads.invokeInEdtNowOrLater(() -> {
-            if (update.result() != null) {
+            if (update.outcome() != null) {
                 if (drawOfferDialog == null) { drawOfferDialog = new VDrawOfferDialog(); }
                 drawOfferDialog.showResult(update);
                 drawOfferDialog = null;

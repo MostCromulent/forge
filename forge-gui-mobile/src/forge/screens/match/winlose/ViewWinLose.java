@@ -39,6 +39,7 @@ public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
     private final FTextArea txtLog;
     private final OutcomesPanel pnlOutcomes;
     private final GameView game;
+    private final ControlWinLose control;
 
     public ViewWinLose(final GameView game0) {
         super(FSkinColor.get(Colors.CLR_OVERLAY).alphaColor(0.75f));
@@ -117,10 +118,26 @@ public class ViewWinLose extends FOverlay implements IWinLoseView<FButton> {
         if (control == null) {
             control = new ControlWinLose(this, game0);
         }
+        this.control = control;
 
         showGameOutcomeSummary();
         showPlayerScores();
         control.showRewards();
+    }
+
+    public ControlWinLose getControl() {
+        return control;
+    }
+
+    /** Enable/disable the continue and new-match buttons (used while waiting on other players' votes). */
+    public void setNextGameButtonsEnabled(final boolean enabled) {
+        btnContinue.setEnabled(enabled && !game.isMatchOver());
+        btnRestart.setEnabled(enabled);
+    }
+
+    /** Show the live next-game vote tally in the stats line, one entry per voter. */
+    public void renderVoteTally(final List<String> lines) {
+        lblStats.setText(String.join("    ", lines));
     }
 
     private String composeTitle(final GameView game) {

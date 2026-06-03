@@ -5,8 +5,8 @@ import forge.game.phase.PhaseType;
 import forge.game.player.PlayerView;
 import forge.game.player.actions.PlayerAction;
 import forge.game.spellability.SpellAbilityView;
-import forge.gamemodes.match.DrawOfferMessage;
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.net.GameProtocolSender;
@@ -91,8 +91,8 @@ public class NetGameController implements IGameController {
     }
 
     @Override
-    public void nextGameDecision(final NextGameDecision decision) {
-        send(ProtocolMethod.nextGameDecision, decision);
+    public void castVote(final VoteKind kind, final VoteChoice choice) {
+        send(ProtocolMethod.castVote, kind, choice);
     }
 
     @Override
@@ -109,11 +109,6 @@ public class NetGameController implements IGameController {
     @Override
     public void concede() {
         send(ProtocolMethod.concede);
-    }
-
-    @Override
-    public void drawOfferAction(final DrawOfferMessage.Action action) {
-        send(ProtocolMethod.drawOfferAction, action);
     }
 
     @Override

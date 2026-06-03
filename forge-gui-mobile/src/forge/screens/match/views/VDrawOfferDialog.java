@@ -6,9 +6,11 @@ import java.util.List;
 import com.badlogic.gdx.utils.Align;
 
 import forge.Forge;
-import forge.game.DrawOffer;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.game.player.PlayerView;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.gamemodes.match.VoteOutcome;
+import forge.gamemodes.match.VoteTally;
 import forge.screens.match.MatchController;
 import forge.toolbox.FButton;
 import forge.toolbox.FDialog;
@@ -36,7 +38,7 @@ public class VDrawOfferDialog extends FDialog {
         super(Forge.getLocalizer().getMessage("lblOfferDrawTitle"), 0);
     }
 
-    public void refresh(final DrawOfferMessage.Status update, final PlayerView localResponder) {
+    public void refresh(final VoteTally update, final PlayerView localResponder) {
         this.localResponder = localResponder;
         clearBody();
         addTally(update);
@@ -49,11 +51,11 @@ public class VDrawOfferDialog extends FDialog {
         present();
     }
 
-    public void showResult(final DrawOfferMessage.Status update) {
+    public void showResult(final VoteTally update) {
         clearBody();
         addTally(update);
         body.add(add(new FLabel.Builder()
-                .text(update.result() == DrawOfferMessage.Result.ACCEPTED
+                .text(update.outcome() == VoteOutcome.ACCEPTED
                         ? Forge.getLocalizer().getMessage("lblDrawAccepted")
                         : Forge.getLocalizer().getMessage("lblDrawDeclined"))
                 .align(Align.left)
@@ -62,14 +64,14 @@ public class VDrawOfferDialog extends FDialog {
         present();
     }
 
-    private void addTally(final DrawOfferMessage.Status update) {
+    private void addTally(final VoteTally update) {
         body.add(add(new FLabel.Builder()
-                .text(Forge.getLocalizer().getMessage("lblDrawOfferedBy", update.offerer().getName()))
+                .text(Forge.getLocalizer().getMessage("lblDrawOfferedBy", update.initiator().getName()))
                 .align(Align.left)
                 .build()));
-        for (final DrawOfferMessage.Entry entry : update.entries()) {
+        for (final VoteTally.Entry entry : update.entries()) {
             body.add(add(new FLabel.Builder()
-                    .text(entry.player().getName() + ": " + voteText(entry.vote()))
+                    .text(entry.player().getName() + ": " + voteText(entry.choice()))
                     .align(Align.left)
                     .build()));
         }
@@ -97,16 +99,16 @@ public class VDrawOfferDialog extends FDialog {
     }
 
     private void respond(final boolean accept) {
-        MatchController.instance.getGameController(localResponder).drawOfferAction(
-                accept ? DrawOfferMessage.Action.ACCEPT : DrawOfferMessage.Action.DECLINE);
+        MatchController.instance.getGameController(localResponder).castVote(
+                VoteKind.DRAW_OFFER, accept ? VoteChoice.ACCEPT : VoteChoice.DECLINE);
         hide();
     }
 
-    private static String voteText(final DrawOffer.Vote vote) {
-        return switch (vote) {
-            case ACCEPTED -> Forge.getLocalizer().getMessage("lblAccept");
-            case DECLINED -> Forge.getLocalizer().getMessage("lblDecline");
-            case PENDING -> Forge.getLocalizer().getMessage("lblDrawPending");
+    private static String voteText(final VoteChoice choice) {
+        return switch (choice) {
+            case ACCEPT -> Forge.getLocalizer().getMessage("lblAccept");
+            case DECLINE -> Forge.getLocalizer().getMessage("lblDecline");
+            default -> Forge.getLocalizer().getMessage("lblDrawPending");
         };
     }
 

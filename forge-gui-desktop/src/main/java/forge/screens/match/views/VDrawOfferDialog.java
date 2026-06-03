@@ -2,9 +2,11 @@ package forge.screens.match.views;
 
 import javax.swing.SwingConstants;
 
-import forge.game.DrawOffer;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.game.player.PlayerView;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.gamemodes.match.VoteOutcome;
+import forge.gamemodes.match.VoteTally;
 import forge.gui.UiCommand;
 import forge.screens.match.CMatchUI;
 import forge.toolbox.FButton;
@@ -36,7 +38,7 @@ public class VDrawOfferDialog extends FDialog {
     }
 
     /** Rebuild the tally for {@code update}; show Accept/Decline if {@code localResponder} still owes a vote. */
-    public void refresh(final DrawOfferMessage.Status update, final PlayerView localResponder) {
+    public void refresh(final VoteTally update, final PlayerView localResponder) {
         this.localResponder = localResponder;
         final Localizer localizer = Localizer.getInstance();
         removeBody();
@@ -66,16 +68,16 @@ public class VDrawOfferDialog extends FDialog {
         finishLayout(y);
     }
 
-    private int addTally(final DrawOfferMessage.Status update, final Localizer localizer, int y) {
+    private int addTally(final VoteTally update, final Localizer localizer, int y) {
         final int w = WIDTH - 2 * PADDING;
         final FLabel header = new FLabel.Builder()
-                .text(localizer.getMessage("lblDrawOfferedBy", update.offerer().getName()))
+                .text(localizer.getMessage("lblDrawOfferedBy", update.initiator().getName()))
                 .fontAlign(SwingConstants.LEFT).build();
         add(header, PADDING, y, w, ROW_HEIGHT);
         y += ROW_HEIGHT + 4;
-        for (final DrawOfferMessage.Entry entry : update.entries()) {
+        for (final VoteTally.Entry entry : update.entries()) {
             final FLabel row = new FLabel.Builder()
-                    .text(entry.player().getName() + ": " + voteText(entry.vote(), localizer))
+                    .text(entry.player().getName() + ": " + voteText(entry.choice(), localizer))
                     .fontSize(12).fontAlign(SwingConstants.LEFT).build();
             add(row, PADDING, y, w, ROW_HEIGHT);
             y += ROW_HEIGHT;
@@ -84,7 +86,7 @@ public class VDrawOfferDialog extends FDialog {
     }
 
     /** Render the final tally and outcome; stays open until the player dismisses it. */
-    public void showResult(final DrawOfferMessage.Status update) {
+    public void showResult(final VoteTally update) {
         final Localizer localizer = Localizer.getInstance();
         removeBody();
 
@@ -92,7 +94,7 @@ public class VDrawOfferDialog extends FDialog {
         int y = addTally(update, localizer, PADDING);
 
         y += 6;
-        final String msg = update.result() == DrawOfferMessage.Result.ACCEPTED
+        final String msg = update.outcome() == VoteOutcome.ACCEPTED
                 ? localizer.getMessage("lblDrawAccepted")
                 : localizer.getMessage("lblDrawDeclined");
         final FLabel result = new FLabel.Builder()
@@ -111,15 +113,15 @@ public class VDrawOfferDialog extends FDialog {
     }
 
     private void respond(final boolean accept) {
-        matchUI.getGameController(localResponder).drawOfferAction(accept ? DrawOfferMessage.Action.ACCEPT : DrawOfferMessage.Action.DECLINE);
+        matchUI.getGameController(localResponder).castVote(VoteKind.DRAW_OFFER, accept ? VoteChoice.ACCEPT : VoteChoice.DECLINE);
         setVisible(false);
     }
 
-    private String voteText(final DrawOffer.Vote vote, final Localizer localizer) {
-        return switch (vote) {
-            case ACCEPTED -> localizer.getMessage("lblAccept");
-            case DECLINED -> localizer.getMessage("lblDecline");
-            case PENDING -> localizer.getMessage("lblDrawPending");
+    private String voteText(final VoteChoice choice, final Localizer localizer) {
+        return switch (choice) {
+            case ACCEPT -> localizer.getMessage("lblAccept");
+            case DECLINE -> localizer.getMessage("lblDecline");
+            default -> localizer.getMessage("lblDrawPending");
         };
     }
 

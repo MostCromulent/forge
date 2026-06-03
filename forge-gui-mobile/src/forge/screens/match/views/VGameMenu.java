@@ -2,7 +2,8 @@ package forge.screens.match.views;
 
 import forge.Forge;
 import forge.assets.FSkinImage;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldUpdate;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -28,7 +29,7 @@ public class VGameMenu extends FDropDownMenu {
         // the game thread is busy (a frozen thread would never drain a queued task). It's applied
         // off-thread like concede, safe because a human acts only while the game thread is parked at priority.
         addItem(new FMenuItem(Forge.getLocalizer().getMessage("lblOfferDraw"), FSkinImage.OFFERDRAW, e ->
-                MatchController.instance.getGameController().drawOfferAction(DrawOfferMessage.Action.OFFER)
+                MatchController.instance.getGameController().castVote(VoteKind.DRAW_OFFER, VoteChoice.OFFER)
         ));
         /*addItem(new FMenuItem("Save Game", FSkinImage.SAVE, new FEventHandler() {
             @Override

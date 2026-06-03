@@ -136,7 +136,7 @@ public class Game {
     private final Match match;
     private GameStage age = GameStage.BeforeMulligan;
     private GameOutcome outcome;
-    private DrawOffer drawOffer;
+    private VoteSession activeVote;
 
     private final Game maingame;
     private final GameView view;
@@ -158,11 +158,11 @@ public class Game {
         startingPlayer = p;
     }
 
-    public DrawOffer getDrawOffer() {
-        return drawOffer;
+    public VoteSession getActiveVote() {
+        return activeVote;
     }
-    public void setDrawOffer(final DrawOffer drawOffer) {
-        this.drawOffer = drawOffer;
+    public void setActiveVote(final VoteSession activeVote) {
+        this.activeVote = activeVote;
     }
 
     public Player getMonarch() {

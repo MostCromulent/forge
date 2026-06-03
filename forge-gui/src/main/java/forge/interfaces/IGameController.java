@@ -5,8 +5,8 @@ import java.util.List;
 import forge.game.card.CardView;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
-import forge.gamemodes.match.DrawOfferMessage;
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldUpdate;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -21,7 +21,7 @@ public interface IGameController {
 
     void concede();
 
-    void drawOfferAction(DrawOfferMessage.Action action);
+    void castVote(VoteKind kind, VoteChoice choice);
 
     void alphaStrike();
 
@@ -42,8 +42,6 @@ public interface IGameController {
     IDevModeCheats cheat();
 
     IMacroSystem macros();
-
-    void nextGameDecision(NextGameDecision decision);
 
     String getActivateDescription(CardView card);
 

@@ -27,7 +27,8 @@ import com.google.common.primitives.Ints;
 
 import forge.Singletons;
 import forge.control.KeyboardShortcuts;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.YieldController;
 import forge.gui.UiCommand;
 import forge.gui.framework.EDocID;
@@ -106,7 +107,7 @@ public class CDock implements ICDoc {
                 Map.entry(DockButtonId.ALPHA_STRIKE,   () -> matchUI.getGameController().alphaStrike()),
                 Map.entry(DockButtonId.TARGETING,      this::toggleTargeting),
                 Map.entry(DockButtonId.AUTO_YIELDS,    () -> new VAutoYieldsAndTriggers(matchUI).showDialog()),
-                Map.entry(DockButtonId.OFFER_DRAW,     () -> matchUI.getGameController().drawOfferAction(DrawOfferMessage.Action.OFFER)));
+                Map.entry(DockButtonId.OFFER_DRAW,     () -> matchUI.getGameController().castVote(VoteKind.DRAW_OFFER, VoteChoice.OFFER)));
         commands.forEach((id, cmd) -> view.getButton(id).setCommand(cmd));
 
         update();

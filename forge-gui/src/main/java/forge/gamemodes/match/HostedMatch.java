@@ -2,7 +2,6 @@ package forge.gamemodes.match;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
 import com.google.common.eventbus.Subscribe;
@@ -61,7 +60,6 @@ public class HostedMatch {
     private int humanCount;
     private FControlGamePlayback playbackControl = null;
     private final MatchUiEventVisitor visitor = new MatchUiEventVisitor();
-    private final Map<PlayerControllerHuman, NextGameDecision> nextGameDecisions = Maps.newHashMap();
     private boolean isMatchOver = false;
     public int subGameCount = 0;
 
@@ -166,7 +164,6 @@ public class HostedMatch {
     }
 
     public void startGame() {
-        nextGameDecisions.clear();
         SoundSystem.instance.setBackgroundMusic(this.matchPlaylist == null ? MusicPlaylist.MATCH : this.matchPlaylist);
 
         game = match.createGame();
@@ -325,13 +322,13 @@ public class HostedMatch {
                         if (isMatchOver) {
                             // Leave match-end overview open for spectator.
                         } else {
-                            addNextGameDecision(null, NextGameDecision.CONTINUE);
+                            addNextGameDecision(null, VoteChoice.CONTINUE);
                         }
                     });
                 } else if (isMatchOver) {
-                    addNextGameDecision(null, NextGameDecision.QUIT);
+                    addNextGameDecision(null, VoteChoice.QUIT);
                 } else {
-                    addNextGameDecision(null, NextGameDecision.CONTINUE);
+                    addNextGameDecision(null, VoteChoice.CONTINUE);
                 }
             }
         });
@@ -526,8 +523,8 @@ public class HostedMatch {
         }
     }
 
-    private void addNextGameDecision(final PlayerControllerHuman controller, final NextGameDecision decision) {
-        if (decision == NextGameDecision.QUIT) {
+    private void addNextGameDecision(final PlayerControllerHuman controller, final VoteChoice choice) {
+        if (choice == VoteChoice.QUIT) {
             FThreads.invokeInEdtNowOrLater(() -> {
                 endCurrentGame();
                 isMatchOver = true;
@@ -538,28 +535,52 @@ public class HostedMatch {
             return; // if any player chooses quit, quit the match
         }
 
-        nextGameDecisions.put(controller, decision);
-        if (nextGameDecisions.size() < humanControllers.size()) {
+        if (controller == null) {
+            // AI-only / programmatic: no human voters to wait on.
+            applyNextGameOutcome(choice == VoteChoice.NEW ? VoteOutcome.RESTART : VoteOutcome.CONTINUE);
             return;
         }
 
-        int newMatch = 0, continueMatch = 0;
-        for (final NextGameDecision dec : nextGameDecisions.values()) {
-            switch (dec) {
-            case CONTINUE:
-                continueMatch++;
-                break;
-            case NEW:
-                newMatch++;
-                break;
-            default:
-            }
+        final VoteSession session = ensureNextGameVote();
+        if (session == null) {
+            return;
         }
+        session.record(controller.getPlayer(), choice);
+        VoteCoordinator.broadcast(game, session, null);
 
-        if (continueMatch >= newMatch) {
-            FThreads.invokeInEdtNowOrLater(this::continueMatch);
-        } else {
+        final VoteOutcome outcome = new NextGameVoteResolver().resolve(session);
+        if (outcome == null) {
+            return; // still waiting on other players
+        }
+        VoteCoordinator.broadcast(game, session, outcome);
+        game.setActiveVote(null);
+        applyNextGameOutcome(outcome);
+    }
+
+    /** Open the next-game vote on the first ballot; voters are the human players in the finished game. */
+    private VoteSession ensureNextGameVote() {
+        if (game == null) {
+            return null;
+        }
+        VoteSession session = game.getActiveVote();
+        if (session == null || session.getKind() != VoteKind.NEXT_GAME) {
+            final List<Player> voters = new ArrayList<>();
+            for (final Player p : game.getRegisteredPlayers()) {
+                if (p.getController() instanceof PlayerControllerHuman) {
+                    voters.add(p);
+                }
+            }
+            session = new VoteSession(VoteKind.NEXT_GAME, null, voters);
+            game.setActiveVote(session);
+        }
+        return session;
+    }
+
+    private void applyNextGameOutcome(final VoteOutcome outcome) {
+        if (outcome == VoteOutcome.RESTART) {
             FThreads.invokeInEdtNowOrLater(this::restartMatch);
+        } else {
+            FThreads.invokeInEdtNowOrLater(this::continueMatch);
         }
     }
 

@@ -4,7 +4,10 @@ import javax.swing.JButton;
 
 import forge.Singletons;
 import forge.game.GameView;
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
+import forge.gamemodes.match.VoteTally;
+import forge.gui.FThreads;
 import forge.gui.SOverlayUtils;
 import forge.gui.framework.FScreen;
 import forge.interfaces.IGameController;
@@ -13,7 +16,7 @@ import forge.interfaces.IGameController;
  * Default controller for a ViewWinLose object. This class can
  * be extended for various game modes to populate the custom
  * panel in the win/lose screen.
- *
+ * 
  */
 public class ControlWinLose {
     private final ViewWinLose view;
@@ -26,6 +29,7 @@ public class ControlWinLose {
         this.view = v;
         this.lastGame = game0;
         this.matchUI = matchUI;
+        matchUI.setActiveWinLose(this);
         addListeners();
     }
 
@@ -43,26 +47,45 @@ public class ControlWinLose {
 
     /** Action performed when "continue" button is pressed in default win/lose UI. */
     public void actionOnContinue() {
-        nextGameAction(NextGameDecision.CONTINUE);
+        castNextGameVote(VoteChoice.CONTINUE);
     }
 
     /** Action performed when "restart" button is pressed in default win/lose UI. */
     public void actionOnRestart() {
-        nextGameAction(NextGameDecision.NEW);
+        castNextGameVote(VoteChoice.NEW);
     }
 
     /** Action performed when "quit" button is pressed in default win/lose UI. */
     public void actionOnQuit() {
-        nextGameAction(NextGameDecision.QUIT);
+        saveOptions();
+        SOverlayUtils.hideOverlay();
+        for (final IGameController controller : matchUI.getOriginalGameControllers()) {
+            controller.castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
+        }
         Singletons.getControl().setCurrentScreen(FScreen.HOME_SCREEN);
     }
 
-    private void nextGameAction(final NextGameDecision decision) {
-        SOverlayUtils.hideOverlay();
+    /**
+     * Submit a continue/new-match vote and keep the screen up until every player has voted, so the
+     * live tally is visible. The overlay is torn down once the vote settles (see {@link #updateNextGameTally}).
+     */
+    private void castNextGameVote(final VoteChoice choice) {
         saveOptions();
+        view.setNextGameButtonsEnabled(false);
         for (final IGameController controller : matchUI.getOriginalGameControllers()) {
-            controller.nextGameDecision(decision);
+            controller.castVote(VoteKind.NEXT_GAME, choice);
         }
+    }
+
+    /** Render the live next-game tally; once the vote settles, dismiss the screen so the match can proceed. */
+    public void updateNextGameTally(final VoteTally update) {
+        FThreads.invokeInEdtNowOrLater(() -> {
+            if (update.outcome() != null) {
+                SOverlayUtils.hideOverlay();
+            } else {
+                view.renderVoteTally(update.tallyLines());
+            }
+        });
     }
 
     /**
@@ -79,7 +102,7 @@ public class ControlWinLose {
      * </p>
      * May be overridden as required by controllers for various game modes
      * to show custom information in center panel. Default configuration is empty.
-     * 
+     *
      * @return boolean, panel has contents or not.
      */
     public boolean populateCustomPanel() {

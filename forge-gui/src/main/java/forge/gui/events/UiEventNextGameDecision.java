@@ -1,9 +1,9 @@
 package forge.gui.events;
 
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
 import forge.player.PlayerControllerHuman;
 
-public record UiEventNextGameDecision(PlayerControllerHuman controller, NextGameDecision decision) implements UiEvent {
+public record UiEventNextGameDecision(PlayerControllerHuman controller, VoteChoice decision) implements UiEvent {
 
     @Override
     public <T> T visit(IUiEventVisitor<T> visitor) {

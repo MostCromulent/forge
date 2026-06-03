@@ -18,7 +18,8 @@ package forge.screens.match.winlose;
 
 import forge.game.GameView;
 import forge.game.player.PlayerView;
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestDraftUtils;
 import forge.model.FModel;
@@ -109,7 +110,7 @@ public class QuestDraftWinLose extends ControlWinLose {
                     //The player is probably not interested in watching more AI matches.
                     QuestDraftUtils.cancelFurtherMatches();
                 } else {
-                    MatchController.instance.getGameController().nextGameDecision(NextGameDecision.QUIT);
+                    MatchController.instance.getGameController().castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
                     controller.actionOnQuit();
                     QuestDraftUtils.matchInProgress = false;
                     QuestDraftUtils.continueMatches(MatchController.instance);

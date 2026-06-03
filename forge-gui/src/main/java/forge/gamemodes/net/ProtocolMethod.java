@@ -8,8 +8,9 @@ import forge.game.card.CardView;
 import forge.game.player.DelayedReveal;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
-import forge.gamemodes.match.DrawOfferMessage;
-import forge.gamemodes.match.NextGameDecision;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
+import forge.gamemodes.match.VoteTally;
 import forge.gamemodes.match.YieldUpdate;
 import forge.gui.interfaces.IGuiGame;
 import forge.gui.interfaces.IGuiGame.OrderResult;
@@ -37,7 +38,7 @@ public enum ProtocolMethod implements IHasForgeLog {
     afterGameEnd        (Mode.SERVER, Void.TYPE),
     showCombat          (Mode.SERVER, Void.TYPE),
     showPromptMessage   (Mode.SERVER, Void.TYPE, PlayerView.class, String.class, CardView.class),
-    updateDrawOffer     (Mode.SERVER, Void.TYPE, DrawOfferMessage.Status.class),
+    updateVoteTally     (Mode.SERVER, Void.TYPE, VoteTally.class),
     updateButtons       (Mode.SERVER, Void.TYPE, PlayerView.class, String.class, String.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE),
     flashIncorrectAction(Mode.SERVER, Void.TYPE),
     alertUser           (Mode.SERVER, Void.TYPE),
@@ -92,10 +93,9 @@ public enum ProtocolMethod implements IHasForgeLog {
     selectButtonCancel        (Mode.CLIENT, Void.TYPE),
     selectAbility             (Mode.CLIENT, Void.TYPE, SpellAbilityView.class),
     passPriority              (Mode.CLIENT, Void.TYPE),
-    nextGameDecision          (Mode.CLIENT, Void.TYPE, NextGameDecision.class),
     getActivateDescription    (Mode.CLIENT, String.class, CardView.class),
     concede                   (Mode.CLIENT, Void.TYPE),
-    drawOfferAction           (Mode.CLIENT, Void.TYPE, DrawOfferMessage.Action.class),
+    castVote                  (Mode.CLIENT, Void.TYPE, VoteKind.class, VoteChoice.class),
     alphaStrike               (Mode.CLIENT, Void.TYPE),
     reorderHand               (Mode.CLIENT, Void.TYPE, CardView.class, Integer.TYPE),
     requestResync             (Mode.CLIENT, Void.TYPE),

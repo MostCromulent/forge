@@ -3,14 +3,19 @@ package forge.screens.match.winlose;
 import forge.Forge;
 import forge.assets.FSkin;
 import forge.game.GameView;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.game.player.PlayerView;
+import forge.gamemodes.match.VoteTally;
+import forge.gui.FThreads;
+import forge.interfaces.IGameController;
 import forge.screens.match.MatchController;
 
 /** 
  * Default controller for a ViewWinLose object. This class can
  * be extended for various game modes to populate the custom
  * panel in the win/lose screen.
- *
+ * 
  */
 public class ControlWinLose {
     private final ViewWinLose view;
@@ -46,19 +51,12 @@ public class ControlWinLose {
 
     /** Action performed when "continue" button is pressed in default win/lose UI. */
     public void actionOnContinue() {
-        view.hide();
-        saveOptions();
-
-        try { MatchController.getHostedMatch().continueMatch();
-        } catch (NullPointerException e) {}
+        castNextGameVote(VoteChoice.CONTINUE);
     }
 
     /** Action performed when "restart" button is pressed in default win/lose UI. */
     public void actionOnRestart() {
-        view.hide();
-        saveOptions();
-        try { MatchController.getHostedMatch().restartMatch();
-        } catch (NullPointerException e) {}
+        castNextGameVote(VoteChoice.NEW);
     }
 
     /** Action performed when "quit" button is pressed in default win/lose UI. */
@@ -67,17 +65,42 @@ public class ControlWinLose {
         // Reset other stuff
         saveOptions();
         try {
-            if(MatchController.getHostedMatch().subGameCount > 0) {
+            if(MatchController.getHostedMatch() != null && MatchController.getHostedMatch().subGameCount > 0) {
                 openHomeScreen = true;
                 MatchController.getHostedMatch().subGameCount--;
             }
-            MatchController.getHostedMatch().endCurrentGame();
         } catch (NullPointerException e) {}
+        for (final IGameController controller : MatchController.instance.getOriginalGameControllers()) {
+            controller.castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
+        }
         view.hide();
         if (openHomeScreen || humancount == 0)
             Forge.openHomeScreen(Forge.lastButtonIndex, Forge.getCurrentScreen());
         //reset cursor
         Forge.setCursor(FSkin.getCursor().get(0), "0");
+    }
+
+    /**
+     * Submit a continue/new-match vote and keep the screen up until every player has voted, so the
+     * live tally is visible. The overlay is torn down once the vote settles (see {@link #updateNextGameTally}).
+     */
+    private void castNextGameVote(final VoteChoice choice) {
+        saveOptions();
+        view.setNextGameButtonsEnabled(false);
+        for (final IGameController controller : MatchController.instance.getOriginalGameControllers()) {
+            controller.castVote(VoteKind.NEXT_GAME, choice);
+        }
+    }
+
+    /** Render the live next-game tally; once the vote settles, dismiss the screen so the match can proceed. */
+    public void updateNextGameTally(final VoteTally update) {
+        FThreads.invokeInEdtNowOrLater(() -> {
+            if (update.outcome() != null) {
+                view.hide();
+            } else {
+                view.renderVoteTally(update.tallyLines());
+            }
+        });
     }
 
     /**
@@ -94,7 +117,7 @@ public class ControlWinLose {
      * </p>
      * May be overridden as required by controllers for various game modes
      * to show custom information in center panel. Default configuration is empty.
-     * 
+     *
      * @return boolean, panel has contents or not.
      */
     public void showRewards() {

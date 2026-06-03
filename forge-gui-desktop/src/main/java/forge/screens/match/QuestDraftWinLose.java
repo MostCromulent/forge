@@ -21,8 +21,9 @@ import java.awt.event.ActionListener;
 import com.google.common.collect.ImmutableList;
 
 import forge.game.GameView;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.game.player.PlayerView;
-import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestDraftUtils;
 import forge.localinstance.skin.FSkinProp;
@@ -121,7 +122,7 @@ public class QuestDraftWinLose extends ControlWinLose {
                     //The player is probably not interested in watching more AI matches.
                     QuestDraftUtils.cancelFurtherMatches();
                 } else {
-                    matchUI.getGameController().nextGameDecision(NextGameDecision.QUIT);
+                    matchUI.getGameController().castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
                     QuestDraftUtils.matchInProgress = false;
                     QuestDraftUtils.continueMatches(matchUI);
                 }

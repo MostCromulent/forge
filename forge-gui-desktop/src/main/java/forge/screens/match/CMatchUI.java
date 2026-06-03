@@ -66,7 +66,8 @@ import forge.game.spellability.SpellAbilityView;
 import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
 import forge.util.IHasForgeLog;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.game.VoteKind;
+import forge.gamemodes.match.VoteTally;
 import forge.gamemodes.match.YieldMarker;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.interfaces.IGameController;
@@ -238,11 +239,24 @@ public final class CMatchUI
     }
 
     private VDrawOfferDialog drawOfferDialog;
+    private ControlWinLose activeWinLose;
+
+    /** The win/lose controller forwards next-game vote tallies; registered while its screen is up. */
+    public void setActiveWinLose(final ControlWinLose control) {
+        this.activeWinLose = control;
+    }
 
     @Override
-    public void updateDrawOffer(final DrawOfferMessage.Status update) {
+    public void updateVoteTally(final VoteTally update) {
+        if (update.kind() == VoteKind.NEXT_GAME) {
+            final ControlWinLose win = activeWinLose;
+            if (win != null) {
+                win.updateNextGameTally(update);
+            }
+            return;
+        }
         FThreads.invokeInEdtNowOrLater(() -> {
-            if (update.result() != null) {
+            if (update.outcome() != null) {
                 if (drawOfferDialog == null) {
                     drawOfferDialog = new VDrawOfferDialog(this);
                 }

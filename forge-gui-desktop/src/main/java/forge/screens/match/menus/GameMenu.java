@@ -9,7 +9,8 @@ import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
 
 import forge.control.KeyboardShortcuts;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldUpdate;
 import forge.localinstance.properties.ForgePreferences;
@@ -85,7 +86,7 @@ public final class GameMenu {
     private SkinnedMenuItem getMenuItem_OfferDraw() {
         final Localizer localizer = Localizer.getInstance();
         final SkinnedMenuItem menuItem = new SkinnedMenuItem(localizer.getMessage("lblOfferDraw"));
-        menuItem.addActionListener(e -> matchUI.getGameController().drawOfferAction(DrawOfferMessage.Action.OFFER));
+        menuItem.addActionListener(e -> matchUI.getGameController().castVote(VoteKind.DRAW_OFFER, VoteChoice.OFFER));
         return menuItem;
     }
 

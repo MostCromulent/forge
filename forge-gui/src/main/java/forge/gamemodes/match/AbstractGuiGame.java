@@ -6,6 +6,8 @@ import forge.game.GameEntityView;
 import forge.game.GameEndReason;
 import forge.game.GameLog;
 import forge.game.GameView;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.game.card.CardView;
 import forge.game.card.CardView.CardStateView;
 import forge.game.event.GameEvent;
@@ -450,7 +452,7 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             ignoreConcedeChain = true;
             for (PlayerView player : getLocalPlayers()) {
                 if (!player.isAI()) {
-                    getGameController(player).nextGameDecision(NextGameDecision.QUIT);
+                    getGameController(player).castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
                 }
             }
             ignoreConcedeChain = false;
@@ -462,7 +464,7 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             spectator = null; //ensure we don't prompt again, including when calling nextGameDecision below
             if (!isGamePaused())
                 controller.selectButtonOk(); //pause
-            controller.nextGameDecision(NextGameDecision.QUIT);
+            controller.castVote(VoteKind.NEXT_GAME, VoteChoice.QUIT);
         }
         return false; //let logic above handle closing current screen
     }

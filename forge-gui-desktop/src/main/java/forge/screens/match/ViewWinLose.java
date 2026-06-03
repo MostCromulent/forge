@@ -47,6 +47,7 @@ public class ViewWinLose implements IWinLoseView<FButton> {
     private final SkinnedLabel lblTitle = new SkinnedLabel("WinLoseFrame > lblTitle needs updating.");
     private final SkinnedLabel lblStats = new SkinnedLabel("WinLoseFrame > lblStats needs updating.");
     private final JPanel pnlOutcomes = new JPanel(new MigLayout("wrap, ax center, ay center"));
+    private final JPanel pnlTally = new JPanel(new MigLayout("insets 0, wrap, ax center"));
 
     /**
      * String constraint parameters for title blocks and cardviewer blocks.
@@ -171,6 +172,9 @@ public class ViewWinLose implements IWinLoseView<FButton> {
         pnlButtons.add(btnQuit, constraints);
         pnlLeft.add(pnlButtons, "w 100%!");
 
+        pnlTally.setOpaque(false);
+        pnlLeft.add(pnlTally, "center");
+
         final JPanel pnlLog = new JPanel(new MigLayout("insets 0, wrap, ax center"));
         scrLog = new FScrollPane(txtLog, false);
         pnlLog.setOpaque(false);
@@ -248,6 +252,22 @@ public class ViewWinLose implements IWinLoseView<FButton> {
      */
     public SkinnedPanel getPnlCustom() {
         return this.pnlCustom;
+    }
+
+    /** Enable/disable the continue and new-match buttons (used while waiting on other players' votes). */
+    public void setNextGameButtonsEnabled(final boolean enabled) {
+        btnContinue.setEnabled(enabled && !game.isMatchOver());
+        btnRestart.setEnabled(enabled);
+    }
+
+    /** Replace the next-game vote tally with one line per voter. */
+    public void renderVoteTally(final List<String> lines) {
+        pnlTally.removeAll();
+        for (final String line : lines) {
+            pnlTally.add(new FLabel.Builder().text(line).fontSize(16).build(), "center, h 22!");
+        }
+        pnlTally.revalidate();
+        pnlTally.repaint();
     }
 
     private void showGameOutcomeSummary() {

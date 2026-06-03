@@ -57,10 +57,10 @@ import forge.game.zone.MagicStack;
 import forge.game.zone.PlayerZone;
 import forge.game.zone.Zone;
 import forge.game.zone.ZoneType;
+import forge.game.VoteChoice;
+import forge.game.VoteKind;
 import forge.gamemodes.match.DeclineScope;
-import forge.gamemodes.match.DrawOfferCoordinator;
-import forge.gamemodes.match.DrawOfferMessage;
-import forge.gamemodes.match.NextGameDecision;
+import forge.gamemodes.match.VoteCoordinator;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.match.input.*;
@@ -3598,11 +3598,16 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     }
 
     @Override
-    public void drawOfferAction(final DrawOfferMessage.Action action) {
-        switch (action) {
-            case OFFER -> DrawOfferCoordinator.offer(getGame(), player);
-            case ACCEPT -> DrawOfferCoordinator.respond(getGame(), player, true);
-            case DECLINE -> DrawOfferCoordinator.respond(getGame(), player, false);
+    public void castVote(final VoteKind kind, final VoteChoice choice) {
+        switch (kind) {
+            case DRAW_OFFER -> {
+                if (choice == VoteChoice.OFFER) {
+                    VoteCoordinator.offerDraw(getGame(), player);
+                } else {
+                    VoteCoordinator.respondDraw(getGame(), player, choice);
+                }
+            }
+            case NEXT_GAME -> gameView.getMatch().fireEvent(new UiEventNextGameDecision(this, choice));
         }
     }
 
@@ -3613,11 +3618,6 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public void cancelAwaitNextInput() {
         getGui().cancelAwaitNextInput();
-    }
-
-    @Override
-    public void nextGameDecision(final NextGameDecision decision) {
-        gameView.getMatch().fireEvent(new UiEventNextGameDecision(this, decision));
     }
 
     @Override

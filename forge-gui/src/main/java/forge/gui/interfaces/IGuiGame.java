@@ -15,7 +15,7 @@ import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
 import forge.game.zone.ZoneType;
-import forge.gamemodes.match.DrawOfferMessage;
+import forge.gamemodes.match.VoteTally;
 import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.match.input.InputConfirm;
 import forge.gamemodes.net.DeltaPacket;
@@ -76,8 +76,8 @@ public interface IGuiGame {
     }
     void showPromptMessage(PlayerView playerView, String message, CardView card);
 
-    /** Open or refresh the draw-offer dialog with the current tally. Default no-op for GUIs that don't render it. */
-    default void updateDrawOffer(DrawOfferMessage.Status update) { }
+    /** Open or refresh the vote tally (draw offer / next game). Default no-op for GUIs that don't render it. */
+    default void updateVoteTally(VoteTally update) { }
 
     default void updateButtons(final PlayerView owner, final boolean okEnabled, final boolean cancelEnabled, final boolean focusOk) {
         updateButtons(owner, Localizer.getInstance().getMessage("lblOK"), Localizer.getInstance().getMessage("lblCancel"), okEnabled, cancelEnabled, focusOk);
