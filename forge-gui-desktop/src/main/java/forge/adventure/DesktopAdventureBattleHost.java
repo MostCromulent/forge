@@ -156,6 +156,13 @@ public class DesktopAdventureBattleHost {
             humanPlayer.setTeamNumber(0);
             humanPlayer.setStartingLife(request.humanStartingLife);
             humanPlayer.setManaShards(request.humanManaShards);
+            humanPlayer.setStartingHand(request.humanStartingHand);
+            humanPlayer.setEnableETBCountersEffect(request.humanEnableETBCountersEffect);
+            humanPlayer.addExtraCardsOnBattlefield(IAdventureBattleHost.resolveCards(request.humanExtraCardsOnBattlefield));
+            humanPlayer.addExtraCardsInCommandZone(IAdventureBattleHost.resolveCards(request.humanExtraCardsInCommandZone));
+            if (request.assignConspiracies) {
+                humanPlayer.assignConspiracies();
+            }
 
             List<RegisteredPlayer> players = new ArrayList<>();
 
@@ -167,6 +174,14 @@ public class DesktopAdventureBattleHost {
                 aiPlayer.setPlayer(aiLobby);
                 aiPlayer.setTeamNumber(aiData.teamNumber);
                 aiPlayer.setStartingLife(aiData.startingLife);
+                aiPlayer.setStartingHand(aiData.startingHand);
+                aiPlayer.setManaShards(aiData.manaShards);
+                aiPlayer.setEnableETBCountersEffect(aiData.enableETBCountersEffect);
+                aiPlayer.addExtraCardsOnBattlefield(IAdventureBattleHost.resolveCards(aiData.extraCardsOnBattlefield));
+                aiPlayer.addExtraCardsInCommandZone(IAdventureBattleHost.resolveCards(aiData.extraCardsInCommandZone));
+                if (request.assignConspiracies) {
+                    aiPlayer.assignConspiracies();
+                }
 
                 players.add(aiPlayer);
             }

@@ -510,7 +510,8 @@ public class DuelScene extends ForgeScene {
                     players, humanPlayer, playerDeck, bossBattle, mainGameType,
                     eventData != null ? eventData.eventRules.gamesPerMatch : enemy.getData().gamesPerMatch,
                     enemy.getName(),
-                    eventData == null || eventData.eventRules.allowsShards);
+                    eventData == null || eventData.eventRules.allowsShards,
+                    eventData != null && eventData.draft != null);
             final String enemyName = enemy.getName();
             DesktopAdventureBridge.runBattle(params, new DesktopAdventureBridge.BattleResultListener() {
                 @Override public void onWaitStart() {

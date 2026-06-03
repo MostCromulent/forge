@@ -2,6 +2,10 @@ package forge.adventure;
 
 import forge.deck.Deck;
 import forge.deck.io.DeckSerializer;
+import forge.item.IPaperCard;
+import forge.item.PaperCard;
+import forge.item.PaperToken;
+import forge.model.FModel;
 import forge.util.FileUtil;
 
 import java.io.*;
@@ -156,6 +160,32 @@ public class IAdventureBattleHost {
         return DeckSerializer.fromFile(getAiDeckPath(index).toFile());
     }
 
+    /** Resolve serialized card names back to paper cards/tokens — mirrors EffectData's lookup, run on the desktop side. */
+    public static List<IPaperCard> resolveCards(List<String> names) {
+        List<IPaperCard> cards = new ArrayList<>();
+        if (names == null) {
+            return cards;
+        }
+        for (String name : names) {
+            PaperCard card = FModel.getMagicDb().getCommonCards().getCard(name);
+            if (card != null) {
+                cards.add(card);
+                continue;
+            }
+            try {
+                PaperToken token = FModel.getMagicDb().getAllTokens().getToken(name);
+                if (token != null) {
+                    cards.add(token);
+                } else {
+                    System.err.println("Adventure battle: cannot find card/token \"" + name + "\"");
+                }
+            } catch (Exception e) {
+                System.err.println("Adventure battle: cannot find card/token \"" + name + "\"");
+            }
+        }
+        return cards;
+    }
+
     /**
      * Data class representing a battle request from Adventure mode.
      */
@@ -166,6 +196,11 @@ public class IAdventureBattleHost {
         public int humanStartingLife;
         public int humanManaShards;
         public int humanAvatarIndex;
+        public int humanStartingHand;
+        public boolean humanEnableETBCountersEffect;
+        // Adventure effects (items, blessings, chaos extras) that start cards in play — must cross the IPC.
+        public List<String> humanExtraCardsOnBattlefield = new ArrayList<>();
+        public List<String> humanExtraCardsInCommandZone = new ArrayList<>();
 
         // aiPlayers.size() also tells the desktop how many AI deck files to load
         public List<AIPlayerData> aiPlayers = new ArrayList<>();
@@ -175,6 +210,7 @@ public class IAdventureBattleHost {
         public boolean playForAnte = false;
         public boolean matchAnteRarity = false;
         public boolean isBossBattle = false;
+        public boolean assignConspiracies = false;
 
         public String enemyName;
 
@@ -208,6 +244,12 @@ public class IAdventureBattleHost {
         public int startingLife;
         public int teamNumber;
         public String aiType;  // one of "Default", "Reckless", "Cautious", "Experimental", or ""
+        public int startingHand;
+        public int manaShards;
+        public boolean enableETBCountersEffect;
+        // Effect-granted cards the enemy starts the battle with (e.g. the monks' starting permanents).
+        public List<String> extraCardsOnBattlefield = new ArrayList<>();
+        public List<String> extraCardsInCommandZone = new ArrayList<>();
     }
 
     /**

@@ -1,14 +1,19 @@
 package forge.adventure;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.badlogic.gdx.Gdx;
 
 import forge.adventure.util.Current;
+import forge.ai.AiProfileUtil;
+import forge.ai.LobbyPlayerAi;
 import forge.deck.Deck;
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
+import forge.item.IPaperCard;
+import forge.item.PaperToken;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
 import forge.screens.LoadingOverlay;
@@ -59,6 +64,10 @@ public final class DesktopAdventureBridge {
         request.humanPlayerName = params.humanPlayer.getPlayer().getName();
         request.humanStartingLife = params.humanPlayer.getStartingLife();
         request.humanManaShards = params.humanPlayer.getManaShards();
+        request.humanStartingHand = params.humanPlayer.getStartingHand();
+        request.humanEnableETBCountersEffect = params.humanPlayer.hasEnableETBCountersEffect();
+        request.humanExtraCardsOnBattlefield = cardNames(params.humanPlayer.getCardsOnBattlefield());
+        request.humanExtraCardsInCommandZone = cardNames(params.humanPlayer.getExtraCardsInCommandZone());
 
         IAdventureBattleHost.saveHumanDeck(params.playerDeck);
 
@@ -74,7 +83,12 @@ public final class DesktopAdventureBridge {
             aiData.deckIndex = aiIndex;
             aiData.startingLife = p.getStartingLife();
             aiData.teamNumber = p.getTeamNumber();
-            aiData.aiType = "";
+            aiData.aiType = resolveAiProfile(p);
+            aiData.startingHand = p.getStartingHand();
+            aiData.manaShards = p.getManaShards();
+            aiData.enableETBCountersEffect = p.hasEnableETBCountersEffect();
+            aiData.extraCardsOnBattlefield = cardNames(p.getCardsOnBattlefield());
+            aiData.extraCardsInCommandZone = cardNames(p.getExtraCardsInCommandZone());
             request.aiPlayers.add(aiData);
             aiIndex++;
         }
@@ -85,7 +99,37 @@ public final class DesktopAdventureBridge {
         request.matchAnteRarity = FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ANTE_MATCH_RARITY);
         request.isBossBattle = params.bossBattle;
         request.enemyName = params.enemyName;
+        request.assignConspiracies = params.assignConspiracies;
         return request;
+    }
+
+    private static List<String> cardNames(final Iterable<? extends IPaperCard> cards) {
+        final List<String> names = new ArrayList<>();
+        if (cards != null) {
+            for (final IPaperCard card : cards) {
+                // Tokens resolve by script key (e.g. "komas_coil"), not display name — serialize that so
+                // the desktop's getToken() lookup matches. Regular cards round-trip fine via getName().
+                if (card instanceof PaperToken) {
+                    names.add(((PaperToken) card).getImageFilename(1).split("\\|")[0]);
+                } else {
+                    names.add(card.getName());
+                }
+            }
+        }
+        return names;
+    }
+
+    private static String resolveAiProfile(final RegisteredPlayer p) {
+        if (!(p.getPlayer() instanceof LobbyPlayerAi)) {
+            return "";
+        }
+        final String profile = ((LobbyPlayerAi) p.getPlayer()).getAiProfile();
+        // The desktop hosts the whole match, so a per-game "random" sentinel can't survive the freeze —
+        // resolve it to a concrete profile here, else the host falls back to hardcoded AI defaults.
+        if (AiProfileUtil.AI_PROFILE_RANDOM_DUEL.equals(profile) || AiProfileUtil.AI_PROFILE_RANDOM_MATCH.equals(profile)) {
+            return AiProfileUtil.getRandomProfile();
+        }
+        return profile;
     }
 
     private static void waitForResult(final BattleParams params, final BattleResultListener listener) {
@@ -137,10 +181,12 @@ public final class DesktopAdventureBridge {
         public final int gamesPerMatch;
         public final String enemyName;
         public final boolean allowsShards;
+        public final boolean assignConspiracies;
 
         public BattleParams(final List<RegisteredPlayer> players, final RegisteredPlayer humanPlayer,
                             final Deck playerDeck, final boolean bossBattle, final GameType gameType,
-                            final int gamesPerMatch, final String enemyName, final boolean allowsShards) {
+                            final int gamesPerMatch, final String enemyName, final boolean allowsShards,
+                            final boolean assignConspiracies) {
             this.players = players;
             this.humanPlayer = humanPlayer;
             this.playerDeck = playerDeck;
@@ -149,6 +195,7 @@ public final class DesktopAdventureBridge {
             this.gamesPerMatch = gamesPerMatch;
             this.enemyName = enemyName;
             this.allowsShards = allowsShards;
+            this.assignConspiracies = assignConspiracies;
         }
     }
 
