@@ -317,7 +317,11 @@ public final class SRearrangingUtil {
         // Falls back to original priority order if none qualify.
         if (tryFillGap(true)) { return; }
         if (tryFillGap(false)) { return; }
-        throw new UnsupportedOperationException("Gap was not filled.");
+        // Some layouts (e.g. pinwheel/L-shaped arrangements) leave a gap that no
+        // single neighbor can fill. This is purely cosmetic - the source cell is
+        // removed by the caller regardless - so don't let it abort the caller
+        // (it previously crashed finishGame() before the win/lose screen showed).
+        System.out.println("SRearrangingUtil: gap left by removed cell could not be filled; leaving layout as-is.");
     }
 
     private static boolean containsField(final List<DragCell> cells) {
