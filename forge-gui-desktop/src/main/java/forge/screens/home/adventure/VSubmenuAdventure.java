@@ -111,7 +111,7 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
 
         infoBox.add(lblTitle, "ax center, gap 0 0 0 15");
         infoBox.add(lblDescription, "ax center, w 600!, gap 0 0 0 25");
-        infoBox.add(btnStart, "ax center, w 200!, h 50!");
+        infoBox.add(btnStart, "ax center, w 260!, h 50!");
 
         container.setLayout(new BorderLayout());
         final JPanel wrapper = new JPanel(new MigLayout("ax center, ay center"));
