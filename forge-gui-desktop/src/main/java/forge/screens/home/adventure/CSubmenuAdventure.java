@@ -34,7 +34,7 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
     @Override
     public void update() {
         MenuUtil.setMenuProvider(this);
-        view.getBtnStart().setEnabled(!DesktopAdventureLauncher.isRunning());
+        view.setStartButtonRunning(DesktopAdventureLauncher.isRunning());
     }
 
     @Override
@@ -55,6 +55,6 @@ public enum CSubmenuAdventure implements ICDoc, IMenuProvider {
         }
 
         DesktopAdventureLauncher.launch();
-        view.getBtnStart().setEnabled(false);
+        view.setStartButtonRunning(true);
     }
 }

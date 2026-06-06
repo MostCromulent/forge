@@ -87,6 +87,12 @@ public enum VSubmenuAdventure implements IVSubmenu<CSubmenuAdventure> {
         return btnStart;
     }
 
+    /** Disables the launch button and swaps its label to a status while the Adventure process is running. */
+    public void setStartButtonRunning(final boolean running) {
+        btnStart.setEnabled(!running);
+        btnStart.setText(localizer.getMessage(running ? "lblAdventureRunning" : "lblStartAdventure"));
+    }
+
     @Override
     public void populate() {
         final JPanel container = VHomeUI.SINGLETON_INSTANCE.getPnlDisplay();

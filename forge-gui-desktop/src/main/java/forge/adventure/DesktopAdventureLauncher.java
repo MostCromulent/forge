@@ -318,7 +318,7 @@ public class DesktopAdventureLauncher {
         DesktopAdventureBattleHost.stopMonitoring();
         IAdventureBattleHost.purgeIpcDir();
         SwingUtilities.invokeLater(() ->
-            VSubmenuAdventure.SINGLETON_INSTANCE.getBtnStart().setEnabled(true));
+            VSubmenuAdventure.SINGLETON_INSTANCE.setStartButtonRunning(false));
         if (argFile != null) {
             try {
                 Files.deleteIfExists(argFile);
