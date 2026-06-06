@@ -2,6 +2,7 @@ package forge.app;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import org.lwjgl.glfw.GLFW;
 import forge.Forge;
 import forge.adventure.DesktopAdventureMode;
 import forge.interfaces.IDeviceAdapter;
@@ -31,7 +32,12 @@ public class Main {
             Forge.forceAdventureMode = true;
             DesktopAdventureMode.setFocusRequest(() -> {
                 if (Gdx.graphics instanceof Lwjgl3Graphics) {
-                    ((Lwjgl3Graphics) Gdx.graphics).getWindow().focusWindow();
+                    // Windows blocks glfwFocusWindow() from a background process; a brief floating
+                    // toggle raises the window without leaving it pinned.
+                    long handle = ((Lwjgl3Graphics) Gdx.graphics).getWindow().getWindowHandle();
+                    GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_TRUE);
+                    GLFW.glfwFocusWindow(handle);
+                    GLFW.glfwSetWindowAttrib(handle, GLFW.GLFW_FLOATING, GLFW.GLFW_FALSE);
                 }
             });
             System.out.println("Adventure Mode: Running in desktop adventure mode (battles use desktop UI)");

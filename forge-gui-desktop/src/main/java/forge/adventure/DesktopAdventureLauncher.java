@@ -65,8 +65,12 @@ public class DesktopAdventureLauncher {
                     if (frame.getState() == java.awt.Frame.ICONIFIED) {
                         frame.setState(java.awt.Frame.NORMAL);
                     }
+                    // Windows blocks toFront() from a background process; a brief always-on-top
+                    // toggle raises the window without leaving it pinned.
+                    frame.setAlwaysOnTop(true);
                     frame.toFront();
                     frame.requestFocus();
+                    frame.setAlwaysOnTop(false);
                 }
             });
 
