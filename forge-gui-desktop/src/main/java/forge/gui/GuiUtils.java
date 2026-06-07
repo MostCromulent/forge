@@ -20,6 +20,7 @@ package forge.gui;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontFormatException;
+import java.awt.GraphicsEnvironment;
 import java.io.File;
 import java.io.IOException;
 
@@ -74,6 +75,10 @@ public final class GuiUtils {
         if (!ttf.canDisplay(lang.canDisplayCheck())) {
             // Use the system default font if can't display the above character
             ttf = new JLabel().getFont();
+        } else {
+            // Register so Swing's HTML renderer can resolve the font by name; otherwise HTML
+            // labels fall back to a wider default font instead of the skin font.
+            GraphicsEnvironment.getLocalGraphicsEnvironment().registerFont(ttf);
         }
 
         return ttf;
