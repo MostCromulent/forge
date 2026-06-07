@@ -271,9 +271,8 @@ public class GuiChoose {
         return new OrderResult<>(null, false);
     }
 
-    public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, 
+    public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable,
 						    final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-	gui.setSelectables(manipulable, 0, 0);
 	@SuppressWarnings("Convert2Lambda") // Avoid lambdas to maintain compatibility with Android 5 API
     final Callable<List<CardView>> callable = new Callable<List<CardView>>() {
         @Override
@@ -287,7 +286,6 @@ public class GuiChoose {
     };
 	final FutureTask<List<CardView>> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);
-	gui.clearSelectables();
         try {
             List<CardView> result = ft.get();
             return result;
