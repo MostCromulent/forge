@@ -38,6 +38,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import forge.ImageCache;
 import forge.LobbyPlayer;
 import forge.Singletons;
@@ -1363,8 +1365,8 @@ public final class CMatchUI
     }
 
     @Override
-    public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-        return GuiChoose.manipulateCardList(this, title, cards, manipulable, toTop, toBottom, toAnywhere);
+    public ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(final String title, final Iterable<CardView> cards, final String topLabel, final String bottomLabel, final String dividerText) {
+        return GuiChoose.sortIntoTwoPiles(this, title, cards, topLabel, bottomLabel, dividerText);
     }
 
     @Override

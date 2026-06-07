@@ -992,26 +992,17 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         }
     }
 
-    public List<Card> manipulateCardList(final String title, final Iterable<Card> cards, final Iterable<Card> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-        GameEntityViewMap<Card, CardView> gameCacheManipulate = GameEntityView.getMap(cards);
-        gameCacheManipulate.putAll(manipulable);
-        List<CardView> views = getGui().manipulateCardList(title, CardView.getCollection(cards), CardView.getCollection(manipulable), toTop, toBottom, toAnywhere);
-        return gameCacheManipulate.addToList(views, new CardCollection());
-    }
-
-    public ImmutablePair<CardCollection, CardCollection> arrangeForMove(final String title, final FCollectionView<Card> cards, final List<Card> manipulable, final boolean topOK, final boolean bottomOK) {
-        List<Card> result = manipulateCardList(title, cards, manipulable, topOK, bottomOK, false);
-        CardCollection toBottom = new CardCollection();
-        CardCollection toTop = new CardCollection();
-        for (int i = 0; i < cards.size() && manipulable.contains(result.get(i)); i++) {
-            toTop.add(result.get(i));
+    private ImmutablePair<CardCollection, CardCollection> sortIntoTwoPiles(final String title, final CardCollectionView cards, final String topLabel, final String bottomLabel, final String dividerText) {
+        GameEntityViewMap<Card, CardView> gameCache = GameEntityView.getMap(cards);
+        ImmutablePair<List<CardView>, List<CardView>> piles = getGui().sortIntoTwoPiles(title, CardView.getCollection(cards), topLabel, bottomLabel, dividerText);
+        if (piles == null) {
+            return ImmutablePair.of(new CardCollection(cards), new CardCollection());
         }
-        if (toTop.size() < cards.size()) { // the top isn't everything
-            for (int i = result.size() - 1; i >= 0 && manipulable.contains(result.get(i)); i--) {
-                toBottom.add(result.get(i));
-            }
-        }
-        return ImmutablePair.of(toTop, toBottom);
+        CardCollection top = new CardCollection();
+        gameCache.addToList(piles.getLeft(), top);
+        CardCollection bottom = new CardCollection();
+        gameCache.addToList(piles.getRight(), bottom);
+        return ImmutablePair.of(top, bottom);
     }
 
     @Override
@@ -1020,15 +1011,20 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (remembered != null) {
             return remembered;
         }
+        if (topN.isEmpty()) { // scrying an empty library — nothing to arrange
+            return ImmutablePair.of(null, null);
+        }
 
         CardCollection toBottom = null;
         CardCollection toTop = null;
 
         tempShowCards(topN);
         if (FModel.getPreferences().getPrefBoolean(FPref.UI_SELECT_FROM_CARD_DISPLAYS) && !getGui().isLibgdxPort()) {
-            CardCollectionView cardList = player.getCardsIn(ZoneType.Library);
-            ImmutablePair<CardCollection, CardCollection> result =
-                    arrangeForMove(localizer.getMessage("lblMoveCardstoToporBbottomofLibrary"), cardList, topN, true, true);
+            final int rest = player.getCardsIn(ZoneType.Library).size() - topN.size();
+            ImmutablePair<CardCollection, CardCollection> result = sortIntoTwoPiles(
+                    localizer.getMessage("lblMoveCardstoToporBbottomofLibrary"), topN,
+                    localizer.getMessage("lblTopOfLibrary"), localizer.getMessage("lblBottomOfLibrary"),
+                    localizer.getMessage("lblNOtherCardsInLibrary", String.valueOf(rest)));
             toTop = result.getLeft();
             toBottom = result.getRight();
         } else if (topN.size() == 1) {
@@ -1069,7 +1065,13 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         CardCollection toTop = null;
 
         tempShowCards(topN);
-        if (topN.size() == 1) {
+        if (FModel.getPreferences().getPrefBoolean(FPref.UI_SELECT_FROM_CARD_DISPLAYS) && !getGui().isLibgdxPort()) {
+            ImmutablePair<CardCollection, CardCollection> piles = sortIntoTwoPiles(
+                    localizer.getMessage("lblMoveCardstoTopOrGraveyard"), topN,
+                    localizer.getMessage("lblTopOfLibrary"), localizer.getMessage("lblGraveyard"), null);
+            toTop = piles.getLeft();
+            toGrave = piles.getRight();
+        } else if (topN.size() == 1) {
             final Card c = topN.getFirst();
             final CardView view = CardView.get(c);
 

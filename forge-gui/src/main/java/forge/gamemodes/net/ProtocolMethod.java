@@ -1,5 +1,7 @@
 package forge.gamemodes.net;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.GameView;
@@ -63,7 +65,7 @@ public enum ProtocolMethod implements IHasForgeLog {
     sideboard           (Mode.SERVER, List.class, CardPool.class, CardPool.class, String.class),
     chooseSingleEntityForEffect(Mode.SERVER, GameEntityView.class, String.class, List.class, DelayedReveal.class, Boolean.TYPE),
     chooseEntitiesForEffect(Mode.SERVER, List.class, String.class, List.class, Integer.TYPE, Integer.TYPE, DelayedReveal.class),
-    manipulateCardList   (Mode.SERVER, List.class, String.class, Iterable.class, Iterable.class, Boolean.TYPE, Boolean.TYPE, Boolean.TYPE),
+    sortIntoTwoPiles     (Mode.SERVER, ImmutablePair.class, String.class, Iterable.class, String.class, String.class, String.class),
     setCard             (Mode.SERVER, Void.TYPE, CardView.class),
     setSelectables      (Mode.SERVER, Void.TYPE, Iterable/*CardView*/.class, Integer.TYPE, Integer.TYPE),
     clearSelectables    (Mode.SERVER, Void.TYPE),

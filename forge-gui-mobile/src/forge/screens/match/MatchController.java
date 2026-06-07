@@ -1,5 +1,7 @@
 package forge.screens.match;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -717,7 +719,7 @@ public class MatchController extends NetworkGuiGame {
     }
 
     @Override
-    public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
+    public ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(final String title, final Iterable<CardView> cards, final String topLabel, final String bottomLabel, final String dividerText) {
         System.err.println("Not implemented yet - should never be called");
         return null;
     }

@@ -33,6 +33,7 @@ import java.util.List;
 import javax.swing.JScrollBar;
 import javax.swing.WindowConstants;
 
+import forge.Singletons;
 import forge.game.card.CardView;
 import forge.screens.match.CMatchUI;
 import forge.toolbox.FButton;
@@ -40,25 +41,21 @@ import forge.toolbox.FSkin;
 import forge.util.Localizer;
 import forge.view.arcane.util.CardPanelMouseAdapter;
 
-// Modal dialog for arranging the scryed cards into the top or bottom of the library.
-// Only the movable (scryed) cards are shown, split into a "top" and "bottom" section
-// separated by a divider; the untouched library cards aren't drawn but are reinserted
-// between the two sections in the returned list so manipulateCardList's top/bottom decode
-// is unchanged.
+// Modal dialog for splitting cards into two ordered piles (e.g. top/bottom of library, or library/graveyard).
+// The cards are shown in a "top" and "bottom" section separated by a divider; clicking a card moves it to the
+// other section and dragging places or reorders it. getTopPile()/getBottomPile() return the two ordered piles.
 public class ListCardArea extends FloatingCardArea {
 
-    private static final int HEADER_HEIGHT = 20;
+    private static final int HEADER_HEIGHT = 30;
     private static final int DIVIDER_GAP = 14;
     private static final int CARD_GAP = 6;
-    private static final int MIN_SECTION_HEIGHT = 32; // keep empty sections an easy drop target
 
     private static ListCardArea storedArea;
     private FButton doneButton;
 
-    private List<CardView> allCards = new ArrayList<>();
-    private List<CardView> moveableCards = new ArrayList<>();
     private final List<CardView> topSection = new ArrayList<>();
     private final List<CardView> bottomSection = new ArrayList<>();
+    private String topLabel, bottomLabel, dividerText;
 
     private int topCount;
     private int topHeaderY, dividerY, bottomHeaderY;
@@ -73,54 +70,47 @@ public class ListCardArea extends FloatingCardArea {
         doneButton = new FButton(Localizer.getInstance().getMessage("lblDone"));
         doneButton.addActionListener(e -> window.setVisible(false));
         window.add(doneButton, "align center, gapbottom 8, w 140, h 24");
-        // Arranging the scry is mandatory — only Done dismisses it; the X, Esc, and titlebar
+        // Splitting the cards is mandatory — only Done dismisses it; the X, Esc, and titlebar
         // double-click must not close it.
         window.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         setOpaque(false);
         setDragEnabled(true);
     }
 
-    public static ListCardArea show(final CMatchUI matchUI, final String title0, final Iterable<CardView> cardList0, final Iterable<CardView> moveableCards0, final boolean toTop0, final boolean toBottom0, final boolean toAnywhere0) {
+    public static ListCardArea show(final CMatchUI matchUI, final String title0, final Iterable<CardView> cards0, final String topLabel0, final String bottomLabel0, final String dividerText0) {
         if (storedArea == null) {
             storedArea = new ListCardArea(matchUI);
         }
-        storedArea.init(title0, cardList0, moveableCards0);
+        storedArea.init(title0, cards0, topLabel0, bottomLabel0, dividerText0);
         storedArea.showWindow();
         return storedArea;
     }
 
-    private void init(final String title0, final Iterable<CardView> cardList0, final Iterable<CardView> moveableCards0) {
+    private void init(final String title0, final Iterable<CardView> cards0, final String topLabel0, final String bottomLabel0, final String dividerText0) {
         title = title0;
-        allCards = new ArrayList<>();
-        for (final CardView c : cardList0) {
-            allCards.add(c);
-        }
-        moveableCards = new ArrayList<>();
-        for (final CardView c : moveableCards0) {
-            if (allCards.contains(c)) {
-                moveableCards.add(c);
-            }
-        }
+        topLabel = topLabel0;
+        bottomLabel = bottomLabel0;
+        dividerText = dividerText0;
         topSection.clear();
         bottomSection.clear();
-        topSection.addAll(moveableCards); // all start on top, in library order
+        for (final CardView c : cards0) {
+            topSection.add(c);
+        }
     }
 
-    // Reconstruct the full library order: top cards, the untouched cards in their
-    // original order, then the bottom cards reversed so the lowest one in the window
-    // becomes the very bottom of the library once moveToBottomOfLibrary is applied.
+    public List<CardView> getTopPile() {
+        return new ArrayList<>(topSection);
+    }
+
+    public List<CardView> getBottomPile() {
+        return new ArrayList<>(bottomSection);
+    }
+
     @Override
     public List<CardView> getCards() {
-        final List<CardView> result = new ArrayList<>(topSection);
-        for (final CardView c : allCards) {
-            if (!moveableCards.contains(c)) {
-                result.add(c);
-            }
-        }
-        for (int i = bottomSection.size() - 1; i >= 0; i--) {
-            result.add(bottomSection.get(i));
-        }
-        return result;
+        final List<CardView> render = new ArrayList<>(topSection);
+        render.addAll(bottomSection);
+        return render;
     }
 
     @Override
@@ -136,6 +126,7 @@ public class ListCardArea extends FloatingCardArea {
         // closes the window, which must not dismiss this mandatory dialog. Load the saved location here.
         if (!hasBeenShown) {
             loadLocation();
+            getWindow().setSize(Singletons.getView().getFrame().getWidth() / 4, Singletons.getView().getFrame().getHeight() * 2 / 3 - 50);
             addCardPanelMouseListener(new CardPanelMouseAdapter() {
                 @Override
                 public void mouseDragEnd(final CardPanel dragPanel, final MouseEvent evt) {
@@ -156,10 +147,7 @@ public class ListCardArea extends FloatingCardArea {
     @Override
     protected void doRefresh() {
         final List<CardPanel> panels = new ArrayList<>();
-        for (final CardView c : topSection) {
-            panels.add(panelFor(c));
-        }
-        for (final CardView c : bottomSection) {
+        for (final CardView c : getCards()) {
             panels.add(panelFor(c));
         }
         topCount = topSection.size();
@@ -195,39 +183,35 @@ public class ListCardArea extends FloatingCardArea {
         final int availH = rect.height - insets.top - insets.bottom;
 
         final int botCount = panels.size() - topCount;
-        final int overhead = 2 * HEADER_HEIGHT + 2 * DIVIDER_GAP + 2 * CardArea.GUTTER_Y;
+        // Split the window into two equal sections so the divider stays put regardless of where cards are.
+        final int sectionH = (availH - 2 * CardArea.GUTTER_Y - 2 * DIVIDER_GAP) / 2;
+        final int cardAreaH = Math.max(1, sectionH - HEADER_HEIGHT);
 
-        // Shrink the cards until both sections plus the headers and divider fit without scrolling
+        // Shrink the cards until the busier section's rows fit within its half.
         int cardWidth = Math.min(getCardWidthMax(), availW - 2 * CardArea.GUTTER_X);
-        int cardHeight;
         int cols;
         while (cardWidth > getCardWidthMin()) {
-            cardHeight = Math.round(cardWidth * CardPanel.ASPECT_RATIO);
+            final int cardHeight = Math.round(cardWidth * CardPanel.ASPECT_RATIO);
             cols = columnsFor(cardWidth, availW);
-            final int contentH = overhead
-                    + sectionHeight(rowsFor(topCount, cols), cardHeight)
-                    + sectionHeight(rowsFor(botCount, cols), cardHeight);
-            if (contentH <= availH) {
+            final int maxRows = Math.max(rowsFor(topCount, cols), rowsFor(botCount, cols));
+            if (maxRows == 0 || maxRows * cardHeight + (maxRows - 1) * CARD_GAP <= cardAreaH) {
                 break;
             }
             cardWidth -= 4;
         }
         cardWidth = Math.max(cardWidth, getCardWidthMin());
-        cardHeight = Math.round(cardWidth * CardPanel.ASPECT_RATIO);
+        final int cardHeight = Math.round(cardWidth * CardPanel.ASPECT_RATIO);
         cols = columnsFor(cardWidth, availW);
 
-        int y = CardArea.GUTTER_Y;
-        topHeaderY = y;
-        y += HEADER_HEIGHT;
-        y = layoutSection(panels, 0, topCount, y, cardWidth, cardHeight, cols, availW);
-        y += DIVIDER_GAP;
-        dividerY = y;
-        y += DIVIDER_GAP;
-        bottomHeaderY = y;
-        y += HEADER_HEIGHT;
-        y = layoutSection(panels, topCount, panels.size(), y, cardWidth, cardHeight, cols, availW);
+        topHeaderY = CardArea.GUTTER_Y;
+        final int topEnd = layoutSection(panels, 0, topCount, topHeaderY + HEADER_HEIGHT, cardWidth, cardHeight, cols, availW);
+        // Divider sits at the midpoint normally; if the top section overflows its half, push it below
+        // the top cards so the sections never overlap (the window scrolls instead).
+        dividerY = Math.max(CardArea.GUTTER_Y + sectionH + DIVIDER_GAP, topEnd + DIVIDER_GAP);
+        bottomHeaderY = dividerY + DIVIDER_GAP;
+        final int bottomEnd = layoutSection(panels, topCount, panels.size(), bottomHeaderY + HEADER_HEIGHT, cardWidth, cardHeight, cols, availW);
 
-        final int prefH = Math.max(y + CardArea.GUTTER_Y, availH);
+        final int prefH = Math.max(bottomEnd + CardArea.GUTTER_Y, availH);
         if (getPreferredSize().width != availW || getPreferredSize().height != prefH) {
             setPreferredSize(new Dimension(availW, prefH));
             revalidate();
@@ -242,15 +226,11 @@ public class ListCardArea extends FloatingCardArea {
         return count == 0 ? 0 : (int) Math.ceil(count / (double) cols);
     }
 
-    private static int sectionHeight(final int rows, final int cardHeight) {
-        return rows == 0 ? MIN_SECTION_HEIGHT : rows * cardHeight + (rows - 1) * CARD_GAP;
-    }
-
     private int layoutSection(final List<CardPanel> panels, final int from, final int to, int y,
             final int cardWidth, final int cardHeight, final int cols, final int availW) {
         final int count = to - from;
         if (count == 0) {
-            return y + MIN_SECTION_HEIGHT;
+            return y;
         }
         int idx = 0;
         while (idx < count) {
@@ -277,40 +257,38 @@ public class ListCardArea extends FloatingCardArea {
         }
         g2.setFont(headerFont);
         final FontMetrics fm = g2.getFontMetrics();
-        final Localizer localizer = Localizer.getInstance();
         FSkin.setGraphicsColor(g2, FSkin.getColor(FSkin.Colors.CLR_TEXT));
-        g2.drawString(localizer.getMessage("lblTopOfLibrary"), CardArea.GUTTER_X, topHeaderY + fm.getAscent());
-        g2.drawString(localizer.getMessage("lblBottomOfLibrary"), CardArea.GUTTER_X, bottomHeaderY + fm.getAscent());
-        paintDivider(g2, localizer);
+        g2.drawString(topLabel, (getWidth() - fm.stringWidth(topLabel)) / 2, topHeaderY + fm.getAscent());
+        g2.drawString(bottomLabel, (getWidth() - fm.stringWidth(bottomLabel)) / 2, bottomHeaderY + fm.getAscent());
+        paintDivider(g2);
     }
 
-    // Centered count flanked by rule lines, all in the separator color: ──── N other cards in library ────
-    private void paintDivider(final Graphics2D g2, final Localizer localizer) {
+    // Plain rule, or a centered count flanked by rule lines, all in the separator colour.
+    private void paintDivider(final Graphics2D g2) {
+        FSkin.setGraphicsColor(g2, FSkin.getColor(FSkin.Colors.CLR_BORDERS));
+        if (dividerText == null || dividerText.isEmpty()) {
+            g2.drawLine(CardArea.GUTTER_X, dividerY, getWidth() - CardArea.GUTTER_X, dividerY);
+            return;
+        }
         if (separatorFont == null) {
             separatorFont = getFont().deriveFont(Font.PLAIN, 12f);
         }
         g2.setFont(separatorFont);
         final FontMetrics fm = g2.getFontMetrics();
-        final int untouched = allCards.size() - moveableCards.size();
-        final String text = localizer.getMessage("lblNOtherCardsInLibrary", String.valueOf(untouched));
-        final int textW = fm.stringWidth(text);
+        final int textW = fm.stringWidth(dividerText);
         final int textX = (getWidth() - textW) / 2;
         final int pad = 8;
-        FSkin.setGraphicsColor(g2, FSkin.getColor(FSkin.Colors.CLR_BORDERS));
         g2.drawLine(CardArea.GUTTER_X, dividerY, textX - pad, dividerY);
         g2.drawLine(textX + textW + pad, dividerY, getWidth() - CardArea.GUTTER_X, dividerY);
-        g2.drawString(text, textX, dividerY + (fm.getAscent() - fm.getDescent()) / 2);
+        g2.drawString(dividerText, textX, dividerY + (fm.getAscent() - fm.getDescent()) / 2);
     }
 
     @Override
     protected boolean cardPanelDraggable(final CardPanel panel) {
-        return moveableCards.contains(panel.getCard());
+        return true;
     }
 
     private void dropCard(final CardView card, final int dropX, final int dropY) {
-        if (!moveableCards.contains(card)) {
-            return;
-        }
         final List<CardView> target = dropY < dividerY ? topSection : bottomSection;
         topSection.remove(card);
         bottomSection.remove(card);
@@ -348,9 +326,6 @@ public class ListCardArea extends FloatingCardArea {
     }
 
     private void toggleSection(final CardView card) {
-        if (!moveableCards.contains(card)) {
-            return;
-        }
         final boolean inTop = topSection.contains(card);
         topSection.remove(card);
         bottomSection.remove(card);

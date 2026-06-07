@@ -1,5 +1,7 @@
 package forge.gamemodes.net.server;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import forge.LobbyPlayer;
 import forge.ai.GameState;
 import forge.deck.CardPool;
@@ -480,8 +482,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     @Override
-    public List<CardView> manipulateCardList(final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
-        return syncAndSendAndWait(ProtocolMethod.manipulateCardList, title, cards, manipulable, toTop, toBottom, toAnywhere);
+    public ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(final String title, final Iterable<CardView> cards, final String topLabel, final String bottomLabel, final String dividerText) {
+        return syncAndSendAndWait(ProtocolMethod.sortIntoTwoPiles, title, cards, topLabel, bottomLabel, dividerText);
     }
 
     public void setHighlighted(final Iterable<GameEntityView> entities, final boolean value) {

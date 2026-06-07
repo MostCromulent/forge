@@ -1,5 +1,7 @@
 package forge.net;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -194,14 +196,14 @@ public class HeadlessNetworkGuiGame extends NetworkGuiGame {
     }
 
     @Override
-    public List<CardView> manipulateCardList(String title, Iterable<CardView> cards, Iterable<CardView> manipulable, boolean toTop, boolean toBottom, boolean toAnywhere) {
-        List<CardView> result = new ArrayList<>();
+    public ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(String title, Iterable<CardView> cards, String topLabel, String bottomLabel, String dividerText) {
+        List<CardView> top = new ArrayList<>();
         if (cards != null) {
             for (CardView card : cards) {
-                result.add(card);
+                top.add(card);
             }
         }
-        return result;
+        return ImmutablePair.of(top, new ArrayList<>());
     }
 
     @Override public void setCard(CardView card) { }

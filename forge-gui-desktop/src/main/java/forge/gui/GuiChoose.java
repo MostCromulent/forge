@@ -12,6 +12,7 @@ import javax.swing.JList;
 import javax.swing.WindowConstants;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import forge.card.CardStateName;
 import forge.card.ICardFace;
@@ -271,24 +272,21 @@ public class GuiChoose {
         return new OrderResult<>(null, false);
     }
 
-    public static List<CardView> manipulateCardList(final CMatchUI gui, final String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable,
-						    final boolean toTop, final boolean toBottom, final boolean toAnywhere) {
+    public static ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(final CMatchUI gui, final String title, final Iterable<CardView> cards,
+						    final String topLabel, final String bottomLabel, final String dividerText) {
 	@SuppressWarnings("Convert2Lambda") // Avoid lambdas to maintain compatibility with Android 5 API
-    final Callable<List<CardView>> callable = new Callable<List<CardView>>() {
+    final Callable<ImmutablePair<List<CardView>, List<CardView>>> callable = new Callable<ImmutablePair<List<CardView>, List<CardView>>>() {
         @Override
-        public List<CardView> call()  {
-            ListCardArea tempArea = ListCardArea.show(gui,title,cards,manipulable,toTop,toBottom,toAnywhere);
-
-            //		tempArea.pack();
+        public ImmutablePair<List<CardView>, List<CardView>> call()  {
+            ListCardArea tempArea = ListCardArea.show(gui, title, cards, topLabel, bottomLabel, dividerText);
             tempArea.setVisible(true);
-            return tempArea.getCards();
+            return ImmutablePair.of(tempArea.getTopPile(), tempArea.getBottomPile());
         }
     };
-	final FutureTask<List<CardView>> ft = new FutureTask<>(callable);
+	final FutureTask<ImmutablePair<List<CardView>, List<CardView>>> ft = new FutureTask<>(callable);
         FThreads.invokeInEdtAndWait(ft);
         try {
-            List<CardView> result = ft.get();
-            return result;
+            return ft.get();
         } catch (final Exception e) { // we have waited enough
             e.printStackTrace();
         }

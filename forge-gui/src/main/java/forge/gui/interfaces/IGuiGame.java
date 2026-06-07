@@ -32,6 +32,8 @@ import forge.util.ITriggerEvent;
 import forge.util.Localizer;
 import forge.util.collect.FCollectionView;
 
+import org.apache.commons.lang3.tuple.ImmutablePair;
+
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
@@ -251,8 +253,9 @@ public interface IGuiGame {
 
     List<GameEntityView> chooseEntitiesForEffect(String title, List<? extends GameEntityView> optionList, int min, int max, DelayedReveal delayedReveal);
 
-    // show a list of cards and allow some of them to be moved around and return new list
-    List<CardView> manipulateCardList(String title, final Iterable<CardView> cards, final Iterable<CardView> manipulable, boolean toTop, boolean toBottom, boolean toAnywhere);
+    // Let the player split the given cards into two ordered piles (e.g. top/bottom of library, or library/graveyard).
+    // Returns (top pile, bottom pile) in display order. dividerText is optional centre text for the separator.
+    ImmutablePair<List<CardView>, List<CardView>> sortIntoTwoPiles(String title, Iterable<CardView> cards, String topLabel, String bottomLabel, String dividerText);
 
     void setCard(CardView card);
 
