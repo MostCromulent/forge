@@ -14,6 +14,7 @@ public abstract class LobbyPlayer {
     protected String name;
     private int avatarIndex = -1;
     private int sleeveIndex = -1;
+    private String sleeveUrl = "";
     private String avatarCardImageKey;
 
     public LobbyPlayer(String name) {
@@ -66,6 +67,12 @@ public abstract class LobbyPlayer {
     }
     public void setSleeveIndex(int sleeveIndex) {
         this.sleeveIndex = sleeveIndex;
+    }
+    public String getSleeveUrl() {
+        return sleeveUrl == null ? "" : sleeveUrl;
+    }
+    public void setSleeveUrl(String sleeveUrl) {
+        this.sleeveUrl = sleeveUrl == null ? "" : sleeveUrl;
     }
 
     public String getAvatarCardImageKey() {

@@ -299,6 +299,7 @@ public final class ForgeConstants {
     public static final String FONTS_DIR                     = CACHE_DIR + "fonts" + PATH_SEPARATOR;
     public static final String CACHE_SKINS_DIR               = CACHE_DIR + "skins" + PATH_SEPARATOR;
     public static final String CACHE_TOKEN_PICS_DIR          = PICS_DIR + "tokens" + PATH_SEPARATOR;
+    public static final String CACHE_SLEEVE_PICS_DIR         = PICS_DIR + "sleeves" + PATH_SEPARATOR;
     public static final String CACHE_ICON_PICS_DIR           = PICS_DIR + "icons" + PATH_SEPARATOR;
     public static final String CACHE_SYMBOLS_DIR             = PICS_DIR + "symbols" + PATH_SEPARATOR;
     public static final String CACHE_BOOSTER_PICS_DIR        = PICS_DIR + "boosters" + PATH_SEPARATOR;
@@ -328,6 +329,7 @@ public final class ForgeConstants {
             DECK_NET_EVENT_DIR,
             QUEST_SAVE_DIR,
             CACHE_TOKEN_PICS_DIR,
+            CACHE_SLEEVE_PICS_DIR,
             CACHE_ICON_PICS_DIR,
             CACHE_BOOSTER_PICS_DIR,
             CACHE_FATPACK_PICS_DIR,

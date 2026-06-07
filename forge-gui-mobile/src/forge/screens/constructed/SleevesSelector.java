@@ -28,8 +28,8 @@ public class SleevesSelector  extends FScreen {
         return random;
     }
 
-    public static void show(final String playerName, final int currentIndex0, final List<Integer> usedSleeves0, final Consumer<Integer> callback0) {
-        SleevesSelector selector = new SleevesSelector(playerName, currentIndex0, usedSleeves0, callback0);
+    public static void show(final String playerName, final int currentIndex0, final boolean customSelected0, final List<Integer> usedSleeves0, final Consumer<Integer> callback0, final Runnable onCustom0) {
+        SleevesSelector selector = new SleevesSelector(playerName, currentIndex0, customSelected0, usedSleeves0, callback0, onCustom0);
         Forge.openScreen(selector);
     }
 
@@ -37,8 +37,10 @@ public class SleevesSelector  extends FScreen {
     private static final int COLUMNS = 5;
 
     private final int currentIndex;
+    private final boolean customSelected;
     private final List<Integer> usedSleeves;
     private final Consumer<Integer> callback;
+    private final Runnable onCustom;
     private final FScrollPane scroller = new FScrollPane() {
         @Override
         protected ScrollBounds layoutAndGetScrollBounds(float visibleWidth, float visibleHeight) {
@@ -60,14 +62,19 @@ public class SleevesSelector  extends FScreen {
         }
     };
 
-    private SleevesSelector(final String playerName, final int currentIndex0, final List<Integer> usedSleeves0, final Consumer<Integer> callback0) {
-        super(Forge.getLocalizer().getMessage("lblSelectSleevesFroPlayer", playerName));
+    private SleevesSelector(final String playerName, final int currentIndex0, final boolean customSelected0, final List<Integer> usedSleeves0, final Consumer<Integer> callback0, final Runnable onCustom0) {
+        super(Forge.getLocalizer().getMessage("lblSelectSleeveForPlayer", playerName));
 
         currentIndex = currentIndex0;
+        customSelected = customSelected0;
         usedSleeves = usedSleeves0;
         callback = callback0;
+        onCustom = onCustom0;
 
-        //add label for selecting random sleeves first
+        //custom URL sleeve first
+        addCustomLabel();
+
+        //add label for selecting random sleeves next
         addSleevesLabel(FSkinImage.UNKNOWN, -1);
 
         //add label for currently selected sleeves next
@@ -84,9 +91,22 @@ public class SleevesSelector  extends FScreen {
         add(scroller);
     }
 
+    private void addCustomLabel() {
+        final FLabel lbl = new FLabel.Builder().icon(FSkinImage.EDIT).iconScaleFactor(0.5f).align(Align.center)
+                .iconInBackground(true).selectable(true).selected(customSelected)
+                .build();
+        lbl.setCommand(e -> {
+            if (onCustom != null) {
+                onCustom.run();
+            }
+            Forge.back();
+        });
+        scroller.add(lbl);
+    }
+
     private void addSleevesLabel(final FImage img, final int index) {
         final FLabel lbl = new FLabel.Builder().icon(img).iconScaleFactor(0.99f).align(Align.center)
-                .iconInBackground(true).selectable(true).selected(currentIndex == index)
+                .iconInBackground(true).selectable(true).selected(!customSelected && currentIndex == index)
                 .build();
 
         if (index == -1) {

@@ -10,6 +10,13 @@ import org.apache.commons.lang3.StringUtils;
 
 import com.badlogic.gdx.utils.Align;
 import com.google.common.collect.ImmutableList;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import forge.assets.FImage;
+import forge.assets.ImageCache;
+import forge.gui.GuiBase;
+import forge.localinstance.properties.ForgeConstants;
+import java.io.File;
 import com.google.common.collect.ImmutableSet;
 
 import forge.Forge;
@@ -42,6 +49,7 @@ import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
 import forge.toolbox.FTextField;
 import forge.toolbox.FToggleSwitch;
+import forge.util.CustomSleeves;
 import forge.util.Lang;
 import forge.util.NameGenerator;
 import forge.util.TextUtil;
@@ -63,6 +71,8 @@ public class PlayerPanel extends FContainer {
     private final FLabel avatarLabel = new FLabel.Builder().opaque(true).iconScaleFactor(0.99f).selectable().alphaComposite(1).iconInBackground(true).build();
     private final FLabel sleeveLabel = new FLabel.Builder().opaque(true).iconScaleFactor(0.99f).selectable().alphaComposite(1).iconInBackground(true).build();
     private int avatarIndex, sleeveIndex;
+    private String sleeveUrl = "";
+    private boolean sleeveUrlSelected = false;
     private final FTextField txtPlayerName = new FTextField(Forge.getLocalizer().getMessage("lblPlayerName"));
     private final FToggleSwitch humanAiSwitch;
     private final FToggleSwitch devModeSwitch;
@@ -100,6 +110,7 @@ public class PlayerPanel extends FContainer {
         setPlayerName(slot.getName());
         setAvatarIndex(slot.getAvatarIndex());
         setSleeveIndex(slot.getSleeveIndex());
+        setSleeveUrl(slot.getSleeveUrl());
 
         devModeSwitch = new FToggleSwitch(Forge.getLocalizer().getMessage("lblNormal"), Forge.getLocalizer().getMessage("lblDevMode"));
         devModeSwitch.setVisible(isNetworkHost());
@@ -503,6 +514,7 @@ public class PlayerPanel extends FContainer {
                 setMayEdit(screen.getLobby().mayEdit(index));
                 setAvatarIndex(slot.getAvatarIndex());
                 setSleeveIndex(slot.getSleeveIndex());
+                setSleeveUrl(slot.getSleeveUrl());
                 setPlayerName(slot.getName());
             }
         }
@@ -595,8 +607,9 @@ public class PlayerPanel extends FContainer {
     private FEventHandler sleeveCommand = new FEventHandler() {
         @Override
         public void handleEvent(FEvent e) {
-            SleevesSelector.show(getPlayerName(), sleeveIndex, screen.getUsedSleeves(), result -> {
+            SleevesSelector.show(getPlayerName(), sleeveIndex, isSleeveUrlSelected(), screen.getUsedSleeves(), result -> {
                 setSleeveIndex(result);
+                setSleeveUrlSelected(false);
 
                 if (index < 2) {
                     screen.updateSleeve(index, result);
@@ -605,9 +618,48 @@ public class PlayerPanel extends FContainer {
                 if (allowNetworking) {
                     screen.firePlayerChangeListener(index);
                 }
-            });
+            }, () -> promptCustomSleeveUrl());
         }
     };
+
+    private void promptCustomSleeveUrl() {
+        FOptionPane.showInputDialog(Forge.getLocalizer().getMessage("lblCustomSleeveUrl"), getParkedSleeveUrl(), (String url) -> {
+            if (url == null) {
+                return;
+            }
+            final String trimmed = url.trim();
+            if (trimmed.isEmpty()) {
+                setSleeveUrl("", false);
+                persistSleeveUrl();
+                return;
+            }
+            if (!CustomSleeves.isHttps(trimmed)) {
+                FOptionPane.showMessageDialog(Forge.getLocalizer().getMessage("lblCustomSleeveHttpsOnly"));
+                return;
+            }
+            GuiBase.getInterface().getImageFetcher().fetchSleeveImage(trimmed, () -> {
+                final File f = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, CustomSleeves.cacheFileName(trimmed));
+                final Texture t = ImageCache.getInstance().getSleeveTexture(f);
+                final FImage previewImg = t != null ? new FTextureRegionImage(new TextureRegion(t)) : null;
+                FOptionPane.showOptionDialog("", Forge.getLocalizer().getMessage("lblCustomSleeveUrl"), previewImg,
+                        ImmutableList.of(Forge.getLocalizer().getMessage("lblOK"), Forge.getLocalizer().getMessage("lblCancel")), 0, choice -> {
+                            if (choice == 0) {
+                                setSleeveUrl(trimmed, true);
+                                persistSleeveUrl();
+                            }
+                        });
+            });
+        });
+    }
+
+    private void persistSleeveUrl() {
+        if (index < 2) {
+            screen.updateSleevePrefs();
+        }
+        if (allowNetworking) {
+            screen.firePlayerChangeListener(index);
+        }
+    }
 
     public void setDeckSelectorButtonText(String text) {
         if (!Forge.isLandscapeMode())
@@ -895,6 +947,9 @@ public class PlayerPanel extends FContainer {
         else {
             setSleeveIndex(SleevesSelector.getRandomSleeves(screen.getUsedSleeves()));
         }
+        String[] urlPrefs = prefs.getPref(FPref.UI_SLEEVE_URLS).split(",", -1);
+        String urlEntry = index < urlPrefs.length ? urlPrefs[index] : "";
+        setSleeveUrl(CustomSleeves.decodeSlotUrl(urlEntry), CustomSleeves.isSlotSelected(urlEntry));
         sleeveLabel.setCommand(sleeveCommand);
     }
 
@@ -924,6 +979,31 @@ public class PlayerPanel extends FContainer {
 
     public int getSleeveIndex() {
         return sleeveIndex;
+    }
+
+    public String getSleeveUrl() {
+        return sleeveUrlSelected && sleeveUrl != null ? sleeveUrl : "";
+    }
+
+    public String getParkedSleeveUrl() {
+        return sleeveUrl == null ? "" : sleeveUrl;
+    }
+
+    public boolean isSleeveUrlSelected() {
+        return sleeveUrlSelected;
+    }
+
+    public void setSleeveUrl(String url) {
+        setSleeveUrl(url, url != null && !url.isEmpty());
+    }
+
+    public void setSleeveUrl(String url, boolean selected) {
+        sleeveUrl = url == null ? "" : url;
+        sleeveUrlSelected = selected && !sleeveUrl.isEmpty();
+    }
+
+    public void setSleeveUrlSelected(boolean selected) {
+        sleeveUrlSelected = selected && !getParkedSleeveUrl().isEmpty();
     }
 
     public void setPlayerName(String string) {

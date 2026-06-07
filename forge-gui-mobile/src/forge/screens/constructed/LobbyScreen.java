@@ -48,6 +48,7 @@ import forge.toolbox.FLabel;
 import forge.toolbox.FList;
 import forge.toolbox.FOptionPane;
 import forge.toolbox.FScrollPane;
+import forge.util.CustomSleeves;
 import forge.util.MyRandom;
 import forge.util.TextUtil;
 import forge.util.Utils;
@@ -360,6 +361,9 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
         int pTwoIndex = playerPanels.get(1).getSleeveIndex();
 
         prefs.setPref(FPref.UI_SLEEVES, pOneIndex + "," + pTwoIndex);
+        prefs.setPref(FPref.UI_SLEEVE_URLS,
+                CustomSleeves.encodeSlot(playerPanels.get(0).getParkedSleeveUrl(), playerPanels.get(0).isSleeveUrlSelected())
+                        + "," + CustomSleeves.encodeSlot(playerPanels.get(1).getParkedSleeveUrl(), playerPanels.get(1).isSleeveUrlSelected()));
         prefs.save();
     }
 
@@ -397,6 +401,12 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
                 sleeveIndex = random;
             }
             playerPanels.get(i).setSleeveIndex(sleeveIndex);
+        }
+
+        String[] sleeveUrlPrefs = prefs.getPref(FPref.UI_SLEEVE_URLS).split(",", -1);
+        for (int i = 0; i < playerPanels.size(); i++) {
+            String urlEntry = i < sleeveUrlPrefs.length ? sleeveUrlPrefs[i] : "";
+            playerPanels.get(i).setSleeveUrl(CustomSleeves.decodeSlotUrl(urlEntry), CustomSleeves.isSlotSelected(urlEntry));
         }
 
         // Name
@@ -641,6 +651,7 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
                     panel.setPlayerName(slot.getName());
                     panel.setAvatarIndex(slot.getAvatarIndex());
                     panel.setSleeveIndex(slot.getSleeveIndex());
+                    panel.setSleeveUrl(slot.getSleeveUrl());
                 } else {
                     //AI: this one overrides the setplayername if blank
                     if (panel.getPlayerName().isEmpty())
@@ -648,6 +659,7 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
                     //AI: override settings if somehow player changes it for AI
                     slot.setAvatarIndex(panel.getAvatarIndex());
                     slot.setSleeveIndex(panel.getSleeveIndex());
+                    slot.setSleeveUrl(panel.getSleeveUrl());
                 }
                 panel.setTeam(slot.getTeam());
                 panel.setIsReady(slot.isReady());
@@ -888,6 +900,7 @@ public abstract class LobbyScreen extends LaunchScreen implements ILobbyView {
                 panel.getPlayerName(),
                 panel.getAvatarIndex(),
                 panel.getSleeveIndex(),
+                panel.getSleeveUrl(),
                 panel.getTeam(),
                 panel.isArchenemy(),
                 panel.isDevMode(),

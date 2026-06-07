@@ -566,7 +566,7 @@ public class VLobby implements ILobbyView {
         final PlayerPanel panel = getPlayerPanel(index);
         return UpdateLobbyPlayerEvent.create(panel.getType(),
                 panel.getPlayerName(),
-                panel.getAvatarIndex(), -1 /*TODO panel.getSleeveIndex()*/,
+                panel.getAvatarIndex(), panel.getSleeveIndex(), panel.getSleeveUrl(),
                 panel.getTeam(), panel.isArchenemy(),
                 panel.isDevMode(),
                 panel.getAiOptions(),
@@ -1012,6 +1012,9 @@ public class VLobby implements ILobbyView {
         final int pTwoIndex = getPlayerPanel(1).getSleeveIndex();
 
         prefs.setPref(FPref.UI_SLEEVES, pOneIndex + "," + pTwoIndex);
+        prefs.setPref(FPref.UI_SLEEVE_URLS,
+                CustomSleeves.encodeSlot(getPlayerPanel(0).getParkedSleeveUrl(), getPlayerPanel(0).isSleeveUrlSelected())
+                        + "," + CustomSleeves.encodeSlot(getPlayerPanel(1).getParkedSleeveUrl(), getPlayerPanel(1).isSleeveUrlSelected()));
         prefs.save();
     }
 

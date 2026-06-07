@@ -215,6 +215,7 @@ public class HostedMatch {
                     p.getLobbyPlayer().setSleeveIndex(0);
                 }
             }
+            p.getLobbyPlayer().setSleeveUrl(rp.getPlayer().getSleeveUrl());
             p.updateSleeve();
 
             if (p.getController() instanceof PlayerControllerHuman humanController) {

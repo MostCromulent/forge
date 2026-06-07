@@ -347,6 +347,22 @@ public class ImageCache {
         return Forge.getAssets().manager().get(file.getPath(), Texture.class, false);
     }
 
+    public Texture getSleeveTexture(File file) {
+        if (file == null || !file.exists())
+            return null;
+        String fileName = file.getPath();
+        Texture loaded = Forge.getAssets().manager().get(fileName, Texture.class, false);
+        if (loaded != null)
+            return loaded;
+        try {
+            Forge.getAssets().manager().load(fileName, Texture.class, Forge.getAssets().getTextureFilter());
+            Forge.getAssets().manager().finishLoadingAsset(fileName);
+            return Forge.getAssets().manager().get(fileName, Texture.class, false);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     private Texture loadAsset(String imageKey, File file, boolean others) {
         if (file == null)
             return null;

@@ -3,6 +3,10 @@ package forge.screens.home;
 import forge.ai.AiProfileUtil;
 import forge.deckchooser.FDeckChooser;
 import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
@@ -14,6 +18,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 
 import javax.swing.ButtonGroup;
+import javax.swing.ImageIcon;
 import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JPopupMenu;
 
@@ -27,10 +32,12 @@ import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gui.GuiBase;
 import forge.gui.UiCommand;
 import forge.gui.framework.FScreen;
 import forge.gui.util.SOptionPane;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
@@ -50,6 +57,7 @@ import forge.toolbox.FSkin;
 import forge.toolbox.FSkin.SkinColor;
 import forge.toolbox.FSkin.SkinImage;
 import forge.toolbox.FTextField;
+import forge.util.CustomSleeves;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.NameGenerator;
@@ -70,6 +78,8 @@ public class PlayerPanel extends FPanel {
     private final FLabel avatarLabel = new FLabel.Builder().opaque(true).hoverable(true).iconScaleFactor(0.99f).iconInBackground(true).build();
     private final FLabel sleeveLabel = new FLabel.Builder().opaque(true).hoverable(true).iconScaleFactor(0.99f).iconInBackground(true).build();
     private int avatarIndex, sleeveIndex;
+    private String sleeveUrl = "";
+    private boolean sleeveUrlSelected = false;
 
     private final FTextField txtPlayerName = new FTextField.Builder().build();
     private FRadioButton radioHuman;
@@ -135,11 +145,10 @@ public class PlayerPanel extends FPanel {
         this.add(closeBtn, "w 20, h 20, pos (container.w-20) 0");
 
         createAvatar();
-        this.add(avatarLabel, "spany 2, width 80px, height 80px");
+        this.add(avatarLabel, "cell 0 0, spany 2, split 2, width 80px, height 80px");
 
-        /*TODO Layout and Override for PC*/
-        //createSleeve();
-        //this.add(sleeveLabel, "spany 2, width 60px, height 80px");
+        createSleeve();
+        this.add(sleeveLabel, "width 60px, height 80px, gapleft 5px");
 
         createNameEditor();
         this.add(lobby.newLabel(localizer.getMessage("lblName") +":"), "w 40px, h 30px, gaptop 5px");
@@ -386,10 +395,18 @@ public class PlayerPanel extends FPanel {
             lobby.changePlayerFocus(index);
             sleeve.requestFocusInWindow();
 
-            final SleeveSelector sSel = new SleeveSelector(playerName, sleeveIndex, lobby.getUsedSleeves());
+            final SleeveSelector sSel = new SleeveSelector(playerName, sleeveIndex, getParkedSleeveUrl(), isSleeveUrlSelected(), lobby.getUsedSleeves());
             for (final FLabel lbl : sSel.getSelectables()) {
                 lbl.setCommand((UiCommand) () -> {
-                    setSleeveIndex(Integer.parseInt(lbl.getName().substring(11)));
+                    if (SleeveSelector.CUSTOM_LABEL_NAME.equals(lbl.getName())) {
+                        final String newUrl = SleeveSelector.promptForUrl(getParkedSleeveUrl());
+                        if (newUrl != null) {
+                            setSleeveUrl(newUrl, true);
+                        }
+                    } else {
+                        setSleeveIndex(Integer.parseInt(lbl.getName().substring(11)));
+                        setSleeveUrlSelected(false);
+                    }
                     sSel.setVisible(false);
                 });
             }
@@ -765,6 +782,10 @@ public class PlayerPanel extends FPanel {
             setRandomSleeve(false);
         }
 
+        final String[] urlPrefs = FModel.getPreferences().getPref(FPref.UI_SLEEVE_URLS).split(",", -1);
+        final String urlEntry = index < urlPrefs.length ? urlPrefs[index] : "";
+        setSleeveUrl(CustomSleeves.decodeSlotUrl(urlEntry), CustomSleeves.isSlotSelected(urlEntry));
+
         sleeveLabel.setToolTipText("L-click: Select sleeve. R-click: Randomize sleeve.");
         sleeveLabel.addFocusListener(sleeveFocusListener);
         sleeveLabel.addMouseListener(sleeveMouseListener);
@@ -839,6 +860,50 @@ public class PlayerPanel extends FPanel {
         final SkinImage icon = FSkin.getSleeves().get(sleeveIndex);
         sleeveLabel.setIcon(icon);
         sleeveLabel.repaintSelf();
+    }
+
+    public String getSleeveUrl() {
+        return sleeveUrlSelected && sleeveUrl != null ? sleeveUrl : "";
+    }
+    public String getParkedSleeveUrl() {
+        return sleeveUrl == null ? "" : sleeveUrl;
+    }
+    public boolean isSleeveUrlSelected() {
+        return sleeveUrlSelected;
+    }
+    public void setSleeveUrl(final String url, final boolean selected) {
+        sleeveUrl = url == null ? "" : url;
+        sleeveUrlSelected = selected && !sleeveUrl.isEmpty();
+        if (sleeveUrlSelected) {
+            refreshCustomSleeveIcon();
+        }
+    }
+    public void setSleeveUrlSelected(final boolean selected) {
+        sleeveUrlSelected = selected && !getParkedSleeveUrl().isEmpty();
+        if (sleeveUrlSelected) {
+            refreshCustomSleeveIcon();
+        }
+    }
+
+    private void refreshCustomSleeveIcon() {
+        final File f = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, CustomSleeves.cacheFileName(getParkedSleeveUrl()));
+        if (f.exists()) {
+            loadCustomSleeveIcon(f);
+        } else {
+            GuiBase.getInterface().getImageFetcher().fetchSleeveImage(getParkedSleeveUrl(),
+                    () -> loadCustomSleeveIcon(new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, CustomSleeves.cacheFileName(getParkedSleeveUrl()))));
+        }
+    }
+
+    private void loadCustomSleeveIcon(final File f) {
+        try {
+            final BufferedImage img = ImageIO.read(f);
+            if (img != null) {
+                sleeveLabel.setIcon(new ImageIcon(img.getScaledInstance(60, 80, Image.SCALE_SMOOTH)));
+                sleeveLabel.repaintSelf();
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     public int getTeam() {

@@ -51,6 +51,9 @@ public class LibGDXImageFetcher extends ImageFetcher {
         }
 
         private boolean doFetch(String urlToDownload) throws IOException {
+            if (destPath.startsWith(ForgeConstants.CACHE_SLEEVE_PICS_DIR)) {
+                return doFetchSleeve(urlToDownload);
+            }
             if (disableHostedDownload && urlToDownload.startsWith(ForgeConstants.URL_CARDFORGE)) {
                 // Don't try to download card images from cardforge servers
                 return false;
@@ -117,6 +120,37 @@ public class LibGDXImageFetcher extends ImageFetcher {
             System.out.println("Saved image to " + newdespath);
             GuiBase.getInterface().invokeInEdtLater(notifyObservers);
             return true;
+        }
+
+        private boolean doFetchSleeve(String urlToDownload) throws IOException {
+            if (!CustomSleeves.isHttps(urlToDownload)) {
+                return false;
+            }
+            HttpURLConnection c = (HttpURLConnection) new URL(urlToDownload).openConnection();
+            c.setConnectTimeout(CustomSleeves.CONNECT_TIMEOUT_MS);
+            c.setReadTimeout(CustomSleeves.READ_TIMEOUT_MS);
+            c.setRequestProperty("User-Agent", BuildInfo.getUserAgent());
+            FileHandle tmp = new FileHandle(destPath + ".tmp");
+            try {
+                if (c.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return false;
+                }
+                if (c.getContentLengthLong() > CustomSleeves.MAX_DOWNLOAD_BYTES) {
+                    return false;
+                }
+                tmp.parent().mkdirs();
+                try (InputStream in = c.getInputStream(); OutputStream out = Files.newOutputStream(tmp.file().toPath())) {
+                    Forge.getDeviceAdapter().convertToPNG(in, out);
+                }
+                tmp.moveTo(new FileHandle(destPath));
+                GuiBase.getInterface().invokeInEdtLater(notifyObservers);
+                return true;
+            } finally {
+                c.disconnect();
+                if (tmp.exists()) {
+                    tmp.delete();
+                }
+            }
         }
 
         private String tofullBorder(String imageurl) {

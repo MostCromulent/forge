@@ -67,6 +67,8 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_RANDOM_FOIL ("false"),
         UI_AVATARS ("0,1"),
         UI_SLEEVES ("0,1"),
+        UI_SLEEVE_URLS (""),
+        UI_SHOW_CUSTOM_SLEEVES ("true"),
         UI_SHOW_CARD_OVERLAYS ("true"),
         UI_OVERLAY_CARD_NAME ("true"),
         UI_OVERLAY_CARD_POWER ("true"),

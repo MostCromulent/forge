@@ -374,6 +374,23 @@ public abstract class ImageFetcher {
         setupObserver(destFile.getAbsolutePath(), callback, downloadUrls);
     }
 
+    public void fetchSleeveImage(final String url, final Callback callback) {
+        if (!CustomSleeves.isHttps(url)) return;
+        if (FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_DISABLE_CARD_IMAGES)) return;
+        if (!FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) return;
+        FThreads.invokeInEdtNowOrLater(() -> {
+            final File dest = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, CustomSleeves.cacheFileName(url));
+            if (dest.exists()) {
+                callback.onImageFetched();
+                return;
+            }
+            FileUtil.ensureDirectoryExists(ForgeConstants.CACHE_SLEEVE_PICS_DIR);
+            final ArrayList<String> urls = new ArrayList<>();
+            urls.add(url);
+            setupObserver(dest.getAbsolutePath(), callback, urls);
+        });
+    }
+
     private void setupObserver(final String destPath, final Callback callback, final ArrayList<String> downloadUrls) {
         // Note: No synchronization is needed here because this is executed on
         // EDT thread (see assert on top) and so is the notification of observers.

@@ -55,6 +55,12 @@ import forge.menu.FCheckBoxMenuItem;
 import forge.menu.FMenuItem;
 import forge.menu.FPopupMenu;
 import forge.model.FModel;
+import forge.localinstance.properties.ForgeConstants;
+import forge.util.CustomSleeves;
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import java.io.File;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
 import forge.screens.match.views.VAssignCombatDamage;
@@ -167,6 +173,17 @@ public class MatchController extends NetworkGuiGame {
     public static FImage getPlayerSleeve(final PlayerView p) {
         if (p == null)
             return FSkinImage.UNKNOWN;
+        final String url = p.getSleeveUrl();
+        if (!url.isEmpty() && FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_SHOW_CUSTOM_SLEEVES)) {
+            final File f = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, CustomSleeves.cacheFileName(url));
+            if (f.exists()) {
+                final Texture t = ImageCache.getInstance().getSleeveTexture(f);
+                if (t != null)
+                    return new FTextureRegionImage(new TextureRegion(t));
+            } else {
+                GuiBase.getInterface().getImageFetcher().fetchSleeveImage(url, () -> Gdx.graphics.requestRendering());
+            }
+        }
         return new FTextureRegionImage(FSkin.getSleeves().get(p.getSleeveIndex()));
     }
 

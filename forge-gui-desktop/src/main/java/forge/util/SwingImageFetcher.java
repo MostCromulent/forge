@@ -3,12 +3,19 @@ package forge.util;
 import forge.localinstance.properties.ForgeConstants;
 
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import javax.swing.*;
+import java.awt.Dimension;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Iterator;
 
 public class SwingImageFetcher extends ImageFetcher {
 
@@ -29,6 +36,9 @@ public class SwingImageFetcher extends ImageFetcher {
         }
 
         private boolean doFetch(String urlToDownload) throws IOException {
+            if (destPath.startsWith(ForgeConstants.CACHE_SLEEVE_PICS_DIR)) {
+                return doFetchSleeve(urlToDownload);
+            }
             if (disableHostedDownload && urlToDownload.startsWith(ForgeConstants.URL_CARDFORGE)) {
                 // Don't try to download card images from cardforge servers
                 return false;
@@ -73,6 +83,71 @@ public class SwingImageFetcher extends ImageFetcher {
             }
 
             return true;
+        }
+
+        private boolean doFetchSleeve(String urlToDownload) throws IOException {
+            if (!CustomSleeves.isHttps(urlToDownload)) {
+                return false;
+            }
+            final HttpURLConnection conn = (HttpURLConnection) new URL(urlToDownload).openConnection();
+            conn.setConnectTimeout(CustomSleeves.CONNECT_TIMEOUT_MS);
+            conn.setReadTimeout(CustomSleeves.READ_TIMEOUT_MS);
+            conn.setRequestProperty("User-Agent", BuildInfo.getUserAgent());
+            final File tmp = new File(destPath + ".tmp");
+            try {
+                if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+                    return false;
+                }
+                if (conn.getContentLengthLong() > CustomSleeves.MAX_DOWNLOAD_BYTES) {
+                    return false;
+                }
+                tmp.getParentFile().mkdirs();
+                long total = 0;
+                try (InputStream in = conn.getInputStream(); OutputStream out = new FileOutputStream(tmp)) {
+                    final byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) != -1) {
+                        total += n;
+                        if (total > CustomSleeves.MAX_DOWNLOAD_BYTES) {
+                            return false;
+                        }
+                        out.write(buf, 0, n);
+                    }
+                }
+                final Dimension dim = readImageDimensions(tmp);
+                if (dim == null || !CustomSleeves.withinDimensionLimit(dim.width, dim.height)) {
+                    return false;
+                }
+                final BufferedImage img = ImageIO.read(tmp);
+                if (img == null) {
+                    return false;
+                }
+                ImageIO.write(img, "png", new File(destPath));
+                SwingUtilities.invokeLater(notifyObservers);
+                return true;
+            } finally {
+                conn.disconnect();
+                if (tmp.exists()) {
+                    tmp.delete();
+                }
+            }
+        }
+
+        private static Dimension readImageDimensions(final File file) {
+            try (ImageInputStream iis = ImageIO.createImageInputStream(file)) {
+                final Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+                if (readers.hasNext()) {
+                    final ImageReader reader = readers.next();
+                    try {
+                        reader.setInput(iis);
+                        return new Dimension(reader.getWidth(0), reader.getHeight(0));
+                    } finally {
+                        reader.dispose();
+                    }
+                }
+            } catch (IOException ignored) {
+            }
+            return null;
         }
 
         private String tofullBorder(String imageurl) {

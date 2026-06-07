@@ -27,6 +27,7 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
+import forge.util.CustomSleeves;
 import forge.util.Localizer;
 import forge.util.NameGenerator;
 
@@ -218,6 +219,15 @@ public abstract class GameLobby implements IHasGameType {
         for (int i = 0; i < sSleeves.length; i++) {
             final Integer val = Ints.tryParse(sSleeves[i]);
             result[i] = val == null ? -1 : val;
+        }
+        return result;
+    }
+
+    protected final static String[] localSleeveUrls() {
+        final String[] entries = FModel.getPreferences().getPref(FPref.UI_SLEEVE_URLS).split(",", -1);
+        final String[] result = new String[entries.length];
+        for (int i = 0; i < entries.length; i++) {
+            result[i] = CustomSleeves.isSlotSelected(entries[i]) ? CustomSleeves.decodeSlotUrl(entries[i]) : "";
         }
         return result;
     }
@@ -468,6 +478,7 @@ public abstract class GameLobby implements IHasGameType {
                 }
                 lobbyPlayer = GamePlayerUtil.getGuiPlayer(name, avatar, sleeve, setNameNow);
             }
+            lobbyPlayer.setSleeveUrl(slot.getSleeveUrl());
 
             Deck deck = slot.getDeck();
             if (autoGenerateVariant != null) {

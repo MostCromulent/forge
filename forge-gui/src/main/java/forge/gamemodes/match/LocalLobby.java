@@ -14,8 +14,10 @@ public final class LocalLobby extends GameLobby {
         final String humanName = localName();
         final int[] avatarIndices = localAvatarIndices();
         final int[] sleeveIndices = localSleeveIndices();
+        final String[] sleeveUrls = localSleeveUrls();
 
         final LobbySlot slot0 = new LobbySlot(LobbySlotType.LOCAL, humanName, avatarIndices[0], sleeveIndices[0],0, true, true, Collections.emptySet());
+        slot0.setSleeveUrl(sleeveUrls.length > 0 ? sleeveUrls[0] : "");
         addSlot(slot0);
 
         final LobbySlot slot1 = new LobbySlot(LobbySlotType.AI, null, avatarIndices[1], sleeveIndices[1],1, false, true, Collections.emptySet());
