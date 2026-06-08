@@ -376,11 +376,13 @@ public final class GameActionUtil {
 
             final StringBuilder sb = new StringBuilder(sa.getDescription());
             if (!source.equals(host) && host.getRenderForUI()) {
-                sb.append(" by ");
-                if (host.isImmutable() && host.getEffectSource() != null) {
-                    sb.append(host.getEffectSource());
-                } else {
-                    sb.append(host);
+                final Object zoneHost = host.isImmutable() && host.getEffectSource() != null
+                        ? host.getEffectSource() : host;
+                final String byHost = " by " + zoneHost;
+                // when one permanent grants both the cast and the cost (e.g. Grenzo's heist plus its own "pay {0}") the cost pass already attributed it — keep one; a different cost source joins with "and" instead of a second "by"
+                // TODO: this two-pass reconciliation goes away once a SpellAbility carries its grants as a list and attribution is derived once from it
+                if (!sb.toString().endsWith(byHost)) {
+                    sb.append(sb.toString().contains(" by ") ? " and " + zoneHost : byHost);
                 }
             }
             if (o.getAbility().hasParam("MayPlayText")) {

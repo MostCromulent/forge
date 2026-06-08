@@ -31,14 +31,21 @@ public class StaticAbilityAlternativeCost {
                     continue;
                 }
 
-                String costTemplate = stAb.getParam("Cost");
-                costTemplate = costTemplate.replace("ConvertedManaCost", Integer.toString(source.getCMC()));
-
-                Cost cost = new Cost(costTemplate, sa.isAbility());
+                final boolean noCost = stAb.hasParam("WithoutManaCost") && !sa.isAbility();
+                Cost cost = null;
+                if (!noCost) {
+                    String costTemplate = stAb.getParam("Cost").replace("ConvertedManaCost", Integer.toString(source.getCMC()));
+                    cost = new Cost(costTemplate, sa.isAbility());
+                }
                 // set the cost to this directly to bypass non mana cost
-                final SpellAbility newSA = sa.isAbility() ? sa.copyWithDefinedCost(cost) : sa.copyWithManaCostReplaced(pl, cost);
+                final SpellAbility newSA = noCost ? sa.copyWithNoManaCost(pl)
+                        : (sa.isAbility() ? sa.copyWithDefinedCost(cost) : sa.copyWithManaCostReplaced(pl, cost));
                 newSA.setActivatingPlayer(pl);
                 newSA.setBasicSpell(false);
+                newSA.setGrantorStatic(stAb);
+                if (stAb.hasParam("WithFlash")) {
+                    newSA.getRestrictions().setInstantSpeed(true);
+                }
 
                 if (stAb.hasParam("XAlternative")) {
                     newSA.putParam("XAlternative", stAb.getParam("XAlternative"));
@@ -80,7 +87,20 @@ public class StaticAbilityAlternativeCost {
                         newSA.addOptionalCost(OptionalCost.AltCost);
                         sb.append(" ("+ stAb.getParam("Description") +") ");
                     } else {
-                        sb.append(" (by paying " + cost.toSimpleString() + " instead of its mana cost)");
+                        if (noCost) {
+                            sb.append(" (without paying its mana cost");
+                        } else {
+                            sb.append(" (by paying ").append(cost.toSimpleString().replace("Pay ", "")).append(" instead of paying its mana cost");
+                        }
+                        if (stAb.hasParam("WithFlash")) {
+                            sb.append(" and as though it has flash");
+                        }
+                        sb.append(")");
+                        final Card altHost = stAb.getHostCard();
+                        if (altHost.getRenderForUI()) {
+                            sb.append(" by ").append(altHost.isImmutable() && altHost.getEffectSource() != null
+                                    ? altHost.getEffectSource() : altHost);
+                        }
                     }
                 }
                 newSA.setDescription(sb.toString());
@@ -104,6 +124,10 @@ public class StaticAbilityAlternativeCost {
             return false;
         }
         if (!stAb.matchesValidParam("ValidPlayer", pl)) {
+            return false;
+        }
+        if (stAb.hasParam("Limit")
+                && stAb.getMayPlayTurn() >= Integer.parseInt(stAb.getParam("Limit"))) {
             return false;
         }
 

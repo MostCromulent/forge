@@ -38,6 +38,7 @@ import forge.game.spellability.SpellAbility;
 import forge.game.spellability.SpellAbilityStackInstance;
 import forge.game.spellability.SpellAbilityView;
 import forge.game.spellability.TargetChoices;
+import forge.game.staticability.StaticAbilityMode;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 import forge.util.IterableUtil;
@@ -533,6 +534,10 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
             if (sp.getMayPlay().hasParam("ReplaceGraveyard")) {
                 PlayEffect.addReplaceGraveyardEffect(sp.getHostCard(), sp.getMayPlay().getHostCard(), sp, sp, sp.getMayPlay().getParam("ReplaceGraveyard"));
             }
+        }
+        if (sp.isSpell() && sp.getGrantorStatic() != null && sp.getGrantorStatic().hasParam("Limit")
+                && sp.getGrantorStatic().getMode().contains(StaticAbilityMode.AlternativeCost)) {
+            sp.getGrantorStatic().incMayPlayTurn();
         }
         si = si == null ? new SpellAbilityStackInstance(sp, id) : si;
 
