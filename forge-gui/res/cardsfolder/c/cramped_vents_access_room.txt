@@ -12,5 +12,5 @@ ALTERNATE
 Name:Access Maze
 ManaCost:5 B B
 Types:Enchantment Room
-S:Mode$ Continuous | Condition$ PlayerTurn | Affected$ Card.YouCtrl+nonLand | MayPlayLimit$ 1 | MayPlay$ True | MayPlayAltManaCost$ PayLife<ConvertedManaCost> | MayPlayDontGrantZonePermissions$ True | AffectedZone$ Hand | Description$ Once during each of your turns, you may cast a spell from your hand by paying life equal to its mana value rather than paying its mana cost.
+S:Mode$ AlternativeCost | Condition$ PlayerTurn | ValidSA$ Spell | ValidCard$ Card.YouCtrl+nonLand+inZoneHand | ValidPlayer$ You | Cost$ PayLife<ConvertedManaCost> | Limit$ 1 | Description$ Once during each of your turns, you may cast a spell from your hand by paying life equal to its mana value rather than paying its mana cost.
 Oracle:(You may cast either half. That door unlocks on the battlefield. As a sorcery, you may pay the mana cost of a locked door to unlock it.)\nOnce during each of your turns, you may cast a spell from your hand by paying life equal to its mana value rather than paying its mana cost.
