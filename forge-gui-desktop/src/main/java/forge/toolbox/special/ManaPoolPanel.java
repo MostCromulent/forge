@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 
+import javax.swing.BorderFactory;
 import javax.swing.SwingConstants;
 
 import forge.card.mana.ManaAtom;
@@ -78,16 +79,34 @@ public class ManaPoolPanel extends SkinnedPanel {
         }
         setVisible(!visiblePips.isEmpty());
         if (!visiblePips.isEmpty()) {
-            // Wrap onto a second row past three colours, scaling the pips to fill the available strip.
+            // Up to three pips per row, each sized to its own content so the strip stays as small as the counts need.
             final int count = visiblePips.size();
-            final int perRow = count <= 3 ? count : (count + 1) / 2;
+            final int perRow = Math.min(3, count);
             final int rows = (count + perRow - 1) / perRow;
             final int availW = getWidth() > 12 ? getWidth() : 90;
             final int availH = getHeight() > 8 ? getHeight() : 38;
-            final int pipH = Math.max(13, Math.min(24, (availH - 4 - (rows - 1) * 2) / rows));
-            final int pipW = Math.max(14, Math.min(Math.round(pipH * 1.35f), (availW - 6) / perRow));
+            final int pipH = Math.max(12, Math.min(26, (availH - 4 - (rows - 1) * 2) / rows));
+            final int iconW = Math.round(pipH * 0.80f);
+            final int maxPipW = (availW - 6) / perRow;
+            int maxLen = 1;
+            for (final ManaPip pip : visiblePips) {
+                maxLen = Math.max(maxLen, pip.getText().length());
+            }
+            final String widest = "8".repeat(maxLen);
+            // Size each pip to its content (icon + the widest count actually present) at the largest font that still
+            // fits the row, so pips sit snug, the row centres them evenly, and single-digit pools get a larger font.
+            int fontPx = Math.min(16, Math.max(10, Math.round(pipH * 0.72f)));
+            Font numFont = FSkin.getFont(fontPx).getBaseFont().deriveFont(Font.BOLD);
+            int pipW = iconW + 5 + getFontMetrics(numFont).stringWidth(widest);
+            while (fontPx > 7 && pipW > maxPipW) {
+                numFont = FSkin.getFont(--fontPx).getBaseFont().deriveFont(Font.BOLD);
+                pipW = iconW + 5 + getFontMetrics(numFont).stringWidth(widest);
+            }
             layout.setLayoutConstraints("insets 2, gap 1, alignx center, aligny top, hidemode 3, wrap " + perRow);
             for (final ManaPip pip : visiblePips) {
+                pip.setFont(numFont);
+                // Count sits just right of the icon (left inset) and a hair low so it optically centres on it.
+                pip.setBorder(BorderFactory.createEmptyBorder(2, iconW + 3, 0, 0));
                 layout.setComponentConstraints(pip, "w " + pipW + "px!, h " + pipH + "px!");
             }
         }
@@ -115,7 +134,7 @@ public class ManaPoolPanel extends SkinnedPanel {
         ManaPip(final String color) {
             super(new FLabel.Builder().icon(FSkin.getImage(FSkinProp.MANA_IMG.get(color)))
                     .opaque(false).fontSize(11).hoverable().unhoveredAlpha(1.0f).fontStyle(Font.BOLD)
-                    .iconScaleFactor(0.92).iconInBackground().iconAlignX(SwingConstants.LEFT).fontAlign(SwingConstants.RIGHT));
+                    .iconScaleFactor(0.80).iconInBackground().iconAlignX(SwingConstants.LEFT).fontAlign(SwingConstants.LEFT));
             this.color = color;
             setFocusable(false);
             setForeground(Color.WHITE);

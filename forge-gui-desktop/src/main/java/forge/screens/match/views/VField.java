@@ -18,7 +18,6 @@
 package forge.screens.match.views;
 
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -113,8 +112,6 @@ public class VField implements IVDoc<CField> {
 
         detailsPanel = new PlayerDetailsPanel(player, CMatchUI.FLOATING_ZONE_TYPES);
         manaPool = new ManaPoolPanel(player);
-        avatarLabel.setLibraryComponent(detailsPanel.getLblLibrary());
-        detailsPanel.setAvatarComponent(avatarLabel);
 
         // TODO player is hard-coded into tabletop...should be dynamic
         // (haven't looked into it too deeply). Doublestrike 12-04-12
@@ -128,8 +125,9 @@ public class VField implements IVDoc<CField> {
         avatarArea.setBackground(FSkin.getColor(FSkin.Colors.CLR_HOVER));
         avatarArea.setLayout(new MigLayout("insets 0, gap 0"));
         avatarArea.add(avatarLabel, "w 100%!, h 100%!");
-        avatarArea.add(manaPool, "pos 2% 3 98% 44");
-        avatarArea.setComponentZOrder(manaPool, 0);
+
+        detailsPanel.addAvatarArea(avatarArea);
+        detailsPanel.setManaOverlay(manaPool);
 
         // Player area hover effect
         avatarArea.addMouseListener(new MouseAdapter() {
@@ -163,10 +161,9 @@ public class VField implements IVDoc<CField> {
         final JPanel pnl = parentCell.getBody();
         pnl.setLayout(new MigLayout("insets 0, gap 0"));
 
-        pnl.add(avatarArea, "w 10%!, h 33%!");
-        pnl.add(phaseIndicator, "w 5%!, h 100%!, span 1 2");
-        pnl.add(scroller, "w 85%!, h 100%!, span 1 2, wrap");
-        pnl.add(detailsPanel, "w 10%!, h 66%!, gapleft 1px");
+        pnl.add(detailsPanel, "w 10%!, h 100%!");
+        pnl.add(phaseIndicator, "w 5%!, h 100%!");
+        pnl.add(scroller, "w 85%!, h 100%!");
     }
 
     @Override
@@ -272,17 +269,12 @@ public class VField implements IVDoc<CField> {
     /** Paints the player's avatar contained and centred (matching the deck sleeve) with the life total as a corner badge. */
     private final class AvatarLabel extends JPanel {
         private SkinImage avatar;
-        private Component library;
         private SkinImage counterIcon;
         private int counterCount;
         private boolean counterCritical;
 
         AvatarLabel() {
             setOpaque(false);
-        }
-
-        void setLibraryComponent(final Component c) {
-            this.library = c;
         }
 
         void setCounter(final SkinImage icon, final int count, final boolean critical) {
@@ -308,16 +300,13 @@ public class VField implements IVDoc<CField> {
             final Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-            // Avatar (square) scaled to the shared width, shrunk to fit the available height (its own and the library's) so it never crops.
+            // Avatar (square) scaled to the shared width, capped to fit the available height so it never crops.
             int side = Math.min(Math.round(w * PlayerDetailsPanel.AVATAR_WIDTH_PCT), h - 2);
-            if (library != null && library.getHeight() > 0) {
-                side = Math.min(side, (int) ((library.getHeight() - 2) / PlayerDetailsPanel.LIBRARY_ASPECT));
-            }
             side = Math.max(8, side);
             final int ax = (w - side) / 2;
             final int ay = (h - side) / 2;
             if (avatar != null) {
-                FSkin.drawImage(g2, avatar, ax, ay, side, side);
+                FSkin.drawImage(g2, PlayerDetailsPanel.scaledForDraw(avatar, side, side, g2.getTransform().getScaleX(), 100, 100), ax, ay, side, side);
             }
 
             if (player != null) {

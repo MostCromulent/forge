@@ -2,6 +2,7 @@ package forge.toolbox.special;
 
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.FontMetrics;
@@ -28,6 +29,7 @@ import org.apache.commons.text.WordUtils;
 
 import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
+import forge.gui.MouseUtil;
 import forge.localinstance.skin.FSkinProp;
 import forge.toolbox.FLabel;
 import forge.toolbox.FMouseAdapter;
@@ -55,9 +57,23 @@ public class PlayerDetailsPanel extends JPanel {
         return Math.max(11, Math.min(15, width / 6));
     }
 
+    /**
+     * Area-averaged (cached) copy of {@code img} at the device resolution for a {@code w}x{@code h} logical draw, so a large
+     * downscale stays smooth instead of the single-pass scale {@link FSkin#drawImage} redoes every paint. The target is
+     * quantised to bound the cache during resizes and capped at the source size so it never upscales.
+     */
+    public static SkinImage scaledForDraw(final SkinImage img, final int w, final int h,
+                                          final double deviceScale, final int srcW, final int srcH) {
+        int tw = ((int) Math.round(w * deviceScale) + 7) / 8 * 8;
+        tw = Math.max(8, Math.min(srcW, tw));
+        final int th = Math.max(8, Math.round(tw * (float) srcH / srcW));
+        return img.resize(tw, th);
+    }
+
     private final PlayerView player;
 
     private final DeckSleeveLabel libraryLabel;
+    private final PortraitStack portrait;
     private final SkinnedPanel zoneList;
     private final Map<ZoneType, ZoneRow> coreLabels = new EnumMap<>(ZoneType.class);
     private final Map<ZoneType, ZoneRow> extraLabels = new EnumMap<>(ZoneType.class);
@@ -89,10 +105,21 @@ public class PlayerDetailsPanel extends JPanel {
             zoneList.add(coreLabels.get(zone), ZONE_ROW);
         }
 
-        add(libraryLabel, "w 100%!, growy, pushy, gap 0");
+        portrait = new PortraitStack();
+        add(portrait, "w 100%!, growy, pushy, gap 0");
         add(zoneList, "w 100%!, gaptop 2px");
 
         updateZones();
+    }
+
+    /** Hosts the avatar tile above the library sleeve so the two scale together as one centred unit. */
+    public void addAvatarArea(final Component avatarArea) {
+        portrait.setAvatar(avatarArea);
+    }
+
+    /** Floats the mana strip over the top of the avatar, spanning the full column width rather than the centred avatar. */
+    public void setManaOverlay(final Component mana) {
+        portrait.setMana(mana);
     }
 
     private static String extraTooltipKey(final ZoneType zone) {
@@ -110,11 +137,6 @@ public class PlayerDetailsPanel extends JPanel {
 
     public Component getLblLibrary() {
         return libraryLabel;
-    }
-
-    /** Links the avatar so the card scales down with it to keep matching widths when vertical space is tight. */
-    public void setAvatarComponent(final Component avatarComponent) {
-        libraryLabel.setAvatarComponent(avatarComponent);
     }
 
     /** Core zones always show; extra zones (command, sideboard, etc.) appear only while they hold cards. */
@@ -241,7 +263,7 @@ public class PlayerDetailsPanel extends JPanel {
             this.tooltipExtraArg = tooltipExtraArg;
 
             setOpaque(false);
-            setLayout(new MigLayout("insets 0 4 0 6, gap 0, fillx, filly"));
+            setLayout(new MigLayout("insets 0 4 0 6, gap 0, fillx, filly", "", "[center]"));
 
             final FLabel icon = new FLabel.Builder().icon(FSkin.getImage(iconFromZone(zone)).resize(14, 14))
                     .iconScaleAuto(false).build();
@@ -263,11 +285,13 @@ public class PlayerDetailsPanel extends JPanel {
                 @Override
                 public void mouseEntered(final MouseEvent e) {
                     setHovered(true);
+                    MouseUtil.setCursor(Cursor.HAND_CURSOR);
                 }
                 @Override
                 public void mouseExited(final MouseEvent e) {
                     if (getMousePosition() == null) {
                         setHovered(false);
+                        MouseUtil.resetCursor();
                     }
                 }
             };
@@ -318,6 +342,52 @@ public class PlayerDetailsPanel extends JPanel {
         }
     }
 
+    /** Avatar (square) above the library sleeve (card), both at one shared width, centred as a unit in the available height. */
+    private final class PortraitStack extends JPanel {
+        private Component avatar;
+        private Component mana;
+
+        PortraitStack() {
+            setOpaque(false);
+            setLayout(null);
+            add(libraryLabel);
+        }
+
+        void setAvatar(final Component c) {
+            avatar = c;
+            add(c);
+            revalidate();
+        }
+
+        void setMana(final Component c) {
+            mana = c;
+            add(c);
+            setComponentZOrder(c, 0); // keep the floating mana above the avatar
+            revalidate();
+        }
+
+        @Override
+        public void doLayout() {
+            final int w = getWidth();
+            final int h = getHeight();
+            final int gap = 2;
+            // Largest width that lets the square avatar and the card library both fit the height; the column width otherwise caps it.
+            int side = Math.min(w, (int) ((h - gap) / (1 + LIBRARY_ASPECT)));
+            side = Math.max(8, side);
+            final int libH = Math.round(side * LIBRARY_ASPECT);
+            final int x = (w - side) / 2;
+            final int y = Math.max(0, (h - side - gap - libH) / 2);
+            if (avatar != null) {
+                avatar.setBounds(x, y, side, side);
+            }
+            libraryLabel.setBounds(x, y + side + gap, side, libH);
+            if (mana != null) {
+                final int pad = 3;
+                mana.setBounds(pad, 4, w - 2 * pad, Math.min(side, 52));
+            }
+        }
+    }
+
     /** The Library, drawn as the player's deck sleeve in a recessed slot with the count in a corner badge. Highlights on hover. */
     private class DeckSleeveLabel extends JComponent {
         private static final int SRC_W = 360;
@@ -326,11 +396,6 @@ public class PlayerDetailsPanel extends JPanel {
         private final SkinImage sleeve;
         private int count;
         private boolean hovered;
-        private Component avatarComp;
-
-        void setAvatarComponent(final Component c) {
-            this.avatarComp = c;
-        }
 
         DeckSleeveLabel() {
             this.sleeve = sleeveImage(player);
@@ -338,11 +403,13 @@ public class PlayerDetailsPanel extends JPanel {
                 @Override
                 public void mouseEntered(final MouseEvent e) {
                     hovered = true;
+                    MouseUtil.setCursor(Cursor.HAND_CURSOR);
                     repaint();
                 }
                 @Override
                 public void mouseExited(final MouseEvent e) {
                     hovered = false;
+                    MouseUtil.resetCursor();
                     repaint();
                 }
             });
@@ -367,11 +434,8 @@ public class PlayerDetailsPanel extends JPanel {
                 return;
             }
 
-            // Card scaled to AVATAR_WIDTH_PCT of width, but shrunk to fit the available height (shared with the avatar) so it never crops.
+            // Card scaled to AVATAR_WIDTH_PCT of width, capped to fit the available height so it never crops.
             int dw = Math.min(Math.round(w * AVATAR_WIDTH_PCT), (int) ((h - 2) / LIBRARY_ASPECT));
-            if (avatarComp != null && avatarComp.getHeight() > 0) {
-                dw = Math.min(dw, avatarComp.getHeight() - 2);
-            }
             dw = Math.max(8, dw);
             final int dh = Math.round(dw * LIBRARY_ASPECT);
             final int dx = (w - dw) / 2;
@@ -382,7 +446,7 @@ public class PlayerDetailsPanel extends JPanel {
 
             g2.setColor(new Color(0, 0, 0, 55));
             g2.fillRect(0, 0, w, h);
-            FSkin.drawImage(g2, sleeve, dx, dy, dw, dh);
+            FSkin.drawImage(g2, scaledForDraw(sleeve, dw, dh, g2.getTransform().getScaleX(), SRC_W, SRC_H), dx, dy, dw, dh);
 
             final String cnt = String.valueOf(count);
             FSkin.setGraphicsFont(g2, FSkin.getBoldFont(badgeFontSize(w)));
