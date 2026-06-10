@@ -18,12 +18,15 @@
 package forge.screens.match.views;
 
 import java.awt.Color;
-import java.awt.Font;
+import java.awt.Component;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.function.Function;
 
 import javax.swing.JPanel;
-import javax.swing.SwingConstants;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 
@@ -42,11 +45,11 @@ import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.screens.match.CMatchUI;
 import forge.screens.match.controllers.CField;
-import forge.toolbox.FLabel;
 import forge.toolbox.FScrollPane;
 import forge.toolbox.FSkin;
 import forge.toolbox.FSkin.SkinImage;
 import forge.toolbox.FSkin.SkinnedPanel;
+import forge.toolbox.special.ManaPoolPanel;
 import forge.toolbox.special.PhaseIndicator;
 import forge.toolbox.special.PlayerDetailsPanel;
 import forge.util.Localizer;
@@ -80,15 +83,10 @@ public class VField implements IVDoc<CField> {
     private final SkinnedPanel avatarArea = new SkinnedPanel();
 
     private final PlayerDetailsPanel detailsPanel;
+    private final ManaPoolPanel manaPool;
 
     // Avatar area
-    private final FLabel lblAvatar     = new FLabel.Builder().fontAlign(SwingConstants.CENTER).iconScaleFactor(1.0f).build();
-    private final FLabel lblLife       = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).build();
-    private final FLabel lblPoison     = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).icon(FSkin.getImage(FSkinProp.IMG_POISON)).iconInBackground().build();
-    private final FLabel lblEnergy     = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).icon(FSkin.getImage(FSkinProp.IMG_ENERGY)).iconInBackground().build();
-    private final FLabel lblExperience = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).icon(FSkin.getImage(FSkinProp.IMG_EXPERIENCE)).iconInBackground().build();
-    private final FLabel lblTicket     = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).icon(FSkin.getImage(FSkinProp.IMG_TICKET)).iconInBackground().build();
-    private final FLabel lblRad        = new FLabel.Builder().fontAlign(SwingConstants.CENTER).fontStyle(Font.BOLD).icon(FSkin.getImage(FSkinProp.IMG_RAD)).iconInBackground().build();
+    private final AvatarLabel avatarLabel = new AvatarLabel();
 
     private final PhaseIndicator phaseIndicator = new PhaseIndicator();
 
@@ -114,6 +112,9 @@ public class VField implements IVDoc<CField> {
         else { tab.setText(Localizer.getInstance().getMessage("lblNoPlayerForEDocID", docID.toString())); }
 
         detailsPanel = new PlayerDetailsPanel(player, CMatchUI.FLOATING_ZONE_TYPES);
+        manaPool = new ManaPoolPanel(player);
+        avatarLabel.setLibraryComponent(detailsPanel.getLblLibrary());
+        detailsPanel.setAvatarComponent(avatarLabel);
 
         // TODO player is hard-coded into tabletop...should be dynamic
         // (haven't looked into it too deeply). Doublestrike 12-04-12
@@ -121,19 +122,14 @@ public class VField implements IVDoc<CField> {
 
         control = new CField(matchUI, player, this);
 
-        lblAvatar.setFocusable(false);
-        lblLife.setFocusable(false);
-        lblPoison.setFocusable(false);
-        lblEnergy.setFocusable(false);
-        lblExperience.setFocusable(false);
-        lblTicket.setFocusable(false);
-        lblRad.setFocusable(false);
+        avatarLabel.setFocusable(false);
 
         avatarArea.setOpaque(false);
         avatarArea.setBackground(FSkin.getColor(FSkin.Colors.CLR_HOVER));
         avatarArea.setLayout(new MigLayout("insets 0, gap 0"));
-        avatarArea.add(lblAvatar, "w 100%-6px!, h 100%-23px!, wrap, gap 3 3 3 0");
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
+        avatarArea.add(avatarLabel, "w 100%!, h 100%!");
+        avatarArea.add(manaPool, "pos 2% 3 98% 44");
+        avatarArea.setComponentZOrder(manaPool, 0);
 
         // Player area hover effect
         avatarArea.addMouseListener(new MouseAdapter() {
@@ -167,10 +163,10 @@ public class VField implements IVDoc<CField> {
         final JPanel pnl = parentCell.getBody();
         pnl.setLayout(new MigLayout("insets 0, gap 0"));
 
-        pnl.add(avatarArea, "w 10%!, h 35%!");
+        pnl.add(avatarArea, "w 10%!, h 33%!");
         pnl.add(phaseIndicator, "w 5%!, h 100%!, span 1 2");
         pnl.add(scroller, "w 85%!, h 100%!, span 1 2, wrap");
-        pnl.add(detailsPanel, "w 10%!, h 64%!, gapleft 1px");
+        pnl.add(detailsPanel, "w 10%!, h 66%!, gapleft 1px");
     }
 
     @Override
@@ -219,12 +215,14 @@ public class VField implements IVDoc<CField> {
     }
 
     public void setAvatar(final SkinImage avatar) {
-        lblAvatar.setIcon(avatar);
-        lblAvatar.getResizeTimer().start();
+        avatarLabel.setAvatarImage(avatar);
     }
 
     public void updateManaPool() {
-        detailsPanel.updateManaPool();
+        manaPool.update();
+    }
+    public void setupManaActions(final Function<Byte, Boolean> manaAction) {
+        manaPool.setupMouseActions(manaAction);
     }
     public void updateZones() {
         detailsPanel.updateZones();
@@ -243,179 +241,114 @@ public class VField implements IVDoc<CField> {
         tab.setToolTipText(label);
     }
 
-    private void addLblTicket() {
-        if (lblTicket.isShowing() || lblExperience.isShowing() || lblEnergy.isShowing() || lblPoison.isShowing()) {
-            return; // experience, energy, poison take precedence
-        }
-        avatarArea.remove(lblLife);
-        lblLife.setIcon(FSkin.getImage(FSkinProp.ICO_QUEST_LIFE));
-        avatarArea.add(lblLife, "w 50%!, h 20px!, split 2");
-        avatarArea.add(lblTicket, "w 50%!, h 20px!, wrap");
-    }
-
-    private void removeLblTicket() {
-        if (!lblTicket.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblTicket);
-        avatarArea.remove(lblLife);
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
-    }
-
-    private void addLblRad() {
-        if (lblRad.isShowing() || lblExperience.isShowing() || lblEnergy.isShowing() || lblPoison.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblLife);
-        lblLife.setIcon(FSkin.getImage(FSkinProp.ICO_QUEST_LIFE));
-        avatarArea.add(lblLife, "w 50%!, h 20px!, split 2");
-        avatarArea.add(lblRad, "w 50%!, h 20px!, wrap");
-    }
-
-    private void removeLblRad() {
-        if (!lblRad.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblRad);
-        avatarArea.remove(lblLife);
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
-    }
-
-    private void addLblExperience() {
-        if (lblExperience.isShowing() || lblEnergy.isShowing() || lblPoison.isShowing()) {
-            return; // energy and poison take precedence
-        }
-        avatarArea.remove(lblLife);
-        lblLife.setIcon(FSkin.getImage(FSkinProp.ICO_QUEST_LIFE));
-        avatarArea.add(lblLife, "w 50%!, h 20px!, split 2");
-        avatarArea.add(lblExperience, "w 50%!, h 20px!, wrap");
-    }
-
-    private void removeLblExperience() {
-        if (!lblExperience.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblExperience);
-        avatarArea.remove(lblLife);
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
-    }
-
-    private void addLblEnergy() {
-        if (lblEnergy.isShowing() || lblPoison.isShowing()) {
-            return; // poison takes precedence
-        }
-        avatarArea.remove(lblLife);
-        lblLife.setIcon(FSkin.getImage(FSkinProp.ICO_QUEST_LIFE));
-        avatarArea.add(lblLife, "w 50%!, h 20px!, split 2");
-        avatarArea.add(lblEnergy, "w 50%!, h 20px!, wrap");
-    }
-    
-    private void removeLblEnergy() {
-        if (!lblEnergy.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblEnergy);
-        avatarArea.remove(lblLife);
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
-    }
-
-    private void addLblPoison() {
-        if (lblPoison.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblLife);
-        lblLife.setIcon(FSkin.getImage(FSkinProp.ICO_QUEST_LIFE));
-        avatarArea.add(lblLife, "w 50%!, h 20px!, split 2");
-        avatarArea.add(lblPoison, "w 50%!, h 20px!, wrap");
-    }
-    private void removeLblPoison() {
-        if (!lblPoison.isShowing()) {
-            return;
-        }
-        avatarArea.remove(lblPoison);
-        avatarArea.remove(lblLife);
-        avatarArea.add(lblLife, "w 100%!, h 20px!, wrap");
-    }
-
     public void updateDetails() {
-        // Update life total
-        final int life = player.getLife();
-        lblLife.setText(String.valueOf(life));
-        if (life > LIFE_CRITICAL) {
-            lblLife.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
-        } else {
-            lblLife.setForeground(Color.RED);
-        }
-
-        // Update poison and/or energy counters, poison counters take precedence
+        // The highest-precedence active counter (poison > energy > experience > rad > ticket) shows on the avatar.
         final int poison = player.getCounters(CounterEnumType.POISON);
         final int energy = player.getCounters(CounterEnumType.ENERGY);
         final int experience = player.getCounters(CounterEnumType.EXPERIENCE);
         final int rad = player.getCounters(CounterEnumType.RAD);
         final int ticket = player.getCounters(CounterEnumType.TICKET);
-
         if (poison > 0) {
-            removeLblEnergy();
-            removeLblExperience();
-            removeLblRad();
-            removeLblTicket();
-            addLblPoison();
-            lblPoison.setText(String.valueOf(poison));
-            if (poison < POISON_CRITICAL) {
-                lblPoison.setForeground(FSkin.getColor(FSkin.Colors.CLR_TEXT));
-            } else {
-                lblPoison.setForeground(Color.RED);
-            }
+            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_POISON), poison, poison >= POISON_CRITICAL);
+        } else if (energy > 0) {
+            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_ENERGY), energy, false);
+        } else if (experience > 0) {
+            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_EXPERIENCE), experience, false);
+        } else if (rad > 0) {
+            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_RAD), rad, false);
+        } else if (ticket > 0) {
+            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_TICKET), ticket, false);
         } else {
-            removeLblPoison();
+            avatarLabel.setCounter(null, 0, false);
         }
-
-        if (energy > 0) {
-            removeLblExperience();
-            removeLblRad();
-            removeLblTicket();
-            if (poison == 0) {
-                addLblEnergy();
-                lblEnergy.setText(String.valueOf(energy));
-            }
-        } else {
-            removeLblEnergy();
-        }
-
-        if (experience > 0) {
-            removeLblRad();
-            removeLblTicket();
-            if (poison == 0 && energy == 0) {
-                addLblExperience();
-                lblExperience.setText(String.valueOf(experience));
-            }
-        } else {
-            removeLblExperience();
-        }
-
-        if (rad > 0) {
-            removeLblTicket();
-            if (poison == 0 && energy == 0 && experience == 0) {
-                addLblRad();
-                lblRad.setText(String.valueOf(rad));
-            }
-        } else {
-            removeLblRad();
-        }
-
-        if (ticket > 0) {
-            if (poison == 0 && energy == 0 && experience == 0 && rad == 0) {
-                addLblTicket();
-                lblTicket.setText(String.valueOf(ticket));
-            }
-        } else {
-            removeLblTicket();
-        }
+        avatarLabel.repaint();
 
         final boolean highlighted = isHighlighted();
         this.avatarArea.setBorder(highlighted ? borderAvatarHighlighted : borderAvatarSimple);
         this.avatarArea.setOpaque(highlighted);
         this.avatarArea.setToolTipText(getPlayerDetailsHtml());
+    }
+
+    /** Paints the player's avatar contained and centred (matching the deck sleeve) with the life total as a corner badge. */
+    private final class AvatarLabel extends JPanel {
+        private SkinImage avatar;
+        private Component library;
+        private SkinImage counterIcon;
+        private int counterCount;
+        private boolean counterCritical;
+
+        AvatarLabel() {
+            setOpaque(false);
+        }
+
+        void setLibraryComponent(final Component c) {
+            this.library = c;
+        }
+
+        void setCounter(final SkinImage icon, final int count, final boolean critical) {
+            this.counterIcon = icon;
+            this.counterCount = count;
+            this.counterCritical = critical;
+            repaint();
+        }
+
+        void setAvatarImage(final SkinImage image) {
+            this.avatar = image;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            super.paintComponent(g);
+            final int w = getWidth();
+            final int h = getHeight();
+            if (w <= 0 || h <= 0) {
+                return;
+            }
+            final Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            // Avatar (square) scaled to the shared width, shrunk to fit the available height (its own and the library's) so it never crops.
+            int side = Math.min(Math.round(w * PlayerDetailsPanel.AVATAR_WIDTH_PCT), h - 2);
+            if (library != null && library.getHeight() > 0) {
+                side = Math.min(side, (int) ((library.getHeight() - 2) / PlayerDetailsPanel.LIBRARY_ASPECT));
+            }
+            side = Math.max(8, side);
+            final int ax = (w - side) / 2;
+            final int ay = (h - side) / 2;
+            if (avatar != null) {
+                FSkin.drawImage(g2, avatar, ax, ay, side, side);
+            }
+
+            if (player != null) {
+                final int life = player.getLife();
+                final String text = String.valueOf(life);
+                FSkin.setGraphicsFont(g2, FSkin.getBoldFont(PlayerDetailsPanel.badgeFontSize(w)));
+                final java.awt.FontMetrics fm = g2.getFontMetrics();
+                final int badgeW = fm.stringWidth(text) + 10;
+                final int badgeH = fm.getAscent() + 6;
+                final int bx = ax + side - badgeW;
+                final int by = Math.min(ay + side, h) - badgeH + 2;
+                g2.setColor(new Color(0, 0, 0, 185));
+                g2.fillRoundRect(bx, by, badgeW, badgeH, 8, 8);
+                g2.setColor(life > LIFE_CRITICAL ? Color.WHITE : Color.RED);
+                g2.drawString(text, bx + 5, by + 3 + fm.getAscent());
+
+                // Active counter (poison/energy/...) as a matching badge on the avatar's bottom-left.
+                if (counterIcon != null && counterCount > 0) {
+                    final String ctext = String.valueOf(counterCount);
+                    final int iconSz = fm.getAscent();
+                    final int cw = 4 + iconSz + 2 + fm.stringWidth(ctext) + 5;
+                    final int cx = ax;
+                    g2.setColor(new Color(0, 0, 0, 185));
+                    g2.fillRoundRect(cx, by, cw, badgeH, 8, 8);
+                    FSkin.drawImage(g2, counterIcon, cx + 4, by + (badgeH - iconSz) / 2, iconSz, iconSz);
+                    g2.setColor(counterCritical ? Color.RED : Color.WHITE);
+                    g2.drawString(ctext, cx + 4 + iconSz + 2, by + 3 + fm.getAscent());
+                }
+            }
+            g2.dispose();
+        }
     }
 
     private String getPlayerDetailsHtml() {

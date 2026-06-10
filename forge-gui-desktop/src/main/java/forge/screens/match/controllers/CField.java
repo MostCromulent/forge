@@ -115,7 +115,8 @@ public class CField implements ICDoc {
             popup.show(e.getComponent(), e.getX(), e.getY());
         };
 
-        view.getDetailsPanel().setupMouseActions(zoneActionFactory, zoneRightClick, manaAction);
+        view.getDetailsPanel().setupMouseActions(zoneActionFactory, zoneRightClick);
+        view.setupManaActions(manaAction);
     }
 
     public final CMatchUI getMatchUI() {
