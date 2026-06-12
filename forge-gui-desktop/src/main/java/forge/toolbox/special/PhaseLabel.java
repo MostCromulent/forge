@@ -32,6 +32,7 @@ public class PhaseLabel extends JLabel {
     private boolean enabled = true;
     private boolean active = false;
     private boolean hover = false;
+    private boolean suppressPreview = false;
     private boolean yieldMarked = false;
     private boolean pressed = false;
     private final Timer pressTimer;
@@ -69,6 +70,7 @@ public class PhaseLabel extends JLabel {
                 PhaseLabel.this.pressed = true;
                 PhaseLabel.this.pressTimer.restart();
                 PhaseLabel.this.enabled = !PhaseLabel.this.enabled;
+                PhaseLabel.this.suppressPreview = true;
                 if (PhaseLabel.this.onToggled != null) {
                     PhaseLabel.this.onToggled.run();
                 }
@@ -85,6 +87,7 @@ public class PhaseLabel extends JLabel {
             @Override
             public void mouseExited(final MouseEvent e) {
                 PhaseLabel.this.hover = false;
+                PhaseLabel.this.suppressPreview = false;
                 MouseUtil.resetCursor();
                 PhaseLabel.this.repaintOnlyThisLabel();
             }
@@ -161,24 +164,24 @@ public class PhaseLabel extends JLabel {
         final int w = this.getWidth();
         final int h = this.getHeight();
 
-        // Precedence: hover > yieldMarked > active/enabled combinations.
-        if (this.hover) {
-            FSkin.setGraphicsColor(g, FSkin.getColor(FSkin.Colors.CLR_HOVER));
-            g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
-        }
-        else if (this.yieldMarked) {
+        // While hovered, preview the state a click would produce; once a click commits it,
+        // show the real state until the pointer leaves so the click doesn't appear to undo itself.
+        final boolean previewEnabled = (this.hover && !this.suppressPreview) ? !this.enabled : this.enabled;
+
+        // Precedence: yieldMarked > active/enabled combinations.
+        if (this.yieldMarked) {
             g.setColor(YIELD_MARKER_COLOR);
             g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
         }
-        else if (this.active && this.enabled) {
+        else if (this.active && previewEnabled) {
             FSkin.setGraphicsColor(g, FSkin.getColor(FSkin.Colors.CLR_PHASE_ACTIVE_ENABLED));
             g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
         }
-        else if (!this.active && this.enabled) {
+        else if (!this.active && previewEnabled) {
             FSkin.setGraphicsColor(g, FSkin.getColor(FSkin.Colors.CLR_PHASE_INACTIVE_ENABLED));
             g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
         }
-        else if (this.active && !this.enabled) {
+        else if (this.active && !previewEnabled) {
             FSkin.setGraphicsColor(g, FSkin.getColor(FSkin.Colors.CLR_PHASE_ACTIVE_DISABLED));
             g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
         }
@@ -187,8 +190,7 @@ public class PhaseLabel extends JLabel {
             g.fillRoundRect(1, 1, w - 2, h - 2, 5, 5);
         }
 
-        // raised = stop; hover previews the toggle, holding dips to pressed for click feedback
-        final boolean raised = !this.pressed && (this.hover ? !this.enabled : this.enabled);
+        final boolean raised = !this.pressed && previewEnabled;
         drawBevel(g, w, h, raised);
         if (this.pressed) {
             drawPressOverlay(g, w, h);

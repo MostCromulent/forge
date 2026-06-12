@@ -214,6 +214,19 @@ public class PlayerDetailsPanel extends JPanel {
         }
     }
 
+    /** Variant deck zones show just their distinguishing word (the deck icon conveys the rest); the full name overflows the panel. */
+    private static String shortZoneName(final ZoneType zone) {
+        final String key;
+        switch (zone) {
+            case SchemeDeck:      key = "lblSchemeDeckZoneShort"; break;
+            case PlanarDeck:      key = "lblPlanarDeckZoneShort"; break;
+            case AttractionDeck:  key = "lblAttractionDeckZoneShort"; break;
+            case ContraptionDeck: key = "lblContraptionDeckZoneShort"; break;
+            default: return zone.getTranslatedName();
+        }
+        return Localizer.getInstance().getMessageorUseDefault(key, zone.getTranslatedName());
+    }
+
     private static String zoneTooltip(final ZoneType zone, final int count, final String tooltipKey,
                                       final Function<PlayerView, Object> extraArg, final PlayerView player) {
         if (tooltipKey == null) {
@@ -267,7 +280,7 @@ public class PlayerDetailsPanel extends JPanel {
 
             final FLabel icon = new FLabel.Builder().icon(FSkin.getImage(iconFromZone(zone)).resize(14, 14))
                     .iconScaleAuto(false).build();
-            final String displayName = WordUtils.capitalize(zone.getTranslatedName());
+            final String displayName = WordUtils.capitalize(shortZoneName(zone));
             final FLabel name = new FLabel.Builder().text(displayName).fontSize(10).fontAlign(SwingConstants.LEFT).build();
             name.addComponentListener(new ComponentAdapter() {
                 @Override
