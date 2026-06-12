@@ -85,6 +85,25 @@ compositing, mobile rendering, the show / hide preference) is unchanged.
   `version = art_crop` (`ImageUtil.java:233`), built from the card's collector
   number and edition — stable identity, not the wrapping art index.
 
+### Card browser + printing chooser (reused — this is the picker)
+- `CardManager` (desktop `forge.itemmanager.CardManager`, and the mobile
+  equivalent) is an embeddable card browser with search, filtering, and a
+  card-image preview. Already reused by the spell shop (`SpellShopManager`), deck
+  viewer (`FDeckViewer`), and every deck editor (`new CardManager(detailPicture,
+  ...)`).
+- Art / printing selection already exists: desktop
+  `ChangePrintingDialog.show(PaperCard) -> PaperCard`
+  (`forge.screens.deckeditor.ChangePrintingDialog`), the deck editor's "Change
+  Printing", with art-style filters (All / Standard / Borderless / Full Art /
+  Showcase / Extended Art / Retro Frame / Promo). Mobile uses
+  `GuiChoose.oneOrNone(message, getAllCardsNoAlt(name), callback)` over the card's
+  printings, exactly as the deck editor's "Change Preferred Art" menu does
+  (`FDeckEditor.java:1876-1893`).
+- Both art selectors return a concrete `PaperCard`; `getName()` / `getEdition()` /
+  `getArtIndex()` compose the sleeve image key directly. This is the same
+  `name | set | artIndex` identity Forge already manages as "preferred art"
+  (`CardDb.setPreferredArt`), so the sleeve key introduces no new identity concept.
+
 ### Avatar-from-card (pattern reference only — NOT proven over the network)
 - `LobbyPlayer.avatarCardImageKey` to `TrackableProperty.AvatarCardImageKey` to
   `CardAvatarImage(imageKey)`; its `draw()` does scale-to-cover centre-crop into
@@ -112,7 +131,7 @@ database. Same-build multiplayer (Section 10) guarantees exactly that.
 | Fetch the art-crop image to the sleeve cache | The branch's per-seat sleeve fetch (`doFetch` into `CACHE_SLEEVE_PICS_DIR`) and `ImageFetcher` base | A fetch branch that, given a card key, resolves the card and fetches its art-crop URL regardless of `UI_CARD_ART_FORMAT` (Section 6) |
 | Composite + centre-crop into the sleeve box | Desktop: the branch's file-to-`__SLEEVEURL_%s__` compositor (rekeyed). Mobile: a `CardSleeveImage` modelled on `CardAvatarImage.draw()` cover-crop, OR the same file-based render | Thin `CardSleeveImage` / rekey of the cache id |
 | Sleeve grid with dynamic tiles + Random | `SleeveSelector` / `SleevesSelector` (already iterate a variable-length map) | A "My card art" section: library tiles + Add tile + per-tile delete |
-| Card search picker | Deck-editor card chooser / `ItemManager` (full card search exists) | A thin "choose a card" dialog returning a `PaperCard` |
+| Choose a card + its art | `CardManager` browser (deck editor / spell shop / deck viewer) + `ChangePrintingDialog.show()` (desktop) / `GuiChoose.oneOrNone` over `getAllCardsNoAlt(name)` (mobile) | An "Add art" launcher that wires the returned `PaperCard` to a key — no new picker widget |
 | Per-seat selection + library persistence | The branch's `CustomSleeves` codecs | Two prefs (Section 5) written through those codecs |
 | Suppress opponents' custom sleeves | `UI_SHOW_CUSTOM_SLEEVES` + its checkbox | none |
 | Built-in fallback when hidden / unresolved | The existing `SleeveIndex` render path | An explicit resolve-or-fallback check (Section 7) — this is NOT inherited behavior |
@@ -219,30 +238,41 @@ host Forge already uses for card images.
 - "Add art" opens the picker (8.2).
 - Selecting any tile sets this seat's selection (built-in index or card key).
 
-### 8.2 Card-art picker
+### 8.2 Choosing a card + art (reuse the existing widgets — no new dialog)
+
+There is no bespoke search / matches / printing / preview dialog. The two halves
+already exist (Section 3) and are wired together by a thin launcher:
+
 ```
-+- Choose Card Art for Sleeve - Player 1 -----------------------------+
-|  Search a card  +-------------------------------+                   |
-|                 | niv-mizzet                    |  (search)         |
-|                 +-------------------------------+                   |
-|  +- Matches ------------------+   +- Sleeve preview ------+         |
-|  | > Niv-Mizzet, Parun        |   |     +-----------+     |         |
-|  |   Niv-Mizzet, the Firemind |   |     |###########|     |         |
-|  |   Niv-Mizzet Reborn        |   |     |##  art  ##|     |         |
-|  |   ...                      |   |     |##  crop ##|     |         |
-|  +----------------------------+   |     +-----------+     |         |
-|  +- Art (one per printing) ---+   |  Niv-Mizzet, Parun    |         |
-|  |  [x]GRN  [ ]MYB  [ ]SLD     |   |  GRN - 360x500 fill   |         |
-|  +----------------------------+   +-----------------------+         |
-|                                  [ Use This Art ]  [ Cancel ]       |
-+--------------------------------------------------------------------+
+  [Add art] tile
+       |
+       v
+  CardManager card browser (search + filter + image preview)   <- existing
+       |  pick a card
+       v
+  ChangePrintingDialog.show(card)  (desktop)                   <- existing
+  GuiChoose.oneOrNone(getAllCardsNoAlt(name)) (mobile)         <- existing
+       |  returns the chosen PaperCard (set + artIndex fixed)
+       v
+  key = chosen.getImageKey(false)
+  append key to UI_SLEEVE_ART_LIBRARY (dedup) and select it
 ```
-- Search: debounced over the local card DB (reuse deck-editor search / `ItemManager`).
-- "Art (one per printing)": art-crop differs per printing / artIndex; picking a
-  printing fixes the exact `c:name|set|artIndex` key.
-- Preview: live centre-crop of the chosen printing's art-crop.
-- Use This Art: append key to `UI_SLEEVE_ART_LIBRARY` (dedup) and select it.
-- Tokens are excluded from results (Section 6).
+
+- Card selection: the existing `CardManager` browser, same component the deck
+  editor / spell shop / deck viewer embed — search, filter, and card preview
+  come for free.
+- Printing / art: the existing `ChangePrintingDialog.show()` (desktop) or the
+  deck editor's "Change Preferred Art" `GuiChoose.oneOrNone` flow (mobile). Both
+  already enumerate printings with art-style filtering and hand back a concrete
+  `PaperCard`.
+- The returned `PaperCard.getImageKey(false)` is the sleeve key (Section 5).
+- Tokens are excluded by the launcher's card filter (Section 6); double-faced /
+  meld use the front face.
+
+The only genuinely new UI is the "Add art" launcher and the library tiles in the
+sleeve grid (8.1). An optional centre-cropped sleeve preview can be shown at the
+confirm step using the same `CardSleeveImage` render, but the existing card-image
+preview in `CardManager` / `ChangePrintingDialog` already conveys the choice.
 
 ---
 
@@ -288,7 +318,9 @@ file-based compositor — applies the same math.
 4. The library + selection prefs over the existing `CustomSleeves` codecs
    (`UI_SLEEVE_ART_LIBRARY`, `UI_SLEEVE_ART_KEYS`).
 5. Grid additions: library tiles, Add tile, per-tile delete (both selectors).
-6. The card-art picker dialog reusing the deck-editor card search.
+6. An "Add art" launcher that opens the existing `CardManager` browser +
+   `ChangePrintingDialog` / `GuiChoose` printing flow and turns the returned
+   `PaperCard` into a library key — no new search / printing / preview widget.
 7. Localization strings; remove the arbitrary-URL entry dialog and its
    https-only / size / dimension caps (no longer needed — fetch is Scryfall-only).
 
