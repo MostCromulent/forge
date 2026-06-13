@@ -9,8 +9,6 @@ import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -43,8 +41,9 @@ import net.miginfocom.swing.MigLayout;
 public class PlayerDetailsPanel extends JPanel {
     private static final long serialVersionUID = -6531759554646891983L;
 
-    private static final List<ZoneType> CORE_ZONES = List.of(ZoneType.Hand, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Flashback);
-    private static final String ZONE_ROW = "w 100%!, h 19px!";
+    /** These zones always show; the rest (command, sideboard, variant decks, etc.) appear only while they hold cards. */
+    private static final List<ZoneType> ALWAYS_SHOWN = List.of(ZoneType.Hand, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Flashback);
+    private static final String ZONE_CELL = "h 22px!";
 
     /** Fraction of the panel width occupied by the avatar and the deck sleeve, so the two images line up. */
     public static final float AVATAR_WIDTH_PCT = 0.96f;
@@ -78,35 +77,31 @@ public class PlayerDetailsPanel extends JPanel {
     private final DeckSleeveLabel libraryLabel;
     private final PortraitStack portrait;
     private final SkinnedPanel zoneList;
-    private final Map<ZoneType, ZoneRow> coreLabels = new EnumMap<>(ZoneType.class);
-    private final Map<ZoneType, ZoneRow> extraLabels = new EnumMap<>(ZoneType.class);
-    private final List<ZoneType> shownExtras = new ArrayList<>();
+    private final Map<ZoneType, ZoneRow> rows = new EnumMap<>(ZoneType.class);
+    private final List<ZoneType> zoneOrder = new ArrayList<>();
+    private final List<ZoneType> shown = new ArrayList<>();
 
     public PlayerDetailsPanel(final PlayerView player, final EnumSet<ZoneType> supportedZones) {
         this.player = player;
 
         libraryLabel = new DeckSleeveLabel();
 
-        coreLabels.put(ZoneType.Hand, new ZoneRow(ZoneType.Hand, "lblHandNOfMax", PlayerView::getMaxHandString));
-        coreLabels.put(ZoneType.Graveyard, new ZoneRow(ZoneType.Graveyard, "lblGraveyardNCardsNTypes", p -> p.getZoneTypes(TrackableProperty.Graveyard)));
-        coreLabels.put(ZoneType.Exile, new ZoneRow(ZoneType.Exile, "lblExileNCards", null));
-        coreLabels.put(ZoneType.Flashback, new ZoneRow(ZoneType.Flashback, "lblFlashbackNCards", null));
-
+        addRow(ZoneType.Hand, "lblHandNOfMax", PlayerView::getMaxHandString);
+        addRow(ZoneType.Graveyard, "lblGraveyardNCardsNTypes", p -> p.getZoneTypes(TrackableProperty.Graveyard));
+        addRow(ZoneType.Exile, "lblExileNCards", null);
+        addRow(ZoneType.Flashback, "lblFlashbackNCards", null);
         for (final ZoneType zone : supportedZones) {
-            if (zone == ZoneType.Library || coreLabels.containsKey(zone)) {
+            if (zone == ZoneType.Library || rows.containsKey(zone)) {
                 continue;
             }
-            extraLabels.put(zone, new ZoneRow(zone, extraTooltipKey(zone), null));
+            addRow(zone, extraTooltipKey(zone), null);
         }
 
         setOpaque(false);
         setLayout(new MigLayout("insets 0, gap 0, wrap, hidemode 3"));
 
-        zoneList = new SkinnedPanel(new MigLayout("insets 1, gap 0, wrap, hidemode 3"));
+        zoneList = new ZoneGrid(new MigLayout("insets 1, gap 1, wrap 2, hidemode 3", "[grow,fill][grow,fill]"));
         zoneList.setOpaque(false);
-        for (final ZoneType zone : CORE_ZONES) {
-            zoneList.add(coreLabels.get(zone), ZONE_ROW);
-        }
 
         portrait = new PortraitStack();
         add(portrait, "w 100%!, growy, pushy, gap 0");
@@ -120,11 +115,17 @@ public class PlayerDetailsPanel extends JPanel {
         portrait.setAvatar(avatarArea);
     }
 
+    private void addRow(final ZoneType zone, final String tooltipKey, final Function<PlayerView, Object> tooltipExtraArg) {
+        rows.put(zone, new ZoneRow(zone, tooltipKey, tooltipExtraArg));
+        zoneOrder.add(zone);
+    }
+
     private static String extraTooltipKey(final ZoneType zone) {
         switch (zone) {
             case Flashback: return "lblFlashbackNCards";
             case Command: return "lblCommandZoneNCards";
             case Sideboard: return "lblSideboardNCards";
+            case Ante: return "lblAnteZoneNCards";
             default: return null;
         }
     }
@@ -137,55 +138,38 @@ public class PlayerDetailsPanel extends JPanel {
         return libraryLabel;
     }
 
-    /** Core zones always show; extra zones (command, sideboard, etc.) appear only while they hold cards. */
+    /** The core zones always show; the rest appear only while they hold cards. Laid out two zones per grid row. */
     public void updateZones() {
         libraryLabel.onContentUpdate();
-        for (final ZoneRow row : coreLabels.values()) {
-            row.onContentUpdate();
-        }
 
         final List<ZoneType> nowVisible = new ArrayList<>();
-        for (final ZoneType zone : extraLabels.keySet()) {
-            if (player.getZoneSize(zone) > 0) {
+        for (final ZoneType zone : zoneOrder) {
+            if (ALWAYS_SHOWN.contains(zone) || player.getZoneSize(zone) > 0) {
                 nowVisible.add(zone);
             }
         }
-        if (!nowVisible.equals(shownExtras)) {
-            for (final ZoneType zone : shownExtras) {
-                zoneList.remove(extraLabels.get(zone));
+        if (!nowVisible.equals(shown)) {
+            for (final ZoneType zone : shown) {
+                zoneList.remove(rows.get(zone));
             }
             for (final ZoneType zone : nowVisible) {
-                zoneList.add(extraLabels.get(zone), ZONE_ROW);
+                zoneList.add(rows.get(zone), ZONE_CELL);
             }
-            shownExtras.clear();
-            shownExtras.addAll(nowVisible);
+            shown.clear();
+            shown.addAll(nowVisible);
             zoneList.revalidate();
             revalidate();
             repaint();
         }
         for (final ZoneType zone : nowVisible) {
-            extraLabels.get(zone).onContentUpdate();
-        }
-        restripe();
-    }
-
-    private void restripe() {
-        int i = 0;
-        for (final ZoneType zone : CORE_ZONES) {
-            coreLabels.get(zone).setStripe(i++ % 2 == 0);
-        }
-        for (final ZoneType zone : shownExtras) {
-            extraLabels.get(zone).setStripe(i++ % 2 == 0);
+            rows.get(zone).onContentUpdate();
         }
     }
 
     public void setupMouseActions(Function<ZoneType, Runnable> zoneActionFactory,
                                   BiConsumer<ZoneType, MouseEvent> zoneRightClick) {
         wireZone(libraryLabel, ZoneType.Library, zoneActionFactory, zoneRightClick);
-        for (final Map.Entry<ZoneType, ZoneRow> entry : coreLabels.entrySet()) {
-            wireZone(entry.getValue(), entry.getKey(), zoneActionFactory, zoneRightClick);
-        }
-        for (final Map.Entry<ZoneType, ZoneRow> entry : extraLabels.entrySet()) {
+        for (final Map.Entry<ZoneType, ZoneRow> entry : rows.entrySet()) {
             wireZone(entry.getValue(), entry.getKey(), zoneActionFactory, zoneRightClick);
         }
     }
@@ -212,19 +196,6 @@ public class PlayerDetailsPanel extends JPanel {
         }
     }
 
-    /** Variant deck zones show just their distinguishing word (the deck icon conveys the rest); the full name overflows the panel. */
-    private static String shortZoneName(final ZoneType zone) {
-        final String key;
-        switch (zone) {
-            case SchemeDeck:      key = "lblSchemeDeckZoneShort"; break;
-            case PlanarDeck:      key = "lblPlanarDeckZoneShort"; break;
-            case AttractionDeck:  key = "lblAttractionDeckZoneShort"; break;
-            case ContraptionDeck: key = "lblContraptionDeckZoneShort"; break;
-            default: return zone.getTranslatedName();
-        }
-        return Localizer.getInstance().getMessageorUseDefault(key, zone.getTranslatedName());
-    }
-
     private static String zoneTooltip(final ZoneType zone, final int count, final String tooltipKey,
                                       final Function<PlayerView, Object> extraArg, final PlayerView player) {
         if (tooltipKey == null) {
@@ -237,35 +208,48 @@ public class PlayerDetailsPanel extends JPanel {
         return localizer.getMessage(tooltipKey, count, extraArg.apply(player));
     }
 
-    /** Shrinks the label's font until the full text fits its current width, so long zone names never truncate. */
-    private static void fitFont(final FLabel label, final String text) {
-        final int avail = label.getWidth();
-        if (avail <= 0) {
-            return;
-        }
-        for (int size = 10; size >= 6; size--) {
-            final Font font = FSkin.getFont(size).getBaseFont();
-            if (label.getFontMetrics(font).stringWidth(text) <= avail) {
-                label.setFont(font);
-                return;
-            }
-        }
-        label.setFont(FSkin.getFont(6).getBaseFont());
-    }
-
     private static SkinImage sleeveImage(final PlayerView player) {
         final Map<Integer, SkinImage> sleeves = FSkin.getSleeves();
         final SkinImage image = sleeves.get(player.getSleeveIndex());
         return image != null ? image : sleeves.get(0);
     }
 
-    /** A single zone row: leading zone icon, the zone's name, and its right-aligned card count. Highlights on hover. */
+    /** Paints full-width zebra bands behind alternate grid rows, so a half-filled last row still stripes across both columns. */
+    private class ZoneGrid extends SkinnedPanel {
+        ZoneGrid(final MigLayout layout) {
+            super(layout);
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            super.paintComponent(g);
+            if (shown.isEmpty()) {
+                return;
+            }
+            FSkin.setGraphicsColor(g, FSkin.getColor(FSkin.Colors.CLR_ZEBRA));
+            // Column x-extents come from the first row's cells, so the gap between the two columns stays an unshaded
+            // separator and an odd last row still stripes its empty trailing slot.
+            final Component left = rows.get(shown.get(0));
+            final Component right = shown.size() > 1 ? rows.get(shown.get(1)) : null;
+            for (int i = 0; i < shown.size(); i += 2) {
+                if ((i / 2) % 2 != 0) {
+                    continue;
+                }
+                final Component cell = rows.get(shown.get(i));
+                g.fillRect(left.getX(), cell.getY(), left.getWidth(), cell.getHeight());
+                if (right != null) {
+                    g.fillRect(right.getX(), cell.getY(), right.getWidth(), cell.getHeight());
+                }
+            }
+        }
+    }
+
+    /** A single zone cell: leading zone icon and its right-aligned card count. The zone name lives in the hover tooltip. */
     private class ZoneRow extends SkinnedPanel {
         private final ZoneType zone;
         private final String tooltipKey;
         private final Function<PlayerView, Object> tooltipExtraArg;
         private final FLabel countLabel;
-        private boolean shaded;
         private boolean hovered;
 
         ZoneRow(final ZoneType zone, final String tooltipKey, final Function<PlayerView, Object> tooltipExtraArg) {
@@ -274,25 +258,16 @@ public class PlayerDetailsPanel extends JPanel {
             this.tooltipExtraArg = tooltipExtraArg;
 
             setOpaque(false);
-            setLayout(new MigLayout("insets 0 4 0 6, gap 0, fillx, filly", "", "[center]"));
+            setLayout(new MigLayout("insets 0 5 0 5, gap 0, fillx, filly", "", "[center]"));
 
             // Render through the background path: scales the source each paint (bicubic, device-scale aware)
             // rather than baking a fixed 14px bitmap that re-upscales blurry on a scaled display.
             final FLabel icon = new FLabel.Builder().icon(FSkin.getImage(iconFromZone(zone)))
                     .iconInBackground().iconScaleFactor(1f).build();
-            final String displayName = WordUtils.capitalize(shortZoneName(zone));
-            final FLabel name = new FLabel.Builder().text(displayName).fontSize(10).fontAlign(SwingConstants.LEFT).build();
-            name.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(final ComponentEvent e) {
-                    fitFont(name, displayName);
-                }
-            });
-            countLabel = new FLabel.Builder().fontSize(10).fontStyle(Font.BOLD).fontAlign(SwingConstants.RIGHT).build();
+            countLabel = new FLabel.Builder().fontSize(12).fontStyle(Font.BOLD).fontAlign(SwingConstants.LEFT).build();
 
-            add(icon, "w 14px!, h 14px!, gapright 5");
-            add(name, "growx, pushx, wmin 0");
-            add(countLabel, "gapleft 4, al right");
+            add(icon, "w 18px!, h 18px!, gapright 8");
+            add(countLabel, "al left");
 
             final MouseAdapter hover = new MouseAdapter() {
                 @Override
@@ -314,31 +289,14 @@ public class PlayerDetailsPanel extends JPanel {
             }
         }
 
-        void setStripe(final boolean shaded) {
-            if (this.shaded == shaded) {
-                return;
-            }
-            this.shaded = shaded;
-            refreshBackground();
-        }
-
         private void setHovered(final boolean hovered) {
             if (this.hovered == hovered) {
                 return;
             }
             this.hovered = hovered;
-            refreshBackground();
-        }
-
-        private void refreshBackground() {
+            setOpaque(hovered);
             if (hovered) {
-                setOpaque(true);
                 setBackground(FSkin.getColor(FSkin.Colors.CLR_HOVER));
-            } else if (shaded) {
-                setOpaque(true);
-                setBackground(FSkin.getColor(FSkin.Colors.CLR_ZEBRA));
-            } else {
-                setOpaque(false);
             }
             repaint();
         }
