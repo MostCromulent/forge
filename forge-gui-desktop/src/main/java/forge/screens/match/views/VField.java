@@ -18,6 +18,7 @@
 package forge.screens.match.views;
 
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -25,6 +26,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.function.Function;
 
+import javax.swing.JLayeredPane;
 import javax.swing.JPanel;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
@@ -79,6 +81,8 @@ public class VField implements IVDoc<CField> {
     // Top-level containers
     private final FScrollPane scroller = new FScrollPane(false);
     private final PlayArea tabletop;
+    private final JLayeredPane battlefield;
+    private final boolean mirror;
     private final SkinnedPanel avatarArea = new SkinnedPanel();
 
     private final PlayerDetailsPanel detailsPanel;
@@ -110,6 +114,7 @@ public class VField implements IVDoc<CField> {
         if (p != null) { tab.setText(Localizer.getInstance().getMessage("lblPlayField", p.getName())); }
         else { tab.setText(Localizer.getInstance().getMessage("lblNoPlayerForEDocID", docID.toString())); }
 
+        this.mirror = mirror;
         detailsPanel = new PlayerDetailsPanel(player, CMatchUI.FLOATING_ZONE_TYPES);
         manaPool = new ManaPoolPanel(player);
 
@@ -127,7 +132,6 @@ public class VField implements IVDoc<CField> {
         avatarArea.add(avatarLabel, "w 100%!, h 100%!");
 
         detailsPanel.addAvatarArea(avatarArea);
-        detailsPanel.setManaOverlay(manaPool);
 
         // Player area hover effect
         avatarArea.addMouseListener(new MouseAdapter() {
@@ -153,6 +157,17 @@ public class VField implements IVDoc<CField> {
 
         scroller.setViewportView(this.tabletop);
 
+        // Float the mana strip over the battlefield, pinned to the corner nearest this field's land row.
+        battlefield = new JLayeredPane() {
+            @Override
+            public void doLayout() {
+                scroller.setBounds(0, 0, getWidth(), getHeight());
+                positionManaStrip();
+            }
+        };
+        battlefield.add(scroller, JLayeredPane.DEFAULT_LAYER);
+        battlefield.add(manaPool, JLayeredPane.PALETTE_LAYER);
+
         updateDetails();
     }
 
@@ -163,7 +178,7 @@ public class VField implements IVDoc<CField> {
 
         pnl.add(detailsPanel, "w 115px!, h 100%!");
         pnl.add(phaseIndicator, "w 50px!, h 100%!");
-        pnl.add(scroller, "w 0:100%, growx, h 100%!");
+        pnl.add(battlefield, "w 0:100%, growx, h 100%!");
     }
 
     @Override
@@ -217,6 +232,20 @@ public class VField implements IVDoc<CField> {
 
     public void updateManaPool() {
         manaPool.update();
+        // Open or close a band on the land-row side so the strip never covers a card.
+        tabletop.setManaReserve(manaPool.isVisible() ? manaPool.getPreferredSize().height + 8 : 0);
+        positionManaStrip();
+        battlefield.repaint();
+    }
+
+    private void positionManaStrip() {
+        if (!manaPool.isVisible()) {
+            return;
+        }
+        final Dimension d = manaPool.getPreferredSize();
+        final int margin = 4;
+        final int y = mirror ? margin : battlefield.getHeight() - d.height - margin;
+        manaPool.setBounds(margin, y, d.width, d.height);
     }
     public void setupManaActions(final Function<Byte, Boolean> manaAction) {
         manaPool.setupMouseActions(manaAction);

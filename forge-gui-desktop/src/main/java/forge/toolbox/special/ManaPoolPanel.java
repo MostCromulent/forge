@@ -24,15 +24,18 @@ import forge.toolbox.FSkin.SkinnedPanel;
 import net.miginfocom.swing.MigLayout;
 
 /**
- * Compact floating-mana strip shown beneath a player's life total. Renders a pip only for the colours
- * currently in the pool, and hides itself entirely when the pool is empty.
+ * Compact single-row floating-mana strip shown at the battlefield corner nearest a player's lands.
+ * Renders a pip only for the colours currently in the pool, and hides itself entirely when the pool is empty.
  */
 public class ManaPoolPanel extends SkinnedPanel {
     private static final String[] COLORS = {"W", "U", "B", "R", "G", "C"};
+    private static final int PIP_H = 26;
+    private static final int PIP_ICON_W = Math.round(PIP_H * 0.80f);
+    private static final int PIP_FONT_PX = 16;
 
     private final PlayerView player;
     private final List<ManaPip> pips = new ArrayList<>();
-    private final MigLayout layout = new MigLayout("insets 2, gap 1, alignx center, aligny top, hidemode 3");
+    private final MigLayout layout = new MigLayout("insets 2, gap 2, alignx left, aligny center, hidemode 3");
 
     public ManaPoolPanel(final PlayerView player) {
         this.player = player;
@@ -41,7 +44,7 @@ public class ManaPoolPanel extends SkinnedPanel {
         for (final String color : COLORS) {
             final ManaPip pip = new ManaPip(color);
             pips.add(pip);
-            add(pip, "w 18px!, h 15px!");
+            add(pip, "w " + PIP_ICON_W + "px!, h " + PIP_H + "px!");
         }
         setVisible(false);
     }
@@ -79,35 +82,18 @@ public class ManaPoolPanel extends SkinnedPanel {
         }
         setVisible(!visiblePips.isEmpty());
         if (!visiblePips.isEmpty()) {
-            // Up to three pips per row, each sized to its own content so the strip stays as small as the counts need.
-            final int count = visiblePips.size();
-            final int perRow = Math.min(3, count);
-            final int rows = (count + perRow - 1) / perRow;
-            final int availW = getWidth() > 12 ? getWidth() : 90;
-            final int availH = getHeight() > 8 ? getHeight() : 38;
-            final int pipH = Math.max(12, Math.min(26, (availH - 4 - (rows - 1) * 2) / rows));
-            final int iconW = Math.round(pipH * 0.80f);
-            final int maxPipW = (availW - 6) / perRow;
             int maxLen = 1;
             for (final ManaPip pip : visiblePips) {
                 maxLen = Math.max(maxLen, pip.getText().length());
             }
-            final String widest = "8".repeat(maxLen);
-            // Size each pip to its content (icon + the widest count actually present) at the largest font that still
-            // fits the row, so pips sit snug, the row centres them evenly, and single-digit pools get a larger font.
-            int fontPx = Math.min(16, Math.max(10, Math.round(pipH * 0.72f)));
-            Font numFont = FSkin.getFont(fontPx).getBaseFont().deriveFont(Font.BOLD);
-            int pipW = iconW + 5 + getFontMetrics(numFont).stringWidth(widest);
-            while (fontPx > 7 && pipW > maxPipW) {
-                numFont = FSkin.getFont(--fontPx).getBaseFont().deriveFont(Font.BOLD);
-                pipW = iconW + 5 + getFontMetrics(numFont).stringWidth(widest);
-            }
-            layout.setLayoutConstraints("insets 2, gap 1, alignx center, aligny top, hidemode 3, wrap " + perRow);
+            // Size each pip to its content: icon plus the widest count actually present.
+            final Font numFont = FSkin.getFont(PIP_FONT_PX).getBaseFont().deriveFont(Font.BOLD);
+            final int pipW = PIP_ICON_W + 5 + getFontMetrics(numFont).stringWidth("8".repeat(maxLen));
             for (final ManaPip pip : visiblePips) {
                 pip.setFont(numFont);
                 // Count sits just right of the icon (left inset) and a hair low so it optically centres on it.
-                pip.setBorder(BorderFactory.createEmptyBorder(2, iconW + 3, 0, 0));
-                layout.setComponentConstraints(pip, "w " + pipW + "px!, h " + pipH + "px!");
+                pip.setBorder(BorderFactory.createEmptyBorder(2, PIP_ICON_W + 3, 0, 0));
+                layout.setComponentConstraints(pip, "w " + pipW + "px!, h " + PIP_H + "px!");
             }
         }
         revalidate();

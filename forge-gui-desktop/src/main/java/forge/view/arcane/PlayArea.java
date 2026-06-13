@@ -85,6 +85,10 @@ public class PlayArea extends CardPanelContainer implements CardPanelMouseListen
     // Ghost panels (cards a permanent holds in exile), keyed by host card id; not in the battlefield model
     private final Map<Integer, List<CardPanel>> ghostPanels = new HashMap<>();
 
+    // Vertical band reserved on the land-row side (bottom for the local field, top when mirrored)
+    // for the floating-mana strip; 0 when the pool is empty.
+    private int manaReserve;
+
     // Computed in layout.
     private List<CardStackRow> rows = new ArrayList<>();
     private int cardWidth, cardHeight;
@@ -108,6 +112,14 @@ public class PlayArea extends CardPanelContainer implements CardPanelMouseListen
         this.model = player;
         this.zone = zone;
         updateGroupScope();
+    }
+
+    /** Reserves a band on the land-row side so the floating-mana strip never covers a card. */
+    public void setManaReserve(final int px) {
+        if (this.manaReserve != px) {
+            this.manaReserve = px;
+            doLayout();
+        }
     }
 
     private void updateGroupScope() {
@@ -429,7 +441,7 @@ public class PlayArea extends CardPanelContainer implements CardPanelMouseListen
         final Rectangle rect = this.getScrollPane().getVisibleRect();
 
         this.playAreaWidth = rect.width;
-        this.playAreaHeight = rect.height;
+        this.playAreaHeight = rect.height - manaReserve;
 
         List<CardPanel> unsorted = new LinkedList<>(this.getCardPanels());
         unsorted.removeIf(p -> p.getAttachedToPanel() != null);
@@ -499,7 +511,7 @@ public class PlayArea extends CardPanelContainer implements CardPanelMouseListen
 
         this.rows = lastTemplate;
         // Get size of all the rows.
-        int x, y = PlayArea.GUTTER_Y;
+        int x, y = PlayArea.GUTTER_Y + (mirror ? manaReserve : 0);
         int maxRowWidth = 0;
         for (final CardStackRow row : this.rows) {
             int rowBottom = 0;
@@ -522,7 +534,7 @@ public class PlayArea extends CardPanelContainer implements CardPanelMouseListen
     // Position all card panels
     private void positionAllCards(List<CardStackRow> template)  {
         int x = 0;
-        int y = PlayArea.GUTTER_Y;
+        int y = PlayArea.GUTTER_Y + (mirror ? manaReserve : 0);
 
         //System.out.println("-------- " + (mirror ? "^" : "_") + " (Positioning) Card width = " + cardWidth + ". Playarea = " + playAreaWidth + " x " + playAreaHeight);
         for (final CardStackRow row : template) {

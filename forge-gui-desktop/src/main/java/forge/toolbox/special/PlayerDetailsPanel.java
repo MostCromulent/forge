@@ -117,11 +117,6 @@ public class PlayerDetailsPanel extends JPanel {
         portrait.setAvatar(avatarArea);
     }
 
-    /** Floats the mana strip over the top of the avatar, spanning the full column width rather than the centred avatar. */
-    public void setManaOverlay(final Component mana) {
-        portrait.setMana(mana);
-    }
-
     private static String extraTooltipKey(final ZoneType zone) {
         switch (zone) {
             case Flashback: return "lblFlashbackNCards";
@@ -278,8 +273,10 @@ public class PlayerDetailsPanel extends JPanel {
             setOpaque(false);
             setLayout(new MigLayout("insets 0 4 0 6, gap 0, fillx, filly", "", "[center]"));
 
-            final FLabel icon = new FLabel.Builder().icon(FSkin.getImage(iconFromZone(zone)).resize(14, 14))
-                    .iconScaleAuto(false).build();
+            // Render through the background path: scales the source each paint (bicubic, device-scale aware)
+            // rather than baking a fixed 14px bitmap that re-upscales blurry on a scaled display.
+            final FLabel icon = new FLabel.Builder().icon(FSkin.getImage(iconFromZone(zone)))
+                    .iconInBackground().iconScaleFactor(1f).build();
             final String displayName = WordUtils.capitalize(shortZoneName(zone));
             final FLabel name = new FLabel.Builder().text(displayName).fontSize(10).fontAlign(SwingConstants.LEFT).build();
             name.addComponentListener(new ComponentAdapter() {
@@ -358,7 +355,6 @@ public class PlayerDetailsPanel extends JPanel {
     /** Avatar (square) above the library sleeve (card), both at one shared width, centred as a unit in the available height. */
     private final class PortraitStack extends JPanel {
         private Component avatar;
-        private Component mana;
 
         PortraitStack() {
             setOpaque(false);
@@ -369,13 +365,6 @@ public class PlayerDetailsPanel extends JPanel {
         void setAvatar(final Component c) {
             avatar = c;
             add(c);
-            revalidate();
-        }
-
-        void setMana(final Component c) {
-            mana = c;
-            add(c);
-            setComponentZOrder(c, 0); // keep the floating mana above the avatar
             revalidate();
         }
 
@@ -394,10 +383,6 @@ public class PlayerDetailsPanel extends JPanel {
                 avatar.setBounds(x, y, side, side);
             }
             libraryLabel.setBounds(x, y + side + gap, side, libH);
-            if (mana != null) {
-                final int pad = 3;
-                mana.setBounds(pad, 4, w - 2 * pad, Math.min(side, 52));
-            }
         }
     }
 
