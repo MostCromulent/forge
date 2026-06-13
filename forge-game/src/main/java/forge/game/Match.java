@@ -329,12 +329,6 @@ public class Match {
                 if (cardsComplained != null && !cardsComplained.isEmpty()) {
                     rAICards.put(player, cardsComplained);
                 }
-            } else {
-                //reset cards to fix weird issues on netplay nextgame client
-                for (Card c : player.getCardsIn(ZoneType.Library)) {
-                    c.setTapped(false);
-                    c.resetActivationsPerTurn();
-                }
             }
 
             if (myRemovedAnteCards != null && !myRemovedAnteCards.isEmpty()) {
