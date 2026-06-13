@@ -1,0 +1,7 @@
+Name:Zzz Review Demo
+ManaCost:R
+Types:Instant
+A:SP$ DealDamge | ValidTgts$ Any | NumDmg$ 3 | NumDmg$ 4 | SpellDescription$ Deal damage.
+T:Mode$ Bogus | Execute$ TrigGo | TriggerDescription$ test
+SVar:TrigGo:DB$ Pump | WinSubAbility$ NopeAbility
+Oracle:test
