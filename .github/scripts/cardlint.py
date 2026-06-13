@@ -14,14 +14,17 @@ Usage:  python3 cardlint.py [--corpus <cardsfolder>] <card.txt> [more.txt ...]
         forge-gui/res/cardsfolder near cwd; skipped if not found).
 Exit:   1 if any findings, else 0.
 """
-import re, sys, os, json, tempfile, hashlib
+import re, sys, os, json, time, tempfile, hashlib
+
+KEY_TOKEN = re.compile(r"([A-Za-z][A-Za-z0-9]*)\$")  # a `key$` param token
 
 LINE_PREFIXES = {"Name","ManaCost","Types","PT","Loyalty","Defense","Colors","Text",
     "Oracle","K","A","T","S","R","SVar","AI","DeckHints","DeckNeeds","DeckHas",
     "AlternateMode","Variant","ALTERNATE","SetColor"}
 PFX_LOWER = {p.lower():p for p in LINE_PREFIXES}
-REF_KEYS = {"Execute","SubAbility","TrueSubAbility","FalseSubAbility","AbilityX",
-            "RepeatSubAbility","ChosenSubAbility"}
+# The sub-ability keys in the engine's additionalAbilityKeys are validated against
+# defined SVars by the build's Java test; only the keys outside that list stay here.
+REF_KEYS = {"Execute","SubAbility","AbilityX","ChosenSubAbility"}
 LIST_REF_KEYS = {"Choices"}
 AMP_LIST_KEYS = {"AddTypes","AddKeyword","AddKeywords","RemoveKeywords",
                  "AddTrigger","AddStatic","AddReplacement","Triggers"}
@@ -80,7 +83,7 @@ def key_freq(corpus):
     cache=os.path.join(tempfile.gettempdir(),
                        "cardlint_keyfreq_"+hashlib.md5(corpus.encode()).hexdigest()[:8]+".json")
     try:
-        if os.path.exists(cache) and (os.path.getmtime(cache) > __import__("time").time()-7*86400):
+        if os.path.exists(cache) and (os.path.getmtime(cache) > time.time()-7*86400):
             return json.load(open(cache,encoding="utf-8"))
     except Exception: pass
     freq={}
@@ -89,7 +92,7 @@ def key_freq(corpus):
             if not fn.endswith(".txt"): continue
             try: txt=open(os.path.join(root,fn),encoding="utf-8",errors="ignore").read()
             except Exception: continue
-            for k in re.findall(r"([A-Za-z][A-Za-z0-9]*)\$",txt):
+            for k in KEY_TOKEN.findall(txt):
                 freq[k]=freq.get(k,0)+1
     try: json.dump(freq,open(cache,"w",encoding="utf-8"))
     except Exception: pass
