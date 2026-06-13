@@ -28,7 +28,8 @@ Usage:   card_script_review.py <changed_files.txt>
          (one repo-relative card path per line; non-card paths are ignored)
 Output:  JSON array of {path, line, body} on stdout; a human summary on stderr.
 """
-import sys, os, io, re, json, time, contextlib, urllib.parse, urllib.request, urllib.error
+import sys, os, io, re, json, time, collections, contextlib
+import urllib.parse, urllib.request, urllib.error
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -294,9 +295,20 @@ def main():
     paths = [l.strip() for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
     cards = [p for p in paths if p.endswith(".txt") and "cardsfolder" in p.replace("\\", "/")]
 
-    # Exclude the cards under review from the reference corpus so their own params
-    # aren't self-counted as "known" (see cardlint.key_freq).
-    freq = cardlint.key_freq(cardlint.find_corpus(), exclude=[p for p in cards if os.path.exists(p)])
+    # The workflow materializes the PR's cards into the corpus, so a freshly
+    # computed key_freq counts them too. Subtract each reviewed card's own param
+    # counts so a typo'd or made-up param present only in the reviewed card isn't
+    # self-counted as "known" (which would silence KEY-TYPO / UNKNOWN-KEY).
+    freq = dict(cardlint.key_freq(cardlint.find_corpus()) or {})
+    for path in cards:
+        if not os.path.exists(path):
+            continue
+        text = open(path, encoding="utf-8", errors="ignore").read()
+        for k, n in collections.Counter(re.findall(r"([A-Za-z][A-Za-z0-9]*)\$", text)).items():
+            if k in freq:
+                freq[k] -= n
+                if freq[k] <= 0:
+                    del freq[k]
     comments = []
     for path in cards:
         if not os.path.exists(path):                   # deleted in the PR

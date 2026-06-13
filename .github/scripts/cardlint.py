@@ -74,38 +74,25 @@ def find_corpus():
         d=nd
     return None
 
-def key_freq(corpus, exclude=None):
-    """Frequency of every `key$` token across the corpus (cached 7 days in temp).
-
-    `exclude` is a set of file paths to leave OUT of the count -- pass the cards
-    under review so their own params aren't self-counted as "known" (otherwise a
-    typo'd / made-up param present only in the reviewed card looks legitimate and
-    KEY-TYPO / UNKNOWN-KEY never fire). The cache is bypassed when excluding, since
-    the exclusion set varies per run.
-    """
+def key_freq(corpus):
+    """Frequency of every `key$` token across the corpus (cached 7 days in temp)."""
     if not corpus or not os.path.isdir(corpus): return None
-    exclude=set(os.path.normpath(os.path.abspath(p)) for p in (exclude or []))
-    cache=(os.path.join(tempfile.gettempdir(),
-                        "cardlint_keyfreq_"+hashlib.md5(corpus.encode()).hexdigest()[:8]+".json")
-           if not exclude else None)
-    if cache:
-        try:
-            if os.path.exists(cache) and (os.path.getmtime(cache) > __import__("time").time()-7*86400):
-                return json.load(open(cache,encoding="utf-8"))
-        except Exception: pass
+    cache=os.path.join(tempfile.gettempdir(),
+                       "cardlint_keyfreq_"+hashlib.md5(corpus.encode()).hexdigest()[:8]+".json")
+    try:
+        if os.path.exists(cache) and (os.path.getmtime(cache) > __import__("time").time()-7*86400):
+            return json.load(open(cache,encoding="utf-8"))
+    except Exception: pass
     freq={}
     for root,_,files in os.walk(corpus):
         for fn in files:
             if not fn.endswith(".txt"): continue
-            full=os.path.join(root,fn)
-            if exclude and os.path.normpath(os.path.abspath(full)) in exclude: continue
-            try: txt=open(full,encoding="utf-8",errors="ignore").read()
+            try: txt=open(os.path.join(root,fn),encoding="utf-8",errors="ignore").read()
             except Exception: continue
             for k in re.findall(r"([A-Za-z][A-Za-z0-9]*)\$",txt):
                 freq[k]=freq.get(k,0)+1
-    if cache:
-        try: json.dump(freq,open(cache,"w",encoding="utf-8"))
-        except Exception: pass
+    try: json.dump(freq,open(cache,"w",encoding="utf-8"))
+    except Exception: pass
     return freq
 
 def lint(path, freq=None):
