@@ -1,0 +1,4 @@
+Name:Divination
+ManaCost:2 U
+Types:Instant
+Oracle:Draw two cards.

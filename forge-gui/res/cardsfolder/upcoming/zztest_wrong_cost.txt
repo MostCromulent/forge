@@ -1,0 +1,4 @@
+Name:Lightning Bolt
+ManaCost:1 R
+Types:Instant
+Oracle:Lightning Bolt deals 3 damage to any target.

@@ -1,0 +1,4 @@
+Name:Shock
+ManaCost:R
+Types:Instant
+Oracle:Shock deals 2 damage to any target.
