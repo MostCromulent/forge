@@ -1,0 +1,6 @@
+Name:Zztest Broken Etb
+ManaCost:2 U
+Types:Artifact Creature Robot
+PT:2/2
+T:Mode$ ChangesZone | Origin$ Any | Destination$ Battlefield | ValidCard$ Card.Self | Execute$ TrigNope | TriggerDescription$ When this enters, draw a card.
+SVar:TrigDraw:DB$ Draw
