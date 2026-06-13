@@ -1,0 +1,4 @@
+Name:Zztest No Cost
+Types:Creature Human
+PT:1/1
+Oracle:Nothing.
