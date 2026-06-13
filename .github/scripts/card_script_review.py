@@ -295,6 +295,13 @@ def main():
     paths = [l.strip() for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
     cards = [p for p in paths if p.endswith(".txt") and "cardsfolder" in p.replace("\\", "/")]
 
+    print(f"[dbg] cwd={os.getcwd()} corpus={cardlint.find_corpus()}", file=sys.stderr)
+    print(f"[dbg] cards={cards}", file=sys.stderr)
+    for p in cards:
+        print(f"[dbg]   exists={os.path.exists(p)} {p}", file=sys.stderr)
+    _f0 = dict(cardlint.key_freq(cardlint.find_corpus()) or {})
+    print(f"[dbg] pre-subtract freq ValidTgt={_f0.get('ValidTgt')} Foozle={_f0.get('Foozle')}", file=sys.stderr)
+
     # The workflow materializes the PR's cards into the corpus, so a freshly
     # computed key_freq counts them too. Subtract each reviewed card's own param
     # counts so a typo'd or made-up param present only in the reviewed card isn't
@@ -309,6 +316,7 @@ def main():
                 freq[k] -= n
                 if freq[k] <= 0:
                     del freq[k]
+    print(f"[dbg] post-subtract freq ValidTgt={freq.get('ValidTgt')} Foozle={freq.get('Foozle')}", file=sys.stderr)
     comments = []
     for path in cards:
         if not os.path.exists(path):                   # deleted in the PR
