@@ -41,8 +41,8 @@ import net.miginfocom.swing.MigLayout;
 public class PlayerDetailsPanel extends JPanel {
     private static final long serialVersionUID = -6531759554646891983L;
 
-    /** These zones always show; the rest (command, sideboard, variant decks, etc.) appear only while they hold cards. */
-    private static final List<ZoneType> ALWAYS_SHOWN = List.of(ZoneType.Hand, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Flashback);
+    /** These zones always show; the rest (sideboard, variant decks, etc.) appear only while they hold cards. */
+    private static final List<ZoneType> ALWAYS_SHOWN = List.of(ZoneType.Hand, ZoneType.Graveyard, ZoneType.Exile, ZoneType.Command, ZoneType.Flashback);
     private static final String ZONE_CELL = "h 22px!";
 
     /** Fraction of the panel width occupied by the avatar and the deck sleeve, so the two images line up. */
@@ -89,6 +89,7 @@ public class PlayerDetailsPanel extends JPanel {
         addRow(ZoneType.Hand, "lblHandNOfMax", PlayerView::getMaxHandString);
         addRow(ZoneType.Graveyard, "lblGraveyardNCardsNTypes", p -> p.getZoneTypes(TrackableProperty.Graveyard));
         addRow(ZoneType.Exile, "lblExileNCards", null);
+        addRow(ZoneType.Command, "lblCommandZoneNCards", null);
         addRow(ZoneType.Flashback, "lblFlashbackNCards", null);
         for (final ZoneType zone : supportedZones) {
             if (zone == ZoneType.Library || rows.containsKey(zone)) {
