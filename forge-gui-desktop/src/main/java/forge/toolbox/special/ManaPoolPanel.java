@@ -29,9 +29,9 @@ import net.miginfocom.swing.MigLayout;
  */
 public class ManaPoolPanel extends SkinnedPanel {
     private static final String[] COLORS = {"W", "U", "B", "R", "G", "C"};
-    private static final int PIP_H = 26;
+    private static final int PIP_H = 22;
     private static final int PIP_ICON_W = Math.round(PIP_H * 0.80f);
-    private static final int PIP_FONT_PX = 16;
+    private static final int PIP_FONT_PX = 14;
 
     private final PlayerView player;
     private final List<ManaPip> pips = new ArrayList<>();

@@ -24,6 +24,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 import javax.swing.JLayeredPane;
@@ -118,8 +120,6 @@ public class VField implements IVDoc<CField> {
         detailsPanel = new PlayerDetailsPanel(player, CMatchUI.FLOATING_ZONE_TYPES);
         manaPool = new ManaPoolPanel(player);
 
-        // TODO player is hard-coded into tabletop...should be dynamic
-        // (haven't looked into it too deeply). Doublestrike 12-04-12
         tabletop = new PlayArea(matchUI, scroller, mirror, player, ZoneType.Battlefield);
 
         control = new CField(matchUI, player, this);
@@ -268,25 +268,29 @@ public class VField implements IVDoc<CField> {
     }
 
     public void updateDetails() {
-        // The highest-precedence active counter (poison > energy > experience > rad > ticket) shows on the avatar.
+        // Every active counter stacks as a badge up the avatar's left edge, in precedence order (poison at the bottom).
+        final List<CounterBadge> counters = new ArrayList<>();
         final int poison = player.getCounters(CounterEnumType.POISON);
-        final int energy = player.getCounters(CounterEnumType.ENERGY);
-        final int experience = player.getCounters(CounterEnumType.EXPERIENCE);
-        final int rad = player.getCounters(CounterEnumType.RAD);
-        final int ticket = player.getCounters(CounterEnumType.TICKET);
         if (poison > 0) {
-            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_POISON), poison, poison >= POISON_CRITICAL);
-        } else if (energy > 0) {
-            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_ENERGY), energy, false);
-        } else if (experience > 0) {
-            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_EXPERIENCE), experience, false);
-        } else if (rad > 0) {
-            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_RAD), rad, false);
-        } else if (ticket > 0) {
-            avatarLabel.setCounter(FSkin.getImage(FSkinProp.IMG_TICKET), ticket, false);
-        } else {
-            avatarLabel.setCounter(null, 0, false);
+            counters.add(new CounterBadge(FSkin.getImage(FSkinProp.IMG_POISON), poison, poison >= POISON_CRITICAL));
         }
+        final int energy = player.getCounters(CounterEnumType.ENERGY);
+        if (energy > 0) {
+            counters.add(new CounterBadge(FSkin.getImage(FSkinProp.IMG_ENERGY), energy, false));
+        }
+        final int experience = player.getCounters(CounterEnumType.EXPERIENCE);
+        if (experience > 0) {
+            counters.add(new CounterBadge(FSkin.getImage(FSkinProp.IMG_EXPERIENCE), experience, false));
+        }
+        final int rad = player.getCounters(CounterEnumType.RAD);
+        if (rad > 0) {
+            counters.add(new CounterBadge(FSkin.getImage(FSkinProp.IMG_RAD), rad, false));
+        }
+        final int ticket = player.getCounters(CounterEnumType.TICKET);
+        if (ticket > 0) {
+            counters.add(new CounterBadge(FSkin.getImage(FSkinProp.IMG_TICKET), ticket, false));
+        }
+        avatarLabel.setCounters(counters);
         avatarLabel.repaint();
 
         final boolean highlighted = isHighlighted();
@@ -295,21 +299,19 @@ public class VField implements IVDoc<CField> {
         this.avatarArea.setToolTipText(getPlayerDetailsHtml());
     }
 
+    private record CounterBadge(SkinImage icon, int count, boolean critical) { }
+
     /** Paints the player's avatar contained and centred (matching the deck sleeve) with the life total as a corner badge. */
     private final class AvatarLabel extends JPanel {
         private SkinImage avatar;
-        private SkinImage counterIcon;
-        private int counterCount;
-        private boolean counterCritical;
+        private List<CounterBadge> counters = List.of();
 
         AvatarLabel() {
             setOpaque(false);
         }
 
-        void setCounter(final SkinImage icon, final int count, final boolean critical) {
-            this.counterIcon = icon;
-            this.counterCount = count;
-            this.counterCritical = critical;
+        void setCounters(final List<CounterBadge> counters) {
+            this.counters = counters;
             repaint();
         }
 
@@ -345,24 +347,26 @@ public class VField implements IVDoc<CField> {
                 final java.awt.FontMetrics fm = g2.getFontMetrics();
                 final int badgeW = fm.stringWidth(text) + 10;
                 final int badgeH = fm.getAscent() + 6;
-                final int bx = ax + side - badgeW;
-                final int by = Math.min(ay + side, h) - badgeH + 2;
+                final int bx = ax + side - badgeW + PlayerDetailsPanel.BADGE_OVERHANG;
+                final int by = Math.min(ay + side, h) - badgeH + PlayerDetailsPanel.BADGE_OVERHANG;
                 g2.setColor(new Color(0, 0, 0, 185));
                 g2.fillRoundRect(bx, by, badgeW, badgeH, 8, 8);
                 g2.setColor(life > LIFE_CRITICAL ? Color.WHITE : Color.RED);
                 g2.drawString(text, bx + 5, by + 3 + fm.getAscent());
 
-                // Active counter (poison/energy/...) as a matching badge on the avatar's bottom-left.
-                if (counterIcon != null && counterCount > 0) {
-                    final String ctext = String.valueOf(counterCount);
-                    final int iconSz = fm.getAscent();
+                // Active counters (poison/energy/...) as matching badges stacked up the avatar's bottom-left.
+                final int iconSz = fm.getAscent();
+                final int cx = ax - PlayerDetailsPanel.BADGE_OVERHANG;
+                int cy = by;
+                for (final CounterBadge counter : counters) {
+                    final String ctext = String.valueOf(counter.count());
                     final int cw = 4 + iconSz + 2 + fm.stringWidth(ctext) + 5;
-                    final int cx = ax;
                     g2.setColor(new Color(0, 0, 0, 185));
-                    g2.fillRoundRect(cx, by, cw, badgeH, 8, 8);
-                    FSkin.drawImage(g2, counterIcon, cx + 4, by + (badgeH - iconSz) / 2, iconSz, iconSz);
-                    g2.setColor(counterCritical ? Color.RED : Color.WHITE);
-                    g2.drawString(ctext, cx + 4 + iconSz + 2, by + 3 + fm.getAscent());
+                    g2.fillRoundRect(cx, cy, cw, badgeH, 8, 8);
+                    FSkin.drawImage(g2, counter.icon(), cx + 4, cy + (badgeH - iconSz) / 2, iconSz, iconSz);
+                    g2.setColor(counter.critical() ? Color.RED : Color.WHITE);
+                    g2.drawString(ctext, cx + 4 + iconSz + 2, cy + 3 + fm.getAscent());
+                    cy -= badgeH + 2;
                 }
             }
             g2.dispose();

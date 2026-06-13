@@ -52,6 +52,9 @@ public class PlayerDetailsPanel extends JPanel {
     /** Library card height / width, used to scale the avatar and card together to fit the available height. */
     public static final float LIBRARY_ASPECT = 500f / 360f;
 
+    /** Pixels the corner badges overhang past the image's edges, so they sit on the image instead of floating inside the centring recess. */
+    public static final int BADGE_OVERHANG = 2;
+
     /** Font size for the life/library corner badges, shared so both read identically. */
     public static int badgeFontSize(final int width) {
         return Math.max(11, Math.min(15, width / 6));
@@ -451,8 +454,8 @@ public class PlayerDetailsPanel extends JPanel {
             final FontMetrics cfm = g2.getFontMetrics();
             final int badgeW = cfm.stringWidth(cnt) + 10;
             final int badgeH = cfm.getAscent() + 6;
-            final int badgeX = dx + dw - badgeW;
-            final int badgeY = Math.min(dy + dh, h) - badgeH - 4;
+            final int badgeX = dx + dw - badgeW + BADGE_OVERHANG;
+            final int badgeY = Math.min(dy + dh, h) - badgeH + BADGE_OVERHANG;
             g2.setColor(new Color(0, 0, 0, 185));
             g2.fillRoundRect(badgeX, badgeY, badgeW, badgeH, 8, 8);
             g2.setColor(Color.WHITE);
