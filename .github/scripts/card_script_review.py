@@ -294,7 +294,9 @@ def main():
     paths = [l.strip() for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
     cards = [p for p in paths if p.endswith(".txt") and "cardsfolder" in p.replace("\\", "/")]
 
-    freq = cardlint.key_freq(cardlint.find_corpus())   # corpus-derived; see module docstring
+    # Exclude the cards under review from the reference corpus so their own params
+    # aren't self-counted as "known" (see cardlint.key_freq).
+    freq = cardlint.key_freq(cardlint.find_corpus(), exclude=[p for p in cards if os.path.exists(p)])
     comments = []
     for path in cards:
         if not os.path.exists(path):                   # deleted in the PR
