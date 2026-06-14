@@ -28,7 +28,9 @@ import org.apache.commons.text.WordUtils;
 import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
 import forge.gui.MouseUtil;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
+import forge.model.FModel;
 import forge.toolbox.FLabel;
 import forge.toolbox.FMouseAdapter;
 import forge.toolbox.FSkin;
@@ -86,6 +88,8 @@ public class PlayerDetailsPanel extends JPanel {
 
         libraryLabel = new DeckSleeveLabel();
 
+        // Library leads the grid; it only appears as a row when the deck-sleeve display is turned off.
+        addRow(ZoneType.Library, "lblLibraryNCards", null);
         addRow(ZoneType.Hand, "lblHandNOfMax", PlayerView::getMaxHandString);
         addRow(ZoneType.Graveyard, "lblGraveyardNCardsNTypes", p -> p.getZoneTypes(TrackableProperty.Graveyard));
         addRow(ZoneType.Exile, "lblExileNCards", null);
@@ -135,17 +139,24 @@ public class PlayerDetailsPanel extends JPanel {
         return FSkinProp.iconFromZone(zoneType, false);
     }
 
+    /** The component the draw animation flies from: the sleeve when shown, otherwise the library zone row. */
     public Component getLblLibrary() {
-        return libraryLabel;
+        return libraryLabel.isVisible() ? libraryLabel : rows.get(ZoneType.Library);
     }
 
     /** The core zones always show; the rest appear only while they hold cards. Laid out two zones per grid row. */
     public void updateZones() {
         libraryLabel.onContentUpdate();
 
+        final boolean asSleeve = FModel.getPreferences().getPrefBoolean(FPref.UI_LIBRARY_AS_CARD_SLEEVE);
+        portrait.setSleeveVisible(asSleeve);
+
         final List<ZoneType> nowVisible = new ArrayList<>();
         for (final ZoneType zone : zoneOrder) {
-            if (ALWAYS_SHOWN.contains(zone) || player.getZoneSize(zone) > 0) {
+            final boolean visible = zone == ZoneType.Library
+                    ? !asSleeve
+                    : ALWAYS_SHOWN.contains(zone) || player.getZoneSize(zone) > 0;
+            if (visible) {
                 nowVisible.add(zone);
             }
         }
@@ -317,6 +328,7 @@ public class PlayerDetailsPanel extends JPanel {
     /** Avatar (square) above the library sleeve (card), both at one shared width, centred as a unit in the available height. */
     private final class PortraitStack extends JPanel {
         private Component avatar;
+        private boolean sleeveVisible = true;
 
         PortraitStack() {
             setOpaque(false);
@@ -330,10 +342,29 @@ public class PlayerDetailsPanel extends JPanel {
             revalidate();
         }
 
+        void setSleeveVisible(final boolean visible) {
+            if (sleeveVisible == visible) {
+                return;
+            }
+            sleeveVisible = visible;
+            libraryLabel.setVisible(visible);
+            revalidate();
+            repaint();
+        }
+
         @Override
         public void doLayout() {
             final int w = getWidth();
             final int h = getHeight();
+            if (avatar == null) {
+                return;
+            }
+            if (!sleeveVisible) {
+                // No sleeve: a single square avatar at column width, centred in the leftover height.
+                final int side = Math.max(8, Math.min(w, h));
+                avatar.setBounds((w - side) / 2, Math.max(0, (h - side) / 2), side, side);
+                return;
+            }
             final int gap = 2;
             // Largest width that lets the square avatar and the card library both fit the height; the column width otherwise caps it.
             int side = Math.min(w, (int) ((h - gap) / (1 + LIBRARY_ASPECT)));
@@ -341,9 +372,7 @@ public class PlayerDetailsPanel extends JPanel {
             final int libH = Math.round(side * LIBRARY_ASPECT);
             final int x = (w - side) / 2;
             final int y = Math.max(0, (h - side - gap - libH) / 2);
-            if (avatar != null) {
-                avatar.setBounds(x, y, side, side);
-            }
+            avatar.setBounds(x, y, side, side);
             libraryLabel.setBounds(x, y + side + gap, side, libH);
         }
     }
@@ -403,6 +432,7 @@ public class PlayerDetailsPanel extends JPanel {
 
             final Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
 
             g2.setColor(new Color(0, 0, 0, 55));
             g2.fillRect(0, 0, w, h);

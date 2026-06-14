@@ -156,6 +156,7 @@ public class ForgePreferences extends PreferencesStore<ForgePreferences.FPref> {
         UI_HAND_MAX_CARDS_PER_ROW("0"),
         UI_HAND_NO_OVERLAP("false"),
         UI_ZONE_TAB_NEW_COUNT("true"),
+        UI_LIBRARY_AS_CARD_SLEEVE("true"),
         UI_ENABLE_AI_PICKER("false"),
         UI_GROUP_IDENTICAL_CARDS("false"),
 

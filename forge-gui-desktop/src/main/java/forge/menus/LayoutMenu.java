@@ -87,6 +87,9 @@ public final class LayoutMenu {
             menu.add(getMenu_LogPane());
         }
         menu.add(getMenuItem_ShowTabs());
+        if (isMatch) {
+            menu.add(getMenuItem_LibraryAsCardSleeve());
+        }
         menu.add(getMenuItem_NewCardCountInTab());
 
         if (isMatch) {
@@ -450,6 +453,27 @@ public final class LayoutMenu {
             prefs.setPref(FPref.UI_HIDE_GAME_TABS, !showTabs);
             prefs.save();
         };
+    }
+
+    private static JCheckBoxMenuItem getMenuItem_LibraryAsCardSleeve() {
+        final JCheckBoxMenuItem menuItem = MenuUtil.createStayOpenCheckBox(
+                localizer.getMessage("lblShowLibraryAsCardSleeve"));
+        menuItem.setToolTipText(localizer.getMessage("lblShowLibraryAsCardSleeveTooltip"));
+        menuItem.setState(prefs.getPrefBoolean(FPref.UI_LIBRARY_AS_CARD_SLEEVE));
+        menuItem.addActionListener(e -> {
+            prefs.setPref(FPref.UI_LIBRARY_AS_CARD_SLEEVE, menuItem.getState());
+            prefs.save();
+            refreshDetailsPanels();
+        });
+        return menuItem;
+    }
+
+    private static void refreshDetailsPanels() {
+        MenuUtil.withMatchUI(vmu -> {
+            for (final VField f : vmu.getControl().getFieldViews()) {
+                f.updateZones();
+            }
+        });
     }
 
     private static JCheckBoxMenuItem getMenuItem_NewCardCountInTab() {
