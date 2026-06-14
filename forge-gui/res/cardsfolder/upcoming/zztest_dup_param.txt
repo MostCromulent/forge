@@ -1,0 +1,4 @@
+Name:Zztest Dup Param
+ManaCost:1 R
+Types:Instant
+A:SP$ DealDamage | ValidTgts$ Any | ValidTgts$ Creature | NumDmg$ 2 | SpellDescription$ Deal 2 damage.
