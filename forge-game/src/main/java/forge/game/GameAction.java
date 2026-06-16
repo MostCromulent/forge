@@ -90,6 +90,17 @@ public class GameAction {
         return changeZone(zoneFrom, zoneTo, c, position, cause, null);
     }
     private Card changeZone(final Zone zoneFrom, Zone zoneTo, final Card c, Integer position, SpellAbility cause, Map<AbilityKey, Object> params) {
+        // Card keeps its id across a zone move, so its cached LKI copy no longer matches
+        game.invalidateLastStateLki(c);
+        // Bump controller/owner so the AI's cached pass re-evaluates -- skip battlefield entry so it passes through its own token cascade
+        if (zoneTo == null || !(zoneTo.is(ZoneType.Battlefield) || zoneTo.is(ZoneType.Merged))) {
+            if (c.getController() != null) {
+                c.getController().bumpPriorityDecisionGen();
+            }
+            if (c.getOwner() != null && c.getOwner() != c.getController()) {
+                c.getOwner().bumpPriorityDecisionGen();
+            }
+        }
         // 111.11. A copy of a permanent spell becomes a token as it resolves.
         // The token has the characteristics of the spell that became that token.
         // The token is not “created” for the purposes of any replacement effects or triggered abilities that refer to creating a token.
@@ -1270,6 +1281,8 @@ public class GameAction {
         if (runEvents && !affectedCards.isEmpty()) {
             game.fireEvent(new GameEventCardStatsChanged(affectedCards));
         }
+        // These cards' P/T or keywords changed without a zone move, so drop their cached LKI copies
+        game.invalidateLastStateLki(affectedCards);
         game.getTracker().unfreeze();
     }
 

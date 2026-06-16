@@ -4671,6 +4671,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final void setTapped(boolean tapped0) {
         if (tapped == tapped0) { return; }
         tapped = tapped0;
+        getGame().invalidateLastStateLki(this); // keep the reusable LKI snapshot from going stale
         view.updateTapped(this);
     }
 
@@ -6075,6 +6076,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (damage0 != 0) {
             damage.put(0, damage0);
         }
+        getGame().invalidateLastStateLki(this); // keep the reusable LKI snapshot from going stale
         view.updateDamage(this);
         getGame().fireEvent(new GameEventCardStatsChanged(this));
     }

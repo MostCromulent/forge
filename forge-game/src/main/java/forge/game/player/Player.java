@@ -79,6 +79,8 @@ public class Player extends GameEntity implements Comparable<Player> {
             ZoneType.Junkyard, ZoneType.Merged, ZoneType.Subgame, ZoneType.None));
 
     private int life = 20;
+    // Bumped on this player's own zone/life changes; read by PlayerControllerAi's cached pass
+    private long priorityDecisionGen = 0;
     private int startingLife = 20;
     private int lifeStartedThisTurnWith = startingLife;
     private int lifeLostThisTurn;
@@ -449,6 +451,13 @@ public class Player extends GameEntity implements Comparable<Player> {
         return life;
     }
 
+    public final long getPriorityDecisionGen() {
+        return priorityDecisionGen;
+    }
+    public final void bumpPriorityDecisionGen() {
+        priorityDecisionGen++;
+    }
+
     public final boolean gainLife(int lifeGain, final Card source, final SpellAbility sa) {
         if (!canGainLife() || lifeGain <= 0) {
             return false;
@@ -479,6 +488,7 @@ public class Player extends GameEntity implements Comparable<Player> {
 
         int oldLife = life;
         life += lifeGain;
+        bumpPriorityDecisionGen();
         view.updateLife(this);
         boolean firstGain = lifeGainedTimesThisTurn == 0;
         lifeGainedThisTurn += lifeGain;
@@ -537,6 +547,7 @@ public class Player extends GameEntity implements Comparable<Player> {
         }
 
         life -= toLose;
+        bumpPriorityDecisionGen();
         view.updateLife(this);
         if (manaBurn) {
             game.fireEvent(new GameEventManaBurn(PlayerView.get(this), true, toLose));

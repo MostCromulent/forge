@@ -105,6 +105,8 @@ public class Game {
     private GameSnapshot previousGameState = null;
     private CardCollection lastStateBattlefield = new CardCollection();
     private CardCollection lastStateGraveyard = new CardCollection();
+    // Reused LKI copies, so an unchanged card isn't deep-copied on every copyLastState of a resolution
+    private final Map<Integer, Card> lastStateLkiCache = Maps.newHashMap();
 
     private CardZoneTable untilHostLeavesPlayTriggerList = new CardZoneTable();
 
@@ -216,20 +218,26 @@ public class Game {
     }
 
     public void copyLastState() {
+        // Empty stack = no active resolution; in-place changes (e.g. combat damage) may be unsnapshotted, so start clean
+        if (stack.isEmpty() && !stack.hasSimultaneousStackEntries()) {
+            lastStateLkiCache.clear();
+        }
         lastStateBattlefield.clear();
         lastStateGraveyard.clear();
-        Map<Integer, Card> cachedMap = Maps.newHashMap();
         for (final Player p : getPlayers()) {
-            lastStateBattlefield.addAll(p.getZone(ZoneType.Battlefield).getLKICopy(cachedMap));
-            lastStateGraveyard.addAll(p.getZone(ZoneType.Graveyard).getLKICopy(cachedMap));
+            lastStateBattlefield.addAll(p.getZone(ZoneType.Battlefield).getLKICopy(lastStateLkiCache));
+            lastStateGraveyard.addAll(p.getZone(ZoneType.Graveyard).getLKICopy(lastStateLkiCache));
         }
     }
 
     public CardCollectionView copyLastState(ZoneType type) {
+        // Same cache as copyLastState(): token creation calls this per token, so a full rebuild each time would be O(board) per token
+        if (stack.isEmpty() && !stack.hasSimultaneousStackEntries()) {
+            lastStateLkiCache.clear();
+        }
         CardCollection result = new CardCollection();
-        Map<Integer, Card> cachedMap = Maps.newHashMap();
         for (final Player p : getPlayers()) {
-            result.addAll(p.getZone(type).getLKICopy(cachedMap));
+            result.addAll(p.getZone(type).getLKICopy(lastStateLkiCache));
         }
         return result;
     }
@@ -242,10 +250,35 @@ public class Game {
         return copyLastState(ZoneType.Graveyard);
     }
 
+    // Drop a card's cached LKI copy after it moves zones or changes in-place; the zone guard skips LKI
+    // copies (same id, no real zone) so building one can't evict the live card's entry
+    public void invalidateLastStateLki(Card c) {
+        if (c == null) {
+            return;
+        }
+        Zone z = c.getZone();
+        if (z != null && (z.is(ZoneType.Battlefield) || z.is(ZoneType.Graveyard))) {
+            lastStateLkiCache.remove(c.getId());
+        }
+    }
+
+    // Bulk variant for cards a static-ability pass changed in place; no-op when the cache is cold, so it doesn't tax that hot path
+    public void invalidateLastStateLki(Iterable<Card> cards) {
+        if (lastStateLkiCache.isEmpty()) {
+            return;
+        }
+        for (Card c : cards) {
+            invalidateLastStateLki(c);
+        }
+    }
+
     public void updateLastStateForCard(Card c) {
         if (c == null || c.getZone() == null) {
             return;
         }
+
+        // Drop the stale cached copy so this refresh and the next copyLastState re-copy it
+        lastStateLkiCache.remove(c.getId());
 
         ZoneType zone = c.getZone().getZoneType();
         CardCollection lookup = zone.equals(ZoneType.Battlefield) ? lastStateBattlefield
@@ -255,7 +288,7 @@ public class Game {
         if (lookup != null) {
             lastStateBattlefield.remove(c);
             lastStateGraveyard.remove(c);
-            lookup.add(CardCopyService.getLKICopy(c));
+            lookup.add(CardCopyService.getLKICopy(c, lastStateLkiCache));
         }
     }
 

@@ -235,6 +235,12 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
         return IterableUtil.filter(undoStack, CardTraitPredicates.isHostCard(c));
     }
 
+    private long pushGen = 0;
+    // Monotonic count of objects put on the stack (unchanged as items resolve off); read by PlayerControllerAi's cached pass
+    public final long getPushGen() {
+        return pushGen;
+    }
+
     public final void add(SpellAbility sp) {
         add(sp, null, SpellAbilityStackInstance.nextId());
     }
@@ -537,6 +543,7 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
         si = si == null ? new SpellAbilityStackInstance(sp, id) : si;
 
         stack.addFirst(si);
+        pushGen++; // a new object on the stack is something any player may want to respond to
         int stackIndex = stack.size() - 1;
 
         int distinctSources = 0;

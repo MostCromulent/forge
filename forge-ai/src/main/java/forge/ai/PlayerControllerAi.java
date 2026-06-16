@@ -33,6 +33,7 @@ import forge.game.staticability.StaticAbility;
 import forge.game.trigger.Trigger;
 import forge.game.trigger.TriggerType;
 import forge.game.trigger.WrappedAbility;
+import forge.game.zone.MagicStack;
 import forge.game.zone.PlayerZone;
 import forge.game.zone.ZoneType;
 import forge.item.PaperCard;
@@ -828,9 +829,30 @@ public class PlayerControllerAi extends PlayerController {
         brains.declareBlockersFor(defender, combat);
     }
 
+    // Memoized pass: reused until a relevant change (priorityDecisionGen / pushGen) invalidates it,
+    // so the AI doesn't re-scan every permanent's abilities on each priority pass of a long stack
+    private boolean cachedPassValid = false;
+    private long cachedPassDecisionGen = -1;
+    private long cachedPassStackGen = -1;
+
     @Override
     public List<SpellAbility> chooseSpellAbilityToPlay() {
-        return brains.chooseSpellAbilityToPlay();
+        final MagicStack stack = player.getGame().getStack();
+        // Only valid mid-stack; an empty stack is a fresh decision window
+        if (cachedPassValid && !stack.isEmpty()
+                && player.getPriorityDecisionGen() == cachedPassDecisionGen
+                && stack.getPushGen() == cachedPassStackGen) {
+            return null;
+        }
+        cachedPassValid = false;
+
+        final List<SpellAbility> chosen = brains.chooseSpellAbilityToPlay();
+        if (chosen == null || chosen.isEmpty()) {
+            cachedPassValid = true;
+            cachedPassDecisionGen = player.getPriorityDecisionGen();
+            cachedPassStackGen = stack.getPushGen();
+        }
+        return chosen;
     }
 
     @Override
