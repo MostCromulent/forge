@@ -106,6 +106,14 @@ public class Game {
     private CardCollection lastStateBattlefield = new CardCollection();
     private CardCollection lastStateGraveyard = new CardCollection();
 
+    // The LKI snapshot is a coherent graph of frozen copies, so it must be (re)built atomically — never
+    // by reusing individual copies (that desyncs cross-references). Instead the whole rebuild is gated on
+    // this flag: a pure zone-entry appends one copy and leaves it clear (existing entries are unaffected),
+    // while anything that can stale or break coherence of existing entries (a departure, an in-place change)
+    // sets it, forcing the next copyLastState to do a full atomic rebuild — exactly when the engine would
+    // have rebuilt anyway. A cascade of pure entries (e.g. 100+ token triggers) therefore never rebuilds.
+    private boolean lastStateStale = true;
+
     private CardZoneTable untilHostLeavesPlayTriggerList = new CardZoneTable();
 
     private Table<CounterType, Player, List<Pair<Card, Integer>>> countersAddedThisTurn = HashBasedTable.create();
@@ -215,7 +223,18 @@ public class Game {
         return true;
     }
 
+    public void markLastStateStale() {
+        lastStateStale = true;
+    }
+
     public void copyLastState() {
+        if (!lastStateStale) {
+            return;
+        }
+        rebuildLastState();
+    }
+
+    private void rebuildLastState() {
         lastStateBattlefield.clear();
         lastStateGraveyard.clear();
         Map<Integer, Card> cachedMap = Maps.newHashMap();
@@ -223,6 +242,7 @@ public class Game {
             lastStateBattlefield.addAll(p.getZone(ZoneType.Battlefield).getLKICopy(cachedMap));
             lastStateGraveyard.addAll(p.getZone(ZoneType.Graveyard).getLKICopy(cachedMap));
         }
+        lastStateStale = false;
     }
 
     public CardCollectionView copyLastState(ZoneType type) {
@@ -235,17 +255,45 @@ public class Game {
     }
 
     public CardCollectionView copyLastStateBattlefield() {
-        return copyLastState(ZoneType.Battlefield);
+        copyLastState();
+        return new CardCollection(lastStateBattlefield);
     }
 
     public CardCollectionView copyLastStateGraveyard() {
-        return copyLastState(ZoneType.Graveyard);
+        copyLastState();
+        return new CardCollection(lastStateGraveyard);
+    }
+
+    // Append a single freshly-entered card to the snapshot without forcing a rebuild. Safe because the new
+    // card's copy doesn't affect existing entries; a full rebuild still happens (via the stale flag) whenever
+    // an existing card changes or leaves.
+    public void addToLastState(Card c) {
+        if (lastStateStale || c == null || c.getZone() == null) {
+            return; // a pending rebuild will include it, or it isn't in a tracked zone
+        }
+        // a card that references other permanents (aura/equipment/melded) can't be appended coherently —
+        // its copy would point at fresh sub-copies instead of the snapshot's entries — so rebuild instead
+        if (c.isAttachedToEntity() || !c.getAttachedCards().isEmpty() || c.getMeldedWith() != null) {
+            markLastStateStale();
+            return;
+        }
+        ZoneType zone = c.getZone().getZoneType();
+        if (zone == ZoneType.Battlefield) {
+            lastStateBattlefield.remove(c);
+            lastStateBattlefield.add(CardCopyService.getLKICopy(c));
+        } else if (zone == ZoneType.Graveyard) {
+            lastStateGraveyard.remove(c);
+            lastStateGraveyard.add(CardCopyService.getLKICopy(c));
+        }
     }
 
     public void updateLastStateForCard(Card c) {
         if (c == null || c.getZone() == null) {
             return;
         }
+
+        // an in-place change to an existing entry can stale cross-references held by other entries
+        markLastStateStale();
 
         ZoneType zone = c.getZone().getZoneType();
         CardCollection lookup = zone.equals(ZoneType.Battlefield) ? lastStateBattlefield

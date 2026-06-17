@@ -927,6 +927,9 @@ public class Combat {
 
     public void dealAssignedDamage() {
         final Game game = playerWhoAttacks.getGame();
+        // combat declaration changes attacker/blocker status, which the snapshot captures but no markLkiStale
+        // path covers — force a fresh build so as-declared combat is recorded (attacksAlone/blocksAlone)
+        game.markLastStateStale();
         game.copyLastState();
 
         CardDamageTable preventMap = new CardDamageTable();
@@ -935,6 +938,7 @@ public class Combat {
         game.getAction().dealDamage(true, damageMap.get(), preventMap, counterTable, null);
 
         // copy last state again for dying replacement effects
+        game.markLastStateStale();
         game.copyLastState();
     }
 

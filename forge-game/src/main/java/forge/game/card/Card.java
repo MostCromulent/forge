@@ -1007,6 +1007,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public void addChangedName(final String name0, boolean addNonLegendaryCreatureNames, long timestamp, long staticId) {
         changedCardNames.put(timestamp, staticId, new CardChangedName(name0, addNonLegendaryCreatureNames));
         updateNameforView();
+        markLkiStale();
     }
 
     public boolean removeChangedName(long timestamp, long staticId) {
@@ -1016,6 +1017,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         boolean changed = changedCardNames.remove(timestamp, staticId) != null;
         if (changed && updateView) {
             updateNameforView();
+        }
+        if (changed) {
+            markLkiStale();
         }
         return changed;
     }
@@ -3980,6 +3984,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         // 613.7e An Aura, Equipment, or Fortification receives a new timestamp each time it becomes attached to an object or player.
         setLayerTimestamp(getGame().getNextTimestamp());
         entity.addAttachedCard(this);
+        markLkiStale(); // rewrites the attachment cross-reference graph of two in-play cards
 
         // Play the Equip sound
         getGame().fireEvent(new GameEventCardAttachment(this, oldTarget, entity));
@@ -4024,6 +4029,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         setEntityAttachedTo(null);
         entity.removeAttachedCard(this);
+        markLkiStale(); // rewrites the attachment cross-reference graph of two in-play cards
 
         // Handle Bestowed Aura part
         unanimateBestow();
@@ -4164,6 +4170,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updateTypesForView();
         }
+        markLkiStale();
     }
 
     public final boolean removeChangedCardTypes(final long timestamp, final long staticId) {
@@ -4192,10 +4199,12 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public void addColorByText(final ColorSet color, final boolean addToColors, final long timestamp, final StaticAbility stAb) {
         changedCardColorsByText.put(timestamp, stAb != null ? stAb.getId() : (long)0, new CardColor(color, addToColors));
         updateColorForView();
+        markLkiStale();
     }
     public final void removeColorByText(final long timestampIn, final long staticId) {
         if (changedCardColorsByText.remove(timestampIn, staticId) != null) {
             updateColorForView();
+            markLkiStale();
         }
     }
 
@@ -4204,6 +4213,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 timestamp, stAb != null ? stAb.getId() : (long)0, new CardColor(color, addToColors)
         );
         updateColorForView();
+        markLkiStale();
     }
 
     public final void removeColor(final long timestampIn, final long staticId) {
@@ -4213,6 +4223,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         if (removed) {
             updateColorForView();
+            markLkiStale();
         }
     }
 
@@ -4296,12 +4307,14 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         clonedStates.put(timestamp, states);
         updateCloneState(true);
         updateWorldTimestamp(timestamp);
+        markLkiStale();
     }
 
     public final boolean removeCloneState(final long timestamp) {
         if (clonedStates.remove(timestamp) != null) {
             updateCloneState(true);
             updateWorldTimestamp(timestamp);
+            markLkiStale();
             return true;
         }
         return false;
@@ -4321,6 +4334,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         }
         if (changed) {
             updateCloneState(true);
+            markLkiStale();
         }
 
         return changed;
@@ -4405,9 +4419,14 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public final void addNewPTByText(final Integer power, final Integer toughness, final long timestamp, final long staticId) {
         newPTText.put(timestamp, staticId, Pair.of(power, toughness));
+        markLkiStale();
     }
     public final boolean removeNewPTbyText(final long timestamp, final long staticId) {
-        return newPTText.remove(timestamp, staticId) != null;
+        boolean removed = newPTText.remove(timestamp, staticId) != null;
+        if (removed) {
+            markLkiStale();
+        }
+        return removed;
     }
 
     public final void addNewPT(final Integer power, final Integer toughness, final long timestamp, final long staticId) {
@@ -4418,6 +4437,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updatePTforView();
         }
+        markLkiStale();
     }
 
     public final void removeNewPT(final long timestamp, final long staticId) {
@@ -4431,6 +4451,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         if (removed && updateView) {
             updatePTforView();
+        }
+        if (removed) {
+            markLkiStale();
         }
         return removed;
     }
@@ -4585,12 +4608,33 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return boostPT.values().stream().mapToInt(Pair::getRight).sum();
     }
 
+    // One-shot continuous changes (pumps, until-EOT grants, re-attach, status flags) don't route through
+    // updateLastStateForCard, so they must mark the LKI snapshot stale themselves or a tracked card's frozen
+    // copy goes stale. Only cards actually in the snapshot (battlefield/graveyard) matter — this also skips
+    // the same setters being called while a card is constructed/copied (e.g. copyCard, getLKICopy), which
+    // would otherwise stale the snapshot on every token creation.
+    private void markLkiStale() {
+        Game g = getGame();
+        if (g == null) {
+            return;
+        }
+        Zone z = getZone();
+        if (z != null && (z.is(ZoneType.Battlefield) || z.is(ZoneType.Graveyard))) {
+            g.markLastStateStale();
+        }
+    }
+
     public void addPTBoost(final int power, final int toughness, final long timestamp, final long staticId) {
         boostPT.put(timestamp, staticId, Pair.of(power, toughness));
+        markLkiStale();
     }
 
     public boolean removePTBoost(final long timestamp, final long staticId) {
-        return boostPT.remove(timestamp, staticId) != null;
+        boolean removed = boostPT.remove(timestamp, staticId) != null;
+        if (removed) {
+            markLkiStale();
+        }
+        return removed;
     }
 
     public Table<Long, Long, Pair<Integer, Integer>> getPTBoostTable() {
@@ -4672,6 +4716,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (tapped == tapped0) { return; }
         tapped = tapped0;
         view.updateTapped(this);
+        markLkiStale();
     }
 
     public final boolean canTap() {
@@ -4946,6 +4991,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updateAbilityTextForView();
         }
+        markLkiStale();
         return changes;
     }
 
@@ -5151,6 +5197,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updateKeywords();
         }
+        markLkiStale();
     }
 
     public final boolean removeChangedCardKeywords(final long timestamp, final long staticId) {
@@ -5612,6 +5659,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final void setUnearthed(final boolean b) {
         unearthed = b;
+        markLkiStale();
     }
 
     public final boolean isPhasedOut() {
@@ -6076,6 +6124,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             damage.put(0, damage0);
         }
         view.updateDamage(this);
+        markLkiStale();
         getGame().fireEvent(new GameEventCardStatsChanged(this));
     }
 
@@ -6374,6 +6423,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final boolean isTributed() { return tributed; }
     public final void setTributed(final boolean b) {
         tributed = b;
+        markLkiStale();
     }
 
     public final SpellAbility getTokenSpawningAbility() {
@@ -6500,6 +6550,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final void setMonstrous(final boolean monstrous0) {
         monstrous = monstrous0;
+        markLkiStale();
     }
 
     public final boolean isRenowned() {
@@ -6507,6 +6558,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final void setRenowned(final boolean renowned0) {
         renowned = renowned0;
+        markLkiStale();
     }
 
     public final boolean isSolved() {
@@ -6514,6 +6566,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     }
     public final boolean setSolved(final boolean solved) {
         this.solved = solved;
+        markLkiStale();
         return true;
     }
 
@@ -6543,6 +6596,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final boolean setSaddled(final boolean saddled) {
         this.saddled = saddled;
         if (saddled) timesSaddledThisTurn++;
+        markLkiStale();
         return true;
     }
 
@@ -6576,6 +6630,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         } else {
             suspectedStatic = null;
         }
+        markLkiStale();
         return true;
     }
 
@@ -7658,6 +7713,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
     public final void addGoad(Long timestamp, final Player p) {
         goad.put(timestamp, p);
         updateAbilityTextForView();
+        markLkiStale();
     }
 
     public final void removeGoad(Long timestamp) {
