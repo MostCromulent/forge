@@ -1095,6 +1095,16 @@ public class VLobby implements ILobbyView {
 
             setToolTipText(variantType.getDescription());
             addItemListener(e -> {
+                // Variants are a host-only control. A non-controlling client must
+                // never mutate its own lobby: doing so desyncs from the host and,
+                // before the host's data has arrived, drives update() over a lobby
+                // with zero slots. setEnabled(hasControl()) in update() is only a
+                // reactive visual guard and hasn't run yet during that window, so
+                // enforce the rule at the action itself. This also stops the
+                // programmatic setSelected() in update() from re-firing applyVariant.
+                if (!lobby.hasControl()) {
+                    return;
+                }
                 if (e.getStateChange() == ItemEvent.SELECTED) {
                     lobby.applyVariant(variantType);
                 } else {
