@@ -330,7 +330,10 @@ public class VLobby implements ILobbyView {
     }
 
     public void focusOnAvatar() {
-        getPlayerPanelWithFocus().focusOnAvatar();
+        final PlayerPanel panel = getPlayerPanelWithFocus();
+        if (panel != null) {
+            panel.focusOnAvatar();
+        }
     }
 
     private PlayerPanel getPlayerPanel(int slot) {
