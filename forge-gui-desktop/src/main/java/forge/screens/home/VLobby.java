@@ -448,7 +448,7 @@ public class VLobby implements ILobbyView {
             }
         }
 
-        if (playerWithFocus >= activePlayersNum) {
+        if (activePlayersNum > 0 && playerWithFocus >= activePlayersNum) {
             changePlayerFocus(activePlayersNum - 1);
         } else {
             updateRightPanelForMode();
@@ -812,7 +812,11 @@ public class VLobby implements ILobbyView {
         return playerPanels;
     }
     private PlayerPanel getPlayerPanelWithFocus() {
-        return getPlayerPanels().get(playerWithFocus);
+        final List<PlayerPanel> panels = getPlayerPanels();
+        if (playerWithFocus < 0 || playerWithFocus >= panels.size()) {
+            return null;
+        }
+        return panels.get(playerWithFocus);
     }
     boolean hasFocus(final int iPlayer) {
         return iPlayer == playerWithFocus;
@@ -853,9 +857,10 @@ public class VLobby implements ILobbyView {
         }
         playerWithFocus = newFocusOwner;
         final PlayerPanel newFocus = getPlayerPanelWithFocus();
-        newFocus.setFocused(true);
-
-        playersScroll.getViewport().scrollRectToVisible(newFocus.getBounds());
+        if (newFocus != null) {
+            newFocus.setFocused(true);
+            playersScroll.getViewport().scrollRectToVisible(newFocus.getBounds());
+        }
         updateRightPanelForMode();
 
         refreshPanels(true, true);
