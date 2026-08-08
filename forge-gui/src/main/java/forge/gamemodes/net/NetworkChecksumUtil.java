@@ -8,7 +8,6 @@ import forge.game.phase.PhaseType;
 import forge.game.player.PlayerView;
 import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
-import forge.trackable.Tracker;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
@@ -419,22 +418,11 @@ public final class NetworkChecksumUtil {
     }
 
     /**
-     * Read the effective value of a property, checking the tracker's delayed
-     * queue when frozen. During a tracker freeze, mergeDelayedProps adds pending
-     * values to the delta that aren't yet in the live props. The checksum must
-     * read these same values to match what the client will have after applying
-     * the delta.
+     * Read a property value. Hashes exactly what the delta ships, so the two
+     * stay aligned by construction.
      */
     static Object getEffectiveValue(TrackableObject obj, TrackableProperty prop) {
-        Object value = ((Map<TrackableProperty, Object>) obj.getProps()).get(prop);
-        Tracker tracker = obj.getTracker();
-        if (tracker != null && tracker.isFrozen()) {
-            Map<TrackableProperty, Object> delayed = tracker.getDelayedPropsFor(obj);
-            if (delayed.containsKey(prop)) {
-                value = delayed.get(prop);
-            }
-        }
-        return value;
+        return ((Map<TrackableProperty, Object>) obj.getProps()).get(prop);
     }
 
     /**

@@ -13,7 +13,6 @@ import forge.game.combat.CombatView;
 import forge.util.collect.FCollection;
 
 import forge.util.IHasForgeLog;
-import forge.trackable.Tracker;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
@@ -279,11 +278,9 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     private Map<TrackableProperty, Object> buildPropertyMap(TrackableObject obj, Set<TrackableProperty> dirtyProps) {
         Map<TrackableProperty, Object> props = obj.getProps();
-        // Copy props — mergeDelayedProps may add entries, and we iterate later
+        // Copy before iterating — the engine may write props concurrently
         Map<TrackableProperty, Object> snapshot = new EnumMap<>(props);
-        mergeDelayedProps(obj, snapshot, dirtyProps);
         if (dirtyProps == null) {
-            // additional delayed props will be included from fresh object
             dirtyProps = snapshot.keySet();
         }
         Map<TrackableProperty, Object> delta = new EnumMap<>(TrackableProperty.class);
@@ -294,26 +291,6 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
         }
         return delta;
-    }
-
-    /**
-     * Merge properties delayed by a tracker freeze into a delta map.
-     * Properties with FreezeMode.RespectsFreeze are not written
-     * to the props map or marked dirty while frozen, but network
-     * clients need them in the same delta as their accompanying events.
-     *
-     * This is safe because speculative freeze brackets (which call clearDelayed()) and real freeze brackets are disjoint
-     * — speculative brackets always start from freezeCounter == 0 and complete before any sync point where delta collection occurs.
-     */
-    private void mergeDelayedProps(TrackableObject obj, Map<TrackableProperty, Object> delta, Set<TrackableProperty> dirtyProps) {
-        Tracker tracker = obj.getTracker();
-        if (tracker == null || !tracker.isFrozen()) return;
-        for (Map.Entry<TrackableProperty, Object> entry : tracker.getDelayedPropsFor(obj).entrySet()) {
-            delta.put(entry.getKey(), entry.getValue());
-            if (dirtyProps != null) {
-                dirtyProps.add(entry.getKey());
-            }
-        }
     }
 
     /**
