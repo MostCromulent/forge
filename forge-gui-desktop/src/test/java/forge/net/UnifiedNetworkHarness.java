@@ -69,6 +69,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private int specifiedPort = -1; // -1 means auto-allocate
     private boolean useAiForRemotePlayers = true;
     private boolean separateClientProcesses = false;
+    private long restartClientAfterMs = 0;
     private boolean commander = false;
     private List<Deck> decks = null;
 
@@ -136,6 +137,17 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
      */
     public UnifiedNetworkHarness separateClientProcesses(boolean enable) {
         this.separateClientProcesses = enable;
+        return this;
+    }
+
+    /**
+     * Kill the first client process this long after it starts, and reconnect it.
+     *
+     * <p>Requires {@link #separateClientProcesses}: a reconnection is a new connection under
+     * the same name, which needs a process that can actually die and come back.
+     */
+    public UnifiedNetworkHarness restartClientAfterMs(long delayMs) {
+        this.restartClientAfterMs = delayMs;
         return this;
     }
 
@@ -452,12 +464,37 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                                         AtomicInteger successfulConnections,
                                         CountDownLatch attemptedLatch,
                                         CountDownLatch finishedLatch) {
-        Process process = null;
+        // The drill kills the first client part-way through; the replacement below connects
+        // under the same name, which is how the server recognises a reconnection.
+        final boolean drill = restartClientAfterMs > 0 && clientIndex == 0;
         boolean attemptedCounted = false;
+        try {
+            attemptedCounted = runClientProcess(clientIndex, clientName, port, 500L + (clientIndex * 3000L),
+                    successfulConnections, attemptedLatch, attemptedCounted, drill);
+            if (drill) {
+                netLog.info("[Reconnect drill] Client {} ({}) was killed; reconnecting under the same name",
+                        clientIndex, clientName);
+                attemptedCounted = runClientProcess(clientIndex, clientName, port, 0L,
+                        successfulConnections, attemptedLatch, attemptedCounted, false);
+            }
+        } catch (Exception e) {
+            netLog.error("Client {} process error: {}", clientIndex, e.getMessage());
+        } finally {
+            if (!attemptedCounted) {
+                attemptedLatch.countDown();
+            }
+            finishedLatch.countDown();
+        }
+    }
+
+    /** Run one client process to completion, returning whether its connection was counted. */
+    private boolean runClientProcess(int clientIndex, String clientName, int port, long staggerDelay,
+                                     AtomicInteger successfulConnections, CountDownLatch attemptedLatch,
+                                     boolean attemptedCounted, boolean killPartWay) throws Exception {
+        Process process = null;
         try {
             String javaBin = System.getProperty("java.home") + java.io.File.separator
                     + "bin" + java.io.File.separator + "java";
-            long staggerDelay = 500L + (clientIndex * 3000L);
 
             List<String> command = new ArrayList<>();
             command.add(javaBin);
@@ -478,14 +515,32 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             process = pb.start();
             netLog.info("Client {} ({}) spawned as separate process", clientIndex, clientName);
 
+            if (killPartWay) {
+                final Process victim = process;
+                final Thread killer = new Thread(() -> {
+                    try {
+                        Thread.sleep(restartClientAfterMs);
+                        victim.destroyForcibly();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }, "reconnect-drill-" + clientIndex);
+                killer.setDaemon(true);
+                killer.start();
+            }
+
             try (java.io.BufferedReader reader = new java.io.BufferedReader(
                     new java.io.InputStreamReader(process.getInputStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     if (line.startsWith("CONNECTED:")) {
-                        successfulConnections.incrementAndGet();
-                        attemptedLatch.countDown();
-                        attemptedCounted = true;
+                        // Counted once: a reconnecting client announces itself again, and
+                        // the parent is waiting on one connection per client, not per spawn.
+                        if (!attemptedCounted) {
+                            successfulConnections.incrementAndGet();
+                            attemptedLatch.countDown();
+                            attemptedCounted = true;
+                        }
                         netLog.info("Client {} ({}) connected: {}", clientIndex, clientName, line);
                     } else if (line.startsWith("RESULT:")) {
                         netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
@@ -496,17 +551,12 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                 }
             }
             process.waitFor();
-        } catch (Exception e) {
-            netLog.error("Client {} process error: {}", clientIndex, e.getMessage());
         } finally {
-            if (!attemptedCounted) {
-                attemptedLatch.countDown();
-            }
             if (process != null && process.isAlive()) {
                 process.destroyForcibly();
             }
-            finishedLatch.countDown();
         }
+        return attemptedCounted;
     }
 
     private void runRemoteClientThread(int clientIndex, String clientName, int port,
