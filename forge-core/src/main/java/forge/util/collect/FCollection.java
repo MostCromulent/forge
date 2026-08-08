@@ -454,6 +454,9 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      */
     @Override
     public T set(final int index, final T element) { //assume this isn't called except when changing list order, so don't worry about updating set
+        if (element == null) {
+            return list.get(index);
+        }
         return list.set(index, element);
     }
 
@@ -463,6 +466,9 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      * in sync with the list.
      */
     public T replace(final int index, final T element) {
+        if (element == null) {
+            return list.get(index);
+        }
         final T old = list.set(index, element);
         if (old != element && set != null) {
             set.remove(old);
@@ -489,6 +495,9 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      * @return whether this collection changed as a result of this method call.
      */
     private boolean insert(int index, final T element) {
+        if (element == null) {
+            return false;
+        }
         if (set == null ? !list.contains(element) : set.add(element)) {
             list.add(index, element);
             if (set == null && list.size() > HASH_THRESHOLD) {
