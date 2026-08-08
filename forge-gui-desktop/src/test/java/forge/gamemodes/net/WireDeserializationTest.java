@@ -47,7 +47,7 @@ public class WireDeserializationTest {
     private static byte[] encode(final Object graph) throws Exception {
         final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         // The real encoder, so the framing matches what a peer would send.
-        try (ObjectOutputStream out = new CObjectOutputStream(bytes, false, null, -1, false)) {
+        try (ObjectOutputStream out = new CObjectOutputStream(bytes, false, null, null, false)) {
             out.writeObject(graph);
         }
         return bytes.toByteArray();

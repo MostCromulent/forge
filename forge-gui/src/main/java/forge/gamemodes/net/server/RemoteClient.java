@@ -3,6 +3,7 @@ package forge.gamemodes.net.server;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
 import forge.gamemodes.net.ReplyPool;
+import forge.trackable.TrackableObject;
 import forge.trackable.Tracker;
 import forge.gamemodes.net.event.IdentifiableNetEvent;
 import forge.gamemodes.net.event.NetEvent;
@@ -12,6 +13,7 @@ import io.netty.channel.Channel;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 public final class RemoteClient implements IToClient, IHasForgeLog {
 
@@ -24,7 +26,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     private boolean libgdx;
     private volatile ReplyPool replies = new ReplyPool();
     private volatile Tracker codecTracker;
-    private volatile int codecConsumerId = -1;
+    private volatile Predicate<TrackableObject> codecReceiverKnows;
     private final AtomicInteger sendErrors = new AtomicInteger(0);
     private RemoteClientGuiGame gui;
 
@@ -180,16 +182,15 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     }
 
     /**
-     * Set the tracker and per-client consumerId on the channel's encoder and
-     * decoder. Called when the game starts (before any client protocol
-     * messages arrive). Cached so that {@link #swapChannel} can re-apply
-     * after a reconnect. The consumerId is the {@code DeltaSyncManager} id
-     * for this client; the encoder uses it to gate IdRef substitution to
-     * objects this client has actually been told about.
+     * Set the tracker and the encoder's IdRef gate on the channel's codecs.
+     * Called when the game starts (before any client protocol messages
+     * arrive). Cached so that {@link #swapChannel} can re-apply after a
+     * reconnect. The gate answers whether this client has already been told
+     * about an object, so a reference to it can travel as an id.
      */
-    public void setCodecTracker(Tracker tracker, int consumerId) {
+    public void setCodecTracker(Tracker tracker, Predicate<TrackableObject> receiverKnows) {
         this.codecTracker = tracker;
-        this.codecConsumerId = consumerId;
+        this.codecReceiverKnows = receiverKnows;
         applyCodecTracker(channel);
     }
 
@@ -200,7 +201,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         CompatibleObjectEncoder encoder = ch.pipeline().get(CompatibleObjectEncoder.class);
         if (encoder != null) {
             encoder.setTracker(codecTracker);
-            encoder.setConsumerId(codecConsumerId);
+            encoder.setReceiverKnows(codecReceiverKnows);
         }
         CompatibleObjectDecoder decoder = ch.pipeline().get(CompatibleObjectDecoder.class);
         if (decoder != null) {

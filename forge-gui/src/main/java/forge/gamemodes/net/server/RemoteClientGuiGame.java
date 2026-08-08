@@ -298,7 +298,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         // client IdRefs against it. Set before any client protocol messages arrive —
         // setGameView runs before openView, and the client can't respond until after.
         if (gameView != null && gameView.getTracker() != null) {
-            client.setCodecTracker(gameView.getTracker(), syncManager.getConsumerId());
+            client.setCodecTracker(gameView.getTracker(), syncManager::receiverKnows);
         }
         updateGameView();
     }

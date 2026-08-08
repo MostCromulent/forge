@@ -67,7 +67,13 @@ public class DeltaSyncManager implements IHasForgeLog {
      * Off by default: diagnostic only, and it doubles the per-pass graph traversal.
      */
     private static final boolean SHADOW_SNAPSHOT = Boolean.getBoolean("forge.snapshot.shadow");
-    private ViewSnapshot shadowPrevious = ViewSnapshot.empty();
+
+    /**
+     * The last snapshot this client is known to hold. Replaced wholesale, never
+     * mutated, so the encode gate can read it from a Netty thread without locking.
+     * Empty unless the snapshot is being maintained.
+     */
+    private volatile ViewSnapshot baseline = ViewSnapshot.empty();
 
     /** Per-thread allocation counter, when the JVM exposes one. Shadow diagnostics only. */
     private static final com.sun.management.ThreadMXBean ALLOC_BEAN = allocBean();
@@ -92,10 +98,43 @@ public class DeltaSyncManager implements IHasForgeLog {
     private static final AtomicInteger NEXT_CONSUMER_ID = new AtomicInteger(0);
     private final int consumerId = NEXT_CONSUMER_ID.getAndIncrement();
 
-    /** Per-client ID used to gate IdRef substitution on the outer codec. */
-    public int getConsumerId() {
-        return consumerId;
+    /**
+     * Whether this client already holds {@code obj}, which is what decides whether a
+     * reference to it travels as an id or is serialized inline. Handed to the encoder
+     * as the IdRef gate.
+     *
+     * <p>Consumer registration answers it today. The baseline — what was actually sent —
+     * is the answer a snapshot would give, and while the snapshot is being shadowed both
+     * are computed so they can be compared, because a wrong one here fails silently: too
+     * permissive ships an id the client cannot resolve, too conservative inlines a whole
+     * card into every packet that mentions one.
+     */
+    boolean receiverKnows(TrackableObject obj) {
+        boolean registered = obj.hasConsumer(consumerId);
+        if (!SHADOW_SNAPSHOT) {
+            return registered;
+        }
+        int deltaKey = DeltaPacket.makeDeltaKey(obj);
+        (registered ? gateIdRef : gateInline).incrementAndGet();
+        if (baseline.objects().containsKey(deltaKey) != registered) {
+            gateDisagreed.incrementAndGet();
+            if (gateDisagreementKeys.add(deltaKey)) {
+                netLog.warn("[Gate] key={} id={}: registered={} inBaseline={}",
+                        String.format("0x%08X", deltaKey), obj.getId(), registered, !registered);
+            }
+        }
+        return registered;
     }
+
+    /**
+     * Tallies for the encode gate. {@code inline} is the one worth watching: it counts
+     * references serialized as whole objects, and it is the answer that fails silently,
+     * since an id the client cannot resolve at least warns on arrival.
+     */
+    private final AtomicInteger gateIdRef = new AtomicInteger();
+    private final AtomicInteger gateInline = new AtomicInteger();
+    private final AtomicInteger gateDisagreed = new AtomicInteger();
+    private final Set<Integer> gateDisagreementKeys = Collections.synchronizedSet(new HashSet<>());
 
     private long sequenceNumber = 0;
 
@@ -214,6 +253,8 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
 
             logSampledChecksumDetails(gameView, checksum, sequenceNumber, checksumPropertyOrdinals);
+            netLog.info("[Gate] idRef={} inline={} disagreed={}",
+                    gateIdRef.get(), gateInline.get(), gateDisagreed.get());
 
             // Store breakdown for logging if the client reports a mismatch
             int turn = gameView.getTurn();
@@ -240,6 +281,9 @@ public class DeltaSyncManager implements IHasForgeLog {
      * <p>Walk-only entries are expected — a dirty bit survives a value changing and
      * changing back, which a diff correctly skips. Snapshot-only entries are the
      * interesting direction: they are changes the walk did not report.
+     *
+     * <p>The baseline advances every pass here rather than on delivery, because nothing
+     * built from the snapshot is sent while it is only shadowing the walk.
      */
     private void shadowCompare(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
         long buildStart = System.nanoTime();
@@ -249,10 +293,10 @@ public class DeltaSyncManager implements IHasForgeLog {
         long buildAlloc = allocatedBytes() - buildAllocStart;
         long diffStart = System.nanoTime();
         long diffAllocStart = allocatedBytes();
-        ViewSnapshot.Diff diff = ViewSnapshot.diff(shadowPrevious, current);
+        ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
         long diffNanos = System.nanoTime() - diffStart;
         long diffAlloc = allocatedBytes() - diffAllocStart;
-        shadowPrevious = current;
+        baseline = current;
 
         Map<Integer, Map<TrackableProperty, Object>> fromWalk =
                 mergeForComparison(packet.getNewObjects(), packet.getObjectDeltas());
@@ -721,6 +765,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             obj.unregisterConsumer(consumerId);
         }
         registeredByKey.clear();
+        baseline = ViewSnapshot.empty();
         sequenceNumber = 0;
         packetsSinceLastChecksum = 0;
         recentDeltaProperties.clear();
