@@ -69,11 +69,37 @@ public class DeltaSyncManager implements IHasForgeLog {
     private static final boolean SHADOW_SNAPSHOT = Boolean.getBoolean("forge.snapshot.shadow");
 
     /**
+     * Build packets by diffing snapshots instead of walking the graph for dirty bits.
+     * The two are meant to produce the same client state, so this exists to run them
+     * against each other in the same harness.
+     */
+    private static final boolean SNAPSHOT_AUTHORITY = Boolean.getBoolean("forge.snapshot.authority");
+
+    /**
      * The last snapshot this client is known to hold. Replaced wholesale, never
      * mutated, so the encode gate can read it from a Netty thread without locking.
      * Empty unless the snapshot is being maintained.
      */
     private volatile ViewSnapshot baseline = ViewSnapshot.empty();
+
+    /** The snapshot the packet just built describes; becomes the baseline once it is sent. */
+    private ViewSnapshot pendingBaseline;
+
+    /**
+     * Record that the packet built by the last collection reached the client, so the
+     * next one is diffed against it.
+     *
+     * <p>Kept apart from building the packet because a baseline that advances past
+     * something the client never received desyncs that client permanently and silently:
+     * the server would then believe it had sent state it never did, and never send it
+     * again.
+     */
+    void commitBaseline() {
+        if (pendingBaseline != null) {
+            baseline = pendingBaseline;
+            pendingBaseline = null;
+        }
+    }
 
     /** Per-thread allocation counter, when the JVM exposes one. Shadow diagnostics only. */
     private static final com.sun.management.ThreadMXBean ALLOC_BEAN = allocBean();
@@ -103,18 +129,23 @@ public class DeltaSyncManager implements IHasForgeLog {
      * reference to it travels as an id or is serialized inline. Handed to the encoder
      * as the IdRef gate.
      *
-     * <p>Consumer registration answers it today. The baseline — what was actually sent —
-     * is the answer a snapshot would give, and while the snapshot is being shadowed both
-     * are computed so they can be compared, because a wrong one here fails silently: too
-     * permissive ships an id the client cannot resolve, too conservative inlines a whole
-     * card into every packet that mentions one.
+     * <p>The walk answers this from consumer registration; the snapshot answers it from
+     * the baseline, which is what was actually sent. Both answers are computed while the
+     * snapshot is being shadowed, because a wrong one here fails silently: too permissive
+     * ships an id the client cannot resolve, too conservative inlines a whole card into
+     * every packet that mentions one.
      */
     boolean receiverKnows(TrackableObject obj) {
+        int deltaKey = DeltaPacket.makeDeltaKey(obj);
+        if (SNAPSHOT_AUTHORITY) {
+            boolean inBaseline = baseline.objects().containsKey(deltaKey);
+            (inBaseline ? gateIdRef : gateInline).incrementAndGet();
+            return inBaseline;
+        }
         boolean registered = obj.hasConsumer(consumerId);
         if (!SHADOW_SNAPSHOT) {
             return registered;
         }
-        int deltaKey = DeltaPacket.makeDeltaKey(obj);
         (registered ? gateIdRef : gateInline).incrementAndGet();
         if (baseline.objects().containsKey(deltaKey) != registered) {
             gateDisagreed.incrementAndGet();
@@ -200,6 +231,13 @@ public class DeltaSyncManager implements IHasForgeLog {
     private final Set<String> collectThreads = Collections.synchronizedSet(new HashSet<>());
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
+        if (SNAPSHOT_AUTHORITY) {
+            ViewSnapshot current = ViewSnapshot.build(gameView);
+            ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
+            pendingBaseline = current;
+            return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
+        }
+
         Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new HashMap<>();
         // need parent-before-child insertion order
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
@@ -223,6 +261,23 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
         }
 
+        DeltaPacket packet = finishPacket(gameView, objectDeltas, newObjects);
+        if (SHADOW_SNAPSHOT) {
+            shadowCompare(gameView, packet, walkNanos, walkAlloc);
+        }
+        return packet;
+    }
+
+    /**
+     * Sequence, checksum and wrap what either path produced.
+     *
+     * <p>The checksum is deliberately still computed from the live view rather than from
+     * the snapshot: it is the independent oracle for whichever path built the packet, and
+     * deriving it from the snapshot would make it agree with the diff by construction.
+     */
+    private DeltaPacket finishPacket(GameView gameView,
+                                     Map<Integer, Map<TrackableProperty, Object>> objectDeltas,
+                                     Map<Integer, Map<TrackableProperty, Object>> newObjects) {
         // Accumulate changed properties for delta-biased sampling
         for (Map<TrackableProperty, Object> delta : objectDeltas.values()) {
             recentDeltaProperties.addAll(delta.keySet());
@@ -263,11 +318,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             lastChecksumDetail = detail;
         }
 
-        DeltaPacket packet = new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
-        if (SHADOW_SNAPSHOT) {
-            shadowCompare(gameView, packet, walkNanos, walkAlloc);
-        }
-        return packet;
+        return new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
     }
 
     /**
@@ -766,6 +817,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
         registeredByKey.clear();
         baseline = ViewSnapshot.empty();
+        pendingBaseline = null;
         sequenceNumber = 0;
         packetsSinceLastChecksum = 0;
         recentDeltaProperties.clear();

@@ -316,6 +316,9 @@ public class MultiProcessGameExecutor implements IHasForgeLog {
         if (Boolean.getBoolean("forge.snapshot.shadow")) {
             command.add("-Dforge.snapshot.shadow=true");
         }
+        if (Boolean.getBoolean("forge.snapshot.authority")) {
+            command.add("-Dforge.snapshot.authority=true");
+        }
 
         command.add(runnerClass);
         command.add(String.valueOf(port));

@@ -239,6 +239,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             } else {
                 sender.write(ProtocolMethod.applyDelta, delta);
             }
+            syncManager.commitBaseline();
 
             if (logBandwidth) {
                 int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
@@ -579,6 +580,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                 DeltaPacket delta = syncManager.collectDeltas(gameView);
                 delta.setEvents(TrackableSerializer.wrapEvents(events, gameView.getTracker()));
                 sender.send(ProtocolMethod.applyDelta, delta);
+                syncManager.commitBaseline();
 
                 if (logBandwidth) {
                     int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
