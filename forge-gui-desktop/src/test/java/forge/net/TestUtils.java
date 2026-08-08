@@ -65,9 +65,10 @@ public final class TestUtils {
         String deltaSyncProp = System.getProperty("forge.deltasync");
         RemoteClientGuiGame.useDeltaSync = !"false".equalsIgnoreCase(deltaSyncProp);
 
-        IHasForgeLog.netLog.info("[TestConfig] checksum={}, deltasync={}, deltasource={}",
+        IHasForgeLog.netLog.info("[TestConfig] checksum={}, deltasync={}, deltasource={}, remote={}",
                 useStable ? "stable" : "sampled",
                 RemoteClientGuiGame.useDeltaSync ? "on" : "off",
-                Boolean.getBoolean("forge.snapshot.authority") ? "snapshot" : "walk");
+                Boolean.getBoolean("forge.snapshot.authority") ? "snapshot" : "walk",
+                "false".equalsIgnoreCase(System.getProperty("test.useAiForRemote")) ? "human" : "ai");
     }
 }

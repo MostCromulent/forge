@@ -30,9 +30,8 @@ import org.testng.annotations.Test;
  * delivered — an artifact of the harness rather than of the code under test, since a
  * real host and client are always separate processes.
  *
- * <p>Because of that, the bandwidth and packet counters on the result stay at zero: they
- * are accumulated in the client processes, not this one. Assert on what this test is for
- * — that a game starts and advances under human control — rather than on those.
+ * <p>The bandwidth and packet counters accumulate in those client processes, and reach the
+ * result only through the {@code RESULT:} line each one prints as it exits.
  */
 public class HumanPathNetworkTest implements IHasForgeLog {
 

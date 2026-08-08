@@ -36,6 +36,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Core single-game executor for network tests. Starts a server, connects
@@ -344,7 +345,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // 4. Start remote clients
             clientExecutor = Executors.newFixedThreadPool(remoteClientCount);
             CountDownLatch clientsAttemptedLatch = new CountDownLatch(remoteClientCount);
-            CountDownLatch clientsFinishedLatch = new CountDownLatch(remoteClientCount);
+            clientsFinishedLatch = new CountDownLatch(remoteClientCount);
 
             for (int i = 0; i < remoteClientCount; i++) {
                 final int clientIndex = i;
@@ -406,24 +407,17 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // 7. Wait for game completion
             waitForRemoteGameCompletion(result, hostedMatch);
 
-            // 8. Wait for clients to finish
-            clientsFinishedLatch.await(10, TimeUnit.SECONDS);
+            // 8. Wait for clients to finish. A client in its own process exits only once the
+            // server closes its channel, which is part of cleanup below, so waiting here
+            // cannot succeed for those — they are collected afterwards instead.
+            if (!separateClientProcesses) {
+                clientsFinishedLatch.await(10, TimeUnit.SECONDS);
+            }
 
             // 9. Collect metrics from clients
             collectRemoteClientMetrics(result);
 
-            // Validate result
-            result.success = result.gameCompleted &&
-                    result.deltaPacketsReceived > 0 &&
-                    result.turnCount > 0;
-
-            if (!result.success && result.errorMessage == null) {
-                if (result.deltaPacketsReceived == 0) {
-                    result.errorMessage = "No delta packets received - network path not exercised";
-                } else if (!result.gameCompleted) {
-                    result.errorMessage = "Game did not complete";
-                }
-            }
+            validateResult(result);
 
             result.gameDurationMs = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
@@ -433,6 +427,17 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             e.printStackTrace();
         } finally {
             cleanup();
+            if (separateClientProcesses && clientsFinishedLatch != null) {
+                // Only now can those clients exit and report: each one is waiting on the
+                // channel that cleanup just closed.
+                try {
+                    clientsFinishedLatch.await(30, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                collectRemoteClientMetrics(result);
+                validateResult(result);
+            }
         }
 
         netLog.info("Remote game result: {}", result.toSummary());
@@ -484,6 +489,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                         netLog.info("Client {} ({}) connected: {}", clientIndex, clientName, line);
                     } else if (line.startsWith("RESULT:")) {
                         netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
+                        recordClientProcessResult(line);
                     } else {
                         netLog.info("[client{}] {}", clientIndex, line);
                     }
@@ -715,7 +721,63 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         }
     }
 
+    private void validateResult(GameResult result) {
+        result.success = result.gameCompleted
+                && result.deltaPacketsReceived > 0
+                && result.turnCount > 0;
+
+        if (result.success) {
+            result.errorMessage = null;
+        } else if (result.errorMessage == null) {
+            if (result.deltaPacketsReceived == 0) {
+                result.errorMessage = "No delta packets received - network path not exercised";
+            } else if (!result.gameCompleted) {
+                result.errorMessage = "Game did not complete";
+            }
+        }
+    }
+
+    /** What a client running in its own process reported on the way out. */
+    private CountDownLatch clientsFinishedLatch;
+    private final AtomicInteger processDeltaPackets = new AtomicInteger();
+    private final AtomicInteger processFullSyncs = new AtomicInteger();
+    private final AtomicLong processDeltaBytes = new AtomicLong();
+    private final AtomicInteger processMismatches = new AtomicInteger();
+
+    /**
+     * Read a client process's {@code RESULT:} line into the metrics this harness reports.
+     *
+     * <p>Clients in their own process cannot be asked afterwards the way in-process ones
+     * can, so without this a run that worked reports zero packets and looks like one where
+     * nothing crossed the network.
+     */
+    private void recordClientProcessResult(final String line) {
+        for (final String part : line.split(":")) {
+            final int eq = part.indexOf('=');
+            if (eq < 0) {
+                continue;
+            }
+            final long value;
+            try {
+                value = Long.parseLong(part.substring(eq + 1));
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            switch (part.substring(0, eq)) {
+                case "deltas" -> processDeltaPackets.addAndGet((int) value);
+                case "fullSyncs" -> processFullSyncs.addAndGet((int) value);
+                case "bytes" -> processDeltaBytes.addAndGet(value);
+                case "mismatches" -> processMismatches.addAndGet((int) value);
+                default -> { }
+            }
+        }
+    }
+
     private void collectRemoteClientMetrics(GameResult result) {
+        result.deltaPacketsReceived += processDeltaPackets.get();
+        result.fullStateSyncsReceived += processFullSyncs.get();
+        result.totalDeltaBytes += processDeltaBytes.get();
+        result.eventStateMismatches += processMismatches.get();
         synchronized (remoteClients) {
             for (HeadlessNetworkClient client : remoteClients) {
                 result.deltaPacketsReceived += client.getDeltaPacketsReceived();
