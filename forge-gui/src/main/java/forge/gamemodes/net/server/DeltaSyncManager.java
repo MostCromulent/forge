@@ -55,7 +55,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     // Built dynamically from ZoneType's trackable property mapping.
     // Excludes Flashback: virtual zone whose cards are references to cards in
     // other zones (Graveyard, Library, etc.), not unique canonical instances.
-    private static final EnumSet<TrackableProperty> ZONE_COLLECTIONS = EnumSet.noneOf(TrackableProperty.class);
+    static final EnumSet<TrackableProperty> ZONE_COLLECTIONS = EnumSet.noneOf(TrackableProperty.class);
     static {
         for (ZoneType z : ZoneType.values()) {
             TrackableProperty prop = z.getTrackableProperty();
@@ -64,6 +64,13 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
         }
     }
+
+    /**
+     * Build a {@link ViewSnapshot} alongside each walk and report where they disagree.
+     * Off by default: diagnostic only, and it doubles the per-pass graph traversal.
+     */
+    private static final boolean SHADOW_SNAPSHOT = Boolean.getBoolean("forge.snapshot.shadow");
+    private ViewSnapshot shadowPrevious = ViewSnapshot.empty();
 
     // each DeltaSyncManager gets a unique ID
     private static final AtomicInteger NEXT_CONSUMER_ID = new AtomicInteger(0);
@@ -162,7 +169,93 @@ public class DeltaSyncManager implements IHasForgeLog {
             lastChecksumDetail = detail;
         }
 
-        return new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
+        DeltaPacket packet = new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
+        if (SHADOW_SNAPSHOT) {
+            shadowCompare(gameView, packet);
+        }
+        return packet;
+    }
+
+    /**
+     * Build a snapshot alongside the walk and report where the two disagree.
+     *
+     * <p>Compares end state rather than packet shape: whether a property arrives under
+     * newObjects or objectDeltas depends on registration history for the walk and on
+     * baseline presence for the diff, so the two legitimately differ there. What must
+     * agree is the set of (object, property, value) a client ends up with.
+     *
+     * <p>Walk-only entries are expected — a dirty bit survives a value changing and
+     * changing back, which a diff correctly skips. Snapshot-only entries are the
+     * interesting direction: they are changes the walk did not report.
+     */
+    private void shadowCompare(GameView gameView, DeltaPacket packet) {
+        ViewSnapshot current = ViewSnapshot.build(gameView);
+        ViewSnapshot.Diff diff = ViewSnapshot.diff(shadowPrevious, current);
+        shadowPrevious = current;
+
+        Map<Integer, Map<TrackableProperty, Object>> fromWalk =
+                mergeForComparison(packet.getNewObjects(), packet.getObjectDeltas());
+        Map<Integer, Map<TrackableProperty, Object>> fromSnapshot =
+                mergeForComparison(diff.newObjects(), diff.objectDeltas());
+
+        int mismatched = 0;
+        int snapshotOnly = 0;
+        int walkOnly = 0;
+
+        for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : fromWalk.entrySet()) {
+            Map<TrackableProperty, Object> other = fromSnapshot.get(entry.getKey());
+            for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
+                if (other == null || !other.containsKey(prop.getKey())) {
+                    walkOnly++;
+                } else if (!java.util.Objects.equals(other.get(prop.getKey()), prop.getValue())) {
+                    mismatched++;
+                    netLog.warn("[Shadow] seq={} key={} {}: walk={} snapshot={}",
+                            packet.getSequenceNumber(), String.format("0x%08X", entry.getKey()),
+                            prop.getKey(), prop.getValue(), other.get(prop.getKey()));
+                }
+            }
+        }
+        for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : fromSnapshot.entrySet()) {
+            Map<TrackableProperty, Object> other = fromWalk.get(entry.getKey());
+            // A key the walk sends as a new object carries full state, and the client
+            // clears before applying — so a property the walk omits there is already
+            // cleared, which is what the diff says explicitly with a null.
+            boolean walkSendsFullState = packet.getNewObjects().containsKey(entry.getKey());
+            for (TrackableProperty prop : entry.getValue().keySet()) {
+                if (other != null && other.containsKey(prop)) {
+                    continue;
+                }
+                if (walkSendsFullState && entry.getValue().get(prop) == null) {
+                    continue;
+                }
+                snapshotOnly++;
+                netLog.warn("[Shadow] seq={} key={} {}: reported by snapshot only, value={}",
+                        packet.getSequenceNumber(), String.format("0x%08X", entry.getKey()),
+                        prop, entry.getValue().get(prop));
+            }
+        }
+
+        netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
+                        + "mismatched={} snapshotOnly={} walkOnly={} evicted={}",
+                packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
+                mismatched, snapshotOnly, walkOnly, diff.evicted().size());
+    }
+
+    /** Flatten a packet's two maps into one, with values canonicalised for comparison. */
+    private static Map<Integer, Map<TrackableProperty, Object>> mergeForComparison(
+            Map<Integer, Map<TrackableProperty, Object>> newObjects,
+            Map<Integer, Map<TrackableProperty, Object>> objectDeltas) {
+        Map<Integer, Map<TrackableProperty, Object>> merged = new HashMap<>();
+        for (Map<Integer, Map<TrackableProperty, Object>> source : List.of(newObjects, objectDeltas)) {
+            for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : source.entrySet()) {
+                Map<TrackableProperty, Object> into =
+                        merged.computeIfAbsent(entry.getKey(), k -> new EnumMap<>(TrackableProperty.class));
+                for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
+                    into.put(prop.getKey(), ViewSnapshot.canonical(prop.getValue()));
+                }
+            }
+        }
+        return merged;
     }
 
     /**
