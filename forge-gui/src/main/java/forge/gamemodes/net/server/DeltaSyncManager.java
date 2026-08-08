@@ -418,19 +418,70 @@ public class DeltaSyncManager implements IHasForgeLog {
                     continue;
                 }
                 snapshotOnly++;
-                netLog.warn("[Shadow] seq={} key={} {}: reported by snapshot only, value={}",
-                        packet.getSequenceNumber(), String.format("0x%08X", entry.getKey()),
-                        prop, entry.getValue().get(prop));
+                awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
+                        .putIfAbsent(prop, packet.getSequenceNumber());
             }
         }
 
+        int unexplained = sweepAwaitingWalk(fromWalk, diff.evicted(), packet.getSequenceNumber());
+
         netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
-                        + "mismatched={} snapshotOnly={} walkOnly={} evicted={} "
+                        + "mismatched={} snapshotOnly={} unexplained={} walkOnly={} evicted={} "
                         + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
-                mismatched, snapshotOnly, walkOnly, diff.evicted().size(),
+                mismatched, snapshotOnly, unexplained, walkOnly, diff.evicted().size(),
                 walkNanos / 1000, buildNanos / 1000, diffNanos / 1000,
                 walkAlloc, buildAlloc, diffAlloc);
+    }
+
+    /**
+     * Properties the snapshot has reported and the walk has not yet, with the pass they were
+     * first seen on.
+     *
+     * <p>The two are not read at the same instant — the walk runs first and the snapshot is
+     * built afterwards — so anything the engine changes in between is in one and not the
+     * other, and the walk carries it a pass or two later off its dirty bit. Counting that as
+     * a divergence measures the gap between the two readings, not a disagreement. What is
+     * worth reporting is a property the walk never catches up on, because that is a change
+     * the client would never be told about.
+     */
+    private final Map<Integer, Map<TrackableProperty, Long>> awaitingWalk = new HashMap<>();
+    private static final int SKEW_ALLOWANCE_PASSES = 3;
+
+    /** Clear what the walk has now reported, and report what it never did. */
+    private int sweepAwaitingWalk(Map<Integer, Map<TrackableProperty, Object>> fromWalk,
+                                  Set<Integer> evicted, long seq) {
+        for (Map.Entry<Integer, Map<TrackableProperty, Object>> reported : fromWalk.entrySet()) {
+            Map<TrackableProperty, Long> pending = awaitingWalk.get(reported.getKey());
+            if (pending != null) {
+                pending.keySet().removeAll(reported.getValue().keySet());
+            }
+        }
+        // A key that has left the graph is one the walk will never mention again, and its
+        // absence says nothing about either path.
+        awaitingWalk.keySet().removeAll(evicted);
+
+        int unexplained = 0;
+        Iterator<Map.Entry<Integer, Map<TrackableProperty, Long>>> keys = awaitingWalk.entrySet().iterator();
+        while (keys.hasNext()) {
+            Map.Entry<Integer, Map<TrackableProperty, Long>> entry = keys.next();
+            Iterator<Map.Entry<TrackableProperty, Long>> props = entry.getValue().entrySet().iterator();
+            while (props.hasNext()) {
+                Map.Entry<TrackableProperty, Long> pending = props.next();
+                if (seq - pending.getValue() < SKEW_ALLOWANCE_PASSES) {
+                    continue;
+                }
+                unexplained++;
+                netLog.warn("[Shadow] key={} {}: reported by the snapshot at seq={} and never "
+                                + "by the walk — a change the client is not told about",
+                        String.format("0x%08X", entry.getKey()), pending.getKey(), pending.getValue());
+                props.remove();
+            }
+            if (entry.getValue().isEmpty()) {
+                keys.remove();
+            }
+        }
+        return unexplained;
     }
 
     /** Flatten a packet's two maps into one, with values canonicalised for comparison. */
