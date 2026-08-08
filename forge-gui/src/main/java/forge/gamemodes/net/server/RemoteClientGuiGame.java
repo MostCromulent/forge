@@ -266,6 +266,28 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
+     * Send a reconnecting client everything it needs, without reading live state.
+     *
+     * <p>This runs on a Netty thread, and cannot be moved off one: the engine is parked
+     * awaiting input from the very client being reseeded, so there is no engine-owned site
+     * to defer to. Diffing the last published snapshot makes it pure computation over an
+     * immutable value. Whatever changed while the client was away is not in that snapshot,
+     * and arrives in the next ordinary delta, because the baseline it leaves behind is
+     * exactly what was sent.
+     */
+    public void reseedAfterReconnect() {
+        if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+            final DeltaPacket reseed = syncManager.reseedFromPublished();
+            if (reseed != null) {
+                initialSyncSent = true;
+                sender.send(ProtocolMethod.applyDelta, reseed);
+                return;
+            }
+        }
+        updateGameView();
+    }
+
+    /**
      * Forget what this client is believed to hold, after a message failed to reach it.
      * The next delta is then a full state, computed by the ordinary diff rather than by a
      * separate repair path.

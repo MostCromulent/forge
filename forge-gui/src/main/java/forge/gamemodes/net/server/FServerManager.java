@@ -926,8 +926,8 @@ public final class FServerManager implements IHasForgeLog {
         netGui.resetForReconnect();
         netLog.info("[Reconnect] Delta sync state reset for slot {}", slotIndex);
 
-        // Send game state via setGameView protocol (client needs gameView set before openView)
-        netGui.updateGameView();
+        // Send game state before openView, so the client has a view to attach controllers to
+        netGui.reseedAfterReconnect();
         netGui.openView(new forge.trackable.TrackableCollection<>(netGui.getLocalPlayers()));
         netLog.info("[Reconnect] Sent game state and openView to slot {}", slotIndex);
 

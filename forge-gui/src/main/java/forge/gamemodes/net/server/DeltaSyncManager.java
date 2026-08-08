@@ -88,6 +88,37 @@ public class DeltaSyncManager implements IHasForgeLog {
     private volatile ViewSnapshot baseline = ViewSnapshot.empty();
 
     /**
+     * The last snapshot built for this client, kept across a reconnect where the baseline
+     * is not. The two answer different questions — what was last seen of the game, versus
+     * what this client is believed to hold — and a reconnect resets only the second.
+     */
+    private volatile ViewSnapshot published = ViewSnapshot.empty();
+
+    /**
+     * A packet carrying the whole of the last published snapshot, for a client that has
+     * just reconnected and holds nothing.
+     *
+     * <p>Pure computation over an immutable value, which is the point: a reconnect is
+     * handled on a Netty thread, and it cannot be deferred to an engine-owned site because
+     * the engine is parked awaiting the very client being reseeded. Walking the live graph
+     * there is what this replaces. It carries no checksum for the same reason — computing
+     * one reads live state.
+     *
+     * <p>Returns null before anything has been published, which is the game-start case;
+     * that one runs on the engine thread and can build normally.
+     */
+    DeltaPacket reseedFromPublished() {
+        final ViewSnapshot snapshot = published;
+        if (snapshot.size() == 0) {
+            return null;
+        }
+        final ViewSnapshot.Diff diff = ViewSnapshot.diff(ViewSnapshot.empty(), snapshot);
+        baseline = snapshot;
+        sequenceNumber++;
+        return new DeltaPacket(sequenceNumber, diff.objectDeltas(), diff.newObjects(), 0, null);
+    }
+
+    /**
      * Forget what this client is believed to hold, so the next packet is a full state
      * through the ordinary diff.
      *
@@ -236,6 +267,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             ViewSnapshot current = ViewSnapshot.build(gameView);
             ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
             baseline = current;
+            published = current;
             return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
         }
 
