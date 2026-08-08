@@ -8,6 +8,7 @@ import forge.gamemodes.net.DeltaPacket;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
+import forge.util.IHasForgeLog;
 
 import com.google.common.collect.Multiset;
 
@@ -37,7 +38,7 @@ import java.util.Set;
  * invisible while a dirty bit decides what to send but would make a value diff resend
  * them on every pass. {@link #canonical} is applied to both sides of any comparison.
  */
-final class ViewSnapshot {
+final class ViewSnapshot implements IHasForgeLog {
 
     /** deltaKey to that object's properties, in network form. */
     private final Map<Integer, Map<TrackableProperty, Object>> objects;
@@ -170,7 +171,46 @@ final class ViewSnapshot {
 
     /** Network form, then canonicalised so it holds no reference into the graph. */
     private static Object snapshotValue(TrackableProperty prop, Object value) {
-        return canonical(DeltaSyncManager.toNetworkValue(prop, value));
+        Object result = canonical(DeltaSyncManager.toNetworkValue(prop, value));
+        if (AUDIT_VALUES) {
+            auditImmutable(prop, result);
+        }
+        return result;
+    }
+
+    private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.shadow");
+    private static final Set<String> AUDIT_REPORTED = Collections.synchronizedSet(new HashSet<>());
+
+    /**
+     * Report any snapshot value that is not of a type known to be immutable and
+     * value-comparable.
+     *
+     * <p>The whole point of a snapshot is that it can be read and diffed from any thread
+     * without racing the engine, which holds only if nothing in it aliases live state or
+     * compares by identity. That claim was established by reading the property types;
+     * this checks it against what actually flows through. One report per offending type.
+     */
+    private static void auditImmutable(TrackableProperty prop, Object value) {
+        if (value == null || value instanceof String || value instanceof Number
+                || value instanceof Boolean || value instanceof Character || value instanceof Enum<?>) {
+            return;
+        }
+        // canonical() returns these wrapped; the wrappers are the marker that a defensive
+        // copy was taken rather than the live collection passed through.
+        String type = value.getClass().getName();
+        if (type.startsWith("java.util.Collections$Unmodifiable")
+                || type.startsWith("java.util.ImmutableCollections")
+                || value instanceof forge.card.ColorSet
+                || value instanceof forge.card.mana.ManaCost
+                || value instanceof forge.item.IPaperCard
+                // No mutators, and equals/hashCode delegate to its backing map.
+                || value instanceof forge.game.keyword.KeywordCollectionView) {
+            return;
+        }
+        if (AUDIT_REPORTED.add(type)) {
+            netLog.warn("[Shadow] snapshot value of unaudited type {} for {} — verify it is "
+                    + "immutable and compares by value", type, prop);
+        }
     }
 
     /**
