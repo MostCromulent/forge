@@ -10,8 +10,10 @@ import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
 import forge.util.IHasForgeLog;
 
+import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
 
+import forge.card.CardType;
 import forge.card.CardTypeView;
 
 import java.util.ArrayList;
@@ -169,13 +171,48 @@ final class ViewSnapshot implements IHasForgeLog {
         }
     }
 
-    /** Network form, then canonicalised so it holds no reference into the graph. */
+    /** Network form, then copied so it holds no reference into the graph. */
     private static Object snapshotValue(TrackableProperty prop, Object value) {
-        Object result = canonical(DeltaSyncManager.toNetworkValue(prop, value));
+        Object result = detached(DeltaSyncManager.toNetworkValue(prop, value));
         if (AUDIT_VALUES) {
             auditImmutable(prop, result);
         }
         return result;
+    }
+
+    /**
+     * Copy a network value so it shares nothing with the engine, <em>keeping the type the
+     * receiver expects</em>.
+     *
+     * <p>The distinction from {@link #canonical} is the whole reason both exist. What is
+     * stored here is also what goes on the wire, so a copy that changes the runtime type —
+     * a {@code Multiset} of counters arriving as a plain {@code Map}, say — is read back as
+     * absent rather than as an error: no exception, no warning, just a client quietly
+     * missing state. Reshaping for comparison happens at comparison time instead.
+     */
+    private static Object detached(Object value) {
+        if (value instanceof CardType type) {
+            // Mutated in place by the engine, so it cannot be shared; the copy keeps it a
+            // CardTypeView, and canonical() covers its lack of value equality when diffing.
+            // Copied as a CardType, not as a CardTypeView: that overload runs addAll alone
+            // and drops allCreatureTypes and the excluded creature subtypes.
+            return new CardType(type);
+        }
+        if (value instanceof Multiset<?> multiset) {
+            return ImmutableMultiset.copyOf(multiset);
+        }
+        if (value instanceof Map<?, ?> map) {
+            // Not Map.copyOf — it rejects null keys and values, and this runs on the
+            // engine thread where a stray null must not become an exception.
+            return Collections.unmodifiableMap(new LinkedHashMap<>(map));
+        }
+        if (value instanceof Set<?> set) {
+            return Collections.unmodifiableSet(new java.util.LinkedHashSet<>(set));
+        }
+        if (value instanceof Collection<?> collection) {
+            return Collections.unmodifiableList(new ArrayList<>(collection));
+        }
+        return value;
     }
 
     private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.shadow");
@@ -200,6 +237,13 @@ final class ViewSnapshot implements IHasForgeLog {
         String type = value.getClass().getName();
         if (type.startsWith("java.util.Collections$Unmodifiable")
                 || type.startsWith("java.util.ImmutableCollections")
+                || value instanceof ImmutableMultiset
+                // Records over freshly built contents, which is what they were made for.
+                || value instanceof DeltaPacket.EntityRef
+                || value instanceof DeltaPacket.CombatData
+                // Mutable and identity-equal, but this is a private copy nothing else holds,
+                // and the diff compares it through canonical().
+                || value instanceof CardType
                 || value instanceof forge.card.ColorSet
                 || value instanceof forge.card.mana.ManaCost
                 || value instanceof forge.item.IPaperCard
@@ -214,9 +258,9 @@ final class ViewSnapshot implements IHasForgeLog {
     }
 
     /**
-     * Reduce a network value to something that compares by value and shares no mutable
-     * state with the engine. Applied to both sides of any comparison, so a form that is
-     * merely unstable (rather than aliased) is equally handled.
+     * Reduce a network value to something that compares by value. Applied to both sides of
+     * any comparison, so a form that is merely unstable is equally handled. Never stored
+     * and never sent — see {@link #detached}.
      */
     static Object canonical(Object value) {
         if (value == null) {
@@ -268,6 +312,17 @@ final class ViewSnapshot implements IHasForgeLog {
      * property that disappeared carried as an explicit null so the receiver clears it; a
      * key absent from {@code current} has left the graph.
      */
+    /**
+     * Whether two stored values represent the same thing. Plain equality settles almost
+     * everything; canonicalising is the fallback for the types that compare by identity,
+     * and running it second keeps its allocation off the path taken by every unchanged
+     * property.
+     */
+    private static boolean same(Object before, Object after) {
+        return java.util.Objects.equals(before, after)
+                || java.util.Objects.equals(canonical(before), canonical(after));
+    }
+
     static Diff diff(ViewSnapshot previous, ViewSnapshot current) {
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
         Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new LinkedHashMap<>();
@@ -280,7 +335,7 @@ final class ViewSnapshot implements IHasForgeLog {
             }
             Map<TrackableProperty, Object> changed = new HashMap<>();
             for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
-                if (!java.util.Objects.equals(before.get(prop.getKey()), prop.getValue())) {
+                if (!same(before.get(prop.getKey()), prop.getValue())) {
                     changed.put(prop.getKey(), prop.getValue());
                 }
             }
