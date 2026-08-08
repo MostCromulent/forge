@@ -69,6 +69,19 @@ public final class TestUtils {
                 useStable ? "stable" : "sampled",
                 RemoteClientGuiGame.useDeltaSync ? "on" : "off",
                 Boolean.getBoolean("forge.snapshot.authority") ? "snapshot" : "walk",
-                "false".equalsIgnoreCase(System.getProperty("test.useAiForRemote")) ? "human" : "ai");
+                useAiForRemotePlayers() ? "ai" : "human");
+    }
+
+    /**
+     * Whether a batch replaces its remote players with server-side AI once the game starts.
+     *
+     * <p>Off by default, so remote players stay human and the server has to ask them
+     * questions over the wire. The AI swap is faster and was the default for a long time, but
+     * a converted player is decided inside the server, so nothing is ever sent to a client:
+     * no prompt, no card in a protocol argument, and none of the display or input paths. It
+     * has hidden real defects that way. {@code -Dtest.useAiForRemote=true} opts back into it.
+     */
+    public static boolean useAiForRemotePlayers() {
+        return "true".equalsIgnoreCase(System.getProperty("test.useAiForRemote"));
     }
 }

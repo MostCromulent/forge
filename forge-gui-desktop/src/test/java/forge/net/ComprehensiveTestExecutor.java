@@ -41,7 +41,7 @@ public class ComprehensiveTestExecutor implements IHasForgeLog {
      * with clients answering, not stuck.
      */
     private static long defaultGameTimeoutMs() {
-        return "false".equalsIgnoreCase(System.getProperty("test.useAiForRemote")) ? 900000 : 300000;
+        return TestUtils.useAiForRemotePlayers() ? 300000 : 900000;
     }
     private boolean sequential = false; // Run sequentially instead of parallel
 

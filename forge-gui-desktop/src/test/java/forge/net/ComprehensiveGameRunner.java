@@ -85,11 +85,9 @@ public class ComprehensiveGameRunner implements IHasForgeLog {
             netLog.info("Starting game {} with {} players on port {} ({})",
                     gameIndex, playerCount, port, formatLabel);
 
-            // Leaving remote players human is what makes the server ask them questions over
-            // the wire, which is the only way the prompt, encode-gate and display paths run
-            // at all. It needs a client process of its own: host and client sharing one event
-            // dispatch thread deadlock the moment the server blocks for a reply.
-            boolean useAiForRemote = !"false".equalsIgnoreCase(System.getProperty("test.useAiForRemote"));
+            // The human path needs a client process of its own: host and client sharing one
+            // event dispatch thread deadlock the moment the server blocks for a reply.
+            boolean useAiForRemote = TestUtils.useAiForRemotePlayers();
 
             UnifiedNetworkHarness.GameResult result = new UnifiedNetworkHarness()
                     .playerCount(playerCount)
