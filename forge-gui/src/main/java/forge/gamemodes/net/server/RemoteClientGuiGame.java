@@ -193,7 +193,18 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     public void updateGameView() {
         updateGameView(true);
     }
-    private void updateGameView(boolean flush) {
+
+    /**
+     * Serialized per client, because collecting and sending have to stay one step.
+     *
+     * <p>The baseline advances as a packet is built, so two threads collecting at once would
+     * each diff from the same starting point and then write in whichever order they reached
+     * the socket. The client would end up holding the older of the two while the baseline
+     * recorded the newer, and nothing would send the difference again. This is not
+     * hypothetical: the concurrent-entry detector reports the event dispatch thread and a
+     * game thread inside one client's collection during ordinary play.
+     */
+    private synchronized void updateGameView(boolean flush) {
         GameView gameView = getGameView();
         if (gameView == null) {
             return;
@@ -591,8 +602,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         handleGameEvents(List.of(event));
     }
 
+    /** Serialized with {@link #updateGameView} — it collects and sends by the same rules. */
     @Override
-    public void handleGameEvents(List<GameEvent> events) {
+    public synchronized void handleGameEvents(List<GameEvent> events) {
         if (paused) { return; }
         for (GameEvent ev : events) {
             if (ev instanceof GameEventPlayerControl pc) {
