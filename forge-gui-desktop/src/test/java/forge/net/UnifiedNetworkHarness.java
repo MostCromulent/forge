@@ -67,6 +67,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private long gameTimeoutMs = DEFAULT_GAME_TIMEOUT_MS;
     private int specifiedPort = -1; // -1 means auto-allocate
     private boolean useAiForRemotePlayers = true;
+    private boolean separateClientProcesses = false;
     private boolean commander = false;
     private List<Deck> decks = null;
 
@@ -119,6 +120,21 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
      */
     public UnifiedNetworkHarness useAiForRemotePlayers(boolean enable) {
         this.useAiForRemotePlayers = enable;
+        return this;
+    }
+
+    /**
+     * Run each remote client in its own JVM instead of in this one.
+     * <p>
+     * In-process clients share this JVM's AWT event thread with the server, so a
+     * human-controlled remote player deadlocks: the server blocks that thread in
+     * {@code syncAndSendAndWait} while the client's reply needs the same thread to be
+     * dispatched. Separate processes remove that and match production, where host and
+     * client are always distinct processes. Required for
+     * {@code useAiForRemotePlayers(false)} to reach a playable game.
+     */
+    public UnifiedNetworkHarness separateClientProcesses(boolean enable) {
+        this.separateClientProcesses = enable;
         return this;
     }
 
@@ -335,9 +351,15 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                 final String clientName = PLAYER_NAMES[i + 1];
                 final int finalPort = port;
 
-                clientExecutor.submit(() -> runRemoteClientThread(
-                        clientIndex, clientName, finalPort,
-                        successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                if (separateClientProcesses) {
+                    clientExecutor.submit(() -> runRemoteClientProcess(
+                            clientIndex, clientName, finalPort,
+                            successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                } else {
+                    clientExecutor.submit(() -> runRemoteClientThread(
+                            clientIndex, clientName, finalPort,
+                            successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                }
 
                 Thread.sleep(100); // Small stagger between submissions
             }
@@ -415,6 +437,70 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
         netLog.info("Remote game result: {}", result.toSummary());
         return result;
+    }
+
+    /**
+     * Spawn one client in its own JVM and drive the same latches the in-process path does.
+     * The child prints {@code CONNECTED:} once it is ready and {@code RESULT:} when done.
+     */
+    private void runRemoteClientProcess(int clientIndex, String clientName, int port,
+                                        AtomicInteger successfulConnections,
+                                        CountDownLatch attemptedLatch,
+                                        CountDownLatch finishedLatch) {
+        Process process = null;
+        boolean attemptedCounted = false;
+        try {
+            String javaBin = System.getProperty("java.home") + java.io.File.separator
+                    + "bin" + java.io.File.separator + "java";
+            long staggerDelay = 500L + (clientIndex * 3000L);
+
+            List<String> command = new ArrayList<>();
+            command.add(javaBin);
+            command.add("-cp");
+            command.add(System.getProperty("java.class.path"));
+            command.add("-Xmx512m");
+            command.add("forge.net.HeadlessClientRunner");
+            command.add(clientName);
+            command.add("localhost");
+            command.add(String.valueOf(port));
+            command.add(String.valueOf(staggerDelay));
+            command.add(String.valueOf(connectionTimeoutMs));
+            command.add(String.valueOf(gameTimeoutMs));
+            command.add(NetworkLogConfig.getBatchId() == null ? "" : NetworkLogConfig.getBatchId());
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            process = pb.start();
+            netLog.info("Client {} ({}) spawned as separate process", clientIndex, clientName);
+
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("CONNECTED:")) {
+                        successfulConnections.incrementAndGet();
+                        attemptedLatch.countDown();
+                        attemptedCounted = true;
+                        netLog.info("Client {} ({}) connected: {}", clientIndex, clientName, line);
+                    } else if (line.startsWith("RESULT:")) {
+                        netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
+                    } else {
+                        netLog.info("[client{}] {}", clientIndex, line);
+                    }
+                }
+            }
+            process.waitFor();
+        } catch (Exception e) {
+            netLog.error("Client {} process error: {}", clientIndex, e.getMessage());
+        } finally {
+            if (!attemptedCounted) {
+                attemptedLatch.countDown();
+            }
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+            finishedLatch.countDown();
+        }
     }
 
     private void runRemoteClientThread(int clientIndex, String clientName, int port,
