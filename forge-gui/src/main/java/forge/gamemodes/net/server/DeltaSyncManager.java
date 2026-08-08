@@ -72,6 +72,25 @@ public class DeltaSyncManager implements IHasForgeLog {
     private static final boolean SHADOW_SNAPSHOT = Boolean.getBoolean("forge.snapshot.shadow");
     private ViewSnapshot shadowPrevious = ViewSnapshot.empty();
 
+    /** Per-thread allocation counter, when the JVM exposes one. Shadow diagnostics only. */
+    private static final com.sun.management.ThreadMXBean ALLOC_BEAN = allocBean();
+
+    private static com.sun.management.ThreadMXBean allocBean() {
+        if (!SHADOW_SNAPSHOT) {
+            return null;
+        }
+        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
+        if (bean instanceof com.sun.management.ThreadMXBean sun && sun.isThreadAllocatedMemorySupported()) {
+            sun.setThreadAllocatedMemoryEnabled(true);
+            return sun;
+        }
+        return null;
+    }
+
+    private static long allocatedBytes() {
+        return ALLOC_BEAN == null ? 0L : ALLOC_BEAN.getCurrentThreadAllocatedBytes();
+    }
+
     // each DeltaSyncManager gets a unique ID
     private static final AtomicInteger NEXT_CONSUMER_ID = new AtomicInteger(0);
     private final int consumerId = NEXT_CONSUMER_ID.getAndIncrement();
@@ -118,10 +137,12 @@ public class DeltaSyncManager implements IHasForgeLog {
         Set<Integer> currentObjectIds = new HashSet<>();
 
         long walkStart = SHADOW_SNAPSHOT ? System.nanoTime() : 0L;
+        long walkAllocStart = SHADOW_SNAPSHOT ? allocatedBytes() : 0L;
         authoritativeInstances.clear();
         preScanZoneCollections(gameView);
         walkAndCollect(gameView, objectDeltas, newObjects, currentObjectIds);
         long walkNanos = SHADOW_SNAPSHOT ? System.nanoTime() - walkStart : 0L;
+        long walkAlloc = SHADOW_SNAPSHOT ? allocatedBytes() - walkAllocStart : 0L;
 
         // Prune registrations for objects no longer in the graph
         Iterator<Map.Entry<Integer, TrackableObject>> regIt = registeredByKey.entrySet().iterator();
@@ -173,7 +194,7 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         DeltaPacket packet = new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
         if (SHADOW_SNAPSHOT) {
-            shadowCompare(gameView, packet, walkNanos);
+            shadowCompare(gameView, packet, walkNanos, walkAlloc);
         }
         return packet;
     }
@@ -190,10 +211,12 @@ public class DeltaSyncManager implements IHasForgeLog {
      * changing back, which a diff correctly skips. Snapshot-only entries are the
      * interesting direction: they are changes the walk did not report.
      */
-    private void shadowCompare(GameView gameView, DeltaPacket packet, long walkNanos) {
+    private void shadowCompare(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
         long buildStart = System.nanoTime();
+        long buildAllocStart = allocatedBytes();
         ViewSnapshot current = ViewSnapshot.build(gameView);
         long buildNanos = System.nanoTime() - buildStart;
+        long buildAlloc = allocatedBytes() - buildAllocStart;
         ViewSnapshot.Diff diff = ViewSnapshot.diff(shadowPrevious, current);
         shadowPrevious = current;
 
@@ -241,10 +264,10 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
                         + "mismatched={} snapshotOnly={} walkOnly={} evicted={} "
-                        + "walkUs={} buildUs={}",
+                        + "walkUs={} buildUs={} walkBytes={} buildBytes={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
                 mismatched, snapshotOnly, walkOnly, diff.evicted().size(),
-                walkNanos / 1000, buildNanos / 1000);
+                walkNanos / 1000, buildNanos / 1000, walkAlloc, buildAlloc);
     }
 
     /** Flatten a packet's two maps into one, with values canonicalised for comparison. */
