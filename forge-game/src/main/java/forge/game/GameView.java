@@ -27,6 +27,7 @@ import forge.game.zone.MagicStack;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
+import forge.trackable.Tracker;
 import forge.util.collect.FCollection;
 import forge.util.collect.FCollectionView;
 
@@ -52,6 +53,20 @@ public class GameView extends TrackableObject {
         set(TrackableProperty.NumGamesInMatch, rules.getGamesPerMatch());
 
         set(TrackableProperty.NumPlayedGamesInMatch, game.getMatch().getOutcomes().size());
+    }
+
+    /**
+     * A view with no game behind it, for a receiver rebuilding one from the network.
+     *
+     * <p>Mirrors the {@code (id, tracker)} constructors on {@link CardView} and
+     * {@link PlayerView}. The game and match fields are transient, so they are already null
+     * wherever a view has crossed the wire; every property arrives as an update rather than
+     * being derived here.
+     */
+    public GameView(final int id0, final Tracker tracker) {
+        super(id0, tracker);
+        game = null;
+        match = null;
     }
 
     public Match getMatch() {

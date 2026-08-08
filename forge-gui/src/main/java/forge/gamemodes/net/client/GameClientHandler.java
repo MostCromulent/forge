@@ -5,6 +5,7 @@ import forge.game.card.CardView;
 import forge.game.player.PlayerView;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
+import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.GameProtocolHandler;
 import forge.gui.GuiBase;
 import forge.util.IHasForgeLog;
@@ -75,29 +76,24 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
         switch (protocolMethod) {
             case setGameView:
                 if (args.length > 0 && args[0] instanceof GameView gameView) {
-                    if (this.tracker == null) {
-                        this.tracker = new Tracker();
-                        // Encoder uses the tracker to emit IdRef for client→server CardView args
-                        // (presence check only — stale detection is server-only).
-                        // Ephemerals absent from the tracker serialize as full objects in both directions.
-                        CompatibleObjectEncoder encoder = ctx.pipeline().get(CompatibleObjectEncoder.class);
-                        if (encoder != null) {
-                            encoder.setTracker(this.tracker);
-                        }
-                        CompatibleObjectDecoder decoder = ctx.pipeline().get(CompatibleObjectDecoder.class);
-                        if (decoder != null) {
-                            decoder.setTracker(this.tracker);
-                        }
-                        if (gameView.getGameLog() == null) {
-                            gameView.initGameLog();
-                        }
+                    final boolean firstMessage = this.tracker == null;
+                    ensureTracker(ctx);
+                    if (firstMessage && gameView.getGameLog() == null) {
+                        gameView.initGameLog();
                     }
                     if (gameView.getTracker() == null) {
                         updateTrackers(new Object[]{gameView});
                     }
                 }
                 break;
+            case applyDelta:
+                ensureTracker(ctx);
+                if (args.length > 0 && args[0] instanceof DeltaPacket packet) {
+                    bootstrapGameView(packet);
+                }
+                break;
             case openView:
+                ensureTracker(ctx);
                 gui.setNetGame();
                 final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
                 for (PlayerView myPlayer : myPlayers) {
@@ -125,6 +121,55 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
                 refreshTrackerCardViews(gv);
             }
             replicateProps(args);
+        }
+    }
+
+    /**
+     * Create the tracker and wire it into the codecs, unless that has already happened.
+     *
+     * <p>Whichever message arrives first has to do this, rather than one nominated message:
+     * the tracker is what id references resolve against in both directions, so nothing can
+     * be decoded before it exists.
+     */
+    private void ensureTracker(final ChannelHandlerContext ctx) {
+        if (this.tracker != null) {
+            return;
+        }
+        this.tracker = new Tracker();
+        // Encoder uses the tracker to emit IdRef for client→server CardView args
+        // (presence check only — stale detection is server-only).
+        // Ephemerals absent from the tracker serialize as full objects in both directions.
+        CompatibleObjectEncoder encoder = ctx.pipeline().get(CompatibleObjectEncoder.class);
+        if (encoder != null) {
+            encoder.setTracker(this.tracker);
+        }
+        CompatibleObjectDecoder decoder = ctx.pipeline().get(CompatibleObjectDecoder.class);
+        if (decoder != null) {
+            decoder.setTracker(this.tracker);
+        }
+    }
+
+    /**
+     * Build the GameView from the first delta, for a client that is not sent a full state.
+     *
+     * <p>{@code applyDelta} does nothing at all without one, and the client cannot derive it
+     * the way the server does — that constructor needs a {@code Game}. The delta carries the
+     * view's own properties under its own key, so the id is there to be read, and the
+     * properties arrive through the ordinary apply once the instance exists.
+     */
+    private void bootstrapGameView(final DeltaPacket packet) {
+        if (gui.getGameView() != null) {
+            return;
+        }
+        for (final Integer key : packet.getNewObjects().keySet()) {
+            if (DeltaPacket.getTypeFromDeltaKey(key) == DeltaPacket.TYPE_GAME_VIEW) {
+                final GameView view = new GameView(DeltaPacket.getIdFromDeltaKey(key), this.tracker);
+                view.initGameLog();
+                gui.setGameView(view);
+                netLog.info("[DeltaSync] Built GameView id={} from delta seq={}",
+                        view.getId(), packet.getSequenceNumber());
+                return;
+            }
         }
     }
 

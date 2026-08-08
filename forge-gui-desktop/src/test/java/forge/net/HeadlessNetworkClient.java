@@ -184,6 +184,10 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
     void onDeltaPacketReceived(DeltaPacket packet) {
         deltaPacketsReceived.incrementAndGet();
         totalDeltaBytes.addAndGet(packet.getApproximateSize());
+        // State arriving at all is what starts the game, whether or not any of it came as a
+        // full state: a client can be seeded entirely by the first delta.
+        gameInProgress.set(true);
+        gameStartedLatch.countDown();
 
         netLog.info("Delta packet #{}: deltas={}, new={}, estimatedBytes={}",
                 packet.getSequenceNumber(),

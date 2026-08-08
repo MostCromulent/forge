@@ -75,6 +75,11 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     private static final boolean SNAPSHOT_AUTHORITY = Boolean.getBoolean("forge.snapshot.authority");
 
+    /** Whether packets come from snapshot diffs, which decides how a client is seeded. */
+    public static boolean snapshotAuthority() {
+        return SNAPSHOT_AUTHORITY;
+    }
+
     /**
      * The last snapshot this client is known to hold. Replaced wholesale, never
      * mutated, so the encode gate can read it from a Netty thread without locking.

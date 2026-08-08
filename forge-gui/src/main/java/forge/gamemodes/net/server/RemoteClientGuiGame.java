@@ -200,6 +200,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         }
 
         if (!useDeltaSync || !initialSyncSent) {
+            // Under snapshot authority the client is seeded by the first diff against an
+            // empty baseline, so there is nothing to send until openView has established
+            // one — sending a delta before it would arrive with no game controllers set.
+            if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+                return;
+            }
             if (logBandwidth && !fallbackLogged) {
                 netLog.info("[DeltaSync] Client {}: Fallback to full state - useDeltaSync={}, initialSyncSent={}",
                     client.getIndex(), useDeltaSync, initialSyncSent);
@@ -284,6 +290,14 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     public void sendFullState() {
         GameView gameView = getGameView();
         if (gameView == null) {
+            return;
+        }
+
+        if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+            // The initial state is the first diff against an empty baseline, so there is no
+            // separate full-state message and no second wire format to keep working.
+            initialSyncSent = true;
+            updateGameView();
             return;
         }
 
