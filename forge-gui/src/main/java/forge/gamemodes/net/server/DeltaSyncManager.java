@@ -250,7 +250,11 @@ public class DeltaSyncManager implements IHasForgeLog {
         ViewSnapshot current = ViewSnapshot.build(gameView);
         long buildNanos = System.nanoTime() - buildStart;
         long buildAlloc = allocatedBytes() - buildAllocStart;
+        long diffStart = System.nanoTime();
+        long diffAllocStart = allocatedBytes();
         ViewSnapshot.Diff diff = ViewSnapshot.diff(shadowPrevious, current);
+        long diffNanos = System.nanoTime() - diffStart;
+        long diffAlloc = allocatedBytes() - diffAllocStart;
         shadowPrevious = current;
 
         Map<Integer, Map<TrackableProperty, Object>> fromWalk =
@@ -297,10 +301,11 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
                         + "mismatched={} snapshotOnly={} walkOnly={} evicted={} "
-                        + "walkUs={} buildUs={} walkBytes={} buildBytes={}",
+                        + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
                 mismatched, snapshotOnly, walkOnly, diff.evicted().size(),
-                walkNanos / 1000, buildNanos / 1000, walkAlloc, buildAlloc);
+                walkNanos / 1000, buildNanos / 1000, diffNanos / 1000,
+                walkAlloc, buildAlloc, diffAlloc);
     }
 
     /** Flatten a packet's two maps into one, with values canonicalised for comparison. */
