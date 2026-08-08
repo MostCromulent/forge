@@ -102,7 +102,9 @@ public class ComprehensiveGameRunner implements IHasForgeLog {
                     // connect, and a batch starts a great many of them at once. The default
                     // allows far less time than that takes under that much contention.
                     .connectionTimeout(useAiForRemote ? 30000 : 180000)
-                    .gameTimeout(300000)  // 5 minute timeout
+                    // Every decision is a round trip on the human path, so a game takes far
+                    // longer in wall-clock without being any less healthy.
+                    .gameTimeout(useAiForRemote ? 300000 : 900000)
                     .execute();
 
             netLog.info("Game {} result: success={}, turns={}, winner={}, format={}",

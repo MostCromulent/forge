@@ -29,7 +29,20 @@ public class ComprehensiveTestExecutor implements IHasForgeLog {
 
     // Execution settings
     private int parallelBatchSize = 10; // Run 10 games at a time
-    private long gameTimeoutMs = 300000; // 5 minutes per game
+    private long gameTimeoutMs = defaultGameTimeoutMs();
+
+    /**
+     * How long a single game may take, before {@code -Dtest.gameTimeout} overrides it.
+     *
+     * <p>Leaving remote players human makes every decision a round trip rather than a call
+     * inside the server, and the auto-answering client waits before replying to each one. A
+     * four-player Commander game runs to thousands of protocol messages on that path and is
+     * still playing normally when five minutes are up — the games that overran were mid-combat
+     * with clients answering, not stuck.
+     */
+    private static long defaultGameTimeoutMs() {
+        return "false".equalsIgnoreCase(System.getProperty("test.useAiForRemote")) ? 900000 : 300000;
+    }
     private boolean sequential = false; // Run sequentially instead of parallel
 
     public ComprehensiveTestExecutor twoPlayerGames(int count) {
