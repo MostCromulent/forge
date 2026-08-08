@@ -95,13 +95,25 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
             case openView:
                 ensureTracker(ctx);
                 gui.setNetGame();
-                final TrackableCollection<PlayerView> myPlayers = (TrackableCollection<PlayerView>) args[0];
-                for (PlayerView myPlayer : myPlayers) {
-                    if (myPlayer.getTracker() == null) {
-                        myPlayer.setTracker(this.tracker);
+                // Carries ids only, and is null for a spectator, who controls nobody. Keep
+                // the instance this client already holds where there is one, so the
+                // controller attaches to the object the deltas populate; otherwise adopt the
+                // carrier and register it, and the first delta fills it in place.
+                final TrackableCollection<PlayerView> myPlayers =
+                        (TrackableCollection<PlayerView>) args[0];
+                final TrackableCollection<PlayerView> localPlayers = new TrackableCollection<>();
+                if (myPlayers != null) {
+                    for (PlayerView incoming : myPlayers) {
+                        PlayerView known = this.tracker.getObj(TrackableTypes.PlayerViewType, incoming.getId());
+                        if (known == null) {
+                            incoming.setTracker(this.tracker);
+                            this.tracker.putObj(TrackableTypes.PlayerViewType, incoming.getId(), incoming);
+                            known = incoming;
+                        }
+                        localPlayers.add(known);
                     }
                 }
-                client.setGameControllers(myPlayers);
+                client.setGameControllers(localPlayers);
                 break;
             default:
                 break;

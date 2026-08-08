@@ -928,7 +928,7 @@ public final class FServerManager implements IHasForgeLog {
 
         // Send game state before openView, so the client has a view to attach controllers to
         netGui.reseedAfterReconnect();
-        netGui.openView(new forge.trackable.TrackableCollection<>(netGui.getLocalPlayers()));
+        netGui.sendOpenView(new forge.trackable.TrackableCollection<>(netGui.getLocalPlayers()));
         netLog.info("[Reconnect] Sent game state and openView to slot {}", slotIndex);
 
         // Replay the host's log entries to rebuild the client's log on re-connect

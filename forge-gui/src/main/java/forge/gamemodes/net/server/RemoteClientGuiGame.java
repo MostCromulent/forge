@@ -368,10 +368,44 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
-        send(ProtocolMethod.openView, myPlayers);
+        sendOpenView(myPlayers);
         updateGameView();
         // Initialize delta sync by sending the initial full state
         sendFullState();
+    }
+
+    /**
+     * Send openView alone, for a client that has already been given state.
+     *
+     * <p>A reconnecting client must not be put through the game-start bootstrap again: that
+     * would rebuild the view graph on the Netty thread the reconnect runs on, which is the
+     * read the snapshot exists to remove.
+     */
+    public void sendOpenView(final TrackableCollection<PlayerView> myPlayers) {
+        send(ProtocolMethod.openView, identifiersOnly(myPlayers));
+    }
+
+    /**
+     * The players reduced to their ids.
+     *
+     * <p>openView is exempt from reference replacement, so sending the views themselves puts
+     * their zone collections on the wire with them — most of the live card graph, serialized
+     * on whatever thread sends it, which on a reconnect is a Netty thread. The client matches
+     * these against its tracker and keeps whichever instance it already holds.
+     *
+     * <p>They cannot travel as id references instead: those resolve in the decoder, before
+     * the state that would define them has been applied.
+     */
+    private static TrackableCollection<PlayerView> identifiersOnly(
+            final TrackableCollection<PlayerView> players) {
+        if (players == null) {
+            return null;
+        }
+        final TrackableCollection<PlayerView> ids = new TrackableCollection<>();
+        for (final PlayerView player : players) {
+            ids.add(new PlayerView(player.getId(), null));
+        }
+        return ids;
     }
 
     @Override
