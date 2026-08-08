@@ -22,11 +22,9 @@ import org.testng.annotations.Test;
  * that same client. A regression there is invisible to every other test in this tree — the
  * game simply carries on for everyone else.
  *
- * <p>Scope, stated because it is narrower than it looks: this shows the reconnection
- * completes and the game runs on afterwards. It does <em>not</em> compare the reconnected
- * client's state against the server's. A client that dies takes its counters with it, and the
- * replacement's arrive too late to be collected, so asserting on them here would assert on
- * zeros. Checksum agreement after a reconnect is visible only in the logs today.
+ * <p>The mismatch count comes from the replacement process, so it only means anything because
+ * that client reports at all — which it did not until it stopped waiting to be assigned a
+ * lobby slot it was never going to be given again.
  */
 public class ReconnectNetworkTest implements IHasForgeLog {
 
@@ -71,5 +69,9 @@ public class ReconnectNetworkTest implements IHasForgeLog {
                 "Game should have run to completion after the reconnect: " + result.toSummary());
         Assert.assertTrue(result.turnCount > 0,
                 "Game should have advanced past turn zero: " + result.toSummary());
+        Assert.assertTrue(result.deltaPacketsReceived > 0,
+                "Reconnected client should have reported its traffic: " + result.toSummary());
+        Assert.assertEquals(result.eventStateMismatches, 0,
+                "Reconnected client should agree with the server: " + result.toSummary());
     }
 }

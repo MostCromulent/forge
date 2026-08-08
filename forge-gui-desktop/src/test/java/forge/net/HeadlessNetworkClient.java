@@ -153,6 +153,12 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
     }
 
     public void setReady() {
+        if (gameInProgress.get()) {
+            // Reconnected into a live match: there is no lobby left to be ready in, and the
+            // slot is already held.
+            netLog.info("Game already in progress, skipping ready status");
+            return;
+        }
         if (client != null && connected.get()) {
             netLog.info("Sending ready status");
             UpdateLobbyPlayerEvent event = UpdateLobbyPlayerEvent.isReadyUpdate(true);
@@ -188,6 +194,11 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         // full state: a client can be seeded entirely by the first delta.
         gameInProgress.set(true);
         gameStartedLatch.countDown();
+        // And receiving it is what being connected means. A reconnecting client is never
+        // assigned a lobby slot again — the server still holds the one it had — so waiting
+        // for that assignment would wait for something that is not coming.
+        connected.set(true);
+        connectedLatch.countDown();
 
         netLog.info("Delta packet #{}: deltas={}, new={}, estimatedBytes={}",
                 packet.getSequenceNumber(),
