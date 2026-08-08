@@ -239,7 +239,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             } else {
                 sender.write(ProtocolMethod.applyDelta, delta);
             }
-            syncManager.commitBaseline();
 
             if (logBandwidth) {
                 int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
@@ -258,6 +257,15 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                     totalFullStateBytes > 0 ? (int)((1.0 - (double)totalDeltaBytes / totalFullStateBytes) * 100) : 0);
             }
         }
+    }
+
+    /**
+     * Forget what this client is believed to hold, after a message failed to reach it.
+     * The next delta is then a full state, computed by the ordinary diff rather than by a
+     * separate repair path.
+     */
+    void resetDeltaBaseline() {
+        syncManager.invalidateBaseline();
     }
 
     /**
@@ -580,7 +588,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                 DeltaPacket delta = syncManager.collectDeltas(gameView);
                 delta.setEvents(TrackableSerializer.wrapEvents(events, gameView.getTracker()));
                 sender.send(ProtocolMethod.applyDelta, delta);
-                syncManager.commitBaseline();
 
                 if (logBandwidth) {
                     int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());

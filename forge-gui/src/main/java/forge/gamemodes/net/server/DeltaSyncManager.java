@@ -82,23 +82,19 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     private volatile ViewSnapshot baseline = ViewSnapshot.empty();
 
-    /** The snapshot the packet just built describes; becomes the baseline once it is sent. */
-    private ViewSnapshot pendingBaseline;
-
     /**
-     * Record that the packet built by the last collection reached the client, so the
-     * next one is diffed against it.
+     * Forget what this client is believed to hold, so the next packet is a full state
+     * through the ordinary diff.
      *
-     * <p>Kept apart from building the packet because a baseline that advances past
-     * something the client never received desyncs that client permanently and silently:
-     * the server would then believe it had sent state it never did, and never send it
-     * again.
+     * <p>The baseline advances as soon as a packet is built, which keeps the encode gate
+     * accurate for the messages that follow it — those are encoded on the calling thread,
+     * before any write could have completed. The cost of advancing early is that anything
+     * stopping a packet from reaching the socket would leave the server believing it had
+     * sent state it never did, and never sending it again. Discarding the baseline on any
+     * failed delivery is what bounds that: the recovery path is the normal path.
      */
-    void commitBaseline() {
-        if (pendingBaseline != null) {
-            baseline = pendingBaseline;
-            pendingBaseline = null;
-        }
+    void invalidateBaseline() {
+        baseline = ViewSnapshot.empty();
     }
 
     /** Per-thread allocation counter, when the JVM exposes one. Shadow diagnostics only. */
@@ -234,7 +230,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         if (SNAPSHOT_AUTHORITY) {
             ViewSnapshot current = ViewSnapshot.build(gameView);
             ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
-            pendingBaseline = current;
+            baseline = current;
             return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
         }
 
@@ -817,7 +813,6 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
         registeredByKey.clear();
         baseline = ViewSnapshot.empty();
-        pendingBaseline = null;
         sequenceNumber = 0;
         packetsSinceLastChecksum = 0;
         recentDeltaProperties.clear();
