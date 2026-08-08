@@ -117,9 +117,11 @@ public class DeltaSyncManager implements IHasForgeLog {
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
         Set<Integer> currentObjectIds = new HashSet<>();
 
+        long walkStart = SHADOW_SNAPSHOT ? System.nanoTime() : 0L;
         authoritativeInstances.clear();
         preScanZoneCollections(gameView);
         walkAndCollect(gameView, objectDeltas, newObjects, currentObjectIds);
+        long walkNanos = SHADOW_SNAPSHOT ? System.nanoTime() - walkStart : 0L;
 
         // Prune registrations for objects no longer in the graph
         Iterator<Map.Entry<Integer, TrackableObject>> regIt = registeredByKey.entrySet().iterator();
@@ -171,7 +173,7 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         DeltaPacket packet = new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
         if (SHADOW_SNAPSHOT) {
-            shadowCompare(gameView, packet);
+            shadowCompare(gameView, packet, walkNanos);
         }
         return packet;
     }
@@ -188,8 +190,10 @@ public class DeltaSyncManager implements IHasForgeLog {
      * changing back, which a diff correctly skips. Snapshot-only entries are the
      * interesting direction: they are changes the walk did not report.
      */
-    private void shadowCompare(GameView gameView, DeltaPacket packet) {
+    private void shadowCompare(GameView gameView, DeltaPacket packet, long walkNanos) {
+        long buildStart = System.nanoTime();
         ViewSnapshot current = ViewSnapshot.build(gameView);
+        long buildNanos = System.nanoTime() - buildStart;
         ViewSnapshot.Diff diff = ViewSnapshot.diff(shadowPrevious, current);
         shadowPrevious = current;
 
@@ -236,9 +240,11 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
 
         netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
-                        + "mismatched={} snapshotOnly={} walkOnly={} evicted={}",
+                        + "mismatched={} snapshotOnly={} walkOnly={} evicted={} "
+                        + "walkUs={} buildUs={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
-                mismatched, snapshotOnly, walkOnly, diff.evicted().size());
+                mismatched, snapshotOnly, walkOnly, diff.evicted().size(),
+                walkNanos / 1000, buildNanos / 1000);
     }
 
     /** Flatten a packet's two maps into one, with values canonicalised for comparison. */

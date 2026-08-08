@@ -16,7 +16,6 @@ import forge.card.CardTypeView;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -145,7 +144,9 @@ final class ViewSnapshot {
         }
 
         Map<TrackableProperty, Object> props = obj.getProps();
-        Map<TrackableProperty, Object> recorded = new EnumMap<>(TrackableProperty.class);
+        // Right-sized rather than an EnumMap: EnumMap allocates a slot per constant, and
+        // TrackableProperty has over two hundred while a typical object sets a handful.
+        Map<TrackableProperty, Object> recorded = new HashMap<>(Math.max(4, props.size() * 2));
         for (Map.Entry<TrackableProperty, Object> entry : props.entrySet()) {
             recorded.put(entry.getKey(), snapshotValue(entry.getKey(), entry.getValue()));
         }
@@ -258,7 +259,7 @@ final class ViewSnapshot {
                 newObjects.put(entry.getKey(), entry.getValue());
                 continue;
             }
-            Map<TrackableProperty, Object> changed = new EnumMap<>(TrackableProperty.class);
+            Map<TrackableProperty, Object> changed = new HashMap<>();
             for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
                 if (!java.util.Objects.equals(before.get(prop.getKey()), prop.getValue())) {
                     changed.put(prop.getKey(), prop.getValue());
