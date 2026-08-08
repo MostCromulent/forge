@@ -432,6 +432,11 @@ public class DeltaSyncManager implements IHasForgeLog {
      * Build a property map for a subset of dirty properties.
      */
     private Map<TrackableProperty, Object> buildPropertyMap(TrackableObject obj, Set<TrackableProperty> dirtyProps) {
+        if (dirtyProps != null && dirtyProps.isEmpty()) {
+            // Most visited objects change nothing on a given pass, and both maps below
+            // are sized to the whole property enum regardless of how little is in them.
+            return Collections.emptyMap();
+        }
         Map<TrackableProperty, Object> props = obj.getProps();
         // Copy before iterating — the engine may write props concurrently
         Map<TrackableProperty, Object> snapshot = new EnumMap<>(props);
