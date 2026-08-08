@@ -46,9 +46,6 @@ public class DeltaSyncManager implements IHasForgeLog {
     private static final int CLEAN_STREAK_TO_RESTORE = 10;
     private static final int SAMPLE_SIZE = 15;
 
-    // Sentinel for properties that should be skipped in network transport
-    static final Object SKIP_MARKER = new Object();
-
     // Zone collection properties on PlayerView — the authoritative source for
     // CardView instances. Cross-reference properties (Commander, AttachedCards,
     // ExiledWith, etc.) may hold stale instances after zone changes via copyCard.
@@ -453,10 +450,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
         Map<TrackableProperty, Object> delta = new EnumMap<>(TrackableProperty.class);
         for (TrackableProperty prop : dirtyProps) {
-            Object netValue = toNetworkValue(prop, snapshot.get(prop));
-            if (netValue != SKIP_MARKER) {
-                delta.put(prop, netValue);
-            }
+            delta.put(prop, toNetworkValue(prop, snapshot.get(prop)));
         }
         return delta;
     }
