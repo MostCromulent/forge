@@ -472,7 +472,9 @@ public class DeltaSyncManager implements IHasForgeLog {
         // Polymorphic reference → int[]{typeMarker, id}
         if (type == TrackableTypes.GameEntityViewType) {
             GameEntityView entity = (GameEntityView) value;
-            return new int[]{ entity instanceof CardView ? 0 : 1, entity.getId() };
+            return new DeltaPacket.EntityRef(
+                    entity instanceof CardView ? DeltaPacket.EntityRef.CARD : DeltaPacket.EntityRef.PLAYER,
+                    entity.getId());
         }
 
         // Collections of objects → List<Integer> of IDs
@@ -525,7 +527,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
 
         List<List<Integer>> allAttackerIds = new ArrayList<>();
-        List<int[]> allDefenderRefs = new ArrayList<>();
+        List<DeltaPacket.EntityRef> allDefenderRefs = new ArrayList<>();
         List<List<Integer>> allBlockerIds = new ArrayList<>();
         List<List<Integer>> allPlannedBlockerIds = new ArrayList<>();
 
@@ -540,8 +542,9 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
             allAttackerIds.add(attackerIds);
 
-            // Defender reference: {typeMarker, id}
-            allDefenderRefs.add(new int[]{ defender instanceof CardView ? 0 : 1, defender.getId() });
+            allDefenderRefs.add(new DeltaPacket.EntityRef(
+                    defender instanceof CardView ? DeltaPacket.EntityRef.CARD : DeltaPacket.EntityRef.PLAYER,
+                    defender.getId()));
 
             // Blockers for this band
             FCollection<CardView> blockers = bandsWithBlockers != null ? bandsWithBlockers.get(band) : null;

@@ -222,27 +222,6 @@ final class ViewSnapshot implements IHasForgeLog {
         if (value == null) {
             return null;
         }
-        if (value instanceof DeltaPacket.CombatData combat) {
-            // Freshly built per conversion, with no equals, so it never compares equal
-            // to its predecessor. Reduce it to its band contents.
-            List<Object> bands = new ArrayList<>();
-            bands.add(canonical(combat.bandAttackerIds));
-            List<Object> defenders = new ArrayList<>();
-            for (int[] ref : combat.bandDefenderRefs) {
-                defenders.add(canonical(ref));
-            }
-            bands.add(Collections.unmodifiableList(defenders));
-            bands.add(canonical(combat.bandBlockerIds));
-            bands.add(canonical(combat.bandPlannedBlockerIds));
-            return Collections.unmodifiableList(bands);
-        }
-        if (value instanceof int[] ints) {
-            List<Integer> boxed = new ArrayList<>(ints.length);
-            for (int i : ints) {
-                boxed.add(i);
-            }
-            return Collections.unmodifiableList(boxed);
-        }
         if (value instanceof CardTypeView type) {
             List<String> parts = new ArrayList<>();
             for (Object t : type.getCoreTypes()) {

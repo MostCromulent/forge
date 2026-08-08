@@ -10,6 +10,7 @@ import forge.gamemodes.net.event.NetEvent;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.List;
@@ -82,23 +83,30 @@ public final class DeltaPacket implements NetEvent {
         return id;
     }
 
-    /** Each entry represents one attacking band with its defender, blockers, and planned blockers. */
-    public static class CombatData implements Serializable {
-        private static final long serialVersionUID = 1L;
+    /**
+     * A reference to something that may be either a card or a player.
+     *
+     * <p>A record rather than a two-element array so that it compares by value: the delta
+     * layer decides what to send by comparing wire values, and an array would differ from
+     * its predecessor every time regardless of content.
+     */
+    public record EntityRef(int marker, int id) implements Serializable {
+        @Serial private static final long serialVersionUID = 1L;
 
-        public final List<List<Integer>> bandAttackerIds;
-        /** {typeMarker, id} per band — 0=CardView, 1=PlayerView. */
-        public final List<int[]> bandDefenderRefs;
-        public final List<List<Integer>> bandBlockerIds;
-        public final List<List<Integer>> bandPlannedBlockerIds;
+        public static final int CARD = 0;
+        public static final int PLAYER = 1;
 
-        public CombatData(List<List<Integer>> bandAttackerIds, List<int[]> bandDefenderRefs,
-                          List<List<Integer>> bandBlockerIds, List<List<Integer>> bandPlannedBlockerIds) {
-            this.bandAttackerIds = bandAttackerIds;
-            this.bandDefenderRefs = bandDefenderRefs;
-            this.bandBlockerIds = bandBlockerIds;
-            this.bandPlannedBlockerIds = bandPlannedBlockerIds;
+        public boolean isCard() {
+            return marker == CARD;
         }
+    }
+
+    /** Each entry represents one attacking band with its defender, blockers, and planned blockers. */
+    public record CombatData(List<List<Integer>> bandAttackerIds,
+                             List<EntityRef> bandDefenderRefs,
+                             List<List<Integer>> bandBlockerIds,
+                             List<List<Integer>> bandPlannedBlockerIds) implements Serializable {
+        @Serial private static final long serialVersionUID = 1L;
     }
 
     /** Create an events-only DeltaPacket with no state deltas (seq=-1 means no ack needed). */

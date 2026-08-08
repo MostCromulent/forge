@@ -285,12 +285,11 @@ public abstract class NetworkGuiGame extends AbstractGuiGame implements IHasForg
             return tracker.getObj(TrackableTypes.PlayerViewType, (Integer) value);
         }
 
-        // int[]{typeMarker, id} → GameEntityView
         if (type == TrackableTypes.GameEntityViewType) {
-            int[] arr = (int[]) value;
-            return arr[0] == 0
-                ? tracker.getObj(TrackableTypes.CardViewType, arr[1])
-                : tracker.getObj(TrackableTypes.PlayerViewType, arr[1]);
+            DeltaPacket.EntityRef ref = (DeltaPacket.EntityRef) value;
+            return ref.isCard()
+                ? tracker.getObj(TrackableTypes.CardViewType, ref.id())
+                : tracker.getObj(TrackableTypes.PlayerViewType, ref.id());
         }
 
         // List<Integer> → TrackableCollection<CardView>
@@ -362,9 +361,9 @@ public abstract class NetworkGuiGame extends AbstractGuiGame implements IHasForg
     private static forge.game.combat.CombatView combatDataToCombatView(DeltaPacket.CombatData data, Tracker tracker) {
         forge.game.combat.CombatView combat = new forge.game.combat.CombatView(tracker);
 
-        for (int i = 0; i < data.bandAttackerIds.size(); i++) {
+        for (int i = 0; i < data.bandAttackerIds().size(); i++) {
             List<CardView> attackers = new ArrayList<>();
-            for (int id : data.bandAttackerIds.get(i)) {
+            for (int id : data.bandAttackerIds().get(i)) {
                 CardView cv = tracker.getObj(TrackableTypes.CardViewType, id);
                 if (cv != null) {
                     attackers.add(cv);
@@ -373,24 +372,24 @@ public abstract class NetworkGuiGame extends AbstractGuiGame implements IHasForg
                 }
             }
 
-            int[] defRef = data.bandDefenderRefs.get(i);
-            forge.game.GameEntityView defender = defRef[0] == 0
-                    ? tracker.getObj(TrackableTypes.CardViewType, defRef[1])
-                    : tracker.getObj(TrackableTypes.PlayerViewType, defRef[1]);
+            DeltaPacket.EntityRef defRef = data.bandDefenderRefs().get(i);
+            forge.game.GameEntityView defender = defRef.isCard()
+                    ? tracker.getObj(TrackableTypes.CardViewType, defRef.id())
+                    : tracker.getObj(TrackableTypes.PlayerViewType, defRef.id());
             if (defender == null) {
-                if (defRef[1] == -1) {
+                if (defRef.id() == -1) {
                     // Rule 506.4c: when a planeswalker/battle leaves combat,
                     // the server replaces it with a fake Card(-1) placeholder
                     // that isn't in the object graph
-                    defender = new CardView(defRef[1], tracker, "<Nothing>");
+                    defender = new CardView(defRef.id(), tracker, "<Nothing>");
                 } else {
                     netLog.warn("[DeltaSync] CombatView defender ID={} (type={}) not found in tracker (band {})",
-                            defRef[1], defRef[0] == 0 ? "Card" : "Player", i);
+                            defRef.id(), defRef.isCard() ? "Card" : "Player", i);
                 }
             }
 
             List<CardView> blockers = null;
-            List<Integer> blockerIds = data.bandBlockerIds.get(i);
+            List<Integer> blockerIds = data.bandBlockerIds().get(i);
             if (blockerIds != null) {
                 blockers = new ArrayList<>();
                 for (int id : blockerIds) {
@@ -404,7 +403,7 @@ public abstract class NetworkGuiGame extends AbstractGuiGame implements IHasForg
             }
 
             List<CardView> plannedBlockers = null;
-            List<Integer> plannedIds = data.bandPlannedBlockerIds.get(i);
+            List<Integer> plannedIds = data.bandPlannedBlockerIds().get(i);
             if (plannedIds != null) {
                 plannedBlockers = new ArrayList<>();
                 for (int id : plannedIds) {
