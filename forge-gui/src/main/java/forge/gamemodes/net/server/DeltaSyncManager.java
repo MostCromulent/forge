@@ -406,7 +406,10 @@ public class DeltaSyncManager implements IHasForgeLog {
         obj.getAndClearDirtyProps(consumerId);
         registeredByKey.put(deltaKey, obj);
         Map<TrackableProperty, Object> allProps = buildPropertyMap(obj, null);
-        if (!allProps.isEmpty()) {
+        // A replacement is sent even when it carries nothing: the client clears the key
+        // before applying, so an empty map is how it learns the old instance's properties
+        // are gone. Suppressing it leaves the client rendering state the server dropped.
+        if (!allProps.isEmpty() || old != null) {
             newObjects.put(deltaKey, allProps);
             netLog.trace("[DeltaSync] {}: key={} id={}, {} props",
                     old != null ? "Replaced instance" : "New object",
