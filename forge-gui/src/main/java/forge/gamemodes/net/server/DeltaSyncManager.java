@@ -131,6 +131,39 @@ public class DeltaSyncManager implements IHasForgeLog {
      * barriers needed.
      */
     public DeltaPacket collectDeltas(GameView gameView) {
+        Thread self = Thread.currentThread();
+        Thread concurrent = collectOwner.getAndSet(self);
+        if (concurrent != null && concurrent != self) {
+            netLog.warn("[Collect] Concurrent entry: {} entered while {} was still inside. "
+                            + "Per-consumer registration state and the view graph are both unguarded here.",
+                    self.getName(), concurrent.getName());
+        }
+        if (SHADOW_SNAPSHOT && collectThreads.add(self.getName())) {
+            netLog.info("[Collect] First entry from thread {} ({} distinct so far)",
+                    self.getName(), collectThreads.size());
+        }
+        try {
+            return collectDeltasInternal(gameView);
+        } finally {
+            collectOwner.compareAndSet(self, null);
+        }
+    }
+
+    /**
+     * Records which thread is inside {@link #collectDeltas}, so a second one entering is
+     * reported rather than silently corrupting per-consumer state.
+     *
+     * <p>Deliberately a detector and not a guard: it observes, it does not serialise. It
+     * also logs rather than throwing, because this is reachable from Netty threads where
+     * an exception reaches {@code exceptionCaught} and closes the channel — and unlike
+     * {@code FThreads.assertExecutedByEdt}, which returns early under net play, it has to
+     * stay live in exactly the mode where these problems occur.
+     */
+    private final java.util.concurrent.atomic.AtomicReference<Thread> collectOwner =
+            new java.util.concurrent.atomic.AtomicReference<>();
+    private final Set<String> collectThreads = Collections.synchronizedSet(new HashSet<>());
+
+    private DeltaPacket collectDeltasInternal(GameView gameView) {
         Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new HashMap<>();
         // need parent-before-child insertion order
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
