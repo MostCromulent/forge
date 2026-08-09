@@ -294,7 +294,7 @@ public class DeltaSyncManager implements IHasForgeLog {
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
         if (SNAPSHOT_AUTHORITY) {
-            ViewSnapshot current = ViewSnapshot.build(gameView);
+            ViewSnapshot current = ViewSnapshot.current(gameView);
             ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
             baseline = current;
             published = current;
@@ -402,7 +402,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     private void crossCheck(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
         long buildStart = System.nanoTime();
         long buildAllocStart = allocatedBytes();
-        ViewSnapshot current = ViewSnapshot.build(gameView);
+        ViewSnapshot current = ViewSnapshot.current(gameView);
         long buildNanos = System.nanoTime() - buildStart;
         long buildAlloc = allocatedBytes() - buildAllocStart;
         long diffStart = System.nanoTime();
@@ -472,11 +472,14 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         netLog.info("[CrossCheck] seq={} objects={} walkKeys={} snapshotKeys={} "
                         + "mismatched={} snapshotOnly={} unexplained={} walkOnly={} evicted={} "
-                        + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={}",
+                        + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={} "
+                        + "changeCount={} consumer={} thread={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
                 mismatched, snapshotOnly, unexplained, walkOnly, diff.evicted().size(),
                 walkNanos / 1000, buildNanos / 1000, diffNanos / 1000,
-                walkAlloc, buildAlloc, diffAlloc);
+                walkAlloc, buildAlloc, diffAlloc,
+                gameView.getTracker() == null ? -1L : gameView.getTracker().getChangeCount(),
+                consumerId, Thread.currentThread().getName());
     }
 
     /**

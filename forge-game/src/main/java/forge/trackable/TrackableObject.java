@@ -120,6 +120,7 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
         }
         if (value == null || value.equals(key.getDefaultValue())) {
             if (props.remove(key) != null) {
+                recordChange();
                 // TODO: A property changing A->B->A between consumer reads would still be marked dirty.
                 // A checksum or version-per-property approach could skip this, but A->B->A is uncommon
                 // in typical Magic game flow. Revisit if profiling shows excessive no-op deltas.
@@ -128,8 +129,15 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
             }
         }
         else if (!value.equals(props.put(key, value))) {
+            recordChange();
             markDirtyForConsumers(key);
             key.updateObjLookup(tracker, value);
+        }
+    }
+
+    private void recordChange() {
+        if (tracker != null) {
+            tracker.recordChange();
         }
     }
 
@@ -171,6 +179,9 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
 
     // use when updating collection type properties without using set (or assigning the same object)
     protected final void flagAsChanged(final TrackableProperty key) {
+        // Collections stored as properties are added to and removed from in place, which
+        // changes what a reader sees without ever passing through set().
+        recordChange();
         markDirtyForConsumers(key);
         key.updateObjLookup(tracker, props.get(key));
     }

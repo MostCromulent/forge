@@ -2,6 +2,7 @@ package forge.trackable;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
@@ -39,6 +40,27 @@ public class Tracker {
 
     private final Table<TrackableType<?>, Integer, Object> objLookups =
             Tables.newCustomTable(new ConcurrentHashMap<>(), ConcurrentHashMap::new);
+
+    private final AtomicLong changeCount = new AtomicLong();
+
+    /**
+     * How many property changes this game's view has seen.
+     *
+     * <p>For a reader that has built something from the whole view and wants to know whether
+     * it is still current, without asking what changed. Monotonic, and only bumped when a
+     * property actually takes a new value.
+     */
+    public long getChangeCount() {
+        return changeCount.get();
+    }
+
+    // Atomic rather than a plain increment: the game thread is the sanctioned mutator, but
+    // dev cheats enter from the display thread and concede runs inline on a network thread,
+    // and a lost increment could move the count backwards - which would let a stale reading
+    // look current again.
+    void recordChange() {
+        changeCount.incrementAndGet();
+    }
 
     public final boolean isFrozen() {
         return freezeCounter > 0;

@@ -8,9 +8,11 @@ import forge.gamemodes.net.DeltaPacket;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
 import forge.trackable.TrackableProperty;
+import forge.trackable.Tracker;
 import forge.util.IHasForgeLog;
 
 import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multiset;
 
 import forge.card.CardType;
@@ -25,6 +27,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * An image of the view graph in network form, holding no references into it.
@@ -70,6 +74,50 @@ final class ViewSnapshot implements IHasForgeLog {
 
     int size() {
         return objects.size();
+    }
+
+    /**
+     * The last snapshot taken of a game, and the change count it was taken at.
+     *
+     * <p>Keyed on the tracker rather than the view because a tracker belongs to one game and
+     * has no equality of its own, while two views of successive games can compare equal - a
+     * view is equal to anything of its class with its id. Weak keys so an entry dies with the
+     * game that made it; a snapshot holds only ids and plain data, so it cannot keep the game
+     * alive itself.
+     *
+     * <p>It lives here rather than on the tracker so that the engine's whole part in this is
+     * one counter: nothing in the engine has to know a snapshot exists.
+     */
+    private static final ConcurrentMap<Tracker, AtomicReference<Stamped>> CACHE =
+            new MapMaker().weakKeys().makeMap();
+
+    private record Stamped(long changeCount, ViewSnapshot snapshot) {
+    }
+
+    /**
+     * The current snapshot of this game, taken once however many clients ask for it.
+     *
+     * <p>Building it does not depend on who is asking, and during one engine action every
+     * client collects in turn with nothing changing in between, so the same image would
+     * otherwise be built once per client. Even a single client asks more than once per change,
+     * because several things flush.
+     */
+    static ViewSnapshot current(GameView gameView) {
+        final Tracker tracker = gameView == null ? null : gameView.getTracker();
+        if (tracker == null) {
+            return build(gameView);
+        }
+        final AtomicReference<Stamped> ref = CACHE.computeIfAbsent(tracker, t -> new AtomicReference<>());
+        final Stamped cached = ref.get();
+        // Read the count before building, never after: a build the engine changed underneath
+        // then carries the older count, so the next reader rebuilds instead of trusting it.
+        final long stamp = tracker.getChangeCount();
+        if (cached != null && cached.changeCount() == stamp) {
+            return cached.snapshot();
+        }
+        final ViewSnapshot snapshot = build(gameView);
+        ref.set(new Stamped(stamp, snapshot));
+        return snapshot;
     }
 
     /**
