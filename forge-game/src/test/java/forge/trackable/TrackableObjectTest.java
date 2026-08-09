@@ -1,5 +1,7 @@
 package forge.trackable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -10,6 +12,30 @@ import org.testng.annotations.Test;
 import forge.game.player.PlayerView;
 
 public class TrackableObjectTest {
+
+    /**
+     * A collection stored as a property is copied, so the engine can keep its own.
+     *
+     * <p>Several of these are handed over still owned by the engine - counters are stored as
+     * the engine's live Multiset, which it goes on mutating - which leaves a reader on any
+     * other thread iterating something being written. Copying as it is stored costs the
+     * thread that owns the value, where nothing is racing it.
+     */
+    @Test
+    @SuppressWarnings("unchecked")
+    public void storingACollectionCopiesIt() {
+        final PlayerView view = new PlayerView(1, null);
+        final List<String> engineOwned = new ArrayList<>();
+        engineOwned.add("first");
+
+        view.set(TrackableProperty.NotedTypes, engineOwned);
+        engineOwned.add("added after the store");
+
+        final List<String> stored =
+                (List<String>) view.getPropsCopy().get(TrackableProperty.NotedTypes);
+        Assert.assertEquals(stored, List.of("first"),
+                "the view followed the engine's later change to a collection it had stored");
+    }
 
     /**
      * Reading all of an object's properties while the engine writes them neither throws nor

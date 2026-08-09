@@ -359,10 +359,12 @@ public class PlayerView extends GameEntityView {
     void updateMergedCommanderDamage(Card card, Card commander) {
         // Add commander damage to top card for card view panel info
         for (final PlayerView p : Iterables.concat(Collections.singleton(this), getOpponents())) {
-            Map<Integer, Integer> map = p.get(TrackableProperty.CommanderDamage);
-            if (map == null) continue;
-            Integer damage = map.get(commander.getId());
-            map.put(card.getId(), damage);
+            Map<Integer, Integer> stored = p.get(TrackableProperty.CommanderDamage);
+            if (stored == null) continue;
+            Map<Integer, Integer> map = Maps.newHashMap(stored);
+            map.put(card.getId(), map.get(commander.getId()));
+            p.set(TrackableProperty.CommanderDamage, map);
+            p.flagAsChanged(TrackableProperty.CommanderDamage);
         }
     }
 
@@ -374,22 +376,20 @@ public class PlayerView extends GameEntityView {
     }
 
     void updateCommanderCast(Player p, Card c) {
-        Map<Integer, Integer> map = get(TrackableProperty.CommanderCast);
-        if (map == null) {
-            map = Maps.newHashMap();
-            set(TrackableProperty.CommanderCast, map);
-        }
+        // Built then stored, never mutated after: the stored value is a copy, so a put
+        // through the local reference would not reach it.
+        Map<Integer, Integer> map = Maps.newHashMap(Objects.requireNonNullElse(
+                get(TrackableProperty.CommanderCast), Collections.<Integer, Integer>emptyMap()));
         map.put(c.getId(), p.getCommanderCast(c));
+        set(TrackableProperty.CommanderCast, map);
         flagAsChanged(TrackableProperty.CommanderCast);
     }
 
     void updateMergedCommanderCast(Player p, Card target, Card commander) {
-        Map<Integer, Integer> map = get(TrackableProperty.CommanderCast);
-        if (map == null) {
-            map = Maps.newHashMap();
-            set(TrackableProperty.CommanderCast, map);
-        }
+        Map<Integer, Integer> map = Maps.newHashMap(Objects.requireNonNullElse(
+                get(TrackableProperty.CommanderCast), Collections.<Integer, Integer>emptyMap()));
         map.put(target.getId(), p.getCommanderCast(commander));
+        set(TrackableProperty.CommanderCast, map);
         flagAsChanged(TrackableProperty.CommanderCast);
     }
 

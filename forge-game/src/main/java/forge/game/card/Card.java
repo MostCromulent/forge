@@ -1975,6 +1975,9 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 }
             }
         }
+        // setCounters does not reach the view, and every other counter mutation pairs with
+        // this call.
+        view.updateCounters(this);
     }
 
     public final String getSVar(final String var) {
@@ -4618,6 +4621,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public void addDraftAction(String s) {
         draftActions.add(s);
+        view.updateDraftAction(this);
     }
 
     private int intensity = 0;

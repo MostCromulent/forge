@@ -101,7 +101,12 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
         return value;
     }
 
-    public final <T> void set(final TrackableProperty key, final T value) {
+    public final <T> void set(final TrackableProperty key, final T value0) {
+        // Before anything else, including being queued for a freeze: what gets queued has to
+        // be as detached as what gets stored, or the engine keeps writing to it until the
+        // freeze lifts.
+        @SuppressWarnings("unchecked")
+        final T value = (T) key.getType().detach(value0);
         if (tracker != null && tracker.isFrozen()) { //if trackable objects currently frozen, queue up delayed prop change
             boolean respectsFreeze = false;
             if (key.getFreezeMode() == TrackableProperty.FreezeMode.RespectsFreeze) {

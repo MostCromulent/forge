@@ -1,10 +1,16 @@
 package forge.trackable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.UnaryOperator;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Multiset;
 
 import forge.card.CardType;
@@ -24,8 +30,35 @@ import forge.item.IPaperCard;
 public class TrackableTypes {
     public static class TrackableType<T> {
         private T defaultValue;
+        private final UnaryOperator<T> copier;
+
         private TrackableType(T defaultValue) {
+            this(defaultValue, null);
+        }
+
+        private TrackableType(T defaultValue, UnaryOperator<T> copier) {
             this.defaultValue = defaultValue;
+            this.copier = copier;
+        }
+
+        /**
+         * A value that will not change underneath whoever reads the property next.
+         *
+         * <p>Some of these are handed to a view still owned by the engine - counters are
+         * stored as the engine's own {@code Multiset}, which it keeps mutating - so a reader
+         * on another thread iterates something being written. Copying as it is stored puts
+         * that cost on the thread that owns the value, where nothing is racing it, rather
+         * than on every reader.
+         *
+         * <p>Only the types holding a plain collection copy. A type whose value is a
+         * {@code TrackableObject} or {@code TrackableCollection} must not: those are the
+         * shared graph, and copying one would sever it. So must a type whose collection the
+         * view deliberately mutates in place after storing it, which is why
+         * {@link #GenericMapType} passes through.
+         */
+        @SuppressWarnings("unchecked")
+        final Object detach(final Object value) {
+            return copier == null || value == null ? value : copier.apply((T) value);
         }
 
         protected void updateObjLookup(Tracker tracker, T newObj) {
@@ -164,7 +197,8 @@ public class TrackableTypes {
             }
         }
     };
-    public static final TrackableType<CardTypeView> CardTypeViewType = new TrackableType<>(CardType.EMPTY);
+    public static final TrackableType<CardTypeView> CardTypeViewType =
+            new TrackableType<>(CardType.EMPTY, CardType::new);
     public static final TrackableObjectType<PlayerView> PlayerViewType = new TrackableObjectType<>();
     public static final TrackableCollectionType<PlayerView> PlayerViewCollectionType = new TrackableCollectionType<>(PlayerViewType);
     public static final TrackableObjectType<GameEntityView> GameEntityViewType = new TrackableObjectType<>();
@@ -173,14 +207,34 @@ public class TrackableTypes {
     public static final TrackableObjectType<CombatView> CombatViewType = new TrackableObjectType<>();
     public static final TrackableType<ManaCost> ManaCostType = new TrackableType<>(ManaCost.NO_COST);
     public static final TrackableType<ColorSet> ColorSetType = new TrackableType<>(ColorSet.C);
-    public static final TrackableType<List<String>> StringListType = new TrackableType<>(null);
-    public static final TrackableType<Set<String>> StringSetType = new TrackableType<>(null);
-    public static final TrackableType<Map<String, String>> StringMapType = new TrackableType<>(null);
+    public static final TrackableType<List<String>> StringListType =
+            new TrackableType<>(null, TrackableTypes::copyList);
+    public static final TrackableType<Set<String>> StringSetType =
+            new TrackableType<>(null, TrackableTypes::copySet);
+    public static final TrackableType<Map<String, String>> StringMapType =
+            new TrackableType<>(null, TrackableTypes::copyMap);
 
-    public static final TrackableType<Set<Integer>> IntegerSetType = new TrackableType<>(null);
-    public static final TrackableType<Map<Integer, Integer>> IntegerMapType = new TrackableType<>(null);
-    public static final TrackableType<Map<Byte, Integer>> ManaMapType = new TrackableType<>(null);
-    public static final TrackableType<Multiset<CounterType>> CounterMapType = new TrackableType<>(null);
+    public static final TrackableType<Set<Integer>> IntegerSetType =
+            new TrackableType<>(null, TrackableTypes::copySet);
+    public static final TrackableType<Map<Integer, Integer>> IntegerMapType =
+            new TrackableType<>(null, TrackableTypes::copyMap);
+    public static final TrackableType<Map<Byte, Integer>> ManaMapType =
+            new TrackableType<>(null, TrackableTypes::copyMap);
+    public static final TrackableType<Multiset<CounterType>> CounterMapType =
+            new TrackableType<>(null, ImmutableMultiset::copyOf);
     public static final TrackableType<Map<Object, Object>> GenericMapType = new TrackableType<>(null);
     public static final TrackableType<KeywordCollectionView> KeywordCollectionViewType = new TrackableType<>(KeywordCollectionView.EMPTY);
+    // Not List.copyOf and friends: those reject a null element, and these run on the engine
+    // thread as it stores, where a stray null must not become an exception.
+    private static <E> List<E> copyList(final List<E> value) {
+        return Collections.unmodifiableList(new ArrayList<>(value));
+    }
+
+    private static <E> Set<E> copySet(final Set<E> value) {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(value));
+    }
+
+    private static <K, V> Map<K, V> copyMap(final Map<K, V> value) {
+        return Collections.unmodifiableMap(new LinkedHashMap<>(value));
+    }
 }
