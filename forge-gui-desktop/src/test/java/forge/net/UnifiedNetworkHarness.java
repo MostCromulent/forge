@@ -30,6 +30,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -419,6 +421,13 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // 7. Wait for game completion
             waitForRemoteGameCompletion(result, hostedMatch);
 
+            // Taken before cleanup tears the match down, and while the engine is finished so
+            // nothing is moving: this is what every client should have ended up holding.
+            if (hostedMatch != null) {
+                serverStateDigest = forge.gamemodes.net.server.SnapshotDigest
+                        .shortDigest(hostedMatch.getGameView());
+            }
+
             // 8. Wait for clients to finish. A client in its own process exits only once the
             // server closes its channel, which is part of cleanup below, so waiting here
             // cannot succeed for those — they are collected afterwards instead.
@@ -448,6 +457,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                     Thread.currentThread().interrupt();
                 }
                 collectRemoteClientMetrics(result);
+                reportStateAgreement();
                 validateResult(result);
             }
         }
@@ -542,6 +552,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                             attemptedCounted = true;
                         }
                         netLog.info("Client {} ({}) connected: {}", clientIndex, clientName, line);
+                    } else if (line.startsWith("STATE:")) {
+                        clientStateDigests.put(clientName, line.substring("STATE:".length()));
                     } else if (line.startsWith("RESULT:")) {
                         netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
                         recordClientProcessResult(line);
@@ -771,6 +783,28 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         }
     }
 
+    /**
+     * Report whether each client finished holding what the server held.
+     *
+     * <p>Diagnostic for now, not an assertion: it is the exact form of the question the
+     * checksum answers by sampling, and until it has been seen to agree on games that are
+     * known good, a difference here is as likely to be something legitimate about what a
+     * client is sent as it is to be a defect.
+     */
+    private void reportStateAgreement() {
+        if (serverStateDigest == null || clientStateDigests.isEmpty()) {
+            return;
+        }
+        for (final Map.Entry<String, String> client : clientStateDigests.entrySet()) {
+            if (serverStateDigest.equals(client.getValue())) {
+                netLog.info("[Agreement] {} finished holding the same state as the server", client.getKey());
+            } else {
+                netLog.warn("[Agreement] {} finished with different state: client={} server={}",
+                        client.getKey(), client.getValue(), serverStateDigest);
+            }
+        }
+    }
+
     private void validateResult(GameResult result) {
         result.success = result.gameCompleted
                 && result.deltaPacketsReceived > 0
@@ -789,6 +823,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
     /** What a client running in its own process reported on the way out. */
     private CountDownLatch clientsFinishedLatch;
+    private final Map<String, String> clientStateDigests = new ConcurrentHashMap<>();
+    private String serverStateDigest;
     private final AtomicInteger processDeltaPackets = new AtomicInteger();
     private final AtomicInteger processFullSyncs = new AtomicInteger();
     private final AtomicLong processDeltaBytes = new AtomicLong();

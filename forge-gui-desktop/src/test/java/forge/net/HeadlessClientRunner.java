@@ -70,6 +70,12 @@ public final class HeadlessClientRunner implements IHasForgeLog {
             client.waitForGameStart(gameTimeoutMs);
             client.waitForGameFinish(gameTimeoutMs);
 
+            // What this client ended up holding, for the parent to compare against what the
+            // server ended up holding. Reported separately from RESULT so a mismatch can be
+            // told apart from a client that never got that far.
+            System.out.println("STATE:" + forge.gamemodes.net.server.SnapshotDigest
+                    .shortDigest(client.getGameView()));
+
             System.out.println("RESULT:OK"
                     + ":slot=" + client.getAssignedSlot()
                     + ":deltas=" + client.getDeltaPacketsReceived()
