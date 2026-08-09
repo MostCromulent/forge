@@ -397,10 +397,14 @@ public class DeltaSyncManager implements IHasForgeLog {
                 if (other == null || !other.containsKey(prop.getKey())) {
                     walkOnly++;
                 } else if (!java.util.Objects.equals(other.get(prop.getKey()), prop.getValue())) {
+                    // Held rather than counted, for the same reason a snapshot-only property
+                    // is: the two readings are taken at different instants, so a property
+                    // that changes between them differs in value without the paths
+                    // disagreeing. PlayerMayLook is set and cleared within milliseconds and
+                    // is caught this way routinely.
                     mismatched++;
-                    netLog.warn("[Shadow] seq={} key={} {}: walk={} snapshot={}",
-                            packet.getSequenceNumber(), String.format("0x%08X", entry.getKey()),
-                            prop.getKey(), prop.getValue(), other.get(prop.getKey()));
+                    awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
+                            .putIfAbsent(prop.getKey(), packet.getSequenceNumber());
                 }
             }
         }
@@ -446,7 +450,8 @@ public class DeltaSyncManager implements IHasForgeLog {
      * the client would never be told about.
      */
     private final Map<Integer, Map<TrackableProperty, Long>> awaitingWalk = new HashMap<>();
-    private static final int SKEW_ALLOWANCE_PASSES = 3;
+    private static final int SKEW_ALLOWANCE_PASSES =
+            Integer.getInteger("forge.snapshot.skewPasses", 3);
 
     /** Clear what the walk has now reported, and report what it never did. */
     private int sweepAwaitingWalk(Map<Integer, Map<TrackableProperty, Object>> fromWalk,
@@ -454,7 +459,10 @@ public class DeltaSyncManager implements IHasForgeLog {
         for (Map.Entry<Integer, Map<TrackableProperty, Object>> reported : fromWalk.entrySet()) {
             Map<TrackableProperty, Long> pending = awaitingWalk.get(reported.getKey());
             if (pending != null) {
-                pending.keySet().removeAll(reported.getValue().keySet());
+                // Only a report from a later pass clears one: a mismatch is recorded from a
+                // pass in which the walk did report the property, with the other value.
+                pending.entrySet().removeIf(e -> e.getValue() < seq
+                        && reported.getValue().containsKey(e.getKey()));
             }
         }
         // A key that has left the graph is one the walk will never mention again, and its
@@ -472,8 +480,8 @@ public class DeltaSyncManager implements IHasForgeLog {
                     continue;
                 }
                 unexplained++;
-                netLog.warn("[Shadow] key={} {}: reported by the snapshot at seq={} and never "
-                                + "by the walk — a change the client is not told about",
+                netLog.warn("[Shadow] key={} {}: the snapshot's value at seq={} was never "
+                                + "reported by the walk — a change the client is not told about",
                         String.format("0x%08X", entry.getKey()), pending.getKey(), pending.getValue());
                 props.remove();
             }
