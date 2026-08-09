@@ -552,7 +552,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         collectObjectDelta(obj, objectDeltas, newObjects);
 
         boolean parentIsGameEntityView = obj instanceof GameEntityView;
-        for (Map.Entry<TrackableProperty, Object> entry : ((Map<TrackableProperty, Object>) obj.getProps()).entrySet()) {
+        for (Map.Entry<TrackableProperty, Object> entry : obj.getPropsCopy().entrySet()) {
             Object value = entry.getValue();
             if (value instanceof TrackableObject to) {
                 // Skip GameEntityView→GameEntityView scalar cross-references
@@ -621,8 +621,9 @@ public class DeltaSyncManager implements IHasForgeLog {
     private void preScanZoneCollections(GameView gameView) {
         if (gameView == null || gameView.getPlayers() == null) return;
         for (PlayerView player : gameView.getPlayers()) {
+            Map<TrackableProperty, Object> props = player.getPropsCopy();
             for (TrackableProperty zoneProp : ZONE_COLLECTIONS) {
-                if (((Map<TrackableProperty, Object>) player.getProps()).get(zoneProp) instanceof TrackableCollection<?> tc) {
+                if (props.get(zoneProp) instanceof TrackableCollection<?> tc) {
                     for (Object item : tc) {
                         if (item instanceof CardView cv) {
                             authoritativeInstances.putIfAbsent(DeltaPacket.makeDeltaKey(cv), cv);
@@ -642,9 +643,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             // are sized to the whole property enum regardless of how little is in them.
             return Collections.emptyMap();
         }
-        Map<TrackableProperty, Object> props = obj.getProps();
-        // Copy before iterating — the engine may write props concurrently
-        Map<TrackableProperty, Object> snapshot = new EnumMap<>(props);
+        Map<TrackableProperty, Object> snapshot = obj.getPropsCopy();
         if (dirtyProps == null) {
             dirtyProps = snapshot.keySet();
         }
@@ -714,7 +713,8 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     @SuppressWarnings("unchecked")
     private static CombatData combatViewToCombatData(CombatView combat) {
-        Map<TrackableProperty, Object> props = combat.getProps();
+        // One reading for all three bands below, so they cannot come from different instants.
+        Map<TrackableProperty, Object> props = combat.getPropsCopy();
         Map<FCollection<CardView>, GameEntityView> bandsWithDefenders =
                 (Map<FCollection<CardView>, GameEntityView>) props.get(TrackableProperty.BandsWithDefenders);
         Map<FCollection<CardView>, FCollection<CardView>> bandsWithBlockers =
@@ -809,7 +809,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         // walkAndRegister only registers consumers (no data sent), and the
         // first collectDeltas corrects any stale registrations.
         boolean parentIsGameEntityView = obj instanceof GameEntityView;
-        for (Object value : ((Map<TrackableProperty, Object>) obj.getProps()).values()) {
+        for (Object value : obj.getPropsCopy().values()) {
             if (value instanceof TrackableObject to) {
                 if (parentIsGameEntityView && to instanceof GameEntityView) {
                     continue;

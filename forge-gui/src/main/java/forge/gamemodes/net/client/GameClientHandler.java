@@ -22,12 +22,13 @@ import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableObject;
+import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
 import forge.trackable.Tracker;
 import io.netty.channel.ChannelHandlerContext;
 
-import java.util.EnumMap;
 import java.util.Iterator;
+import java.util.Map;
 
 final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements IHasForgeLog {
 
@@ -201,7 +202,7 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
                 if (trackableObject.getTracker() == null) {
                     trackableObject.setTracker(this.tracker);
                     // walk the props
-                    EnumMap props = trackableObject.getProps();
+                    Map<TrackableProperty, Object> props = trackableObject.getPropsCopy();
                     if (props != null) {
                         for (Object propObj : props.values()) {
                             updateTrackers(new Object[]{propObj});
@@ -261,7 +262,7 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
     private void refreshTrackerCardViews(final GameView gv) {
         if (gv.getPlayers() == null) { return; }
         for (final PlayerView pv : gv.getPlayers()) {
-            final EnumMap<?, ?> props = pv.getProps();
+            final Map<TrackableProperty, Object> props = pv.getPropsCopy();
             if (props == null) { continue; }
             for (final Object value : props.values()) {
                 if (value instanceof TrackableCollection<?> collection) {

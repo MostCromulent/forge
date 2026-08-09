@@ -32,7 +32,9 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
 
     private final int id;
     protected transient Tracker tracker;
-    private final Map<TrackableProperty, Object> props;
+    // Declared as EnumMap, not Map: the copy constructor clones the backing array only when
+    // it can see the source is one, and falls back to iterating it otherwise.
+    private final EnumMap<TrackableProperty, Object> props;
     private int version;
     // Per-consumer dirty tracking. Lazy-init: null until first registerConsumer.
     private transient Map<Integer, EnumSet<TrackableProperty>> consumers;
@@ -71,6 +73,23 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     // don't know if this is really needed, but don't know a better way
     public <T> T getProps() {
         return (T)props;
+    }
+
+    /**
+     * A copy of the properties, for reading all of them.
+     *
+     * <p>{@link #getProps} hands out the live map, and EnumMap does not check for concurrent
+     * modification: iterating it while a property is being set neither throws nor finishes
+     * cleanly. Values read back null, or the walk runs off the end with a
+     * NoSuchElementException - both quiet enough to look like state that was never there.
+     * Copying clones the backing array instead of iterating, so it can see neither, and it
+     * is no more expensive than the read it replaces.
+     *
+     * <p>Reading one property through {@code getProps().get(...)} is a single array read and
+     * needs none of this.
+     */
+    public final Map<TrackableProperty, Object> getPropsCopy() {
+        return new EnumMap<>(props);
     }
 
     @SuppressWarnings("unchecked")

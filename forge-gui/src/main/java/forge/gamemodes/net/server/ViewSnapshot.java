@@ -98,7 +98,7 @@ final class ViewSnapshot implements IHasForgeLog {
             return;
         }
         for (PlayerView player : gameView.getPlayers()) {
-            Map<TrackableProperty, Object> props = player.getProps();
+            Map<TrackableProperty, Object> props = player.getPropsCopy();
             for (TrackableProperty zoneProp : DeltaSyncManager.ZONE_COLLECTIONS) {
                 if (props.get(zoneProp) instanceof TrackableCollection<?> zone) {
                     for (Object item : zone) {
@@ -123,7 +123,7 @@ final class ViewSnapshot implements IHasForgeLog {
      * read as deleted.
      */
     private static void seedCardStates(CardView card, Map<Integer, TrackableObject> authoritative) {
-        Map<TrackableProperty, Object> props = card.getProps();
+        Map<TrackableProperty, Object> props = card.getPropsCopy();
         for (TrackableProperty stateProp : CARD_STATES) {
             if (props.get(stateProp) instanceof TrackableObject state
                     && DeltaPacket.typeTagFor(state) >= 0) {
@@ -160,7 +160,7 @@ final class ViewSnapshot implements IHasForgeLog {
             return;
         }
 
-        Map<TrackableProperty, Object> props = obj.getProps();
+        Map<TrackableProperty, Object> props = obj.getPropsCopy();
         // Right-sized rather than an EnumMap: EnumMap allocates a slot per constant, and
         // TrackableProperty has over two hundred while a typical object sets a handful.
         Map<TrackableProperty, Object> recorded = new HashMap<>(Math.max(4, props.size() * 2));
