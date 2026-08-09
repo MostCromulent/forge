@@ -62,8 +62,20 @@ public class HeadlessNetworkGuiGame extends NetworkGuiGame {
     @Override
     public void restoreOldZones(PlayerView playerView, PlayerZoneUpdates playerZoneUpdates) { }
 
+    /**
+     * Reads what a real GUI reads at this point - the game view, and the players it lays the
+     * screen out by - so an openView that arrives before that state fails here. Recording the
+     * call alone cannot detect that, and nothing else in this harness renders.
+     */
     @Override
     public void openView(TrackableCollection<PlayerView> myPlayers) {
+        final forge.game.GameView view = getGameView();
+        if (view == null) {
+            throw new IllegalStateException("openView arrived before the client held a game view");
+        }
+        if (view.getPlayers() == null || view.getPlayers().isEmpty()) {
+            throw new IllegalStateException("openView arrived before the client held any players");
+        }
         openViewCalled = true;
     }
 

@@ -239,9 +239,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        // A client is seeded by the first diff against an empty baseline, so there is
-        // nothing to send until openView has established one — a delta before that would
-        // arrive with no game controllers set.
+        // A client is seeded by the first diff against an empty baseline, taken when the
+        // match opens. Nothing is sent before that.
         if (!initialSyncSent) {
             return;
         }
@@ -357,10 +356,10 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
-        sendOpenView(myPlayers);
-        updateGameView();
-        // Initialize delta sync by sending the initial full state
+        // State first. The client builds its GameView from the first delta, and openView
+        // carries player ids that resolve against the tracker that delta populates.
         sendFullState();
+        sendOpenView(myPlayers);
     }
 
     /**
