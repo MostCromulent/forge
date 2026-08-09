@@ -1,10 +1,5 @@
 package forge.gamemodes.net.server;
 
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Multiset;
-
-import forge.card.CardType;
-import forge.card.CardTypeView;
 import forge.game.GameEntityView;
 import forge.game.GameView;
 import forge.game.card.CardView;
@@ -26,13 +21,11 @@ import forge.trackable.TrackableTypes.TrackableType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Iterator;
 import java.util.HashSet;
 import java.util.List;
@@ -73,7 +66,7 @@ public class DeltaSyncManager implements IHasForgeLog {
      * Build a {@link ViewSnapshot} alongside each walk and report where they disagree.
      * Off by default: diagnostic only, and it doubles the per-pass graph traversal.
      */
-    private static final boolean SHADOW_SNAPSHOT = Boolean.getBoolean("forge.snapshot.shadow");
+    private static final boolean CROSS_CHECK = Boolean.getBoolean("forge.snapshot.crosscheck");
 
     /**
      * Build packets by diffing snapshots instead of walking the graph for dirty bits.
@@ -157,11 +150,11 @@ public class DeltaSyncManager implements IHasForgeLog {
         baseline = ViewSnapshot.empty();
     }
 
-    /** Per-thread allocation counter, when the JVM exposes one. Shadow diagnostics only. */
+    /** Per-thread allocation counter, when the JVM exposes one. Cross-check diagnostics only. */
     private static final com.sun.management.ThreadMXBean ALLOC_BEAN = allocBean();
 
     private static com.sun.management.ThreadMXBean allocBean() {
-        if (!SHADOW_SNAPSHOT) {
+        if (!CROSS_CHECK) {
             return null;
         }
         java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
@@ -187,7 +180,7 @@ public class DeltaSyncManager implements IHasForgeLog {
      *
      * <p>The walk answers this from consumer registration; the snapshot answers it from
      * the baseline, which is what was actually sent. Both answers are computed while the
-     * snapshot is being shadowed, because a wrong one here fails silently: too permissive
+     * snapshot is only being cross-checked, because a wrong one here fails silently: too permissive
      * ships an id the client cannot resolve, too conservative inlines a whole card into
      * every packet that mentions one.
      */
@@ -199,7 +192,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             return inBaseline;
         }
         boolean registered = obj.hasConsumer(consumerId);
-        if (!SHADOW_SNAPSHOT) {
+        if (!CROSS_CHECK) {
             return registered;
         }
         (registered ? gateIdRef : gateInline).incrementAndGet();
@@ -262,7 +255,7 @@ public class DeltaSyncManager implements IHasForgeLog {
                             + "Per-consumer registration state and the view graph are both unguarded here.",
                     self.getName(), concurrent.getName());
         }
-        if (SHADOW_SNAPSHOT && collectThreads.add(self.getName())) {
+        if (CROSS_CHECK && collectThreads.add(self.getName())) {
             netLog.info("[Collect] First entry from thread {} ({} distinct so far)",
                     self.getName(), collectThreads.size());
         }
@@ -313,13 +306,13 @@ public class DeltaSyncManager implements IHasForgeLog {
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
         Set<Integer> currentObjectIds = new HashSet<>();
 
-        long walkStart = SHADOW_SNAPSHOT ? System.nanoTime() : 0L;
-        long walkAllocStart = SHADOW_SNAPSHOT ? allocatedBytes() : 0L;
+        long walkStart = CROSS_CHECK ? System.nanoTime() : 0L;
+        long walkAllocStart = CROSS_CHECK ? allocatedBytes() : 0L;
         authoritativeInstances.clear();
         preScanZoneCollections(gameView);
         walkAndCollect(gameView, objectDeltas, newObjects, currentObjectIds);
-        long walkNanos = SHADOW_SNAPSHOT ? System.nanoTime() - walkStart : 0L;
-        long walkAlloc = SHADOW_SNAPSHOT ? allocatedBytes() - walkAllocStart : 0L;
+        long walkNanos = CROSS_CHECK ? System.nanoTime() - walkStart : 0L;
+        long walkAlloc = CROSS_CHECK ? allocatedBytes() - walkAllocStart : 0L;
 
         // Prune registrations for objects no longer in the graph
         Iterator<Map.Entry<Integer, TrackableObject>> regIt = registeredByKey.entrySet().iterator();
@@ -332,8 +325,8 @@ public class DeltaSyncManager implements IHasForgeLog {
         }
 
         DeltaPacket packet = finishPacket(gameView, objectDeltas, newObjects);
-        if (SHADOW_SNAPSHOT) {
-            shadowCompare(gameView, packet, walkNanos, walkAlloc);
+        if (CROSS_CHECK) {
+            crossCheck(gameView, packet, walkNanos, walkAlloc);
         }
         return packet;
     }
@@ -404,9 +397,9 @@ public class DeltaSyncManager implements IHasForgeLog {
      * interesting direction: they are changes the walk did not report.
      *
      * <p>The baseline advances every pass here rather than on delivery, because nothing
-     * built from the snapshot is sent while it is only shadowing the walk.
+     * built from the snapshot is sent while it is only being cross-checked against the walk.
      */
-    private void shadowCompare(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
+    private void crossCheck(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
         long buildStart = System.nanoTime();
         long buildAllocStart = allocatedBytes();
         ViewSnapshot current = ViewSnapshot.build(gameView);
@@ -477,7 +470,7 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         int unexplained = sweepAwaitingWalk(fromWalk, diff.evicted(), packet.getSequenceNumber());
 
-        netLog.info("[Shadow] seq={} objects={} walkKeys={} snapshotKeys={} "
+        netLog.info("[CrossCheck] seq={} objects={} walkKeys={} snapshotKeys={} "
                         + "mismatched={} snapshotOnly={} unexplained={} walkOnly={} evicted={} "
                         + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={}",
                 packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
@@ -528,7 +521,7 @@ public class DeltaSyncManager implements IHasForgeLog {
                     continue;
                 }
                 unexplained++;
-                netLog.warn("[Shadow] key={} {}: the snapshot's value at seq={} was never "
+                netLog.warn("[CrossCheck] key={} {}: the snapshot's value at seq={} was never "
                                 + "reported by the walk — a change the client is not told about",
                         String.format("0x%08X", entry.getKey()), pending.getKey(), pending.getValue());
                 props.remove();
@@ -689,55 +682,18 @@ public class DeltaSyncManager implements IHasForgeLog {
         return delta;
     }
 
-    /**
-     * Convert a property value to a network-safe form.
-     * Object references become Integer IDs; everything else is copied.
-     */
-    static Object toNetworkValue(TrackableProperty prop, Object value) {
-        return detached(referencesAsIds(prop, value));
-    }
 
     /**
-     * Copy a value so that what travels shares nothing with the engine, <em>keeping the type
-     * the receiver expects</em>.
+     * Convert a property value to a network-safe form: object references become ids, and
+     * everything else already is what should travel.
      *
-     * <p>Some view properties hold the engine's own collection rather than a copy of one -
-     * counters are the engine's live {@code Multiset}. Without this the packet carries that
-     * object and the encoder serializes it on the event loop, iterating it while the game
-     * thread writes it. Copying here happens on whichever thread collected, which is normally
-     * the thread that does those writes, so the copy is uncontended. It narrows the window
-     * rather than closing it; only the view holding its own collection would do that.
-     *
-     * <p>The type has to survive the copy. A {@code Multiset} of counters arriving as a plain
-     * {@code Map} is read back as absent rather than as an error - no exception, no warning,
-     * just a client quietly missing state. Reshaping for comparison happens in
-     * {@code ViewSnapshot.canonical} instead.
+     * <p>Nothing is copied here. A property whose value the engine goes on mutating stores a
+     * private copy as it is set, so what is read here is already detached - and returning the
+     * stored instance rather than a copy of it is what lets an unchanged property compare
+     * equal by identity when two snapshots are diffed.
      */
-    private static Object detached(Object value) {
-        if (value instanceof CardTypeView type) {
-            // Copied as a CardType, not through the CardTypeView overload: that one runs
-            // addAll alone and drops allCreatureTypes and the excluded creature subtypes.
-            return new CardType(type);
-        }
-        if (value instanceof Multiset<?> multiset) {
-            return ImmutableMultiset.copyOf(multiset);
-        }
-        if (value instanceof Map<?, ?> map) {
-            // Not Map.copyOf - it rejects null keys and values, and this runs on the engine
-            // thread where a stray null must not become an exception.
-            return Collections.unmodifiableMap(new LinkedHashMap<>(map));
-        }
-        if (value instanceof Set<?> set) {
-            return Collections.unmodifiableSet(new LinkedHashSet<>(set));
-        }
-        if (value instanceof Collection<?> collection) {
-            return Collections.unmodifiableList(new ArrayList<>(collection));
-        }
-        return value;
-    }
-
     @SuppressWarnings("unchecked")
-    private static Object referencesAsIds(TrackableProperty prop, Object value) {
+    static Object toNetworkValue(TrackableProperty prop, Object value) {
         if (value == null) return null;
         TrackableType<?> type = prop.getType();
 
@@ -758,7 +714,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             TrackableCollection<?> coll = (TrackableCollection<?>) value;
             List<Integer> ids = new ArrayList<>(coll.size());
             for (TrackableObject obj : coll) ids.add(obj == null ? -1 : obj.getId());
-            return ids;
+            return Collections.unmodifiableList(ids);
         }
 
         // CardStateView slot reference → ordinal of CardStateName
@@ -779,7 +735,7 @@ public class DeltaSyncManager implements IHasForgeLog {
             TrackableCollection<?> coll = (TrackableCollection<?>) value;
             List<Integer> ids = new ArrayList<>(coll.size());
             for (TrackableObject obj : coll) ids.add(obj == null ? -1 : obj.getId());
-            return ids;
+            return Collections.unmodifiableList(ids);
         }
 
         return value;

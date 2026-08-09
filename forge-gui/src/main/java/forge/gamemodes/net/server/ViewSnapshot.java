@@ -29,16 +29,15 @@ import java.util.Set;
 /**
  * An image of the view graph in network form, holding no references into it.
  *
- * <p>Every value is reduced to plain data — ids, id lists, ordinals, boxed primitives
- * and defensive copies of collections — so a snapshot can be read, diffed and encoded
- * from any thread without racing the engine. This is the piece that lets the network
- * layer stop walking live state.
+ * <p>Every value is reduced to plain data — ids, id lists, ordinals, boxed primitives and
+ * collections the engine no longer holds — so a snapshot can be read, diffed and encoded from
+ * any thread without racing the engine. This is the piece that lets the network layer stop
+ * walking live state.
  *
- * <p>Values are also canonicalised for comparison. Several of the forms
- * {@code DeltaSyncManager.toNetworkValue} produces have identity equality
- * ({@code int[]} for polymorphic refs, {@code CardType}, {@code CombatData}), which is
- * invisible while a dirty bit decides what to send but would make a value diff resend
- * them on every pass. {@link #canonical} is applied to both sides of any comparison.
+ * <p>Nothing is copied on the way in. A property whose value the engine goes on mutating is
+ * copied as it is stored, so what is recorded here is the instance the view holds — which is
+ * also what makes an unchanged property compare equal by identity when two of these are
+ * diffed, rather than by rebuilding and comparing its contents every pass.
  */
 final class ViewSnapshot implements IHasForgeLog {
 
@@ -197,7 +196,7 @@ final class ViewSnapshot implements IHasForgeLog {
         return result;
     }
 
-    private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.shadow");
+    private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.crosscheck");
     private static final Set<String> AUDIT_REPORTED = Collections.synchronizedSet(new HashSet<>());
 
     /**
@@ -234,7 +233,7 @@ final class ViewSnapshot implements IHasForgeLog {
             return;
         }
         if (AUDIT_REPORTED.add(type)) {
-            netLog.warn("[Shadow] snapshot value of unaudited type {} for {} — verify it is "
+            netLog.warn("[CrossCheck] snapshot value of unaudited type {} for {} — verify it is "
                     + "immutable and compares by value", type, prop);
         }
     }
