@@ -369,14 +369,24 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
             // may reference intermediate states that the delta (final-state-only)
             // correctly doesn't include.
             java.util.Map<Integer, forge.game.event.GameEventCardTapped> lastTapPerCard = new java.util.LinkedHashMap<>();
+            // A card that also changed zone in this batch is exempt: tapping it was a step on
+            // the way somewhere, as when a Treasure is tapped for mana and sacrificed to pay a
+            // cost, and where it ended up is all the delta carries. Its last tap event is then
+            // as intermediate as the earlier ones, so comparing against it fails on correct
+            // behaviour.
+            final java.util.Set<Integer> movedZone = new java.util.HashSet<>();
             for (forge.game.event.GameEvent event : events) {
                 if (event instanceof forge.game.event.GameEventCardTapped tapEvent) {
                     forge.game.card.CardView card = tapEvent.card();
                     if (card != null) {
                         lastTapPerCard.put(card.getId(), tapEvent);
                     }
+                } else if (event instanceof forge.game.event.GameEventZone zoneEvent
+                        && zoneEvent.card() != null) {
+                    movedZone.add(zoneEvent.card().getId());
                 }
             }
+            lastTapPerCard.keySet().removeAll(movedZone);
             for (forge.game.event.GameEventCardTapped tapEvent : lastTapPerCard.values()) {
                 forge.game.card.CardView card = tapEvent.card();
                 if (card != null && card.getZone() == forge.game.zone.ZoneType.Battlefield && card.isTapped() != tapEvent.tapped()) {
