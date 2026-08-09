@@ -362,14 +362,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         }
 
         if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
-            // The initial state is the first diff against an empty baseline, so there is no
-            // separate full-state message and no second wire format to keep working.
-            //
-            // Forgetting the baseline is what makes this a full state rather than an
-            // ordinary delta. It matters on the resync path: without it a client reporting a
-            // checksum mismatch is answered by a diff against the baseline the server still
-            // believes in, which resends nothing, and the divergence the checksum caught is
-            // never corrected.
+            // Forgetting the baseline is what makes the next diff a full state. Without it a
+            // client reporting a checksum mismatch is answered by a diff against the baseline
+            // the server still believes in, which resends nothing.
             syncManager.invalidateBaseline();
             initialSyncSent = true;
             updateGameView();

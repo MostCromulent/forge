@@ -257,6 +257,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         Thread self = Thread.currentThread();
         Thread concurrent = collectOwner.getAndSet(self);
         if (concurrent != null && concurrent != self) {
+            CONCURRENT_ENTRIES.incrementAndGet();
             netLog.warn("[Collect] Concurrent entry: {} entered while {} was still inside. "
                             + "Per-consumer registration state and the view graph are both unguarded here.",
                     self.getName(), concurrent.getName());
@@ -285,6 +286,18 @@ public class DeltaSyncManager implements IHasForgeLog {
     private final java.util.concurrent.atomic.AtomicReference<Thread> collectOwner =
             new java.util.concurrent.atomic.AtomicReference<>();
     private final Set<String> collectThreads = Collections.synchronizedSet(new HashSet<>());
+
+    private static final AtomicInteger CONCURRENT_ENTRIES = new AtomicInteger();
+
+    /**
+     * How many times a second thread has been found inside collection, across every client
+     * in this process. Counted rather than only logged so a test can hold it at zero — the
+     * detector has fired during ordinary play before collection was serialised, and nothing
+     * would notice it starting again.
+     */
+    public static int concurrentEntryCount() {
+        return CONCURRENT_ENTRIES.get();
+    }
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
         if (SNAPSHOT_AUTHORITY) {
@@ -421,11 +434,9 @@ public class DeltaSyncManager implements IHasForgeLog {
                 if (other == null || !other.containsKey(prop.getKey())) {
                     walkOnly++;
                 } else if (!java.util.Objects.equals(other.get(prop.getKey()), prop.getValue())) {
-                    // Held rather than counted, for the same reason a snapshot-only property
-                    // is: the two readings are taken at different instants, so a property
-                    // that changes between them differs in value without the paths
-                    // disagreeing. PlayerMayLook is set and cleared within milliseconds and
-                    // is caught this way routinely.
+                    // Held rather than counted: the two readings are taken at different
+                    // instants, so a property that changes between them differs in value
+                    // without the paths disagreeing.
                     mismatched++;
                     awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
                             .putIfAbsent(prop.getKey(), packet.getSequenceNumber());
@@ -683,7 +694,7 @@ public class DeltaSyncManager implements IHasForgeLog {
      * Object references become Integer IDs; everything else is copied.
      */
     static Object toNetworkValue(TrackableProperty prop, Object value) {
-        return detached(networkForm(prop, value));
+        return detached(referencesAsIds(prop, value));
     }
 
     /**
@@ -726,7 +737,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     @SuppressWarnings("unchecked")
-    private static Object networkForm(TrackableProperty prop, Object value) {
+    private static Object referencesAsIds(TrackableProperty prop, Object value) {
         if (value == null) return null;
         TrackableType<?> type = prop.getType();
 
