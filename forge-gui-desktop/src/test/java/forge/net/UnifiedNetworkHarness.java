@@ -827,7 +827,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private final Map<String, String> clientStateDigests = new ConcurrentHashMap<>();
     private String serverStateDigest;
     private final AtomicInteger processDeltaPackets = new AtomicInteger();
-    private final AtomicInteger processFullSyncs = new AtomicInteger();
     private final AtomicLong processDeltaBytes = new AtomicLong();
     private final AtomicInteger processMismatches = new AtomicInteger();
 
@@ -852,7 +851,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             }
             switch (part.substring(0, eq)) {
                 case "deltas" -> processDeltaPackets.addAndGet((int) value);
-                case "fullSyncs" -> processFullSyncs.addAndGet((int) value);
                 case "bytes" -> processDeltaBytes.addAndGet(value);
                 case "mismatches" -> processMismatches.addAndGet((int) value);
                 default -> { }
@@ -862,14 +860,12 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
     private void collectRemoteClientMetrics(GameResult result) {
         result.deltaPacketsReceived += processDeltaPackets.get();
-        result.fullStateSyncsReceived += processFullSyncs.get();
         result.totalDeltaBytes += processDeltaBytes.get();
         result.eventStateMismatches += processMismatches.get();
         synchronized (remoteClients) {
             for (HeadlessNetworkClient client : remoteClients) {
                 result.deltaPacketsReceived += client.getDeltaPacketsReceived();
-                result.fullStateSyncsReceived += client.getFullStateSyncsReceived();
-                result.totalDeltaBytes += client.getTotalDeltaBytes();
+                    result.totalDeltaBytes += client.getTotalDeltaBytes();
                 result.eventStateMismatches += client.getEventStateMismatches();
             }
             // Snapshot client-side state from first remote client for post-game assertions
@@ -884,8 +880,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         if (server != null) {
             result.sendErrors = server.getTotalSendErrors();
         }
-        netLog.info("Client metrics: deltas={}, fullSyncs={}, bytes={}",
-                result.deltaPacketsReceived, result.fullStateSyncsReceived, result.totalDeltaBytes);
+        netLog.info("Client metrics: deltas={}, bytes={}",
+                result.deltaPacketsReceived, result.totalDeltaBytes);
     }
 
     private void swapRemotePlayersToAi() {
@@ -996,7 +992,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
         // Network metrics (from remote clients)
         public long deltaPacketsReceived;
-        public long fullStateSyncsReceived;
         public long totalDeltaBytes;
         public long eventStateMismatches;
 

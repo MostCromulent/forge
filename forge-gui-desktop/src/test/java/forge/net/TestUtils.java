@@ -3,7 +3,6 @@ package forge.net;
 import forge.StaticData;
 import forge.util.IHasForgeLog;
 import forge.gamemodes.net.NetworkChecksumUtil;
-import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -64,13 +63,8 @@ public final class TestUtils {
         boolean useStable = !"production".equalsIgnoreCase(System.getProperty("forge.checksum.mode"));
         NetworkChecksumUtil.setStableChecksum(useStable);
 
-        // Delta sync enabled by default in tests; use -Dforge.deltasync=false to disable
-        String deltaSyncProp = System.getProperty("forge.deltasync");
-        RemoteClientGuiGame.useDeltaSync = !"false".equalsIgnoreCase(deltaSyncProp);
-
-        IHasForgeLog.netLog.info("[TestConfig] checksum={}, deltasync={}, remote={}",
+        IHasForgeLog.netLog.info("[TestConfig] checksum={}, remote={}",
                 useStable ? "stable" : "sampled",
-                RemoteClientGuiGame.useDeltaSync ? "on" : "off",
                 useAiForRemotePlayers() ? "ai" : "human");
     }
 
@@ -88,7 +82,6 @@ public final class TestUtils {
         final List<String> args = new ArrayList<>();
         for (final String name : List.of(
                 "forge.checksum.mode",
-                "forge.deltasync",
                 "forge.snapshot.crosscheck",
                 "forge.snapshot.skewPasses",
                 "test.useAiForRemote")) {

@@ -49,7 +49,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
 
     // Metrics
     private final AtomicLong deltaPacketsReceived = new AtomicLong(0);
-    private final AtomicLong fullStateSyncsReceived = new AtomicLong(0);
     private final AtomicLong totalDeltaBytes = new AtomicLong(0);
     private final AtomicLong eventStateMismatches = new AtomicLong(0);
 
@@ -118,10 +117,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
 
     public long getDeltaPacketsReceived() {
         return deltaPacketsReceived.get();
-    }
-
-    public long getFullStateSyncsReceived() {
-        return fullStateSyncsReceived.get();
     }
 
     public long getTotalDeltaBytes() {
@@ -207,20 +202,11 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
                 packet.getApproximateSize());
     }
 
-    void onFullStateSyncReceived(long sequenceNumber) {
-        fullStateSyncsReceived.incrementAndGet();
-        gameInProgress.set(true);
-        gameStartedLatch.countDown();
-
-        netLog.info("Full state sync: seq={}", sequenceNumber);
-    }
-
     void onGameEnd() {
         gameInProgress.set(false);
         gameFinishedLatch.countDown();
         netLog.info("Game ended. Deltas={}, FullSyncs={}, TotalBytes={}",
                 deltaPacketsReceived.get(),
-                fullStateSyncsReceived.get(),
                 totalDeltaBytes.get());
     }
 
@@ -349,16 +335,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
 
             // Then notify the client for logging/verification
             client.onDeltaPacketReceived(packet);
-        }
-
-        @Override
-        public void setGameView(forge.game.GameView gameView, long sequenceNumber) {
-            super.setGameView(gameView, sequenceNumber);
-
-            // Notify the client when this is a full state sync (sequenceNumber >= 0)
-            if (sequenceNumber >= 0) {
-                client.onFullStateSyncReceived(sequenceNumber);
-            }
         }
 
         @Override
@@ -535,10 +511,9 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
     }
 
     public String getMetricsSummary() {
-        return String.format("HeadlessClient[%s]: deltas=%d, fullSyncs=%d, bytes=%d, eventMismatches=%d, connected=%s, gameInProgress=%s",
+        return String.format("HeadlessClient[%s]: deltas=%d, bytes=%d, eventMismatches=%d, connected=%s, gameInProgress=%s",
                 username,
                 deltaPacketsReceived.get(),
-                fullStateSyncsReceived.get(),
                 totalDeltaBytes.get(),
                 eventStateMismatches.get(),
                 connected.get(),

@@ -79,7 +79,6 @@ public final class HeadlessClientRunner implements IHasForgeLog {
             System.out.println("RESULT:OK"
                     + ":slot=" + client.getAssignedSlot()
                     + ":deltas=" + client.getDeltaPacketsReceived()
-                    + ":fullSyncs=" + client.getFullStateSyncsReceived()
                     + ":bytes=" + client.getTotalDeltaBytes()
                     + ":mismatches=" + client.getEventStateMismatches());
             exit = 0;

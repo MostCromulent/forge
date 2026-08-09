@@ -55,15 +55,12 @@ import java.util.stream.Collectors;
  */
 public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog {
 
-    // New objects are sent with full property data, existing objects only send changed properties
-    public static boolean useDeltaSync = true;
 
     private final RemoteClient client;
     private final GameProtocolSender sender;
     private final DeltaSyncManager syncManager;
 
     private boolean initialSyncSent = false;
-    private boolean fallbackLogged = false;  // Prevent duplicate fallback log messages
     private volatile boolean paused;
     private volatile boolean resyncPending;
 
@@ -103,7 +100,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      */
     public void resetForReconnect() {
         initialSyncSent = false;
-        fallbackLogged = false;
         syncManager.reset();
     }
 
@@ -243,28 +239,10 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        if (!useDeltaSync || !initialSyncSent) {
-            // With packets built from snapshots the client is seeded by the first diff against an
-            // empty baseline, so there is nothing to send until openView has established
-            // one — sending a delta before it would arrive with no game controllers set.
-            if (useDeltaSync) {
-                return;
-            }
-            if (logBandwidth && !fallbackLogged) {
-                netLog.info("[DeltaSync] Client {}: Fallback to full state - useDeltaSync={}, initialSyncSent={}",
-                    client.getIndex(), useDeltaSync, initialSyncSent);
-                fallbackLogged = true;
-            }
-            // Batch flush already emits setGameView; skip the duplicate.
-            if (forwarder != null && forwarder.hasPendingEvents()) {
-                flushPendingEvents();
-                return;
-            }
-            if (flush) {
-                send(ProtocolMethod.setGameView, gameView, -1L);
-            } else {
-                sender.write(ProtocolMethod.setGameView, gameView, -1L);
-            }
+        // A client is seeded by the first diff against an empty baseline, so there is
+        // nothing to send until openView has established one — a delta before that would
+        // arrive with no game controllers set.
+        if (!initialSyncSent) {
             return;
         }
 
@@ -320,13 +298,11 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * exactly what was sent.
      */
     public synchronized void reseedAfterReconnect() {
-        if (useDeltaSync) {
-            final DeltaPacket reseed = syncManager.reseedFromPublished();
-            if (reseed != null) {
-                initialSyncSent = true;
-                sender.send(ProtocolMethod.applyDelta, reseed);
-                return;
-            }
+        final DeltaPacket reseed = syncManager.reseedFromPublished();
+        if (reseed != null) {
+            initialSyncSent = true;
+            sender.send(ProtocolMethod.applyDelta, reseed);
+            return;
         }
         updateGameView();
     }
@@ -359,27 +335,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        if (useDeltaSync) {
-            // Forgetting the baseline is what makes the next diff a full state. Without it a
-            // client reporting a checksum mismatch is answered by a diff against the baseline
-            // the server still believes in, which resends nothing.
-            syncManager.invalidateBaseline();
-            initialSyncSent = true;
-            updateGameView();
-            return;
-        }
-
-        long seq = syncManager.getCurrentSequence();
-        send(ProtocolMethod.setGameView, gameView, seq);
+        // Forgetting the baseline is what makes the next diff a full state. Without it a
+        // client reporting a checksum mismatch is answered by a diff against the baseline the
+        // server still believes in, which resends nothing.
+        syncManager.invalidateBaseline();
         initialSyncSent = true;
-
-        // Consumer registration is deferred — it happens on the first collectDeltas()
-        // call (see updateGameView). This ensures that all objects created during game
-        // initialization (prepareAllZones, hand dealing, commander placement) are present
-        // in the view graph when registration occurs. If we registered here, the view
-        // is still empty (openView runs before match.startGame/prepareAllZones), and
-        // zone updates during init would set dirty bits on the 3 registered objects
-        // but the Command zone dirty bit is sporadically lost in Commander games.
+        updateGameView();
     }
 
     @Override
@@ -683,7 +644,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         netLog.info("Sending batch of {}: [{}]", events.size(),
                 events.stream().map(e -> e.getClass().getSimpleName()).collect(Collectors.joining(", ")));
         // When GameEventGameStarted arrives, prepareAllZones has completed —
-        if (useDeltaSync && initialSyncSent) {
+        if (initialSyncSent) {
             // Bundle events with delta so they're applied atomically:
             // delta properties first, then events forwarded.
             GameView gameView = getGameView();
@@ -763,8 +724,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     @Override
     public String toString() {
         GameView gv = getGameView();
-        return String.format("RemoteClientGuiGame[client=%d, deltaSyncEnabled=%b, initialSyncSent=%b, gameView=%s]",
-                client.getIndex(), useDeltaSync, initialSyncSent,
+        return String.format("RemoteClientGuiGame[client=%d, initialSyncSent=%b, gameView=%s]",
+                client.getIndex(), initialSyncSent,
                 gv != null ? "GameView@" + Integer.toHexString(System.identityHashCode(gv)) : "null");
     }
 
