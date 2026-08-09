@@ -35,7 +35,6 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     // Declared as EnumMap, not Map: the copy constructor clones the backing array only when
     // it can see the source is one, and falls back to iterating it otherwise.
     private final EnumMap<TrackableProperty, Object> props;
-    private int version;
     // Per-consumer dirty tracking. Lazy-init: null until first registerConsumer.
     private transient Map<Integer, EnumSet<TrackableProperty>> consumers;
     private boolean copyingProps;
@@ -135,13 +134,12 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     }
 
     /**
-     * Mark a property as dirty for all registered consumers and increment version.
+     * Mark a property as dirty for all registered consumers.
      */
     private void markDirtyForConsumers(final TrackableProperty key) {
         if (consumers == null) {
             return;
         }
-        version++;
         for (EnumSet<TrackableProperty> dirtySet : consumers.values()) {
             dirtySet.add(key);
         }
@@ -175,13 +173,6 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     protected final void flagAsChanged(final TrackableProperty key) {
         markDirtyForConsumers(key);
         key.updateObjLookup(tracker, props.get(key));
-    }
-
-    /**
-     * Get the monotonic version counter. Incremented on every actual property change.
-     */
-    public int getVersion() {
-        return version;
     }
 
     /**

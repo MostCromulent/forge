@@ -61,6 +61,11 @@ public class TrackableTypes {
             return copier == null || value == null ? value : copier.apply((T) value);
         }
 
+        /** Whether a stored value is a private copy. Every type has to answer this on purpose. */
+        final boolean copiesOnStore() {
+            return copier != null;
+        }
+
         protected void updateObjLookup(Tracker tracker, T newObj) {
         }
         protected void copyChangedProps(TrackableObject from, TrackableObject to, TrackableProperty prop) {
