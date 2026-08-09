@@ -63,7 +63,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     private final DeltaSyncManager syncManager;
 
     private boolean initialSyncSent = false;
-    private boolean objectsRegistered = false;
     private boolean fallbackLogged = false;  // Prevent duplicate fallback log messages
     private volatile boolean paused;
     private volatile boolean resyncPending;
@@ -104,7 +103,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      */
     public void resetForReconnect() {
         initialSyncSent = false;
-        objectsRegistered = false;
         fallbackLogged = false;
         syncManager.reset();
     }
@@ -249,7 +247,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             // With packets built from snapshots the client is seeded by the first diff against an
             // empty baseline, so there is nothing to send until openView has established
             // one — sending a delta before it would arrive with no game controllers set.
-            if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
+            if (useDeltaSync) {
                 return;
             }
             if (logBandwidth && !fallbackLogged) {
@@ -322,7 +320,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * exactly what was sent.
      */
     public synchronized void reseedAfterReconnect() {
-        if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
+        if (useDeltaSync) {
             final DeltaPacket reseed = syncManager.reseedFromPublished();
             if (reseed != null) {
                 initialSyncSent = true;
@@ -361,7 +359,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
+        if (useDeltaSync) {
             // Forgetting the baseline is what makes the next diff a full state. Without it a
             // client reporting a checksum mismatch is answered by a diff against the baseline
             // the server still believes in, which resends nothing.
@@ -685,21 +683,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         netLog.info("Sending batch of {}: [{}]", events.size(),
                 events.stream().map(e -> e.getClass().getSimpleName()).collect(Collectors.joining(", ")));
         // When GameEventGameStarted arrives, prepareAllZones has completed —
-        // commanders are placed and zones are populated. Register consumers on
-        // any objects not yet tracked (without clearing dirty bits).
-        if (!objectsRegistered) {
-            for (GameEvent ev : events) {
-                if (ev instanceof forge.game.event.GameEventGameStarted) {
-                    GameView gv = getGameView();
-                    if (gv != null) {
-                        syncManager.registerNewObjects(gv);
-                        objectsRegistered = true;
-                    }
-                    break;
-                }
-            }
-        }
-        if (useDeltaSync && initialSyncSent && objectsRegistered) {
+        if (useDeltaSync && initialSyncSent) {
             // Bundle events with delta so they're applied atomically:
             // delta properties first, then events forwarded.
             GameView gameView = getGameView();

@@ -22,12 +22,7 @@ import forge.trackable.TrackableTypes.TrackableType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Iterator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,28 +55,6 @@ public class DeltaSyncManager implements IHasForgeLog {
                 ZONE_COLLECTIONS.add(prop);
             }
         }
-    }
-
-    /**
-     * Build a {@link ViewSnapshot} alongside each walk and report where they disagree.
-     * Off by default: diagnostic only, and it doubles the per-pass graph traversal.
-     */
-    private static final boolean CROSS_CHECK = Boolean.getBoolean("forge.snapshot.crosscheck");
-
-    /**
-     * Where a packet's contents come from: diffing snapshots, or walking the graph for dirty
-     * bits.
-     *
-     * <p>Snapshots by default. The walk remains only so a run can be compared against it and
-     * so anything found in the field has somewhere to fall back to;
-     * {@code -Dforge.delta.source=walk} does that. It goes when the walk does.
-     */
-    private static final boolean DELTAS_FROM_SNAPSHOT =
-            !"walk".equalsIgnoreCase(System.getProperty("forge.delta.source"));
-
-    /** Whether packets come from snapshot diffs, which also decides how a client is seeded. */
-    public static boolean deltasFromSnapshot() {
-        return DELTAS_FROM_SNAPSHOT;
     }
 
     /**
@@ -154,28 +127,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         baseline = ViewSnapshot.empty();
     }
 
-    /** Per-thread allocation counter, when the JVM exposes one. Cross-check diagnostics only. */
-    private static final com.sun.management.ThreadMXBean ALLOC_BEAN = allocBean();
-
-    private static com.sun.management.ThreadMXBean allocBean() {
-        if (!CROSS_CHECK) {
-            return null;
-        }
-        java.lang.management.ThreadMXBean bean = java.lang.management.ManagementFactory.getThreadMXBean();
-        if (bean instanceof com.sun.management.ThreadMXBean sun && sun.isThreadAllocatedMemorySupported()) {
-            sun.setThreadAllocatedMemoryEnabled(true);
-            return sun;
-        }
-        return null;
-    }
-
-    private static long allocatedBytes() {
-        return ALLOC_BEAN == null ? 0L : ALLOC_BEAN.getCurrentThreadAllocatedBytes();
-    }
-
     // each DeltaSyncManager gets a unique ID
-    private static final AtomicInteger NEXT_CONSUMER_ID = new AtomicInteger(0);
-    private final int consumerId = NEXT_CONSUMER_ID.getAndIncrement();
 
     /**
      * Whether this client already holds {@code obj}, which is what decides whether a
@@ -189,43 +141,13 @@ public class DeltaSyncManager implements IHasForgeLog {
      * every packet that mentions one.
      */
     boolean receiverKnows(TrackableObject obj) {
-        int deltaKey = DeltaPacket.makeDeltaKey(obj);
-        if (DELTAS_FROM_SNAPSHOT) {
-            boolean inBaseline = baseline.objects().containsKey(deltaKey);
-            (inBaseline ? gateIdRef : gateInline).incrementAndGet();
-            return inBaseline;
-        }
-        boolean registered = obj.hasConsumer(consumerId);
-        if (!CROSS_CHECK) {
-            return registered;
-        }
-        (registered ? gateIdRef : gateInline).incrementAndGet();
-        if (baseline.objects().containsKey(deltaKey) != registered) {
-            gateDisagreed.incrementAndGet();
-            if (gateDisagreementKeys.add(deltaKey)) {
-                netLog.warn("[Gate] key={} id={}: registered={} inBaseline={}",
-                        String.format("0x%08X", deltaKey), obj.getId(), registered, !registered);
-            }
-        }
-        return registered;
+        return baseline.objects().containsKey(DeltaPacket.makeDeltaKey(obj));
     }
-
-    /**
-     * Tallies for the encode gate. {@code inline} is the one worth watching: it counts
-     * references serialized as whole objects, and it is the answer that fails silently,
-     * since an id the client cannot resolve at least warns on arrival.
-     */
-    private final AtomicInteger gateIdRef = new AtomicInteger();
-    private final AtomicInteger gateInline = new AtomicInteger();
-    private final AtomicInteger gateDisagreed = new AtomicInteger();
-    private final Set<Integer> gateDisagreementKeys = Collections.synchronizedSet(new HashSet<>());
 
     private long sequenceNumber = 0;
 
     // Objects registered with this consumer (for cleanup on disconnect/reset)
-    private final Map<Integer, TrackableObject> registeredByKey = new HashMap<>();
     // Used to block stale cross-reference replacements
-    private final Map<Integer, CardView> authoritativeInstances = new HashMap<>();
 
     // Not atomic: only accessed from game thread
     // Defer the first checksum until the game state stabilizes — seq=1 races
@@ -259,10 +181,6 @@ public class DeltaSyncManager implements IHasForgeLog {
                             + "Per-consumer registration state and the view graph are both unguarded here.",
                     self.getName(), concurrent.getName());
         }
-        if (CROSS_CHECK && collectThreads.add(self.getName())) {
-            netLog.info("[Collect] First entry from thread {} ({} distinct so far)",
-                    self.getName(), collectThreads.size());
-        }
         try {
             return collectDeltasInternal(gameView);
         } finally {
@@ -282,8 +200,6 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     private final java.util.concurrent.atomic.AtomicReference<Thread> collectOwner =
             new java.util.concurrent.atomic.AtomicReference<>();
-    private final Set<String> collectThreads = Collections.synchronizedSet(new HashSet<>());
-
     private static final AtomicInteger CONCURRENT_ENTRIES = new AtomicInteger();
 
     /**
@@ -297,42 +213,11 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
-        if (DELTAS_FROM_SNAPSHOT) {
-            ViewSnapshot current = ViewSnapshot.current(gameView);
-            ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
-            baseline = current;
-            published = current;
-            return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
-        }
-
-        Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new HashMap<>();
-        // need parent-before-child insertion order
-        Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
-        Set<Integer> currentObjectIds = new HashSet<>();
-
-        long walkStart = CROSS_CHECK ? System.nanoTime() : 0L;
-        long walkAllocStart = CROSS_CHECK ? allocatedBytes() : 0L;
-        authoritativeInstances.clear();
-        preScanZoneCollections(gameView);
-        walkAndCollect(gameView, objectDeltas, newObjects, currentObjectIds);
-        long walkNanos = CROSS_CHECK ? System.nanoTime() - walkStart : 0L;
-        long walkAlloc = CROSS_CHECK ? allocatedBytes() - walkAllocStart : 0L;
-
-        // Prune registrations for objects no longer in the graph
-        Iterator<Map.Entry<Integer, TrackableObject>> regIt = registeredByKey.entrySet().iterator();
-        while (regIt.hasNext()) {
-            Map.Entry<Integer, TrackableObject> entry = regIt.next();
-            if (!currentObjectIds.contains(entry.getKey())) {
-                entry.getValue().unregisterConsumer(consumerId);
-                regIt.remove();
-            }
-        }
-
-        DeltaPacket packet = finishPacket(gameView, objectDeltas, newObjects);
-        if (CROSS_CHECK) {
-            crossCheck(gameView, packet, walkNanos, walkAlloc);
-        }
-        return packet;
+        ViewSnapshot current = ViewSnapshot.current(gameView);
+        ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
+        baseline = current;
+        published = current;
+        return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
     }
 
     /**
@@ -375,9 +260,6 @@ public class DeltaSyncManager implements IHasForgeLog {
             }
 
             logSampledChecksumDetails(gameView, checksum, sequenceNumber, checksumPropertyOrdinals);
-            netLog.info("[Gate] idRef={} inline={} disagreed={}",
-                    gateIdRef.get(), gateInline.get(), gateDisagreed.get());
-
             // Store breakdown for logging if the client reports a mismatch
             int turn = gameView.getTurn();
             int phaseOrdinal = gameView.getPhase() != null ? gameView.getPhase().ordinal() : -1;
@@ -387,308 +269,6 @@ public class DeltaSyncManager implements IHasForgeLog {
 
         return new DeltaPacket(sequenceNumber, objectDeltas, newObjects, checksum, checksumPropertyOrdinals);
     }
-
-    /**
-     * Build a snapshot alongside the walk and report where the two disagree.
-     *
-     * <p>Compares end state rather than packet shape: whether a property arrives under
-     * newObjects or objectDeltas depends on registration history for the walk and on
-     * baseline presence for the diff, so the two legitimately differ there. What must
-     * agree is the set of (object, property, value) a client ends up with.
-     *
-     * <p>Walk-only entries are expected — a dirty bit survives a value changing and
-     * changing back, which a diff correctly skips. Snapshot-only entries are the
-     * interesting direction: they are changes the walk did not report.
-     *
-     * <p>The baseline advances every pass here rather than on delivery, because nothing
-     * built from the snapshot is sent while it is only being cross-checked against the walk.
-     */
-    private void crossCheck(GameView gameView, DeltaPacket packet, long walkNanos, long walkAlloc) {
-        long buildStart = System.nanoTime();
-        long buildAllocStart = allocatedBytes();
-        ViewSnapshot current = ViewSnapshot.current(gameView);
-        long buildNanos = System.nanoTime() - buildStart;
-        long buildAlloc = allocatedBytes() - buildAllocStart;
-        long diffStart = System.nanoTime();
-        long diffAllocStart = allocatedBytes();
-        ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
-        long diffNanos = System.nanoTime() - diffStart;
-        long diffAlloc = allocatedBytes() - diffAllocStart;
-        baseline = current;
-
-        Map<Integer, Map<TrackableProperty, Object>> fromWalk =
-                mergeForComparison(packet.getNewObjects(), packet.getObjectDeltas());
-        Map<Integer, Map<TrackableProperty, Object>> fromSnapshot =
-                mergeForComparison(diff.newObjects(), diff.objectDeltas());
-
-        int mismatched = 0;
-        int snapshotOnly = 0;
-        int walkOnly = 0;
-
-        for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : fromWalk.entrySet()) {
-            Map<TrackableProperty, Object> other = fromSnapshot.get(entry.getKey());
-            for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
-                if (other == null || !other.containsKey(prop.getKey())) {
-                    walkOnly++;
-                } else if (!java.util.Objects.equals(other.get(prop.getKey()), prop.getValue())) {
-                    // Held rather than counted: the two readings are taken at different
-                    // instants, so a property that changes between them differs in value
-                    // without the paths disagreeing.
-                    mismatched++;
-                    awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
-                            .putIfAbsent(prop.getKey(), packet.getSequenceNumber());
-                }
-            }
-        }
-        for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : fromSnapshot.entrySet()) {
-            Map<TrackableProperty, Object> other = fromWalk.get(entry.getKey());
-            // A key the walk sends as a new object carries full state, and the client
-            // clears before applying — so a property the walk omits there is already
-            // cleared, which is what the diff says explicitly with a null.
-            boolean walkSendsFullState = packet.getNewObjects().containsKey(entry.getKey());
-            for (TrackableProperty prop : entry.getValue().keySet()) {
-                if (other != null && other.containsKey(prop)) {
-                    continue;
-                }
-                if (walkSendsFullState && entry.getValue().get(prop) == null) {
-                    continue;
-                }
-                snapshotOnly++;
-                // Whether the two paths were even looking at the same object. Two instances
-                // can share a delta key, and the walk skips by key where the snapshot skips
-                // by instance — so they can settle on different ones and report different
-                // values for what is nominally the same card.
-                Integer snapshotInstance = current.instanceFor(entry.getKey());
-                TrackableObject walkInstance = registeredByKey.get(entry.getKey());
-                if (snapshotInstance != null && walkInstance != null
-                        && snapshotInstance != System.identityHashCode(walkInstance)) {
-                    netLog.warn("[DifferentInstance] key={} {}: snapshot read instance {}, the "
-                                    + "walk has {} registered — same key, different objects",
-                            String.format("0x%08X", entry.getKey()), prop,
-                            snapshotInstance, System.identityHashCode(walkInstance));
-                }
-                awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
-                        .putIfAbsent(prop, packet.getSequenceNumber());
-            }
-        }
-
-        int unexplained = sweepAwaitingWalk(fromWalk, diff.evicted(), packet.getSequenceNumber());
-
-        netLog.info("[CrossCheck] seq={} objects={} walkKeys={} snapshotKeys={} "
-                        + "mismatched={} snapshotOnly={} unexplained={} walkOnly={} evicted={} "
-                        + "walkUs={} buildUs={} diffUs={} walkBytes={} buildBytes={} diffBytes={} "
-                        + "changeCount={} consumer={} thread={}",
-                packet.getSequenceNumber(), current.size(), fromWalk.size(), fromSnapshot.size(),
-                mismatched, snapshotOnly, unexplained, walkOnly, diff.evicted().size(),
-                walkNanos / 1000, buildNanos / 1000, diffNanos / 1000,
-                walkAlloc, buildAlloc, diffAlloc,
-                gameView.getTracker() == null ? -1L : gameView.getTracker().getChangeCount(),
-                consumerId, Thread.currentThread().getName());
-    }
-
-    /**
-     * Properties the snapshot has reported and the walk has not yet, with the pass they were
-     * first seen on.
-     *
-     * <p>The two are not read at the same instant — the walk runs first and the snapshot is
-     * built afterwards — so anything the engine changes in between is in one and not the
-     * other, and the walk carries it a pass or two later off its dirty bit. Counting that as
-     * a divergence measures the gap between the two readings, not a disagreement. What is
-     * worth reporting is a property the walk never catches up on, because that is a change
-     * the client would never be told about.
-     */
-    private final Map<Integer, Map<TrackableProperty, Long>> awaitingWalk = new HashMap<>();
-    private static final int SKEW_ALLOWANCE_PASSES =
-            Integer.getInteger("forge.snapshot.skewPasses", 3);
-
-    /** Clear what the walk has now reported, and report what it never did. */
-    private int sweepAwaitingWalk(Map<Integer, Map<TrackableProperty, Object>> fromWalk,
-                                  Set<Integer> evicted, long seq) {
-        for (Map.Entry<Integer, Map<TrackableProperty, Object>> reported : fromWalk.entrySet()) {
-            Map<TrackableProperty, Long> pending = awaitingWalk.get(reported.getKey());
-            if (pending != null) {
-                // Only a report from a later pass clears one: a mismatch is recorded from a
-                // pass in which the walk did report the property, with the other value.
-                pending.entrySet().removeIf(e -> e.getValue() < seq
-                        && reported.getValue().containsKey(e.getKey()));
-            }
-        }
-        // A key that has left the graph is one the walk will never mention again, and its
-        // absence says nothing about either path.
-        awaitingWalk.keySet().removeAll(evicted);
-
-        int unexplained = 0;
-        Iterator<Map.Entry<Integer, Map<TrackableProperty, Long>>> keys = awaitingWalk.entrySet().iterator();
-        while (keys.hasNext()) {
-            Map.Entry<Integer, Map<TrackableProperty, Long>> entry = keys.next();
-            Iterator<Map.Entry<TrackableProperty, Long>> props = entry.getValue().entrySet().iterator();
-            while (props.hasNext()) {
-                Map.Entry<TrackableProperty, Long> pending = props.next();
-                if (seq - pending.getValue() < SKEW_ALLOWANCE_PASSES) {
-                    continue;
-                }
-                unexplained++;
-                netLog.warn("[CrossCheck] key={} {}: the snapshot's value at seq={} was never "
-                                + "reported by the walk — a change the client is not told about",
-                        String.format("0x%08X", entry.getKey()), pending.getKey(), pending.getValue());
-                props.remove();
-            }
-            if (entry.getValue().isEmpty()) {
-                keys.remove();
-            }
-        }
-        return unexplained;
-    }
-
-    /** Flatten a packet's two maps into one, with values canonicalised for comparison. */
-    private static Map<Integer, Map<TrackableProperty, Object>> mergeForComparison(
-            Map<Integer, Map<TrackableProperty, Object>> newObjects,
-            Map<Integer, Map<TrackableProperty, Object>> objectDeltas) {
-        Map<Integer, Map<TrackableProperty, Object>> merged = new HashMap<>();
-        for (Map<Integer, Map<TrackableProperty, Object>> source : List.of(newObjects, objectDeltas)) {
-            for (Map.Entry<Integer, Map<TrackableProperty, Object>> entry : source.entrySet()) {
-                Map<TrackableProperty, Object> into =
-                        merged.computeIfAbsent(entry.getKey(), k -> new EnumMap<>(TrackableProperty.class));
-                for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
-                    into.put(prop.getKey(), ViewSnapshot.canonical(prop.getValue()));
-                }
-            }
-        }
-        return merged;
-    }
-
-    /**
-     * Recursively walk the object graph starting from a TrackableObject, collecting deltas.
-     * Discovers children by inspecting property values for TrackableObject/TrackableCollection
-     * references. CombatView is serialized inline by toNetworkValue().
-     */
-    private void walkAndCollect(TrackableObject obj,
-                                Map<Integer, Map<TrackableProperty, Object>> objectDeltas,
-                                Map<Integer, Map<TrackableProperty, Object>> newObjects,
-                                Set<Integer> currentObjectIds) {
-        int type = DeltaPacket.typeTagFor(obj);
-        if (type < 0) return;
-        int deltaKey = DeltaPacket.makeDeltaKey(obj);
-
-        // Block stale cross-references before touching currentObjectIds.
-        // Zone instances (seeded by preScanZoneCollections) are authoritative —
-        // any other instance at the same key is stale and must not be processed
-        // or have its children walked (stale CardStateViews would bypass the
-        // CardView-only auth check and overwrite correct deltas).
-        TrackableObject auth = authoritativeInstances.get(deltaKey);
-        if (auth != null && auth != obj) return;
-
-        // Dedup: skip if same instance already processed this pass
-        if (!currentObjectIds.add(deltaKey)) {
-            if (registeredByKey.get(deltaKey) == obj) return;
-            // Different instance at same key — replacement (zone change)
-        }
-
-        collectObjectDelta(obj, objectDeltas, newObjects);
-
-        boolean parentIsGameEntityView = obj instanceof GameEntityView;
-        for (Map.Entry<TrackableProperty, Object> entry : obj.getPropsCopy().entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof TrackableObject to) {
-                // Skip GameEntityView→GameEntityView scalar cross-references
-                // (CardView→CardView, PlayerView→CardView are stale after zone
-                // changes). Non-GameEntityView parents (StackItemView.SourceCard)
-                // hold primary containment refs — walked and auth-checked above.
-                if (parentIsGameEntityView && to instanceof GameEntityView) {
-                    continue;
-                }
-                walkAndCollect(to, objectDeltas, newObjects, currentObjectIds);
-            } else if (value instanceof TrackableCollection<?> tc) {
-                for (TrackableObject to : tc) {
-                    walkAndCollect(to, objectDeltas, newObjects, currentObjectIds);
-                }
-            }
-        }
-    }
-
-    /**
-     * Process a single object's delta. Stale cross-references are already
-     * filtered by the authoritative check in walkAndCollect.
-     */
-    private void collectObjectDelta(TrackableObject obj,
-                                    Map<Integer, Map<TrackableProperty, Object>> objectDeltas,
-                                    Map<Integer, Map<TrackableProperty, Object>> newObjects) {
-        int deltaKey = DeltaPacket.makeDeltaKey(obj);
-        TrackableObject old = registeredByKey.get(deltaKey);
-
-        if (old == obj) {
-            // Existing object — dirty props only
-            EnumSet<TrackableProperty> dirtyProps = obj.getAndClearDirtyProps(consumerId);
-            Map<TrackableProperty, Object> delta = buildPropertyMap(obj, dirtyProps);
-            if (!delta.isEmpty()) {
-                objectDeltas.put(deltaKey, delta);
-                netLog.trace("[DeltaSync] Delta: key={} id={}, props={}",
-                        String.format("0x%08X", deltaKey), obj.getId(), delta.keySet());
-            }
-            return;
-        }
-
-        // New or replacement — send full state via newObjects so the client
-        // clears stale properties before applying
-        if (old != null) {
-            old.unregisterConsumer(consumerId);
-            objectDeltas.remove(deltaKey);
-        }
-        obj.registerConsumer(consumerId);
-        obj.getAndClearDirtyProps(consumerId);
-        registeredByKey.put(deltaKey, obj);
-        Map<TrackableProperty, Object> allProps = buildPropertyMap(obj, null);
-        // A replacement is sent even when it carries nothing: the client clears the key
-        // before applying, so an empty map is how it learns the old instance's properties
-        // are gone. Suppressing it leaves the client rendering state the server dropped.
-        if (!allProps.isEmpty() || old != null) {
-            newObjects.put(deltaKey, allProps);
-            netLog.trace("[DeltaSync] {}: key={} id={}, {} props",
-                    old != null ? "Replaced instance" : "New object",
-                    String.format("0x%08X", deltaKey), obj.getId(), allProps.size());
-        }
-    }
-
-    /**
-     * Pre-scan zone collections across all players to seed authoritativeInstances.
-     * Provides cross-player coverage for stale Commander references.
-     */
-    private void preScanZoneCollections(GameView gameView) {
-        if (gameView == null || gameView.getPlayers() == null) return;
-        for (PlayerView player : gameView.getPlayers()) {
-            Map<TrackableProperty, Object> props = player.getPropsCopy();
-            for (TrackableProperty zoneProp : ZONE_COLLECTIONS) {
-                if (props.get(zoneProp) instanceof TrackableCollection<?> tc) {
-                    for (Object item : tc) {
-                        if (item instanceof CardView cv) {
-                            authoritativeInstances.putIfAbsent(DeltaPacket.makeDeltaKey(cv), cv);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * Build a property map for a subset of dirty properties.
-     */
-    private Map<TrackableProperty, Object> buildPropertyMap(TrackableObject obj, Set<TrackableProperty> dirtyProps) {
-        if (dirtyProps != null && dirtyProps.isEmpty()) {
-            // Most visited objects change nothing on a given pass, and both maps below
-            // are sized to the whole property enum regardless of how little is in them.
-            return Collections.emptyMap();
-        }
-        Map<TrackableProperty, Object> snapshot = obj.getPropsCopy();
-        if (dirtyProps == null) {
-            dirtyProps = snapshot.keySet();
-        }
-        Map<TrackableProperty, Object> delta = new EnumMap<>(TrackableProperty.class);
-        for (TrackableProperty prop : dirtyProps) {
-            delta.put(prop, toNetworkValue(prop, snapshot.get(prop)));
-        }
-        return delta;
-    }
-
 
     /**
      * Convert a property value to a network-safe form: object references become ids, and
@@ -815,55 +395,6 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     /**
-     * Register consumers on objects not yet tracked, without clearing dirty bits.
-     * Used when the view graph has been populated after the initial sendFullState
-     * (which sees an empty view). Objects already registered by collectDeltas'
-     * new-object path are skipped — their consumers and dirty bits are preserved.
-     */
-    public void registerNewObjects(GameView gameView) {
-        if (gameView == null) {
-            return;
-        }
-        int before = registeredByKey.size();
-        walkAndRegister(gameView, new HashSet<>());
-        int added = registeredByKey.size() - before;
-        if (added > 0) {
-            netLog.info("[DeltaSync] Registered {} new objects (total {})", added, registeredByKey.size());
-        }
-    }
-
-    private void walkAndRegister(TrackableObject obj, Set<Integer> visited) {
-        int type = DeltaPacket.typeTagFor(obj);
-        if (type < 0) return;
-        int deltaKey = DeltaPacket.makeDeltaKey(obj);
-        if (!visited.add(deltaKey)) return;
-
-        // Only register consumer if not already tracked — don't add to
-        // registeredByKey so collectDeltas' new-object path still fires and
-        // sends the full property map to the client.
-        if (!registeredByKey.containsKey(deltaKey)) {
-            obj.registerConsumer(consumerId);
-        }
-
-        // Same skip guards as walkAndCollect. No auth check needed here:
-        // walkAndRegister only registers consumers (no data sent), and the
-        // first collectDeltas corrects any stale registrations.
-        boolean parentIsGameEntityView = obj instanceof GameEntityView;
-        for (Object value : obj.getPropsCopy().values()) {
-            if (value instanceof TrackableObject to) {
-                if (parentIsGameEntityView && to instanceof GameEntityView) {
-                    continue;
-                }
-                walkAndRegister(to, visited);
-            } else if (value instanceof TrackableCollection<?> tc) {
-                for (TrackableObject to : tc) {
-                    walkAndRegister(to, visited);
-                }
-            }
-        }
-    }
-
-    /**
      * Select properties for sampled checksum. Biases toward recently-changed
      * properties (up to half the sample), fills rest randomly from eligible pool.
      */
@@ -956,11 +487,6 @@ public class DeltaSyncManager implements IHasForgeLog {
      * After reset, the next sync will be treated as a fresh initial sync.
      */
     public void reset() {
-        // Unregister consumer from all tracked objects
-        for (TrackableObject obj : registeredByKey.values()) {
-            obj.unregisterConsumer(consumerId);
-        }
-        registeredByKey.clear();
         baseline = ViewSnapshot.empty();
         sequenceNumber = 0;
         packetsSinceLastChecksum = 0;

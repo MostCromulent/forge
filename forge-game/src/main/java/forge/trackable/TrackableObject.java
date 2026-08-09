@@ -2,8 +2,6 @@ package forge.trackable;
 
 import java.io.Serializable;
 import java.util.EnumMap;
-import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -15,12 +13,11 @@ import forge.game.card.CardView;
 /**
  * Base for objects that mirror engine state into a serialized view consumed by GUI(s).
  * Each subclass exposes its mutable state as {@link TrackableProperty} entries; the engine
- * writes via {@link #set} and consumers (GUIs) read via {@link #get}.
+ * writes via {@link #set} and the GUI reads via {@link #get}.
  *
- * <p><b>Consumer dirty bits.</b> Each GUI client that uses delta-sync registers as a
- * consumer; the object keeps a per-consumer set of properties dirty since the consumer's
- * last drain. {@link forge.gamemodes.net.server.DeltaSyncManager#collectDeltas} reads and
- * clears them. Offline games never register consumers, so {@code set} does no tracking work.
+ * <p><b>Change count.</b> A change that actually stores a value bumps a counter on the
+ * owning {@link Tracker}, so a reader that has built something from the whole view can tell
+ * whether it is still current without being told what changed.
  *
  * <p><b>Freeze interaction.</b> When the owning {@link Tracker} is frozen, {@code set}
  * queues the change rather than applying it; the queued change replays at unfreeze. Do not
@@ -35,8 +32,6 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     // Declared as EnumMap, not Map: the copy constructor clones the backing array only when
     // it can see the source is one, and falls back to iterating it otherwise.
     private final EnumMap<TrackableProperty, Object> props;
-    // Per-consumer dirty tracking. Lazy-init: null until first registerConsumer.
-    private transient Map<Integer, EnumSet<TrackableProperty>> consumers;
     private boolean copyingProps;
 
     protected TrackableObject(final int id0, final Tracker tracker) {
@@ -124,13 +119,11 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
                 // TODO: A property changing A->B->A between consumer reads would still be marked dirty.
                 // A checksum or version-per-property approach could skip this, but A->B->A is uncommon
                 // in typical Magic game flow. Revisit if profiling shows excessive no-op deltas.
-                markDirtyForConsumers(key);
                 key.updateObjLookup(tracker, value);
             }
         }
         else if (!value.equals(props.put(key, value))) {
             recordChange();
-            markDirtyForConsumers(key);
             key.updateObjLookup(tracker, value);
         }
     }
@@ -138,18 +131,6 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
     private void recordChange() {
         if (tracker != null) {
             tracker.recordChange();
-        }
-    }
-
-    /**
-     * Mark a property as dirty for all registered consumers.
-     */
-    private void markDirtyForConsumers(final TrackableProperty key) {
-        if (consumers == null) {
-            return;
-        }
-        for (EnumSet<TrackableProperty> dirtySet : consumers.values()) {
-            dirtySet.add(key);
         }
     }
 
@@ -182,62 +163,7 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
         // Collections stored as properties are added to and removed from in place, which
         // changes what a reader sees without ever passing through set().
         recordChange();
-        markDirtyForConsumers(key);
         key.updateObjLookup(tracker, props.get(key));
-    }
-
-    /**
-     * Check whether a consumer is currently registered on this object.
-     * <p>
-     * Used by network serialization to gate IdRef substitution: the server
-     * registers a consumer on every TrackableObject it has included in a
-     * delta packet for a given client. An object without that consumer is
-     * one the client hasn't been told about (typically an ephemeral such as
-     * a {@code Card.fromPaperCard} choice copy that never enters a tracked
-     * zone), and protocol-method args holding it must serialize inline.
-     */
-    public boolean hasConsumer(int consumerId) {
-        return consumers != null && consumers.containsKey(consumerId);
-    }
-
-    /**
-     * Register a consumer for per-consumer dirty tracking.
-     */
-    public void registerConsumer(int consumerId) {
-        if (consumers == null) {
-            consumers = new HashMap<>();
-        }
-        consumers.putIfAbsent(consumerId, EnumSet.noneOf(TrackableProperty.class));
-    }
-
-    /**
-     * Unregister a consumer. Removes its dirty set.
-     * Nulls the map if empty to avoid overhead in offline games.
-     */
-    public void unregisterConsumer(int consumerId) {
-        if (consumers != null) {
-            consumers.remove(consumerId);
-            if (consumers.isEmpty()) {
-                consumers = null;
-            }
-        }
-    }
-
-    /**
-     * Get and clear dirty properties for a specific consumer.
-     * Returns a snapshot copy; the consumer's dirty set is cleared.
-     */
-    public EnumSet<TrackableProperty> getAndClearDirtyProps(int consumerId) {
-        if (consumers == null) {
-            return EnumSet.noneOf(TrackableProperty.class);
-        }
-        EnumSet<TrackableProperty> dirtySet = consumers.get(consumerId);
-        if (dirtySet == null || dirtySet.isEmpty()) {
-            return EnumSet.noneOf(TrackableProperty.class);
-        }
-        EnumSet<TrackableProperty> copy = EnumSet.copyOf(dirtySet);
-        dirtySet.clear();
-        return copy;
     }
 
     //special methods for updating card and player properties as needed and returning the new collection

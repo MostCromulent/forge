@@ -25,22 +25,21 @@ public class TrackableObjectTest {
      */
     @Test
     public void restoringAnUnchangedTypeDoesNotMarkItChanged() {
-        final CardView card = new CardView(1, null);
-        final int consumer = 7;
-        card.registerConsumer(consumer);
+        final Tracker tracker = new Tracker();
+        final CardView card = new CardView(1, tracker);
 
         // Core types and supertypes, not subtypes: subtypes are sanitised against the creature
         // type tables, which a test without card data loaded does not have.
         card.set(TrackableProperty.Type, new CardType(List.of("Creature"), false));
-        card.getAndClearDirtyProps(consumer);
 
+        final long afterFirst = tracker.getChangeCount();
         card.set(TrackableProperty.Type, new CardType(List.of("Creature"), false));
-        Assert.assertFalse(card.getAndClearDirtyProps(consumer).contains(TrackableProperty.Type),
-                "an unchanged type was reported as changed");
+        Assert.assertEquals(tracker.getChangeCount(), afterFirst,
+                "an unchanged type was recorded as a change");
 
         card.set(TrackableProperty.Type, new CardType(List.of("Legendary", "Creature"), false));
-        Assert.assertTrue(card.getAndClearDirtyProps(consumer).contains(TrackableProperty.Type),
-                "a changed type was not reported as changed");
+        Assert.assertTrue(tracker.getChangeCount() > afterFirst,
+                "a changed type was not recorded as a change");
     }
 
     /**

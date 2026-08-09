@@ -134,20 +134,14 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         // Protocol lifecycle
         Assert.assertTrue(result.clientOpenViewCalled,
                 "Client should have received openView over the wire");
-        if (DeltaSyncManager.deltasFromSnapshot()) {
-            // Exactly one, and it is not a full state arriving: a client seeded from deltas
-            // builds its own view from the first one and installs it locally. Everything
-            // asserted below about what that client holds is then reached purely through
-            // deltas, which is the claim the deletion of the full-state message rests on.
-            // This counts the view being installed, not a message - what does not arrive
-            // cannot be counted here, so a batch grepping the protocol log covers that.
-            Assert.assertEquals(result.clientSetGameViewCount, 1,
-                    "A client seeded from deltas installs its view once (count: "
-                            + result.clientSetGameViewCount + ")");
-        } else {
-            Assert.assertTrue(result.clientSetGameViewCount > 0,
-                    "Client should have received setGameView updates (count: " + result.clientSetGameViewCount + ")");
-        }
+        // Exactly one, and it is not a full state arriving: a client is seeded from deltas,
+        // builds its own view from the first one and installs it locally. Everything asserted
+        // below about what that client holds is then reached purely through deltas. This
+        // counts the view being installed, not a message - what does not arrive cannot be
+        // counted here, so a batch grepping the protocol log covers that.
+        Assert.assertEquals(result.clientSetGameViewCount, 1,
+                "A client seeded from deltas installs its view once (count: "
+                        + result.clientSetGameViewCount + ")");
 
         // Client GameView state
         GameView clientGameView = result.clientGameView;

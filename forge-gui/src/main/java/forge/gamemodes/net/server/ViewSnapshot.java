@@ -11,11 +11,9 @@ import forge.trackable.TrackableProperty;
 import forge.trackable.Tracker;
 import forge.util.IHasForgeLog;
 
-import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Multiset;
 
-import forge.card.CardType;
 import forge.card.CardTypeView;
 
 import java.util.ArrayList;
@@ -48,20 +46,8 @@ final class ViewSnapshot implements IHasForgeLog {
     /** deltaKey to that object's properties, in network form. */
     private final Map<Integer, Map<TrackableProperty, Object>> objects;
 
-    /**
-     * Which instance each key was read from, kept only while auditing. Two instances can
-     * share a key, and when the two paths disagree the first thing worth knowing is whether
-     * they were even looking at the same object.
-     */
-    private final Map<Integer, Integer> readFrom = new HashMap<>();
-
     private ViewSnapshot(Map<Integer, Map<TrackableProperty, Object>> objects) {
         this.objects = objects;
-    }
-
-    /** Identity of the instance this key's values came from, or null if not auditing. */
-    Integer instanceFor(int deltaKey) {
-        return readFrom.get(deltaKey);
     }
 
     static ViewSnapshot empty() {
@@ -136,7 +122,7 @@ final class ViewSnapshot implements IHasForgeLog {
         Map<Integer, Map<TrackableProperty, Object>> objects = new LinkedHashMap<>();
         Set<TrackableObject> visited = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         ViewSnapshot snapshot = new ViewSnapshot(objects);
-        walk(gameView, authoritative, objects, visited, snapshot.readFrom);
+        walk(gameView, authoritative, objects, visited);
         return snapshot;
     }
 
@@ -188,8 +174,7 @@ final class ViewSnapshot implements IHasForgeLog {
     private static void walk(TrackableObject obj,
                              Map<Integer, TrackableObject> authoritative,
                              Map<Integer, Map<TrackableProperty, Object>> objects,
-                             Set<TrackableObject> visited,
-                             Map<Integer, Integer> readFrom) {
+                             Set<TrackableObject> visited) {
         if (DeltaPacket.typeTagFor(obj) < 0) {
             return;
         }
@@ -215,9 +200,6 @@ final class ViewSnapshot implements IHasForgeLog {
             recorded.put(entry.getKey(), snapshotValue(entry.getKey(), entry.getValue()));
         }
         objects.put(deltaKey, recorded);
-        if (AUDIT_VALUES) {
-            readFrom.put(deltaKey, System.identityHashCode(obj));
-        }
 
         boolean parentIsGameEntityView = obj instanceof GameEntityView;
         for (Map.Entry<TrackableProperty, Object> entry : props.entrySet()) {
@@ -226,10 +208,10 @@ final class ViewSnapshot implements IHasForgeLog {
                 if (parentIsGameEntityView && child instanceof GameEntityView) {
                     continue;
                 }
-                walk(child, authoritative, objects, visited, readFrom);
+                walk(child, authoritative, objects, visited);
             } else if (value instanceof TrackableCollection<?> children) {
                 for (TrackableObject child : children) {
-                    walk(child, authoritative, objects, visited, readFrom);
+                    walk(child, authoritative, objects, visited);
                 }
             }
         }
@@ -237,53 +219,7 @@ final class ViewSnapshot implements IHasForgeLog {
 
     /** Network form, which is already detached from the graph. */
     private static Object snapshotValue(TrackableProperty prop, Object value) {
-        Object result = DeltaSyncManager.toNetworkValue(prop, value);
-        if (AUDIT_VALUES) {
-            auditImmutable(prop, result);
-        }
-        return result;
-    }
-
-    private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.crosscheck");
-    private static final Set<String> AUDIT_REPORTED = Collections.synchronizedSet(new HashSet<>());
-
-    /**
-     * Report any snapshot value that is not of a type known to be immutable and
-     * value-comparable.
-     *
-     * <p>The whole point of a snapshot is that it can be read and diffed from any thread
-     * without racing the engine, which holds only if nothing in it aliases live state or
-     * compares by identity. That claim was established by reading the property types;
-     * this checks it against what actually flows through. One report per offending type.
-     */
-    private static void auditImmutable(TrackableProperty prop, Object value) {
-        if (value == null || value instanceof String || value instanceof Number
-                || value instanceof Boolean || value instanceof Character || value instanceof Enum<?>) {
-            return;
-        }
-        // canonical() returns these wrapped; the wrappers are the marker that a defensive
-        // copy was taken rather than the live collection passed through.
-        String type = value.getClass().getName();
-        if (type.startsWith("java.util.Collections$Unmodifiable")
-                || type.startsWith("java.util.ImmutableCollections")
-                || value instanceof ImmutableMultiset
-                // Records over freshly built contents, which is what they were made for.
-                || value instanceof DeltaPacket.EntityRef
-                || value instanceof DeltaPacket.CombatData
-                // Mutable and identity-equal, but this is a private copy nothing else holds,
-                // and the diff compares it through canonical().
-                || value instanceof CardType
-                || value instanceof forge.card.ColorSet
-                || value instanceof forge.card.mana.ManaCost
-                || value instanceof forge.item.IPaperCard
-                // No mutators, and equals/hashCode delegate to its backing map.
-                || value instanceof forge.game.keyword.KeywordCollectionView) {
-            return;
-        }
-        if (AUDIT_REPORTED.add(type)) {
-            netLog.warn("[CrossCheck] snapshot value of unaudited type {} for {} — verify it is "
-                    + "immutable and compares by value", type, prop);
-        }
+        return DeltaSyncManager.toNetworkValue(prop, value);
     }
 
     /**
