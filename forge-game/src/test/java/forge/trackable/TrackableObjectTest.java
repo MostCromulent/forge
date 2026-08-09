@@ -9,9 +9,39 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import forge.card.CardType;
+import forge.game.card.CardView;
 import forge.game.player.PlayerView;
 
 public class TrackableObjectTest {
+
+    /**
+     * Storing a property that has not changed does not mark it changed.
+     *
+     * <p>Whether a property is dirty is decided by comparing the new value against the stored
+     * one, so a type that compares only by identity gets the answer backwards in both
+     * directions: a fresh copy of an unchanged type reads as changed, and a type mutated in
+     * place reads as unchanged because it is compared against itself.
+     */
+    @Test
+    public void restoringAnUnchangedTypeDoesNotMarkItChanged() {
+        final CardView card = new CardView(1, null);
+        final int consumer = 7;
+        card.registerConsumer(consumer);
+
+        // Core types and supertypes, not subtypes: subtypes are sanitised against the creature
+        // type tables, which a test without card data loaded does not have.
+        card.set(TrackableProperty.Type, new CardType(List.of("Creature"), false));
+        card.getAndClearDirtyProps(consumer);
+
+        card.set(TrackableProperty.Type, new CardType(List.of("Creature"), false));
+        Assert.assertFalse(card.getAndClearDirtyProps(consumer).contains(TrackableProperty.Type),
+                "an unchanged type was reported as changed");
+
+        card.set(TrackableProperty.Type, new CardType(List.of("Legendary", "Creature"), false));
+        Assert.assertTrue(card.getAndClearDirtyProps(consumer).contains(TrackableProperty.Type),
+                "a changed type was not reported as changed");
+    }
 
     /**
      * A collection stored as a property is copied, so the engine can keep its own.

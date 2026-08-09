@@ -688,6 +688,38 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
         return toString().compareTo(o.toString());
     }
 
+    /**
+     * Two of these are equal when they describe the same types.
+     *
+     * <p>Identity equality made a copy of a type unequal to the type it was copied from, and a
+     * type mutated in place equal to what it used to be - so anything deciding whether a type
+     * had changed got the answer backwards in both directions.
+     *
+     * <p>Over the same state {@link #toString} is built from, which keeps this consistent with
+     * {@link #compareTo} and with what the copy constructor carries over. {@code incomplete}
+     * is deliberately not part of it: it records how far parsing got, not what the card is,
+     * and the copy constructor does not preserve it.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof CardType other)) {
+            return false;
+        }
+        return allCreatureTypes == other.allCreatureTypes
+                && coreTypes.equals(other.coreTypes)
+                && supertypes.equals(other.supertypes)
+                && subtypes.equals(other.subtypes)
+                && excludedCreatureSubtypes.equals(other.excludedCreatureSubtypes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(coreTypes, supertypes, subtypes, allCreatureTypes, excludedCreatureSubtypes);
+    }
+
     public boolean sharesCreaturetypeWith(final CardTypeView ctOther) {
         if (ctOther == null) {
             return false;
