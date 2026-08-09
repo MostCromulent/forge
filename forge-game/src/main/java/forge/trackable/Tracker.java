@@ -1,10 +1,11 @@
 package forge.trackable;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 
 import forge.trackable.TrackableTypes.TrackableType;
 
@@ -23,15 +24,21 @@ import forge.trackable.TrackableTypes.TrackableType;
  * engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
  * queue without leaving the frozen state.
  *
- * <p><b>Thread safety.</b> Not thread-safe — game thread only. The {@code unfreeze}
- * replay walks TrackableObjects and triggers consumer notifications; running it from
- * another thread corrupts consumer dirty-bit state.
+ * <p><b>Thread safety.</b> The freeze machinery is game-thread only: the {@code unfreeze}
+ * replay walks TrackableObjects and triggers consumer notifications, and running it from
+ * another thread corrupts consumer dirty-bit state. The object lookup is not, because on a
+ * client it cannot be — a message is decoded on the network thread, which resolves id
+ * references against this table, while the previous message is still being applied on the
+ * display thread, which writes to it. A read losing that race returns null, and the caller
+ * reports a reference it could not resolve rather than failing, so the table is backed by
+ * concurrent maps and the two at least do not corrupt it.
  */
 public class Tracker {
     private int freezeCounter = 0;
     private final List<DelayedPropChange> delayedPropChanges = Lists.newArrayList();
 
-    private final Table<TrackableType<?>, Integer, Object> objLookups = HashBasedTable.create();
+    private final Table<TrackableType<?>, Integer, Object> objLookups =
+            Tables.newCustomTable(new ConcurrentHashMap<>(), ConcurrentHashMap::new);
 
     public final boolean isFrozen() {
         return freezeCounter > 0;
