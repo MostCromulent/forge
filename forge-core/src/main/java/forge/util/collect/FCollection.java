@@ -600,20 +600,27 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     }
 
     /**
+     * A private copy of the contents, safe to read while another thread writes.
+     *
+     * <p>The copy reads the backing array and the size separately, so a concurrent add or
+     * remove leaves nulls in the tail: a removal nulls the last slot after the size is
+     * captured, and a growth hands over the old, shorter array. Those slots hold no element
+     * at either instant, so dropping them gives a reading the collection genuinely had -
+     * which is the point of the copy - rather than a null the caller has no reason to expect.
+     */
+    protected List<T> safeCopy() {
+        final ArrayList<T> copy = new ArrayList<>(list);
+        copy.removeIf(Objects::isNull);
+        return copy;
+    }
+
+    /**
      * {@inheritDoc}
      */
     @Override
     public Iterable<T> threadSafeIterable() {
         //create a new list for iterating to make it thread safe and avoid concurrent modification exceptions
-        final ArrayList<T> copy = new ArrayList<>(list);
-        // The copy reads the backing array and the size separately, so a concurrent add or
-        // remove between the two leaves nulls in the tail: a removal nulls the last slot
-        // after the size is captured, and a growth hands over the old, shorter array. Those
-        // slots hold no element at either instant, so dropping them gives a reading the
-        // collection genuinely had - which is the point of the copy - rather than a null
-        // the caller has no reason to expect.
-        copy.removeIf(Objects::isNull);
-        return Iterables.unmodifiableIterable(copy);
+        return Iterables.unmodifiableIterable(safeCopy());
     }
 
     @Override
