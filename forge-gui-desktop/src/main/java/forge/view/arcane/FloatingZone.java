@@ -557,8 +557,9 @@ public class FloatingZone extends FloatingCardArea {
         if (zoneCards.isEmpty()) {
             return zoneCards;
         }
-        Iterable<CardView> safe = getMatchUI().isNetGame() ? zoneCards.threadSafeIterable() : zoneCards;
-        cardList = new FCollection<>(safe);
+        // The FCollection copy constructor takes the backing list straight across when its
+        // source is one, so this is the reader that does not go through the iterator.
+        cardList = new FCollection<>(zoneCards.threadSafeIterable());
         if (sortedByName) {
             cardList.sort(comp);
         } else if (zone == ZoneType.Flashback) {

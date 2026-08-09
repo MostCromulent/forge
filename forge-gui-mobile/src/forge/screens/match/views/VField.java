@@ -9,7 +9,6 @@ import forge.game.player.PlayerView;
 import forge.gui.FThreads;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
-import forge.screens.match.MatchController;
 import forge.screens.match.MatchScreen;
 import forge.screens.match.views.VCardDisplayArea.CardAreaPanel;
 import forge.toolbox.FCardPanel;
@@ -68,9 +67,9 @@ public class VField extends FContainer {
             if (battlefield.isEmpty()) {
                 return;
             }
-            Iterable<CardView> model = MatchController.instance.isNetGame()
-                    ? battlefield.threadSafeIterable() : battlefield;
-
+            // One reading for both passes below: the first clears the stack links that the
+            // second rebuilds, so they have to be working from the same set of cards.
+            List<CardView> model = new ArrayList<>(battlefield);
             for (CardView card : model) {
                 CardAreaPanel cardPanel = CardAreaPanel.get(card);
                 cardPanel.updateCard(card);
