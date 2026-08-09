@@ -65,6 +65,48 @@ public class ViewSnapshotTest {
                 "type must stay a CardTypeView, was " + props.get(TrackableProperty.Type).getClass());
     }
 
+    /**
+     * References become ids, and containers stay the kind of container they were.
+     *
+     * <p>These are the conversions with somewhere to go wrong: a reference that stayed a
+     * reference would put a live object on the wire, and a container that changed kind reads
+     * as absent rather than as an error. Nothing downstream type-checks any of it.
+     */
+    @Test
+    public void convertsReferencesAndKeepsContainerKinds() {
+        final Tracker tracker = new Tracker();
+        final PlayerView controller = new PlayerView(7, tracker);
+        final CardView attached = new CardView(200, tracker);
+        final CardView card = new CardView(106, tracker);
+
+        card.set(TrackableProperty.Controller, controller);
+        card.set(TrackableProperty.EntityAttachedTo, controller);
+        card.set(TrackableProperty.AttachedCards, new TrackableCollection<>(attached));
+        card.set(TrackableProperty.ChosenColors, new java.util.ArrayList<>(java.util.List.of("R")));
+        card.set(TrackableProperty.CantHaveKeyword, new java.util.HashSet<>(java.util.Set.of("Flying")));
+        card.set(TrackableProperty.CommanderCast, new java.util.HashMap<>(Map.of(1, 2)));
+
+        final Map<TrackableProperty, Object> props =
+                propsOf(ViewSnapshot.build(graphWith(tracker, card)), card);
+
+        Assert.assertEquals(props.get(TrackableProperty.Controller), 7,
+                "a player reference must travel as its id");
+        Assert.assertEquals(props.get(TrackableProperty.EntityAttachedTo),
+                new forge.gamemodes.net.DeltaPacket.EntityRef(
+                        forge.gamemodes.net.DeltaPacket.EntityRef.PLAYER, 7),
+                "a reference that may be card or player must say which");
+        Assert.assertEquals(props.get(TrackableProperty.AttachedCards), java.util.List.of(200),
+                "a collection of cards must travel as their ids");
+        Assert.assertTrue(props.get(TrackableProperty.ChosenColors) instanceof java.util.List,
+                "a list property must stay a list");
+        Assert.assertTrue(props.get(TrackableProperty.CantHaveKeyword) instanceof java.util.Set,
+                "a set property must stay a set");
+        Assert.assertTrue(props.get(TrackableProperty.CommanderCast) instanceof Map,
+                "a map property must stay a map");
+        Assert.assertTrue(props.get(TrackableProperty.CurrentState) instanceof Integer,
+                "a card state must travel as the slot it occupies");
+    }
+
     /** A snapshot shares nothing with the graph it was taken from. */
     @Test
     public void doesNotAliasTheGraph() {
