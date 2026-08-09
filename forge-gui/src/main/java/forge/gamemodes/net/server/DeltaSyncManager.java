@@ -422,6 +422,19 @@ public class DeltaSyncManager implements IHasForgeLog {
                     continue;
                 }
                 snapshotOnly++;
+                // Whether the two paths were even looking at the same object. Two instances
+                // can share a delta key, and the walk skips by key where the snapshot skips
+                // by instance — so they can settle on different ones and report different
+                // values for what is nominally the same card.
+                Integer snapshotInstance = current.instanceFor(entry.getKey());
+                TrackableObject walkInstance = registeredByKey.get(entry.getKey());
+                if (snapshotInstance != null && walkInstance != null
+                        && snapshotInstance != System.identityHashCode(walkInstance)) {
+                    netLog.warn("[DifferentInstance] key={} {}: snapshot read instance {}, the "
+                                    + "walk has {} registered — same key, different objects",
+                            String.format("0x%08X", entry.getKey()), prop,
+                            snapshotInstance, System.identityHashCode(walkInstance));
+                }
                 awaitingWalk.computeIfAbsent(entry.getKey(), k -> new HashMap<>())
                         .putIfAbsent(prop, packet.getSequenceNumber());
             }

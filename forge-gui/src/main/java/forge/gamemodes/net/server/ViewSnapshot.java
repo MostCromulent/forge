@@ -45,8 +45,20 @@ final class ViewSnapshot implements IHasForgeLog {
     /** deltaKey to that object's properties, in network form. */
     private final Map<Integer, Map<TrackableProperty, Object>> objects;
 
+    /**
+     * Which instance each key was read from, kept only while auditing. Two instances can
+     * share a key, and when the two paths disagree the first thing worth knowing is whether
+     * they were even looking at the same object.
+     */
+    private final Map<Integer, Integer> readFrom = new HashMap<>();
+
     private ViewSnapshot(Map<Integer, Map<TrackableProperty, Object>> objects) {
         this.objects = objects;
+    }
+
+    /** Identity of the instance this key's values came from, or null if not auditing. */
+    Integer instanceFor(int deltaKey) {
+        return readFrom.get(deltaKey);
     }
 
     static ViewSnapshot empty() {
@@ -76,8 +88,9 @@ final class ViewSnapshot implements IHasForgeLog {
 
         Map<Integer, Map<TrackableProperty, Object>> objects = new LinkedHashMap<>();
         Set<TrackableObject> visited = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-        walk(gameView, authoritative, objects, visited);
-        return new ViewSnapshot(objects);
+        ViewSnapshot snapshot = new ViewSnapshot(objects);
+        walk(gameView, authoritative, objects, visited, snapshot.readFrom);
+        return snapshot;
     }
 
     private static void seedZoneInstances(GameView gameView, Map<Integer, TrackableObject> authoritative) {
@@ -128,7 +141,8 @@ final class ViewSnapshot implements IHasForgeLog {
     private static void walk(TrackableObject obj,
                              Map<Integer, TrackableObject> authoritative,
                              Map<Integer, Map<TrackableProperty, Object>> objects,
-                             Set<TrackableObject> visited) {
+                             Set<TrackableObject> visited,
+                             Map<Integer, Integer> readFrom) {
         if (DeltaPacket.typeTagFor(obj) < 0) {
             return;
         }
@@ -154,6 +168,9 @@ final class ViewSnapshot implements IHasForgeLog {
             recorded.put(entry.getKey(), snapshotValue(entry.getKey(), entry.getValue()));
         }
         objects.put(deltaKey, recorded);
+        if (AUDIT_VALUES) {
+            readFrom.put(deltaKey, System.identityHashCode(obj));
+        }
 
         boolean parentIsGameEntityView = obj instanceof GameEntityView;
         for (Map.Entry<TrackableProperty, Object> entry : props.entrySet()) {
@@ -162,10 +179,10 @@ final class ViewSnapshot implements IHasForgeLog {
                 if (parentIsGameEntityView && child instanceof GameEntityView) {
                     continue;
                 }
-                walk(child, authoritative, objects, visited);
+                walk(child, authoritative, objects, visited, readFrom);
             } else if (value instanceof TrackableCollection<?> children) {
                 for (TrackableObject child : children) {
-                    walk(child, authoritative, objects, visited);
+                    walk(child, authoritative, objects, visited, readFrom);
                 }
             }
         }
