@@ -114,6 +114,8 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         Deck deck1 = TestDeckLoader.createMinimalDeck("Mountain", 10);
         Deck deck2 = TestDeckLoader.createMinimalDeck("Forest", 10);
 
+        final int concurrentEntriesBefore = DeltaSyncManager.concurrentEntryCount();
+
         UnifiedNetworkHarness.GameResult result = new UnifiedNetworkHarness()
                 .playerCount(2)
                 .remoteClients(1)
@@ -132,8 +134,18 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         // Protocol lifecycle
         Assert.assertTrue(result.clientOpenViewCalled,
                 "Client should have received openView over the wire");
-        Assert.assertTrue(result.clientSetGameViewCount > 0,
-                "Client should have received setGameView updates (count: " + result.clientSetGameViewCount + ")");
+        if (DeltaSyncManager.snapshotAuthority()) {
+            // A client is seeded by the first diff against an empty baseline, so no full
+            // state is sent at all. Everything asserted below about what the client holds
+            // is then reached purely through deltas, which is the claim the deletion of
+            // setGameView rests on.
+            Assert.assertEquals(result.clientSetGameViewCount, 0,
+                    "No full state should be sent under snapshot authority (count: "
+                            + result.clientSetGameViewCount + ")");
+        } else {
+            Assert.assertTrue(result.clientSetGameViewCount > 0,
+                    "Client should have received setGameView updates (count: " + result.clientSetGameViewCount + ")");
+        }
 
         // Client GameView state
         GameView clientGameView = result.clientGameView;
@@ -173,6 +185,12 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         // Pipeline error assertions
         Assert.assertEquals(result.sendErrors, 0,
                 "Server encountered " + result.sendErrors + " send error(s) during the game");
+
+        // Delta collection reads the view graph and advances per-consumer state, neither of
+        // which is guarded. Two threads inside it at once has been observed during ordinary
+        // play; this is the only automated check that it stays closed.
+        Assert.assertEquals(DeltaSyncManager.concurrentEntryCount(), concurrentEntriesBefore,
+                "A second thread entered delta collection while another was still inside it");
 
         netLog.info("Test PASSED: {} turns, {} setGameView updates, 0 send errors",
                 result.turnCount, result.clientSetGameViewCount);
