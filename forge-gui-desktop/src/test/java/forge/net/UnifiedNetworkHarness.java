@@ -511,6 +511,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             command.add("-cp");
             command.add(System.getProperty("java.class.path"));
             command.add("-Xmx512m");
+            command.addAll(TestUtils.childJvmProperties());
             command.add("forge.net.HeadlessClientRunner");
             command.add(clientName);
             command.add("localhost");

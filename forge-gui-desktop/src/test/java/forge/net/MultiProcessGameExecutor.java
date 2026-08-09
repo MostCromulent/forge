@@ -301,25 +301,7 @@ public class MultiProcessGameExecutor implements IHasForgeLog {
         command.add(classpath);
         command.add("-Xmx512m");  // Limit memory per process
 
-        // Pass through test configuration properties to child processes
-        String useAiForRemote = System.getProperty("test.useAiForRemote");
-        if (useAiForRemote != null) {
-            command.add("-Dtest.useAiForRemote=" + useAiForRemote);
-        }
-        String checksumMode = System.getProperty("forge.checksum.mode");
-        if (checksumMode != null) {
-            command.add("-Dforge.checksum.mode=" + checksumMode);
-        }
-        String deltaSyncProp = System.getProperty("forge.deltasync");
-        if (deltaSyncProp != null) {
-            command.add("-Dforge.deltasync=" + deltaSyncProp);
-        }
-        if (Boolean.getBoolean("forge.snapshot.shadow")) {
-            command.add("-Dforge.snapshot.shadow=true");
-        }
-        if (Boolean.getBoolean("forge.snapshot.authority")) {
-            command.add("-Dforge.snapshot.authority=true");
-        }
+        command.addAll(TestUtils.childJvmProperties());
 
         command.add(runnerClass);
         command.add(String.valueOf(port));

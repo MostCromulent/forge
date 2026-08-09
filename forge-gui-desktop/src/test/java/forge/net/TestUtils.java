@@ -9,6 +9,9 @@ import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Bootstrap and shared utilities for network test infrastructure.
  * {@link #ensureFModelInitialized()} is the entry point — all test classes call it
@@ -70,6 +73,33 @@ public final class TestUtils {
                 RemoteClientGuiGame.useDeltaSync ? "on" : "off",
                 Boolean.getBoolean("forge.snapshot.authority") ? "snapshot" : "walk",
                 useAiForRemotePlayers() ? "ai" : "human");
+    }
+
+    /**
+     * The configuration a spawned JVM needs in order to be set up like this one.
+     *
+     * <p>A batch spawns a JVM per game, and each of those spawns one per remote client, so a
+     * property has two hops to survive. Anything that reaches only the first hop puts a client
+     * in a different configuration from the server it is talking to — a client computing a
+     * different kind of checksum disagrees with its server on every packet it checks, which
+     * reads as thousands of desyncs and is nothing of the sort. One list, used by both, so the
+     * two cannot drift apart again.
+     */
+    public static List<String> childJvmProperties() {
+        final List<String> args = new ArrayList<>();
+        for (final String name : List.of(
+                "forge.checksum.mode",
+                "forge.deltasync",
+                "forge.snapshot.authority",
+                "forge.snapshot.shadow",
+                "forge.snapshot.skewPasses",
+                "test.useAiForRemote")) {
+            final String value = System.getProperty(name);
+            if (value != null) {
+                args.add("-D" + name + "=" + value);
+            }
+        }
+        return args;
     }
 
     /**
