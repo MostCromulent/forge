@@ -177,6 +177,64 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     private boolean logBandwidth = FModel.getNetPreferences().getPrefBoolean(forge.localinstance.properties.ForgeNetPreferences.FNetPref.NET_BANDWIDTH_LOGGING);
 
     /**
+     * Count what a client is sent that it is not entitled to see.
+     *
+     * <p>Applies the rule the display already uses to decide what to draw, at the point the
+     * state is sent instead. Everything it reports is state the client has no use for and,
+     * in a modified client, could read: an opponent's library is the whole of their deck and
+     * its order.
+     *
+     * <p>It counts the packet's property maps only, and runs before the events are attached, so
+     * it does not see what those carry. That matters: an event names the card it is about, so a
+     * zero here is not a statement that nothing was disclosed.
+     */
+    private static final boolean MEASURE_VISIBILITY = Boolean.getBoolean("forge.net.measureVisibility");
+    private long cardsVisible;
+    private long cardsHidden;
+    private long propsVisible;
+    private long propsHidden;
+    private long lastVisibilityReport;
+
+    private void measureVisibility(final GameView gameView, final DeltaPacket packet) {
+        final forge.trackable.Tracker tracker = gameView.getTracker();
+        if (tracker == null) {
+            return;
+        }
+        final java.util.Set<PlayerView> viewers = getLocalPlayers();
+        for (final Map<Integer, Map<forge.trackable.TrackableProperty, Object>> source
+                : List.of(packet.getNewObjects(), packet.getObjectDeltas())) {
+            for (final Map.Entry<Integer, Map<forge.trackable.TrackableProperty, Object>> entry : source.entrySet()) {
+                if (DeltaPacket.getTypeFromDeltaKey(entry.getKey()) != DeltaPacket.TYPE_CARD_VIEW) {
+                    continue;
+                }
+                final CardView card = tracker.getObj(forge.trackable.TrackableTypes.CardViewType,
+                        DeltaPacket.getIdFromDeltaKey(entry.getKey()));
+                if (card == null) {
+                    continue;
+                }
+                final int props = entry.getValue().size();
+                if (card.canBeShownToAny(viewers)) {
+                    cardsVisible++;
+                    propsVisible += props;
+                } else {
+                    cardsHidden++;
+                    propsHidden += props;
+                }
+            }
+        }
+        final long seen = cardsVisible + cardsHidden;
+        if (seen - lastVisibilityReport >= 25) {
+            lastVisibilityReport = seen;
+            netLog.info("[Visibility] client={} cards visible={} hidden={} ({}%), "
+                            + "properties visible={} hidden={} ({}%)",
+                    client.getIndex(), cardsVisible, cardsHidden,
+                    100 * cardsHidden / Math.max(1, cardsVisible + cardsHidden),
+                    propsVisible, propsHidden,
+                    100 * propsHidden / Math.max(1, propsVisible + propsHidden));
+        }
+    }
+
+    /**
      * How often the full-state baseline is re-measured, in packets.
      *
      * <p>It costs a serialization of the whole game to measure and it moves slowly, so
@@ -260,6 +318,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
         DeltaPacket delta = syncManager.collectDeltas(gameView);
+        if (MEASURE_VISIBILITY) {
+            measureVisibility(gameView, delta);
+        }
         if (!delta.isEmpty()) {
             if (flush) {
                 sender.send(ProtocolMethod.applyDelta, delta);
@@ -649,6 +710,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             GameView gameView = getGameView();
             if (gameView != null) {
                 DeltaPacket delta = syncManager.collectDeltas(gameView);
+                if (MEASURE_VISIBILITY) {
+                    measureVisibility(gameView, delta);
+                }
                 delta.setEvents(TrackableSerializer.wrapEvents(events, gameView.getTracker()));
                 sender.send(ProtocolMethod.applyDelta, delta);
 

@@ -84,7 +84,8 @@ public final class TestUtils {
                 "forge.checksum.mode",
                 "forge.snapshot.crosscheck",
                 "forge.snapshot.skewPasses",
-                "test.useAiForRemote")) {
+                "test.useAiForRemote",
+                "forge.net.measureVisibility")) {
             final String value = System.getProperty(name);
             if (value != null) {
                 args.add("-D" + name + "=" + value);
