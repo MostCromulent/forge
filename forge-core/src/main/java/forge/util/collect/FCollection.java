@@ -250,6 +250,17 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     }
 
     /**
+     * Called after anything changes the contents.
+     *
+     * <p>For a subclass that caches a read-only view of them and needs to discard it. The
+     * default does nothing, so a collection that caches nothing pays a call the JIT removes.
+     * It lives here rather than in the subclass because {@link #insert} is private, so
+     * overriding the public mutators would miss two of the ways a collection changes.
+     */
+    protected void onMutated() {
+    }
+
+    /**
      * Add an element to this collection, if it isn't already present.
      *
      * @param e the object to add.
@@ -268,10 +279,12 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (list.size() > HASH_THRESHOLD) {
                 hashed();
             }
+            onMutated();
             return true;
         }
         if (set.add(e)) {
             list.add(e);
+            onMutated();
             return true;
         }
         return false;
@@ -289,10 +302,15 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         if (o == null)
             return false;
         if (set == null) {
-            return list.remove(o);
+            if (!list.remove(o)) {
+                return false;
+            }
+            onMutated();
+            return true;
         }
         if (set.remove(o)) {
             list.remove(o);
+            onMutated();
             return true;
         }
         return false;
@@ -304,6 +322,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (set != null) {
                 set.removeIf(filter);
             }
+            onMutated();
             return true;
         }
         return false;
@@ -422,6 +441,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (set != null) {
                 set.retainAll(c);
             }
+            onMutated();
             return true;
         }
         return false;
@@ -437,6 +457,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             set.clear();
         }
         list.clear();
+        onMutated();
     }
 
     /**
@@ -457,7 +478,9 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         if (element == null) {
             return list.get(index);
         }
-        return list.set(index, element);
+        final T previous = list.set(index, element);
+        onMutated();
+        return previous;
     }
 
     /**
@@ -474,6 +497,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             set.remove(old);
             set.add(element);
         }
+        onMutated();
         return old;
     }
 
@@ -503,6 +527,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (set == null && list.size() > HASH_THRESHOLD) {
                 hashed();
             }
+            onMutated();
             return true;
         }
         //re-position in list if needed
@@ -516,6 +541,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         }
         list.remove(oldIndex);
         list.add(index, element);
+        onMutated();
         return true;
     }
 
@@ -528,6 +554,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         if (removedItem != null && set != null) {
             set.remove(removedItem);
         }
+        onMutated();
         return removedItem;
     }
 
@@ -594,6 +621,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     public void sort(final Comparator<? super T> comparator) {
         try {
             list.sort(comparator);
+            onMutated();
         } catch (Exception e) {
             System.err.println("FCollection failed to sort: \n" + comparator + "\n" + e.getMessage());
         }

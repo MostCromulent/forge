@@ -1,7 +1,9 @@
 package forge.trackable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -89,6 +91,65 @@ public class TrackableCollectionTest {
 
         Assert.assertEquals(thrown.get(), 0L, "reading a view collection failed under concurrent writes");
         Assert.assertTrue(reads.get() > 0 && writes.get() > 0, "neither thread ran, so nothing was tested");
+    }
+
+    /**
+     * Every way of changing the contents is reflected by the next read.
+     *
+     * <p>Reads are served from a view rebuilt only when the contents change, so a mutator
+     * that failed to discard it would serve stale contents indefinitely - a wrong answer
+     * rather than a slow one. There is no way to check that generically, so every mutator
+     * gets exercised here.
+     */
+    @Test
+    public void everyMutatorIsReflectedInTheNextRead() {
+        final TrackableCollection<PlayerView> c = new TrackableCollection<>();
+        final PlayerView a = new PlayerView(1, null);
+        final PlayerView b = new PlayerView(2, null);
+        final PlayerView d = new PlayerView(3, null);
+
+        c.add(a);
+        Assert.assertEquals(contents(c), List.of(a), "add");
+
+        c.addAll(List.of(b, d));
+        Assert.assertEquals(contents(c), List.of(a, b, d), "addAll");
+
+        c.remove(b);
+        Assert.assertEquals(contents(c), List.of(a, d), "remove");
+
+        c.add(1, b);
+        Assert.assertEquals(contents(c), List.of(a, b, d), "add at index");
+
+        c.set(0, d);
+        Assert.assertEquals(contents(c).get(0), d, "set");
+
+        c.replace(0, a);
+        Assert.assertEquals(contents(c).get(0), a, "replace");
+
+        c.remove(0);
+        Assert.assertEquals(contents(c), List.of(b, d), "remove at index");
+
+        c.removeIf(p -> p.getId() == 2);
+        Assert.assertEquals(contents(c), List.of(d), "removeIf");
+
+        c.addAll(List.of(a, b));
+        c.retainAll(List.of(a, d));
+        Assert.assertEquals(contents(c), List.of(d, a), "retainAll");
+
+        c.sort(Comparator.comparingInt(PlayerView::getId));
+        Assert.assertEquals(contents(c), List.of(a, d), "sort");
+
+        c.clear();
+        Assert.assertEquals(contents(c), List.of(), "clear");
+    }
+
+    /** Reads through the iterator, which is what the cached view serves. */
+    private static List<PlayerView> contents(final TrackableCollection<PlayerView> c) {
+        final List<PlayerView> seen = new ArrayList<>();
+        for (final PlayerView p : c) {
+            seen.add(p);
+        }
+        return seen;
     }
 
     /**
