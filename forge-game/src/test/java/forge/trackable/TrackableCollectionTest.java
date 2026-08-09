@@ -143,6 +143,39 @@ public class TrackableCollectionTest {
         Assert.assertEquals(contents(c), List.of(), "clear");
     }
 
+    /**
+     * A read that races a write does not leave the cached view stale.
+     *
+     * <p>Reads are served from a view rebuilt on demand, so a reader that starts copying, is
+     * overtaken by a write, and then publishes would store contents from before that write -
+     * over the very invalidation the write left behind. Nothing rebuilds until the next
+     * write, so the collection would serve contents it no longer has for as long as it sits
+     * still. Once the writer stops, a read has to show everything it wrote.
+     */
+    @Test
+    public void aReadRacingAWriteDoesNotLeaveTheViewStale() throws Exception {
+        final int writes = 60;
+        for (int round = 0; round < 300; round++) {
+            final TrackableCollection<PlayerView> c = new TrackableCollection<>();
+            final AtomicBoolean stop = new AtomicBoolean(false);
+
+            final Thread reader = new Thread(() -> {
+                while (!stop.get()) {
+                    contents(c);
+                }
+            });
+            reader.start();
+            for (int i = 0; i < writes; i++) {
+                c.add(new PlayerView(i, null));
+            }
+            stop.set(true);
+            reader.join(5000);
+
+            Assert.assertEquals(contents(c).size(), writes,
+                    "round " + round + ": the view kept contents from before the last write");
+        }
+    }
+
     /** Reads through the iterator, which is what the cached view serves. */
     private static List<PlayerView> contents(final TrackableCollection<PlayerView> c) {
         final List<PlayerView> seen = new ArrayList<>();

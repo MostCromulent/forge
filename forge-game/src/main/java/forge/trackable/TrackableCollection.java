@@ -38,22 +38,36 @@ public class TrackableCollection<T extends TrackableObject> extends FCollection<
      * whole point of this a cost that only network play should bear is what the guards did.
      * The copy belongs on the write.
      */
-    private transient volatile List<T> readOnly;
+    private transient volatile int version;
+    private transient volatile Cached<T> cached;
 
     @Override
     protected void onMutated() {
-        readOnly = null;
+        version++;
+        cached = null;
+    }
+
+    /**
+     * The version a cached view was built from, so one that raced a write is spotted.
+     *
+     * <p>Without it a reader that starts copying, is overtaken by a write, and then publishes
+     * would store contents from before that write - over the very null the write left to
+     * invalidate it. Nothing would rebuild until the next write, so the collection would serve
+     * a reading it no longer has, indefinitely. Stamping the copy with the version it was
+     * taken at turns that into a mismatch the next read repairs.
+     */
+    private record Cached<E>(int version, List<E> items) {
     }
 
     private List<T> readOnly() {
-        List<T> view = readOnly;
-        if (view == null) {
-            // Racing writers can only cost a redundant rebuild: safeCopy reads a consistent
-            // enough instant, and whichever view is published is a reading the collection had.
-            view = Collections.unmodifiableList(safeCopy());
-            readOnly = view;
+        final int stamp = version;
+        final Cached<T> current = cached;
+        if (current != null && current.version() == stamp) {
+            return current.items();
         }
-        return view;
+        final List<T> items = Collections.unmodifiableList(safeCopy());
+        cached = new Cached<>(stamp, items);
+        return items;
     }
 
     /**

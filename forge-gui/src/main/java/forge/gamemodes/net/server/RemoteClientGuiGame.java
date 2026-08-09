@@ -321,7 +321,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * and arrives in the next ordinary delta, because the baseline it leaves behind is
      * exactly what was sent.
      */
-    public void reseedAfterReconnect() {
+    public synchronized void reseedAfterReconnect() {
         if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
             final DeltaPacket reseed = syncManager.reseedFromPublished();
             if (reseed != null) {
@@ -338,7 +338,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * The next delta is then a full state, computed by the ordinary diff rather than by a
      * separate repair path.
      */
-    void resetDeltaBaseline() {
+    synchronized void resetDeltaBaseline() {
         syncManager.invalidateBaseline();
     }
 
