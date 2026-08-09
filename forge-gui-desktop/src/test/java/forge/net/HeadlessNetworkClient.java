@@ -38,6 +38,9 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
     private FGameClient client;
     private ClientGameLobby lobby;
     private DeltaLoggingGuiGame guiGame;
+    // Set when the caller brings its own GUI, as the desktop match screen does. The
+    // auto-responding one is built here only when nothing was supplied.
+    private forge.gui.interfaces.IGuiGame suppliedGui;
 
     // Connection state
     private final CountDownLatch connectedLatch = new CountDownLatch(1);
@@ -62,8 +65,14 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         netLog.info("Connecting to {}:{} as '{}'", hostname, port, username);
 
         try {
-            guiGame = new DeltaLoggingGuiGame(this);
-            client = new FGameClient(username, guiGame, hostname, port);
+            final forge.gui.interfaces.IGuiGame gui;
+            if (suppliedGui != null) {
+                gui = suppliedGui;
+            } else {
+                guiGame = new DeltaLoggingGuiGame(this);
+                gui = guiGame;
+            }
+            client = new FGameClient(username, gui, hostname, port);
             lobby = new ClientGameLobby();
             client.addLobbyListener(new ClientLobbyListener());
             client.connect();
@@ -127,7 +136,15 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         return eventStateMismatches.get();
     }
 
+    /** Use this GUI instead of the auto-responding one. Must precede {@link #connect}. */
+    public void useGui(final forge.gui.interfaces.IGuiGame gui) {
+        this.suppliedGui = gui;
+    }
+
     public forge.game.GameView getGameView() {
+        if (suppliedGui != null) {
+            return suppliedGui.getGameView();
+        }
         return guiGame != null ? guiGame.getGameView() : null;
     }
 

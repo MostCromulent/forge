@@ -60,6 +60,31 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
     private static final String[] PLAYER_NAMES = {"Alice (Host AI)", "Bob (Remote)", "Charlie (Remote)", "Diana (Remote)"};
 
+    /**
+     * What the desktop application needs from the module system, mirroring
+     * {@code addopen.java.args} in forge-gui-desktop's pom.
+     *
+     * <p>Only a GUI client needs these, and without them it fails in a way that looks like a
+     * hang rather than an error: the match screen's saved layout is read reflectively, that
+     * read is refused, and the screen never finishes opening, so everything the server sends it
+     * afterwards is queued against a screen that is not there.
+     */
+    private static final List<String> DESKTOP_MODULE_ACCESS = List.of(
+            "--add-opens", "java.base/java.util=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens", "java.base/java.text=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.beans=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing.border=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing.event=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.swing=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.font=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.image=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.color=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.awt.image=ALL-UNNAMED");
+
     private static final long DEFAULT_CONNECTION_TIMEOUT_MS = 30000;
     private static final long DEFAULT_GAME_TIMEOUT_MS = 300000; // 5 minutes
 
@@ -71,6 +96,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private int specifiedPort = -1; // -1 means auto-allocate
     private boolean useAiForRemotePlayers = true;
     private boolean separateClientProcesses = false;
+    private boolean guiClients = false;
     private long restartClientAfterMs = 0;
     private boolean commander = false;
     private List<Deck> decks = null;
@@ -139,6 +165,21 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
      */
     public UnifiedNetworkHarness separateClientProcesses(boolean enable) {
         this.separateClientProcesses = enable;
+        return this;
+    }
+
+    /**
+     * Give each remote client the real desktop match screen instead of a headless stub.
+     *
+     * <p>Needs a display, and is far slower, so it is for one game at a time rather than a
+     * batch. Implies {@link #separateClientProcesses}: the screen is a whole desktop
+     * application, and only one of those can exist per JVM.
+     */
+    public UnifiedNetworkHarness guiClients(boolean enable) {
+        this.guiClients = enable;
+        if (enable) {
+            this.separateClientProcesses = true;
+        }
         return this;
     }
 
@@ -511,8 +552,11 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             command.add("-cp");
             command.add(System.getProperty("java.class.path"));
             command.add("-Xmx512m");
+            if (guiClients) {
+                command.addAll(DESKTOP_MODULE_ACCESS);
+            }
             command.addAll(TestUtils.childJvmProperties());
-            command.add("forge.net.HeadlessClientRunner");
+            command.add(guiClients ? "forge.net.GuiClientRunner" : "forge.net.HeadlessClientRunner");
             command.add(clientName);
             command.add("localhost");
             command.add(String.valueOf(port));
