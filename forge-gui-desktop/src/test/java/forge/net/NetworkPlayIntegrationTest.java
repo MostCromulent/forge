@@ -134,7 +134,7 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         // Protocol lifecycle
         Assert.assertTrue(result.clientOpenViewCalled,
                 "Client should have received openView over the wire");
-        if (DeltaSyncManager.snapshotAuthority()) {
+        if (DeltaSyncManager.deltasFromSnapshot()) {
             // Exactly one, and it is not a full state arriving: a client seeded from deltas
             // builds its own view from the first one and installs it locally. Everything
             // asserted below about what that client holds is then reached purely through

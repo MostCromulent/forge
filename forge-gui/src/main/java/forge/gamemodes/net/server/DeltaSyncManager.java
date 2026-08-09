@@ -69,15 +69,19 @@ public class DeltaSyncManager implements IHasForgeLog {
     private static final boolean CROSS_CHECK = Boolean.getBoolean("forge.snapshot.crosscheck");
 
     /**
-     * Build packets by diffing snapshots instead of walking the graph for dirty bits.
-     * The two are meant to produce the same client state, so this exists to run them
-     * against each other in the same harness.
+     * Where a packet's contents come from: diffing snapshots, or walking the graph for dirty
+     * bits.
+     *
+     * <p>Snapshots by default. The walk remains only so a run can be compared against it and
+     * so anything found in the field has somewhere to fall back to;
+     * {@code -Dforge.delta.source=walk} does that. It goes when the walk does.
      */
-    private static final boolean SNAPSHOT_AUTHORITY = Boolean.getBoolean("forge.snapshot.authority");
+    private static final boolean DELTAS_FROM_SNAPSHOT =
+            !"walk".equalsIgnoreCase(System.getProperty("forge.delta.source"));
 
-    /** Whether packets come from snapshot diffs, which decides how a client is seeded. */
-    public static boolean snapshotAuthority() {
-        return SNAPSHOT_AUTHORITY;
+    /** Whether packets come from snapshot diffs, which also decides how a client is seeded. */
+    public static boolean deltasFromSnapshot() {
+        return DELTAS_FROM_SNAPSHOT;
     }
 
     /**
@@ -186,7 +190,7 @@ public class DeltaSyncManager implements IHasForgeLog {
      */
     boolean receiverKnows(TrackableObject obj) {
         int deltaKey = DeltaPacket.makeDeltaKey(obj);
-        if (SNAPSHOT_AUTHORITY) {
+        if (DELTAS_FROM_SNAPSHOT) {
             boolean inBaseline = baseline.objects().containsKey(deltaKey);
             (inBaseline ? gateIdRef : gateInline).incrementAndGet();
             return inBaseline;
@@ -293,7 +297,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
-        if (SNAPSHOT_AUTHORITY) {
+        if (DELTAS_FROM_SNAPSHOT) {
             ViewSnapshot current = ViewSnapshot.current(gameView);
             ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
             baseline = current;

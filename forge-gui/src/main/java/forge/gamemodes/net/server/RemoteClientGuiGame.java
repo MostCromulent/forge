@@ -246,10 +246,10 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         }
 
         if (!useDeltaSync || !initialSyncSent) {
-            // Under snapshot authority the client is seeded by the first diff against an
+            // With packets built from snapshots the client is seeded by the first diff against an
             // empty baseline, so there is nothing to send until openView has established
             // one — sending a delta before it would arrive with no game controllers set.
-            if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+            if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
                 return;
             }
             if (logBandwidth && !fallbackLogged) {
@@ -322,7 +322,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      * exactly what was sent.
      */
     public synchronized void reseedAfterReconnect() {
-        if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+        if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
             final DeltaPacket reseed = syncManager.reseedFromPublished();
             if (reseed != null) {
                 initialSyncSent = true;
@@ -361,7 +361,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        if (DeltaSyncManager.snapshotAuthority() && useDeltaSync) {
+        if (DeltaSyncManager.deltasFromSnapshot() && useDeltaSync) {
             // Forgetting the baseline is what makes the next diff a full state. Without it a
             // client reporting a checksum mismatch is answered by a diff against the baseline
             // the server still believes in, which resends nothing.

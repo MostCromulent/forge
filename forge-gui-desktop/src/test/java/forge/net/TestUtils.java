@@ -3,6 +3,7 @@ package forge.net;
 import forge.StaticData;
 import forge.util.IHasForgeLog;
 import forge.gamemodes.net.NetworkChecksumUtil;
+import forge.gamemodes.net.server.DeltaSyncManager;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeNetPreferences;
@@ -71,7 +72,7 @@ public final class TestUtils {
         IHasForgeLog.netLog.info("[TestConfig] checksum={}, deltasync={}, deltasource={}, remote={}",
                 useStable ? "stable" : "sampled",
                 RemoteClientGuiGame.useDeltaSync ? "on" : "off",
-                Boolean.getBoolean("forge.snapshot.authority") ? "snapshot" : "walk",
+                DeltaSyncManager.deltasFromSnapshot() ? "snapshot" : "walk",
                 useAiForRemotePlayers() ? "ai" : "human");
     }
 
@@ -90,7 +91,7 @@ public final class TestUtils {
         for (final String name : List.of(
                 "forge.checksum.mode",
                 "forge.deltasync",
-                "forge.snapshot.authority",
+                "forge.delta.source",
                 "forge.snapshot.crosscheck",
                 "forge.snapshot.skewPasses",
                 "test.useAiForRemote")) {
