@@ -116,9 +116,6 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
         if (value == null || value.equals(key.getDefaultValue())) {
             if (props.remove(key) != null) {
                 recordChange();
-                // TODO: A property changing A->B->A between consumer reads would still be marked dirty.
-                // A checksum or version-per-property approach could skip this, but A->B->A is uncommon
-                // in typical Magic game flow. Revisit if profiling shows excessive no-op deltas.
                 key.updateObjLookup(tracker, value);
             }
         }

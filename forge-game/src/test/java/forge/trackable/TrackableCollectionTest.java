@@ -36,8 +36,11 @@ public class TrackableCollectionTest {
     }
 
     /**
-     * Taking a copy is as often written {@code new ArrayList<>(collection)} as it is a loop,
-     * and that route goes through {@code toArray} rather than the iterator.
+     * Copying the contents while the engine writes them is as safe as iterating them.
+     *
+     * <p>Taking a copy is as often written {@code new ArrayList<>(collection)} as it is a
+     * loop, and that route goes through {@code toArray}, not the iterator. Covering only
+     * iteration would leave the more common spelling reading the live collection.
      */
     @Test
     public void copyingToleratesConcurrentWrites() throws Exception {

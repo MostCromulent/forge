@@ -20,14 +20,13 @@ import forge.trackable.TrackableTypes.TrackableType;
  *
  * <p><b>Freeze model.</b> {@link #freeze()}/{@link #unfreeze()} bracket a region during
  * which {@link TrackableObject#set} queues changes rather than applying them. When the
- * freeze counter reaches zero, queued changes replay through {@code set} and may cascade
- * into consumer dirty-bit updates. Used to bundle the state changes of a multi-step
- * engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
+ * freeze counter reaches zero, queued changes replay through {@code set}. Used to bundle the
+ * state changes of a multi-step engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
  * queue without leaving the frozen state.
  *
  * <p><b>Thread safety.</b> The freeze machinery is game-thread only: the {@code unfreeze}
- * replay walks TrackableObjects and triggers consumer notifications, and running it from
- * another thread corrupts consumer dirty-bit state. The object lookup is not, because on a
+ * replay writes to TrackableObjects, so running it from another thread races the engine.
+ * The object lookup is not, because on a
  * client it cannot be — a message is decoded on the network thread, which resolves id
  * references against this table, while the previous message is still being applied on the
  * display thread, which writes to it. A read losing that race returns null, and the caller
