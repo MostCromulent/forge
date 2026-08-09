@@ -188,48 +188,13 @@ final class ViewSnapshot implements IHasForgeLog {
         }
     }
 
-    /** Network form, then copied so it holds no reference into the graph. */
+    /** Network form, which is already detached from the graph. */
     private static Object snapshotValue(TrackableProperty prop, Object value) {
-        Object result = detached(DeltaSyncManager.toNetworkValue(prop, value));
+        Object result = DeltaSyncManager.toNetworkValue(prop, value);
         if (AUDIT_VALUES) {
             auditImmutable(prop, result);
         }
         return result;
-    }
-
-    /**
-     * Copy a network value so it shares nothing with the engine, <em>keeping the type the
-     * receiver expects</em>.
-     *
-     * <p>The distinction from {@link #canonical} is the whole reason both exist. What is
-     * stored here is also what goes on the wire, so a copy that changes the runtime type —
-     * a {@code Multiset} of counters arriving as a plain {@code Map}, say — is read back as
-     * absent rather than as an error: no exception, no warning, just a client quietly
-     * missing state. Reshaping for comparison happens at comparison time instead.
-     */
-    private static Object detached(Object value) {
-        if (value instanceof CardType type) {
-            // Mutated in place by the engine, so it cannot be shared; the copy keeps it a
-            // CardTypeView, and canonical() covers its lack of value equality when diffing.
-            // Copied as a CardType, not as a CardTypeView: that overload runs addAll alone
-            // and drops allCreatureTypes and the excluded creature subtypes.
-            return new CardType(type);
-        }
-        if (value instanceof Multiset<?> multiset) {
-            return ImmutableMultiset.copyOf(multiset);
-        }
-        if (value instanceof Map<?, ?> map) {
-            // Not Map.copyOf — it rejects null keys and values, and this runs on the
-            // engine thread where a stray null must not become an exception.
-            return Collections.unmodifiableMap(new LinkedHashMap<>(map));
-        }
-        if (value instanceof Set<?> set) {
-            return Collections.unmodifiableSet(new java.util.LinkedHashSet<>(set));
-        }
-        if (value instanceof Collection<?> collection) {
-            return Collections.unmodifiableList(new ArrayList<>(collection));
-        }
-        return value;
     }
 
     private static final boolean AUDIT_VALUES = Boolean.getBoolean("forge.snapshot.shadow");

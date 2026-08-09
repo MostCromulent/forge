@@ -1,5 +1,10 @@
 package forge.gamemodes.net.server;
 
+import com.google.common.collect.ImmutableMultiset;
+import com.google.common.collect.Multiset;
+
+import forge.card.CardType;
+import forge.card.CardTypeView;
 import forge.game.GameEntityView;
 import forge.game.GameView;
 import forge.game.card.CardView;
@@ -21,11 +26,13 @@ import forge.trackable.TrackableTypes.TrackableType;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Iterator;
 import java.util.HashSet;
 import java.util.List;
@@ -95,19 +102,6 @@ public class DeltaSyncManager implements IHasForgeLog {
     private volatile ViewSnapshot published = ViewSnapshot.empty();
 
     /**
-     * A packet carrying the whole of the last published snapshot, for a client that has
-     * just reconnected and holds nothing.
-     *
-     * <p>Pure computation over an immutable value, which is the point: a reconnect is
-     * handled on a Netty thread, and it cannot be deferred to an engine-owned site because
-     * the engine is parked awaiting the very client being reseeded. Walking the live graph
-     * there is what this replaces. It carries no checksum for the same reason — computing
-     * one reads live state.
-     *
-     * <p>Returns null before anything has been published, which is the game-start case;
-     * that one runs on the engine thread and can build normally.
-     */
-    /**
      * Everything this client would need from scratch, or null before anything is published.
      *
      * <p>For measuring what a delta saves. The baseline has to be what a full state costs
@@ -124,6 +118,19 @@ public class DeltaSyncManager implements IHasForgeLog {
         return new DeltaPacket(sequenceNumber, diff.objectDeltas(), diff.newObjects(), 0, null);
     }
 
+    /**
+     * A packet carrying the whole of the last published snapshot, for a client that has
+     * just reconnected and holds nothing.
+     *
+     * <p>Pure computation over an immutable value, which is the point: a reconnect is
+     * handled on a Netty thread, and it cannot be deferred to an engine-owned site because
+     * the engine is parked awaiting the very client being reseeded. Walking the live graph
+     * there is what this replaces. It carries no checksum for the same reason — computing
+     * one reads live state.
+     *
+     * <p>Returns null before anything has been published, which is the game-start case;
+     * that one runs on the engine thread and can build normally.
+     */
     DeltaPacket reseedFromPublished() {
         final ViewSnapshot snapshot = published;
         if (snapshot.size() == 0) {
@@ -673,11 +680,53 @@ public class DeltaSyncManager implements IHasForgeLog {
 
     /**
      * Convert a property value to a network-safe form.
-     * Object references become Integer IDs. Everything else passes through
-     * as-is — Java serialization handles it natively.
+     * Object references become Integer IDs; everything else is copied.
      */
-    @SuppressWarnings("unchecked")
     static Object toNetworkValue(TrackableProperty prop, Object value) {
+        return detached(networkForm(prop, value));
+    }
+
+    /**
+     * Copy a value so that what travels shares nothing with the engine, <em>keeping the type
+     * the receiver expects</em>.
+     *
+     * <p>Some view properties hold the engine's own collection rather than a copy of one -
+     * counters are the engine's live {@code Multiset}. Without this the packet carries that
+     * object and the encoder serializes it on the event loop, iterating it while the game
+     * thread writes it. Copying here happens on whichever thread collected, which is normally
+     * the thread that does those writes, so the copy is uncontended. It narrows the window
+     * rather than closing it; only the view holding its own collection would do that.
+     *
+     * <p>The type has to survive the copy. A {@code Multiset} of counters arriving as a plain
+     * {@code Map} is read back as absent rather than as an error - no exception, no warning,
+     * just a client quietly missing state. Reshaping for comparison happens in
+     * {@code ViewSnapshot.canonical} instead.
+     */
+    private static Object detached(Object value) {
+        if (value instanceof CardTypeView type) {
+            // Copied as a CardType, not through the CardTypeView overload: that one runs
+            // addAll alone and drops allCreatureTypes and the excluded creature subtypes.
+            return new CardType(type);
+        }
+        if (value instanceof Multiset<?> multiset) {
+            return ImmutableMultiset.copyOf(multiset);
+        }
+        if (value instanceof Map<?, ?> map) {
+            // Not Map.copyOf - it rejects null keys and values, and this runs on the engine
+            // thread where a stray null must not become an exception.
+            return Collections.unmodifiableMap(new LinkedHashMap<>(map));
+        }
+        if (value instanceof Set<?> set) {
+            return Collections.unmodifiableSet(new LinkedHashSet<>(set));
+        }
+        if (value instanceof Collection<?> collection) {
+            return Collections.unmodifiableList(new ArrayList<>(collection));
+        }
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object networkForm(TrackableProperty prop, Object value) {
         if (value == null) return null;
         TrackableType<?> type = prop.getType();
 
