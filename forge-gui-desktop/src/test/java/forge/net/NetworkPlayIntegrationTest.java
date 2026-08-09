@@ -135,12 +135,14 @@ public class NetworkPlayIntegrationTest implements IHasForgeLog {
         Assert.assertTrue(result.clientOpenViewCalled,
                 "Client should have received openView over the wire");
         if (DeltaSyncManager.snapshotAuthority()) {
-            // A client is seeded by the first diff against an empty baseline, so no full
-            // state is sent at all. Everything asserted below about what the client holds
-            // is then reached purely through deltas, which is the claim the deletion of
-            // setGameView rests on.
-            Assert.assertEquals(result.clientSetGameViewCount, 0,
-                    "No full state should be sent under snapshot authority (count: "
+            // Exactly one, and it is not a full state arriving: a client seeded from deltas
+            // builds its own view from the first one and installs it locally. Everything
+            // asserted below about what that client holds is then reached purely through
+            // deltas, which is the claim the deletion of the full-state message rests on.
+            // This counts the view being installed, not a message - what does not arrive
+            // cannot be counted here, so a batch grepping the protocol log covers that.
+            Assert.assertEquals(result.clientSetGameViewCount, 1,
+                    "A client seeded from deltas installs its view once (count: "
                             + result.clientSetGameViewCount + ")");
         } else {
             Assert.assertTrue(result.clientSetGameViewCount > 0,
