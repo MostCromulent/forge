@@ -107,6 +107,23 @@ public class DeltaSyncManager implements IHasForgeLog {
      * <p>Returns null before anything has been published, which is the game-start case;
      * that one runs on the engine thread and can build normally.
      */
+    /**
+     * Everything this client would need from scratch, or null before anything is published.
+     *
+     * <p>For measuring what a delta saves. The baseline has to be what a full state costs
+     * under the method actually in use, and under the snapshot that is the diff against an
+     * empty baseline rather than a setGameView. Taking it from the published snapshot also
+     * keeps the measurement off the live graph, which is the whole point of the snapshot.
+     */
+    DeltaPacket fullStateForMeasurement() {
+        final ViewSnapshot snapshot = published;
+        if (snapshot.size() == 0) {
+            return null;
+        }
+        final ViewSnapshot.Diff diff = ViewSnapshot.diff(ViewSnapshot.empty(), snapshot);
+        return new DeltaPacket(sequenceNumber, diff.objectDeltas(), diff.newObjects(), 0, null);
+    }
+
     DeltaPacket reseedFromPublished() {
         final ViewSnapshot snapshot = published;
         if (snapshot.size() == 0) {

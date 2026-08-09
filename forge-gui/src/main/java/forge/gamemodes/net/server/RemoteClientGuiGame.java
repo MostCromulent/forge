@@ -179,7 +179,42 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     private long totalDeltaBytes = 0;
     private long totalFullStateBytes = 0;
     private int deltaPacketCount = 0;
+    private int lastFullStateSize = 0;
     private boolean logBandwidth = FModel.getNetPreferences().getPrefBoolean(forge.localinstance.properties.ForgeNetPreferences.FNetPref.NET_BANDWIDTH_LOGGING);
+
+    /**
+     * How often the full-state baseline is re-measured, in packets.
+     *
+     * <p>It costs a serialization of the whole game to measure and it moves slowly, so
+     * measuring it per packet was most of the cost of having bandwidth logging on at all.
+     * Every packet still reports one, from the most recent measurement, so the totals stay
+     * comparable.
+     */
+    private static final int FULL_STATE_SAMPLE_INTERVAL =
+            Integer.getInteger("forge.bandwidth.sampleEvery", 25);
+
+    /**
+     * What a full state costs right now, under whichever method is in use.
+     *
+     * <p>Under the snapshot that is the diff against an empty baseline, taken from the
+     * published snapshot so nothing reads the live graph. Otherwise it is the serialized
+     * GameView, which is what the walk would have to send.
+     */
+    private int measureFullState(final GameView gameView) {
+        final DeltaPacket asDelta = syncManager.fullStateForMeasurement();
+        if (asDelta != null) {
+            return TrackableSerializer.measureSize(asDelta, gameView.getTracker());
+        }
+        return TrackableSerializer.measureSize(gameView, null);
+    }
+
+    /** Re-measures on a sampled packet, and otherwise reports the last measurement. */
+    private int currentFullStateSize(final GameView gameView) {
+        if (lastFullStateSize == 0 || deltaPacketCount % FULL_STATE_SAMPLE_INTERVAL == 0) {
+            lastFullStateSize = measureFullState(gameView);
+        }
+        return lastFullStateSize;
+    }
 
     /**
      * Push pending state to the client. Flushes the event queue if any events
@@ -259,7 +294,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
             if (logBandwidth) {
                 int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
-                int fullStateSize = TrackableSerializer.measureSize(gameView, null);
+                int fullStateSize = currentFullStateSize(gameView);
 
                 totalDeltaBytes += deltaSize;
                 totalFullStateBytes += fullStateSize;
@@ -681,7 +716,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                 if (logBandwidth) {
                     int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
                     int eventsSize = TrackableSerializer.measureSize(events, gameView.getTracker());
-                    int stateOnlyFullSize = TrackableSerializer.measureSize(gameView, null);
+                    int stateOnlyFullSize = currentFullStateSize(gameView);
                     int fullStateSize = stateOnlyFullSize + eventsSize;
                     int stateOnlyDeltaSize = TrackableSerializer.measureSize(delta.withoutEvents(), gameView.getTracker());
 
