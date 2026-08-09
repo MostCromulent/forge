@@ -447,10 +447,6 @@ public abstract class NetworkGuiGame extends AbstractGuiGame implements IHasForg
             return existing;
         }
 
-        if (objectType == DeltaPacket.TYPE_PLAYER_VIEW) {
-            netLog.warn("[DeltaSync] Creating NEW PlayerView ID={} - this may cause identity mismatch!", objectId);
-        }
-
         TrackableObject obj = null;
         switch (objectType) {
             case DeltaPacket.TYPE_CARD_VIEW:
