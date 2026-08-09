@@ -91,7 +91,7 @@ public final class TestUtils {
                 "forge.checksum.mode",
                 "forge.deltasync",
                 "forge.snapshot.authority",
-                "forge.snapshot.shadow",
+                "forge.snapshot.crosscheck",
                 "forge.snapshot.skewPasses",
                 "test.useAiForRemote")) {
             final String value = System.getProperty(name);

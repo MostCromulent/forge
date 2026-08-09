@@ -20,7 +20,7 @@ import org.testng.annotations.Test;
  * server spawns to carry remote input into the engine.
  *
  * <p>The difference is visible in {@code DeltaSyncManager}'s entry reporting, enabled by
- * {@code -Dforge.snapshot.shadow=true}: an AI batch game reaches delta collection from
+ * {@code -Dforge.snapshot.crosscheck=true}: an AI batch game reaches delta collection from
  * game-pool threads only, while a game played through this path reaches it from
  * considerably more.
  *
