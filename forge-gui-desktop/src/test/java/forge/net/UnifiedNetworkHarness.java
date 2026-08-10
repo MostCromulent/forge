@@ -616,6 +616,13 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                         clientStateDigests.put(clientName, line.substring("STATE:".length()));
                     } else if (line.startsWith("RESULT:")) {
                         netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
+                        // A failure line carries no key=value pairs, so the metrics parser
+                        // below drops it. Recording it here is what lets a client that died -
+                        // an exception on its event dispatch thread, say - fail the game
+                        // rather than be reported as one that simply sent no packets.
+                        if (line.startsWith("RESULT:FAIL")) {
+                            clientFailures.add(clientName + " reported " + line);
+                        }
                         recordClientProcessResult(line);
                     } else {
                         netLog.info("[client{}] {}", clientIndex, line);
@@ -881,12 +888,15 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         result.success = result.gameCompleted
                 && result.deltaPacketsReceived > 0
                 && result.turnCount > 0
-                && stateDisagreement == null;
+                && stateDisagreement == null
+                && clientFailures.isEmpty();
 
         if (result.success) {
             result.errorMessage = null;
         } else if (result.errorMessage == null) {
-            if (stateDisagreement != null) {
+            if (!clientFailures.isEmpty()) {
+                result.errorMessage = "A client process failed: " + clientFailures.get(0);
+            } else if (stateDisagreement != null) {
                 result.errorMessage = "Client and server disagree on final state: " + stateDisagreement;
             } else if (result.deltaPacketsReceived == 0) {
                 result.errorMessage = "No delta packets received - network path not exercised";
@@ -902,6 +912,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private String serverStateDigest;
     /** Set when a client finished holding something other than what the server holds. */
     private volatile String stateDisagreement;
+    /** Clients whose process reported a failure rather than a result. */
+    private final java.util.List<String> clientFailures = java.util.Collections.synchronizedList(new ArrayList<>());
     private final AtomicInteger processDeltaPackets = new AtomicInteger();
     private final AtomicLong processDeltaBytes = new AtomicLong();
     private final AtomicInteger processMismatches = new AtomicInteger();

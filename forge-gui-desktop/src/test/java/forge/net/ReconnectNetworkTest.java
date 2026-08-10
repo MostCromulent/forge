@@ -64,6 +64,10 @@ public class ReconnectNetworkTest implements IHasForgeLog {
 
         netLog.info("Reconnect result: {}", result.toSummary());
 
+        // Covers the client-versus-server state comparison and a client process that died,
+        // neither of which any other assertion here would notice.
+        Assert.assertTrue(result.success, "Game did not succeed: " + result.errorMessage
+                + " | " + result.toSummary());
         Assert.assertTrue(result.gameStarted, "Game should have started: " + result.toSummary());
         Assert.assertTrue(result.gameCompleted,
                 "Game should have run to completion after the reconnect: " + result.toSummary());

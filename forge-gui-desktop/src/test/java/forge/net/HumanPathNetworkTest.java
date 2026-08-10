@@ -66,6 +66,10 @@ public class HumanPathNetworkTest implements IHasForgeLog {
 
         netLog.info("Human-path result: {}", result.toSummary());
 
+        // Covers the client-versus-server state comparison and a client process that died,
+        // neither of which any other assertion here would notice.
+        Assert.assertTrue(result.success, "Game did not succeed: " + result.errorMessage
+                + " | " + result.toSummary());
         Assert.assertTrue(result.gameStarted, "Game should have started: " + result.toSummary());
         Assert.assertTrue(result.turnCount > 0,
                 "Game should have advanced past turn zero: " + result.toSummary());
