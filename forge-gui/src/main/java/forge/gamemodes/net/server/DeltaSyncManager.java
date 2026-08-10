@@ -29,9 +29,10 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Manages delta synchronization between server and clients.
- * Tracks changes to TrackableObjects via per-consumer dirty tracking and builds
- * minimal delta packets using property maps.
+ * Builds each client's delta packets by diffing immutable snapshots of the view graph.
+ *
+ * <p>One snapshot per pass serves every client; each client's baseline records what it was
+ * last sent, and the difference between the two is its packet.
  */
 public class DeltaSyncManager implements IHasForgeLog {
 
@@ -127,27 +128,20 @@ public class DeltaSyncManager implements IHasForgeLog {
         baseline = ViewSnapshot.empty();
     }
 
-    // each DeltaSyncManager gets a unique ID
-
     /**
      * Whether this client already holds {@code obj}, which is what decides whether a
      * reference to it travels as an id or is serialized inline. Handed to the encoder
      * as the IdRef gate.
      *
-     * <p>The walk answers this from consumer registration; the snapshot answers it from
-     * the baseline, which is what was actually sent. Both answers are computed while the
-     * snapshot is only being cross-checked, because a wrong one here fails silently: too permissive
-     * ships an id the client cannot resolve, too conservative inlines a whole card into
-     * every packet that mentions one.
+     * <p>Answered from the baseline, which is what was actually sent. A wrong answer fails
+     * silently: too permissive ships an id the client cannot resolve, too conservative inlines
+     * a whole card into every packet that mentions one.
      */
     boolean receiverKnows(TrackableObject obj) {
         return baseline.objects().containsKey(DeltaPacket.makeDeltaKey(obj));
     }
 
     private long sequenceNumber = 0;
-
-    // Objects registered with this consumer (for cleanup on disconnect/reset)
-    // Used to block stale cross-reference replacements
 
     // Not atomic: only accessed from game thread
     // Defer the first checksum until the game state stabilizes — seq=1 races
@@ -164,13 +158,12 @@ public class DeltaSyncManager implements IHasForgeLog {
     private List<String> lastChecksumDetail;
 
     /**
-     * Collect all changes from the GameView hierarchy and build a delta packet.
-     * New objects are registered with this consumer and sent in full.
-     * Existing objects only send properties dirty for THIS consumer.
+     * Build this client's packet: the difference between the current snapshot of the view
+     * graph and the one this client was last sent. Objects it has never been sent travel in
+     * full, the rest carry only what changed.
      *
-     * <p>Must be called on the game thread. All delta collection and checksum
-     * computation runs single-threaded — no locks, snapshots, or volatile
-     * barriers needed.
+     * <p>Senders hold the client's monitor, so the baseline advanced here is not read by
+     * another send midway. The detector below reports a caller that bypasses that.
      */
     public DeltaPacket collectDeltas(GameView gameView) {
         Thread self = Thread.currentThread();
@@ -178,7 +171,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         if (concurrent != null && concurrent != self) {
             CONCURRENT_ENTRIES.incrementAndGet();
             netLog.warn("[Collect] Concurrent entry: {} entered while {} was still inside. "
-                            + "Per-consumer registration state and the view graph are both unguarded here.",
+                            + "The baseline and the view graph are both unguarded here.",
                     self.getName(), concurrent.getName());
         }
         try {
@@ -190,7 +183,7 @@ public class DeltaSyncManager implements IHasForgeLog {
 
     /**
      * Records which thread is inside {@link #collectDeltas}, so a second one entering is
-     * reported rather than silently corrupting per-consumer state.
+     * reported rather than silently interleaving with the send already in progress.
      *
      * <p>Deliberately a detector and not a guard: it observes, it does not serialise. It
      * also logs rather than throwing, because this is reachable from Netty threads where
@@ -221,7 +214,7 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     /**
-     * Sequence, checksum and wrap what either path produced.
+     * Sequence, checksum and wrap the collected difference.
      *
      * <p>The checksum is deliberately still computed from the live view rather than from
      * the snapshot: it is the independent oracle for whichever path built the packet, and
@@ -482,9 +475,8 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     /**
-     * Reset all tracking state for reconnection.
-     * Unregisters this consumer from all tracked objects.
-     * After reset, the next sync will be treated as a fresh initial sync.
+     * Forget what this client holds, so the next packet is a full state through the ordinary
+     * diff.
      */
     public void reset() {
         baseline = ViewSnapshot.empty();

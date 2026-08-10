@@ -45,13 +45,10 @@ import java.util.stream.Collectors;
  * {@link #resetForReconnect}).
  *
  * <p>IGuiGame overrides forward through one of four helpers named for their behavior:
- * {@link #send} (fire), {@link #syncAndSend} (walk the trackable graph, then fire),
- * {@link #sendAndWait} (block for reply), {@link #syncAndSendAndWait} (walk, then block).
- * {@code sync*} ensures the client has the entities referenced in the payload; the bare
- * forms are for payloads that are pure IDs, strings, or flags.
- *
- * <p>{@code sync*} requires the game thread because the trackable graph is single-mutator;
- * the bare variants skip the walk and are safe from any thread.
+ * {@link #send} (fire), {@link #syncAndSend} (send this client's pending state first, then
+ * fire), {@link #sendAndWait} (block for reply), {@link #syncAndSendAndWait} (state first,
+ * then block). {@code sync*} ensures the client has the entities referenced in the payload;
+ * the bare forms are for payloads that are pure IDs, strings, or flags.
  */
 public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog {
 
@@ -130,9 +127,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Dispatches a self-contained payload (IDs, strings, flags) — no graph walk,
-     * safe from any thread. Used when the client doesn't need fresh state to
-     * consume the message.
+     * Dispatches a self-contained payload (IDs, strings, flags), safe from any thread. Used
+     * when the client doesn't need fresh state to consume the message.
      */
     private void send(final ProtocolMethod method, final Object... args) {
         if (paused) { return; }
@@ -140,8 +136,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Walks the trackable graph via {@link #updateGameView} before dispatching, so
-     * the client has the entities referenced in the payload. Game-thread-only.
+     * Sends this client's pending state via {@link #updateGameView} before dispatching, so it
+     * has the entities the payload refers to. Game-thread-only.
      */
     private void syncAndSend(final ProtocolMethod method, final Object... args) {
         if (paused) { return; }
@@ -150,8 +146,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Dispatches and blocks for the client's reply, with no graph walk. Used for
-     * dialogs whose args carry the full question (e.g. plain-text confirms).
+     * Dispatches and blocks for the client's reply. Used for dialogs whose args carry the
+     * full question (e.g. plain-text confirms).
      */
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
         if (paused) { return null; }
@@ -159,9 +155,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Walks the trackable graph, dispatches, and blocks for the client's reply.
-     * Used for dialogs that reference entities, cards, or zones the client must
-     * have to render the prompt. Game-thread-only.
+     * Sends this client's pending state, dispatches, and blocks for the reply. Used for
+     * dialogs that reference entities, cards or zones the client must have to render the
+     * prompt. Game-thread-only.
      */
     private <T> T syncAndSendAndWait(final ProtocolMethod method, final Object... args) {
         if (paused) { return null; }
@@ -268,10 +264,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Push pending state to the client. Flushes the event queue if any events
-     * are queued; otherwise walks the trackable graph for state changes that
-     * didn't fire an event and sends an applyDelta. Falls back to a full
-     * setGameView before delta sync is established. Game-thread-only.
+     * Send this client whatever it has not been sent: the events queued for it, or the
+     * difference between the current snapshot and its baseline. Nothing is sent before the
+     * match opens. Game-thread-only.
      *
      * <p>Called internally by {@link #syncAndSend} and {@link #syncAndSendAndWait};
      * also invoked directly from the reconnect handshake.
@@ -310,8 +305,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        // If events are pending, the batch flush bundles dirty props with
-        // them into applyDelta — skip the redundant graph walk here.
+        // The flush bundles the difference into the same packet as the events, so collecting
+        // it here as well would send it twice.
         if (forwarder != null && forwarder.hasPendingEvents()) {
             flushPendingEvents();
             return;
@@ -405,9 +400,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     @Override
     public void setGameView(final GameView gameView) {
         super.setGameView(gameView);
-        // Rebind on every game: each Game owns a Tracker, and the decoder resolves
-        // client IdRefs against it. Set before any client protocol messages arrive —
-        // setGameView runs before openView, and the client can't respond until after.
+        // Rebind on every game: each Game owns a Tracker, and the decoder resolves client
+        // IdRefs against it. Set before any client protocol message can arrive.
         if (gameView != null && gameView.getTracker() != null) {
             client.setCodecTracker(gameView.getTracker(), syncManager::receiverKnows);
         }
