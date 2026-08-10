@@ -792,6 +792,22 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
             return super.getAbilityToPlay(hostCard, abilities, triggerEvent);
         }
 
+        /**
+         * Forget what was selectable when the server says it no longer is.
+         *
+         * <p>Anything left in the list outlives the prompt that produced it, and the next
+         * prompt to arrive with OK disabled drains it - selecting a card the game moved on
+         * from turns ago, which the server then cannot find in any zone.
+         */
+        @Override
+        public void clearSelectables() {
+            super.clearSelectables();
+            synchronized (pendingSelectables) {
+                pendingSelectables.clear();
+                selectableIndex = 0;
+            }
+        }
+
         @Override
         public void setSelectables(Iterable<forge.game.card.CardView> cards, int min, int max) {
             super.setSelectables(cards, min, max);
