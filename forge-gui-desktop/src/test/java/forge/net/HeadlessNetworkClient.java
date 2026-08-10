@@ -290,6 +290,43 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         private final java.util.List<forge.game.card.CardView> pendingSelectables = new java.util.ArrayList<>();
         private int selectableIndex = 0;
 
+        /**
+         * When set, this player acts on its own turns instead of passing every priority, so
+         * that a board develops and the packets that carry one are exercised.
+         *
+         * <p><b>What decides what.</b> Everything reached through priority is decided by the
+         * real AI: which spell to cast and which ability to activate come from
+         * {@link AdviceServer}, and mana payment is the server's own {@code ComputerUtilMana},
+         * reached by the production Auto button. What is <b>not</b> AI-decided: attacks are
+         * "swing with everything able", blocks are never declared, and targeting, discards,
+         * trigger ordering and damage assignment all take the first option the stub offers.
+         * The split follows the engine rather than taste - one controller method sits behind
+         * priority, while combat and each dialog have their own, so each would need its own
+         * question asked. Combat is a worthwhile follow-up; the rest matter less.
+         *
+         * <p>So a game played this way develops a real board and resolves real spells, and its
+         * combat is not a model of anything. Read win rates accordingly.
+         */
+        private static final boolean ACTIVE_PLAY = Boolean.getBoolean("test.activeRemotePlay");
+        private final AtomicInteger promptGeneration = new AtomicInteger();
+        private final AtomicInteger playsAttempted = new AtomicInteger();
+        // Cards already attempted this turn; a refused selectCard gets no reply of any kind,
+        // so never retrying within the turn is what prevents an infinite retry loop.
+        private final java.util.Set<Integer> attemptedCards = new java.util.HashSet<>();
+        private int attemptTurn = -1;
+        private volatile int alphaStrikeTurn = -1;
+
+        // Side channel to the host's AI. When the port is set, decisions come from the
+        // real AI running against the host's game; only a player id goes out and only a
+        // card id plus ability description comes back. Without it, the local heuristic
+        // (land drop, then cheapest affordable spell) decides.
+        private static final int ADVICE_PORT = Integer.getInteger("test.advicePort", -1);
+        private java.net.Socket adviceSocket;
+        private java.io.BufferedReader adviceIn;
+        private java.io.PrintWriter adviceOut;
+        // The ability the AI chose, matched when the server asks getAbilityToPlay
+        private volatile String adviceAbilityDesc;
+
         // Single-threaded executor to serialize all auto-responses and prevent race conditions
         private final ScheduledExecutorService autoResponseExecutor = Executors.newSingleThreadScheduledExecutor(r -> {
             Thread t = new Thread(r, "HeadlessClient-AutoResponse");
@@ -460,6 +497,11 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         public void updateButtons(forge.game.player.PlayerView owner, String label1, String label2, boolean enable1, boolean enable2, boolean focus1) {
             netLog.info("updateButtons(labels): '{}'/{}, '{}'/{}, controller={}",
                     label1, enable1, label2, enable2, gameController != null ? "set" : "null");
+            promptGeneration.incrementAndGet();
+            if (ACTIVE_PLAY && gameController != null
+                    && respondActively(owner, label1, label2, enable1, enable2)) {
+                return;
+            }
             // Auto-respond to labeled button prompts - click first enabled button
             if (gameController != null && (enable1 || enable2)) {
                 String clickTarget = enable1 ? label1 : label2;
@@ -480,6 +522,274 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
                     }
                 }
             }
+        }
+
+        /**
+         * Active-play dispatch on the button labels the server sent. Returns true when this
+         * prompt was handled here; false falls through to the click-first-enabled default.
+         */
+        private boolean respondActively(forge.game.player.PlayerView owner,
+                String label1, String label2, boolean enable1, boolean enable2) {
+            // Mana payment (InputPayMana): label1 is "Auto", or "" when auto-pay is
+            // unsupported. Auto starts disabled and enables shortly after, once the server
+            // has computed that the cost is payable — clicking it then has the server's AI
+            // tap mana sources. Don't cancel instantly; give Auto time to enable, and only
+            // if it never does (cost not actually payable) let the delayed Cancel abort.
+            if ("Auto".equals(label1) || label1 == null || label1.isEmpty()) {
+                if (!enable1 && enable2) {
+                    scheduleAutoResponse(() -> gameController.selectButtonCancel(),
+                            2000, "cancel unpayable mana cost");
+                    return true;
+                }
+                return false; // Auto enabled: default behavior clicks it
+            }
+            final GameView gv = getGameView();
+            if (gv == null) {
+                return false;
+            }
+            // Combat (InputAttack): the second button alpha-strikes while no attackers are
+            // declared and becomes "Call Back" (undo) once they are. Strike once per turn,
+            // then confirm with OK; treating both labels as "attack" declares and undoes
+            // forever.
+            if ("Alpha Strike".equals(label2) && enable2) {
+                final int turn = gv.getTurn();
+                if (turn != alphaStrikeTurn) {
+                    // Mark the turn when the strike executes, not when scheduled: the input
+                    // re-sends this prompt several times back-to-back, and each re-send
+                    // cancels whatever is pending. A scheduled-time mark would let the
+                    // duplicate knock out the strike and fall through to OK.
+                    scheduleAutoResponse(() -> {
+                        alphaStrikeTurn = turn;
+                        gameController.selectButtonCancel();
+                    }, 50, "alpha strike");
+                    return true;
+                }
+                return false; // struck already; OK confirms (or declares nothing)
+            }
+            // Priority (InputPassPriority): second button is "End Turn", or "Undo (n)" when
+            // something can be undone. Only this prompt can initiate a play.
+            if (enable1 && ("End Turn".equals(label2)
+                    || (label2 != null && label2.startsWith("Undo")))) {
+                return tryInitiatePlay(owner, gv);
+            }
+            return false;
+        }
+
+        /**
+         * Act in our own main phase with an empty stack, and pass priority everywhere else.
+         *
+         * <p>That gate is what keeps this affordable. Priority returns in every step and after
+         * every action, and asking a question in each one costs a round trip that nearly
+         * always ends in nothing: enough of them and the game runs slower than its own timeout.
+         *
+         * <p>With a host to ask, the choice is the AI's. Without one the fallback picks a land
+         * while the drop is unused, else the cheapest spell the untapped lands could cover -
+         * which ignores colour, so it offers plenty it cannot pay for.
+         */
+        private boolean tryInitiatePlay(forge.game.player.PlayerView owner, GameView gv) {
+            final forge.game.player.PlayerView turnPlayer = gv.getPlayerTurn();
+            final forge.game.phase.PhaseType phase = gv.getPhase();
+            if (owner == null || turnPlayer == null || owner.getId() != turnPlayer.getId()) {
+                return false;
+            }
+            if (phase != forge.game.phase.PhaseType.MAIN1 && phase != forge.game.phase.PhaseType.MAIN2) {
+                return false;
+            }
+            if (!gv.getStack().isEmpty()) {
+                return false;
+            }
+            forge.game.player.PlayerView me = null;
+            for (forge.game.player.PlayerView pv : gv.getPlayers()) {
+                if (pv.getId() == owner.getId()) {
+                    me = pv;
+                    break;
+                }
+            }
+            if (me == null) {
+                return false;
+            }
+            if (ADVICE_PORT > 0) {
+                final forge.game.player.PlayerView self = me;
+                final int gen = promptGeneration.get();
+                // Off the Netty thread: the ask blocks until the host AI answers
+                scheduleAutoResponse(() -> actOnAdvice(self, gen), 50, "ask host AI");
+                return true;
+            }
+            final forge.game.card.CardView pick;
+            synchronized (attemptedCards) {
+                if (gv.getTurn() != attemptTurn) {
+                    attemptTurn = gv.getTurn();
+                    attemptedCards.clear();
+                }
+                int untappedLands = 0;
+                for (forge.game.card.CardView c : me.getBattlefield()) {
+                    final forge.game.card.CardView.CardStateView st = c.getCurrentState();
+                    if (st != null && st.getType().isLand() && !c.isTapped()) {
+                        untappedLands++;
+                    }
+                }
+                final boolean canPlayLand = me.getNumLandThisTurn() < me.getMaxLandPlay();
+                forge.game.card.CardView landPick = null;
+                forge.game.card.CardView spellPick = null;
+                int spellCmc = Integer.MAX_VALUE;
+                for (forge.game.card.CardView c : me.getHand()) {
+                    if (attemptedCards.contains(c.getId())) {
+                        continue;
+                    }
+                    final forge.game.card.CardView.CardStateView st = c.getCurrentState();
+                    if (st == null || st.getType() == null) {
+                        continue;
+                    }
+                    if (st.getType().isLand()) {
+                        if (canPlayLand && landPick == null) {
+                            landPick = c;
+                        }
+                    } else {
+                        final forge.card.mana.ManaCost mc = st.getManaCost();
+                        final int cmc = mc == null ? 0 : mc.getCMC();
+                        if (cmc <= untappedLands && cmc < spellCmc) {
+                            spellPick = c;
+                            spellCmc = cmc;
+                        }
+                    }
+                }
+                pick = landPick != null ? landPick : spellPick;
+                if (pick == null) {
+                    return false;
+                }
+                attemptedCards.add(pick.getId());
+            }
+            playsAttempted.incrementAndGet();
+            final int gen = promptGeneration.get();
+            netLog.info("[ActivePlay] attempt #{}: {} (turn {}, {})",
+                    playsAttempted.get(), pick, gv.getTurn(), phase);
+            scheduleAutoResponse(() -> {
+                gameController.selectCard(pick, null, null);
+                // A refused selection gets no reply and no fresh prompt, so nothing else
+                // would ever wake us. If no prompt superseded this one, try the next
+                // candidate (the refused card is in attemptedCards) or pass.
+                scheduleAutoResponse(() -> {
+                    if (promptGeneration.get() == gen) {
+                        netLog.info("[ActivePlay] no response to {}; moving on", pick);
+                        final GameView current = getGameView();
+                        if (current == null || !tryInitiatePlay(owner, current)) {
+                            gameController.selectButtonOk();
+                        }
+                    }
+                }, 2500, "retry after silent refusal");
+            }, 50, "play " + pick.getName());
+            return true;
+        }
+
+        /** Ask the host AI what to play and act on the answer over the real protocol. */
+        private void actOnAdvice(forge.game.player.PlayerView me, int gen) {
+            final String reply = askAdvice(me.getId());
+            if (promptGeneration.get() != gen) {
+                // The prompt changed while the ask was in flight; whoever handled the
+                // newer prompt owns the input now.
+                netLog.info("[ActivePlay] advice arrived for a stale prompt; dropping");
+                return;
+            }
+            if (reply == null || !reply.startsWith("CARD ")) {
+                gameController.selectButtonOk();
+                return;
+            }
+            final String payload = reply.substring("CARD ".length());
+            final int sep = payload.indexOf('|');
+            final int cardId;
+            try {
+                cardId = Integer.parseInt((sep < 0 ? payload : payload.substring(0, sep)).trim());
+            } catch (NumberFormatException e) {
+                gameController.selectButtonOk();
+                return;
+            }
+            final GameView gv = getGameView();
+            synchronized (attemptedCards) {
+                if (gv != null && gv.getTurn() != attemptTurn) {
+                    attemptTurn = gv.getTurn();
+                    attemptedCards.clear();
+                }
+                // The AI re-advises a card whose play failed (it is still where it was);
+                // once per turn keeps that from looping.
+                if (!attemptedCards.add(cardId)) {
+                    netLog.info("[ActivePlay] advised card {} already attempted this turn; passing", cardId);
+                    gameController.selectButtonOk();
+                    return;
+                }
+            }
+            final forge.game.card.CardView card = findOwnCard(me, cardId);
+            if (card == null) {
+                netLog.info("[ActivePlay] advised card {} not visible here; passing", cardId);
+                gameController.selectButtonOk();
+                return;
+            }
+            playsAttempted.incrementAndGet();
+            adviceAbilityDesc = sep < 0 ? null : payload.substring(sep + 1);
+            netLog.info("[ActivePlay] attempt #{}: AI advises {} ({})",
+                    playsAttempted.get(), card, adviceAbilityDesc);
+            gameController.selectCard(card, null, null);
+            // A refused selection gets no reply and no fresh prompt; don't hang on it
+            scheduleAutoResponse(() -> {
+                if (promptGeneration.get() == gen) {
+                    netLog.info("[ActivePlay] no response to advised {}; passing", card);
+                    gameController.selectButtonOk();
+                }
+            }, 2500, "pass after silent refusal of advised play");
+        }
+
+        private synchronized String askAdvice(int playerId) {
+            try {
+                if (adviceSocket == null || adviceSocket.isClosed()) {
+                    adviceSocket = new java.net.Socket(client.hostname, ADVICE_PORT);
+                    adviceSocket.setSoTimeout(20000);
+                    adviceIn = new java.io.BufferedReader(new java.io.InputStreamReader(
+                            adviceSocket.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+                    adviceOut = new java.io.PrintWriter(
+                            adviceSocket.getOutputStream(), true, java.nio.charset.StandardCharsets.UTF_8);
+                }
+                adviceOut.println("ADVICE " + playerId);
+                return adviceIn.readLine();
+            } catch (java.io.IOException e) {
+                netLog.warn("[ActivePlay] advice channel failed: {}", e.getMessage());
+                try {
+                    if (adviceSocket != null) {
+                        adviceSocket.close();
+                    }
+                } catch (java.io.IOException ignored) {
+                    // reconnect next time
+                }
+                adviceSocket = null;
+                return null;
+            }
+        }
+
+        /** The AI can advise a card anywhere the player could act from, not just hand. */
+        private forge.game.card.CardView findOwnCard(forge.game.player.PlayerView me, int cardId) {
+            final java.util.List<Iterable<forge.game.card.CardView>> zones = java.util.List.of(
+                    me.getHand(), me.getBattlefield(), me.getGraveyard(), me.getCommand(), me.getExile());
+            for (final Iterable<forge.game.card.CardView> zone : zones) {
+                for (final forge.game.card.CardView c : zone) {
+                    if (c.getId() == cardId) {
+                        return c;
+                    }
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public forge.game.spellability.SpellAbilityView getAbilityToPlay(forge.game.card.CardView hostCard,
+                java.util.List<forge.game.spellability.SpellAbilityView> abilities, forge.util.ITriggerEvent triggerEvent) {
+            final String desc = adviceAbilityDesc;
+            if (desc != null && abilities != null) {
+                for (final forge.game.spellability.SpellAbilityView sav : abilities) {
+                    if (desc.equals(sav.getDescription())) {
+                        netLog.info("[ActivePlay] matched advised ability: {}", desc);
+                        return sav;
+                    }
+                }
+            }
+            return super.getAbilityToPlay(hostCard, abilities, triggerEvent);
         }
 
         @Override

@@ -103,6 +103,7 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
     // Runtime state
     private FServerManager server;
+    private AdviceServer adviceServer;
     private ServerGameLobby lobby;
     private List<HeadlessNetworkClient> remoteClients = new ArrayList<>();
     private ExecutorService clientExecutor;
@@ -397,6 +398,17 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // Brief pause for server initialization
             Thread.sleep(1000);
 
+            // Side channel for active play: clients ask the host's AI for decisions and
+            // then act on them over the real protocol.
+            if (Boolean.getBoolean("test.activeRemotePlay") && separateClientProcesses) {
+                // Beside this game's own port, which the parent process allocated and so is
+                // unique across a batch. Allocating one here instead would hand out ports
+                // starting from the same base in every game process, and those are exactly
+                // the ports the other games' servers were given.
+                adviceServer = new AdviceServer(port + 1);
+                netLog.info("AdviceServer listening on port {}", adviceServer.getPort());
+            }
+
             // 4. Start remote clients
             clientExecutor = Executors.newFixedThreadPool(remoteClientCount);
             CountDownLatch clientsAttemptedLatch = new CountDownLatch(remoteClientCount);
@@ -556,6 +568,9 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                 command.addAll(DESKTOP_MODULE_ACCESS);
             }
             command.addAll(TestUtils.childJvmProperties());
+            if (adviceServer != null) {
+                command.add("-Dtest.advicePort=" + adviceServer.getPort());
+            }
             command.add(guiClients ? "forge.net.GuiClientRunner" : "forge.net.HeadlessClientRunner");
             command.add(clientName);
             command.add("localhost");
@@ -982,6 +997,11 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
                 Thread.currentThread().interrupt();
             }
             clientExecutor = null;
+        }
+
+        if (adviceServer != null) {
+            adviceServer.close();
+            adviceServer = null;
         }
 
         // Clear player GUIs between games

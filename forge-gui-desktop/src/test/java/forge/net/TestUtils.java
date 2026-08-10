@@ -85,6 +85,7 @@ public final class TestUtils {
                 "forge.snapshot.crosscheck",
                 "forge.snapshot.skewPasses",
                 "test.useAiForRemote",
+                "test.activeRemotePlay",
                 "forge.net.measureVisibility")) {
             final String value = System.getProperty(name);
             if (value != null) {
