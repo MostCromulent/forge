@@ -166,6 +166,10 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
     }
     public CardType(final CardTypeView from0) {
         addAll(from0);
+        // After addAll, which clears these while tidying subtypes. Without them a changeling
+        // copied through here stops having every creature type, and an exclusion is lost.
+        allCreatureTypes = from0.hasAllCreatureTypes();
+        Iterables.addAll(excludedCreatureSubtypes, from0.getExcludedCreatureSubTypes());
     }
 
     public boolean add(final String t) {
