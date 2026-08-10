@@ -2,6 +2,7 @@ package forge.trackable;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Predicate;
@@ -34,16 +35,28 @@ public class TrackableCollection<T extends TrackableObject> extends FCollection<
      *
      * <p>Copying on each read instead would charge that to readers who are not racing
      * anything: a battlefield is drawn every frame and changes a few times a turn, so a
-     * local game with no second thread in sight would allocate a list per frame. Making the
-     * whole point of this a cost that only network play should bear is what the guards did.
-     * The copy belongs on the write.
+     * local game with no second thread in sight would allocate a list per frame. The copy
+     * belongs on the write.
      */
     private transient volatile int version;
+    /**
+     * Over the field rather than an AtomicInteger, because these are serialized: a transient
+     * object field arrives null on the far side, while a transient int arrives zero.
+     */
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<TrackableCollection> VERSION =
+            AtomicIntegerFieldUpdater.newUpdater(TrackableCollection.class, "version");
     private transient volatile Cached<T> cached;
 
+    /**
+     * Counted atomically because two writers losing an increment would leave them publishing
+     * the same version, which is the stale reading the version exists to catch. Writers are
+     * meant to be the engine alone, but a dev cheat arrives on the display thread and a
+     * concede on a network thread, and those reach a collection through the ordinary adds.
+     */
     @Override
     protected void onMutated() {
-        version++;
+        VERSION.incrementAndGet(this);
         cached = null;
     }
 
