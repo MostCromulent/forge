@@ -90,15 +90,6 @@ public class TrackableTypesTest {
             }
         }
 
-        Assert.assertEquals(unclassified, Set.of(),
-                "a trackable type is in neither list — decide whether it must copy what it stores, "
-                        + "and say so in " + TrackableTypesTest.class.getSimpleName());
-        Assert.assertEquals(wrong, Set.of(), "a trackable type does not copy the way it is listed to");
-    }
-
-    /** The lists describe real types, so a renamed or deleted one is caught rather than ignored. */
-    @Test
-    public void everyListedTypeStillExists() throws Exception {
         final Set<String> declared = new TreeSet<>();
         for (final Field field : TrackableTypes.class.getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers())
@@ -106,10 +97,21 @@ public class TrackableTypesTest {
                 declared.add(field.getName());
             }
         }
+        final Set<String> vanished = new TreeSet<>();
         for (final Set<String> listed : List.of(COPIES_ON_STORE, SHARES_BY_DESIGN)) {
             for (final String name : listed) {
-                Assert.assertTrue(declared.contains(name), name + " is listed but no longer exists");
+                if (!declared.contains(name)) {
+                    vanished.add(name);
+                }
             }
         }
+
+        Assert.assertEquals(unclassified, Set.of(),
+                "a trackable type is in neither list — decide whether it must copy what it stores, "
+                        + "and say so in " + TrackableTypesTest.class.getSimpleName());
+        Assert.assertEquals(wrong, Set.of(), "a trackable type does not copy the way it is listed to");
+        // A renamed or deleted type would otherwise drop out of the check above unnoticed.
+        Assert.assertEquals(vanished, Set.of(), "a listed trackable type no longer exists");
     }
+
 }
