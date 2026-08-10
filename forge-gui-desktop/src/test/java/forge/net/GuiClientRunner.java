@@ -97,6 +97,12 @@ public final class GuiClientRunner implements IHasForgeLog {
             client.waitForGameStart(gameTimeoutMs);
             client.waitForGameFinish(gameTimeoutMs);
 
+            // What this client ended up holding, for the parent to compare against the server.
+            // Without it the agreement check has nothing to compare and passes silently, which
+            // is the worst outcome for the client that exercises the most of the apply path.
+            System.out.println("STATE:" + forge.gamemodes.net.server.SnapshotDigest
+                    .shortDigest(client.getGameView()));
+
             final Throwable escaped = FIRST_ESCAPE.get();
             if (escaped != null) {
                 System.out.println("RESULT:FAIL:uncaught:" + escaped.getClass().getSimpleName()

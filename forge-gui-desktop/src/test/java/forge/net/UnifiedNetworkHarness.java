@@ -851,6 +851,14 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
      * known good, a difference here is as likely to be something legitimate about what a
      * client is sent as it is to be a defect.
      */
+    /**
+     * Compare what each client finished holding against what the server finished holding.
+     *
+     * <p>This is the exact form of the question the checksum answers by sampling, and the only
+     * cross-process check that a client's own delta application produced the right state. A
+     * disagreement fails the game: a warning nobody reads is the same as no check at all, and
+     * this is the instrument the checksum would be retired in favour of.
+     */
     private void reportStateAgreement() {
         if (serverStateDigest == null || clientStateDigests.isEmpty()) {
             return;
@@ -859,8 +867,12 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             if (serverStateDigest.equals(client.getValue())) {
                 netLog.info("[Agreement] {} finished holding the same state as the server", client.getKey());
             } else {
-                netLog.warn("[Agreement] {} finished with different state: client={} server={}",
+                netLog.error("[Agreement] {} finished with different state: client={} server={}",
                         client.getKey(), client.getValue(), serverStateDigest);
+                if (stateDisagreement == null) {
+                    stateDisagreement = client.getKey() + " held " + client.getValue()
+                            + " where the server held " + serverStateDigest;
+                }
             }
         }
     }
@@ -868,12 +880,15 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private void validateResult(GameResult result) {
         result.success = result.gameCompleted
                 && result.deltaPacketsReceived > 0
-                && result.turnCount > 0;
+                && result.turnCount > 0
+                && stateDisagreement == null;
 
         if (result.success) {
             result.errorMessage = null;
         } else if (result.errorMessage == null) {
-            if (result.deltaPacketsReceived == 0) {
+            if (stateDisagreement != null) {
+                result.errorMessage = "Client and server disagree on final state: " + stateDisagreement;
+            } else if (result.deltaPacketsReceived == 0) {
                 result.errorMessage = "No delta packets received - network path not exercised";
             } else if (!result.gameCompleted) {
                 result.errorMessage = "Game did not complete";
@@ -885,6 +900,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private CountDownLatch clientsFinishedLatch;
     private final Map<String, String> clientStateDigests = new ConcurrentHashMap<>();
     private String serverStateDigest;
+    /** Set when a client finished holding something other than what the server holds. */
+    private volatile String stateDisagreement;
     private final AtomicInteger processDeltaPackets = new AtomicInteger();
     private final AtomicLong processDeltaBytes = new AtomicLong();
     private final AtomicInteger processMismatches = new AtomicInteger();
