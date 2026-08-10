@@ -101,8 +101,12 @@ public class ComprehensiveGameRunner implements IHasForgeLog {
                     // allows far less time than that takes under that much contention.
                     .connectionTimeout(useAiForRemote ? 30000 : 180000)
                     // Every decision is a round trip on the human path, so a game takes far
-                    // longer in wall-clock without being any less healthy.
-                    .gameTimeout(useAiForRemote ? 300000 : 900000)
+                    // longer in wall-clock without being any less healthy. Playing rather than
+                    // passing adds another trip per play and a question to the host's AI on top,
+                    // and the games that ran out of time were four-player ones still mid-game
+                    // rather than stuck.
+                    .gameTimeout(useAiForRemote ? 300000
+                            : Boolean.getBoolean("test.activeRemotePlay") ? 1500000 : 900000)
                     .execute();
 
             netLog.info("Game {} result: success={}, turns={}, winner={}, format={}",
