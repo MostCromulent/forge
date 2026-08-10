@@ -729,7 +729,10 @@ public class Game {
             forEachCardInGame(visit);
         }
         Card found = visit.getFound();
-        if (found == null) {
+        // Once the game is over its zones are empty, so a click sent just before the last
+        // point of damage arrives just after and finds nothing. That is a race every
+        // networked client has and nothing is wrong with it, so it is not reported.
+        if (found == null && !isGameOver()) {
             netLog.error("findByView: id={} (zone={}, controller={}) not found in any zone — returning null",
                     view.getId(), view.getZone(), view.getController());
         }
