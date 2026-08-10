@@ -246,18 +246,17 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             Integer.getInteger("forge.bandwidth.sampleEvery", 25);
 
     /**
-     * What a full state costs right now, under whichever method is in use.
-     *
-     * <p>Under the snapshot that is the diff against an empty baseline, taken from the
-     * published snapshot so nothing reads the live graph. Otherwise it is the serialized
-     * GameView, which is what the walk would have to send.
+     * What a full state would cost right now: the diff against an empty baseline, taken from
+     * the published snapshot so nothing reads the live graph. Zero until something is
+     * published, since serializing the live view to fill that gap would be the one read this
+     * layer exists to remove.
      */
     private int measureFullState(final GameView gameView) {
         final DeltaPacket asDelta = syncManager.fullStateForMeasurement();
-        if (asDelta != null) {
-            return TrackableSerializer.measureSize(asDelta, gameView.getTracker());
+        if (asDelta == null) {
+            return 0;
         }
-        return TrackableSerializer.measureSize(gameView, null);
+        return TrackableSerializer.measureSize(asDelta, gameView.getTracker());
     }
 
     /** Re-measures on a sampled packet, and otherwise reports the last measurement. */
