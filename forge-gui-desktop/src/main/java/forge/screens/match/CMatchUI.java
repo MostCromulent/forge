@@ -220,13 +220,33 @@ public final class CMatchUI
         if (gameView0 == null) { return; }
 
         cDetailPicture.setGameView(gameView0);
-        screen.setTabCaption(gameView0.getTitle());
+        updateTabCaption();
         refreshAllViews();
     }
 
     @Override
     protected void afterDeltaApplied() {
+        updateTabCaption();
         refreshAllViews();
+    }
+
+    private String tabCaption;
+
+    /**
+     * Title the match tab from the game view, once it has a title to give.
+     *
+     * <p>A remote client's view starts empty and is filled by deltas, so the title is not
+     * known when the view is installed - and installing it happens on a network thread, which
+     * is no place to touch a Swing label.
+     */
+    private void updateTabCaption() {
+        final GameView gameView = getGameView();
+        final String caption = gameView == null ? null : gameView.getTitle();
+        if (caption == null || caption.equals(tabCaption)) {
+            return;
+        }
+        tabCaption = caption;
+        FThreads.invokeInEdtNowOrLater(() -> screen.setTabCaption(caption));
     }
 
     private VDrawOfferDialog drawOfferDialog;

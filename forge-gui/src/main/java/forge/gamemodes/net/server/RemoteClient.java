@@ -10,6 +10,7 @@ import forge.gamemodes.net.event.NetEvent;
 import forge.util.IHasForgeLog;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.util.concurrent.Future;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -28,7 +29,8 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     private volatile Tracker codecTracker;
     private volatile Predicate<TrackableObject> codecReceiverKnows;
     private final AtomicInteger sendErrors = new AtomicInteger(0);
-    private RemoteClientGuiGame gui;
+    // Volatile: set on the game thread, read by the write listeners on Netty threads.
+    private volatile RemoteClientGuiGame gui;
 
     // Package-private: SaturationLoggingHandler reads/resets these on writability transitions
     volatile long saturationStartMs = 0L;
@@ -109,7 +111,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         }
     }
 
-    private String failureDetail(final io.netty.util.concurrent.Future<?> f) {
+    private String failureDetail(final Future<?> f) {
         return f.isCancelled() ? "cancelled" : "no cause";
     }
 

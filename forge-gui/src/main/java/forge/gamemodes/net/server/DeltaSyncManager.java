@@ -26,13 +26,25 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Builds each client's delta packets by diffing immutable snapshots of the view graph.
+ * Builds one client's packets. There is an instance per connected client.
  *
- * <p>One snapshot per pass serves every client; each client's baseline records what it was
- * last sent, and the difference between the two is its packet.
+ * <p>A packet is the difference between two immutable snapshots of the view graph: the current
+ * one, and the one this client was last sent. Building the current one does not depend on who
+ * is asking, so it is built once per change and shared by every client; only the differencing
+ * is per-client. Nothing here reads the live graph, which is why it does not matter which
+ * thread runs it — the one exception is the checksum, which is deliberately computed from live
+ * state so that it remains an independent check rather than confirming the snapshot against
+ * itself.
+ *
+ * <p>Two snapshots are kept per client and they answer different questions. The <i>baseline</i>
+ * is what this client is believed to hold, so it is what the next difference is taken against;
+ * forgetting it makes the next packet a full state, which is how both game start and repair
+ * work. The <i>published</i> snapshot is simply the last one built, and survives a reconnect
+ * so that a returning client can be sent everything without reading the graph from the network
+ * thread it arrived on.
  */
 public class DeltaSyncManager implements IHasForgeLog {
 
@@ -59,17 +71,12 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     /**
-     * The last snapshot this client is known to hold. Replaced wholesale, never
-     * mutated, so the encode gate can read it from a Netty thread without locking.
-     * Empty unless the snapshot is being maintained.
+     * What this client is believed to hold. Replaced wholesale and never mutated, so the
+     * encode gate can read it from a Netty thread without locking.
      */
     private volatile ViewSnapshot baseline = ViewSnapshot.empty();
 
-    /**
-     * The last snapshot built for this client, kept across a reconnect where the baseline
-     * is not. The two answer different questions — what was last seen of the game, versus
-     * what this client is believed to hold — and a reconnect resets only the second.
-     */
+    /** The last snapshot built, which unlike the baseline survives a reconnect. */
     private volatile ViewSnapshot published = ViewSnapshot.empty();
 
     /**
@@ -169,7 +176,6 @@ public class DeltaSyncManager implements IHasForgeLog {
         Thread self = Thread.currentThread();
         Thread concurrent = collectOwner.getAndSet(self);
         if (concurrent != null && concurrent != self) {
-            CONCURRENT_ENTRIES.incrementAndGet();
             netLog.warn("[Collect] Concurrent entry: {} entered while {} was still inside. "
                             + "The baseline and the view graph are both unguarded here.",
                     self.getName(), concurrent.getName());
@@ -187,39 +193,29 @@ public class DeltaSyncManager implements IHasForgeLog {
      *
      * <p>Deliberately a detector and not a guard: it observes, it does not serialise. It
      * also logs rather than throwing, because this is reachable from Netty threads where
-     * an exception reaches {@code exceptionCaught} and closes the channel — and unlike
-     * {@code FThreads.assertExecutedByEdt}, which returns early under net play, it has to
-     * stay live in exactly the mode where these problems occur.
+     * an exception reaches {@code exceptionCaught} and closes the channel.
      */
-    private final java.util.concurrent.atomic.AtomicReference<Thread> collectOwner =
-            new java.util.concurrent.atomic.AtomicReference<>();
-    private static final AtomicInteger CONCURRENT_ENTRIES = new AtomicInteger();
-
-    /**
-     * How many times a second thread has been found inside collection, across every client
-     * in this process. Counted rather than only logged so a test can hold it at zero — the
-     * detector has fired during ordinary play before collection was serialised, and nothing
-     * would notice it starting again.
-     */
-    public static int concurrentEntryCount() {
-        return CONCURRENT_ENTRIES.get();
-    }
+    private final AtomicReference<Thread> collectOwner = new AtomicReference<>();
 
     /**
      * Send every client the whole state in every packet, rather than the difference.
      *
-     * <p>The escape hatch for a suspected fault in the differencing: with the baseline left
-     * empty, each packet is a diff against nothing, which is a complete state. Costs bandwidth
-     * and nothing else - the wire format, the encoding and the client's apply are the ones
-     * used normally, so this changes how much is sent rather than how.
+     * <p>The escape hatch for a suspected fault in the differencing: each packet is diffed
+     * against nothing, which is a complete state. Costs bandwidth and nothing else - the wire
+     * format, the encoding and the client's apply are the ones used normally, so this changes
+     * how much is sent rather than how.
      */
     private static final boolean SEND_FULL_STATE_EVERY_PACKET =
             Boolean.getBoolean("forge.net.fullStateEveryPacket");
 
     private DeltaPacket collectDeltasInternal(GameView gameView) {
         ViewSnapshot current = ViewSnapshot.current(gameView);
-        ViewSnapshot.Diff diff = ViewSnapshot.diff(baseline, current);
-        baseline = SEND_FULL_STATE_EVERY_PACKET ? ViewSnapshot.empty() : current;
+        ViewSnapshot.Diff diff = ViewSnapshot.diff(
+                SEND_FULL_STATE_EVERY_PACKET ? ViewSnapshot.empty() : baseline, current);
+        // Advanced even under the hatch. The baseline is also what the encoder asks whether
+        // this client holds an object, and answering no for everything would inline whole
+        // cards into unrelated messages - changing what the hatch is meant to hold still.
+        baseline = current;
         published = current;
         return finishPacket(gameView, diff.objectDeltas(), diff.newObjects());
     }
@@ -292,7 +288,7 @@ public class DeltaSyncManager implements IHasForgeLog {
         if (type == TrackableTypes.CardViewType || type == TrackableTypes.PlayerViewType)
             return ((TrackableObject) value).getId();
 
-        // Polymorphic reference → int[]{typeMarker, id}
+        // Either a card or a player → a reference carrying which
         if (type == TrackableTypes.GameEntityViewType) {
             GameEntityView entity = (GameEntityView) value;
             return new DeltaPacket.EntityRef(

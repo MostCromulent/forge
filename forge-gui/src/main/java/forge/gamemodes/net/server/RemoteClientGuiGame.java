@@ -215,11 +215,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      *
      * <p>Serialized per client, because collecting and sending have to stay one step: the
      * baseline advances as a packet is built, so two threads collecting at once would each
-     * diff from the same starting point and then write in whichever order they reached the
-     * socket. The client would keep the older of the two while the baseline recorded the
-     * newer, and nothing would send the difference again. Not hypothetical - the
-     * concurrent-entry detector has reported the event dispatch thread and a game thread
-     * inside one client's collection during ordinary play.
+     * diff from the same starting point, and whichever packet lost the race to the socket
+     * would leave the client behind a baseline that says otherwise. The event dispatch thread
+     * and a game thread have both been observed inside one client's collection.
      */
     public synchronized void updateGameView() {
         GameView gameView = getGameView();
@@ -282,12 +280,17 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
      */
     public synchronized void reseedAfterReconnect() {
         final DeltaPacket reseed = syncManager.reseedFromPublished();
-        if (reseed != null) {
-            initialSyncSent = true;
-            sender.send(ProtocolMethod.applyDelta, reseed);
+        if (reseed == null) {
+            // Nothing has been published, so this client dropped before it was ever seeded and
+            // there is nothing here to send it. Building one would mean reading the graph from
+            // this thread, which is the read this path exists to avoid; the next collect on the
+            // game thread sends everything, because the baseline is still empty.
+            netLog.info("[Reconnect] Nothing published yet for {}; state follows on the next collect",
+                    client.getUsername());
             return;
         }
-        updateGameView();
+        initialSyncSent = true;
+        sender.send(ProtocolMethod.applyDelta, reseed);
     }
 
     /**
@@ -627,10 +630,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         }
         netLog.info("Sending batch of {}: [{}]", events.size(),
                 events.stream().map(e -> e.getClass().getSimpleName()).collect(Collectors.joining(", ")));
-        // When GameEventGameStarted arrives, prepareAllZones has completed —
         if (initialSyncSent) {
-            // Bundle events with delta so they're applied atomically:
-            // delta properties first, then events forwarded.
+            // One packet, so the client applies the state a batch of events describes before
+            // the events themselves.
             GameView gameView = getGameView();
             if (gameView != null) {
                 DeltaPacket delta = syncManager.collectDeltas(gameView);
@@ -684,8 +686,12 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Send events as a standalone applyDelta without running {@link DeltaSyncManager#collectDeltas},
-     * which is game-thread-only and would also redundantly re-send the full graph right after a reconnect's sendFullState.
+     * Send events with no state attached, for callers that have just sent it themselves.
+     *
+     * <p>Both are cases where collecting again would be wrong rather than merely wasteful:
+     * before this client is seeded there is nothing to diff against, and the reconnect that
+     * replays the game log has already been given everything - on a Netty thread, where the
+     * checksum's read of the live view does not belong.
      */
     public void replayEvents(final List<GameEvent> events) {
         if (paused) { return; }

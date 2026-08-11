@@ -140,9 +140,15 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
      * the way the server does — that constructor needs a {@code Game}. The delta carries the
      * view's own properties under its own key, so the id is there to be read, and the
      * properties arrive through the ordinary apply once the instance exists.
+     *
+     * <p>A view left over from a previous connection is replaced rather than kept. Deltas are
+     * applied into the tracker that view holds, while ids arriving on this connection resolve
+     * against this handler's; a GUI that outlives a connection, as the mobile one does, would
+     * otherwise fill one and be read from the other.
      */
     private void bootstrapGameView(final DeltaPacket packet) {
-        if (gui.getGameView() != null) {
+        final GameView existing = gui.getGameView();
+        if (existing != null && existing.getTracker() == this.tracker) {
             return;
         }
         for (final Integer key : packet.getNewObjects().keySet()) {

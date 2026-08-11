@@ -633,7 +633,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         synchronized (remoteClients) {
             for (HeadlessNetworkClient client : remoteClients) {
                 result.deltaPacketsReceived += client.getDeltaPacketsReceived();
-                result.fullStateSyncsReceived += client.getFullStateSyncsReceived();
                 result.totalDeltaBytes += client.getTotalDeltaBytes();
                 result.eventStateMismatches += client.getEventStateMismatches();
             }
@@ -649,8 +648,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         if (server != null) {
             result.sendErrors = server.getTotalSendErrors();
         }
-        netLog.info("Client metrics: deltas={}, fullSyncs={}, bytes={}",
-                result.deltaPacketsReceived, result.fullStateSyncsReceived, result.totalDeltaBytes);
+        netLog.info("Client metrics: deltas={}, bytes={}",
+                result.deltaPacketsReceived, result.totalDeltaBytes);
     }
 
     private void swapRemotePlayersToAi() {
@@ -761,7 +760,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
         // Network metrics (from remote clients)
         public long deltaPacketsReceived;
-        public long fullStateSyncsReceived;
         public long totalDeltaBytes;
         public long eventStateMismatches;
 

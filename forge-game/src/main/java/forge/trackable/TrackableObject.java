@@ -19,6 +19,11 @@ import forge.game.card.CardView;
  * owning {@link Tracker}, so a reader that has built something from the whole view can tell
  * whether it is still current without being told what changed.
  *
+ * <p><b>Stored values are the view's own.</b> A property whose value is a collection stores a
+ * copy of it, so the engine cannot go on mutating something a reader is holding. Which types
+ * copy is declared in {@link TrackableTypes}; a new type holding a collection and not
+ * declaring it would silently share the engine's.
+ *
  * <p><b>Freeze interaction.</b> When the owning {@link Tracker} is frozen, {@code set}
  * queues the change rather than applying it; the queued change replays at unfreeze. Do not
  * read a property during a frozen window expecting a freshly-set value — {@code get}
@@ -74,7 +79,7 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
      *
      * <p>{@link #getProps} hands out the live map, and EnumMap does not check for concurrent
      * modification: iterating it while a property is being set neither throws nor finishes
-     * cleanly. Values read back null, or the walk runs off the end with a
+     * cleanly. Values read back null, or the iteration runs off the end with a
      * NoSuchElementException - both quiet enough to look like state that was never there.
      * Copying clones the backing array instead of iterating, so it can see neither, and it
      * is no more expensive than the read it replaces.
@@ -117,15 +122,22 @@ public abstract class TrackableObject implements IIdentifiable, Serializable {
             }
             return;
         }
-        // Compared before copying, since a copy equals what it was made from. Storing a value
-        // that has not moved is routine - a card's type is recalculated far more often than it
-        // changes - and copying first meant allocating one every time only to discard it.
-        if (value0.equals(props.get(key))) {
+        final boolean unchanged = value0.equals(props.get(key));
+        // A value stored as a copy is not worth copying again when it equals the one already
+        // there: nothing can tell the two apart. Anything else is stored even when it compares
+        // equal, because equality here is not identity - two view objects are equal when they
+        // share a class and an id, so a replacement carrying newer state looks like what it
+        // replaces. Skipping that store would leave the graph pointing at the old instance
+        // while every later update went to the new one.
+        if (unchanged && key.getType().copiesOnStore()) {
             return;
         }
         @SuppressWarnings("unchecked")
         final T value = (T) key.getType().detach(value0);
         props.put(key, value);
+        if (unchanged) {
+            return;
+        }
         recordChange();
         key.updateObjLookup(tracker, value);
     }
