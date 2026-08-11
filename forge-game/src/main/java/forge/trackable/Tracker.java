@@ -1,13 +1,12 @@
 package forge.trackable;
 
-import java.util.Collections;
-import java.util.EnumMap;
 import java.util.List;
-import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
-import com.google.common.collect.HashBasedTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Table;
+import com.google.common.collect.Tables;
 
 import forge.trackable.TrackableTypes.TrackableType;
 
@@ -21,20 +20,44 @@ import forge.trackable.TrackableTypes.TrackableType;
  *
  * <p><b>Freeze model.</b> {@link #freeze()}/{@link #unfreeze()} bracket a region during
  * which {@link TrackableObject#set} queues changes rather than applying them. When the
- * freeze counter reaches zero, queued changes replay through {@code set} and may cascade
- * into consumer dirty-bit updates. Used to bundle the state changes of a multi-step
- * engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
+ * freeze counter reaches zero, queued changes replay through {@code set}. Used to bundle the
+ * state changes of a multi-step engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
  * queue without leaving the frozen state.
  *
- * <p><b>Thread safety.</b> Not thread-safe — game thread only. The {@code unfreeze}
- * replay walks TrackableObjects and triggers consumer notifications; running it from
- * another thread corrupts consumer dirty-bit state.
+ * <p><b>Thread safety.</b> The freeze machinery is game-thread only: the {@code unfreeze}
+ * replay writes to TrackableObjects, so running it from another thread races the engine.
+ * The object lookup is not, because on a
+ * client it cannot be — a message is decoded on the network thread, which resolves id
+ * references against this table, while the previous message is still being applied on the
+ * display thread, which writes to it. A read losing that race returns null, and the caller
+ * reports a reference it could not resolve rather than failing, so the table is backed by
+ * concurrent maps and the two at least do not corrupt it.
  */
 public class Tracker {
     private int freezeCounter = 0;
     private final List<DelayedPropChange> delayedPropChanges = Lists.newArrayList();
 
-    private final Table<TrackableType<?>, Integer, Object> objLookups = HashBasedTable.create();
+    private final Table<TrackableType<?>, Integer, Object> objLookups =
+            Tables.newCustomTable(new ConcurrentHashMap<>(), ConcurrentHashMap::new);
+
+    private final AtomicLong changeCount = new AtomicLong();
+
+    /**
+     * How many property changes this game's view has seen.
+     *
+     * <p>For a reader that has built something from the whole view and wants to know whether
+     * it is still current, without asking what changed. Monotonic, and only bumped when a
+     * property actually takes a new value.
+     */
+    public long getChangeCount() {
+        return changeCount.get();
+    }
+
+    // Atomic because dev cheats and concede write from other threads, and a lost increment
+    // would let a stale reading look current.
+    void recordChange() {
+        changeCount.incrementAndGet();
+    }
 
     public final boolean isFrozen() {
         return freezeCounter > 0;
@@ -85,22 +108,6 @@ public class Tracker {
 
     public void clearDelayed() {
         delayedPropChanges.clear();
-    }
-
-    /**
-     * Read-only peek at delayed property changes queued for a specific object.
-     */
-    public Map<TrackableProperty, Object> getDelayedPropsFor(TrackableObject obj) {
-        if (delayedPropChanges.isEmpty()) {
-            return Collections.emptyMap();
-        }
-        Map<TrackableProperty, Object> result = new EnumMap<>(TrackableProperty.class);
-        for (DelayedPropChange change : delayedPropChanges) {
-            if (change.object == obj) {
-                result.put(change.prop, change.value);
-            }
-        }
-        return result;
     }
 
     private class DelayedPropChange {

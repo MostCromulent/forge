@@ -18,6 +18,7 @@ import net.jpountz.lz4.LZ4BlockOutputStream;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 
 /**
  * Handles serialization of {@link TrackableObject} references across the network.
@@ -68,18 +69,18 @@ public final class TrackableSerializer implements IHasForgeLog {
      * and image key.
      * <p>
      * In non-event mode, a CardView is substituted with an IdRef only when
-     * the receiver is known to have it: server-side (consumerId &ge; 0) that
-     * means {@code DeltaSyncManager} has registered this consumer on the
-     * object (i.e. its properties have been included in a delta for that
-     * client); client-side (consumerId &lt; 0) the encoder falls back to
-     * tracker presence, which is sound there because the client's tracker
+     * the receiver is known to have it. Server-side that question is answered
+     * by {@code receiverKnows}, supplied per connection by
+     * {@code DeltaSyncManager}, which is the only thing that knows what it has
+     * sent this client. With no predicate the encoder falls back to tracker
+     * presence, which is sound client-side because the client's tracker
      * <em>is</em> exactly what the client knows.
      * <p>
      * CardViews that fail the gate pass through unchanged so Java serializes
      * the full object inline (covers Jhoira-style ephemeral choice copies
      * that never enter a tracked zone and are never broadcast).
      */
-    static Object replace(Object obj, Tracker tracker, int consumerId, boolean eventMode) {
+    static Object replace(Object obj, Tracker tracker, Predicate<TrackableObject> receiverKnows, boolean eventMode) {
         if (obj instanceof TrackableObject trackable) {
             byte tag = typeTagFor(trackable);
             if (tag < 0) return obj;
@@ -89,10 +90,10 @@ public final class TrackableSerializer implements IHasForgeLog {
             }
 
             if (!eventMode) {
-                boolean receiverKnows = consumerId >= 0
-                        ? trackable.hasConsumer(consumerId)
+                boolean known = receiverKnows != null
+                        ? receiverKnows.test(trackable)
                         : tracker != null && tracker.getObj(trackableTypeFor(tag), trackable.getId()) != null;
-                if (receiverKnows) {
+                if (known) {
                     return new IdRef(tag, trackable.getId());
                 }
                 return obj;
@@ -152,7 +153,7 @@ public final class TrackableSerializer implements IHasForgeLog {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             LZ4BlockOutputStream lz4Out = new LZ4BlockOutputStream(baos);
-            try (CObjectOutputStream oos = new CObjectOutputStream(lz4Out, tracker != null, tracker, -1, false)) {
+            try (CObjectOutputStream oos = new CObjectOutputStream(lz4Out, tracker != null, tracker, null, false)) {
                 oos.writeObject(obj);
             }
             return baos.size();
@@ -181,7 +182,7 @@ public final class TrackableSerializer implements IHasForgeLog {
         for (GameEvent event : events) {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream(256);
-                try (CObjectOutputStream out = new CObjectOutputStream(baos, true, tracker, -1, true)) {
+                try (CObjectOutputStream out = new CObjectOutputStream(baos, true, tracker, null, true)) {
                     out.writeObject(event);
                 }
                 wrapped.add(new WrappedEvent(baos.toByteArray()));

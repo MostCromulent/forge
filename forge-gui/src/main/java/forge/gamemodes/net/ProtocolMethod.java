@@ -2,7 +2,6 @@ package forge.gamemodes.net;
 
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
-import forge.game.GameView;
 
 import forge.game.card.CardView;
 import forge.game.player.DelayedReveal;
@@ -32,7 +31,6 @@ import java.util.Map;
  */
 public enum ProtocolMethod implements IHasForgeLog {
     // Server -> Client
-    setGameView         (Mode.SERVER, Void.TYPE, GameView.class, Long.TYPE),
     openView            (Mode.SERVER, Void.TYPE, TrackableCollection/*PlayerView*/.class),
     afterGameEnd        (Mode.SERVER, Void.TYPE),
     showCombat          (Mode.SERVER, Void.TYPE),

@@ -1,6 +1,7 @@
 package forge.gamemodes.net;
 
 import forge.gamemodes.net.event.GuiGameEvent;
+import forge.trackable.TrackableObject;
 import forge.trackable.Tracker;
 import forge.util.IHasForgeLog;
 import io.netty.buffer.ByteBuf;
@@ -12,6 +13,7 @@ import net.jpountz.lz4.LZ4BlockOutputStream;
 
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.function.Predicate;
 
 /**
  * Netty outbound handler that frames and serializes one network message per
@@ -29,11 +31,12 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
     private final NetworkByteTracker byteTracker;
     private volatile Tracker tracker;
     /**
-     * Per-client {@code DeltaSyncManager.consumerId} for IdRef gating on the
-     * server side. {@code -1} = use tracker presence instead (client-side
-     * encoders never set this; server-side wires it via {@link #setTracker}).
+     * Whether the client on the other end of this channel already holds a given
+     * object, for IdRef gating on the server side. Null = use tracker presence
+     * instead (client-side encoders never set this; server-side wires it via
+     * {@code RemoteClient.setCodecTracker}).
      */
-    private volatile int consumerId = -1;
+    private volatile Predicate<TrackableObject> receiverKnows;
 
     public CompatibleObjectEncoder(NetworkByteTracker byteTracker) {
         this.byteTracker = byteTracker;
@@ -43,20 +46,20 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
         this.tracker = tracker;
     }
 
-    public void setConsumerId(int consumerId) {
-        this.consumerId = consumerId;
+    public void setReceiverKnows(Predicate<TrackableObject> receiverKnows) {
+        this.receiverKnows = receiverKnows;
     }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
-        encodeInto(msg, out, this.tracker, this.consumerId, this.byteTracker);
+        encodeInto(msg, out, this.tracker, this.receiverKnows, this.byteTracker);
     }
 
     /** Caller passes the returned buffer to writeAndFlush, which takes ownership. */
     public ByteBuf encodeToBuf(Serializable msg, ByteBufAllocator alloc) throws Exception {
         ByteBuf out = alloc.buffer();
         try {
-            encodeInto(msg, out, this.tracker, this.consumerId, this.byteTracker);
+            encodeInto(msg, out, this.tracker, this.receiverKnows, this.byteTracker);
         } catch (Exception e) {
             out.release();
             throw e;
@@ -64,7 +67,8 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
         return out;
     }
 
-    private static void encodeInto(Serializable msg, ByteBuf out, Tracker tracker, int consumerId,
+    private static void encodeInto(Serializable msg, ByteBuf out, Tracker tracker,
+                                   Predicate<TrackableObject> receiverKnows,
                                    NetworkByteTracker byteTracker) throws Exception {
         int startIdx = out.writerIndex();
         ByteBufOutputStream byteOut = new ByteBufOutputStream(out);
@@ -74,7 +78,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
         try {
             byteOut.write(LENGTH_PLACEHOLDER);
-            objectOut = new CObjectOutputStream(new LZ4BlockOutputStream(byteOut), replace, tracker, consumerId, false);
+            objectOut = new CObjectOutputStream(new LZ4BlockOutputStream(byteOut), replace, tracker, receiverKnows, false);
             objectOut.writeObject(msg);
             objectOut.flush();
         } finally {
@@ -101,8 +105,8 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
 
     /**
      * Determines whether TrackableObject references should be replaced with
-     * IdRef markers for this message. Excludes only:
-     * - setGameView/openView: carry full state to populate the client's Tracker
+     * IdRef markers for this message. Excludes only openView, whose player views are
+     * carriers for their ids and are resolved against the client's tracker on arrival.
      *
      * applyDelta is NOT excluded: its property maps already use Integer IDs
      * (via DeltaSyncManager.toNetworkValue), and bundled events are wrapped
@@ -112,8 +116,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
     private static boolean shouldReplaceTrackables(Serializable msg) {
         if (msg instanceof GuiGameEvent event) {
             ProtocolMethod method = event.getMethod();
-            return method != ProtocolMethod.setGameView
-                    && method != ProtocolMethod.openView;
+            return method != ProtocolMethod.openView;
         }
         return true;
     }

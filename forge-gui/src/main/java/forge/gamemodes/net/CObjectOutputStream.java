@@ -1,11 +1,13 @@
 package forge.gamemodes.net;
 
+import forge.trackable.TrackableObject;
 import forge.trackable.Tracker;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.ObjectStreamClass;
 import java.io.OutputStream;
+import java.util.function.Predicate;
 
 /**
  * {@link ObjectOutputStream} subclass used by {@link CompatibleObjectEncoder}
@@ -22,7 +24,7 @@ import java.io.OutputStream;
  *       the wire.</li>
  *   <li>When replacement is enabled (per-message, by the encoder), delegates
  *       {@code replaceObject} to {@link TrackableSerializer#replace} with the
- *       supplied Tracker / consumerId / eventMode, turning tracked
+ *       supplied Tracker / receiverKnows / eventMode, turning tracked
  *       CardView/PlayerView references into compact {@link TrackableSerializer.IdRef}
  *       (or {@link TrackableSerializer.EventCardRef} when {@code eventMode}) markers.</li>
  * </ul>
@@ -31,13 +33,14 @@ public class CObjectOutputStream extends ObjectOutputStream {
     static final int TYPE_THIN_DESCRIPTOR = 1;
 
     private final Tracker tracker;
-    private final int consumerId;
+    private final Predicate<TrackableObject> receiverKnows;
     private final boolean eventMode;
 
-    CObjectOutputStream(OutputStream out, boolean replaceTrackables, Tracker tracker, int consumerId, boolean eventMode) throws IOException {
+    CObjectOutputStream(OutputStream out, boolean replaceTrackables, Tracker tracker,
+                        Predicate<TrackableObject> receiverKnows, boolean eventMode) throws IOException {
         super(out);
         this.tracker = tracker;
-        this.consumerId = consumerId;
+        this.receiverKnows = receiverKnows;
         this.eventMode = eventMode;
         if (replaceTrackables) {
             enableReplaceObject(true);
@@ -52,6 +55,6 @@ public class CObjectOutputStream extends ObjectOutputStream {
 
     @Override
     protected Object replaceObject(Object obj) throws IOException {
-        return TrackableSerializer.replace(obj, tracker, consumerId, eventMode);
+        return TrackableSerializer.replace(obj, tracker, receiverKnows, eventMode);
     }
 }

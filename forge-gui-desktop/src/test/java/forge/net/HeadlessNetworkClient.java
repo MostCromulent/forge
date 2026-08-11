@@ -337,16 +337,6 @@ public class HeadlessNetworkClient implements AutoCloseable, IHasForgeLog {
         }
 
         @Override
-        public void setGameView(forge.game.GameView gameView, long sequenceNumber) {
-            super.setGameView(gameView, sequenceNumber);
-
-            // Notify the client when this is a full state sync (sequenceNumber >= 0)
-            if (sequenceNumber >= 0) {
-                client.onFullStateSyncReceived(sequenceNumber);
-            }
-        }
-
-        @Override
         public void handleGameEvents(java.util.List<forge.game.event.GameEvent> events) {
             // Validate event-delta consistency AFTER delta is applied but BEFORE
             // super dispatches events to FControlGameEventHandler.

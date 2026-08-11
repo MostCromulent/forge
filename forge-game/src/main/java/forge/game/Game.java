@@ -729,7 +729,8 @@ public class Game {
             forEachCardInGame(visit);
         }
         Card found = visit.getFound();
-        if (found == null) {
+        // A click racing the last point of damage resolves against emptied zones; not an error.
+        if (found == null && !isGameOver()) {
             netLog.error("findByView: id={} (zone={}, controller={}) not found in any zone — returning null",
                     view.getId(), view.getZone(), view.getController());
         }

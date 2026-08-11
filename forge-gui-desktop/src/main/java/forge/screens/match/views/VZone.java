@@ -93,9 +93,8 @@ public class VZone implements IVDoc<CZone> {
         final List<CardPanel> cardPanels = new ArrayList<>();
         final FCollectionView<CardView> cards = player.getCards(zone);
         if (!cards.isEmpty()) {
-            final Iterable<CardView> safeCards = matchUI.isNetGame() ? cards.threadSafeIterable() : cards;
             final List<CardView> cardList = new ArrayList<>();
-            for (final CardView card : safeCards) {
+            for (final CardView card : cards) {
                 cardList.add(card);
             }
             if (sortedByName) {

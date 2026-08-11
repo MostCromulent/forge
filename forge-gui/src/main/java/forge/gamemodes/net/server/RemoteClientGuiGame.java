@@ -45,27 +45,19 @@ import java.util.stream.Collectors;
  * {@link #resetForReconnect}).
  *
  * <p>IGuiGame overrides forward through one of four helpers named for their behavior:
- * {@link #send} (fire), {@link #syncAndSend} (walk the trackable graph, then fire),
- * {@link #sendAndWait} (block for reply), {@link #syncAndSendAndWait} (walk, then block).
- * {@code sync*} ensures the client has the entities referenced in the payload; the bare
- * forms are for payloads that are pure IDs, strings, or flags.
- *
- * <p>{@code sync*} requires the game thread because the trackable graph is single-mutator;
- * the bare variants skip the walk and are safe from any thread.
+ * {@link #send} (fire), {@link #syncAndSend} (send this client's pending state first, then
+ * fire), {@link #sendAndWait} (block for reply), {@link #syncAndSendAndWait} (state first,
+ * then block). {@code sync*} ensures the client has the entities referenced in the payload;
+ * the bare forms are for payloads that are pure IDs, strings, or flags.
  */
 public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog {
 
-    // New objects are sent with full property data, existing objects only send changed properties
-    public static boolean useDeltaSync = true;
 
     private final RemoteClient client;
     private final GameProtocolSender sender;
     private final DeltaSyncManager syncManager;
 
     private boolean initialSyncSent = false;
-    private boolean objectsRegistered = false;
-    private boolean codecTrackerSet = false;
-    private boolean fallbackLogged = false;  // Prevent duplicate fallback log messages
     private volatile boolean paused;
     private volatile boolean resyncPending;
 
@@ -99,14 +91,14 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Reset delta sync state for reconnection.
-     * After a client reconnects, it has no prior delta baseline,
-     * so we must send a full state before resuming delta sync.
+     * Forget what this client holds, so a reconnecting one is sent everything again.
+     *
+     * <p>Synchronized like the senders: this runs on a Netty thread while a collect can be in
+     * flight on the game thread, and it zeroes the sequence and the baseline that collect is
+     * about to advance.
      */
-    public void resetForReconnect() {
+    public synchronized void resetForReconnect() {
         initialSyncSent = false;
-        objectsRegistered = false;
-        fallbackLogged = false;
         syncManager.reset();
     }
 
@@ -137,9 +129,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Dispatches a self-contained payload (IDs, strings, flags) — no graph walk,
-     * safe from any thread. Used when the client doesn't need fresh state to
-     * consume the message.
+     * Dispatches a self-contained payload (IDs, strings, flags), safe from any thread. Used
+     * when the client doesn't need fresh state to consume the message.
      */
     private void send(final ProtocolMethod method, final Object... args) {
         if (paused) { return; }
@@ -147,8 +138,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Walks the trackable graph via {@link #updateGameView} before dispatching, so
-     * the client has the entities referenced in the payload. Game-thread-only.
+     * Sends this client's pending state via {@link #updateGameView} before dispatching, so it
+     * has the entities the payload refers to. Game-thread-only.
      */
     private void syncAndSend(final ProtocolMethod method, final Object... args) {
         if (paused) { return; }
@@ -157,8 +148,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Dispatches and blocks for the client's reply, with no graph walk. Used for
-     * dialogs whose args carry the full question (e.g. plain-text confirms).
+     * Dispatches and blocks for the client's reply. Used for dialogs whose args carry the
+     * full question (e.g. plain-text confirms).
      */
     private <T> T sendAndWait(final ProtocolMethod method, final Object... args) {
         if (paused) { return null; }
@@ -166,9 +157,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Walks the trackable graph, dispatches, and blocks for the client's reply.
-     * Used for dialogs that reference entities, cards, or zones the client must
-     * have to render the prompt. Game-thread-only.
+     * Sends this client's pending state, dispatches, and blocks for the reply. Used for
+     * dialogs that reference entities, cards or zones the client must have to render the
+     * prompt. Game-thread-only.
      */
     private <T> T syncAndSendAndWait(final ProtocolMethod method, final Object... args) {
         if (paused) { return null; }
@@ -180,42 +171,65 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     private long totalDeltaBytes = 0;
     private long totalFullStateBytes = 0;
     private int deltaPacketCount = 0;
+    private int lastFullStateSize = 0;
     private boolean logBandwidth = FModel.getNetPreferences().getPrefBoolean(forge.localinstance.properties.ForgeNetPreferences.FNetPref.NET_BANDWIDTH_LOGGING);
 
     /**
-     * Push pending state to the client. Flushes the event queue if any events
-     * are queued; otherwise walks the trackable graph for state changes that
-     * didn't fire an event and sends an applyDelta. Falls back to a full
-     * setGameView before delta sync is established. Game-thread-only.
+     * How often the full-state baseline is re-measured, in packets.
      *
-     * <p>Called internally by {@link #syncAndSend} and {@link #syncAndSendAndWait};
-     * also invoked directly from the reconnect handshake.
+     * <p>It costs a serialization of the whole game to measure and it moves slowly, so
+     * measuring it per packet was most of the cost of having bandwidth logging on at all.
+     * Every packet still reports one, from the most recent measurement, so the totals stay
+     * comparable.
      */
-    public void updateGameView() {
-        updateGameView(true);
+    private static final int FULL_STATE_SAMPLE_INTERVAL =
+            Integer.getInteger("forge.bandwidth.sampleEvery", 25);
+
+    /**
+     * What a full state would cost right now: the diff against an empty baseline, taken from
+     * the published snapshot so nothing reads the live graph. Zero until something is
+     * published, since serializing the live view to fill that gap would be the one read this
+     * layer exists to remove.
+     */
+    private int measureFullState(final GameView gameView) {
+        final DeltaPacket asDelta = syncManager.fullStateForMeasurement();
+        if (asDelta == null) {
+            return 0;
+        }
+        return TrackableSerializer.measureSize(asDelta, gameView.getTracker());
     }
-    private void updateGameView(boolean flush) {
+
+    /** Re-measures on a sampled packet, and otherwise reports the last measurement. */
+    private int currentFullStateSize(final GameView gameView) {
+        if (lastFullStateSize == 0 || deltaPacketCount % FULL_STATE_SAMPLE_INTERVAL == 0) {
+            lastFullStateSize = measureFullState(gameView);
+        }
+        return lastFullStateSize;
+    }
+
+    /**
+     * Send this client whatever it has not been sent: the events queued for it, or the
+     * difference between the current snapshot and its baseline. Nothing is sent before the
+     * match opens. Called by {@link #syncAndSend} and {@link #syncAndSendAndWait}, and
+     * directly from the reconnect handshake.
+     *
+     * <p>Serialized per client, because collecting and sending have to stay one step: the
+     * baseline advances as a packet is built, so two threads collecting at once would each
+     * diff from the same starting point and then write in whichever order they reached the
+     * socket. The client would keep the older of the two while the baseline recorded the
+     * newer, and nothing would send the difference again. Not hypothetical - the
+     * concurrent-entry detector has reported the event dispatch thread and a game thread
+     * inside one client's collection during ordinary play.
+     */
+    public synchronized void updateGameView() {
         GameView gameView = getGameView();
         if (gameView == null) {
             return;
         }
 
-        if (!useDeltaSync || !initialSyncSent) {
-            if (logBandwidth && !fallbackLogged) {
-                netLog.info("[DeltaSync] Client {}: Fallback to full state - useDeltaSync={}, initialSyncSent={}",
-                    client.getIndex(), useDeltaSync, initialSyncSent);
-                fallbackLogged = true;
-            }
-            // Batch flush already emits setGameView; skip the duplicate.
-            if (forwarder != null && forwarder.hasPendingEvents()) {
-                flushPendingEvents();
-                return;
-            }
-            if (flush) {
-                send(ProtocolMethod.setGameView, gameView, -1L);
-            } else {
-                sender.write(ProtocolMethod.setGameView, gameView, -1L);
-            }
+        // A client is seeded by the first diff against an empty baseline, taken when the
+        // match opens. Nothing is sent before that.
+        if (!initialSyncSent) {
             return;
         }
 
@@ -227,23 +241,19 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
             return;
         }
 
-        // If events are pending, the batch flush bundles dirty props with
-        // them into applyDelta — skip the redundant graph walk here.
+        // The flush bundles the difference into the same packet as the events, so collecting
+        // it here as well would send it twice.
         if (forwarder != null && forwarder.hasPendingEvents()) {
             flushPendingEvents();
             return;
         }
         DeltaPacket delta = syncManager.collectDeltas(gameView);
         if (!delta.isEmpty()) {
-            if (flush) {
-                sender.send(ProtocolMethod.applyDelta, delta);
-            } else {
-                sender.write(ProtocolMethod.applyDelta, delta);
-            }
+            sender.send(ProtocolMethod.applyDelta, delta);
 
             if (logBandwidth) {
                 int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
-                int fullStateSize = TrackableSerializer.measureSize(gameView, null);
+                int fullStateSize = currentFullStateSize(gameView);
 
                 totalDeltaBytes += deltaSize;
                 totalFullStateBytes += fullStateSize;
@@ -261,6 +271,35 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
+     * Send a reconnecting client everything it needs, without reading live state.
+     *
+     * <p>This runs on a Netty thread, and cannot be moved off one: the engine is parked
+     * awaiting input from the very client being reseeded, so there is no engine-owned site
+     * to defer to. Diffing the last published snapshot makes it pure computation over an
+     * immutable value. Whatever changed while the client was away is not in that snapshot,
+     * and arrives in the next ordinary delta, because the baseline it leaves behind is
+     * exactly what was sent.
+     */
+    public synchronized void reseedAfterReconnect() {
+        final DeltaPacket reseed = syncManager.reseedFromPublished();
+        if (reseed != null) {
+            initialSyncSent = true;
+            sender.send(ProtocolMethod.applyDelta, reseed);
+            return;
+        }
+        updateGameView();
+    }
+
+    /**
+     * Forget what this client is believed to hold, after a message failed to reach it.
+     * The next delta is then a full state, computed by the ordinary diff rather than by a
+     * separate repair path.
+     */
+    synchronized void resetDeltaBaseline() {
+        syncManager.invalidateBaseline();
+    }
+
+    /**
      * Request a full state resync on the next updateGameView call.
      * Called from the Netty thread; the actual send happens on the game thread.
      */
@@ -270,47 +309,76 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     /**
-     * Send the full game state to the client.
-     * Used for initial connection and reconnection.
+     * Send this client everything, by forgetting what it holds and diffing from nothing.
+     *
+     * <p>Synchronized like the senders, because it writes the flag and the baseline that a
+     * collect on the game thread reads.
      */
-    public void sendFullState() {
+    public synchronized void sendFullState() {
         GameView gameView = getGameView();
         if (gameView == null) {
             return;
         }
 
-        long seq = syncManager.getCurrentSequence();
-        send(ProtocolMethod.setGameView, gameView, seq);
+        // Forgetting the baseline is what makes the next diff a full state. Without it a
+        // client reporting a checksum mismatch is answered by a diff against the baseline the
+        // server still believes in, which resends nothing.
+        syncManager.invalidateBaseline();
         initialSyncSent = true;
-
-        // Consumer registration is deferred — it happens on the first collectDeltas()
-        // call (see updateGameView). This ensures that all objects created during game
-        // initialization (prepareAllZones, hand dealing, commander placement) are present
-        // in the view graph when registration occurs. If we registered here, the view
-        // is still empty (openView runs before match.startGame/prepareAllZones), and
-        // zone updates during init would set dirty bits on the 3 registered objects
-        // but the Command zone dirty bit is sporadically lost in Commander games.
+        updateGameView();
     }
 
     @Override
     public void setGameView(final GameView gameView) {
         super.setGameView(gameView);
-        // Set codec tracker before any client protocol messages arrive.
-        // setGameView is called before openView, and the client can't respond
-        // until after openView — so the encoder/decoder are ready in time.
-        if (!codecTrackerSet && gameView != null && gameView.getTracker() != null) {
-            client.setCodecTracker(gameView.getTracker(), syncManager.getConsumerId());
-            codecTrackerSet = true;
+        // Rebind on every game: each Game owns a Tracker, and the decoder resolves client
+        // IdRefs against it. Set before any client protocol message can arrive.
+        if (gameView != null && gameView.getTracker() != null) {
+            client.setCodecTracker(gameView.getTracker(), syncManager::receiverKnows);
         }
         updateGameView();
     }
 
     @Override
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
-        send(ProtocolMethod.openView, myPlayers);
-        updateGameView();
-        // Initialize delta sync by sending the initial full state
+        // State first. The client builds its GameView from the first delta, and openView
+        // carries player ids that resolve against the tracker that delta populates.
         sendFullState();
+        sendOpenView(myPlayers);
+    }
+
+    /**
+     * Send openView alone, for a client that has already been given state.
+     *
+     * <p>A reconnecting client must not be put through the game-start bootstrap again: that
+     * would rebuild the view graph on the Netty thread the reconnect runs on, which is the
+     * read the snapshot exists to remove.
+     */
+    public void sendOpenView(final TrackableCollection<PlayerView> myPlayers) {
+        send(ProtocolMethod.openView, identifiersOnly(myPlayers));
+    }
+
+    /**
+     * The players reduced to their ids.
+     *
+     * <p>openView is exempt from reference replacement, so sending the views themselves puts
+     * their zone collections on the wire with them — most of the live card graph, serialized
+     * on whatever thread sends it, which on a reconnect is a Netty thread. The client matches
+     * these against its tracker and keeps whichever instance it already holds.
+     *
+     * <p>They cannot travel as id references instead: those resolve in the decoder, before
+     * the state that would define them has been applied.
+     */
+    private static TrackableCollection<PlayerView> identifiersOnly(
+            final TrackableCollection<PlayerView> players) {
+        if (players == null) {
+            return null;
+        }
+        final TrackableCollection<PlayerView> ids = new TrackableCollection<>();
+        for (final PlayerView player : players) {
+            ids.add(new PlayerView(player.getId(), null));
+        }
+        return ids;
     }
 
     @Override
@@ -548,8 +616,9 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         handleGameEvents(List.of(event));
     }
 
+    /** Serialized with {@link #updateGameView} — it collects and sends by the same rules. */
     @Override
-    public void handleGameEvents(List<GameEvent> events) {
+    public synchronized void handleGameEvents(List<GameEvent> events) {
         if (paused) { return; }
         for (GameEvent ev : events) {
             if (ev instanceof GameEventPlayerControl pc) {
@@ -559,21 +628,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         netLog.info("Sending batch of {}: [{}]", events.size(),
                 events.stream().map(e -> e.getClass().getSimpleName()).collect(Collectors.joining(", ")));
         // When GameEventGameStarted arrives, prepareAllZones has completed —
-        // commanders are placed and zones are populated. Register consumers on
-        // any objects not yet tracked (without clearing dirty bits).
-        if (!objectsRegistered) {
-            for (GameEvent ev : events) {
-                if (ev instanceof forge.game.event.GameEventGameStarted) {
-                    GameView gv = getGameView();
-                    if (gv != null) {
-                        syncManager.registerNewObjects(gv);
-                        objectsRegistered = true;
-                    }
-                    break;
-                }
-            }
-        }
-        if (useDeltaSync && initialSyncSent && objectsRegistered) {
+        if (initialSyncSent) {
             // Bundle events with delta so they're applied atomically:
             // delta properties first, then events forwarded.
             GameView gameView = getGameView();
@@ -585,7 +640,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                 if (logBandwidth) {
                     int deltaSize = TrackableSerializer.measureSize(delta, gameView.getTracker());
                     int eventsSize = TrackableSerializer.measureSize(events, gameView.getTracker());
-                    int stateOnlyFullSize = TrackableSerializer.measureSize(gameView, null);
+                    int stateOnlyFullSize = currentFullStateSize(gameView);
                     int fullStateSize = stateOnlyFullSize + eventsSize;
                     int stateOnlyDeltaSize = TrackableSerializer.measureSize(delta.withoutEvents(), gameView.getTracker());
 
@@ -603,10 +658,7 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
                 }
             }
         } else {
-            updateGameView(false);
-            GameView gameView = getGameView();
-            forge.trackable.Tracker tracker = gameView != null ? gameView.getTracker() : null;
-            sender.send(ProtocolMethod.applyDelta, DeltaPacket.eventsOnly(TrackableSerializer.wrapEvents(events, tracker)));
+            replayEvents(events);
         }
     }
 
@@ -653,8 +705,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     @Override
     public String toString() {
         GameView gv = getGameView();
-        return String.format("RemoteClientGuiGame[client=%d, deltaSyncEnabled=%b, initialSyncSent=%b, gameView=%s]",
-                client.getIndex(), useDeltaSync, initialSyncSent,
+        return String.format("RemoteClientGuiGame[client=%d, initialSyncSent=%b, gameView=%s]",
+                client.getIndex(), initialSyncSent,
                 gv != null ? "GameView@" + Integer.toHexString(System.identityHashCode(gv)) : "null");
     }
 

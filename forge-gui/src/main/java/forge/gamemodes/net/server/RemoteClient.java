@@ -3,6 +3,7 @@ package forge.gamemodes.net.server;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
 import forge.gamemodes.net.ReplyPool;
+import forge.trackable.TrackableObject;
 import forge.trackable.Tracker;
 import forge.gamemodes.net.event.IdentifiableNetEvent;
 import forge.gamemodes.net.event.NetEvent;
@@ -12,6 +13,7 @@ import io.netty.channel.Channel;
 
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 public final class RemoteClient implements IToClient, IHasForgeLog {
 
@@ -24,7 +26,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     private boolean libgdx;
     private volatile ReplyPool replies = new ReplyPool();
     private volatile Tracker codecTracker;
-    private volatile int codecConsumerId = -1;
+    private volatile Predicate<TrackableObject> codecReceiverKnows;
     private final AtomicInteger sendErrors = new AtomicInteger(0);
     private RemoteClientGuiGame gui;
 
@@ -72,17 +74,43 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         final Channel ch = channel;
         final CompatibleObjectEncoder encoder = ch.pipeline().get(CompatibleObjectEncoder.class);
         if (encoder == null) {
-            netLog.error("No encoder in pipeline for {} (event: {})", username, event);
-            sendErrors.incrementAndGet();
+            deliveryFailed("encode", event, null, "no encoder in pipeline");
             return null;
         }
         try {
             return encoder.encodeToBuf(event, ch.alloc());
         } catch (Exception e) {
-            sendErrors.incrementAndGet();
-            netLog.error(e, "Network encode error for {} (event: {})", username, event);
+            deliveryFailed("encode", event, e, null);
             return null;
         }
+    }
+
+    /**
+     * Report a message that did not reach the socket, and reseed this client's delta
+     * baseline.
+     *
+     * <p>The baseline records what the server believes this client holds, and it advances
+     * when a packet is built rather than when it lands. Every way a message can be lost
+     * ends up here — a missing encoder, an encode that threw, a write that failed or was
+     * cancelled — so this is the one place that can stop a silent, permanent divergence:
+     * without the reseed the server would never send that state again.
+     */
+    private void deliveryFailed(final String stage, final NetEvent event,
+                                final Throwable cause, final String detail) {
+        sendErrors.incrementAndGet();
+        if (cause != null) {
+            netLog.error(cause, "Network {} error for {} (event: {})", stage, username, event);
+        } else {
+            netLog.error("Network {} error for {} (event: {}, cause: {})", stage, username, event, detail);
+        }
+        final RemoteClientGuiGame g = gui;
+        if (g != null) {
+            g.resetDeltaBaseline();
+        }
+    }
+
+    private String failureDetail(final io.netty.util.concurrent.Future<?> f) {
+        return f.isCancelled() ? "cancelled" : "no cause";
     }
 
     @Override
@@ -93,14 +121,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         if (encoded == null) return;
         ch.writeAndFlush(encoded).addListener(f -> {
             if (!f.isSuccess()) {
-                sendErrors.incrementAndGet();
-                Throwable c = f.cause();
-                if (c != null) {
-                    netLog.error(c, "Network send error for {} (event: {})", username, event);
-                } else {
-                    netLog.error("Network send error for {} (event: {}, cause: {})",
-                            username, event, f.isCancelled() ? "cancelled" : "no cause");
-                }
+                deliveryFailed("send", event, f.cause(), failureDetail(f));
             }
         });
     }
@@ -113,14 +134,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         if (encoded == null) return;
         ch.write(encoded).addListener(f -> {
             if (!f.isSuccess()) {
-                sendErrors.incrementAndGet();
-                Throwable c = f.cause();
-                if (c != null) {
-                    netLog.error(c, "Network write error for {} (event: {})", username, event);
-                } else {
-                    netLog.error("Network write error for {} (event: {}, cause: {})",
-                            username, event, f.isCancelled() ? "cancelled" : "no cause");
-                }
+                deliveryFailed("write", event, f.cause(), failureDetail(f));
             }
         });
     }
@@ -137,14 +151,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         }
         ch.writeAndFlush(encoded).addListener(f -> {
             if (!f.isSuccess()) {
-                sendErrors.incrementAndGet();
-                Throwable c = f.cause();
-                if (c != null) {
-                    netLog.error(c, "sendAndWait write failed for {} (event: {})", username, event);
-                } else {
-                    netLog.error("sendAndWait write failed for {} (event: {}, cause: {})",
-                            username, event, f.isCancelled() ? "cancelled" : "no cause");
-                }
+                deliveryFailed("sendAndWait", event, f.cause(), failureDetail(f));
                 replies.complete(event.getId(), null);
             }
         });
@@ -180,16 +187,15 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
     }
 
     /**
-     * Set the tracker and per-client consumerId on the channel's encoder and
-     * decoder. Called when the game starts (before any client protocol
-     * messages arrive). Cached so that {@link #swapChannel} can re-apply
-     * after a reconnect. The consumerId is the {@code DeltaSyncManager} id
-     * for this client; the encoder uses it to gate IdRef substitution to
-     * objects this client has actually been told about.
+     * Set the tracker and the encoder's IdRef gate on the channel's codecs.
+     * Called when the game starts (before any client protocol messages
+     * arrive). Cached so that {@link #swapChannel} can re-apply after a
+     * reconnect. The gate answers whether this client has already been told
+     * about an object, so a reference to it can travel as an id.
      */
-    public void setCodecTracker(Tracker tracker, int consumerId) {
+    public void setCodecTracker(Tracker tracker, Predicate<TrackableObject> receiverKnows) {
         this.codecTracker = tracker;
-        this.codecConsumerId = consumerId;
+        this.codecReceiverKnows = receiverKnows;
         applyCodecTracker(channel);
     }
 
@@ -200,7 +206,7 @@ public final class RemoteClient implements IToClient, IHasForgeLog {
         CompatibleObjectEncoder encoder = ch.pipeline().get(CompatibleObjectEncoder.class);
         if (encoder != null) {
             encoder.setTracker(codecTracker);
-            encoder.setConsumerId(codecConsumerId);
+            encoder.setReceiverKnows(codecReceiverKnows);
         }
         CompatibleObjectDecoder decoder = ch.pipeline().get(CompatibleObjectDecoder.class);
         if (decoder != null) {

@@ -30,7 +30,6 @@ import forge.trackable.TrackableCollection;
 import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
 import forge.util.Localizer;
-import forge.util.collect.FCollectionView;
 
 import java.io.Serializable;
 import java.util.Collection;
@@ -50,13 +49,6 @@ public interface IGuiGame {
         return GuiBase.getInterface().isLibgdxPort();
     }
 
-    /**
-     * Set the game view with a sequence number for delta sync baseline.
-     * Local games ignore the sequence number.
-     */
-    default void setGameView(GameView gameView, long sequenceNumber) {
-        setGameView(gameView);
-    }
     void setGameView(GameView gameView);
     GameView getGameView();
 
@@ -125,7 +117,6 @@ public interface IGuiGame {
     void updateSingleCard(CardView card);
 
     void updateCards(Iterable<CardView> cards);
-    default void updateCardsNetSafe(FCollectionView<CardView> cards) { updateCards(isNetGame() ? cards.threadSafeIterable() : cards); }
 
     void updateRevealedCards(TrackableCollection<CardView> collection);
 

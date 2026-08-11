@@ -250,6 +250,17 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     }
 
     /**
+     * Called after anything changes the contents.
+     *
+     * <p>For a subclass that caches a read-only view of them and needs to discard it. The
+     * default does nothing, so a collection that caches nothing pays a call the JIT removes.
+     * It lives here rather than in the subclass because {@link #insert} is private, so
+     * overriding the public mutators would miss two of the ways a collection changes.
+     */
+    protected void onMutated() {
+    }
+
+    /**
      * Add an element to this collection, if it isn't already present.
      *
      * @param e the object to add.
@@ -268,10 +279,12 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (list.size() > HASH_THRESHOLD) {
                 hashed();
             }
+            onMutated();
             return true;
         }
         if (set.add(e)) {
             list.add(e);
+            onMutated();
             return true;
         }
         return false;
@@ -289,10 +302,15 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         if (o == null)
             return false;
         if (set == null) {
-            return list.remove(o);
+            if (!list.remove(o)) {
+                return false;
+            }
+            onMutated();
+            return true;
         }
         if (set.remove(o)) {
             list.remove(o);
+            onMutated();
             return true;
         }
         return false;
@@ -304,6 +322,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (set != null) {
                 set.removeIf(filter);
             }
+            onMutated();
             return true;
         }
         return false;
@@ -422,6 +441,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             if (set != null) {
                 set.retainAll(c);
             }
+            onMutated();
             return true;
         }
         return false;
@@ -437,6 +457,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             set.clear();
         }
         list.clear();
+        onMutated();
     }
 
     /**
@@ -454,7 +475,12 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      */
     @Override
     public T set(final int index, final T element) { //assume this isn't called except when changing list order, so don't worry about updating set
-        return list.set(index, element);
+        if (element == null) {
+            return list.get(index);
+        }
+        final T previous = list.set(index, element);
+        onMutated();
+        return previous;
     }
 
     /**
@@ -463,11 +489,15 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      * in sync with the list.
      */
     public T replace(final int index, final T element) {
+        if (element == null) {
+            return list.get(index);
+        }
         final T old = list.set(index, element);
         if (old != element && set != null) {
             set.remove(old);
             set.add(element);
         }
+        onMutated();
         return old;
     }
 
@@ -489,11 +519,15 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      * @return whether this collection changed as a result of this method call.
      */
     private boolean insert(int index, final T element) {
+        if (element == null) {
+            return false;
+        }
         if (set == null ? !list.contains(element) : set.add(element)) {
             list.add(index, element);
             if (set == null && list.size() > HASH_THRESHOLD) {
                 hashed();
             }
+            onMutated();
             return true;
         }
         //re-position in list if needed
@@ -507,6 +541,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         }
         list.remove(oldIndex);
         list.add(index, element);
+        onMutated();
         return true;
     }
 
@@ -519,6 +554,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
         if (removedItem != null && set != null) {
             set.remove(removedItem);
         }
+        onMutated();
         return removedItem;
     }
 
@@ -587,7 +623,26 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
             list.sort(comparator);
         } catch (Exception e) {
             System.err.println("FCollection failed to sort: \n" + comparator + "\n" + e.getMessage());
+        } finally {
+            // A comparator that breaks its contract throws after the sort has already moved
+            // things, so the order changed whether or not it finished.
+            onMutated();
         }
+    }
+
+    /**
+     * A private copy of the contents, safe to read while another thread writes.
+     *
+     * <p>The copy reads the backing array and the size separately, so a concurrent add or
+     * remove leaves nulls in the tail: a removal nulls the last slot after the size is
+     * captured, and a growth hands over the old, shorter array. Those slots hold no element
+     * at either instant, so dropping them gives a reading the collection genuinely had -
+     * which is the point of the copy - rather than a null the caller has no reason to expect.
+     */
+    protected List<T> safeCopy() {
+        final ArrayList<T> copy = new ArrayList<>(list);
+        copy.removeIf(Objects::isNull);
+        return copy;
     }
 
     /**
@@ -596,7 +651,7 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
     @Override
     public Iterable<T> threadSafeIterable() {
         //create a new list for iterating to make it thread safe and avoid concurrent modification exceptions
-        return Iterables.unmodifiableIterable(new ArrayList<>(list));
+        return Iterables.unmodifiableIterable(safeCopy());
     }
 
     @Override

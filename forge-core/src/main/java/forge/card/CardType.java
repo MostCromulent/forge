@@ -166,6 +166,10 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
     }
     public CardType(final CardTypeView from0) {
         addAll(from0);
+        // After addAll, which clears these while tidying subtypes. Without them a changeling
+        // copied through here stops having every creature type, and an exclusion is lost.
+        allCreatureTypes = from0.hasAllCreatureTypes();
+        Iterables.addAll(excludedCreatureSubtypes, from0.getExcludedCreatureSubTypes());
     }
 
     public boolean add(final String t) {
@@ -686,6 +690,35 @@ public final class CardType implements Comparable<CardType>, CardTypeView {
     @Override
     public int compareTo(final CardType o) {
         return toString().compareTo(o.toString());
+    }
+
+    /**
+     * Two of these are equal when they describe the same types, so that a copy equals what it
+     * was copied from and anything asking whether a type changed gets a useful answer.
+     *
+     * <p>Over the same state {@link #toString} is built from, which keeps this consistent with
+     * {@link #compareTo} and with what the copy constructors carry over. {@code incomplete} is
+     * deliberately not part of it: it records how far parsing got, not what the card is, and
+     * the copy constructors do not preserve it.
+     */
+    @Override
+    public boolean equals(final Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof CardType other)) {
+            return false;
+        }
+        return allCreatureTypes == other.allCreatureTypes
+                && coreTypes.equals(other.coreTypes)
+                && supertypes.equals(other.supertypes)
+                && subtypes.equals(other.subtypes)
+                && excludedCreatureSubtypes.equals(other.excludedCreatureSubtypes);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(coreTypes, supertypes, subtypes, allCreatureTypes, excludedCreatureSubtypes);
     }
 
     public boolean sharesCreaturetypeWith(final CardTypeView ctOther) {
