@@ -475,6 +475,8 @@ public class FCollection<T> implements List<T>, /*Set<T>,*/ FCollectionView<T>, 
      */
     @Override
     public T set(final int index, final T element) { //assume this isn't called except when changing list order, so don't worry about updating set
+        // Refused like add refuses one, and for a sharper reason here: a stored null is
+        // dropped by safeCopy, so it would count towards the size while no reader saw it.
         if (element == null) {
             return list.get(index);
         }

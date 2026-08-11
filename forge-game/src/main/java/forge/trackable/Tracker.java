@@ -21,17 +21,16 @@ import forge.trackable.TrackableTypes.TrackableType;
  * <p><b>Freeze model.</b> {@link #freeze()}/{@link #unfreeze()} bracket a region during
  * which {@link TrackableObject#set} queues changes rather than applying them. When the
  * freeze counter reaches zero, queued changes replay through {@code set}. Used to bundle the
- * state changes of a multi-step engine effect into a single coherent post-effect snapshot. {@link #flush()} drains the
- * queue without leaving the frozen state.
+ * state changes of a multi-step engine effect into one coherent result. {@link #flush()}
+ * drains the queue without leaving the frozen state.
  *
  * <p><b>Thread safety.</b> The freeze machinery is game-thread only: the {@code unfreeze}
  * replay writes to TrackableObjects, so running it from another thread races the engine.
- * The object lookup is not, because on a
- * client it cannot be — a message is decoded on the network thread, which resolves id
- * references against this table, while the previous message is still being applied on the
- * display thread, which writes to it. A read losing that race returns null, and the caller
- * reports a reference it could not resolve rather than failing, so the table is backed by
- * concurrent maps and the two at least do not corrupt it.
+ * The object lookup is not, because on a client it cannot be — a message is decoded on the
+ * network thread, which resolves id references against this table, while the previous
+ * message is still being applied on the display thread, which writes to it. A read that
+ * loses that race returns null and the caller reports a reference it could not resolve, so
+ * concurrent maps are enough here: they keep the table from being corrupted outright.
  */
 public class Tracker {
     private int freezeCounter = 0;

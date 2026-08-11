@@ -408,7 +408,6 @@ public class CardView extends GameEntityView {
     }
     void updateNotedTypes(Card c) {
         set(TrackableProperty.NotedTypes, c.getNotedTypes());
-        flagAsChanged(TrackableProperty.NotedTypes);
     }
 
     public String getChosenNumber() {
@@ -433,7 +432,6 @@ public class CardView extends GameEntityView {
     }
     void updateChosenColors(Card c) {
         set(TrackableProperty.ChosenColors, c.getChosenColors());
-        flagAsChanged(TrackableProperty.ChosenColors);
     }
 
     public boolean hasPaperFoil() {
@@ -599,7 +597,6 @@ public class CardView extends GameEntityView {
     public List<String> getDraftAction() { return get(TrackableProperty.DraftAction); }
     void updateDraftAction(Card c) {
         set(TrackableProperty.DraftAction, c.getDraftActions());
-        flagAsChanged(TrackableProperty.DraftAction);
     }
 
     public List<String> getNamedCard() {
@@ -607,7 +604,6 @@ public class CardView extends GameEntityView {
     }
     void updateNamedCard(Card c) {
         set(TrackableProperty.NamedCard, c.getNamedCards());
-        flagAsChanged(TrackableProperty.NamedCard);
     }
     public boolean getMayPlayPlayers(PlayerView pv) {
         TrackableCollection<PlayerView> col = get(TrackableProperty.MayPlayPlayers);

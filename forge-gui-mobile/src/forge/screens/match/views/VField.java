@@ -9,7 +9,6 @@ import forge.game.player.PlayerView;
 import forge.gui.FThreads;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
-import forge.screens.match.MatchController;
 import forge.screens.match.MatchScreen;
 import forge.screens.match.views.VCardDisplayArea.CardAreaPanel;
 import forge.toolbox.FCardPanel;
@@ -68,10 +67,7 @@ public class VField extends FContainer {
             if (battlefield.isEmpty()) {
                 return;
             }
-            Iterable<CardView> model = MatchController.instance.isNetGame()
-                    ? battlefield.threadSafeIterable() : battlefield;
-
-            for (CardView card : model) {
+            for (CardView card : battlefield) {
                 CardAreaPanel cardPanel = CardAreaPanel.get(card);
                 cardPanel.updateCard(card);
                 // Clear all stacks since they will be rebuilt in the loop below.
@@ -84,7 +80,7 @@ public class VField extends FContainer {
             List<CardView> contraptions = null; //Usually not used; create on demand.
             List<CardView> otherPermanents = new ArrayList<>();
 
-            for (CardView card : model) {
+            for (CardView card : battlefield) {
                 CardAreaPanel cardPanel = CardAreaPanel.get(card);
                 CardStateView details = card.getCurrentState();
                 if (cardPanel.getAttachedToPanel() == null) { //skip attached panels

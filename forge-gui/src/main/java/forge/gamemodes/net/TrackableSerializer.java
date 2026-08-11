@@ -145,9 +145,8 @@ public final class TrackableSerializer implements IHasForgeLog {
     }
 
     /**
-     * Measures serialized size matching the encoder wire format
-     * for applyDelta messages with IdRef replacement (when tracker not null).
-     * otherwise for setGameView messages.
+     * Measures serialized size the way the encoder frames a message: with IdRef
+     * replacement when a tracker is supplied, and without one when it is not.
      */
     public static int measureSize(Object obj, Tracker tracker) {
         try {

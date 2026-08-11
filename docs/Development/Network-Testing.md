@@ -16,7 +16,7 @@ All tests live under `forge-gui-desktop/src/test/java/forge/net/`.
 ---
 
 # How It Works
-Every test game starts a real TCP server and connects one or more headless AI clients to it. The server and clients exchange game state over the network just like a real multiplayer game — the only difference is there's no GUI and the AI makes all decisions. By default this uses delta sync, but you can test the full-state sync path instead with `-Dforge.deltasync=false`.
+Every test game starts a real TCP server and connects one or more headless AI clients to it. The server and clients exchange game state over the network just like a real multiplayer game — the only difference is there's no GUI and the AI makes all decisions. Every packet is the difference between the current state and what that client was last sent; `-Dforge.net.fullStateEveryPacket=true` makes each one carry the whole state instead, to tell a fault in the differencing from a fault anywhere else.
 
 The vertical slice test uses minimal 10-card basic land decks instead, so games end quickly by decking out.
 
@@ -101,11 +101,11 @@ mvn -pl forge-gui-desktop -am verify \
     -Drun.stress.tests=true -Dsurefire.failIfNoSpecifiedTests=false
 ```
 
-Full-state sync test (no deltas):
+Full state in every packet, for isolating a suspected fault in the differencing:
 ```bash
 mvn -pl forge-gui-desktop -am verify \
     -Dtest="NetworkPlayIntegrationTest#runQuickDeltaSyncTest" \
-    -Dforge.deltasync=false \
+    -Dforge.net.fullStateEveryPacket=true \
     -Drun.stress.tests=true -Dsurefire.failIfNoSpecifiedTests=false
 ```
 ---

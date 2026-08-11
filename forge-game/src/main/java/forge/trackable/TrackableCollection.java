@@ -10,6 +10,19 @@ import java.util.stream.Stream;
 
 import forge.util.collect.FCollection;
 
+/**
+ * A collection of view objects that any thread may read while the engine writes to it.
+ *
+ * <p>The threads that read these — the UI painting a zone, the network layer building a packet
+ * — are never the thread the engine mutates them from. So every read of the whole contents is
+ * served from an immutable copy, rebuilt only when the contents change. That covers every
+ * reader, including ones written later, rather than the call sites someone remembered to guard.
+ *
+ * <p>The copy is made when the collection changes, not when it is read. Copying per read would
+ * charge readers that are not racing anything: a battlefield is drawn every frame and changes a
+ * few times a turn, so a local game with no second thread in sight would allocate a list per
+ * frame.
+ */
 public class TrackableCollection<T extends TrackableObject> extends FCollection<T> {
     private static final long serialVersionUID = 1528674215758232314L;
 
@@ -25,35 +38,20 @@ public class TrackableCollection<T extends TrackableObject> extends FCollection<
         super(i);
     }
 
-    /**
-     * An immutable view of the contents, rebuilt only when they change.
-     *
-     * <p>These hold view objects, and the threads that read them - the UI painting a zone,
-     * the network layer building a packet - are never the thread the engine mutates them
-     * from. Reading a copy covers every reader, including ones written later, instead of
-     * whichever call sites someone remembered to guard.
-     *
-     * <p>Copying on each read instead would charge that to readers who are not racing
-     * anything: a battlefield is drawn every frame and changes a few times a turn, so a
-     * local game with no second thread in sight would allocate a list per frame. The copy
-     * belongs on the write.
-     */
+    /** Bumped on every change, so a copy taken before one can be told from a current one. */
     private transient volatile int version;
-    /**
-     * Over the field rather than an AtomicInteger, because these are serialized: a transient
-     * object field arrives null on the far side, while a transient int arrives zero.
-     */
+
+    // Counted through a field updater rather than an AtomicInteger field: these are
+    // serialized, and a transient object arrives null on the far side where an int arrives 0.
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<TrackableCollection> VERSION =
             AtomicIntegerFieldUpdater.newUpdater(TrackableCollection.class, "version");
+
     private transient volatile Cached<T> cached;
 
-    /**
-     * Counted atomically because two writers losing an increment would leave them publishing
-     * the same version, which is the stale reading the version exists to catch. Writers are
-     * meant to be the engine alone, but a dev cheat arrives on the display thread and a
-     * concede on a network thread, and those reach a collection through the ordinary adds.
-     */
+    // Atomic because the engine is not quite the only writer - a dev cheat arrives on the
+    // display thread, a concede on a network thread - and a lost increment would republish a
+    // version, which is the stale reading this exists to catch.
     @Override
     protected void onMutated() {
         VERSION.incrementAndGet(this);

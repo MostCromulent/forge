@@ -557,8 +557,9 @@ public class FloatingZone extends FloatingCardArea {
         if (zoneCards.isEmpty()) {
             return zoneCards;
         }
-        // The FCollection copy constructor takes the backing list straight across when its
-        // source is one, so this is the reader that does not go through the iterator.
+        // Copied through threadSafeIterable rather than directly: the FCollection copy
+        // constructor reads another FCollection's backing list without iterating it, which
+        // is the one read that would miss the zone's copy-on-write.
         cardList = new FCollection<>(zoneCards.threadSafeIterable());
         if (sortedByName) {
             cardList.sort(comp);

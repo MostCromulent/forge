@@ -309,9 +309,9 @@ public class MultiProcessGameExecutor implements IHasForgeLog {
         if (checksumMode != null) {
             command.add("-Dforge.checksum.mode=" + checksumMode);
         }
-        String deltaSyncProp = System.getProperty("forge.deltasync");
-        if (deltaSyncProp != null) {
-            command.add("-Dforge.deltasync=" + deltaSyncProp);
+        String fullStateProp = System.getProperty("forge.net.fullStateEveryPacket");
+        if (fullStateProp != null) {
+            command.add("-Dforge.net.fullStateEveryPacket=" + fullStateProp);
         }
 
         command.add(runnerClass);

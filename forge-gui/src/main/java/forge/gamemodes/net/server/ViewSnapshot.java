@@ -11,34 +11,34 @@ import forge.trackable.TrackableProperty;
 import forge.trackable.Tracker;
 
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Multiset;
 
-import forge.card.CardTypeView;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * An image of the view graph in network form, holding no references into it.
+ * An immutable image of the view graph, already in the form that goes on the wire.
  *
- * <p>Every value is reduced to plain data — ids, id lists, ordinals, boxed primitives and
- * collections the engine no longer holds — so a snapshot can be read, diffed and encoded from
- * any thread without racing the engine. This is the piece that lets the network layer stop
- * walking live state.
+ * <p>Keyed by delta key — the {@code (type, id)} pair identifying one view object — with each
+ * object's properties reduced to plain data: ids in place of object references, ordinals in
+ * place of enums, boxed primitives, and collections of the same. Nothing here refers back into
+ * the live graph, so a snapshot can be read, diffed and encoded from any thread without racing
+ * the engine. That is what lets the sending path stop reading state the game is still changing.
  *
- * <p>Nothing is copied on the way in. A property whose value the engine goes on mutating is
- * copied as it is stored, so what is recorded here is the instance the view holds — which is
- * also what makes an unchanged property compare equal by identity when two of these are
- * diffed, rather than by rebuilding and comparing its contents every pass.
+ * <p>The values are safe to hold because of work done elsewhere: a property whose value is a
+ * collection stores a private copy when it is set (see {@code TrackableTypes.detach}), so the
+ * instance recorded here is one the engine has no reference to and cannot go on mutating.
+ *
+ * <p>A packet is {@link #diff} between two of these — the one just built and the one a client
+ * was last sent. Building is client-independent, so one image per pass serves every client.
  */
 final class ViewSnapshot {
 
@@ -106,23 +106,23 @@ final class ViewSnapshot {
     }
 
     /**
-     * Walk the graph and record every reachable object.
+     * Record every object reachable from the game view.
      *
-     * <p>Mirrors {@code DeltaSyncManager.walkAndCollect}: zone collections are scanned
-     * first so the authoritative instance for a deltaKey wins, since {@code copyCard}
-     * leaves stale instances sharing a key, and scalar {@code GameEntityView} to
-     * {@code GameEntityView} references are not followed because they are the ones that
-     * go stale after a zone change.
+     * <p>Two rules, both inherited from what the graph actually contains. Zone collections are
+     * scanned before anything else, so that where {@code copyCard} has left more than one
+     * instance sharing a delta key, the one a zone holds is the one recorded. And a scalar
+     * reference from one {@code GameEntityView} to another is not followed: those are the
+     * references that go stale after a zone change, so following them would record the state a
+     * card had when something last pointed at it.
      */
     static ViewSnapshot build(GameView gameView) {
         Map<Integer, TrackableObject> authoritative = new HashMap<>();
         seedZoneInstances(gameView, authoritative);
 
         Map<Integer, Map<TrackableProperty, Object>> objects = new LinkedHashMap<>();
-        Set<TrackableObject> visited = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
-        ViewSnapshot snapshot = new ViewSnapshot(objects);
+        Set<TrackableObject> visited = Collections.newSetFromMap(new IdentityHashMap<>());
         walk(gameView, authoritative, objects, visited);
-        return snapshot;
+        return new ViewSnapshot(objects);
     }
 
     private static void seedZoneInstances(GameView gameView, Map<Integer, TrackableObject> authoritative) {
@@ -183,10 +183,9 @@ final class ViewSnapshot {
         if (auth != null && auth != obj) {
             return;
         }
-        // Dedup by instance, not by key: only CardViews get an authoritative seed from
-        // the zone scan, so a CardStateView relies on a later instance at the same key
-        // overwriting an earlier one, exactly as the walk treats a replacement.
-        // Identity also makes this cycle-safe.
+        // By instance and not by key, because only CardViews are seeded from the zone scan:
+        // a CardStateView relies on a later instance at the same key replacing an earlier
+        // one. Identity also makes this safe against cycles.
         if (!visited.add(obj)) {
             return;
         }
@@ -222,71 +221,18 @@ final class ViewSnapshot {
     }
 
     /**
-     * Reduce a network value to something that compares by value. Applied to both sides of
-     * any comparison, so a form that is merely unstable is equally handled. Never stored
-     * and never sent — see {@link #detached}.
-     */
-    static Object canonical(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof CardTypeView type) {
-            List<String> parts = new ArrayList<>();
-            for (Object t : type.getCoreTypes()) {
-                parts.add("c:" + t);
-            }
-            for (Object t : type.getSupertypes()) {
-                parts.add("s:" + t);
-            }
-            for (Object t : type.getSubtypes()) {
-                parts.add("u:" + t);
-            }
-            for (Object t : type.getExcludedCreatureSubTypes()) {
-                parts.add("x:" + t);
-            }
-            parts.add("all:" + type.hasAllCreatureTypes());
-            return Collections.unmodifiableList(parts);
-        }
-        if (value instanceof Multiset<?> multiset) {
-            Map<String, Integer> counts = new LinkedHashMap<>();
-            for (Multiset.Entry<?> e : multiset.entrySet()) {
-                counts.put(String.valueOf(e.getElement()), e.getCount());
-            }
-            return Collections.unmodifiableMap(counts);
-        }
-        if (value instanceof Map<?, ?> map) {
-            // Not Map.copyOf — it rejects null keys and values, and this runs on the
-            // engine thread where a stray null must not become an exception.
-            return Collections.unmodifiableMap(new LinkedHashMap<>(map));
-        }
-        if (value instanceof Set<?> set) {
-            return Collections.unmodifiableSet(new java.util.LinkedHashSet<>(set));
-        }
-        if (value instanceof Collection<?> collection) {
-            return Collections.unmodifiableList(new ArrayList<>(collection));
-        }
-        return value;
-    }
-
-    /**
      * What changed between two snapshots, in the shape {@code DeltaPacket} expects.
      *
-     * <p>A key absent from {@code previous} is new and carries its whole property map; a
-     * key present in both carries only the properties whose values differ, with a
-     * property that disappeared carried as an explicit null so the receiver clears it; a
-     * key absent from {@code current} has left the graph.
+     * <p>A key absent from {@code previous} is new and carries its whole property map; a key
+     * present in both carries only the properties whose values differ, with a property that
+     * disappeared carried as an explicit null so the receiver clears it.
+     *
+     * <p>A key absent from {@code current} is not reported. An object leaving the graph leaves
+     * the client holding it, which costs memory and nothing else: what the client displays is
+     * reached from the game view, so an unreferenced object is already invisible. Telling it to
+     * drop them is a separate change, and one that has to answer what happens when a card comes
+     * back.
      */
-    /**
-     * Whether two stored values represent the same thing. Plain equality settles almost
-     * everything; canonicalising is the fallback for the types that compare by identity,
-     * and running it second keeps its allocation off the path taken by every unchanged
-     * property.
-     */
-    private static boolean same(Object before, Object after) {
-        return java.util.Objects.equals(before, after)
-                || java.util.Objects.equals(canonical(before), canonical(after));
-    }
-
     static Diff diff(ViewSnapshot previous, ViewSnapshot current) {
         Map<Integer, Map<TrackableProperty, Object>> newObjects = new LinkedHashMap<>();
         Map<Integer, Map<TrackableProperty, Object>> objectDeltas = new LinkedHashMap<>();
@@ -299,7 +245,7 @@ final class ViewSnapshot {
             }
             Map<TrackableProperty, Object> changed = new HashMap<>();
             for (Map.Entry<TrackableProperty, Object> prop : entry.getValue().entrySet()) {
-                if (!same(before.get(prop.getKey()), prop.getValue())) {
+                if (!Objects.equals(before.get(prop.getKey()), prop.getValue())) {
                     changed.put(prop.getKey(), prop.getValue());
                 }
             }
@@ -313,14 +259,10 @@ final class ViewSnapshot {
             }
         }
 
-        Set<Integer> evicted = new HashSet<>(previous.objects.keySet());
-        evicted.removeAll(current.objects.keySet());
-
-        return new Diff(newObjects, objectDeltas, evicted);
+        return new Diff(newObjects, objectDeltas);
     }
 
     record Diff(Map<Integer, Map<TrackableProperty, Object>> newObjects,
-                Map<Integer, Map<TrackableProperty, Object>> objectDeltas,
-                Set<Integer> evicted) {
+                Map<Integer, Map<TrackableProperty, Object>> objectDeltas) {
     }
 }

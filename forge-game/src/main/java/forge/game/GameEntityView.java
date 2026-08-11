@@ -93,6 +93,5 @@ public abstract class GameEntityView extends TrackableObject {
 
     public void updateCounters(GameEntity e) {
         set(TrackableProperty.Counters, e.getCounters());
-        flagAsChanged(TrackableProperty.Counters);
     }
 }

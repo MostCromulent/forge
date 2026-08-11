@@ -418,8 +418,10 @@ public final class NetworkChecksumUtil {
     }
 
     /**
-     * Read a property value. Hashes exactly what the delta ships, so the two
-     * stay aligned by construction.
+     * Read a property's stored value, without consulting the changes queued behind a
+     * freeze. A queued change has not reached the property, so it is not in what was
+     * sent either; hashing it would put every checksum taken inside a freeze ahead of
+     * the client by exactly the queue.
      */
     static Object getEffectiveValue(TrackableObject obj, TrackableProperty prop) {
         return ((Map<TrackableProperty, Object>) obj.getProps()).get(prop);
