@@ -5,6 +5,7 @@ import forge.game.Game;
 import forge.game.GameOutcome;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.net.NetworkChecksumUtil;
 import forge.game.Match;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
@@ -30,12 +31,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Core single-game executor for network tests. Starts a server, connects
@@ -57,6 +61,31 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
     private static final String[] PLAYER_NAMES = {"Alice (Host AI)", "Bob (Remote)", "Charlie (Remote)", "Diana (Remote)"};
 
+    /**
+     * What the desktop application needs from the module system, mirroring
+     * {@code addopen.java.args} in forge-gui-desktop's pom.
+     *
+     * <p>Only a GUI client needs these, and without them it fails in a way that looks like a
+     * hang rather than an error: the match screen's saved layout is read reflectively, that
+     * read is refused, and the screen never finishes opening, so everything the server sends it
+     * afterwards is queued against a screen that is not there.
+     */
+    private static final List<String> DESKTOP_MODULE_ACCESS = List.of(
+            "--add-opens", "java.base/java.util=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+            "--add-opens", "java.base/java.lang.reflect=ALL-UNNAMED",
+            "--add-opens", "java.base/java.text=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.beans=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing.border=ALL-UNNAMED",
+            "--add-opens", "java.desktop/javax.swing.event=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.swing=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.font=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.image=ALL-UNNAMED",
+            "--add-opens", "java.desktop/java.awt.color=ALL-UNNAMED",
+            "--add-opens", "java.desktop/sun.awt.image=ALL-UNNAMED");
+
     private static final long DEFAULT_CONNECTION_TIMEOUT_MS = 30000;
     private static final long DEFAULT_GAME_TIMEOUT_MS = 300000; // 5 minutes
 
@@ -67,11 +96,15 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
     private long gameTimeoutMs = DEFAULT_GAME_TIMEOUT_MS;
     private int specifiedPort = -1; // -1 means auto-allocate
     private boolean useAiForRemotePlayers = true;
+    private boolean separateClientProcesses = false;
+    private boolean guiClients = false;
+    private long restartClientAfterMs = 0;
     private boolean commander = false;
     private List<Deck> decks = null;
 
     // Runtime state
     private FServerManager server;
+    private AdviceServer adviceServer;
     private ServerGameLobby lobby;
     private List<HeadlessNetworkClient> remoteClients = new ArrayList<>();
     private ExecutorService clientExecutor;
@@ -119,6 +152,47 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
      */
     public UnifiedNetworkHarness useAiForRemotePlayers(boolean enable) {
         this.useAiForRemotePlayers = enable;
+        return this;
+    }
+
+    /**
+     * Run each remote client in its own JVM instead of in this one.
+     * <p>
+     * In-process clients share this JVM's AWT event thread with the server, so a
+     * human-controlled remote player deadlocks: the server blocks that thread in
+     * {@code syncAndSendAndWait} while the client's reply needs the same thread to be
+     * dispatched. Separate processes remove that and match production, where host and
+     * client are always distinct processes. Required for
+     * {@code useAiForRemotePlayers(false)} to reach a playable game.
+     */
+    public UnifiedNetworkHarness separateClientProcesses(boolean enable) {
+        this.separateClientProcesses = enable;
+        return this;
+    }
+
+    /**
+     * Give each remote client the real desktop match screen instead of a headless stub.
+     *
+     * <p>Needs a display, and is far slower, so it is for one game at a time rather than a
+     * batch. Implies {@link #separateClientProcesses}: the screen is a whole desktop
+     * application, and only one of those can exist per JVM.
+     */
+    public UnifiedNetworkHarness guiClients(boolean enable) {
+        this.guiClients = enable;
+        if (enable) {
+            this.separateClientProcesses = true;
+        }
+        return this;
+    }
+
+    /**
+     * Kill the first client process this long after it starts, and reconnect it.
+     *
+     * <p>Requires {@link #separateClientProcesses}: a reconnection is a new connection under
+     * the same name, which needs a process that can actually die and come back.
+     */
+    public UnifiedNetworkHarness restartClientAfterMs(long delayMs) {
+        this.restartClientAfterMs = delayMs;
         return this;
     }
 
@@ -325,19 +399,36 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // Brief pause for server initialization
             Thread.sleep(1000);
 
+            // Side channel for active play: clients ask the host's AI for decisions and
+            // then act on them over the real protocol.
+            if (Boolean.getBoolean("test.activeRemotePlay") && separateClientProcesses) {
+                // Beside this game's own port, which the parent process allocated and so is
+                // unique across a batch. Allocating one here instead would hand out ports
+                // starting from the same base in every game process, and those are exactly
+                // the ports the other games' servers were given.
+                adviceServer = new AdviceServer(port + 1);
+                netLog.info("AdviceServer listening on port {}", adviceServer.getPort());
+            }
+
             // 4. Start remote clients
             clientExecutor = Executors.newFixedThreadPool(remoteClientCount);
             CountDownLatch clientsAttemptedLatch = new CountDownLatch(remoteClientCount);
-            CountDownLatch clientsFinishedLatch = new CountDownLatch(remoteClientCount);
+            clientsFinishedLatch = new CountDownLatch(remoteClientCount);
 
             for (int i = 0; i < remoteClientCount; i++) {
                 final int clientIndex = i;
                 final String clientName = PLAYER_NAMES[i + 1];
                 final int finalPort = port;
 
-                clientExecutor.submit(() -> runRemoteClientThread(
-                        clientIndex, clientName, finalPort,
-                        successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                if (separateClientProcesses) {
+                    clientExecutor.submit(() -> runRemoteClientProcess(
+                            clientIndex, clientName, finalPort,
+                            successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                } else {
+                    clientExecutor.submit(() -> runRemoteClientThread(
+                            clientIndex, clientName, finalPort,
+                            successfulConnections, clientsAttemptedLatch, clientsFinishedLatch));
+                }
 
                 Thread.sleep(100); // Small stagger between submissions
             }
@@ -384,24 +475,23 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             // 7. Wait for game completion
             waitForRemoteGameCompletion(result, hostedMatch);
 
-            // 8. Wait for clients to finish
-            clientsFinishedLatch.await(10, TimeUnit.SECONDS);
+            // Taken before cleanup tears the match down, and while the engine is finished so
+            // nothing is moving: this is what every client should have ended up holding.
+            if (hostedMatch != null) {
+                serverStateDigest = stateDigest(hostedMatch.getGameView());
+            }
+
+            // 8. Wait for clients to finish. A client in its own process exits only once the
+            // server closes its channel, which is part of cleanup below, so waiting here
+            // cannot succeed for those — they are collected afterwards instead.
+            if (!separateClientProcesses) {
+                clientsFinishedLatch.await(10, TimeUnit.SECONDS);
+            }
 
             // 9. Collect metrics from clients
             collectRemoteClientMetrics(result);
 
-            // Validate result
-            result.success = result.gameCompleted &&
-                    result.deltaPacketsReceived > 0 &&
-                    result.turnCount > 0;
-
-            if (!result.success && result.errorMessage == null) {
-                if (result.deltaPacketsReceived == 0) {
-                    result.errorMessage = "No delta packets received - network path not exercised";
-                } else if (!result.gameCompleted) {
-                    result.errorMessage = "Game did not complete";
-                }
-            }
+            validateResult(result);
 
             result.gameDurationMs = System.currentTimeMillis() - startTime;
         } catch (Exception e) {
@@ -411,10 +501,141 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             e.printStackTrace();
         } finally {
             cleanup();
+            if (separateClientProcesses && clientsFinishedLatch != null) {
+                // Only now can those clients exit and report: each one is waiting on the
+                // channel that cleanup just closed.
+                try {
+                    clientsFinishedLatch.await(30, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                collectRemoteClientMetrics(result);
+                reportStateAgreement();
+                validateResult(result);
+            }
         }
 
         netLog.info("Remote game result: {}", result.toSummary());
         return result;
+    }
+
+    /**
+     * Spawn one client in its own JVM and drive the same latches the in-process path does.
+     * The child prints {@code CONNECTED:} once it is ready and {@code RESULT:} when done.
+     */
+    private void runRemoteClientProcess(int clientIndex, String clientName, int port,
+                                        AtomicInteger successfulConnections,
+                                        CountDownLatch attemptedLatch,
+                                        CountDownLatch finishedLatch) {
+        // The drill kills the first client part-way through; the replacement below connects
+        // under the same name, which is how the server recognises a reconnection.
+        final boolean drill = restartClientAfterMs > 0 && clientIndex == 0;
+        boolean attemptedCounted = false;
+        try {
+            attemptedCounted = runClientProcess(clientIndex, clientName, port, 500L + (clientIndex * 3000L),
+                    successfulConnections, attemptedLatch, attemptedCounted, drill);
+            if (drill) {
+                netLog.info("[Reconnect drill] Client {} ({}) was killed; reconnecting under the same name",
+                        clientIndex, clientName);
+                attemptedCounted = runClientProcess(clientIndex, clientName, port, 0L,
+                        successfulConnections, attemptedLatch, attemptedCounted, false);
+            }
+        } catch (Exception e) {
+            netLog.error("Client {} process error: {}", clientIndex, e.getMessage());
+        } finally {
+            if (!attemptedCounted) {
+                attemptedLatch.countDown();
+            }
+            finishedLatch.countDown();
+        }
+    }
+
+    /** Run one client process to completion, returning whether its connection was counted. */
+    private boolean runClientProcess(int clientIndex, String clientName, int port, long staggerDelay,
+                                     AtomicInteger successfulConnections, CountDownLatch attemptedLatch,
+                                     boolean attemptedCounted, boolean killPartWay) throws Exception {
+        Process process = null;
+        try {
+            String javaBin = System.getProperty("java.home") + java.io.File.separator
+                    + "bin" + java.io.File.separator + "java";
+
+            List<String> command = new ArrayList<>();
+            command.add(javaBin);
+            command.add("-cp");
+            command.add(System.getProperty("java.class.path"));
+            command.add("-Xmx512m");
+            if (guiClients) {
+                command.addAll(DESKTOP_MODULE_ACCESS);
+            }
+            command.addAll(TestUtils.childJvmProperties());
+            if (adviceServer != null) {
+                command.add("-Dtest.advicePort=" + adviceServer.getPort());
+            }
+            command.add(guiClients ? "forge.net.GuiClientRunner" : "forge.net.HeadlessClientRunner");
+            command.add(clientName);
+            command.add("localhost");
+            command.add(String.valueOf(port));
+            command.add(String.valueOf(staggerDelay));
+            command.add(String.valueOf(connectionTimeoutMs));
+            command.add(String.valueOf(gameTimeoutMs));
+            command.add(NetworkLogConfig.getBatchId() == null ? "" : NetworkLogConfig.getBatchId());
+
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.redirectErrorStream(true);
+            process = pb.start();
+            netLog.info("Client {} ({}) spawned as separate process", clientIndex, clientName);
+
+            if (killPartWay) {
+                final Process victim = process;
+                final Thread killer = new Thread(() -> {
+                    try {
+                        Thread.sleep(restartClientAfterMs);
+                        victim.destroyForcibly();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }, "reconnect-drill-" + clientIndex);
+                killer.setDaemon(true);
+                killer.start();
+            }
+
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(process.getInputStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("CONNECTED:")) {
+                        // Counted once: a reconnecting client announces itself again, and
+                        // the parent is waiting on one connection per client, not per spawn.
+                        if (!attemptedCounted) {
+                            successfulConnections.incrementAndGet();
+                            attemptedLatch.countDown();
+                            attemptedCounted = true;
+                        }
+                        netLog.info("Client {} ({}) connected: {}", clientIndex, clientName, line);
+                    } else if (line.startsWith("STATE:")) {
+                        clientStateDigests.put(clientName, line.substring("STATE:".length()));
+                    } else if (line.startsWith("RESULT:")) {
+                        netLog.info("Client {} ({}) finished: {}", clientIndex, clientName, line);
+                        // A failure line carries no key=value pairs, so the metrics parser
+                        // below drops it. Recording it here is what lets a client that died -
+                        // an exception on its event dispatch thread, say - fail the game
+                        // rather than be reported as one that simply sent no packets.
+                        if (line.startsWith("RESULT:FAIL")) {
+                            clientFailures.add(clientName + " reported " + line);
+                        }
+                        recordClientProcessResult(line);
+                    } else {
+                        netLog.info("[client{}] {}", clientIndex, line);
+                    }
+                }
+            }
+            process.waitFor();
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+        return attemptedCounted;
     }
 
     private void runRemoteClientThread(int clientIndex, String clientName, int port,
@@ -629,12 +850,124 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         }
     }
 
+    /**
+     * Report whether each client finished holding what the server held.
+     *
+     * <p>Diagnostic for now, not an assertion: it is the exact form of the question the
+     * checksum answers by sampling, and until it has been seen to agree on games that are
+     * known good, a difference here is as likely to be something legitimate about what a
+     * client is sent as it is to be a defect.
+     */
+    /**
+     * Compare what each client finished holding against what the server finished holding.
+     *
+     * <p>This is the exact form of the question the checksum answers by sampling, and the only
+     * cross-process check that a client's own delta application produced the right state. A
+     * disagreement fails the game: a warning nobody reads is the same as no check at all, and
+     * this is the instrument the checksum would be retired in favour of.
+     */
+    private void reportStateAgreement() {
+        if (serverStateDigest == null || clientStateDigests.isEmpty()) {
+            return;
+        }
+        for (final Map.Entry<String, String> client : clientStateDigests.entrySet()) {
+            if (serverStateDigest.equals(client.getValue())) {
+                netLog.info("[Agreement] {} finished holding the same state as the server", client.getKey());
+            } else {
+                netLog.error("[Agreement] {} finished with different state: client={} server={}",
+                        client.getKey(), client.getValue(), serverStateDigest);
+                if (stateDisagreement == null) {
+                    stateDisagreement = client.getKey() + " held " + client.getValue()
+                            + " where the server held " + serverStateDigest;
+                }
+            }
+        }
+    }
+
+    private void validateResult(GameResult result) {
+        result.success = result.gameCompleted
+                && result.deltaPacketsReceived > 0
+                && result.turnCount > 0
+                && stateDisagreement == null
+                && clientFailures.isEmpty();
+
+        if (result.success) {
+            result.errorMessage = null;
+        } else if (result.errorMessage == null) {
+            if (!clientFailures.isEmpty()) {
+                result.errorMessage = "A client process failed: " + clientFailures.get(0);
+            } else if (stateDisagreement != null) {
+                result.errorMessage = "Client and server disagree on final state: " + stateDisagreement;
+            } else if (result.deltaPacketsReceived == 0) {
+                result.errorMessage = "No delta packets received - network path not exercised";
+            } else if (!result.gameCompleted) {
+                result.errorMessage = "Game did not complete";
+            }
+        }
+    }
+
+    /**
+     * End-of-game state summary, computed identically on both sides so a client's result can be
+     * compared against the server's. Covers turn, phase, per-player life and zone sizes, mana,
+     * battlefield card properties, combat and stack — not every property, so agreement here is
+     * necessary but not sufficient. Requires stable checksum, which the harness enables.
+     */
+    static String stateDigest(final GameView gameView) {
+        if (gameView == null) {
+            return null;
+        }
+        return NetworkChecksumUtil.computeChecksumBreakdown(gameView.getTurn(),
+                gameView.getPhase() != null ? gameView.getPhase().ordinal() : -1, gameView);
+    }
+
+    /** What a client running in its own process reported on the way out. */
+    private CountDownLatch clientsFinishedLatch;
+    private final Map<String, String> clientStateDigests = new ConcurrentHashMap<>();
+    private String serverStateDigest;
+    /** Set when a client finished holding something other than what the server holds. */
+    private volatile String stateDisagreement;
+    /** Clients whose process reported a failure rather than a result. */
+    private final java.util.List<String> clientFailures = java.util.Collections.synchronizedList(new ArrayList<>());
+    private final AtomicInteger processDeltaPackets = new AtomicInteger();
+    private final AtomicLong processDeltaBytes = new AtomicLong();
+    private final AtomicInteger processMismatches = new AtomicInteger();
+
+    /**
+     * Read a client process's {@code RESULT:} line into the metrics this harness reports.
+     *
+     * <p>Clients in their own process cannot be asked afterwards the way in-process ones
+     * can, so without this a run that worked reports zero packets and looks like one where
+     * nothing crossed the network.
+     */
+    private void recordClientProcessResult(final String line) {
+        for (final String part : line.split(":")) {
+            final int eq = part.indexOf('=');
+            if (eq < 0) {
+                continue;
+            }
+            final long value;
+            try {
+                value = Long.parseLong(part.substring(eq + 1));
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            switch (part.substring(0, eq)) {
+                case "deltas" -> processDeltaPackets.addAndGet((int) value);
+                case "bytes" -> processDeltaBytes.addAndGet(value);
+                case "mismatches" -> processMismatches.addAndGet((int) value);
+                default -> { }
+            }
+        }
+    }
+
     private void collectRemoteClientMetrics(GameResult result) {
+        result.deltaPacketsReceived += processDeltaPackets.get();
+        result.totalDeltaBytes += processDeltaBytes.get();
+        result.eventStateMismatches += processMismatches.get();
         synchronized (remoteClients) {
             for (HeadlessNetworkClient client : remoteClients) {
                 result.deltaPacketsReceived += client.getDeltaPacketsReceived();
-                result.fullStateSyncsReceived += client.getFullStateSyncsReceived();
-                result.totalDeltaBytes += client.getTotalDeltaBytes();
+                    result.totalDeltaBytes += client.getTotalDeltaBytes();
                 result.eventStateMismatches += client.getEventStateMismatches();
             }
             // Snapshot client-side state from first remote client for post-game assertions
@@ -649,8 +982,8 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
         if (server != null) {
             result.sendErrors = server.getTotalSendErrors();
         }
-        netLog.info("Client metrics: deltas={}, fullSyncs={}, bytes={}",
-                result.deltaPacketsReceived, result.fullStateSyncsReceived, result.totalDeltaBytes);
+        netLog.info("Client metrics: deltas={}, bytes={}",
+                result.deltaPacketsReceived, result.totalDeltaBytes);
     }
 
     private void swapRemotePlayersToAi() {
@@ -709,6 +1042,11 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
             clientExecutor = null;
         }
 
+        if (adviceServer != null) {
+            adviceServer.close();
+            adviceServer = null;
+        }
+
         // Clear player GUIs between games
         if (server != null) {
             try {
@@ -761,7 +1099,6 @@ public class UnifiedNetworkHarness implements IHasForgeLog {
 
         // Network metrics (from remote clients)
         public long deltaPacketsReceived;
-        public long fullStateSyncsReceived;
         public long totalDeltaBytes;
         public long eventStateMismatches;
 

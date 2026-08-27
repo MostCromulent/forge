@@ -3,11 +3,13 @@ package forge.net;
 import forge.StaticData;
 import forge.util.IHasForgeLog;
 import forge.gamemodes.net.NetworkChecksumUtil;
-import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Bootstrap and shared utilities for network test infrastructure.
@@ -61,12 +63,48 @@ public final class TestUtils {
         boolean useStable = !"production".equalsIgnoreCase(System.getProperty("forge.checksum.mode"));
         NetworkChecksumUtil.setStableChecksum(useStable);
 
-        // Delta sync enabled by default in tests; use -Dforge.deltasync=false to disable
-        String deltaSyncProp = System.getProperty("forge.deltasync");
-        RemoteClientGuiGame.useDeltaSync = !"false".equalsIgnoreCase(deltaSyncProp);
-
-        IHasForgeLog.netLog.info("[TestConfig] checksum={}, deltasync={}",
+        IHasForgeLog.netLog.info("[TestConfig] checksum={}, remote={}",
                 useStable ? "stable" : "sampled",
-                RemoteClientGuiGame.useDeltaSync ? "on" : "off");
+                useAiForRemotePlayers() ? "ai" : "human");
+    }
+
+    /**
+     * The configuration a spawned JVM needs in order to be set up like this one.
+     *
+     * <p>A batch spawns a JVM per game, and each of those spawns one per remote client, so a
+     * property has two hops to survive. Anything that reaches only the first hop puts a client
+     * in a different configuration from the server it is talking to — a client computing a
+     * different kind of checksum disagrees with its server on every packet it checks, which
+     * reads as thousands of desyncs and is nothing of the sort. One list, used by both, so the
+     * two cannot drift apart again.
+     */
+    public static List<String> childJvmProperties() {
+        final List<String> args = new ArrayList<>();
+        for (final String name : List.of(
+                "forge.checksum.mode",
+                "forge.snapshot.crosscheck",
+                "forge.snapshot.skewPasses",
+                "test.useAiForRemote",
+                "test.activeRemotePlay",
+                "forge.net.measureVisibility")) {
+            final String value = System.getProperty(name);
+            if (value != null) {
+                args.add("-D" + name + "=" + value);
+            }
+        }
+        return args;
+    }
+
+    /**
+     * Whether a batch replaces its remote players with server-side AI once the game starts.
+     *
+     * <p>Off by default, so remote players stay human and the server has to ask them
+     * questions over the wire. The AI swap is faster and was the default for a long time, but
+     * a converted player is decided inside the server, so nothing is ever sent to a client:
+     * no prompt, no card in a protocol argument, and none of the display or input paths. It
+     * has hidden real defects that way. {@code -Dtest.useAiForRemote=true} opts back into it.
+     */
+    public static boolean useAiForRemotePlayers() {
+        return "true".equalsIgnoreCase(System.getProperty("test.useAiForRemote"));
     }
 }
