@@ -2733,13 +2733,6 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         inputProxy.selectButtonCancel();
     }
 
-    /** Answer a priority prompt, if that is what is on screen. */
-    private void passPriority() {
-        if (inputProxy.getInput() instanceof InputPassPriority inp) {
-            inp.passPriority();
-        }
-    }
-
     @Override
     public void useMana(final byte mana) {
         if (inputQueue.getInput() instanceof InputPayMana ipm) {
@@ -3797,17 +3790,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         return gui instanceof RemoteClientGuiGame;
     }
 
-    /** Whether an auto-pass regime is running. Distinct from {@link #shouldSkipPriorityPrompt}: the engine
-     *  calls {@link #autoPassCancel} for every player at every cleanup, which does not mean "would this
-     *  prompt be answered". */
+    /** Whether an auto-pass regime is running. Narrower than the prompt decision, which also covers a
+     *  skipped phase and an auto-yielded top of stack: the engine calls {@link #autoPassCancel} for every
+     *  player at every cleanup, and that does not mean "would this prompt be answered". */
     public boolean mayAutoPass() {
         return yieldController.shouldAutoYield()
                 || yieldController.isAutoPassingNoActions(getLocalPlayerView());
-    }
-
-    /** Every reason a priority prompt is answered without the user. */
-    private boolean shouldSkipPriorityPrompt() {
-        return mayAutoPass() || skipsPromptForStackOrPhase();
     }
 
     /** The two reasons that skip a prompt without any yield regime running: an auto-yielded top of stack, or a
@@ -3915,10 +3903,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         tryAutoPassNow();
     }
 
-    /** Re-evaluate at the current prompt and pass priority if the prompt would now be skipped. */
+    /** Re-evaluate at the current prompt and pass priority if the prompt would now be skipped.
+     *  Answers the input it decided about, not whatever replaced it meanwhile. */
     private void tryAutoPassNow() {
-        if (inputProxy.getInput() instanceof InputPassPriority && shouldSkipPriorityPrompt()) {
-            passPriority();
+        if (inputProxy.getInput() instanceof InputPassPriority inp
+                && (mayAutoPass() || skipsPromptForStackOrPhase())) {
+            inp.passPriority();
         }
     }
 
