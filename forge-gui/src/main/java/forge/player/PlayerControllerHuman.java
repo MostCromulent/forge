@@ -2752,8 +2752,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         inputProxy.selectButtonCancel();
     }
 
-    @Override
-    public void passPriority() {
+    /** Answer a priority prompt, if that is what is on screen. */
+    private void passPriority() {
         final Input inp = inputProxy.getInput();
         if (inp instanceof InputPassPriority) {
             inp.selectButtonOK();
@@ -3842,6 +3842,17 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public void setShouldAutoYield(final String key, final boolean autoYield, final boolean isAbilityScope) {
         yieldController.setShouldAutoYield(key, autoYield, isAbilityScope);
+        passPriorityIfYieldingTopOfStack();
+    }
+
+    /** Answers a prompt that {@link #chooseSpellAbilityToPlay} would now skip. Reads the view and the yield
+     *  store only, so it is safe on the network thread. */
+    private void passPriorityIfYieldingTopOfStack() {
+        final GameView gameView = getGui().getGameView();
+        final StackItemView top = gameView == null ? null : gameView.peekStack();
+        if (top != null && top.isAbility() && shouldAutoYield(top.getKey())) {
+            passPriority();
+        }
     }
 
     @Override
@@ -3897,7 +3908,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 getGui().updateAutoPassPrompt();
             }
         }
-        tryAutoPassNow();
+        // Player-choice writes feed neither half of mayAutoPass, so tryAutoPassNow could only reach the same answer via the graph-mutating availability sweep
+        if (update instanceof YieldUpdate.CardAutoYield) {
+            passPriorityIfYieldingTopOfStack();
+        } else if (!(update instanceof YieldUpdate.TriggerDecision)) {
+            tryAutoPassNow();
+        }
     }
 
     @Override
@@ -3909,13 +3925,13 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     /** Re-evaluate mayAutoPass at the current prompt; click OK if it would now fire.
      *  Same compute gating as {@link #chooseSpellAbilityToPlay} so the actions field is fresh. */
     private void tryAutoPassNow() {
-        if (!(inputQueue.getInput() instanceof InputPassPriority)) return;
+        if (!(inputProxy.getInput() instanceof InputPassPriority)) return;
         if (!yieldController.isYieldActive() && needsAvailableActions()) {
             long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
             getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
         }
         if (mayAutoPass()) {
-            selectButtonOk();
+            passPriority();
         }
     }
 
