@@ -569,15 +569,6 @@ public class YieldController {
     public boolean isAutoPassingNoActions(PlayerView player) {
         if (!getBoolPref(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) return false;
         if (autoPassInterrupted) return false;
-        GameView gv = owner != null && owner.getGui() != null ? owner.getGui().getGameView() : null;
-        if (gv != null && gv.getStack() != null && gv.getStack().isEmpty()) {
-            PlayerView turnPlayer = gv.getPlayerTurn();
-            PhaseType phase = gv.getPhase();
-            if (turnPlayer != null && phase != null
-                    && owner.getGui().isUiSetToSkipPhase(turnPlayer, phase)) {
-                return true;
-            }
-        }
         return player != null && !player.hasAvailableActions();
     }
 

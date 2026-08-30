@@ -1652,10 +1652,10 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 player.getName(), getGame().getPhaseHandler().getPhase(), getGame().isGameOver());
         final MagicStack stack = getGame().getStack();
 
-        // Skip when already yielding — yield proceeds regardless of available-actions.
+        // Skip when already yielding — yield proceeds regardless of available-actions. Not isYieldActive: shouldAutoYield retires an expired stack-yield or marker first, so the scan is not skipped for one about to end.
         // Compute the actionable set when APINA / suggestions / highlights need it.
         boolean highlightsEnabled = yieldController.getBoolPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
-        if (!yieldController.isYieldActive() && (needsAvailableActions() || highlightsEnabled)) {
+        if (!yieldController.shouldAutoYield() && (needsAvailableActions() || highlightsEnabled)) {
             long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
             if (highlightsEnabled) {
                 // Highlights need the full set; APINA derives its boolean from the same scan.
@@ -1672,8 +1672,11 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         }
 
         // yieldJustEndedFlag is read from the EDT (didYieldJustEnd); synchronized writer/reader pair handles visibility.
-        boolean nowMayAutoPass = mayAutoPass();
-        yieldController.noteMayAutoPassResult(nowMayAutoPass);
+        // Note the regime, not the prompt decision: a skipped phase is not a yield ending, and treating it as
+        // one would suppress the yield suggestion at nearly every stop.
+        boolean regimeActive = mayAutoPass();
+        yieldController.noteMayAutoPassResult(regimeActive);
+        boolean nowMayAutoPass = regimeActive || skipsPromptForStackOrPhase();
 
         if (nowMayAutoPass) {
             // avoid prompting for input if current phase is set to be
@@ -1701,28 +1704,6 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             getGui().awaitNextInput();
             netLog.trace("Returning null (mayAutoPass) for player {}", player.getName());
             return null;
-        }
-
-        if (stack.isEmpty()) {
-            if (isUiSetToSkipPhase(getGame().getPhaseHandler().getPlayerTurn().getView(), getGame().getPhaseHandler().getPhase())) {
-                getGui().awaitNextInput();
-                netLog.trace("Returning null (skipPhase) for player {}", player.getName());
-                return null; // avoid prompt for input if stack is empty and
-                // player is set to skip the current phase
-            }
-        } else {
-            final SpellAbility ability = stack.peekAbility();
-            if (ability != null && ability.isAbility() && shouldAutoYield(ability.yieldKey())) {
-                // avoid prompt for input if top ability of stack is set to auto-yield
-                try {
-                    Thread.sleep(FControlGamePlayback.resolveDelay);
-                } catch (final InterruptedException e) {
-                    e.printStackTrace();
-                }
-                getGui().awaitNextInput();
-                netLog.trace("Returning null (autoYield) for player {}", player.getName());
-                return null;
-            }
         }
 
         netLog.trace("Creating InputPassPriority for player {}", player.getName());
@@ -3816,9 +3797,29 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         return gui instanceof RemoteClientGuiGame;
     }
 
+    /** Whether an auto-pass regime is running. Distinct from {@link #shouldSkipPriorityPrompt}: the engine
+     *  calls {@link #autoPassCancel} for every player at every cleanup, which does not mean "would this
+     *  prompt be answered". */
     public boolean mayAutoPass() {
         return yieldController.shouldAutoYield()
                 || yieldController.isAutoPassingNoActions(getLocalPlayerView());
+    }
+
+    /** Every reason a priority prompt is answered without the user. */
+    private boolean shouldSkipPriorityPrompt() {
+        return mayAutoPass() || skipsPromptForStackOrPhase();
+    }
+
+    /** The two reasons that skip a prompt without any yield regime running: an auto-yielded top of stack, or a
+     *  phase set to be skipped with the stack empty. Reads the view rather than the engine, so the network
+     *  path does not walk the graph to answer it. */
+    private boolean skipsPromptForStackOrPhase() {
+        final GameView gameView = getGui().getGameView();
+        if (gameView == null) return false;
+        final StackItemView top = gameView.peekStack();
+        if (top != null) return top.isAbility() && shouldAutoYield(top.getKey());
+        return gameView.getPlayerTurn() != null && gameView.getPhase() != null
+                && isUiSetToSkipPhase(gameView.getPlayerTurn(), gameView.getPhase());
     }
 
     public void autoPassUntilEndOfTurn() {
@@ -3841,17 +3842,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public void setShouldAutoYield(final String key, final boolean autoYield, final boolean isAbilityScope) {
         yieldController.setShouldAutoYield(key, autoYield, isAbilityScope);
-        passPriorityIfYieldingTopOfStack();
-    }
-
-    /** Answers a prompt that {@link #chooseSpellAbilityToPlay} would now skip. Reads the view and the yield
-     *  store only, so it is safe on the network thread. */
-    private void passPriorityIfYieldingTopOfStack() {
-        final GameView gameView = getGui().getGameView();
-        final StackItemView top = gameView == null ? null : gameView.peekStack();
-        if (top != null && top.isAbility() && shouldAutoYield(top.getKey())) {
-            passPriority();
-        }
+        tryAutoPassNow();
     }
 
     @Override
@@ -3907,31 +3898,36 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 getGui().updateAutoPassPrompt();
             }
         }
-        // Player-choice writes feed neither half of mayAutoPass, so tryAutoPassNow could only reach the same answer via the graph-mutating availability sweep
-        if (update instanceof YieldUpdate.CardAutoYield) {
-            passPriorityIfYieldingTopOfStack();
-        } else if (!(update instanceof YieldUpdate.TriggerDecision)) {
-            tryAutoPassNow();
+        if (update instanceof YieldUpdate.SeedFromClient
+                || (update instanceof YieldUpdate.SetYieldPref u && u.pref() == FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
+            refreshAvailableActionsForPrompt();
         }
+        tryAutoPassNow();
     }
 
     @Override
     public void setYieldPref(final FPref pref, final String value) {
-        // Dialog already wrote to FModel; APINA is the only pref whose toggle can flip mayAutoPass for a sitting prompt
-        if (pref == FPref.YIELD_AUTO_PASS_NO_ACTIONS) tryAutoPassNow();
+        // Dialog already wrote to FModel; APINA is the only pref whose toggle can flip mayAutoPass for a
+        // sitting prompt, and the budget field saves on every keystroke, so do not sweep for the rest.
+        if (pref != FPref.YIELD_AUTO_PASS_NO_ACTIONS) return;
+        refreshAvailableActionsForPrompt();
+        tryAutoPassNow();
     }
 
-    /** Re-evaluate mayAutoPass at the current prompt; click OK if it would now fire.
-     *  Same compute gating as {@link #chooseSpellAbilityToPlay} so the actions field is fresh. */
+    /** Re-evaluate at the current prompt and pass priority if the prompt would now be skipped. */
     private void tryAutoPassNow() {
-        if (!(inputProxy.getInput() instanceof InputPassPriority)) return;
-        if (!yieldController.isYieldActive() && needsAvailableActions()) {
-            long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
-            getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
-        }
-        if (mayAutoPass()) {
+        if (inputProxy.getInput() instanceof InputPassPriority && shouldSkipPriorityPrompt()) {
             passPriority();
         }
+    }
+
+    /** The availability sweep mutates the game graph, so it runs only when a preference that reads it changes.
+     *  Elsewhere the value computed when the prompt was built still stands. */
+    private void refreshAvailableActionsForPrompt() {
+        if (yieldController.isYieldActive() || !needsAvailableActions()) return;
+        if (!(inputProxy.getInput() instanceof InputPassPriority)) return;
+        long timeoutMs = computeAvailableActionsBudgetMs(getPlayer());
+        getPlayer().getView().setHasAvailableActions(AvailableActions.compute(getPlayer(), timeoutMs));
     }
 
     /** True if yield consumer needs the synced wire field. */
