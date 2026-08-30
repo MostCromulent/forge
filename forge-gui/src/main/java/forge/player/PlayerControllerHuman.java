@@ -3848,6 +3848,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
     @Override
     public void setDisableAutoYields(final boolean disable) {
         yieldController.setDisableAutoYields(disable);
+        tryAutoPassNow();
     }
 
     @Override

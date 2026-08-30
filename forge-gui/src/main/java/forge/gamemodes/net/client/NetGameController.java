@@ -162,10 +162,6 @@ public class NetGameController implements IGameController {
         send(ProtocolMethod.sendYieldUpdate, new YieldUpdate.SetDisableTriggers(disable));
     }
 
-    public void setUiShouldSkipPhase(final PlayerView turnPlayer, final PhaseType phase, final boolean shouldSkip) {
-        send(ProtocolMethod.sendYieldUpdate, new YieldUpdate.SkipPhase(turnPlayer, phase, shouldSkip));
-    }
-
     @Override
     public void applyYieldUpdate(final YieldUpdate update) {
         yieldController.apply(update);
