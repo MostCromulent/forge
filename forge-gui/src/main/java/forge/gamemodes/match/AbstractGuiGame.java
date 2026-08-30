@@ -740,7 +740,6 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
             markLabelStopsAtPhase.run();
             boolean atOrPast = YieldController.isPriorityAtOrPastMarker(getGameView(), phaseOwner, phase);
             controller.sendYieldUpdate(new YieldUpdate.SetMarker(phaseOwner, phase, atOrPast));
-            controller.selectButtonOk();   // Pass current priority so the marker takes effect immediately.
         }
         refreshYieldUi(local);
     }

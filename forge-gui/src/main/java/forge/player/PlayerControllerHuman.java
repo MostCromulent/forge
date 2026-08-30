@@ -2754,9 +2754,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     /** Answer a priority prompt, if that is what is on screen. */
     private void passPriority() {
-        final Input inp = inputProxy.getInput();
-        if (inp instanceof InputPassPriority) {
-            inp.selectButtonOK();
+        if (inputProxy.getInput() instanceof InputPassPriority inp) {
+            inp.passPriority();
         }
     }
 
@@ -3155,7 +3154,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         @Override
         public void winGame() {
             final Input input = inputQueue.getInput();
-            if (!(input instanceof InputPassPriority)) {
+            if (!(input instanceof InputPassPriority priorityInput)) {
                 getGui().message(localizer.getMessage("lblYouMustHavePrioritytoUseThisFeature"), localizer.getMessage("lblWinGame"));
                 return;
             }
@@ -3170,7 +3169,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
             }
 
             // pass priority so that causes gui player to win
-            input.selectButtonOK();
+            priorityInput.passPriority();
         }
 
         /*
