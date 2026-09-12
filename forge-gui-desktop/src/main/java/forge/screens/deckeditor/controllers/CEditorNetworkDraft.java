@@ -194,16 +194,12 @@ public class CEditorNetworkDraft extends ACEditorBase<PaperCard, Deck> {
     @Override
     protected void buildAddContextMenu(EditorContextMenuBuilder cmb) {
         cmb.addMoveItems(localizer.getMessage("lblDraft"), null);
-        if (!draftComplete) {
-            cmb.addDraftActionItems(actions, action -> submitPick(action.target(), action));
-        }
+        cmb.addDraftActionItems(actions, action -> submitPick(action.target(), action));
     }
 
     @Override
     protected void buildRemoveContextMenu(EditorContextMenuBuilder cmb) {
-        if (!draftComplete) {
-            cmb.addDraftActionItems(actions, action -> draftSender.accept(new DraftActivateEvent(seatIndex, action)));
-        }
+        cmb.addDraftActionItems(actions, action -> draftSender.accept(new DraftActivateEvent(seatIndex, action)));
     }
 
     /**

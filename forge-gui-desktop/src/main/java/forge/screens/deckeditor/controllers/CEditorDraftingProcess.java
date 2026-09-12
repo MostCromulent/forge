@@ -225,8 +225,6 @@ public class CEditorDraftingProcess extends ACEditorBase<PaperCard, DeckGroup> i
         deck.getOrCreate(DeckSection.Sideboard).addAll(this.getDeckManager().getPool());
 
         return deck;
-        // Why don't we just do?
-        // return player.getDeck()
     }
 
     /**
@@ -278,8 +276,6 @@ public class CEditorDraftingProcess extends ACEditorBase<PaperCard, DeckGroup> i
         final DeckGroup finishedDraft = new DeckGroup(s);
         final LimitedPlayer player = this.boosterDraft.getHumanPlayer();
 
-        // Why is human deck just imported from LimitedPlayer?
-        //Deck humanDeck = player.getDeck().copyTo(s);
         Deck humanDeck = (Deck) this.getPlayersDeck().copyTo(s);
 
         humanDeck.setDraftNotes(player.getSerializedDraftNotes());
