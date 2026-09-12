@@ -52,6 +52,7 @@ public class GameLogPanel extends JPanel {
     private final LayerUI<FScrollPane> layerUI = new GameLogPanelLayerUI();
     private JLayer<FScrollPane> layer;
     private boolean isScrollBarVisible = false;
+    private boolean scrollBarEnabled = false;
     private Consumer<CardView> onCardHover;
     private Consumer<PaperCard> onItemHover;
 
@@ -68,6 +69,12 @@ public class GameLogPanel extends JPanel {
 
     public void setOnItemHover(final Consumer<PaperCard> callback) {
         this.onItemHover = callback;
+    }
+
+    /** Shows the scrollbar whenever the entries overflow, instead of only after a click on an entry. */
+    public void enableScrollBar() {
+        scrollBarEnabled = true;
+        scrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
     }
 
     public void reset() {
@@ -327,7 +334,7 @@ public class GameLogPanel extends JPanel {
             switch (e.getID()) {
             case MouseEvent.MOUSE_ENTERED:
                 if (isHoveringOverLogEntry) {
-                    if (isScrollBarRequired) {
+                    if (isScrollBarRequired && !scrollBarEnabled) {
                         MouseUtil.setCursor(Cursor.HAND_CURSOR);
                     }
                     // Trigger card hover callback
@@ -343,7 +350,7 @@ public class GameLogPanel extends JPanel {
                 MouseUtil.resetCursor();
                 break;
             case MouseEvent.MOUSE_RELEASED:
-                if (e.getButton() == 1 && isHoveringOverLogEntry) {
+                if (e.getButton() == 1 && isHoveringOverLogEntry && !scrollBarEnabled) {
                     isScrollBarVisible = isScrollBarRequired && !isScrollBarVisible;
                     setVerticalScrollbarVisibility();
                 }

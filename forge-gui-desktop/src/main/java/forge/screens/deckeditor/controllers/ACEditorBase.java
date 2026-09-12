@@ -73,6 +73,7 @@ import forge.toolbox.FLabel;
 import forge.toolbox.FSkin;
 import forge.util.*;
 import forge.view.FView;
+import forge.view.arcane.CardPanel;
 
 /**
  * Maintains a generically typed architecture for various editing
@@ -425,9 +426,12 @@ public abstract class ACEditorBase<TItem extends InventoryItem, TModel extends D
         deckManager.setMarkerPredicate(item -> item instanceof PaperCard card
                 && actions.stream().anyMatch(a -> a.isPoolActionFor(card)));
         catalogManager.setCaption(packCaption);
-        catalogManager.setHint(hasPick ? localizer.getMessage("lblDraftAbilityHintDesktop") : null);
+        // The hint takes the marker's colour, so it reads as a key to the marked cards
+        catalogManager.setHint(hasPick ? localizer.getMessage("lblDraftAbilityHintDesktop") : null,
+                CardPanel.parseActionableHighlightColor());
         deckManager.setCaption(localizer.getMessage("lblDraftPicks"));
-        deckManager.setHint(hasPool ? localizer.getMessage("lblDraftPoolAbilityHintDesktop") : null);
+        deckManager.setHint(hasPool ? localizer.getMessage("lblDraftPoolAbilityHintDesktop") : null,
+                CardPanel.parseActionableHighlightColor());
     }
 
     public ContextMenuBuilder createContextMenuBuilder(final boolean isAddContextMenu0) {

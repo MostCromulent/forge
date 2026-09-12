@@ -444,9 +444,10 @@ public abstract class ItemManager<T extends InventoryItem> extends JPanel implem
         this.lblCaption.setLabelFor(this.listView.getTable());
     }
 
-    /** Shows {@code hint} on its own line above the items, or hides the line when it is null or empty. */
-    public void setHint(final String hint) {
+    /** Shows {@code hint} in {@code color} on its own line above the items, or hides the line when it is null or empty. */
+    public void setHint(final String hint, final Color color) {
         this.lblHint.setText(hint == null ? "" : hint);
+        this.lblHint.setForeground(color);
         this.lblHint.setVisible(hint != null && !hint.isEmpty());
         this.revalidate();
         this.repaint();

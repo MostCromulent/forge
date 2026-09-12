@@ -9,6 +9,7 @@ import forge.Forge.KeyInputAdapter;
 import forge.Graphics;
 import forge.assets.*;
 import forge.card.CardEdition;
+import forge.card.CardRenderer;
 import forge.card.ColorSet;
 import forge.card.MagicColor;
 import forge.deck.io.DeckPreferences;
@@ -1258,7 +1259,7 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
             // Live-refresh the open dropdown so a remote player's pick shows without local interaction
             draftLog.addObserver((o, arg) -> FThreads.invokeInEdtNowOrLater(draftLogContainer::refresh));
             this.btnDraftLog = new FLabel.ButtonBuilder()
-                    .text(Localizer.getInstance().getMessage("lblEditorLog"))
+                    .text(Localizer.getInstance().getMessage("lblDraftLog"))
                     .pressedColor(Header.getBtnPressedColor())
                     .command((e) -> draftLogContainer.show())
                     .font(FSkinFont.get(20))
@@ -2101,8 +2102,9 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         void showHints(List<DraftAction> actions) {
             boolean hasPool = actions.stream().anyMatch(a -> a.kind() == DraftAction.Kind.POOL);
             cardManager.setMarkerPredicate(c -> actions.stream().anyMatch(a -> a.isPoolActionFor(c)));
-            cardManager.setCaption(captionPrefix + (hasPool
-                    ? " - " + Forge.getLocalizer().getMessage("lblDraftAbilitiesInPoolMenu") : ""));
+            cardManager.setCaption(captionPrefix);
+            cardManager.setHint(hasPool ? Forge.getLocalizer().getMessage("lblDraftAbilitiesInPoolMenu") : null,
+                    FSkinColor.getStandardColor(CardRenderer.parseActionableHighlightColor()));
         }
 
         @Override
@@ -2457,8 +2459,9 @@ public class FDeckEditor extends TabPageScreen<FDeckEditor> {
         void showHints(List<DraftAction> actions) {
             boolean hasPick = actions.stream().anyMatch(a -> a.kind() == DraftAction.Kind.PICK);
             cardManager.setMarkerPredicate(c -> actions.stream().anyMatch(a -> a.isPickFor(c)));
-            cardManager.setCaption(caption + (hasPick
-                    ? " - " + Forge.getLocalizer().getMessage("lblDraftAbilitiesInPackMenu") : ""));
+            cardManager.setCaption(caption);
+            cardManager.setHint(hasPick ? Forge.getLocalizer().getMessage("lblDraftAbilitiesInPackMenu") : null,
+                    FSkinColor.getStandardColor(CardRenderer.parseActionableHighlightColor()));
         }
 
         @Override

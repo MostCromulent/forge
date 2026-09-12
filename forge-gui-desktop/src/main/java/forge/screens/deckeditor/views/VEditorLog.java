@@ -46,6 +46,7 @@ public enum VEditorLog implements IVDoc<CEditorLog> {
         scroller.getViewport().setBorder(null);
 
         this.gameLog = new GameLogPanel();
+        gameLog.enableScrollBar();
         gameLog.setOnItemHover(card -> CDeckEditorUI.SINGLETON_INSTANCE.getCDetailPicture().showItem(card));
     }
 
