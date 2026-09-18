@@ -640,8 +640,7 @@ public class MagicStack /* extends MyObservable */ implements Iterable<SpellAbil
         if (isEmpty() && !hasSimultaneousStackEntries()) {
             // assuming that if the stack is empty, no reason to hold on to old LKI data (everything is a new object)
             game.clearChangeZoneLKIInfo();
-            // safety net: force a fresh atomic rebuild at each resolution-sequence boundary, bounding any
-            // missed in-place staleness to a single sequence
+            // rebuild once the stack empties, so a change nothing marked cannot persist past it
             game.markLastStateStale();
         }
         game.copyLastState();

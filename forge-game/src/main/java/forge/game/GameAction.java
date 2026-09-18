@@ -607,12 +607,11 @@ public class GameAction {
             game.getTriggerHandler().runTrigger(TriggerType.ChangesController, runParams2, false);
         }
 
-        // maintain the LKI snapshot incrementally (see Game.lastStateStale): a departure can stale other
-        // entries' cross-references, so force a coherent rebuild; a pure entry just appends its own copy.
+        // a card leaving can affect the copies that stay, so rebuild; one arriving is just added
         if (fromBattlefield || fromGraveyard) {
             game.markLastStateStale();
         } else if (toBattlefield || zoneTo.is(ZoneType.Graveyard)) {
-            game.addToLastState(copied);
+            game.updateLastStateForCard(copied);
         }
 
         if (zoneFrom == null) {
@@ -1034,7 +1033,7 @@ public class GameAction {
 
         oldBattlefield.remove(c);
         newBattlefield.add(c);
-        // control change keeps the card in play (no changeZone), but rewrites a snapshot-read field (controller)
+        // the card stays in play, but the snapshot records its controller
         game.markLastStateStale();
         if (game.getPhaseHandler().inCombat()) {
             game.getCombat().removeFromCombat(c);

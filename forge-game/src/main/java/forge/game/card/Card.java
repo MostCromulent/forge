@@ -3937,7 +3937,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         // 613.7e An Aura, Equipment, or Fortification receives a new timestamp each time it becomes attached to an object or player.
         setLayerTimestamp(getGame().getNextTimestamp());
         entity.addAttachedCard(this);
-        markLkiStale(); // rewrites the attachment cross-reference graph of two in-play cards
+        markLkiStale(); // attaching changes both cards
 
         // Play the Equip sound
         getGame().fireEvent(new GameEventCardAttachment(this, oldTarget, entity));
@@ -3982,7 +3982,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         setEntityAttachedTo(null);
         entity.removeAttachedCard(this);
-        markLkiStale(); // rewrites the attachment cross-reference graph of two in-play cards
+        markLkiStale(); // detaching changes both cards
 
         // Handle Bestowed Aura part
         unanimateBestow();
@@ -4126,7 +4126,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updateTypesForView();
         }
-        markLkiStale();
+        markLkiStale(staticId);
     }
 
     public final boolean removeChangedCardTypes(final long timestamp, final long staticId) {
@@ -4169,7 +4169,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
                 timestamp, stAb != null ? stAb.getId() : (long)0, new CardColor(color, addToColors)
         );
         updateColorForView();
-        markLkiStale();
+        markLkiStale(stAb == null ? 0 : stAb.getId());
     }
 
     public final void removeColor(final long timestampIn, final long staticId) {
@@ -4179,7 +4179,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
         if (removed) {
             updateColorForView();
-            markLkiStale();
+            markLkiStale(staticId);
         }
     }
 
@@ -4393,7 +4393,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         if (updateView) {
             updatePTforView();
         }
-        markLkiStale();
+        markLkiStale(staticId);
     }
 
     public final void removeNewPT(final long timestamp, final long staticId) {
@@ -4409,7 +4409,7 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
             updatePTforView();
         }
         if (removed) {
-            markLkiStale();
+            markLkiStale(staticId);
         }
         return removed;
     }
@@ -4564,11 +4564,15 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
         return boostPT.values().stream().mapToInt(Pair::getRight).sum();
     }
 
-    // One-shot continuous changes (pumps, until-EOT grants, re-attach, status flags) don't route through
-    // updateLastStateForCard, so they must mark the LKI snapshot stale themselves or a tracked card's frozen
-    // copy goes stale. Only cards actually in the snapshot (battlefield/graveyard) matter — this also skips
-    // the same setters being called while a card is constructed/copied (e.g. copyCard, getLKICopy), which
-    // would otherwise stale the snapshot on every token creation.
+    // Static effects are removed and re-applied on every state check with the same timestamp, so
+    // re-application leaves the card as it was. Only a change of its own, which passes no static id, counts.
+    private void markLkiStale(final long staticId) {
+        if (staticId == 0) {
+            markLkiStale();
+        }
+    }
+
+    // Only cards in the snapshot matter; this also stops card construction and copying staling it.
     private void markLkiStale() {
         Game g = getGame();
         if (g == null) {
@@ -4582,13 +4586,13 @@ public class Card extends GameEntity implements Comparable<Card>, IHasSVars, ITr
 
     public void addPTBoost(final int power, final int toughness, final long timestamp, final long staticId) {
         boostPT.put(timestamp, staticId, Pair.of(power, toughness));
-        markLkiStale();
+        markLkiStale(staticId);
     }
 
     public boolean removePTBoost(final long timestamp, final long staticId) {
         boolean removed = boostPT.remove(timestamp, staticId) != null;
         if (removed) {
-            markLkiStale();
+            markLkiStale(staticId);
         }
         return removed;
     }

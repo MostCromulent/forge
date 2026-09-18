@@ -927,8 +927,7 @@ public class Combat {
 
     public void dealAssignedDamage() {
         final Game game = playerWhoAttacks.getGame();
-        // combat declaration changes attacker/blocker status, which the snapshot captures but no markLkiStale
-        // path covers — force a fresh build so as-declared combat is recorded (attacksAlone/blocksAlone)
+        // nothing marks the snapshot stale when attackers and blockers are declared, so rebuild here
         game.markLastStateStale();
         game.copyLastState();
 
