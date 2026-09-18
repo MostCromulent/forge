@@ -105,8 +105,10 @@ public abstract class TokenEffectBase extends SpellAbilityEffect {
         List<Card> allTokens = Lists.newArrayList();
 
         Map<AbilityKey, Object> moveParams = AbilityKey.newMap();
-        moveParams.put(AbilityKey.LastStateBattlefield, game.copyLastStateBattlefield());
-        moveParams.put(AbilityKey.LastStateGraveyard, game.copyLastStateGraveyard());
+        // the snapshot for this resolution was built before the effect ran, so reuse it rather than
+        // copying both zones again for every token: a cascade of token triggers copies a growing board once each
+        moveParams.put(AbilityKey.LastStateBattlefield, new CardCollection(game.getLastStateBattlefield()));
+        moveParams.put(AbilityKey.LastStateGraveyard, new CardCollection(game.getLastStateGraveyard()));
 
         for (final Table.Cell<Player, Card, Integer> c : tokenTable.cellSet()) {
             Card prototype = c.getColumnKey();
