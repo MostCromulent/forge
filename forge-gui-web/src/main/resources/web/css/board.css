@@ -70,11 +70,10 @@
 #phase-strip .owner b { font-weight: 700; }
 #phase-strip .owner .turn { color: var(--muted); font-size: 10.5px; }
 #phase-strip .track { display: flex; align-items: center; gap: 2px; }
-/* Passed phases are brighter with a filled underline; upcoming ones are dim */
-#phase-strip .phase { width: 20px; height: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #56606e; }
-#phase-strip .phase i { width: 13px; height: 2px; border-radius: 1px; background: #2b3440; }
-#phase-strip .phase.past { color: var(--muted); }
-#phase-strip .phase.past i { background: var(--muted); }
+/* A yellow line under a phase means a stop is set in it on this turn's row of the grid */
+#phase-strip .phase { width: 20px; height: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted); }
+#phase-strip .phase i { width: 13px; height: 2px; border-radius: 1px; }
+#phase-strip .phase.stop i { background: var(--select); }
 #phase-strip .phase.current { width: auto; flex-direction: row; gap: 5px; height: 22px; padding: 0 9px 0 7px; margin: 0 2px; border-radius: 11px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 650; }
 #phase-strip .pips { display: flex; gap: 2px; margin-left: 2px; }
 #phase-strip .pips i { width: 4px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.3); }

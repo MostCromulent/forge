@@ -86,8 +86,9 @@ export function renderPhaseBar(model, g, send) {
   const pill = root.querySelector('.pill');
   const avatar = active ? playerAvatarUrl(active) : '';
   const owner = `<span class="owner">${avatar ? `<img alt="" src="${avatar}">` : ''}<b>${myTurn ? 'Your turn' : escapeHtml(active?.Name ?? '')}</b><span class="turn">T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}</span></span>`;
+  const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
   const track = PHASES.map((p, n) => {
-    if (n !== phase) return `<span class="phase ${n < phase ? 'past' : ''}">${glyph(p.glyph, 12)}<i></i></span>`;
+    if (n !== phase) return `<span class="phase ${p.steps.some(i => stops.has(STEPS[i][0])) ? 'stop' : ''}">${glyph(p.glyph, 12)}<i></i></span>`;
     const name = step < 0 ? 'Untap' : STEPS[step][3];
     const pips = p.steps.length === 6
       ? `<span class="pips">${p.steps.map(i => `<i class="${i < step ? 'past' : i === step ? 'now' : ''}"></i>`).join('')}</span>` : '';
