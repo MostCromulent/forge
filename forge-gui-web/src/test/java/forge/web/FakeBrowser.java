@@ -1,0 +1,93 @@
+package forge.web;
+
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
+
+/** Records what the web client sends; when autoPlay is on, passes priority and answers every request with its default. */
+final class FakeBrowser implements BrowserChannel {
+    final List<JsonObject> received = new CopyOnWriteArrayList<>();
+    final BrowserModel model = new BrowserModel();
+    final CountDownLatch gameOver = new CountDownLatch(1);
+    private final WebGuiGame gui;
+    private final boolean autoPlay;
+    private final ExecutorService actions = Executors.newSingleThreadExecutor(r -> {
+        final Thread t = new Thread(r, "FakeBrowser");
+        t.setDaemon(true);
+        return t;
+    });
+
+    FakeBrowser(final WebGuiGame gui, final boolean autoPlay) {
+        this.gui = gui;
+        this.autoPlay = autoPlay;
+    }
+
+    @Override
+    public void send(final JsonObject message) {
+        received.add(message);
+        switch (message.get("t").getAsString()) {
+            case "state" -> model.applyStateMessage(message);
+            case "gameOver" -> gameOver.countDown();
+            case "prompt" -> {
+                if (autoPlay && message.getAsJsonObject("ok").get("enabled").getAsBoolean()) {
+                    later(action("ok"));
+                }
+            }
+            case "request" -> {
+                if (autoPlay) {
+                    later(reply(message.get("id").getAsInt(), message.get("default")));
+                }
+            }
+            default -> { }
+        }
+    }
+
+    List<JsonObject> all(final String type) {
+        return received.stream().filter(m -> type.equals(m.get("t").getAsString())).collect(Collectors.toList());
+    }
+
+    JsonObject last(final String type) {
+        final List<JsonObject> matches = all(type);
+        return matches.isEmpty() ? null : matches.get(matches.size() - 1);
+    }
+
+    JsonObject awaitLast(final String type, final long timeoutMillis) throws InterruptedException {
+        final long end = System.currentTimeMillis() + timeoutMillis;
+        while (System.currentTimeMillis() < end) {
+            final JsonObject m = last(type);
+            if (m != null) {
+                return m;
+            }
+            Thread.sleep(10);
+        }
+        return null;
+    }
+
+    static JsonObject action(final String type) {
+        return JsonCodec.message(type);
+    }
+
+    static JsonObject reply(final int id, final JsonElement value) {
+        final JsonObject r = JsonCodec.message("reply");
+        r.addProperty("id", id);
+        r.add("value", value);
+        return r;
+    }
+
+    private void later(final JsonObject msg) {
+        actions.execute(() -> {
+            try {
+                Thread.sleep(20);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            gui.onBrowserMessage(msg);
+        });
+    }
+}

@@ -600,6 +600,53 @@ public class DeltaSyncManager implements IHasForgeLog {
     }
 
     /**
+     * Full property map of every object reachable from the view, keyed and converted as collectDeltas does.
+     * Registers nothing: registration writes each object's consumer map, which set() on another thread iterates.
+     * Returns null if every walk attempt hit a concurrent modification.
+     */
+    public Map<Integer, Map<TrackableProperty, Object>> snapshot(GameView gameView) {
+        if (gameView == null) {
+            return null;
+        }
+        for (int attempt = 1; attempt <= MAX_WALK_ATTEMPTS; attempt++) {
+            Map<Integer, Map<TrackableProperty, Object>> objects = new LinkedHashMap<>();
+            try {
+                walkForSnapshot(gameView, objects);
+                return objects;
+            } catch (ConcurrentModificationException e) {
+                netLog.warn(e, "[DeltaSync] Snapshot attempt {} of {} failed", attempt, MAX_WALK_ATTEMPTS);
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void walkForSnapshot(TrackableObject obj, Map<Integer, Map<TrackableProperty, Object>> objects) {
+        if (DeltaPacket.typeTagFor(obj) < 0) {
+            return;
+        }
+        int deltaKey = DeltaPacket.makeDeltaKey(obj);
+        if (objects.containsKey(deltaKey)) {
+            return;
+        }
+        // Parent before children, as collectDeltas orders newObjects
+        objects.put(deltaKey, buildPropertyMap(obj, null));
+        boolean parentIsGameEntityView = obj instanceof GameEntityView;
+        for (Object value : ((Map<TrackableProperty, Object>) obj.getProps()).values()) {
+            if (value instanceof TrackableObject to) {
+                if (parentIsGameEntityView && to instanceof GameEntityView) {
+                    continue;
+                }
+                walkForSnapshot(to, objects);
+            } else if (value instanceof TrackableCollection<?> tc) {
+                for (TrackableObject to : tc) {
+                    walkForSnapshot(to, objects);
+                }
+            }
+        }
+    }
+
+    /**
      * Reset all tracking state for reconnection.
      * Unregisters this consumer from all tracked objects.
      * After reset, the next sync will be treated as a fresh initial sync.
