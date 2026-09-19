@@ -7,12 +7,12 @@ import { openOptions, closeOptions } from './settings.js';
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
 
+// Icons from Lucide (ISC, see web/licenses/lucide-license.txt), drawn on the same 24-unit grid
 const ICONS = {
-  endTurn: '<path d="M5 6.5l6 5.5-6 5.5"/><path d="M12 6.5l6 5.5-6 5.5"/>',
-  autoPass: '<circle cx="12" cy="12" r="8.5"/><path d="M10 9.2l5 2.8-5 2.8z" fill="currentColor" stroke="none"/>',
-  undo: '<path d="M4.5 9.5h9a5 5 0 0 1 0 10H9"/><path d="M8 5.5l-3.5 4L8 13.5"/>',
-  // Eight teeth around the hub, drawn as a dashed ring so they stay even at any size
-  cog: '<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="7.6" stroke-width="3.2" stroke-dasharray="2.6 3.37"/>',
+  endTurn: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
+  autoPass: '<path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/><circle cx="12" cy="12" r="10"/>',
+  undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
+  cog: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
 };
 const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 

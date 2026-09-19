@@ -112,7 +112,7 @@ export function openOptions() {
       <header>
         <b>Options</b>
         <input class="search" type="search" placeholder="Search settings" aria-label="Search settings">
-        <button class="close" title="Close (Esc)">✕</button>
+        <button class="close" title="Close (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
       </header>
       <div class="rows"></div>
       <footer><span class="hint">Changes apply at once.</span><button class="concede"></button></footer>
@@ -123,7 +123,7 @@ export function openOptions() {
     if (e.target === back) closeOptions();
   };
   const concede = back.querySelector('.concede');
-  concede.textContent = 'Concede game';
+  concede.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"/></svg>Concede game';
   concede.onclick = () => {
     if (concede.classList.contains('armed')) {
       onConcede();
@@ -131,7 +131,7 @@ export function openOptions() {
       return;
     }
     concede.classList.add('armed');
-    concede.textContent = 'Confirm concede';
+    concede.lastChild.textContent = 'Confirm concede';
   };
   document.body.append(back);
   drawRows();
