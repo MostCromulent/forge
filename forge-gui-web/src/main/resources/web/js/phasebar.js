@@ -90,7 +90,7 @@ export function renderPhaseBar(model, g, send) {
   const track = PHASES.map((p, n) => {
     if (n !== phase) return `<span class="phase ${p.steps.some(i => stops.has(STEPS[i][0])) ? 'stop' : ''}">${glyph(p.glyph, 12)}<i></i></span>`;
     const name = step < 0 ? 'Untap' : STEPS[step][3];
-    const pips = p.steps.length === 6
+    const pips = p.steps.length > 1
       ? `<span class="pips">${p.steps.map(i => `<i class="${i < step ? 'past' : i === step ? 'now' : ''}"></i>`).join('')}</span>` : '';
     return `<span class="phase current">${glyph(step < 0 ? p.glyph : STEPS[step][1], 12)}${name}${pips}</span>`;
   }).join('');
