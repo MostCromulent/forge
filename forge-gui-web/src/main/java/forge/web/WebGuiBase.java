@@ -20,6 +20,7 @@ import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Locale;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -199,7 +200,11 @@ public final class WebGuiBase implements IGuiBase {
     @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { }
     @Override public String showFileDialog(final String title, final String defaultDir) { return null; }
     @Override public File getSaveFile(final File defaultFile) { return null; }
-    @Override public boolean isSupportedAudioFormat(final File file) { return false; }
+    // The browser plays the audio, so the formats it understands are the ones this client supports
+    @Override public boolean isSupportedAudioFormat(final File file) {
+        final String name = file.getName().toLowerCase(Locale.ROOT);
+        return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg") || name.endsWith(".m4a");
+    }
     @Override public IAudioClip createAudioClip(final String filename) { return null; }
     @Override public IAudioMusic createAudioMusic(final String filename) { return null; }
     @Override public void startAltSoundSystem(final String filename, final boolean isSynchronized) { }

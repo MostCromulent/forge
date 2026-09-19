@@ -14,6 +14,7 @@ import forge.game.GameLog;
 import forge.game.GameLogEntry;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
+import forge.game.event.GameEventGameOutcome;
 import forge.game.GameState;
 import forge.game.GameView;
 import forge.game.card.CardFaceView;
@@ -41,6 +42,8 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
+import forge.sound.EventVisualizer;
+import forge.sound.SoundEffectType;
 import forge.model.FModel;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
@@ -253,6 +256,36 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         log.getEventVisitor().recieve(event);
         forwardNewLogEntries(log);
+        forwardSound(event);
+    }
+
+    // Desktop plays the same sounds from the same events; here the browser plays them, so only the name travels
+    private final EventVisualizer sounds = new EventVisualizer(null) {
+        @Override
+        public SoundEffectType visit(final GameEventGameOutcome event) {
+            final PlayerView local = getCurrentPlayer();
+            return local != null && local.getName().equals(event.winningPlayerName())
+                    ? SoundEffectType.WinDuel : SoundEffectType.LoseDuel;
+        }
+    };
+
+    private void forwardSound(final GameEvent event) {
+        if (!FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_SOUNDS)) {
+            return;
+        }
+        final SoundEffectType effect = event.visit(sounds);
+        if (effect == null) {
+            return;
+        }
+        final String name = effect == SoundEffectType.ScriptedEffect
+                ? sounds.getScriptedSoundEffectName(event) : effect.getResourceFileName();
+        if (name == null || name.isEmpty()) {
+            return;
+        }
+        final JsonObject m = JsonCodec.message("sound");
+        m.addProperty("name", name);
+        m.addProperty("sync", effect.isSynced());
+        send(m);
     }
 
     private void forwardNewLogEntries(final GameLog log) {
@@ -333,7 +366,9 @@ public class WebGuiGame extends NetworkGuiGame {
             "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
             "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
             "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
-            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
+            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW,
+            "sounds", FPref.UI_ENABLE_SOUNDS,
+            "music", FPref.UI_ENABLE_MUSIC);
 
     private static JsonObject settings() {
         final ForgePreferences prefs = FModel.getPreferences();
@@ -344,6 +379,8 @@ public class WebGuiGame extends NetworkGuiGame {
         s.addProperty("logDetail", GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)).name());
         s.addProperty("arrows", prefs.getPref(FPref.UI_TARGETING_OVERLAY));
         s.addProperty("highlightColor", "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR));
+        s.addProperty("soundVolume", prefs.getPrefInt(FPref.UI_VOL_SOUNDS));
+        s.addProperty("musicVolume", prefs.getPrefInt(FPref.UI_VOL_MUSIC));
         return s;
     }
 
@@ -364,6 +401,10 @@ public class WebGuiGame extends NetworkGuiGame {
             prefs.setPref(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
         } else if ("arrows".equals(key)) {
             prefs.setPref(FPref.UI_TARGETING_OVERLAY, value);
+        } else if ("soundVolume".equals(key)) {
+            prefs.setPref(FPref.UI_VOL_SOUNDS, value);
+        } else if ("musicVolume".equals(key)) {
+            prefs.setPref(FPref.UI_VOL_MUSIC, value);
         } else {
             Logger.warn("Web client: unknown setting {}", key);
             return;

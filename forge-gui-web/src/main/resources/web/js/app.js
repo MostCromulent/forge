@@ -9,6 +9,7 @@ import { initDetail, onDetail, onPlayerDetail } from './detail.js';
 import { initStack, onStackMenu } from './stack.js';
 import { initOverlay, drawOverlay } from './overlay.js';
 import { initSettings, onServerSettings } from './settings.js';
+import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio.js';
 
 const model = createModel();
 let scheduled = false;
@@ -17,7 +18,10 @@ initDetail(send);
 initStack(send);
 initOverlay();
 initLog();
-initSettings(send, () => send({ t: 'concede' }), () => schedule());
+initSettings(send, () => send({ t: 'concede' }), () => {
+  applyAudioSettings();
+  schedule();
+});
 
 function onMessage(msg) {
   switch (msg.t) {
@@ -44,7 +48,11 @@ function onMessage(msg) {
     case 'prompt': model.prompt = msg; break;
     case 'zones': model.zones = msg.show; break;
     case 'request': model.requests.set(msg.id, msg); break;
-    case 'gameOver': model.gameOver = true; break;
+    case 'gameOver':
+      model.gameOver = true;
+      stopMusic();
+      break;
+    case 'sound': playSound(msg); return;
     case 'playable':
       model.playable = msg;
       break;

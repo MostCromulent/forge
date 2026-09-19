@@ -48,9 +48,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import forge.sound.MusicPlaylist;
+import forge.sound.SoundSystem;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -222,6 +226,24 @@ public final class WebServer implements AutoCloseable {
         return "application/octet-stream";
     }
 
+    // The player's own sound set and music, resolved the way the desktop client resolves them
+    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name) throws IOException {
+        final File file = sound && name != null && !name.contains("/") && !name.contains("\\")
+                ? SoundSystem.instance.getSoundResource(name)
+                : sound ? null : musicTrack();
+        if (file == null || !file.isFile()) {
+            respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            return;
+        }
+        final String type = file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg";
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type, false);
+    }
+
+    private static File musicTrack() {
+        final String track = MusicPlaylist.MATCH.getRandomFilename();
+        return track == null ? null : new File(track);
+    }
+
     private static byte[] readResource(final String resource) throws IOException {
         if (PAGE_DIR != null) {
             final Path root = Path.of(PAGE_DIR).toAbsolutePath().normalize();
@@ -264,6 +286,11 @@ public final class WebServer implements AutoCloseable {
                 } else {
                     respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
                 }
+                return;
+            }
+            if ("/sound".equals(path) || "/music".equals(path)) {
+                final List<String> name = q.parameters().get("name");
+                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0));
                 return;
             }
             if ("/img".equals(path)) {

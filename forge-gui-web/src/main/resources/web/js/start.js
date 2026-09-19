@@ -1,4 +1,5 @@
 import { avatarUrl, sleeveUrl, pickLook } from './looks.js';
+import { startMusic } from './audio.js';
 
 let built = false;
 // Avatar and sleeve per seat: [you, opponent]
@@ -18,15 +19,19 @@ export function renderStart(model, send) {
         <p id="start-error" class="error" hidden></p>
         <div class="actions"><button id="quit">Quit</button><button id="play" class="primary">Play</button></div>
       </div>`;
-    root.querySelector('#play').onclick = () => send({
-      t: 'start',
-      playerName: root.querySelector('#player-name').value,
-      playerDeck: root.querySelector('#player-deck').value,
-      aiDeck: root.querySelector('#ai-deck').value,
-      avatars: looks?.avatars,
-      sleeves: looks?.sleeves,
-      spectate: root.querySelector('#spectate').checked,
-    });
+    root.querySelector('#play').onclick = () => {
+      // A browser plays nothing before a click, so the music starts on this one
+      startMusic();
+      send({
+        t: 'start',
+        playerName: root.querySelector('#player-name').value,
+        playerDeck: root.querySelector('#player-deck').value,
+        aiDeck: root.querySelector('#ai-deck').value,
+        avatars: looks?.avatars,
+        sleeves: looks?.sleeves,
+        spectate: root.querySelector('#spectate').checked,
+      });
+    };
     root.querySelector('#quit').onclick = () => send({ t: 'quit' });
     built = true;
   }

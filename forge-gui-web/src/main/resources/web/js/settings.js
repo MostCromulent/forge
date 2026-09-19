@@ -54,6 +54,14 @@ const SETTINGS = [
     section: 'Arrows', key: 'arrows', label: 'Target and combat arrows', type: 'choice', server: true,
     options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
   },
+  { section: 'Sound', key: 'sounds', label: 'Sound effects', type: 'toggle', server: true, def: true },
+  {
+    section: 'Sound', key: 'soundVolume', label: 'Effect volume', type: 'slider', server: true, min: 0, max: 100, def: 100,
+  },
+  { section: 'Sound', key: 'music', label: 'Music', type: 'toggle', server: true, def: true },
+  {
+    section: 'Sound', key: 'musicVolume', label: 'Music volume', type: 'slider', server: true, min: 0, max: 100, def: 100,
+  },
   {
     section: 'Theme', key: 'customCss', label: 'Custom CSS',
     hint: 'Applied to the match screen as you type, and kept in this browser.', type: 'css', def: '',
