@@ -1,4 +1,4 @@
-import { deref, isLocal, opponents } from './model.js';
+import { deref, isLocal, me, opponents } from './model.js';
 import { playerAvatarUrl } from './looks.js';
 
 // A pill on the divider: whose turn it is, then the five phases with the current step named. Clicking it opens a
@@ -101,6 +101,7 @@ export function renderPhaseBar(model, g, send) {
   }
   pill.innerHTML = `${owner}<span class="track">${track}</span>${until}<span class="caret">${glyph(myTurn ? 'up' : 'down', 12)}</span>`;
   pill.classList.toggle('open', open);
+  pill.classList.toggle('priority', !!me(model)?.HasPriority);
 
   const panel = root.querySelector('.stops');
   panel.hidden = !open;
@@ -117,7 +118,7 @@ function stopsGrid(model, step, myTurn, opponentLabel) {
     { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
   ];
   const gap = i => (i > 0 && PHASES.findIndex(p => p.steps.includes(i)) !== PHASES.findIndex(p => p.steps.includes(i - 1))) ? '<td class="gap"></td>' : '';
-  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th><span class="head ${i === step ? 'current' : ''}" title="${s[2]}">${glyph(s[1], 13)}</span></th>`).join('') + '</tr>';
+  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th title="${s[2]}"><span class="head ${i === step ? 'current' : ''}">${glyph(s[1], 13)}</span><span class="name">${s[3]}</span></th>`).join('') + '</tr>';
   const body = rows.map(r => '<tr>' + `<td class="who">${r.label}${r.now ? ' <span class="now">now</span>' : ''}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
@@ -126,7 +127,7 @@ function stopsGrid(model, step, myTurn, opponentLabel) {
     return `${gap(i)}<td><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + '</tr>').join('');
   return `<div class="title">Phase stops<span class="hint"><kbd>Esc</kbd> or click outside to close</span></div><table>${head}${body}</table>`
-    + '<p class="foot">Click a square to stop there on that player\'s turns. <span class="yield">Right-click to pass priority until that step.</span></p>';
+    + '<p class="foot">Click a square to stop there on that player\'s turns. Right-click to pass priority until that step.</p>';
 }
 
 function wireGrid(panel) {

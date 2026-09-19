@@ -58,8 +58,12 @@
 .player-counter.commander-damage { border-style: dashed; }
 /* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
 #phase-strip { display: flex; justify-content: center; position: relative; }
-#phase-strip .pill { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 3px; border-radius: 15px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; cursor: pointer; }
+/* A hairline across the battlefield column separates the two halves of the board */
+#phase-strip::before { content: ''; position: absolute; left: 162px; right: 0; top: 50%; height: 1px; background: var(--line); }
+#phase-strip .pill { position: relative; display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 3px; border-radius: 15px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; cursor: pointer; }
 #phase-strip .pill.open { background: var(--surface-2); border-color: #4a5563; }
+/* The whole outline lights while you hold priority, whoever's turn it is */
+#phase-strip .pill.priority { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 0 12px rgba(167,139,250,.45); }
 #phase-strip .glyph { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 #phase-strip .owner { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 2px; border-radius: 12px; background: var(--surface-2); }
 #phase-strip .owner img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1.5px var(--accent-2); }
@@ -85,19 +89,21 @@
 #phase-strip .stops kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--text); font: inherit; }
 #phase-strip .stops table { border-collapse: separate; border-spacing: 0; }
 #phase-strip .stops td, #phase-strip .stops th { padding: 0; height: 22px; text-align: center; font-weight: 400; }
+#phase-strip .stops th { width: 46px; vertical-align: top; padding-bottom: 4px; }
+#phase-strip .stops th .name { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; line-height: 1.15; }
+#phase-strip .stops th .current + .name { color: var(--text); font-weight: 650; }
 #phase-strip .stops td.who { text-align: left; padding-right: 10px; white-space: nowrap; }
 #phase-strip .stops .now { color: var(--accent-2); font-size: 10px; font-weight: 600; }
 #phase-strip .stops td.gap { width: 8px; }
-#phase-strip .stops .head { width: 22px; height: 20px; margin: 0 1px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+#phase-strip .stops .head { width: 22px; height: 20px; margin: 0 auto; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 #phase-strip .stops .head.current { background: var(--accent); color: #fff; }
-#phase-strip .stops .cell { width: 24px; height: 22px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }
+#phase-strip .stops .cell { width: 100%; height: 22px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }
 #phase-strip .stops .square { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px #4a5563; }
-#phase-strip .stops .square.on { background: var(--text); box-shadow: none; }
+#phase-strip .stops .square.on { background: var(--select); box-shadow: none; }
 #phase-strip .stops .square.current { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 #phase-strip .stops .cell:hover .square { outline: 2px solid var(--text); outline-offset: 2px; }
 #phase-strip .stops .skip { color: var(--select); display: flex; }
 #phase-strip .stops .foot { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; }
-#phase-strip .stops .yield { color: var(--select); }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
 #stack { position: fixed; right: var(--side-gap); z-index: 25; display: flex; align-items: flex-start; gap: 8px; }
 #stack .pile { position: relative; width: calc(var(--span) + var(--stack-w)); height: calc(var(--stack-w) * 1.4 + 40px); }
