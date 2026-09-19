@@ -49,6 +49,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -202,6 +203,9 @@ public final class WebServer implements AutoCloseable {
         ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
     }
 
+    // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
+    private static final String PAGE_DIR = System.getProperty("forge.web.pageDir");
+
     private static String contentType(final String resource) {
         if (resource.endsWith(".html")) {
             return "text/html; charset=utf-8";
@@ -219,6 +223,11 @@ public final class WebServer implements AutoCloseable {
     }
 
     private static byte[] readResource(final String resource) throws IOException {
+        if (PAGE_DIR != null) {
+            final Path root = Path.of(PAGE_DIR).toAbsolutePath().normalize();
+            final Path file = root.resolve(resource).normalize();
+            return file.startsWith(root) && Files.isRegularFile(file) ? Files.readAllBytes(file) : null;
+        }
         try (InputStream in = WebServer.class.getResourceAsStream("/web/" + resource)) {
             return in == null ? null : in.readAllBytes();
         }
