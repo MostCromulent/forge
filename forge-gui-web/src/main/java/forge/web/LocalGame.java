@@ -10,6 +10,7 @@ import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -22,6 +23,9 @@ import java.util.concurrent.TimeUnit;
 /** The loopback netplay host local games run on, and the web client's seat in each match. Call on the host UI thread. */
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
+    private static final int SPECTATE_WAIT_MILLIS = 5000;
+    /** The lobby slot the browser sits in; slot 0 is the AI opponent. */
+    private static final int WEB_SEAT = 1;
     private final FServerManager server = FServerManager.getInstance();
     private int port = -1;
     private ServerGameLobby lobby;
@@ -43,7 +47,7 @@ public final class LocalGame {
         ai.setAvatarIndex(storedIndex(FPref.UI_AVATARS, 1));
         ai.setSleeveIndex(storedIndex(FPref.UI_SLEEVES, 1));
         ai.setIsReady(true);
-        final LobbySlot seat = lobby.getSlot(1);
+        final LobbySlot seat = lobby.getSlot(WEB_SEAT);
         seat.setType(LobbySlotType.OPEN);
         seat.setDeck(playerDeck);
         seat.setIsReady(false);
@@ -77,6 +81,26 @@ public final class LocalGame {
         final String[] stored = FModel.getPreferences().getPref(pref).split(",");
         final Integer v = seat < stored.length ? Ints.tryParse(stored[seat].trim()) : null;
         return v == null || v < 0 ? seat : v;
+    }
+
+    /** Hands the web seat to an AI, the way the host does for a player who never reconnects, so the browser
+     *  spectates two AI players instead of playing one of them. */
+    public void spectate() {
+        final HostedMatch match = hostedMatch();
+        for (int i = 0; i < SPECTATE_WAIT_MILLIS / 50 && (match == null || match.getGame() == null); i++) {
+            try {
+                Thread.sleep(50);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+        final RemoteClient client = server.getClientBySlotIndex(WEB_SEAT);
+        if (client == null) {
+            Logger.warn("No web seat to hand to the AI");
+            return;
+        }
+        server.convertToAI(client);
     }
 
     public HostedMatch hostedMatch() {

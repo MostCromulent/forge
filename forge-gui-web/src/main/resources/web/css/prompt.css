@@ -18,6 +18,9 @@
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 16px var(--accent); }
 #prompt kbd { border: 1px solid #ffffff33; border-radius: 4px; padding: 0 4px; font: 500 10.5px/1.5 system-ui, sans-serif; color: var(--muted); }
 #prompt .ok kbd { color: #fff; }
+/* Spectating two AI players leaves nothing to answer, so only the options button stays */
+#prompt.spectating .tools button:not(.cog), #prompt.spectating .buttons, #prompt.spectating .prompt-card { display: none; }
+#prompt.spectating { border-color: var(--line); box-shadow: 0 10px 30px #0009; }
 #prompt.flash { animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 /* Options: one scrolling list with a search box, as the settings are too many for columns */

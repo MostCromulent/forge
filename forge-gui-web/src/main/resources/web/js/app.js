@@ -23,6 +23,7 @@ function onMessage(msg) {
   switch (msg.t) {
     case 'hello':
       model.inMatch = msg.inMatch;
+      model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
       if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.error = null;

@@ -64,6 +64,12 @@ export function renderPrompt(model, send) {
     });
     built = true;
   }
+  root.classList.toggle('spectating', !!model.spectating);
+  if (model.spectating) {
+    root.querySelector('.step').textContent = stepName(game(model)?.Phase);
+    root.querySelector('.message').textContent = 'Two AI players. You are spectating.';
+    return;
+  }
   const autoPass = !!model.controls?.autoPass;
   const autoPassButton = root.querySelector('.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);

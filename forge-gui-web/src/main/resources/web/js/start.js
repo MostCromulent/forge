@@ -14,6 +14,7 @@ export function renderStart(model, send) {
         <div class="seat-row"><div class="looks" data-seat="0"></div><label>Your deck <select id="player-deck"></select></label></div>
         <div class="seat-row"><div class="looks" data-seat="1"></div><label>Opponent deck <select id="ai-deck"></select></label></div>
         <p class="hint">Click the avatar or sleeve to choose; right-click to pick one at random.</p>
+        <label class="spectate"><input id="spectate" type="checkbox"> Spectate: two AI players play instead</label>
         <p id="start-error" class="error" hidden></p>
         <div class="actions"><button id="quit">Quit</button><button id="play" class="primary">Play</button></div>
       </div>`;
@@ -24,6 +25,7 @@ export function renderStart(model, send) {
       aiDeck: root.querySelector('#ai-deck').value,
       avatars: looks?.avatars,
       sleeves: looks?.sleeves,
+      spectate: root.querySelector('#spectate').checked,
     });
     root.querySelector('#quit').onclick = () => send({ t: 'quit' });
     built = true;

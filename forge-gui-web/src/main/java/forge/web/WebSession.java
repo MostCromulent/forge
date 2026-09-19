@@ -33,6 +33,8 @@ public final class WebSession implements WebServer.Endpoint {
     private ScheduledFuture<?> idle;
     private volatile BrowserChannel browser;
     private volatile WebGuiGame match;
+    /** True when an AI plays the web seat and the browser only spectates. */
+    private volatile boolean spectating;
 
     public WebSession(final WebGuiBase ui, final LocalGame local, final long idleMillis, final Runnable onQuit) {
         this.ui = ui;
@@ -106,6 +108,7 @@ public final class WebSession implements WebServer.Endpoint {
     private JsonObject hello() {
         final JsonObject m = JsonCodec.message("hello");
         m.addProperty("inMatch", match != null);
+        m.addProperty("spectating", spectating);
         m.addProperty("playerName", FModel.getPreferences().getPref(FPref.PLAYER_NAME));
         // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
         m.add("avatars", seatIndices(FPref.UI_AVATARS));
@@ -181,6 +184,7 @@ public final class WebSession implements WebServer.Endpoint {
     }
 
     private void start(final BrowserChannel channel, final JsonObject msg) {
+        spectating = msg.has("spectate") && msg.get("spectate").getAsBoolean();
         final String name = msg.get("playerName").getAsString().trim();
         final DeckProxy mine = decks.get(msg.get("playerDeck").getAsString());
         final DeckProxy theirs = decks.get(msg.get("aiDeck").getAsString());
@@ -206,6 +210,9 @@ public final class WebSession implements WebServer.Endpoint {
         }
         try {
             local.startMatch(name, mine.getDeck(), AI_NAME, theirs.getDeck(), gui);
+            if (spectating) {
+                local.spectate();
+            }
         } catch (final RuntimeException e) {
             Logger.error(e, "Could not start the match");
             match = null;
