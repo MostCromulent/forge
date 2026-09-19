@@ -96,16 +96,23 @@ function build(req, model, answer) {
   }
 }
 
+// Naming a card offers every card face, so long lists get a search box and draw only the first matches
+const SEARCH_FROM = 20;
+const SHOW_AT_MOST = 200;
+
 function choices(dlg, req, model, answer) {
   const reveal = req.kind === 'reveal';
   const picked = new Set(reveal ? [] : req.selected);
   const list = el('div', 'options');
+  const note = el('p', 'hint');
   const confirm = button(reveal ? 'OK' : 'Confirm', true, () => answer(reveal ? [] : [...picked]));
+  const search = req.options.length > SEARCH_FROM ? el('input', 'choice-search') : null;
+  let shown = [];
   const sync = () => {
-    [...list.children].forEach((o, i) => o.classList.toggle('picked', picked.has(i)));
+    [...list.children].forEach((o, pos) => o.classList.toggle('picked', picked.has(shown[pos])));
     confirm.disabled = !reveal && (picked.size < req.min || (req.max >= 0 && picked.size > req.max));
   };
-  req.options.forEach((opt, i) => list.append(optionElement(model, opt, () => {
+  const toggle = i => {
     if (reveal) return;
     if (picked.has(i)) picked.delete(i);
     else {
@@ -113,9 +120,28 @@ function choices(dlg, req, model, answer) {
       picked.add(i);
     }
     sync();
-  })));
-  dlg.append(list, actions(confirm));
-  sync();
+  };
+  const draw = () => {
+    const q = search ? search.value.trim().toLowerCase() : '';
+    const matches = [];
+    for (let i = 0; i < req.options.length && matches.length <= SHOW_AT_MOST; i++) {
+      const o = req.options[i];
+      if (!q || String(o.label ?? o.name ?? '').toLowerCase().includes(q)) matches.push(i);
+    }
+    shown = matches.slice(0, SHOW_AT_MOST);
+    list.replaceChildren(...shown.map(i => optionElement(model, req.options[i], () => toggle(i))));
+    note.textContent = matches.length > SHOW_AT_MOST ? `Showing the first ${SHOW_AT_MOST} of ${req.options.length}. Type to narrow the list.`
+      : search && picked.size ? `${picked.size} selected` : '';
+    sync();
+  };
+  if (search) {
+    search.placeholder = `Search ${req.options.length} options`;
+    search.addEventListener('input', draw);
+    dlg.append(search);
+  }
+  dlg.append(list, note, actions(confirm));
+  draw();
+  if (search) requestAnimationFrame(() => search.focus());
   return wrap(dlg);
 }
 
