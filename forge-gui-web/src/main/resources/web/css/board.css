@@ -1,4 +1,4 @@
-#match { --side-gap: 280px; display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand prompt"; gap: 8px; padding: 8px; }
+#match { --side-gap: 280px; display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand prompt"; gap: 8px; padding: 8px 8px 0; }
 #opponent { grid-area: opp; }
 #me { grid-area: me; }
 #phase-strip { grid-area: phase; }
