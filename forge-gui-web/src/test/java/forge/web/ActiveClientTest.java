@@ -7,6 +7,7 @@ import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameState;
 import forge.game.card.Card;
+import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.HostedMatch;
@@ -235,6 +236,62 @@ public class ActiveClientTest {
             final JsonArray hidden = faces(gui, browser, theirFaceDown);
             Assert.assertEquals(hidden.size(), 1, "an opponent's face-down card offers another face");
             Assert.assertFalse(hidden.toString().contains("Grizzly"), "an opponent's face-down card revealed its name: " + hidden);
+            gui.onBrowserMessage(FakeBrowser.action("concede"));
+        } finally {
+            onUi(local::shutdown);
+        }
+    }
+
+    // Jötun Grunt's upkeep asks the web seat to choose a player (whose graveyard), answered by clicking an avatar
+    @Test(timeOut = 180000)
+    public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final LocalGame local = new LocalGame();
+        try {
+            final WebGuiGame gui = new WebGuiGame();
+            // Passes priority, takes the first option of optional choices and presses OK to pay costs
+            final ScriptedBrowser browser = new ScriptedBrowser(gui, 50);
+            gui.attach(browser);
+            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+            Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
+            final Game game = local.hostedMatch().getGame();
+            final boolean webFirst = game.getPlayers().get(0).getController() instanceof PlayerControllerHuman;
+            final String web = webFirst ? "human" : "ai";
+            final String ai = webFirst ? "ai" : "human";
+            final GameState state = new GameState();
+            state.parse(List.of(
+                    "activeplayer=" + web,
+                    "activephase=MAIN1",
+                    web + "life=20",
+                    ai + "life=20",
+                    web + "battlefield=J\u00f6tun Grunt",
+                    web + "graveyard=Plains;Plains;Plains",
+                    web + "hand=",
+                    web + "library=Plains;Plains;Plains;Plains;Plains",
+                    ai + "battlefield=",
+                    ai + "graveyard=",
+                    ai + "hand=",
+                    ai + "library=Forest;Forest;Forest;Forest;Forest"));
+            state.applyToGame(game);
+            Thread.sleep(500);
+            remoteGui(local.hostedMatch()).updateGameView();
+            final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
+            final int turn = game.getPhaseHandler().getTurn();
+            // "Put cards from whose graveyard?" is answered by clicking the player
+            browser.pickPlayerWhenAsked(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, seat.getId()));
+            browser.release();
+            // On to the web seat's next turn, past the upkeep that asks for the payment
+            for (int i = 0; i < 600 && !(game.getPhaseHandler().getTurn() >= turn + 2 && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {
+                Thread.sleep(100);
+            }
+            Assert.assertEquals(game.getPhaseHandler().getPlayerTurn(), seat, "the web seat's next turn never came: turn "
+                    + game.getPhaseHandler().getTurn() + " in " + game.getPhaseHandler().getPhase());
+            boolean gruntSurvived = false;
+            for (final Card c : seat.getCardsIn(ZoneType.Battlefield)) {
+                gruntSurvived |= c.getName().startsWith("J");
+            }
+            Assert.assertTrue(gruntSurvived, "the cumulative upkeep went unpaid and the Grunt was sacrificed");
+            Assert.assertEquals(seat.getCardsIn(ZoneType.Graveyard).size(), 1, "two cards should have left the graveyard");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
         } finally {
             onUi(local::shutdown);
