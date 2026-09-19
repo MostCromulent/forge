@@ -48,7 +48,7 @@ public class LoopbackGameTest {
         Assert.fail("game did not start");
     }
 
-    private static void assertSameIgnoringZone(final Map<Integer, JsonObject> incremental, final Map<Integer, JsonObject> fresh) {
+    static void assertSameIgnoringZone(final Map<Integer, JsonObject> incremental, final Map<Integer, JsonObject> fresh) {
         // The client rewrites CardView.Zone from zone collections, and that rewrite is not in the host's packets
         incremental.values().forEach(o -> o.remove("Zone"));
         fresh.values().forEach(o -> o.remove("Zone"));

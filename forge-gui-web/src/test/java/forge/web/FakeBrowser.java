@@ -3,7 +3,9 @@ package forge.web;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -35,8 +37,8 @@ final class FakeBrowser implements BrowserChannel {
             case "state" -> model.applyStateMessage(message);
             case "gameOver" -> gameOver.countDown();
             case "prompt" -> {
-                if (autoPlay && message.getAsJsonObject("ok").get("enabled").getAsBoolean()) {
-                    later(action("ok"));
+                if (autoPlay) {
+                    autoPlay(message);
                 }
             }
             case "request" -> {
@@ -45,6 +47,25 @@ final class FakeBrowser implements BrowserChannel {
                 }
             }
             default -> { }
+        }
+    }
+
+    // Passes priority; when an input needs a selection first (e.g. discard to hand size), picks a card not yet selected
+    private void autoPlay(final JsonObject prompt) {
+        if (prompt.getAsJsonObject("ok").get("enabled").getAsBoolean()) {
+            later(action("ok"));
+            return;
+        }
+        final Set<Integer> chosen = new HashSet<>();
+        prompt.getAsJsonArray("highlighted").forEach(k -> chosen.add(k.getAsInt()));
+        for (final JsonElement ref : prompt.getAsJsonArray("selectable")) {
+            final int key = ref.getAsJsonObject().get("ref").getAsInt();
+            if (!chosen.contains(key)) {
+                final JsonObject select = action("selectCard");
+                select.addProperty("key", key);
+                later(select);
+                return;
+            }
         }
     }
 
