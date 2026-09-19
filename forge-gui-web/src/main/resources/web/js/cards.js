@@ -16,6 +16,8 @@ export function createCard(onClick) {
   return el;
 }
 
+const has = (refs, key) => (refs ?? []).some(r => r?.ref === key);
+
 export function updateCard(el, model, card) {
   const state = stateOf(model, card);
   const visible = model.visible.has(card.$key);
@@ -26,6 +28,8 @@ export function updateCard(el, model, card) {
   el.style.setProperty('--sleeve', cssUrl(visible ? '' : playerSleeveUrl(model.objects.get(card.Owner?.ref))));
   el.classList.toggle('tapped', !!card.Tapped);
   el.classList.toggle('selectable', selectable);
+  el.classList.toggle('playable', has(model.playable?.cards, card.$key));
+  el.classList.toggle('auto-tap', has(model.playable?.autoTap, card.$key));
   el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(card.$key));
   el.classList.toggle('attacking', !!card.Attacking);
   el.classList.toggle('blocking', !!card.Blocking);

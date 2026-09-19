@@ -159,6 +159,10 @@
 /* A tapped card is wider than its box, so push its neighbours clear */
 .row .card.tapped { margin: 0 14px; }
 .card.selectable { box-shadow: 0 0 0 2px var(--select), 0 0 14px var(--select); }
+/* A card you could act on now, and the stronger mark on what Auto would tap: paler and thinner than a card a
+   prompt is asking for, so the two never read the same */
+.card.playable:not(.selectable) { box-shadow: 0 0 0 2px var(--playable, #66ccff); }
+.card.auto-tap:not(.selectable) { box-shadow: 0 0 0 2px var(--playable, #66ccff), 0 0 14px var(--playable, #66ccff); }
 .card.highlighted { box-shadow: 0 0 0 2px var(--accent-2), 0 0 14px var(--accent-2); }
 .card.attacking { transform: translateY(-14px); outline: 2px solid var(--attack); }
 .card.tapped.attacking { transform: rotate(90deg) translateX(-14px) scale(.9); }

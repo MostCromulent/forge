@@ -17,7 +17,7 @@ initDetail(send);
 initStack(send);
 initOverlay();
 initLog();
-initSettings(send, () => send({ t: 'concede' }));
+initSettings(send, () => send({ t: 'concede' }), () => schedule());
 
 function onMessage(msg) {
   switch (msg.t) {
@@ -45,6 +45,9 @@ function onMessage(msg) {
     case 'zones': model.zones = msg.show; break;
     case 'request': model.requests.set(msg.id, msg); break;
     case 'gameOver': model.gameOver = true; break;
+    case 'playable':
+      model.playable = msg;
+      break;
     case 'controls':
       model.controls = msg;
       onServerSettings(msg.settings);

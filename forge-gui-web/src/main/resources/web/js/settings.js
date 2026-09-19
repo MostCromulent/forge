@@ -2,6 +2,7 @@
 // preferences shared with the desktop client; the rest live in this browser.
 
 const LOCAL_KEY = 'forge.settings';
+const DEFAULTS_KEY = 'forge.defaults';
 
 const SETTINGS = [
   {
@@ -37,6 +38,16 @@ const SETTINGS = [
     options: [['LOW', 'Low'], ['MEDIUM', 'Medium'], ['HIGH', 'High']], def: 'MEDIUM',
   },
   { section: 'Game log', key: 'logImages', label: 'Card thumbnails in the log', type: 'toggle', def: true },
+  {
+    section: 'Cards', key: 'highlightPlayable', label: 'Highlight cards I can play', type: 'toggle', server: true, def: true,
+  },
+  {
+    section: 'Cards', key: 'autoTapPreview', label: 'Highlight the lands Auto would tap', type: 'toggle', server: true, def: false,
+  },
+  {
+    section: 'Cards', key: 'handSort', label: 'Sort hand', type: 'choice',
+    options: [['mana', 'By mana value'], ['draw', 'As drawn']], def: 'mana',
+  },
   { section: 'Cards', key: 'cardSize', label: 'Card size', type: 'slider', min: 70, max: 130, def: 100 },
   { section: 'Cards', key: 'handSize', label: 'Hand size', type: 'slider', min: 70, max: 130, def: 100 },
   {
@@ -50,10 +61,12 @@ let local = {};
 let server = {};
 let send = () => {};
 let onConcede = () => {};
+let redraw = () => {};
 
-export function initSettings(sendFn, concede) {
+export function initSettings(sendFn, concede, schedule) {
   send = sendFn;
   onConcede = concede;
+  redraw = schedule;
   try {
     local = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}');
   } catch {
@@ -71,8 +84,25 @@ export function setting(key) {
 // The server sends its preference values with the rest of the turn controls
 export function onServerSettings(values) {
   server = values ?? {};
+  applyWebDefaults();
   apply();
   if (document.getElementById('options')) drawRows();
+}
+
+// Forge ships with playable-card highlighting off; this UI wants it on. A browser turns it on once, and after
+// that the setting belongs to the player.
+function applyWebDefaults() {
+  try {
+    if (localStorage.getItem(DEFAULTS_KEY)) {
+      return;
+    }
+    localStorage.setItem(DEFAULTS_KEY, '1');
+  } catch {
+    return;
+  }
+  if (!setting('highlightPlayable')) {
+    set('highlightPlayable', true);
+  }
 }
 
 function set(key, value) {
@@ -89,11 +119,14 @@ function set(key, value) {
     }
   }
   apply();
+  redraw();
 }
 
 // Card and hand size scale the shared card variables; the rest is read where it is used
 function apply() {
   const root = document.documentElement;
+  // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog
+  root.style.setProperty('--playable', server.highlightColor ?? '#66ccff');
   const card = setting('cardSize') / 100;
   root.style.setProperty('--card-w', `${Math.round(88 * card)}px`);
   root.style.setProperty('--card-h', `${Math.round(123 * card)}px`);

@@ -331,7 +331,9 @@ public class WebGuiGame extends NetworkGuiGame {
             "interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL,
             "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
             "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
-            "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL);
+            "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
+            "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
+            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
 
     private static JsonObject settings() {
         final ForgePreferences prefs = FModel.getPreferences();
@@ -341,6 +343,7 @@ public class WebGuiGame extends NetworkGuiGame {
         s.addProperty("autoYieldMode", ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability");
         s.addProperty("logDetail", GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)).name());
         s.addProperty("arrows", prefs.getPref(FPref.UI_TARGETING_OVERLAY));
+        s.addProperty("highlightColor", "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR));
         return s;
     }
 
@@ -601,6 +604,36 @@ public class WebGuiGame extends NetworkGuiGame {
             prompt.add("selectable", selectable);
             sendPrompt();
         }
+    }
+
+    // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
+    @Override
+    public void setWeaklySelectable(final Iterable<CardView> cards) {
+        super.setWeaklySelectable(cards);
+        final JsonArray playable = new JsonArray();
+        final JsonArray autoTap = new JsonArray();
+        final Set<CardView> seen = new HashSet<>();
+        for (final CardView c : cards) {
+            if (seen.add(c)) {
+                playable.add(cardRef(c));
+            } else {
+                autoTap.add(cardRef(c));
+            }
+        }
+        sendPlayable(playable, autoTap);
+    }
+
+    @Override
+    public void clearWeaklySelectable() {
+        super.clearWeaklySelectable();
+        sendPlayable(new JsonArray(), new JsonArray());
+    }
+
+    private void sendPlayable(final JsonArray playable, final JsonArray autoTap) {
+        final JsonObject m = JsonCodec.message("playable");
+        m.add("cards", playable);
+        m.add("autoTap", autoTap);
+        send(m);
     }
 
     @Override
