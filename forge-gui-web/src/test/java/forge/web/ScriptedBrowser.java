@@ -4,10 +4,12 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
+import java.util.Deque;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -16,12 +18,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Plays the web seat with lands only: plays one per turn, activates Evolving Wilds, picks the first selectable card
- * when an input needs a selection, holds every request open before answering with its default, and reloads once.
+ * Plays the web seat to a script: waits at its first own main phase until released, then uses the named cards in
+ * order (clicking a card in hand plays it, clicking one on the battlefield activates it) and passes priority after.
+ * Every request is held open before it is answered, and the browser reloads once, on the third request.
  */
 final class ScriptedBrowser implements BrowserChannel {
     final BrowserModel model = new BrowserModel();
-    final CountDownLatch gameOver = new CountDownLatch(1);
+    final CountDownLatch atOwnMain = new CountDownLatch(1);
     final Map<String, Integer> requestKinds = new ConcurrentHashMap<>();
     final Set<String> zonesShown = ConcurrentHashMap.newKeySet();
     volatile boolean reloaded;
@@ -32,18 +35,26 @@ final class ScriptedBrowser implements BrowserChannel {
         t.setDaemon(true);
         return t;
     });
+    private final Deque<String> cardsToUse = new ConcurrentLinkedDeque<>();
     private final Set<Integer> answered = ConcurrentHashMap.newKeySet();
-    private final Set<Integer> tried = ConcurrentHashMap.newKeySet();
     private final AtomicInteger requests = new AtomicInteger();
     private final AtomicLong promptVersion = new AtomicLong();
+    private volatile boolean released;
     private volatile JsonObject lastPrompt;
     private volatile int root = -1;
     private volatile JsonArray localPlayers = new JsonArray();
-    private volatile int turn = -1;
 
     ScriptedBrowser(final WebGuiGame gui, final long holdMillis) {
         this.gui = gui;
         this.holdMillis = holdMillis;
+    }
+
+    void release(final String... cardNames) {
+        for (final String name : cardNames) {
+            cardsToUse.add(name);
+        }
+        released = true;
+        actOnLatestPrompt();
     }
 
     @Override
@@ -54,7 +65,6 @@ final class ScriptedBrowser implements BrowserChannel {
                 root = m.get("root").getAsInt();
                 localPlayers = m.getAsJsonArray("localPlayers");
             }
-            case "gameOver" -> gameOver.countDown();
             case "zones" -> m.getAsJsonArray("show").forEach(z -> zonesShown.add(z.getAsJsonObject().get("zone").getAsString()));
             case "request" -> onRequest(m);
             case "prompt" -> {
@@ -82,12 +92,12 @@ final class ScriptedBrowser implements BrowserChannel {
         final JsonElement value = answerFor(m);
         actions.schedule(() -> {
             gui.onBrowserMessage(FakeBrowser.reply(id, value));
-            // A declined request (e.g. no ability chosen) leaves the same input open without a new prompt
+            // A declined request leaves the same input open without a new prompt
             actOnLatestPrompt();
         }, holdMillis, TimeUnit.MILLISECONDS);
     }
 
-    // The default for an optional choice is "none"; picking the first option is what plays the land when a card offers abilities
+    // An optional single choice defaults to "none"; taking the first option is what plays or activates the clicked card
     private static JsonElement answerFor(final JsonObject request) {
         final JsonElement def = request.get("default");
         if ("choices".equals(request.get("kind").getAsString()) && def.isJsonArray() && def.getAsJsonArray().isEmpty()
@@ -111,35 +121,45 @@ final class ScriptedBrowser implements BrowserChannel {
     }
 
     private void act(final JsonObject prompt) {
-        // A rejected click (flashIncorrectAction) sends no new prompt; try again if nothing arrives
+        if (!released && inOwnFirstMain()) {
+            atOwnMain.countDown();
+            return;
+        }
+        // A rejected click sends no new prompt; act again if nothing arrives
         final long seen = promptVersion.get();
         actions.schedule(() -> {
             if (promptVersion.get() == seen) {
                 actOnLatestPrompt();
             }
         }, 1500, TimeUnit.MILLISECONDS);
-        final boolean okEnabled = prompt.getAsJsonObject("ok").get("enabled").getAsBoolean();
-        if (!okEnabled) {
-            // Clicking a card that is already selected deselects it, so pick one that is not
-            final Set<Integer> chosen = new HashSet<>();
-            prompt.getAsJsonArray("highlighted").forEach(k -> chosen.add(k.getAsInt()));
-            for (final JsonElement ref : prompt.getAsJsonArray("selectable")) {
-                final int key = ref.getAsJsonObject().get("ref").getAsInt();
-                if (!chosen.contains(key)) {
-                    select(key);
-                    return;
-                }
-            }
-            if (prompt.getAsJsonObject("cancel").get("enabled").getAsBoolean()) {
-                gui.onBrowserMessage(FakeBrowser.action("cancel"));
-            }
+        if (!prompt.getAsJsonObject("ok").get("enabled").getAsBoolean()) {
+            selectUnchosen(prompt);
             return;
         }
-        final Integer card = cardToTry();
+        // Cards are only used from the priority prompt with an empty stack; cost prompts such as "Sacrifice X?" are answered with OK
+        final boolean priority = prompt.get("message").getAsString().startsWith("Priority");
+        final Integer card = released && priority && inOwnFirstMain() && stackEmpty() ? nextScriptedCard() : null;
         if (card != null) {
             select(card);
-        } else {
+        } else if (cardsToUse.isEmpty() || !priority || !inOwnFirstMain() || !stackEmpty()) {
+            // Passing with something on the stack lets it resolve
             gui.onBrowserMessage(FakeBrowser.action("ok"));
+        }
+    }
+
+    // Clicking a card that is already selected deselects it, so pick one that is not
+    private void selectUnchosen(final JsonObject prompt) {
+        final Set<Integer> chosen = new HashSet<>();
+        prompt.getAsJsonArray("highlighted").forEach(k -> chosen.add(k.getAsInt()));
+        for (final JsonElement ref : prompt.getAsJsonArray("selectable")) {
+            final int key = ref.getAsJsonObject().get("ref").getAsInt();
+            if (!chosen.contains(key)) {
+                select(key);
+                return;
+            }
+        }
+        if (prompt.getAsJsonObject("cancel").get("enabled").getAsBoolean()) {
+            gui.onBrowserMessage(FakeBrowser.action("cancel"));
         }
     }
 
@@ -149,48 +169,54 @@ final class ScriptedBrowser implements BrowserChannel {
         gui.onBrowserMessage(msg);
     }
 
-    // In its own first main phase: each hand card once per turn, then Evolving Wilds on the battlefield
-    private Integer cardToTry() {
+    private boolean inOwnFirstMain() {
+        final JsonObject game = model.objectsCopy().get(root);
+        return game != null && !localPlayers.isEmpty() && game.has("PlayerTurn") && game.has("Phase")
+                && game.getAsJsonObject("PlayerTurn").get("ref").getAsInt() == localPlayers.get(0).getAsInt()
+                && "MAIN1".equals(game.get("Phase").getAsString());
+    }
+
+    private boolean stackEmpty() {
+        final JsonObject game = model.objectsCopy().get(root);
+        return game != null && (!game.has("Stack") || game.getAsJsonArray("Stack").isEmpty());
+    }
+
+    // Entries are "Zone:Card Name". An entry is done once its card has left that zone (played, or sacrificed);
+    // until then it is clicked again, because a click can be rejected while a trigger waits to go on the stack
+    private Integer nextScriptedCard() {
         final Map<Integer, JsonObject> objects = model.objectsCopy();
-        final JsonObject game = objects.get(root);
-        if (game == null || localPlayers.isEmpty() || !game.has("PlayerTurn") || !game.has("Turn") || !game.has("Phase")) {
-            return null;
-        }
-        final int me = localPlayers.get(0).getAsInt();
-        if (game.getAsJsonObject("PlayerTurn").get("ref").getAsInt() != me || !"MAIN1".equals(game.get("Phase").getAsString())) {
-            return null;
-        }
-        final int currentTurn = game.get("Turn").getAsInt();
-        if (currentTurn != turn) {
-            turn = currentTurn;
-            tried.clear();
-        }
-        final JsonObject player = objects.get(me);
-        for (final String zone : new String[]{"Hand", "Battlefield"}) {
-            if (player == null || !player.has(zone)) {
-                continue;
-            }
-            for (final JsonElement ref : player.getAsJsonArray(zone)) {
-                if (!ref.isJsonObject()) {
-                    continue;
-                }
-                final int key = ref.getAsJsonObject().get("ref").getAsInt();
-                final JsonObject card = objects.get(key);
-                if (card == null || tried.contains(key) || ("Battlefield".equals(zone) && !isWilds(objects, card))) {
-                    continue;
-                }
-                tried.add(key);
+        final JsonObject player = objects.get(localPlayers.get(0).getAsInt());
+        while (!cardsToUse.isEmpty()) {
+            final String[] entry = cardsToUse.peek().split(":", 2);
+            final Integer key = findIn(objects, player, entry[0], entry[1]);
+            if (key != null) {
                 return key;
+            }
+            cardsToUse.poll();
+        }
+        return null;
+    }
+
+    private static Integer findIn(final Map<Integer, JsonObject> objects, final JsonObject player, final String zone, final String name) {
+        if (player == null || !player.has(zone)) {
+            return null;
+        }
+        for (final JsonElement ref : player.getAsJsonArray(zone)) {
+            if (ref.isJsonObject()) {
+                final int key = ref.getAsJsonObject().get("ref").getAsInt();
+                if (name.equals(nameOf(objects, objects.get(key)))) {
+                    return key;
+                }
             }
         }
         return null;
     }
 
-    private static boolean isWilds(final Map<Integer, JsonObject> objects, final JsonObject card) {
-        if (!card.has("CurrentState") || (card.has("Tapped") && card.get("Tapped").getAsBoolean())) {
-            return false;
+    private static String nameOf(final Map<Integer, JsonObject> objects, final JsonObject card) {
+        if (card == null || !card.has("CurrentState")) {
+            return null;
         }
         final JsonObject state = objects.get(card.getAsJsonObject("CurrentState").get("ref").getAsInt());
-        return state != null && state.has("Name") && "Evolving Wilds".equals(state.get("Name").getAsString());
+        return state == null || !state.has("Name") ? null : state.get("Name").getAsString();
     }
 }
