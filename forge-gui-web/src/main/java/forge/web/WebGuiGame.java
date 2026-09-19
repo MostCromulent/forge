@@ -263,6 +263,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 final JsonObject e = new JsonObject();
                 e.addProperty("type", entry.type().name());
                 e.addProperty("message", entry.message());
+                final CardView card = entry.sourceCard();
+                if (card != null && card.getCurrentState() != null && mayView(card)) {
+                    e.addProperty("card", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()));
+                    e.addProperty("imageKey", card.getCurrentState().getImageKey());
+                }
                 added.add(e);
             }
         }

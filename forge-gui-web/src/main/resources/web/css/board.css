@@ -63,7 +63,8 @@
 .stack-item .targets { color: var(--select); margin-top: 2px; }
 .stack-item .targets:empty { display: none; }
 #log { background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
-.log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); }
+.log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
+.log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }
 .log-entry.turn { color: var(--text); font-weight: 600; padding-top: 6px; }
 .log-entry.game_outcome, .log-entry.match_results { color: var(--text); }
 #zones { position: fixed; left: 50%; top: 15%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; max-width: 80vw; }

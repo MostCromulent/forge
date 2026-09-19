@@ -95,6 +95,10 @@ public class LoopbackGameTest {
                     .flatMap(m -> m.getAsJsonArray("entries").asList().stream())
                     .filter(e -> "TURN".equals(e.getAsJsonObject().get("type").getAsString())).count();
             Assert.assertTrue(turnEntries >= turns - 1, turnEntries + " turn log entries for " + turns + " turns");
+            // Land plays name their card, so the log can show it
+            Assert.assertTrue(browser.all("log").stream().flatMap(m -> m.getAsJsonArray("entries").asList().stream())
+                    .anyMatch(e -> "LAND".equals(e.getAsJsonObject().get("type").getAsString()) && e.getAsJsonObject().has("imageKey")),
+                    "no land entry carried its card");
 
             // A second match reuses the running loopback host
             final WebGuiGame second = new WebGuiGame();
