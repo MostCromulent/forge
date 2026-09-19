@@ -533,6 +533,7 @@ public class WebGuiGame extends NetworkGuiGame {
         p.add("cancel", button("", false));
         p.addProperty("focusOk", false);
         p.add("selectable", new JsonArray());
+        p.addProperty("selectableMin", 0);
         p.add("selectablePlayers", new JsonArray());
         p.add("highlighted", new JsonArray());
         return p;
@@ -602,6 +603,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         synchronized (promptLock) {
             prompt.add("selectable", selectable);
+            prompt.addProperty("selectableMin", min);
             sendPrompt();
         }
     }
@@ -654,6 +656,7 @@ public class WebGuiGame extends NetworkGuiGame {
         synchronized (promptLock) {
             prompt.add("selectable", new JsonArray());
             prompt.add("selectablePlayers", new JsonArray());
+            prompt.addProperty("selectableMin", 0);
             sendPrompt();
         }
     }

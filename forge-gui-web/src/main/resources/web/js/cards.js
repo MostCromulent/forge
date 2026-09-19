@@ -21,7 +21,8 @@ const has = (refs, key) => (refs ?? []).some(r => r?.ref === key);
 export function updateCard(el, model, card) {
   const state = stateOf(model, card);
   const visible = model.visible.has(card.$key);
-  const selectable = (model.prompt?.selectable ?? []).some(r => r?.ref === card.$key);
+  // Only a prompt that demands a pick rings its cards; an optional one leaves the playable outline to do it
+  const selectable = (model.prompt?.selectableMin ?? 0) > 0 && has(model.prompt?.selectable, card.$key);
   const type = visible ? (state.Type ?? '') : '';
   el.classList.toggle('back', !visible);
   // A hidden card shows its owner's sleeve
