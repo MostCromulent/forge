@@ -56,17 +56,48 @@
 .mana-button { padding: 1px 7px; font-size: 12px; font-weight: 700; border-radius: 10px; }
 .mana-button:disabled { opacity: .8; cursor: default; }
 .player-counter.commander-damage { border-style: dashed; }
-#phase-strip { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 16px; justify-content: center; align-items: center; font-size: 12px; }
-#phase-strip .turn { grid-column: 2; grid-row: 1 / span 2; }
-.phase-row { display: flex; gap: 2px; align-items: center; }
-.phase-row .whose { width: 64px; color: var(--muted); text-align: right; padding-right: 6px; }
-.phase-row.active .whose { color: var(--text); font-weight: 600; }
-/* A stop is bright with a dot; a skipped phase is dim and struck through */
-.phase { padding: 1px 7px; font-size: 12px; border-radius: 10px; background: none; border: 1px solid transparent; color: var(--muted); text-decoration: line-through; opacity: .6; }
-.phase.stop { color: var(--text); text-decoration: none; opacity: 1; }
-.phase.stop::before { content: "● "; font-size: 8px; vertical-align: middle; }
-.phase.current { background: var(--accent); border-color: var(--accent-2); color: var(--text); font-weight: 600; opacity: 1; }
-.phase.marker { border: 2px dashed var(--select); color: var(--text); opacity: 1; }
+/* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
+#phase-strip { display: flex; justify-content: center; position: relative; }
+#phase-strip .pill { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 10px 0 3px; border-radius: 15px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; cursor: pointer; }
+#phase-strip .pill.open { background: var(--surface-2); border-color: #4a5563; }
+#phase-strip .glyph { display: block; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+#phase-strip .owner { display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 2px; border-radius: 12px; background: var(--surface-2); }
+#phase-strip .owner img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; box-shadow: 0 0 0 1.5px var(--accent-2); }
+#phase-strip .owner b { font-weight: 700; }
+#phase-strip .owner .turn { color: var(--muted); font-size: 10.5px; }
+#phase-strip .track { display: flex; align-items: center; gap: 2px; }
+/* Passed phases are brighter with a filled underline; upcoming ones are dim */
+#phase-strip .phase { width: 20px; height: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #56606e; }
+#phase-strip .phase i { width: 13px; height: 2px; border-radius: 1px; background: #2b3440; }
+#phase-strip .phase.past { color: var(--muted); }
+#phase-strip .phase.past i { background: var(--muted); }
+#phase-strip .phase.current { width: auto; flex-direction: row; gap: 5px; height: 22px; padding: 0 9px 0 7px; margin: 0 2px; border-radius: 11px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 650; }
+#phase-strip .pips { display: flex; gap: 2px; margin-left: 2px; }
+#phase-strip .pips i { width: 4px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.3); }
+#phase-strip .pips i.past { background: rgba(255,255,255,.65); }
+#phase-strip .pips i.now { width: 9px; background: #fff; }
+#phase-strip .until { display: flex; align-items: center; gap: 3px; height: 20px; padding: 0 8px 0 5px; border-radius: 10px; box-shadow: inset 0 0 0 1.5px var(--select); color: var(--select); font-size: 11px; font-weight: 600; }
+#phase-strip .caret { color: var(--muted); display: flex; }
+#phase-strip .stops { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 35; background: rgba(22,27,34,.97); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 8px; box-shadow: 0 10px 30px #000c; font-size: 11.5px; }
+#phase-strip .stops.above { top: auto; bottom: calc(100% + 8px); }
+#phase-strip .stops .title { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 4px; font-weight: 650; }
+#phase-strip .stops .hint { color: var(--muted); font-weight: 500; font-size: 10.5px; display: flex; align-items: center; gap: 5px; }
+#phase-strip .stops kbd { border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--text); font: inherit; }
+#phase-strip .stops table { border-collapse: separate; border-spacing: 0; }
+#phase-strip .stops td, #phase-strip .stops th { padding: 0; height: 22px; text-align: center; font-weight: 400; }
+#phase-strip .stops td.who { text-align: left; padding-right: 10px; white-space: nowrap; }
+#phase-strip .stops .now { color: var(--accent-2); font-size: 10px; font-weight: 600; }
+#phase-strip .stops td.gap { width: 8px; }
+#phase-strip .stops .head { width: 22px; height: 20px; margin: 0 1px; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
+#phase-strip .stops .head.current { background: var(--accent); color: #fff; }
+#phase-strip .stops .cell { width: 24px; height: 22px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }
+#phase-strip .stops .square { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px #4a5563; }
+#phase-strip .stops .square.on { background: var(--text); box-shadow: none; }
+#phase-strip .stops .square.current { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+#phase-strip .stops .cell:hover .square { outline: 2px solid var(--text); outline-offset: 2px; }
+#phase-strip .stops .skip { color: var(--select); display: flex; }
+#phase-strip .stops .foot { margin: 6px 0 0; color: var(--muted); font-size: 10.5px; }
+#phase-strip .stops .yield { color: var(--select); }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
 #stack { position: fixed; right: var(--side-gap); z-index: 25; display: flex; align-items: flex-start; gap: 8px; }
 #stack .pile { position: relative; width: calc(var(--span) + var(--stack-w)); height: calc(var(--stack-w) * 1.4 + 40px); }

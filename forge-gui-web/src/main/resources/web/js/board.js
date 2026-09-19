@@ -6,14 +6,9 @@ import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
 import { hoverCard, hoverPlayer } from './detail.js';
 import { renderStack } from './stack.js';
+import { renderPhaseBar } from './phasebar.js';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks.js';
 
-// Untap has no stop, as on desktop
-const PHASES = [
-  ['UPKEEP', 'Upkeep'], ['DRAW', 'Draw'], ['MAIN1', 'Main 1'], ['COMBAT_BEGIN', 'Combat'],
-  ['COMBAT_DECLARE_ATTACKERS', 'Attack'], ['COMBAT_DECLARE_BLOCKERS', 'Block'], ['COMBAT_FIRST_STRIKE_DAMAGE', '1st Strike'],
-  ['COMBAT_DAMAGE', 'Damage'], ['COMBAT_END', 'End Combat'], ['MAIN2', 'Main 2'], ['END_OF_TURN', 'End'], ['CLEANUP', 'Cleanup'],
-];
 const MANA = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
 export function renderMatch(model, send) {
@@ -24,7 +19,7 @@ export function renderMatch(model, send) {
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
   renderSeat(document.getElementById('opponent'), model, opponents(model)[0], onField, send, select);
   renderSeat(document.getElementById('me'), model, me(model), onField, send, select);
-  renderPhaseStrip(model, g, send);
+  renderPhaseBar(model, g, send);
   renderStack(model);
   renderHand(model, me(model), select);
   renderZones(model, select);
@@ -170,42 +165,6 @@ function renderEmblems(root, model, cards, select) {
       el.querySelector('.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
       el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r?.ref === card.$key));
     });
-}
-
-// One row of phase stops for the local player's turns and one for everyone else's; clicking a phase toggles its stop
-function renderPhaseStrip(model, g, send) {
-  const root = document.getElementById('phase-strip');
-  if (!root.firstChild) {
-    const row = (mine, label) => `<div class="phase-row" data-mine="${mine}"><span class="whose">${label}</span>`
-      + PHASES.map(([id, name]) => `<button class="phase" data-phase="${id}">${name}</button>`).join('') + '</div>';
-    root.innerHTML = row(false, 'Opponent') + row(true, 'You') + '<span class="turn"></span>';
-    for (const b of root.querySelectorAll('.phase')) {
-      b.onclick = () => send({ t: 'toggleStop', phase: b.dataset.phase, mine: b.parentElement.dataset.mine === 'true' });
-      b.oncontextmenu = e => {
-        e.preventDefault();
-        send({ t: 'toggleMarker', phase: b.dataset.phase, mine: b.parentElement.dataset.mine === 'true' });
-      };
-    }
-  }
-  const active = deref(model, g.PlayerTurn);
-  const myTurn = !!active && isLocal(model, active);
-  for (const rowEl of root.querySelectorAll('.phase-row')) {
-    const mine = rowEl.dataset.mine === 'true';
-    const stops = new Set(model.controls?.[mine ? 'myStops' : 'otherStops'] ?? []);
-    rowEl.classList.toggle('active', mine === myTurn);
-    for (const b of rowEl.querySelectorAll('.phase')) {
-      const stop = stops.has(b.dataset.phase);
-      b.classList.toggle('stop', stop);
-      const marker = model.controls?.marker;
-      const marked = !!marker && marker.mine === mine && marker.phase === b.dataset.phase;
-      b.classList.toggle('current', mine === myTurn && b.dataset.phase === g.Phase);
-      b.classList.toggle('marker', marked);
-      b.title = `${stop ? 'Stops' : 'Skips'} here on ${mine ? 'your' : 'opponents\''} turns. Click to toggle.`
-        + (marked ? ' Passing priority until here. Right-click to cancel.' : ' Right-click to pass priority until here.');
-    }
-  }
-  const dayTime = model.controls?.dayTime;
-  root.querySelector('.turn').textContent = `Turn ${g.Turn ?? 0}${active ? ` · ${active.Name}` : ''}${dayTime ? ` · ${dayTime}` : ''}`;
 }
 
 function renderGameOver(model, g, send) {
