@@ -137,7 +137,7 @@ final class ScriptedBrowser implements BrowserChannel {
             return;
         }
         // Cards are only used from the priority prompt with an empty stack; cost prompts such as "Sacrifice X?" are answered with OK
-        final boolean priority = prompt.get("message").getAsString().startsWith("Priority");
+        final boolean priority = prompt.has("priority") && prompt.get("priority").getAsBoolean();
         final Integer card = released && priority && inOwnFirstMain() && stackEmpty() ? nextScriptedCard() : null;
         if (card != null) {
             select(card);

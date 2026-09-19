@@ -130,7 +130,8 @@ public class ActiveClientTest {
     }
 
     private static boolean atPriority(final FakeBrowser browser) {
-        return browser.last("prompt").get("message").getAsString().startsWith("Priority");
+        final JsonObject prompt = browser.last("prompt");
+        return prompt.has("priority") && prompt.get("priority").getAsBoolean();
     }
 
     private static boolean okEnabled(final FakeBrowser browser) {

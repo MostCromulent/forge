@@ -71,7 +71,8 @@ export function renderPrompt(model, send) {
   root.querySelector('.step').textContent = stepName(game(model)?.Phase);
   const p = model.prompt;
   if (!p) return;
-  root.querySelector('.message').textContent = p.message ?? '';
+  // The turn and phase lines are dropped from a priority prompt, which often leaves nothing to print
+  root.querySelector('.message').textContent = (p.message ?? '').trim() || (p.priority ? 'You have priority.' : '');
   renderPromptCard(root.querySelector('.prompt-card'), model, p.card);
   setButton(root.querySelector('.ok'), p.ok);
   setButton(root.querySelector('.cancel'), p.cancel);

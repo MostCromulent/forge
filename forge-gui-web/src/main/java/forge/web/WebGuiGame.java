@@ -553,10 +553,31 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
         synchronized (promptLock) {
-            prompt.addProperty("message", message);
+            final String trimmed = withoutTurnState(message);
+            prompt.addProperty("message", trimmed);
+            prompt.addProperty("priority", !trimmed.equals(message));
             prompt.add("card", cardRef(card));
             sendPrompt();
         }
+    }
+
+    // The phase pill and the stack pile carry the turn, the step and what is waiting, so the priority prompt
+    // keeps only the lines that add something, such as the storm count or a macro being recorded
+    private static String withoutTurnState(final String message) {
+        final Localizer loc = Localizer.getInstance();
+        if (!message.startsWith(loc.getMessage("lblPriority") + ":")) {
+            return message;
+        }
+        final List<String> labels = List.of(loc.getMessage("lblPriority"), loc.getMessage("lblTurn"),
+                loc.getMessage("lblPhase"), loc.getMessage("lblStack"));
+        final StringBuilder kept = new StringBuilder();
+        for (final String line : message.split("\n")) {
+            if (line.isBlank() || labels.stream().anyMatch(label -> line.startsWith(label + ":"))) {
+                continue;
+            }
+            kept.append(kept.isEmpty() ? "" : "\n").append(line);
+        }
+        return kept.toString();
     }
 
     @Override
