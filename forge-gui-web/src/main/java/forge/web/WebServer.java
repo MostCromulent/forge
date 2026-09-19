@@ -3,7 +3,10 @@ package forge.web;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import forge.ImageKeys;
+import forge.gui.GuiBase;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
 import forge.util.ImageUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
@@ -46,6 +49,10 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /** Serves the page, its files and card images, and the browser's WebSocket; 127.0.0.1 only, behind a per-launch token. */
 public final class WebServer implements AutoCloseable {
@@ -58,6 +65,8 @@ public final class WebServer implements AutoCloseable {
     private static final String COOKIE = "forge_token";
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final String token;
+    // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
+    private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
 
     public WebServer(final Endpoint endpoint, final String token) throws InterruptedException {
@@ -114,6 +123,44 @@ public final class WebServer implements AutoCloseable {
         }
         final File file = ImageKeys.getImageFile(key);
         return file != null && file.isFile() ? file : null;
+    }
+
+    // A missing image is downloaded as on desktop, and the request answered when it lands
+    private void serveImage(final ChannelHandlerContext ctx, final String key) throws IOException {
+        final File file = cardImage(key);
+        if (file != null) {
+            respondImage(ctx, file);
+            return;
+        }
+        if (unavailableImages.contains(key) || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
+            respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            return;
+        }
+        final AtomicBoolean answered = new AtomicBoolean();
+        GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
+            final File fetched = cardImage(key);
+            if (answered.compareAndSet(false, true)) {
+                try {
+                    if (fetched != null) {
+                        respondImage(ctx, fetched);
+                    } else {
+                        respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                    }
+                } catch (final IOException e) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                }
+            }
+        }));
+        ctx.executor().schedule(() -> {
+            if (answered.compareAndSet(false, true)) {
+                unavailableImages.add(key);
+                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            }
+        }, 15, TimeUnit.SECONDS);
+    }
+
+    private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), file.getName().endsWith(".png") ? "image/png" : "image/jpeg", false);
     }
 
     private boolean queryToken(final QueryStringDecoder q) {
@@ -198,18 +245,18 @@ public final class WebServer implements AutoCloseable {
         protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
             final QueryStringDecoder q = new QueryStringDecoder(req.uri());
             final String path = q.path();
-            final byte[] body;
-            final String type;
             if ("/img".equals(path)) {
                 final List<String> key = q.parameters().get("key");
-                final File file = key == null ? null : cardImage(key.get(0));
-                body = file == null ? null : Files.readAllBytes(file.toPath());
-                type = file != null && file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
-            } else {
-                final String resource = "/".equals(path) ? "index.html" : path.substring(1);
-                body = resource.contains("..") ? null : readResource(resource);
-                type = contentType(resource);
+                if (key == null) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                } else {
+                    serveImage(ctx, key.get(0));
+                }
+                return;
             }
+            final String resource = "/".equals(path) ? "index.html" : path.substring(1);
+            final byte[] body = resource.contains("..") ? null : readResource(resource);
+            final String type = contentType(resource);
             if (body == null) {
                 respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
                 return;

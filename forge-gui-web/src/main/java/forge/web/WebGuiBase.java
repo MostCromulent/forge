@@ -40,6 +40,7 @@ public final class WebGuiBase implements IGuiBase {
         return t;
     });
     private final String assetsDir = resolveAssetsDir();
+    private final ImageFetcher imageFetcher = new WebImageFetcher();
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
 
     public void setNoticeSink(final Consumer<JsonObject> sink) {
@@ -82,7 +83,7 @@ public final class WebGuiBase implements IGuiBase {
     @Override public boolean isLibgdxPort() { return false; }
     @Override public String getCurrentVersion() { return BuildInfo.getVersionString(); }
     @Override public String getAssetsDir() { return assetsDir; }
-    @Override public ImageFetcher getImageFetcher() { return null; }
+    @Override public ImageFetcher getImageFetcher() { return imageFetcher; }
     @Override public boolean isGuiThread() { return Thread.currentThread() == uiThread; }
 
     @Override
