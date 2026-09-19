@@ -20,9 +20,15 @@
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--select), 0 0 18px var(--select); }
 .avatar .initial { font-size: 28px; font-weight: 700; }
 .avatar .life { position: absolute; bottom: -8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-weight: 700; }
-.piles { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
-.piles .pile { padding: 2px 6px; font-size: 12px; }
-.piles .pile.hand { border: 1px solid var(--line); border-radius: 6px; color: var(--muted); }
+.zone-tiles { display: grid; grid-template-columns: repeat(2, var(--tile-w)); gap: 6px; }
+.zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
+.zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.zone-tile.back { background: repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
+.zone-tile.empty { background: none; border: 2px dotted var(--line); }
+.zone-tile .zone-name { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--muted); text-align: center; }
+.zone-tile img:not([hidden]) ~ .zone-name { display: none; }
+.zone-tile .zone-count { position: absolute; right: 3px; bottom: 3px; min-width: 20px; background: var(--bg); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 5px; font-size: 12px; font-weight: 700; color: var(--text); }
+.zone-tile:hover { border-color: var(--accent-2); }
 .player-counters { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 .player-counter { font-size: 12px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 8px; }
 .player-counters:empty, .emblems:empty { display: none; }

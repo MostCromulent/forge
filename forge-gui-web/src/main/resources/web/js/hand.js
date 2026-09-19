@@ -6,9 +6,9 @@ export function renderHand(model, player, select) {
   const root = document.getElementById('hand');
   const cards = zone(model, player, 'Hand');
   reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => updateCard(el, model, c));
-  const mid = (cards.length - 1) / 2;
-  [...root.children].forEach((el, i) => {
-    el.style.setProperty('--fan', i - mid);
-    el.style.setProperty('--lift', `${Math.abs(i - mid) * 5}px`);
-  });
+  const first = root.firstElementChild;
+  if (!first || cards.length < 2) return;
+  const cardWidth = first.offsetWidth;
+  const step = Math.min(6, (root.clientWidth - 16 - cards.length * cardWidth) / (cards.length - 1));
+  root.style.setProperty('--step', `${step}px`);
 }

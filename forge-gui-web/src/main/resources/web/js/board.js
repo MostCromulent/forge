@@ -39,14 +39,11 @@ function renderSeat(root, model, player, send, select) {
         <div class="name"></div>
         <div class="player-counters"></div>
         <div class="emblems"></div>
-        <div class="piles"><span class="pile hand"></span><button class="pile library"></button><button class="pile graveyard"></button><button class="pile exile"></button></div>
+        <div class="zone-tiles"></div>
         <div class="mana"></div>
       </div>
       <div class="battlefield"><div class="row lands"></div><div class="row permanents"></div></div>`;
     root.querySelector('.avatar').onclick = () => send({ t: 'selectPlayer', key: Number(root.dataset.player) });
-    for (const [cls, zoneName] of [['graveyard', 'Graveyard'], ['exile', 'Exile'], ['library', 'Library']]) {
-      root.querySelector(`.pile.${cls}`).onclick = () => togglePile(Number(root.dataset.player), zoneName);
-    }
   }
   root.dataset.player = player.$key;
   const avatar = root.querySelector('.avatar');
@@ -55,10 +52,7 @@ function renderSeat(root, model, player, send, select) {
   root.querySelector('.name').textContent = player.Name ?? '';
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
-  root.querySelector('.hand').textContent = `Hand ${zone(model, player, 'Hand').length}`;
-  root.querySelector('.library').textContent = `Library ${zone(model, player, 'Library').length}`;
-  root.querySelector('.graveyard').textContent = `Graveyard ${zone(model, player, 'Graveyard').length}`;
-  root.querySelector('.exile').textContent = `Exile ${zone(model, player, 'Exile').length}`;
+  renderZoneTiles(root.querySelector('.zone-tiles'), model, player);
   root.querySelector('.mana').textContent = MANA.map(([bit, sym]) => (player.Mana?.[bit] ? `${sym}${player.Mana[bit]}` : '')).filter(Boolean).join(' ');
   reconcile(root.querySelector('.player-counters'), Object.entries(player.Counters ?? {}), ([name]) => name,
     () => {
@@ -69,6 +63,40 @@ function renderSeat(root, model, player, send, select) {
     (el, [name, n]) => { el.textContent = `${name.toLowerCase()} ${n}`; });
   renderEmblems(root.querySelector('.emblems'), model, zone(model, player, 'Command'), select);
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), select);
+}
+
+// Your own hand is laid out along the bottom, so only opponents get a Hand tile
+function renderZoneTiles(root, model, player) {
+  const zones = isLocal(model, player) ? ['Library', 'Graveyard', 'Exile'] : ['Hand', 'Library', 'Graveyard', 'Exile'];
+  reconcile(root, zones, z => z,
+    zoneName => {
+      const el = document.createElement('button');
+      el.className = 'zone-tile';
+      el.innerHTML = '<img alt="" draggable="false"><span class="zone-name"></span><span class="zone-count"></span>';
+      el.querySelector('.zone-name').textContent = zoneName;
+      el.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
+      el.onclick = () => togglePile(Number(el.closest('.seat').dataset.player), zoneName);
+      el.addEventListener('mouseenter', () => hoverCard(el));
+      el.addEventListener('mouseleave', () => hoverCard(null));
+      return el;
+    },
+    (el, zoneName) => {
+      const cards = zone(model, player, zoneName);
+      // New cards go to the end of the graveyard and exile lists, so the last is on top
+      const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : undefined;
+      const state = top ? stateOf(model, top) : {};
+      const src = top && model.visible.has(top.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
+      const img = el.querySelector('img');
+      if (img.getAttribute('src') !== src) {
+        img.hidden = !src;
+        if (src) img.src = src;
+      }
+      el.dataset.key = top?.$key ?? '';
+      el.dataset.zoom = src;
+      el.classList.toggle('back', (zoneName === 'Library' || zoneName === 'Hand') && cards.length > 0);
+      el.classList.toggle('empty', cards.length === 0);
+      el.querySelector('.zone-count').textContent = cards.length;
+    });
 }
 
 // The command zone: the monarch, the initiative, emblems and commanders, shown as round tokens beside the player
