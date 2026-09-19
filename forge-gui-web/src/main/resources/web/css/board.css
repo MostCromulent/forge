@@ -1,8 +1,14 @@
-#match { display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand prompt"; gap: 8px; padding: 8px; }
+#match { --side-gap: 280px; display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand prompt"; gap: 8px; padding: 8px; }
 #opponent { grid-area: opp; }
 #me { grid-area: me; }
 #phase-strip { grid-area: phase; }
 #side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.log-toggle { align-self: flex-end; font-size: 12px; padding: 2px 10px; }
+/* Collapsed, the log is a tab at the right edge and the board takes its column */
+#match.log-collapsed { --side-gap: 48px; grid-template-areas: "opp opp" "phase phase" "me me" "hand prompt"; }
+#match.log-collapsed #log { display: none; }
+#match.log-collapsed #side { position: fixed; right: 0; top: 30%; z-index: 26; }
+#match.log-collapsed .log-toggle { writing-mode: vertical-rl; padding: 10px 4px; border-radius: 6px 0 0 6px; }
 #hand { grid-area: hand; }
 #prompt { grid-area: prompt; }
 .seat { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; min-height: 0; }
@@ -55,7 +61,7 @@
 .phase.current { background: var(--accent); border-color: var(--accent-2); color: var(--text); font-weight: 600; opacity: 1; }
 .phase.marker { border: 2px dashed var(--select); color: var(--text); opacity: 1; }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
-#stack { position: fixed; right: 280px; z-index: 25; display: flex; align-items: flex-start; gap: 8px; }
+#stack { position: fixed; right: var(--side-gap); z-index: 25; display: flex; align-items: flex-start; gap: 8px; }
 #stack .pile { position: relative; width: calc(var(--span) + var(--stack-w)); height: calc(var(--stack-w) * 1.4 + 40px); }
 #stack.collapsed .pile { display: none; }
 #stack .collapse { font-size: 12px; padding: 4px 10px; align-self: flex-start; }
@@ -81,7 +87,7 @@
 .zone-panel header { display: flex; justify-content: space-between; margin-bottom: 6px; }
 .zone-panel .cards { display: flex; flex-wrap: wrap; gap: 6px; max-height: 50vh; overflow: auto; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
-#zoom { position: fixed; right: 280px; top: 50%; transform: translateY(-50%); z-index: 40; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+#zoom { position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 40; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 #zoom img { width: 300px; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }

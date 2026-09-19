@@ -4,7 +4,7 @@ import { renderStart } from './start.js';
 import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
-import { appendLog } from './log.js';
+import { appendLog, initLog } from './log.js';
 import { initDetail, onDetail } from './detail.js';
 import { initOverlay, drawOverlay } from './overlay.js';
 
@@ -13,6 +13,7 @@ let scheduled = false;
 const send = connect(onMessage, online => { document.getElementById('banner').hidden = online; });
 initDetail(send);
 initOverlay();
+initLog();
 
 function onMessage(msg) {
   switch (msg.t) {
