@@ -14,6 +14,7 @@
   --card-w: 88px;
   --card-h: 123px;
   --tile-w: 58px;
+  --stack-w: 150px;
   --radius: 6px;
   color-scheme: dark;
 }

@@ -5,7 +5,7 @@ import { renderHand } from './hand.js';
 import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
 import { hoverCard } from './detail.js';
-import { hoverStackItem, stackTargets } from './overlay.js';
+import { renderStack } from './stack.js';
 
 // Untap has no stop, as on desktop
 const PHASES = [
@@ -190,40 +190,6 @@ function renderPhaseStrip(model, g, send) {
   }
   const dayTime = model.controls?.dayTime;
   root.querySelector('.turn').textContent = `Turn ${g.Turn ?? 0}${active ? ` · ${active.Name}` : ''}${dayTime ? ` · ${dayTime}` : ''}`;
-}
-
-function renderStack(model) {
-  const items = (game(model)?.Stack ?? []).map(r => model.objects.get(r.ref)).filter(Boolean);
-  reconcile(document.getElementById('stack'), items, i => i.$key,
-    () => {
-      const el = document.createElement('div');
-      el.className = 'stack-item';
-      el.innerHTML = '<img class="thumb" alt="" draggable="false"><div class="body"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
-      const thumb = el.querySelector('.thumb');
-      thumb.addEventListener('error', () => { thumb.hidden = true; });
-      thumb.addEventListener('mouseenter', () => hoverCard(thumb));
-      thumb.addEventListener('mouseleave', () => hoverCard(null));
-      el.addEventListener('mouseenter', () => hoverStackItem(Number(el.dataset.key)));
-      el.addEventListener('mouseleave', () => hoverStackItem(null));
-      return el;
-    },
-    (el, item) => {
-      const source = deref(model, item.SourceCard);
-      const state = source ? stateOf(model, source) : {};
-      const src = source && model.visible.has(source.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
-      const thumb = el.querySelector('.thumb');
-      if (thumb.getAttribute('src') !== src) {
-        thumb.hidden = !src;
-        if (src) thumb.src = src;
-      }
-      thumb.dataset.key = source?.$key ?? '';
-      thumb.dataset.zoom = src;
-      const caster = deref(model, item.ActivatingPlayer);
-      el.querySelector('.who').textContent = caster?.Name ?? '';
-      el.querySelector('.desc').textContent = item.Description ?? '';
-      const targets = stackTargets(model, item).map(t => t.Name ?? stateOf(model, t).Name ?? '?');
-      el.querySelector('.targets').textContent = targets.length ? `→ ${targets.join(', ')}` : '';
-    });
 }
 
 function renderGameOver(model, g, send) {
