@@ -1,4 +1,5 @@
 import { game, derefAll } from './model.js';
+import { setting } from './settings.js';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
 // of the hovered stack item. Styles differ by dash and luminance, never by red versus green.
@@ -42,7 +43,10 @@ function paint(model) {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   const g = model && game(model);
   if (!g || document.getElementById('match').hidden) return;
-  for (const band of g.CombatView ?? []) {
+  const mode = setting('arrows');
+  if (mode === '0') return;
+  // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
+  for (const band of mode === '1' ? [] : g.CombatView ?? []) {
     for (const attacker of band.attackers ?? []) {
       arrow(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), STYLES.attack);
       for (const blocker of band.blockers ?? []) {

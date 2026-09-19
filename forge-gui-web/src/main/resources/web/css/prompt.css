@@ -1,13 +1,43 @@
-#prompt { display: grid; gap: 8px; align-content: end; padding-bottom: 8px; }
-#prompt .message { margin: 0; min-height: 2.8em; }
+#prompt { position: fixed; left: 16px; bottom: 14px; z-index: 30; width: 290px; display: grid; gap: 8px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px #0009; }
+#prompt.waiting { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 10px 30px #0009; }
+#prompt .tools { display: flex; align-items: center; gap: 4px; }
+#prompt .tools .spacer { flex: 1; }
+#prompt .tools button { width: 30px; height: 28px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; }
+#prompt .tools button:hover { background: var(--surface-2); border-color: var(--line); }
+#prompt .tools svg { width: 17px; height: 17px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#prompt .tools button:hover svg { stroke: var(--text); }
+#prompt .tools .auto-pass.on { background: var(--accent); border-color: var(--accent); }
+#prompt .tools .auto-pass.on svg { stroke: #fff; }
 #prompt .prompt-body { display: flex; gap: 8px; align-items: flex-start; }
-#prompt .prompt-card { width: 52px; border-radius: 4px; flex: none; }
-#prompt .controls { display: flex; flex-wrap: wrap; gap: 4px; }
-#prompt .controls button { padding: 3px 8px; font-size: 12px; }
-#prompt .controls .auto-pass.on { border-color: var(--accent-2); background: var(--accent); }
-#prompt .controls .concede.armed { border-color: var(--danger); color: var(--danger); font-weight: 600; }
-#prompt .buttons { display: flex; gap: 8px; justify-content: flex-end; }
-#prompt .ok { min-width: 140px; padding: 12px 20px; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; }
+#prompt .prompt-card { width: 46px; border-radius: 4px; flex: none; }
+#prompt .step { margin: 0 0 2px; color: var(--accent-2); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+#prompt .message { margin: 0; min-height: 2.8em; max-height: 8em; overflow-y: auto; scrollbar-width: thin; }
+#prompt .buttons { display: flex; gap: 8px; }
+#prompt .buttons button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; font-size: 15px; }
+#prompt .ok { font-weight: 600; letter-spacing: .04em; }
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 16px var(--accent); }
+#prompt kbd { border: 1px solid #ffffff33; border-radius: 4px; padding: 0 4px; font: 500 10.5px/1.5 system-ui, sans-serif; color: var(--muted); }
+#prompt .ok kbd { color: #fff; }
 #prompt.flash { animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+/* Options: one scrolling list with a search box, as the settings are too many for columns */
+#options .options-dialog { width: min(560px, 92vw); max-height: 86vh; display: grid; grid-template-rows: auto 1fr auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+#options header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+#options header .search { flex: 1; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; padding: 5px 9px; }
+#options header .close { background: none; border: none; color: var(--muted); }
+#options .rows { overflow-y: auto; scrollbar-width: thin; padding: 6px 14px 12px; }
+#options h4 { margin: 14px 0 4px; color: var(--muted); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+#options .setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); }
+#options .hint { color: var(--muted); font-size: 11.5px; }
+#options .choice { display: flex; gap: 4px; }
+#options .choice button { padding: 4px 10px; font-size: 12px; }
+#options .choice button.on { background: var(--accent); border-color: var(--accent); }
+#options .switch { width: 40px; height: 22px; padding: 0; border-radius: 11px; background: var(--surface-2); position: relative; flex: none; }
+#options .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s, background .12s; }
+#options .switch.on { background: var(--accent); border-color: var(--accent); }
+#options .switch.on::after { left: 20px; background: #fff; }
+#options .slider { display: flex; align-items: center; gap: 8px; }
+#options .slider span { color: var(--muted); font-size: 11.5px; width: 34px; text-align: right; }
+#options footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+#options .concede { border-color: var(--danger); color: var(--danger); }
+#options .concede.armed { background: var(--danger); color: #000; font-weight: 600; }

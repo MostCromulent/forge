@@ -1,4 +1,5 @@
 import { imageUrl } from './cards.js';
+import { setting } from './settings.js';
 import { hoverCard } from './detail.js';
 
 const MAX_ENTRIES = 400;
@@ -40,7 +41,7 @@ export function appendLog(msg) {
     const el = document.createElement('div');
     el.className = `log-entry ${entry.type.toLowerCase()}`;
     // Entries about a card show it, as the desktop log does
-    if (entry.imageKey) {
+    if (entry.imageKey && setting('logImages')) {
       const thumb = document.createElement('img');
       thumb.className = 'thumb';
       thumb.alt = '';

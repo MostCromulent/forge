@@ -46,6 +46,7 @@ const PHASES = [
   { glyph: 'main2', steps: [9] }, { glyph: 'end', steps: [10, 11] },
 ];
 const stepIndex = phase => STEPS.findIndex(s => s[0] === phase);
+export const stepName = phase => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 
 let open = false;
 let wired = false;

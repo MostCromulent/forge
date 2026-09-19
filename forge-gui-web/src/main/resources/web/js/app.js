@@ -8,6 +8,7 @@ import { appendLog, initLog } from './log.js';
 import { initDetail, onDetail, onPlayerDetail } from './detail.js';
 import { initStack, onStackMenu } from './stack.js';
 import { initOverlay, drawOverlay } from './overlay.js';
+import { initSettings, onServerSettings } from './settings.js';
 
 const model = createModel();
 let scheduled = false;
@@ -16,6 +17,7 @@ initDetail(send);
 initStack(send);
 initOverlay();
 initLog();
+initSettings(send, () => send({ t: 'concede' }));
 
 function onMessage(msg) {
   switch (msg.t) {
@@ -42,7 +44,10 @@ function onMessage(msg) {
     case 'zones': model.zones = msg.show; break;
     case 'request': model.requests.set(msg.id, msg); break;
     case 'gameOver': model.gameOver = true; break;
-    case 'controls': model.controls = msg; break;
+    case 'controls':
+      model.controls = msg;
+      onServerSettings(msg.settings);
+      break;
     case 'log': appendLog(msg); return;
     case 'detail': onDetail(msg); return;
     case 'playerDetail': onPlayerDetail(msg); return;

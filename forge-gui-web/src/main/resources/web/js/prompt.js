@@ -1,46 +1,57 @@
 import { imageUrl } from './cards.js';
-import { stateOf } from './model.js';
+import { game, stateOf } from './model.js';
 import { hoverCard } from './detail.js';
+import { stepName } from './phasebar.js';
+import { openOptions, closeOptions } from './settings.js';
+
+// The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
+// bottom. Its rim lights while the game waits on you.
+
+const ICONS = {
+  endTurn: '<path d="M5 6.5l6 5.5-6 5.5"/><path d="M12 6.5l6 5.5-6 5.5"/>',
+  autoPass: '<circle cx="12" cy="12" r="8.5"/><path d="M10 9.2l5 2.8-5 2.8z" fill="currentColor" stroke="none"/>',
+  undo: '<path d="M4.5 9.5h9a5 5 0 0 1 0 10H9"/><path d="M8 5.5l-3.5 4L8 13.5"/>',
+  // Eight teeth around the hub, drawn as a dashed ring so they stay even at any size
+  cog: '<circle cx="12" cy="12" r="3.4"/><circle cx="12" cy="12" r="7.6" stroke-width="3.2" stroke-dasharray="2.6 3.37"/>',
+};
+const icon = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
 let built = false;
-let concedeTimer = 0;
 
 export function renderPrompt(model, send) {
   const root = document.getElementById('prompt');
   if (!built) {
     root.innerHTML = `
-      <div class="controls">
-        <button class="end-turn" title="Pass priority until the end of this turn (E)">End turn</button>
-        <button class="auto-pass" title="Pass priority automatically when you have nothing to play"></button>
-        <button class="undo" title="Undo your last undoable action, such as tapping a land for mana (Z)">Undo</button>
-        <button class="attack-all" title="Declare every creature that can attack">Attack all</button>
-        <button class="concede">Concede</button>
+      <div class="tools">
+        <button class="end-turn" title="Pass priority until the end of this turn (E)">${icon('endTurn')}</button>
+        <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
+        <button class="undo" title="Undo your last undoable action, such as tapping a land for mana (Z)">${icon('undo')}</button>
+        <span class="spacer"></span>
+        <button class="cog" title="Options">${icon('cog')}</button>
       </div>
-      <div class="prompt-body"><img class="prompt-card" alt="" hidden><p class="message"></p></div>
-      <div class="buttons"><button class="cancel"></button><button class="ok primary"></button></div>`;
+      <div class="prompt-body">
+        <img class="prompt-card" alt="" hidden>
+        <div><p class="step"></p><p class="message"></p></div>
+      </div>
+      <div class="buttons">
+        <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
+        <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
+      </div>`;
     root.querySelector('.ok').onclick = () => send({ t: 'ok' });
     root.querySelector('.cancel').onclick = () => send({ t: 'cancel' });
     root.querySelector('.end-turn').onclick = () => send({ t: 'endTurn' });
     root.querySelector('.auto-pass').onclick = () => send({ t: 'autoPass' });
     root.querySelector('.undo').onclick = () => send({ t: 'undo' });
-    root.querySelector('.attack-all').onclick = () => send({ t: 'attackAll' });
-    const concede = root.querySelector('.concede');
-    // The first click arms it; a second click within a few seconds concedes
-    concede.onclick = () => {
-      if (concede.classList.contains('armed')) {
-        disarm(concede);
-        send({ t: 'concede' });
-        return;
-      }
-      concede.classList.add('armed');
-      concede.textContent = 'Confirm concede';
-      concedeTimer = setTimeout(() => disarm(concede), 3000);
-    };
+    root.querySelector('.cog').onclick = openOptions;
     document.addEventListener('keydown', e => {
       if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = root.querySelector('.ok');
       const cancel = root.querySelector('.cancel');
-      if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
+      if (e.key === 'Escape' && document.getElementById('options')) {
+        closeOptions();
+      } else if (document.getElementById('options')) {
+        return;
+      } else if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
         e.preventDefault();
         ok.click();
       } else if (e.key === 'Escape' && !cancel.disabled) {
@@ -55,8 +66,9 @@ export function renderPrompt(model, send) {
   }
   const autoPass = !!model.controls?.autoPass;
   const autoPassButton = root.querySelector('.auto-pass');
-  autoPassButton.textContent = `Auto-pass: ${autoPass ? 'on' : 'off'}`;
   autoPassButton.classList.toggle('on', autoPass);
+  autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play`;
+  root.querySelector('.step').textContent = stepName(game(model)?.Phase);
   const p = model.prompt;
   if (!p) return;
   root.querySelector('.message').textContent = p.message ?? '';
@@ -64,6 +76,7 @@ export function renderPrompt(model, send) {
   setButton(root.querySelector('.ok'), p.ok);
   setButton(root.querySelector('.cancel'), p.cancel);
   root.querySelector('.ok').classList.toggle('focus', !!p.focusOk);
+  root.classList.toggle('waiting', !!p.ok?.enabled || !!p.cancel?.enabled);
 }
 
 // The card the prompt is about (the spell being targeted, the trigger being paid for), as desktop shows it
@@ -86,14 +99,8 @@ function renderPromptCard(img, model, ref) {
   }
 }
 
-function disarm(concede) {
-  clearTimeout(concedeTimer);
-  concede.classList.remove('armed');
-  concede.textContent = 'Concede';
-}
-
 function setButton(button, spec) {
-  button.textContent = spec?.label ?? '';
+  button.querySelector('.label').textContent = spec?.label ?? '';
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;
 }

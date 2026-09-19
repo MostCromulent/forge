@@ -37,6 +37,7 @@ import forge.gamemodes.net.server.DeltaSyncManager;
 import forge.gui.card.CardDetailUtil;
 import forge.interfaces.IGameController;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
@@ -311,6 +312,7 @@ public class WebGuiGame extends NetworkGuiGame {
         m.add("otherStops", stops(FPref.PHASES_AI));
         m.addProperty("autoPass", FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
         m.addProperty("dayTime", getDayTime());
+        m.add("settings", settings());
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
         final YieldMarker marker = yields == null ? null : yields.getAutoPassUntilMarker();
@@ -321,6 +323,49 @@ public class WebGuiGame extends NetworkGuiGame {
             m.add("marker", mk);
         }
         return m;
+    }
+
+    // Settings the options dialog shares with the desktop client, as their preference values
+    private static final Map<String, FPref> SETTING_PREFS = Map.of(
+            "interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS,
+            "interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL,
+            "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
+            "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
+            "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL);
+
+    private static JsonObject settings() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final JsonObject s = new JsonObject();
+        SETTING_PREFS.forEach((key, pref) -> s.addProperty(key, prefs.getPrefBoolean(pref)));
+        s.addProperty("autoPassNoActions", prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
+        s.addProperty("autoYieldMode", ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability");
+        s.addProperty("logDetail", GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)).name());
+        s.addProperty("arrows", prefs.getPref(FPref.UI_TARGETING_OVERLAY));
+        return s;
+    }
+
+    private void setSetting(final IGameController controller, final String key, final String value) {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final FPref pref = SETTING_PREFS.get(key);
+        if (pref != null) {
+            prefs.setPref(pref, Boolean.parseBoolean(value));
+        } else if ("autoPassNoActions".equals(key)) {
+            if (Boolean.parseBoolean(value) != prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
+                YieldController.toggleAutoPassNoActions(controller);
+            }
+            return;
+        } else if ("autoYieldMode".equals(key)) {
+            prefs.setPref(FPref.UI_AUTO_DECISION_MODE,
+                    "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
+        } else if ("logDetail".equals(key)) {
+            prefs.setPref(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
+        } else if ("arrows".equals(key)) {
+            prefs.setPref(FPref.UI_TARGETING_OVERLAY, value);
+        } else {
+            Logger.warn("Web client: unknown setting {}", key);
+            return;
+        }
+        prefs.save();
     }
 
     @Override
@@ -1143,7 +1188,6 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "concede" -> controller.concede();
                 case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
                 case "undo" -> controller.undoLastAction();
-                case "attackAll" -> controller.alphaStrike();
                 case "autoPass" -> {
                     YieldController.toggleAutoPassNoActions(controller);
                     send(controlsMessage());
@@ -1157,6 +1201,10 @@ public class WebGuiGame extends NetworkGuiGame {
                     send(controlsMessage());
                 }
                 case "useMana" -> controller.useMana(msg.get("color").getAsByte());
+                case "setSetting" -> {
+                    setSetting(controller, msg.get("key").getAsString(), msg.get("value").getAsString());
+                    send(controlsMessage());
+                }
                 case "stackMenu" -> {
                     final StackItemView item = lookup(msg, TrackableTypes.StackItemViewType);
                     if (item != null) {
