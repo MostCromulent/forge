@@ -5,13 +5,15 @@ import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
 import { appendLog, initLog } from './log.js';
-import { initDetail, onDetail } from './detail.js';
+import { initDetail, onDetail, onPlayerDetail } from './detail.js';
+import { initStack, onStackMenu } from './stack.js';
 import { initOverlay, drawOverlay } from './overlay.js';
 
 const model = createModel();
 let scheduled = false;
 const send = connect(onMessage, online => { document.getElementById('banner').hidden = online; });
 initDetail(send);
+initStack(send);
 initOverlay();
 initLog();
 
@@ -43,6 +45,8 @@ function onMessage(msg) {
     case 'controls': model.controls = msg; break;
     case 'log': appendLog(msg); return;
     case 'detail': onDetail(msg); return;
+    case 'playerDetail': onPlayerDetail(msg); return;
+    case 'stackMenu': onStackMenu(msg); return;
     case 'notice': showNotice(msg); return;
     case 'flash': flash(); return;
     default: break;

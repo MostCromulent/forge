@@ -1,5 +1,7 @@
 #prompt { display: grid; gap: 8px; align-content: end; padding-bottom: 8px; }
 #prompt .message { margin: 0; min-height: 2.8em; }
+#prompt .prompt-body { display: flex; gap: 8px; align-items: flex-start; }
+#prompt .prompt-card { width: 52px; border-radius: 4px; flex: none; }
 #prompt .controls { display: flex; flex-wrap: wrap; gap: 4px; }
 #prompt .controls button { padding: 3px 8px; font-size: 12px; }
 #prompt .controls .auto-pass.on { border-color: var(--accent-2); background: var(--accent); }

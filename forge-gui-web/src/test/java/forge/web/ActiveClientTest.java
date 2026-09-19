@@ -242,7 +242,8 @@ public class ActiveClientTest {
         }
     }
 
-    // Jötun Grunt's upkeep asks the web seat to choose a player (whose graveyard), answered by clicking an avatar
+    // Jötun Grunt's upkeep asks the web seat to choose a player (whose graveyard); the browser must be told which
+    // players it may click, or the scripted seat cancels and the Grunt is sacrificed
     @Test(timeOut = 180000)
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -277,8 +278,6 @@ public class ActiveClientTest {
             remoteGui(local.hostedMatch()).updateGameView();
             final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
             final int turn = game.getPhaseHandler().getTurn();
-            // "Put cards from whose graveyard?" is answered by clicking the player
-            browser.pickPlayerWhenAsked(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, seat.getId()));
             browser.release();
             // On to the web seat's next turn, past the upkeep that asks for the payment
             for (int i = 0; i < 600 && !(game.getPhaseHandler().getTurn() >= turn + 2 && game.getPhaseHandler().getPhase().isAfter(PhaseType.UPKEEP)); i++) {

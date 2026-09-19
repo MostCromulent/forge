@@ -10,6 +10,7 @@ import forge.game.ability.ApiType;
 import forge.game.card.Card;
 import forge.game.card.CardView;
 import forge.game.player.Player;
+import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbility;
 import forge.game.spellability.TargetRestrictions;
 import forge.gui.FThreads;
@@ -66,6 +67,15 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         final int initialMin = numTargets != null ? numTargets : sa.getMinTargets();
         final int initialMax = numTargets != null ? numTargets : sa.getMaxTargets();
         controller.getGui().setSelectables(CardView.getCollection(choices), initialMin, initialMax);
+        final List<PlayerView> players = new ArrayList<>();
+        if (!mustTargetFiltered) {
+            for (final Player p : sa.getHostCard().getGame().getPlayers()) {
+                if (!p.hasLost() && sa.canTarget(p) && (filter == null || filter.test(p))) {
+                    players.add(p.getView());
+                }
+            }
+        }
+        controller.getGui().setSelectablePlayers(players);
         final PlayerZoneUpdates zonesToUpdate = new PlayerZoneUpdates();
         for (final Card c : choices) {
             zonesToUpdate.add(new PlayerZoneUpdate(c.getZone().getPlayer().getView(), c.getZone().getZoneType()));

@@ -32,6 +32,21 @@ export function hoverCard(el) {
   draw();
 }
 
+// Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
+const playerDetails = new Map();
+
+export function hoverPlayer(key) {
+  faceIndex = 0;
+  hovered = key === null ? null : { player: key };
+  if (key !== null) send({ t: 'playerDetail', key });
+  draw();
+}
+
+export function onPlayerDetail(msg) {
+  playerDetails.set(msg.key, msg);
+  if (hovered?.player === msg.key) draw();
+}
+
 export function onDetail(msg) {
   details.set(msg.key, msg);
   if (hovered?.key === msg.key) draw();
@@ -41,13 +56,15 @@ function draw() {
   const zoom = document.getElementById('zoom');
   zoom.hidden = !hovered;
   if (!hovered) return;
+  if (hovered.player !== undefined) {
+    drawPlayer(zoom, playerDetails.get(hovered.player));
+    return;
+  }
   const d = hovered.key !== null ? details.get(hovered.key) : null;
   const face = d?.faces[faceIndex] ?? d?.faces[0];
-  if (!zoom.firstChild) {
-    zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
-    zoom.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
-  }
+  ensureZoom(zoom);
   const img = zoom.querySelector('img');
+  img.hidden = false;
   const src = face?.imageKey ? imageUrl(face.imageKey) : hovered.src;
   if (img.getAttribute('src') !== src) {
     img.hidden = false;
@@ -83,4 +100,23 @@ function setRulesText(el, html) {
     }
   };
   walk(doc.body, false);
+}
+
+function ensureZoom(zoom) {
+  if (zoom.firstChild) return;
+  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
+  zoom.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
+}
+
+function drawPlayer(zoom, d) {
+  ensureZoom(zoom);
+  zoom.querySelector('img').hidden = true;
+  zoom.querySelector('.detail').hidden = !d;
+  if (!d) return;
+  zoom.querySelector('.name').textContent = d.name ?? '';
+  zoom.querySelector('.cost').textContent = '';
+  zoom.querySelector('.type').textContent = '';
+  zoom.querySelector('.text').textContent = d.lines.join('\n');
+  zoom.querySelector('.pt').textContent = '';
+  zoom.querySelector('.hint').textContent = '';
 }

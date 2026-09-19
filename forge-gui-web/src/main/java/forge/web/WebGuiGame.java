@@ -25,10 +25,12 @@ import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
+import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldMarker;
+import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
@@ -39,6 +41,7 @@ import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
+import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
 import forge.trackable.TrackableCollection;
@@ -380,6 +383,56 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    // Desktop's avatar tooltip: life, counters, hand and land counts, commander damage and tax, and so on
+    private static JsonObject playerDetailMessage(final PlayerView player) {
+        final JsonObject m = JsonCodec.message("playerDetail");
+        m.addProperty("key", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()));
+        m.addProperty("name", player.getName());
+        final JsonArray lines = new JsonArray();
+        final String[] parts = player.getDetails().split("\n");
+        for (int i = 1; i < parts.length; i++) {
+            if (!parts[i].isBlank()) {
+                lines.add(parts[i]);
+            }
+        }
+        m.add("lines", lines);
+        return m;
+    }
+
+    // Desktop's right-click menu on a stack item: auto-yield to an ability, always accept or decline an optional
+    // trigger of your own, and yield to the stack
+    private JsonObject stackMenuMessage(final IGameController controller, final StackItemView item) {
+        final JsonObject m = JsonCodec.message("stackMenu");
+        m.addProperty("key", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()));
+        final String yieldKey = item.getKey();
+        if (item.isAbility()) {
+            m.addProperty("autoYield", controller.shouldAutoYield(yieldKey));
+        }
+        if (item.isOptionalTrigger() && isLocalPlayer(item.getActivatingPlayer()) && !yieldKey.isEmpty()) {
+            m.addProperty("trigger", controller.getTriggerDecision(yieldKey).name());
+        }
+        return m;
+    }
+
+    private void stackYield(final IGameController controller, final StackItemView item, final String action) {
+        final String yieldKey = item.getKey();
+        final boolean abilityScope = controller.getYieldController().isAbilityScope();
+        switch (action) {
+            case "autoYield" -> controller.setShouldAutoYield(yieldKey, !controller.shouldAutoYield(yieldKey), abilityScope);
+            case "alwaysYes" -> controller.setTriggerDecision(yieldKey,
+                    controller.getTriggerDecision(yieldKey) == TriggerDecision.ACCEPT ? TriggerDecision.ASK : TriggerDecision.ACCEPT, abilityScope);
+            case "alwaysNo" -> controller.setTriggerDecision(yieldKey,
+                    controller.getTriggerDecision(yieldKey) == TriggerDecision.DECLINE ? TriggerDecision.ASK : TriggerDecision.DECLINE, abilityScope);
+            case "yieldToStack", "yieldToEntireStack" -> {
+                final PlayerView local = getCurrentPlayer();
+                if (local != null) {
+                    controller.sendYieldUpdate(new YieldUpdate.StackYield(local, true, "yieldToStack".equals(action)));
+                }
+            }
+            default -> Logger.warn("Web client: unknown stack yield action {}", action);
+        }
+    }
+
     // mayFlip hides an opponent's face-down card but shows the owner theirs, as on desktop
     private JsonObject detailMessage(final CardView card) {
         final JsonObject m = JsonCodec.message("detail");
@@ -432,6 +485,7 @@ public class WebGuiGame extends NetworkGuiGame {
         p.add("cancel", button("", false));
         p.addProperty("focusOk", false);
         p.add("selectable", new JsonArray());
+        p.add("selectablePlayers", new JsonArray());
         p.add("highlighted", new JsonArray());
         return p;
     }
@@ -484,10 +538,23 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     @Override
+    public void setSelectablePlayers(final Iterable<PlayerView> players) {
+        final JsonArray keys = new JsonArray();
+        for (final PlayerView p : players) {
+            keys.add(JsonCodec.ref(DeltaPacket.TYPE_PLAYER_VIEW, p.getId()));
+        }
+        synchronized (promptLock) {
+            prompt.add("selectablePlayers", keys);
+            sendPrompt();
+        }
+    }
+
+    @Override
     public void clearSelectables() {
         super.clearSelectables();
         synchronized (promptLock) {
             prompt.add("selectable", new JsonArray());
+            prompt.add("selectablePlayers", new JsonArray());
             sendPrompt();
         }
     }
@@ -1047,6 +1114,13 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
                 return;
             }
+            if ("playerDetail".equals(type)) {
+                final PlayerView player = lookup(msg, TrackableTypes.PlayerViewType);
+                if (player != null) {
+                    send(playerDetailMessage(player));
+                }
+                return;
+            }
             final IGameController controller = getGameController();
             if (controller == null) {
                 return;
@@ -1083,6 +1157,19 @@ public class WebGuiGame extends NetworkGuiGame {
                     send(controlsMessage());
                 }
                 case "useMana" -> controller.useMana(msg.get("color").getAsByte());
+                case "stackMenu" -> {
+                    final StackItemView item = lookup(msg, TrackableTypes.StackItemViewType);
+                    if (item != null) {
+                        send(stackMenuMessage(controller, item));
+                    }
+                }
+                case "stackYield" -> {
+                    final StackItemView item = lookup(msg, TrackableTypes.StackItemViewType);
+                    if (item != null) {
+                        stackYield(controller, item, msg.get("action").getAsString());
+                        send(stackMenuMessage(controller, item));
+                    }
+                }
                 case "nextGame" -> controller.nextGameDecision(NextGameDecision.valueOf(msg.get("decision").getAsString()));
                 default -> Logger.warn("Web client: unknown browser message {}", type);
             }

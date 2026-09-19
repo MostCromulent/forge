@@ -29,6 +29,8 @@
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--select), 0 0 18px var(--select); }
+/* A player the prompt lets you choose: dashed ring, so it differs from a chosen one by shape as well as glow */
+.avatar.selectable:not(.highlighted) { outline: 3px dashed var(--select); outline-offset: 3px; }
 .avatar .initial { font-size: 28px; font-weight: 700; }
 .avatar .life { position: absolute; bottom: -8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-weight: 700; }
 .zone-tiles { display: grid; grid-template-columns: repeat(2, var(--tile-w)); gap: 6px; }
@@ -132,3 +134,6 @@
 /* Offset copies behind the top card read as a stack */
 .card.pile { filter: drop-shadow(4px -4px 0 #3a4452) drop-shadow(4px -4px 0 #2b3440); }
 .card:hover { z-index: 5; }
+#stack-menu { position: fixed; z-index: 70; display: grid; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px #000c; }
+#stack-menu button { text-align: left; border: none; background: none; padding: 6px 10px; white-space: pre; }
+#stack-menu button:hover { background: var(--surface-2); }

@@ -40,7 +40,6 @@ final class ScriptedBrowser implements BrowserChannel {
     private final AtomicInteger requests = new AtomicInteger();
     private final AtomicLong promptVersion = new AtomicLong();
     private volatile boolean released;
-    private volatile Integer playerToPick;
     private volatile JsonObject lastPrompt;
     private volatile int root = -1;
     private volatile JsonArray localPlayers = new JsonArray();
@@ -48,11 +47,6 @@ final class ScriptedBrowser implements BrowserChannel {
     ScriptedBrowser(final WebGuiGame gui, final long holdMillis) {
         this.gui = gui;
         this.holdMillis = holdMillis;
-    }
-
-    /** When a prompt offers no cards (choose a player), click this player's avatar instead of cancelling. */
-    void pickPlayerWhenAsked(final int playerKey) {
-        playerToPick = playerKey;
     }
 
     void release(final String... cardNames) {
@@ -164,9 +158,11 @@ final class ScriptedBrowser implements BrowserChannel {
                 return;
             }
         }
-        if (playerToPick != null) {
+        // A prompt that offers players is answered by clicking the first one's avatar
+        final JsonArray players = prompt.getAsJsonArray("selectablePlayers");
+        if (players != null && !players.isEmpty()) {
             final JsonObject msg = FakeBrowser.action("selectPlayer");
-            msg.addProperty("key", playerToPick);
+            msg.addProperty("key", players.get(0).getAsJsonObject().get("ref").getAsInt());
             gui.onBrowserMessage(msg);
         } else if (prompt.getAsJsonObject("cancel").get("enabled").getAsBoolean()) {
             gui.onBrowserMessage(FakeBrowser.action("cancel"));

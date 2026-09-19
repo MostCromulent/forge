@@ -4,7 +4,7 @@ import { game, me, opponents, players, zone, deref, stateOf, isLocal } from './m
 import { renderHand } from './hand.js';
 import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
-import { hoverCard } from './detail.js';
+import { hoverCard, hoverPlayer } from './detail.js';
 import { renderStack } from './stack.js';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks.js';
 
@@ -47,7 +47,10 @@ function renderSeat(root, model, player, onField, send, select) {
         <div class="mana"></div>
       </div>
       <div class="battlefield"><div class="row lands"></div><div class="row permanents"></div></div>`;
-    root.querySelector('.avatar').onclick = () => send({ t: 'selectPlayer', key: Number(root.dataset.player) });
+    const avatarEl = root.querySelector('.avatar');
+    avatarEl.onclick = () => send({ t: 'selectPlayer', key: Number(root.dataset.player) });
+    avatarEl.addEventListener('mouseenter', () => hoverPlayer(Number(root.dataset.player)));
+    avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
   }
   root.dataset.player = player.$key;
   const avatar = root.querySelector('.avatar');
@@ -65,6 +68,7 @@ function renderSeat(root, model, player, onField, send, select) {
   root.querySelector('.life').textContent = player.Life ?? 0;
   root.querySelector('.name').textContent = player.Name ?? '';
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
+  avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r?.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   renderZoneTiles(root.querySelector('.zone-tiles'), model, player);
   renderManaPool(root.querySelector('.mana'), player, isLocal(model, player), send);

@@ -46,6 +46,7 @@ export function updateCard(el, model, card) {
     : /Planeswalker/.test(type) ? (state.Loyalty ?? '') : '';
   const badges = [];
   if (card.Damage) badges.push(`${card.Damage} dmg`);
+  if (card.IsRingBearer) badges.push('Ring-bearer');
   for (const [name, n] of Object.entries(card.Counters ?? {})) badges.push(`${n} ${name}`);
   el.querySelector('.badges').textContent = badges.join(' · ');
 }

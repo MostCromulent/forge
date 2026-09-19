@@ -13,6 +13,17 @@ const PUSH_X = 42;
 let hovered = null;
 let collapsed = false;
 let lastModel = null;
+let send = () => {};
+
+export function initStack(sendFn) {
+  send = sendFn;
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#stack-menu')) closeMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMenu();
+  });
+}
 
 export function renderStack(model) {
   lastModel = model;
@@ -55,6 +66,12 @@ function createItem() {
     hoverStackItem(hovered);
     hoverCard(img);
   });
+  // Desktop's stack menu: auto-yield, always accept or decline your optional trigger, yield to the stack
+  el.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    menuAt = { x: e.clientX, y: e.clientY };
+    send({ t: 'stackMenu', key: Number(el.dataset.key) });
+  });
   el.addEventListener('mouseleave', () => {
     hovered = null;
     layout(el.parentElement, el.parentElement.childElementCount);
@@ -95,4 +112,37 @@ function layout(pile, n) {
     el.classList.toggle('top', i === 0);
     el.classList.toggle('lifted', i === h);
   });
+}
+
+let menuAt = null;
+
+// The server answers a right-click with what applies to that item and the current settings
+export function onStackMenu(msg) {
+  if (!menuAt) return;
+  closeMenu();
+  const menu = document.createElement('div');
+  menu.id = 'stack-menu';
+  menu.style.left = `${menuAt.x}px`;
+  menu.style.top = `${menuAt.y}px`;
+  const item = (label, action, checked) => {
+    const b = document.createElement('button');
+    b.textContent = (checked === undefined ? '' : checked ? '✓ ' : '    ') + label;
+    b.onclick = () => {
+      send({ t: 'stackYield', key: msg.key, action });
+      closeMenu();
+    };
+    menu.append(b);
+  };
+  if (msg.autoYield !== undefined) item('Auto-yield to this ability', 'autoYield', msg.autoYield);
+  if (msg.trigger !== undefined) {
+    item('Always accept this trigger', 'alwaysYes', msg.trigger === 'ACCEPT');
+    item('Always decline this trigger', 'alwaysNo', msg.trigger === 'DECLINE');
+  }
+  item('Yield until this resolves', 'yieldToStack');
+  item('Yield until the stack is empty', 'yieldToEntireStack');
+  document.body.append(menu);
+}
+
+function closeMenu() {
+  document.getElementById('stack-menu')?.remove();
 }
