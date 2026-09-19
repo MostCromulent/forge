@@ -1,0 +1,259 @@
+package forge.web;
+
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import forge.ImageKeys;
+import forge.item.PaperCard;
+import forge.util.ImageUtil;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.FullHttpRequest;
+import io.netty.handler.codec.http.FullHttpResponse;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.HttpResponseStatus;
+import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.codec.http.QueryStringDecoder;
+import io.netty.handler.codec.http.cookie.Cookie;
+import io.netty.handler.codec.http.cookie.CookieHeaderNames;
+import io.netty.handler.codec.http.cookie.DefaultCookie;
+import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
+import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.util.concurrent.DefaultThreadFactory;
+import org.tinylog.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.util.List;
+
+/** Serves the page, its files and card images, and the browser's WebSocket; 127.0.0.1 only, behind a per-launch token. */
+public final class WebServer implements AutoCloseable {
+    public interface Endpoint {
+        void connected(BrowserChannel channel);
+        void disconnected(BrowserChannel channel);
+        void onMessage(BrowserChannel channel, JsonObject message);
+    }
+
+    private static final String COOKIE = "forge_token";
+    private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
+    private final String token;
+    private final Channel channel;
+
+    public WebServer(final Endpoint endpoint, final String token) throws InterruptedException {
+        this.token = token;
+        final ServerBootstrap b = new ServerBootstrap()
+                .group(group)
+                .channel(NioServerSocketChannel.class)
+                .childHandler(new ChannelInitializer<SocketChannel>() {
+                    @Override
+                    protected void initChannel(final SocketChannel ch) {
+                        ch.pipeline().addLast(
+                                new HttpServerCodec(),
+                                new HttpObjectAggregator(1 << 20),
+                                new AccessGate(),
+                                new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                                        .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22).build()),
+                                new StaticFiles(),
+                                new BrowserSocket(endpoint));
+                    }
+                });
+        channel = b.bind(InetAddress.getLoopbackAddress(), 0).sync().channel();
+    }
+
+    public int port() {
+        return ((InetSocketAddress) channel.localAddress()).getPort();
+    }
+
+    public String url() {
+        return origin() + "/?token=" + token;
+    }
+
+    String origin() {
+        return "http://127.0.0.1:" + port();
+    }
+
+    @Override
+    public void close() {
+        channel.close().syncUninterruptibly();
+        group.shutdownGracefully();
+    }
+
+    static File cardImage(final String imageKey) {
+        String key = imageKey;
+        final boolean backFace = key.endsWith(ImageKeys.BACKFACE_POSTFIX);
+        if (backFace) {
+            key = key.substring(0, key.length() - ImageKeys.BACKFACE_POSTFIX.length());
+        }
+        if (key.startsWith(ImageKeys.CARD_PREFIX)) {
+            final PaperCard card = ImageUtil.getPaperCardFromImageKey(key);
+            if (card == null) {
+                return null;
+            }
+            key = backFace ? card.getCardAltImageKey() : card.getCardImageKey();
+        }
+        final File file = ImageKeys.getImageFile(key);
+        return file != null && file.isFile() ? file : null;
+    }
+
+    private boolean queryToken(final QueryStringDecoder q) {
+        final List<String> values = q.parameters().get("token");
+        return values != null && token.equals(values.get(0));
+    }
+
+    private boolean hasToken(final FullHttpRequest req, final QueryStringDecoder q) {
+        if (queryToken(q)) {
+            return true;
+        }
+        final String header = req.headers().get(HttpHeaderNames.COOKIE);
+        if (header == null) {
+            return false;
+        }
+        for (final Cookie c : ServerCookieDecoder.STRICT.decode(header)) {
+            if (COOKIE.equals(c.name()) && token.equals(c.value())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type, final boolean setCookie) {
+        final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
+        resp.headers()
+                .set(HttpHeaderNames.CONTENT_TYPE, type)
+                .setInt(HttpHeaderNames.CONTENT_LENGTH, body.length)
+                .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
+                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        if (setCookie) {
+            final DefaultCookie cookie = new DefaultCookie(COOKIE, token);
+            cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
+            resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
+        }
+        ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private static String contentType(final String resource) {
+        if (resource.endsWith(".html")) {
+            return "text/html; charset=utf-8";
+        }
+        if (resource.endsWith(".js")) {
+            return "text/javascript; charset=utf-8";
+        }
+        if (resource.endsWith(".css")) {
+            return "text/css; charset=utf-8";
+        }
+        if (resource.endsWith(".svg")) {
+            return "image/svg+xml";
+        }
+        return "application/octet-stream";
+    }
+
+    private static byte[] readResource(final String resource) throws IOException {
+        try (InputStream in = WebServer.class.getResourceAsStream("/web/" + resource)) {
+            return in == null ? null : in.readAllBytes();
+        }
+    }
+
+    private final class AccessGate extends ChannelInboundHandlerAdapter {
+        @Override
+        public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
+            if (msg instanceof FullHttpRequest req) {
+                final QueryStringDecoder q = new QueryStringDecoder(req.uri());
+                final boolean socket = "/ws".equals(q.path());
+                // Any page in the same browser can reach 127.0.0.1; the token, cookie and origin keep them out
+                if (!hasToken(req, q) || (socket && !origin().equals(req.headers().get(HttpHeaderNames.ORIGIN)))) {
+                    req.release();
+                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain", false);
+                    return;
+                }
+            }
+            ctx.fireChannelRead(msg);
+        }
+    }
+
+    private final class StaticFiles extends SimpleChannelInboundHandler<FullHttpRequest> {
+        @Override
+        protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
+            final QueryStringDecoder q = new QueryStringDecoder(req.uri());
+            final String path = q.path();
+            final byte[] body;
+            final String type;
+            if ("/img".equals(path)) {
+                final List<String> key = q.parameters().get("key");
+                final File file = key == null ? null : cardImage(key.get(0));
+                body = file == null ? null : Files.readAllBytes(file.toPath());
+                type = file != null && file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
+            } else {
+                final String resource = "/".equals(path) ? "index.html" : path.substring(1);
+                body = resource.contains("..") ? null : readResource(resource);
+                type = contentType(resource);
+            }
+            if (body == null) {
+                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                return;
+            }
+            respond(ctx, HttpResponseStatus.OK, body, type, queryToken(q));
+        }
+    }
+
+    private static final class BrowserSocket extends SimpleChannelInboundHandler<WebSocketFrame> {
+        private final Endpoint endpoint;
+        private BrowserChannel browser;
+
+        BrowserSocket(final Endpoint endpoint) {
+            this.endpoint = endpoint;
+        }
+
+        @Override
+        public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
+            if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+                final Channel ch = ctx.channel();
+                browser = message -> ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
+                endpoint.connected(browser);
+            } else {
+                ctx.fireUserEventTriggered(evt);
+            }
+        }
+
+        @Override
+        protected void channelRead0(final ChannelHandlerContext ctx, final WebSocketFrame frame) {
+            if (frame instanceof TextWebSocketFrame text && browser != null) {
+                try {
+                    endpoint.onMessage(browser, JsonParser.parseString(text.text()).getAsJsonObject());
+                } catch (final RuntimeException e) {
+                    Logger.warn(e, "Bad browser message");
+                }
+            }
+        }
+
+        @Override
+        public void channelInactive(final ChannelHandlerContext ctx) {
+            if (browser != null) {
+                endpoint.disconnected(browser);
+            }
+            ctx.fireChannelInactive();
+        }
+    }
+}
