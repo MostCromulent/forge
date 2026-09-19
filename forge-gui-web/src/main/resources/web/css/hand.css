@@ -1,5 +1,5 @@
 #hand { display: flex; justify-content: center; align-items: flex-end; height: calc(var(--card-h) + 16px); padding-bottom: 8px; }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
-#hand .card { transform-origin: 50% 100%; }
+#hand .card { transform: translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; }
 #hand .card:hover { transform: translateY(-8px) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }

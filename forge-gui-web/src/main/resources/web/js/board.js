@@ -1,16 +1,17 @@
 import { reconcile } from './render.js';
 import { imageUrl } from './cards.js';
-import { game, me, opponents, zone, deref, stateOf, isLocal } from './model.js';
+import { game, me, opponents, players, zone, deref, stateOf, isLocal } from './model.js';
 import { renderHand } from './hand.js';
 import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
 import { hoverCard } from './detail.js';
 import { hoverStackItem, stackTargets } from './overlay.js';
 
+// Untap has no stop, as on desktop
 const PHASES = [
   ['UPKEEP', 'Upkeep'], ['DRAW', 'Draw'], ['MAIN1', 'Main 1'], ['COMBAT_BEGIN', 'Combat'],
-  ['COMBAT_DECLARE_ATTACKERS', 'Attack'], ['COMBAT_DECLARE_BLOCKERS', 'Block'], ['COMBAT_DAMAGE', 'Damage'],
-  ['MAIN2', 'Main 2'], ['END_OF_TURN', 'End'],
+  ['COMBAT_DECLARE_ATTACKERS', 'Attack'], ['COMBAT_DECLARE_BLOCKERS', 'Block'], ['COMBAT_FIRST_STRIKE_DAMAGE', '1st Strike'],
+  ['COMBAT_DAMAGE', 'Damage'], ['COMBAT_END', 'End Combat'], ['MAIN2', 'Main 2'], ['END_OF_TURN', 'End'], ['CLEANUP', 'Cleanup'],
 ];
 const MANA = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
@@ -18,8 +19,10 @@ export function renderMatch(model, send) {
   const g = game(model);
   if (!g) return;
   const select = el => send({ t: 'selectCard', key: Number(el.dataset.key) });
-  renderSeat(document.getElementById('opponent'), model, opponents(model)[0], send, select);
-  renderSeat(document.getElementById('me'), model, me(model), send, select);
+  // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
+  const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
+  renderSeat(document.getElementById('opponent'), model, opponents(model)[0], onField, send, select);
+  renderSeat(document.getElementById('me'), model, me(model), onField, send, select);
   renderPhaseStrip(model, g, send);
   renderStack(model);
   renderHand(model, me(model), select);
@@ -27,7 +30,7 @@ export function renderMatch(model, send) {
   renderGameOver(model, g, send);
 }
 
-function renderSeat(root, model, player, send, select) {
+function renderSeat(root, model, player, onField, send, select) {
   if (!player) {
     root.replaceChildren();
     return;
@@ -53,16 +56,41 @@ function renderSeat(root, model, player, send, select) {
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   renderZoneTiles(root.querySelector('.zone-tiles'), model, player);
-  root.querySelector('.mana').textContent = MANA.map(([bit, sym]) => (player.Mana?.[bit] ? `${sym}${player.Mana[bit]}` : '')).filter(Boolean).join(' ');
-  reconcile(root.querySelector('.player-counters'), Object.entries(player.Counters ?? {}), ([name]) => name,
+  renderManaPool(root.querySelector('.mana'), player, isLocal(model, player), send);
+  const badges = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
+  for (const { card, value } of player.CommanderDamage ?? []) {
+    const name = stateOf(model, deref(model, card) ?? {}).Name ?? 'Commander';
+    if (value > 0) badges.push({ key: `cmdr-${card.ref}`, text: `${name} ${value}`, title: `Commander damage from ${name}` });
+  }
+  reconcile(root.querySelector('.player-counters'), badges, b => b.key,
     () => {
       const el = document.createElement('span');
       el.className = 'player-counter';
       return el;
     },
-    (el, [name, n]) => { el.textContent = `${name.toLowerCase()} ${n}`; });
+    (el, b) => {
+      el.textContent = b.text;
+      el.title = b.title;
+      el.classList.toggle('commander-damage', !!b.title);
+    });
   renderEmblems(root.querySelector('.emblems'), model, zone(model, player, 'Command'), select);
-  renderBattlefield(root, model, zone(model, player, 'Battlefield'), select);
+  renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
+}
+
+// Clicking your own mana pays with that colour, as on desktop
+function renderManaPool(root, player, own, send) {
+  const pool = MANA.filter(([bit]) => player.Mana?.[bit]);
+  reconcile(root, pool, ([bit]) => bit,
+    ([bit]) => {
+      const el = document.createElement('button');
+      el.className = 'mana-button';
+      el.onclick = () => send({ t: 'useMana', color: bit });
+      return el;
+    },
+    (el, [bit, sym]) => {
+      el.textContent = `${sym} ${player.Mana[bit]}`;
+      el.disabled = !own;
+    });
 }
 
 // Your own hand is laid out along the bottom, so only opponents get a Hand tile
@@ -137,6 +165,10 @@ function renderPhaseStrip(model, g, send) {
     root.innerHTML = row(false, 'Opponent') + row(true, 'You') + '<span class="turn"></span>';
     for (const b of root.querySelectorAll('.phase')) {
       b.onclick = () => send({ t: 'toggleStop', phase: b.dataset.phase, mine: b.parentElement.dataset.mine === 'true' });
+      b.oncontextmenu = e => {
+        e.preventDefault();
+        send({ t: 'toggleMarker', phase: b.dataset.phase, mine: b.parentElement.dataset.mine === 'true' });
+      };
     }
   }
   const active = deref(model, g.PlayerTurn);
@@ -148,11 +180,16 @@ function renderPhaseStrip(model, g, send) {
     for (const b of rowEl.querySelectorAll('.phase')) {
       const stop = stops.has(b.dataset.phase);
       b.classList.toggle('stop', stop);
+      const marker = model.controls?.marker;
+      const marked = !!marker && marker.mine === mine && marker.phase === b.dataset.phase;
       b.classList.toggle('current', mine === myTurn && b.dataset.phase === g.Phase);
-      b.title = `${stop ? 'Stops' : 'Skips'} here on ${mine ? 'your' : 'opponents\''} turns. Click to toggle.`;
+      b.classList.toggle('marker', marked);
+      b.title = `${stop ? 'Stops' : 'Skips'} here on ${mine ? 'your' : 'opponents\''} turns. Click to toggle.`
+        + (marked ? ' Passing priority until here. Right-click to cancel.' : ' Right-click to pass priority until here.');
     }
   }
-  root.querySelector('.turn').textContent = `Turn ${g.Turn ?? 0}${active ? ` · ${active.Name}` : ''}`;
+  const dayTime = model.controls?.dayTime;
+  root.querySelector('.turn').textContent = `Turn ${g.Turn ?? 0}${active ? ` · ${active.Name}` : ''}${dayTime ? ` · ${dayTime}` : ''}`;
 }
 
 function renderStack(model) {

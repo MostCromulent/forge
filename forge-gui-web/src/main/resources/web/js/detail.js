@@ -3,15 +3,16 @@ import { imageUrl } from './cards.js';
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop).
 let send = () => {};
 let hovered = null;
-let flipped = false;
+let faceIndex = 0;
 const details = new Map();
 
 export function initDetail(sendFn) {
   send = sendFn;
   document.addEventListener('keydown', e => {
     if (e.key.toLowerCase() !== 'f' || e.target instanceof HTMLInputElement || !hovered) return;
-    if (details.get(hovered.key)?.back) {
-      flipped = !flipped;
+    const count = details.get(hovered.key)?.faces.length ?? 0;
+    if (count > 1) {
+      faceIndex = (faceIndex + 1) % count;
       draw();
     }
   });
@@ -19,7 +20,7 @@ export function initDetail(sendFn) {
 
 // el carries data-key (the card) and data-zoom (its image, empty when the viewer may not see it)
 export function hoverCard(el) {
-  flipped = false;
+  faceIndex = 0;
   if (!el || !el.dataset.zoom) {
     hovered = null;
     draw();
@@ -41,7 +42,7 @@ function draw() {
   zoom.hidden = !hovered;
   if (!hovered) return;
   const d = hovered.key !== null ? details.get(hovered.key) : null;
-  const face = d && (flipped && d.back ? d.back : d.front);
+  const face = d?.faces[faceIndex] ?? d?.faces[0];
   if (!zoom.firstChild) {
     zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
     zoom.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
@@ -59,7 +60,7 @@ function draw() {
   zoom.querySelector('.type').textContent = face.type ?? '';
   setRulesText(zoom.querySelector('.text'), face.text ?? '');
   zoom.querySelector('.pt').textContent = face.pt ?? '';
-  zoom.querySelector('.hint').textContent = d.back ? (flipped ? 'F: front face' : 'F: back face') : '';
+  zoom.querySelector('.hint').textContent = d.faces.length > 1 ? `F: next face (${faceIndex + 1}/${d.faces.length})` : '';
 }
 
 // CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other

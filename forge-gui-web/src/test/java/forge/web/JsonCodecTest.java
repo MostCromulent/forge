@@ -55,6 +55,16 @@ public class JsonCodecTest {
     }
 
     @Test
+    public void commanderDamageIsKeyedByCardReference() {
+        final Map<Integer, Integer> damage = new LinkedHashMap<>();
+        damage.put(12, 7);
+        final JsonArray encoded = encodeOne(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, 1), TrackableProperty.CommanderDamage, damage).getAsJsonArray();
+        Assert.assertEquals(encoded.size(), 1);
+        Assert.assertEquals(encoded.get(0).getAsJsonObject().get("card"), JsonCodec.ref(DeltaPacket.TYPE_CARD_VIEW, 12));
+        Assert.assertEquals(encoded.get(0).getAsJsonObject().get("value").getAsInt(), 7);
+    }
+
+    @Test
     public void cardReferenceBecomesRefMarker() {
         Assert.assertEquals(encodeOne(cardKey(1), ofType(TrackableTypes.CardViewType), 7), JsonCodec.ref(DeltaPacket.TYPE_CARD_VIEW, 7));
     }

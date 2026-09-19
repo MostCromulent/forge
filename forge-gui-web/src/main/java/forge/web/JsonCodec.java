@@ -100,7 +100,22 @@ public final class JsonCodec {
         if (type == TrackableTypes.CombatViewType) {
             return combat((DeltaPacket.CombatData) value);
         }
+        if (prop == TrackableProperty.CommanderDamage || prop == TrackableProperty.CommanderCast) {
+            return byCommander((Map<Integer, Integer>) value);
+        }
         return plain(value);
+    }
+
+    // These maps are keyed by the commander's card id, which the browser can only follow as a reference
+    private static JsonElement byCommander(final Map<Integer, Integer> values) {
+        final JsonArray out = new JsonArray();
+        for (final Map.Entry<Integer, Integer> e : values.entrySet()) {
+            final JsonObject o = new JsonObject();
+            o.add("card", ref(DeltaPacket.TYPE_CARD_VIEW, e.getKey()));
+            o.addProperty("value", e.getValue());
+            out.add(o);
+        }
+        return out;
     }
 
     private static JsonElement entity(final int[] pair) {

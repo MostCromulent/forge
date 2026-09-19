@@ -5,6 +5,7 @@ import { game, derefAll } from './model.js';
 const STYLES = {
   attack: { color: '#ffffff', dash: [] },
   block: { color: '#ffffff', dash: [8, 6] },
+  plannedBlock: { color: '#ffffff', dash: [2, 6] },
   target: { color: '#ffcc33', dash: [] },
 };
 
@@ -46,6 +47,10 @@ function paint(model) {
       arrow(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), STYLES.attack);
       for (const blocker of band.blockers ?? []) {
         arrow(ctx, elementFor(blocker.ref), elementFor(attacker.ref), STYLES.block);
+      }
+      // Blocks still being declared
+      for (const blocker of band.plannedBlockers ?? []) {
+        arrow(ctx, elementFor(blocker.ref), elementFor(attacker.ref), STYLES.plannedBlock);
       }
     }
   }

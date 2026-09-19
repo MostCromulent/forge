@@ -26,6 +26,7 @@ import forge.game.spellability.SpellAbilityView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.match.YieldController;
+import forge.gamemodes.match.YieldMarker;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
@@ -294,12 +295,33 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
-    private static JsonObject controlsMessage() {
+    private JsonObject controlsMessage() {
         final JsonObject m = JsonCodec.message("controls");
         m.add("myStops", stops(FPref.PHASES_HUMAN));
         m.add("otherStops", stops(FPref.PHASES_AI));
         m.addProperty("autoPass", FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
+        m.addProperty("dayTime", getDayTime());
+        final IGameController controller = getGameController();
+        final YieldController yields = controller == null ? null : controller.getYieldController();
+        final YieldMarker marker = yields == null ? null : yields.getAutoPassUntilMarker();
+        if (marker != null) {
+            final JsonObject mk = new JsonObject();
+            mk.addProperty("phase", marker.getPhase().name());
+            mk.addProperty("mine", isLocalPlayer(marker.getPhaseOwner()));
+            m.add("marker", mk);
+        }
         return m;
+    }
+
+    @Override
+    public void refreshYieldUi(final PlayerView player) {
+        send(controlsMessage());
+    }
+
+    @Override
+    public void updateDayTime(final String daytime) {
+        super.updateDayTime(daytime);
+        send(controlsMessage());
     }
 
     private static JsonArray stops(final FPref[] keys) {
@@ -314,12 +336,18 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     private void toggleStop(final PhaseType phase, final boolean mine) {
-        if (phase.ordinal() == 0) {
-            return;
+        if (phase.ordinal() > 0) {
+            setStop(phase, mine, !FModel.getPreferences().getPrefBoolean(stopKey(phase, mine)));
         }
-        final FPref key = (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
+    }
+
+    private static FPref stopKey(final PhaseType phase, final boolean mine) {
+        return (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
+    }
+
+    private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
         final ForgePreferences prefs = FModel.getPreferences();
-        prefs.setPref(key, !prefs.getPrefBoolean(key));
+        prefs.setPref(stopKey(phase, mine), stop);
         prefs.save();
         for (final PlayerView p : getGameView().getPlayers()) {
             if (isLocalPlayer(p) == mine) {
@@ -328,15 +356,38 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    // Desktop's right-click on a phase: pass priority until that phase. The opponents' row marks the first opponent
+    private void toggleMarker(final PhaseType phase, final boolean mine) {
+        if (phase.ordinal() == 0) {
+            return;
+        }
+        PlayerView owner = mine ? getCurrentPlayer() : null;
+        for (final PlayerView p : getGameView().getPlayers()) {
+            if (owner == null && !isLocalPlayer(p)) {
+                owner = p;
+            }
+        }
+        if (owner != null) {
+            // A marker only fires at a phase the player stops at
+            handleYieldMarkerToggle(owner, phase, () -> setStop(phase, mine, true));
+        }
+    }
+
+    // mayFlip hides an opponent's face-down card but shows the owner theirs, as on desktop
     private JsonObject detailMessage(final CardView card) {
         final JsonObject m = JsonCodec.message("detail");
         m.addProperty("key", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()));
+        final JsonArray faces = new JsonArray();
         if (mayView(card)) {
-            m.add("front", face(card.getCurrentState()));
-            if (card.hasBackSide() && card.hasAlternateState()) {
-                m.add("back", face(card.getAlternateState()));
+            faces.add(face(card.getCurrentState()));
+            if (card.isSplitCard() && card.hasLeftSplitState() && card.hasRightSplitState()) {
+                faces.add(face(card.getLeftSplitState()));
+                faces.add(face(card.getRightSplitState()));
+            } else if (mayFlip(card)) {
+                faces.add(face(card.getAlternateState()));
             }
         }
+        m.add("faces", faces);
         return m;
     }
 
@@ -971,6 +1022,11 @@ public class WebGuiGame extends NetworkGuiGame {
                     toggleStop(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
                     send(controlsMessage());
                 }
+                case "toggleMarker" -> {
+                    toggleMarker(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
+                    send(controlsMessage());
+                }
+                case "useMana" -> controller.useMana(msg.get("color").getAsByte());
                 case "nextGame" -> controller.nextGameDecision(NextGameDecision.valueOf(msg.get("decision").getAsString()));
                 default -> Logger.warn("Web client: unknown browser message {}", type);
             }

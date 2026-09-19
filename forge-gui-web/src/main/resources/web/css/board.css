@@ -39,7 +39,10 @@
 .emblem.noimg img { display: none; }
 .emblem.noimg .initials { display: block; }
 .emblem.selectable { box-shadow: 0 0 0 2px var(--select), 0 0 12px var(--select); }
-.mana { font-size: 12px; color: var(--muted); min-height: 1em; }
+.mana { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.mana-button { padding: 1px 7px; font-size: 12px; font-weight: 700; border-radius: 10px; }
+.mana-button:disabled { opacity: .8; cursor: default; }
+.player-counter.commander-damage { border-style: dashed; }
 #phase-strip { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 16px; justify-content: center; align-items: center; font-size: 12px; }
 #phase-strip .turn { grid-column: 2; grid-row: 1 / span 2; }
 .phase-row { display: flex; gap: 2px; align-items: center; }
@@ -50,6 +53,7 @@
 .phase.stop { color: var(--text); text-decoration: none; opacity: 1; }
 .phase.stop::before { content: "● "; font-size: 8px; vertical-align: middle; }
 .phase.current { background: var(--accent); border-color: var(--accent-2); color: var(--text); font-weight: 600; opacity: 1; }
+.phase.marker { border: 2px dashed var(--select); color: var(--text); opacity: 1; }
 #stack { background: var(--surface); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 55%; flex: none; }
 #stack:empty { display: none; }
 .stack-item { background: var(--surface-2); border-radius: 6px; padding: 6px; font-size: 12px; display: flex; gap: 8px; align-items: flex-start; border: 1px solid var(--line); }

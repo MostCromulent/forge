@@ -3,27 +3,31 @@ import { createCard, updateCard, setPileCount } from './cards.js';
 import { stateOf } from './model.js';
 
 // A slot is one spot on the battlefield: a card with its attachments tucked under it, or a pile of identical permanents
-export function renderBattlefield(root, model, cards, select) {
-  const slots = slotsFor(model, cards);
+export function renderBattlefield(root, model, cards, onField, select) {
+  const slots = slotsFor(model, cards, onField);
   const isLand = slot => /Land/.test(stateOf(model, slot.top).Type ?? '');
   const draw = (rowEl, rowSlots) => reconcile(rowEl, rowSlots, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select));
   draw(root.querySelector('.lands'), slots.filter(isLand));
   draw(root.querySelector('.permanents'), slots.filter(s => !isLand(s)));
 }
 
-function slotsFor(model, cards) {
-  const onField = new Set(cards.map(c => c.$key));
+// An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
+function slotsFor(model, cards, onField) {
+  const byKey = new Map(onField.map(c => [c.$key, c]));
+  const hostOf = c => byKey.get(c.EntityAttachedTo?.ref);
+  const rootOf = c => {
+    let host = c;
+    for (let i = 0; i < 10 && hostOf(host); i++) host = hostOf(host);
+    return host;
+  };
   const under = new Map();
-  const hosts = [];
-  for (const c of cards) {
-    const host = c.EntityAttachedTo?.ref;
-    if (host !== undefined && onField.has(host)) {
-      if (!under.has(host)) under.set(host, []);
-      under.get(host).push(c);
-    } else {
-      hosts.push(c);
-    }
+  for (const c of onField) {
+    if (!hostOf(c)) continue;
+    const host = rootOf(c).$key;
+    if (!under.has(host)) under.set(host, []);
+    under.get(host).push(c);
   }
+  const hosts = cards.filter(c => !hostOf(c));
   const selectable = new Set((model.prompt?.selectable ?? []).map(r => r?.ref));
   const highlighted = new Set(model.prompt?.highlighted ?? []);
   const piles = new Map();
