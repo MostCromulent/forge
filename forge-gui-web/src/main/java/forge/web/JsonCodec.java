@@ -149,7 +149,7 @@ public final class JsonCodec {
             return new JsonPrimitive(e.name());
         }
         if (v instanceof ManaCost m) {
-            return new JsonPrimitive(m.getShortString());
+            return new JsonPrimitive(manaCost(m));
         }
         if (v instanceof CardTypeView t) {
             return new JsonPrimitive(t.toString());
@@ -201,5 +201,10 @@ public final class JsonCodec {
             return a;
         }
         return null;
+    }
+
+    // Lands and tokens have no cost at all, which is different from a cost of {0}
+    static String manaCost(final ManaCost cost) {
+        return cost == null || cost.isNoCost() ? "" : cost.getSimpleString();
     }
 }

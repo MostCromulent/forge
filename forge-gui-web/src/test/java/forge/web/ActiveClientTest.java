@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameState;
@@ -8,6 +9,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
+import forge.util.Localizer;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -106,6 +108,54 @@ public class ActiveClientTest {
             Assert.assertTrue(browser.zonesShown.contains("Library"), "no library search reached the browser: " + browser.zonesShown);
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
             Assert.assertEquals(gui.skippedProperties(), 0);
+            gui.onBrowserMessage(FakeBrowser.action("concede"));
+        } finally {
+            onUi(local::shutdown);
+        }
+    }
+
+    private static int turn(final FakeBrowser browser) {
+        final JsonObject state = browser.last("state");
+        final JsonObject game = state == null ? null : browser.model.objectsCopy().get(state.get("root").getAsInt());
+        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
+    }
+
+    private static String okLabel(final FakeBrowser browser) {
+        return browser.last("prompt").getAsJsonObject("ok").get("label").getAsString();
+    }
+
+    private static boolean okEnabled(final FakeBrowser browser) {
+        return browser.last("prompt").getAsJsonObject("ok").get("enabled").getAsBoolean();
+    }
+
+    @Test(timeOut = 180000)
+    public void endTurnPassesTheTurnWithoutPressingOk() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final LocalGame local = new LocalGame();
+        try {
+            final WebGuiGame gui = new WebGuiGame();
+            // Keeps its opening hand, then never passes priority, so only End Turn can move the game on
+            final FakeBrowser browser = new FakeBrowser(gui, false, true);
+            gui.attach(browser);
+            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+            final String keep = Localizer.getInstance().getMessage("lblKeep");
+            for (int i = 0; i < 600 && !keep.equals(okLabel(browser)); i++) {
+                Thread.sleep(100);
+            }
+            gui.onBrowserMessage(FakeBrowser.action("ok"));
+            for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && !keep.equals(okLabel(browser))); i++) {
+                Thread.sleep(100);
+            }
+            final int held = turn(browser);
+            Assert.assertTrue(held > 0, "the web seat never got priority");
+            Thread.sleep(2000);
+            Assert.assertEquals(turn(browser), held, "the game moved on while the seat held priority");
+
+            gui.onBrowserMessage(FakeBrowser.action("endTurn"));
+            for (int i = 0; i < 300 && turn(browser) == held; i++) {
+                Thread.sleep(100);
+            }
+            Assert.assertTrue(turn(browser) > held, "End Turn did not pass the turn");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
         } finally {
             onUi(local::shutdown);

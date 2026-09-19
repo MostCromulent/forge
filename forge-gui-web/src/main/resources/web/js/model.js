@@ -2,7 +2,7 @@
 export function createModel() {
   return {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
-    prompt: null, zones: [], requests: new Map(), gameOver: false,
+    prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null,
     inMatch: false, playerName: '', decks: [], error: null,
   };
 }

@@ -90,6 +90,11 @@ public class LoopbackGameTest {
             final BrowserModel fresh = CompletableFuture.supplyAsync(gui::freshSnapshot, gui.dispatchExecutor()).get(10, TimeUnit.SECONDS);
             assertSameIgnoringZone(browser.model.objectsCopy(), fresh.objectsCopy());
             Assert.assertEquals(gui.skippedProperties(), 0, "properties with no JSON form");
+            // The client builds its log from forwarded game events
+            final long turnEntries = browser.all("log").stream()
+                    .flatMap(m -> m.getAsJsonArray("entries").asList().stream())
+                    .filter(e -> "TURN".equals(e.getAsJsonObject().get("type").getAsString())).count();
+            Assert.assertTrue(turnEntries >= turns - 1, turnEntries + " turn log entries for " + turns + " turns");
 
             // A second match reuses the running loopback host
             final WebGuiGame second = new WebGuiGame();

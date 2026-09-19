@@ -12,13 +12,17 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-/** Records what the web client sends; when autoPlay is on, passes priority and answers every request with its default. */
+/**
+ * Records what the web client sends. With autoPlay it passes priority; with answerRequests it answers every request
+ * with its default. Without either it holds whatever the game asks.
+ */
 final class FakeBrowser implements BrowserChannel {
     final List<JsonObject> received = new CopyOnWriteArrayList<>();
     final BrowserModel model = new BrowserModel();
     final CountDownLatch gameOver = new CountDownLatch(1);
     private final WebGuiGame gui;
     private final boolean autoPlay;
+    private final boolean answerRequests;
     private final ExecutorService actions = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "FakeBrowser");
         t.setDaemon(true);
@@ -26,8 +30,13 @@ final class FakeBrowser implements BrowserChannel {
     });
 
     FakeBrowser(final WebGuiGame gui, final boolean autoPlay) {
+        this(gui, autoPlay, autoPlay);
+    }
+
+    FakeBrowser(final WebGuiGame gui, final boolean autoPlay, final boolean answerRequests) {
         this.gui = gui;
         this.autoPlay = autoPlay;
+        this.answerRequests = answerRequests;
     }
 
     @Override
@@ -42,7 +51,7 @@ final class FakeBrowser implements BrowserChannel {
                 }
             }
             case "request" -> {
-                if (autoPlay) {
+                if (answerRequests) {
                     later(reply(message.get("id").getAsInt(), message.get("default")));
                 }
             }

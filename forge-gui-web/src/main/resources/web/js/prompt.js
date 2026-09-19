@@ -1,13 +1,39 @@
 let built = false;
+let concedeTimer = 0;
 
 export function renderPrompt(model, send) {
   const root = document.getElementById('prompt');
   if (!built) {
-    root.innerHTML = '<p class="message"></p><div class="buttons"><button class="cancel"></button><button class="ok primary"></button></div>';
+    root.innerHTML = `
+      <div class="controls">
+        <button class="end-turn" title="Pass priority until the end of this turn (E)">End turn</button>
+        <button class="auto-pass" title="Pass priority automatically when you have nothing to play"></button>
+        <button class="undo" title="Undo your last undoable action, such as tapping a land for mana (Z)">Undo</button>
+        <button class="attack-all" title="Declare every creature that can attack">Attack all</button>
+        <button class="concede">Concede</button>
+      </div>
+      <p class="message"></p>
+      <div class="buttons"><button class="cancel"></button><button class="ok primary"></button></div>`;
     root.querySelector('.ok').onclick = () => send({ t: 'ok' });
     root.querySelector('.cancel').onclick = () => send({ t: 'cancel' });
+    root.querySelector('.end-turn').onclick = () => send({ t: 'endTurn' });
+    root.querySelector('.auto-pass').onclick = () => send({ t: 'autoPass' });
+    root.querySelector('.undo').onclick = () => send({ t: 'undo' });
+    root.querySelector('.attack-all').onclick = () => send({ t: 'attackAll' });
+    const concede = root.querySelector('.concede');
+    // The first click arms it; a second click within a few seconds concedes
+    concede.onclick = () => {
+      if (concede.classList.contains('armed')) {
+        disarm(concede);
+        send({ t: 'concede' });
+        return;
+      }
+      concede.classList.add('armed');
+      concede.textContent = 'Confirm concede';
+      concedeTimer = setTimeout(() => disarm(concede), 3000);
+    };
     document.addEventListener('keydown', e => {
-      if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog')) return;
+      if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = root.querySelector('.ok');
       const cancel = root.querySelector('.cancel');
       if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
@@ -15,16 +41,30 @@ export function renderPrompt(model, send) {
         ok.click();
       } else if (e.key === 'Escape' && !cancel.disabled) {
         cancel.click();
+      } else if (e.key.toLowerCase() === 'e') {
+        send({ t: 'endTurn' });
+      } else if (e.key.toLowerCase() === 'z') {
+        send({ t: 'undo' });
       }
     });
     built = true;
   }
+  const autoPass = !!model.controls?.autoPass;
+  const autoPassButton = root.querySelector('.auto-pass');
+  autoPassButton.textContent = `Auto-pass: ${autoPass ? 'on' : 'off'}`;
+  autoPassButton.classList.toggle('on', autoPass);
   const p = model.prompt;
   if (!p) return;
   root.querySelector('.message').textContent = p.message ?? '';
   setButton(root.querySelector('.ok'), p.ok);
   setButton(root.querySelector('.cancel'), p.cancel);
   root.querySelector('.ok').classList.toggle('focus', !!p.focusOk);
+}
+
+function disarm(concede) {
+  clearTimeout(concedeTimer);
+  concede.classList.remove('armed');
+  concede.textContent = 'Concede';
 }
 
 function setButton(button, spec) {

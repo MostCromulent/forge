@@ -9,9 +9,14 @@ import com.google.gson.JsonPrimitive;
 import forge.LobbyPlayer;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
+import forge.game.GameLog;
+import forge.game.GameLogEntry;
+import forge.game.GameLogEntryType;
+import forge.game.GameLogVerbosity;
 import forge.game.GameState;
 import forge.game.GameView;
 import forge.game.card.CardView;
+import forge.game.card.CardView.CardStateView;
 import forge.game.event.GameEvent;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
@@ -20,11 +25,14 @@ import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.NextGameDecision;
+import forge.gamemodes.match.YieldController;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
+import forge.gui.card.CardDetailUtil;
 import forge.interfaces.IGameController;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
@@ -73,6 +81,10 @@ public class WebGuiGame extends NetworkGuiGame {
     private final JsonObject prompt = initialPrompt();
     private final Set<Integer> highlighted = new LinkedHashSet<>();
     private final Map<String, JsonObject> shownZones = new LinkedHashMap<>();
+    // Written on the dispatch thread, replayed to a reloading browser from the socket thread
+    private final List<JsonObject> logEntries = new ArrayList<>();
+    private GameLog loggedLog;
+    private int loggedCount;
     private volatile BrowserChannel browser;
     private volatile JsonObject gameOver;
 
@@ -95,6 +107,10 @@ public class WebGuiGame extends NetworkGuiGame {
         synchronized (promptLock) {
             channel.send(prompt.deepCopy());
             channel.send(zonesMessage());
+        }
+        channel.send(controlsMessage());
+        synchronized (logEntries) {
+            channel.send(logMessage(logEntries, true));
         }
         requests.replay(channel::send);
         final JsonObject over = gameOver;
@@ -222,7 +238,123 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void handleGameEvent(final GameEvent event) {
-        // FControlGameEventHandler would post to the host UI thread; everything the browser needs comes from state
+        // Only the game log: FControlGameEventHandler would post to the host UI thread, and the rest comes from state
+        final GameView gv = getGameView();
+        final GameLog log = gv == null ? null : gv.getGameLog();
+        if (log == null) {
+            return;
+        }
+        log.getEventVisitor().recieve(event);
+        forwardNewLogEntries(log);
+    }
+
+    private void forwardNewLogEntries(final GameLog log) {
+        final List<GameLogEntry> all = log.getAllEntries();
+        final boolean newGame = log != loggedLog;
+        if (newGame) {
+            loggedLog = log;
+            loggedCount = 0;
+        }
+        final Set<GameLogEntryType> shown = shownLogTypes();
+        final List<JsonObject> added = new ArrayList<>();
+        for (final GameLogEntry entry : all.subList(loggedCount, all.size())) {
+            if (shown.contains(entry.type())) {
+                final JsonObject e = new JsonObject();
+                e.addProperty("type", entry.type().name());
+                e.addProperty("message", entry.message());
+                added.add(e);
+            }
+        }
+        loggedCount = all.size();
+        synchronized (logEntries) {
+            if (newGame) {
+                logEntries.clear();
+            }
+            logEntries.addAll(added);
+        }
+        if (newGame || !added.isEmpty()) {
+            send(logMessage(added, newGame));
+        }
+    }
+
+    // The desktop log's verbosity preference
+    private static Set<GameLogEntryType> shownLogTypes() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final GameLogVerbosity verbosity = GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE));
+        return verbosity == GameLogVerbosity.CUSTOM ? prefs.getCustomLogTypes() : verbosity.getIncludedTypes();
+    }
+
+    private static JsonObject logMessage(final List<JsonObject> entries, final boolean full) {
+        final JsonObject m = JsonCodec.message("log");
+        m.addProperty("full", full);
+        final JsonArray a = new JsonArray();
+        entries.forEach(a::add);
+        m.add("entries", a);
+        return m;
+    }
+
+    // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
+    private static JsonObject controlsMessage() {
+        final JsonObject m = JsonCodec.message("controls");
+        m.add("myStops", stops(FPref.PHASES_HUMAN));
+        m.add("otherStops", stops(FPref.PHASES_AI));
+        m.addProperty("autoPass", FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
+        return m;
+    }
+
+    private static JsonArray stops(final FPref[] keys) {
+        final JsonArray out = new JsonArray();
+        final PhaseType[] phases = PhaseType.values();
+        for (int i = 1; i < phases.length; i++) {
+            if (FModel.getPreferences().getPrefBoolean(keys[i - 1])) {
+                out.add(phases[i].name());
+            }
+        }
+        return out;
+    }
+
+    private void toggleStop(final PhaseType phase, final boolean mine) {
+        if (phase.ordinal() == 0) {
+            return;
+        }
+        final FPref key = (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
+        final ForgePreferences prefs = FModel.getPreferences();
+        prefs.setPref(key, !prefs.getPrefBoolean(key));
+        prefs.save();
+        for (final PlayerView p : getGameView().getPlayers()) {
+            if (isLocalPlayer(p) == mine) {
+                pushSkipPhaseToControllers(p, phase);
+            }
+        }
+    }
+
+    private JsonObject detailMessage(final CardView card) {
+        final JsonObject m = JsonCodec.message("detail");
+        m.addProperty("key", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()));
+        if (mayView(card)) {
+            m.add("front", face(card.getCurrentState()));
+            if (card.hasBackSide() && card.hasAlternateState()) {
+                m.add("back", face(card.getAlternateState()));
+            }
+        }
+        return m;
+    }
+
+    private JsonObject face(final CardStateView state) {
+        final JsonObject f = new JsonObject();
+        f.addProperty("name", state.getName());
+        f.addProperty("cost", JsonCodec.manaCost(state.getManaCost()));
+        f.addProperty("type", state.getType() == null ? "" : state.getType().toString());
+        if (state.isCreature()) {
+            f.addProperty("pt", state.getPower() + "/" + state.getToughness());
+        } else if (state.isPlaneswalker()) {
+            f.addProperty("pt", state.getLoyalty());
+        } else if (state.isBattle()) {
+            f.addProperty("pt", state.getDefense());
+        }
+        f.addProperty("text", CardDetailUtil.composeCardText(state, getGameView(), true).trim());
+        f.addProperty("imageKey", state.getImageKey());
+        return f;
     }
 
     @Override
@@ -801,6 +933,13 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         mirrorLock.lock();
         try {
+            if ("detail".equals(type)) {
+                final CardView card = lookup(msg, TrackableTypes.CardViewType);
+                if (card != null) {
+                    send(detailMessage(card));
+                }
+                return;
+            }
             final IGameController controller = getGameController();
             if (controller == null) {
                 return;
@@ -821,6 +960,17 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "ok" -> controller.selectButtonOk();
                 case "cancel" -> controller.selectButtonCancel();
                 case "concede" -> controller.concede();
+                case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
+                case "undo" -> controller.undoLastAction();
+                case "attackAll" -> controller.alphaStrike();
+                case "autoPass" -> {
+                    YieldController.toggleAutoPassNoActions(controller);
+                    send(controlsMessage());
+                }
+                case "toggleStop" -> {
+                    toggleStop(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
+                    send(controlsMessage());
+                }
                 case "nextGame" -> controller.nextGameDecision(NextGameDecision.valueOf(msg.get("decision").getAsString()));
                 default -> Logger.warn("Web client: unknown browser message {}", type);
             }

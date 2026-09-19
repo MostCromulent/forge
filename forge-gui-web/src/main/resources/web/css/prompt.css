@@ -1,5 +1,9 @@
 #prompt { display: grid; gap: 8px; align-content: end; }
 #prompt .message { margin: 0; min-height: 2.8em; }
+#prompt .controls { display: flex; flex-wrap: wrap; gap: 4px; }
+#prompt .controls button { padding: 3px 8px; font-size: 12px; }
+#prompt .controls .auto-pass.on { border-color: var(--accent-2); background: var(--accent); }
+#prompt .controls .concede.armed { border-color: var(--danger); color: var(--danger); font-weight: 600; }
 #prompt .buttons { display: flex; gap: 8px; justify-content: flex-end; }
 #prompt .ok { min-width: 140px; padding: 12px 20px; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; }
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 16px var(--accent); }
