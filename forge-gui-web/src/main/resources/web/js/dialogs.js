@@ -1,4 +1,5 @@
 import { createCard, updateCard, imageUrl } from './cards.js';
+import { hoverCard } from './detail.js';
 
 let shownId = null;
 
@@ -66,10 +67,16 @@ function optionElement(model, opt, onClick) {
     const c = el('div', 'card inline');
     const img = el('img');
     img.alt = '';
+    // Long lists of card images load as they scroll into view
+    img.loading = 'lazy';
     img.src = imageUrl(opt.imageKey ?? '');
     img.onerror = () => c.classList.add('noimg');
     const frame = el('div', 'frame', opt.name ?? opt.label);
     c.append(img, frame);
+    c.title = opt.label ?? opt.name ?? '';
+    c.dataset.zoom = img.src;
+    c.addEventListener('mouseenter', () => hoverCard(c));
+    c.addEventListener('mouseleave', () => hoverCard(null));
     c.onclick = onClick;
     return c;
   }
@@ -90,6 +97,7 @@ function build(req, model, answer) {
     case 'option': return option(dlg, req, model, answer);
     case 'text': return text(dlg, req, answer);
     case 'distribute': return distribute(dlg, req, model, answer);
+    case 'sideboard': return sideboard(dlg, req, model, answer);
     default:
       dlg.append(actions(button('OK', true, () => answer(req.default))));
       return wrap(dlg);
@@ -256,5 +264,41 @@ function distribute(dlg, req, model, answer) {
   };
   dlg.append(...rows, remaining, actions(...(req.maySkip ? [button('Skip', false, () => answer(null))] : []), confirm));
   sync();
+  return wrap(dlg);
+}
+
+// Between games: move copies between the main deck and the sideboard. The host re-asks if the deck is illegal
+function sideboard(dlg, req, model, answer) {
+  const inMain = [...req.main];
+  const mainList = el('div', 'sb-list');
+  const sideList = el('div', 'sb-list');
+  const mainHead = el('h4');
+  const sideHead = el('h4');
+  const row = (i, count, arrow, move) => {
+    const r = el('div', 'sb-row');
+    const card = optionElement(model, req.entries[i], move);
+    const n = el('span', 'sb-count', `×${count}`);
+    r.append(card, el('span', 'sb-name', req.entries[i].name), n, button(arrow, false, move));
+    return r;
+  };
+  const redraw = () => {
+    const mainTotal = inMain.reduce((a, b) => a + b, 0);
+    const sideTotal = req.entries.reduce((a, e, i) => a + e.total - inMain[i], 0);
+    mainHead.textContent = `Main deck (${mainTotal})`;
+    sideHead.textContent = `Sideboard (${sideTotal})`;
+    mainList.replaceChildren(...req.entries.flatMap((e, i) => inMain[i] > 0
+      ? [row(i, inMain[i], '→', () => { inMain[i]--; redraw(); })] : []));
+    sideList.replaceChildren(...req.entries.flatMap((e, i) => e.total - inMain[i] > 0
+      ? [row(i, e.total - inMain[i], '←', () => { inMain[i]++; redraw(); })] : []));
+  };
+  const columns = el('div', 'sb-columns');
+  const left = el('div');
+  left.append(mainHead, mainList);
+  const right = el('div');
+  right.append(sideHead, sideList);
+  columns.append(left, right);
+  dlg.append(el('p', 'hint', 'Click a card or its arrow to move one copy.'), columns,
+    actions(button('Reset', false, () => { req.main.forEach((n, i) => { inMain[i] = n; }); redraw(); }), button('Done', true, () => answer(inMain))));
+  redraw();
   return wrap(dlg);
 }

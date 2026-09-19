@@ -3,8 +3,11 @@ package forge.web;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import forge.deck.CardPool;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gui.interfaces.IGuiGame;
+import forge.item.PaperCard;
+import forge.model.FModel;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -68,6 +71,28 @@ public class WebGuiGameTest {
         choice.add(2);
         gui.onBrowserMessage(FakeBrowser.reply(request.get("id").getAsInt(), choice));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("c"));
+    }
+
+    @Test
+    public void sideboardReplyBecomesTheNewMainDeck() throws Exception {
+        final PaperCard bears = FModel.getMagicDb().getCommonCards().getCard("Grizzly Bears");
+        final PaperCard naturalize = FModel.getMagicDb().getCommonCards().getCard("Naturalize");
+        final CardPool main = new CardPool();
+        main.add(bears, 2);
+        final CardPool side = new CardPool();
+        side.add(naturalize, 1);
+        final CompletableFuture<List<PaperCard>> newMain = CompletableFuture.supplyAsync(() -> gui.sideboard(side, main, "Game 2"));
+        final JsonObject request = browser.awaitLast("request", 2000);
+        Assert.assertEquals(request.get("kind").getAsString(), "sideboard");
+        // Swap one Grizzly Bears for the Naturalize
+        final JsonArray counts = new JsonArray();
+        counts.add(1);
+        counts.add(1);
+        gui.onBrowserMessage(FakeBrowser.reply(request.get("id").getAsInt(), counts));
+        final List<PaperCard> result = newMain.get(2, TimeUnit.SECONDS);
+        Assert.assertEquals(result.stream().filter(bears::equals).count(), 1);
+        Assert.assertEquals(result.stream().filter(naturalize::equals).count(), 1);
+        Assert.assertEquals(result.size(), 2);
     }
 
     @Test

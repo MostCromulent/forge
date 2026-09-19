@@ -6,6 +6,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import forge.ImageKeys;
 import forge.LobbyPlayer;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
@@ -15,6 +16,7 @@ import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.GameState;
 import forge.game.GameView;
+import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
 import forge.game.card.CardView.CardStateView;
 import forge.game.event.GameEvent;
@@ -654,6 +656,10 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
             } else if (item instanceof PlayerView player) {
                 o.add("player", JsonCodec.ref(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()));
+            } else if (item instanceof CardFaceView face) {
+                // Naming a card: show the card itself
+                o.addProperty("name", face.getName());
+                o.addProperty("imageKey", ImageKeys.CARD_PREFIX + face.getName());
             }
             out.add(o);
         }
@@ -970,10 +976,55 @@ public class WebGuiGame extends NetworkGuiGame {
         return result;
     }
 
+    // One entry per distinct card; the reply is how many copies of each go in the main deck.
+    // PlayerControllerHuman checks deck sizes and asks again if the result is illegal
     @Override
     public List<PaperCard> sideboard(final CardPool sideboard, final CardPool main, final String message) {
-        // Documented default: PlayerControllerHuman keeps the main deck on null
-        return null;
+        final Map<PaperCard, int[]> counts = new LinkedHashMap<>();
+        for (final Map.Entry<PaperCard, Integer> e : main) {
+            counts.computeIfAbsent(e.getKey(), k -> new int[2])[0] += e.getValue();
+        }
+        for (final Map.Entry<PaperCard, Integer> e : sideboard) {
+            counts.computeIfAbsent(e.getKey(), k -> new int[2])[1] += e.getValue();
+        }
+        final List<PaperCard> cards = new ArrayList<>(counts.keySet());
+        final JsonArray entries = new JsonArray();
+        final JsonArray inMain = new JsonArray();
+        final int[] totals = new int[cards.size()];
+        for (int i = 0; i < cards.size(); i++) {
+            final PaperCard card = cards.get(i);
+            final int[] c = counts.get(card);
+            totals[i] = c[0] + c[1];
+            final JsonObject o = new JsonObject();
+            o.addProperty("name", card.getName());
+            o.addProperty("imageKey", ImageKeys.CARD_PREFIX + card.getName() + "|" + card.getEdition() + "|" + card.getArtIndex());
+            o.addProperty("total", totals[i]);
+            entries.add(o);
+            inMain.add(c[0]);
+        }
+        final JsonObject p = new JsonObject();
+        p.addProperty("message", message);
+        p.add("entries", entries);
+        p.add("main", inMain);
+        final JsonElement reply = ask("sideboard", p, inMain, v -> {
+            if (!v.isJsonArray() || v.getAsJsonArray().size() != totals.length) {
+                return false;
+            }
+            for (int i = 0; i < totals.length; i++) {
+                final JsonElement e = v.getAsJsonArray().get(i);
+                if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber() || e.getAsInt() < 0 || e.getAsInt() > totals[i]) {
+                    return false;
+                }
+            }
+            return true;
+        });
+        final List<PaperCard> newMain = new ArrayList<>();
+        for (int i = 0; i < cards.size(); i++) {
+            for (int n = reply.getAsJsonArray().get(i).getAsInt(); n > 0; n--) {
+                newMain.add(cards.get(i));
+            }
+        }
+        return newMain;
     }
 
     public void onBrowserMessage(final JsonObject msg) {

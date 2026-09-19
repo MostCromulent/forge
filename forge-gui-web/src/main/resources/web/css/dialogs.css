@@ -9,3 +9,11 @@
 .dialog .text-option.picked { background: var(--accent); }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
+.sb-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: min(80vw, 760px); }
+.sb-columns h4 { margin: 0 0 6px; }
+.sb-list { display: grid; gap: 4px; max-height: 60vh; overflow: auto; padding-right: 4px; }
+.sb-row { display: flex; align-items: center; gap: 8px; }
+.sb-row .card.inline { width: 44px; height: 62px; flex: none; }
+.sb-row .card.inline .frame { font-size: 8px; padding: 3px; }
+.sb-count { min-width: 28px; font-weight: 700; }
+.sb-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
