@@ -1,0 +1,7 @@
+#start { display: grid; place-items: center; height: 100vh; }
+.start-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 28px 32px; display: grid; gap: 14px; width: min(420px, 90vw); }
+.start-card h1 { margin: 0; font-size: 28px; letter-spacing: .04em; }
+.start-card label { display: grid; gap: 4px; color: var(--muted); }
+.start-card input, .start-card select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
+.start-card .actions { display: flex; justify-content: space-between; }
+.error { color: var(--danger); margin: 0; }

@@ -28,7 +28,9 @@ public final class WebMain {
         final WebSession session = new WebSession(ui, local, IDLE_MILLIS, quit::countDown);
         try (WebServer server = new WebServer(session, newToken())) {
             System.out.println("Forge web UI: " + server.url());
-            openBrowser(server.url(), ui);
+            if (!Boolean.getBoolean("forge.web.noBrowser")) {
+                openBrowser(server.url(), ui);
+            }
             quit.await();
         }
         // Engine and netplay threads are not all daemons

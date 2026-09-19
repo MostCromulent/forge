@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.deck.DeckProxy;
 import forge.game.GameType;
+import forge.gamemodes.quest.QuestController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
@@ -117,18 +118,23 @@ public final class WebSession implements WebServer.Endpoint {
     private JsonObject deckList() {
         decks.clear();
         final JsonArray list = new JsonArray();
-        for (final DeckProxy proxy : DeckProxy.getAllConstructedDecks()) {
-            final String key = proxy.getPath() + "/" + proxy.getName();
-            decks.put(key, proxy);
-            final JsonObject d = new JsonObject();
-            d.addProperty("key", key);
-            d.addProperty("name", proxy.getName());
-            d.addProperty("problem", GameType.Constructed.getDeckFormat().getDeckConformanceProblem(proxy.getDeck()));
-            list.add(d);
-        }
+        addDecks(list, DeckProxy.getAllConstructedDecks(), "user", "");
+        addDecks(list, DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), "precon", "Precon: ");
         final JsonObject m = JsonCodec.message("decks");
         m.add("decks", list);
         return m;
+    }
+
+    private void addDecks(final JsonArray list, final Iterable<DeckProxy> source, final String keyPrefix, final String labelPrefix) {
+        for (final DeckProxy proxy : source) {
+            final String key = keyPrefix + ":" + proxy.getPath() + "/" + proxy.getName();
+            decks.put(key, proxy);
+            final JsonObject d = new JsonObject();
+            d.addProperty("key", key);
+            d.addProperty("name", labelPrefix + proxy.getName());
+            d.addProperty("problem", GameType.Constructed.getDeckFormat().getDeckConformanceProblem(proxy.getDeck()));
+            list.add(d);
+        }
     }
 
     // Checked here so the lobby's deck-legality confirm dialog never opens on the host
