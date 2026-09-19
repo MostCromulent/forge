@@ -27,6 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 
 import java.util.EnumMap;
 import java.util.Iterator;
+import java.util.concurrent.Executor;
 
 final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements IHasForgeLog {
 
@@ -67,6 +68,17 @@ final class GameClientHandler extends GameProtocolHandler<IGuiGame> implements I
             return false;
         }
         return super.shouldDispatchToGuiThread(protocolMethod);
+    }
+
+    @Override
+    protected void dispatch(final ProtocolMethod protocolMethod, final Runnable toRun) {
+        final Executor executor = client.getDispatchExecutor();
+        if (executor == null) {
+            super.dispatch(protocolMethod, toRun);
+            return;
+        }
+        // A client sharing a JVM with its host cannot share the host's GUI thread: the host blocks it waiting for this client
+        executor.execute(toRun);
     }
 
     @SuppressWarnings("unchecked")

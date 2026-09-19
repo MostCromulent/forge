@@ -25,6 +25,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.util.List;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 public class FGameClient implements IToServer, IHasForgeLog {
@@ -38,6 +39,7 @@ public class FGameClient implements IToServer, IHasForgeLog {
     private IDraftEventHandler draftHandler;
     private final ReplyPool replies = new ReplyPool();
     private volatile boolean disconnectSimulated;
+    private volatile Executor dispatchExecutor;
     private Channel channel;
 
     public FGameClient(String username, IGuiGame clientGui, String hostname, int port) {
@@ -56,6 +58,15 @@ public class FGameClient implements IToServer, IHasForgeLog {
     }
     final ReplyPool getReplyPool() {
         return replies;
+    }
+
+    /** Runs protocol calls on this executor instead of the GUI thread. Set before connect(). */
+    public void setDispatchExecutor(final Executor executor) {
+        dispatchExecutor = executor;
+    }
+
+    Executor getDispatchExecutor() {
+        return dispatchExecutor;
     }
 
     public void connect() {

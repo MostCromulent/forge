@@ -149,6 +149,7 @@ public final class FServerManager implements IHasForgeLog {
     }
 
     private volatile boolean isHosting = false;
+    private volatile boolean loopbackOnly;
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
     private UpnpService upnpService = null;
@@ -234,6 +235,17 @@ public final class FServerManager implements IHasForgeLog {
         } else {
             startUPnP = UPnPOption.equalsIgnoreCase("ALWAYS");
         }
+        bind(null, port, startUPnP);
+    }
+
+    /** Hosts a game only this machine can join: 127.0.0.1, an ephemeral port, no UPnP, no AFK timeout. Returns the port. */
+    public int startLoopbackServer() {
+        loopbackOnly = true;
+        bind(InetAddress.getLoopbackAddress(), 0, false);
+        return port;
+    }
+
+    private void bind(final InetAddress address, final int requestedPort, final boolean startUPnP) {
         netLog.info("Starting Multiplayer Server");
         try {
             final ServerBootstrap b = new ServerBootstrap()
@@ -260,7 +272,9 @@ public final class FServerManager implements IHasForgeLog {
                     });
 
             // Bind and start to accept incoming connections.
-            final ChannelFuture ch = b.bind(port).sync().channel().closeFuture();
+            final Channel serverChannel = (address == null ? b.bind(requestedPort) : b.bind(address, requestedPort)).sync().channel();
+            this.port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
+            final ChannelFuture ch = serverChannel.closeFuture();
             new Thread(() -> {
                 try {
                     ch.sync();
@@ -340,6 +354,7 @@ public final class FServerManager implements IHasForgeLog {
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
         isHosting = false;
+        loopbackOnly = false;
         UPnPMapped = false;
         NetworkLogConfig.deactivateNetworkLogging();
         // create new EventLoopGroups for potential restart
@@ -387,7 +402,7 @@ public final class FServerManager implements IHasForgeLog {
 
     public String formatAfkTimeoutMessage() {
         final int minutes = FModel.getNetPreferences().getPrefInt(ForgeNetPreferences.FNetPref.NET_AFK_TIMEOUT);
-        if (minutes <= 0) {
+        if (loopbackOnly || minutes <= 0) {
             return Localizer.getInstance().getMessage("lblAfkTimeoutDisabled");
         }
         return Localizer.getInstance().getMessage("lblAfkTimeoutChat", minutes + ":00");
@@ -421,7 +436,7 @@ public final class FServerManager implements IHasForgeLog {
      * ...) is blocked on those methods not being null-safe.
      */
     public AfkTimeout armAfkTimeout(final PlayerControllerHuman controller, final InputSynchronized input) {
-        if (!isHosting() || localLobby == null) {
+        if (!isHosting() || localLobby == null || loopbackOnly) {
             return AfkTimeout.NOOP;
         }
         final HostedMatch hostedMatch = localLobby.getHostedMatch();
