@@ -22,6 +22,11 @@
 .slot > .card:not(:last-child):hover { z-index: 6; }
 .player { display: grid; gap: 6px; justify-items: center; }
 .avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; position: relative; cursor: pointer; border: 2px solid var(--line); }
+.avatar .portrait { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.avatar .ai-badge { display: none; position: absolute; left: -6px; top: -6px; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); border: 1px solid var(--accent-2); padding: 3px; }
+.avatar.ai .ai-badge { display: block; }
+.ai-badge svg { width: 100%; height: 100%; fill: var(--text); }
+.ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--select), 0 0 18px var(--select); }
 .avatar .initial { font-size: 28px; font-weight: 700; }
@@ -29,7 +34,7 @@
 .zone-tiles { display: grid; grid-template-columns: repeat(2, var(--tile-w)); gap: 6px; }
 .zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.zone-tile.back { background: repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
+.zone-tile.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
 .zone-tile.empty { background: none; border: 2px dotted var(--line); }
 .zone-tile .zone-name { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--muted); text-align: center; }
 .zone-tile img:not([hidden]) ~ .zone-name { display: none; }
@@ -67,10 +72,10 @@
 #stack .collapse { font-size: 12px; padding: 4px 10px; align-self: flex-start; }
 #stack.collapsed .collapse { border-color: var(--accent-2); }
 .stack-item { position: absolute; width: var(--stack-w); height: calc(var(--stack-w) * 1.4); border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 6px 18px #000a; transition: left .15s ease, top .15s ease, transform .15s ease; cursor: default; }
-.stack-item img { width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
-.stack-item .frame { display: none; }
+.stack-item img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
+.stack-item .frame { position: absolute; inset: 0; padding: 8px; font-weight: 700; font-size: 12px; }
 .stack-item.noimg img { display: none; }
-.stack-item.noimg .frame { display: block; padding: 8px; font-weight: 700; font-size: 12px; }
+.stack-item .caption { z-index: 2; }
 .stack-item.top { outline: 3px solid var(--accent-2); }
 .stack-item.lifted { transform: scale(1.15); }
 .stack-item .caption { position: absolute; left: 0; right: 0; bottom: 0; background: #000d; border-radius: 0 0 8px 8px; padding: 4px 6px; font-size: 11px; line-height: 1.3; }
@@ -101,12 +106,13 @@
 #game-over .panel { background: var(--surface); padding: 24px 32px; border-radius: 12px; text-align: center; }
 #game-over .actions { display: flex; gap: 8px; justify-content: center; }
 .card { width: var(--card-w); height: var(--card-h); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; flex: none; }
-.card img { width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
-.card .frame { display: none; }
+/* The text frame sits under the image, so a card reads while its image loads or when it has none */
+.card img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
+.card .frame { position: absolute; inset: 0; display: grid; gap: 2px; padding: 6px; font-size: 10px; align-content: start; border: 1px solid var(--line); border-radius: var(--radius); }
 .card.noimg img { display: none; }
-.card.noimg .frame { display: grid; gap: 2px; padding: 6px; font-size: 10px; height: 100%; align-content: start; border: 1px solid var(--line); border-radius: var(--radius); }
+.card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back img, .card.back .frame { display: none; }
-.card.back { background: repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
+.card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
 .card .pt { position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .badges { position: absolute; left: 4px; top: 4px; font-size: 10px; background: #000c; border-radius: 4px; padding: 0 3px; }
 .card .badges:empty, .card .pt:empty { display: none; }

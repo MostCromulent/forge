@@ -20,6 +20,7 @@ function onMessage(msg) {
     case 'hello':
       model.inMatch = msg.inMatch;
       model.playerName = msg.playerName ?? '';
+      if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.error = null;
       // The server replays open requests after every hello
       model.requests.clear();

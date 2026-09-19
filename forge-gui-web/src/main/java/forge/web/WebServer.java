@@ -2,6 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.common.primitives.Ints;
 import forge.ImageKeys;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
@@ -245,6 +246,17 @@ public final class WebServer implements AutoCloseable {
         protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
             final QueryStringDecoder q = new QueryStringDecoder(req.uri());
             final String path = q.path();
+            if ("/avatar".equals(path) || "/sleeve".equals(path)) {
+                final List<String> index = q.parameters().get("i");
+                final Integer i = index == null ? null : Ints.tryParse(index.get(0));
+                final byte[] png = i == null ? null : SkinSprites.png("/avatar".equals(path), i);
+                if (png == null) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                } else {
+                    respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
+                }
+                return;
+            }
             if ("/img".equals(path)) {
                 final List<String> key = q.parameters().get("key");
                 if (key == null) {

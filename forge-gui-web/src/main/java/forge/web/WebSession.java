@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.deck.DeckProxy;
 import forge.game.GameType;
@@ -106,7 +107,35 @@ public final class WebSession implements WebServer.Endpoint {
         final JsonObject m = JsonCodec.message("hello");
         m.addProperty("inMatch", match != null);
         m.addProperty("playerName", FModel.getPreferences().getPref(FPref.PLAYER_NAME));
+        // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
+        m.add("avatars", seatIndices(FPref.UI_AVATARS));
+        m.add("sleeves", seatIndices(FPref.UI_SLEEVES));
+        m.addProperty("avatarCount", SkinSprites.avatarCount());
+        m.addProperty("sleeveCount", SkinSprites.sleeveCount());
         return m;
+    }
+
+    private static JsonArray seatIndices(final FPref pref) {
+        final JsonArray a = new JsonArray();
+        a.add(LocalGame.storedIndex(pref, 0));
+        a.add(LocalGame.storedIndex(pref, 1));
+        return a;
+    }
+
+    // Kept only when both entries are real indices, so a bad message cannot corrupt the shared preference
+    private static void saveSeatIndices(final FPref pref, final JsonObject msg, final String field, final int count) {
+        if (!msg.has(field) || !msg.get(field).isJsonArray() || msg.getAsJsonArray(field).size() != 2) {
+            return;
+        }
+        final int[] v = new int[2];
+        for (int i = 0; i < 2; i++) {
+            final JsonElement e = msg.getAsJsonArray(field).get(i);
+            if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber() || e.getAsInt() < 0 || e.getAsInt() >= count) {
+                return;
+            }
+            v[i] = e.getAsInt();
+        }
+        FModel.getPreferences().setPref(pref, v[0] + "," + v[1]);
     }
 
     private static JsonObject error(final String message) {
@@ -164,6 +193,9 @@ public final class WebSession implements WebServer.Endpoint {
         }
         // Set before the match so HostedMatch never reaches the first-run name prompt
         FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
+        // The web seat joins with the first saved avatar and sleeve, as any netplay client does
+        saveSeatIndices(FPref.UI_AVATARS, msg, "avatars", SkinSprites.avatarCount());
+        saveSeatIndices(FPref.UI_SLEEVES, msg, "sleeves", SkinSprites.sleeveCount());
         FModel.getPreferences().save();
         final WebGuiGame gui = new WebGuiGame();
         match = gui;

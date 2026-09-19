@@ -6,6 +6,7 @@ import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
 import { hoverCard } from './detail.js';
 import { renderStack } from './stack.js';
+import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks.js';
 
 // Untap has no stop, as on desktop
 const PHASES = [
@@ -38,7 +39,7 @@ function renderSeat(root, model, player, onField, send, select) {
   if (!root.firstChild) {
     root.innerHTML = `
       <div class="player">
-        <div class="avatar"><span class="initial"></span><span class="life"></span></div>
+        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
         <div class="name"></div>
         <div class="player-counters"></div>
         <div class="emblems"></div>
@@ -51,6 +52,16 @@ function renderSeat(root, model, player, onField, send, select) {
   root.dataset.player = player.$key;
   const avatar = root.querySelector('.avatar');
   root.querySelector('.initial').textContent = (player.Name ?? '?').slice(0, 1).toUpperCase();
+  const portrait = root.querySelector('.portrait');
+  const portraitSrc = playerAvatarUrl(player);
+  if ((portrait.getAttribute('src') ?? '') !== portraitSrc) {
+    portrait.hidden = true;
+    portrait.onload = () => { portrait.hidden = false; };
+    if (portraitSrc) portrait.src = portraitSrc;
+    else portrait.removeAttribute('src');
+  }
+  avatar.classList.toggle('ai', !!player.IsAI);
+  root.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(player)));
   root.querySelector('.life').textContent = player.Life ?? 0;
   root.querySelector('.name').textContent = player.Name ?? '';
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
@@ -104,7 +115,8 @@ function renderZoneTiles(root, model, player) {
       el.querySelector('.zone-name').textContent = zoneName;
       el.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
       el.onclick = () => togglePile(Number(el.closest('.seat').dataset.player), zoneName);
-      el.addEventListener('mouseenter', () => hoverCard(el));
+      // The hover data sits on the image: the tile's own data-key is how the render finds it again
+      el.addEventListener('mouseenter', () => hoverCard(el.querySelector('img')));
       el.addEventListener('mouseleave', () => hoverCard(null));
       return el;
     },
@@ -119,8 +131,8 @@ function renderZoneTiles(root, model, player) {
         img.hidden = !src;
         if (src) img.src = src;
       }
-      el.dataset.key = top?.$key ?? '';
-      el.dataset.zoom = src;
+      img.dataset.key = top?.$key ?? '';
+      img.dataset.zoom = src;
       el.classList.toggle('back', (zoneName === 'Library' || zoneName === 'Hand') && cards.length > 0);
       el.classList.toggle('empty', cards.length === 0);
       el.querySelector('.zone-count').textContent = cards.length;

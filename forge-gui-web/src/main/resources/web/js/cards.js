@@ -1,5 +1,6 @@
 import { stateOf } from './model.js';
 import { hoverCard } from './detail.js';
+import { playerSleeveUrl, cssUrl } from './looks.js';
 
 export const imageUrl = key => `img?key=${encodeURIComponent(key)}`;
 
@@ -21,12 +22,13 @@ export function updateCard(el, model, card) {
   const selectable = (model.prompt?.selectable ?? []).some(r => r?.ref === card.$key);
   const type = visible ? (state.Type ?? '') : '';
   el.classList.toggle('back', !visible);
+  // A hidden card shows its owner's sleeve
+  el.style.setProperty('--sleeve', cssUrl(visible ? '' : playerSleeveUrl(model.objects.get(card.Owner?.ref))));
   el.classList.toggle('tapped', !!card.Tapped);
   el.classList.toggle('selectable', selectable);
   el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(card.$key));
   el.classList.toggle('attacking', !!card.Attacking);
   el.classList.toggle('blocking', !!card.Blocking);
-  el.classList.toggle('sickness', !!card.Sickness && /Creature/.test(type));
   el.classList.toggle('phased', !!card.PhasedOut);
   const src = visible && state.ImageKey ? imageUrl(state.ImageKey) : '';
   const img = el.querySelector('img');

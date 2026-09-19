@@ -65,7 +65,11 @@ function createSlot() {
 function updateSlot(el, model, slot, select) {
   // The host comes last so it paints over what is attached to it
   const cards = [...slot.attached, slot.top];
-  reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
+  reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
+    updateCard(c, model, card);
+    // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
+    c.classList.toggle('sickness', !!card.Sickness && /Creature/.test(stateOf(model, card).Type ?? ''));
+  });
   [...el.children].forEach((c, i) => c.style.setProperty('--under', i));
   el.style.setProperty('--attached', slot.attached.length);
   setPileCount(el.lastChild, slot.members.length);

@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.primitives.Ints;
 import forge.deck.Deck;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
@@ -11,6 +12,8 @@ import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
 import org.tinylog.Logger;
 
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +39,9 @@ public final class LocalGame {
         ai.setType(LobbySlotType.AI);
         ai.setName(aiName);
         ai.setDeck(aiDeck);
+        // Slot 0 would otherwise carry the host's own avatar and sleeve
+        ai.setAvatarIndex(storedIndex(FPref.UI_AVATARS, 1));
+        ai.setSleeveIndex(storedIndex(FPref.UI_SLEEVES, 1));
         ai.setIsReady(true);
         final LobbySlot seat = lobby.getSlot(1);
         seat.setType(LobbySlotType.OPEN);
@@ -64,6 +70,13 @@ public final class LocalGame {
             throw new IllegalStateException("The lobby refused to start the match");
         }
         start.run();
+    }
+
+    /** The saved avatar or sleeve for a lobby seat, falling back to the seat number as the desktop lobby does. */
+    static int storedIndex(final FPref pref, final int seat) {
+        final String[] stored = FModel.getPreferences().getPref(pref).split(",");
+        final Integer v = seat < stored.length ? Ints.tryParse(stored[seat].trim()) : null;
+        return v == null || v < 0 ? seat : v;
     }
 
     public HostedMatch hostedMatch() {
