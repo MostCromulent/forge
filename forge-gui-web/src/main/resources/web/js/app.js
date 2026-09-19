@@ -1,6 +1,9 @@
 import { connect } from './net.js';
 import { createModel, applyState } from './model.js';
 import { renderStart } from './start.js';
+import { renderMatch } from './board.js';
+import { renderPrompt, flash, showNotice } from './prompt.js';
+import { renderDialogs } from './dialogs.js';
 
 const model = createModel();
 let scheduled = false;
@@ -30,6 +33,8 @@ function onMessage(msg) {
     case 'zones': model.zones = msg.show; break;
     case 'request': model.requests.set(msg.id, msg); break;
     case 'gameOver': model.gameOver = true; break;
+    case 'notice': showNotice(msg); return;
+    case 'flash': flash(); return;
     default: break;
   }
   schedule();
@@ -44,5 +49,11 @@ function schedule() {
 function render() {
   document.getElementById('start').hidden = model.inMatch;
   document.getElementById('match').hidden = !model.inMatch;
-  if (!model.inMatch) renderStart(model, send);
+  if (!model.inMatch) {
+    renderStart(model, send);
+    return;
+  }
+  renderMatch(model, send);
+  renderPrompt(model, send);
+  renderDialogs(model, send, schedule);
 }

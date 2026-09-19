@@ -1,0 +1,3 @@
+#hand { display: flex; justify-content: center; align-items: flex-start; height: calc(var(--card-h) + 48px); padding-top: 8px; }
+#hand .card { margin: 0 -14px; transform: rotate(calc(var(--fan, 0) * 4deg)) translateY(var(--lift, 0px)); transform-origin: 50% 120%; }
+#hand .card:hover { transform: translateY(-30px) scale(1.15); z-index: 10; }

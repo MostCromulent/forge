@@ -1,0 +1,11 @@
+.backdrop { position: fixed; inset: 0; background: #0009; display: grid; place-items: center; z-index: 50; }
+.dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: 85vh; overflow: auto; display: grid; gap: 10px; }
+.dialog h3 { margin: 0; }
+.dialog .hint { margin: 0; color: var(--muted); font-size: 12px; }
+.dialog .options { display: flex; flex-wrap: wrap; gap: 8px; }
+.dialog .ordered { flex-direction: column; flex-wrap: nowrap; }
+.dialog .ordered-item, .dialog .row { display: flex; align-items: center; gap: 8px; }
+.dialog .picked { box-shadow: 0 0 0 3px var(--select); }
+.dialog .text-option.picked { background: var(--accent); }
+.dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }

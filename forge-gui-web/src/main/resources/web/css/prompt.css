@@ -1,0 +1,7 @@
+#prompt { display: grid; gap: 8px; align-content: end; }
+#prompt .message { margin: 0; min-height: 2.8em; }
+#prompt .buttons { display: flex; gap: 8px; justify-content: flex-end; }
+#prompt .ok { min-width: 140px; padding: 12px 20px; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; }
+#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 16px var(--accent); }
+#prompt.flash { animation: shake .3s; }
+@keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
