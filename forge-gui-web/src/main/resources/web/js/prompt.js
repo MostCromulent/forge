@@ -23,15 +23,16 @@ export function renderPrompt(model, send) {
   if (!built) {
     root.innerHTML = `
       <div class="tools">
+        <p class="step"></p>
+        <span class="spacer"></span>
         <button class="end-turn" title="Pass priority until the end of this turn (E)">${icon('endTurn')}</button>
         <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
         <button class="undo" title="Undo your last undoable action, such as tapping a land for mana (Z)">${icon('undo')}</button>
-        <span class="spacer"></span>
         <button class="cog" title="Options">${icon('cog')}</button>
       </div>
       <div class="prompt-body">
         <img class="prompt-card" alt="" hidden>
-        <div><p class="step"></p><p class="message"></p></div>
+        <p class="message"></p>
       </div>
       <div class="buttons">
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
@@ -74,11 +75,15 @@ export function renderPrompt(model, send) {
   const autoPassButton = root.querySelector('.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
   autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play`;
-  root.querySelector('.step').textContent = stepName(game(model)?.Phase);
   const p = model.prompt;
   if (!p) return;
-  // The turn and phase lines are dropped from a priority prompt, which often leaves nothing to print
-  root.querySelector('.message').textContent = (p.message ?? '').trim() || (p.priority ? 'You have priority.' : '');
+  // Several prompts open with a short line naming the phase; that line becomes the title rather than repeating
+  // under it, and a plain priority prompt has nothing left to print
+  const lines = (p.message ?? '').trim().split('\n');
+  // A heading, not a sentence: short, and with nothing that ends a sentence
+  const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]);
+  root.querySelector('.step').textContent = heading ? lines[0] : p.priority ? 'Priority' : stepName(game(model)?.Phase);
+  root.querySelector('.message').textContent = (heading ? lines.slice(1) : lines).join(' ').trim();
   renderPromptCard(root.querySelector('.prompt-card'), model, p.card);
   setButton(root.querySelector('.ok'), p.ok);
   setButton(root.querySelector('.cancel'), p.cancel);

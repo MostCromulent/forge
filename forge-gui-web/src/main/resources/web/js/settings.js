@@ -54,6 +54,10 @@ const SETTINGS = [
     section: 'Arrows', key: 'arrows', label: 'Target and combat arrows', type: 'choice', server: true,
     options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
   },
+  {
+    section: 'Theme', key: 'customCss', label: 'Custom CSS',
+    hint: 'Applied to the match screen as you type, and kept in this browser.', type: 'css', def: '',
+  },
 ];
 
 const byKey = new Map(SETTINGS.map(s => [s.key, s]));
@@ -133,6 +137,17 @@ function apply() {
   const hand = setting('handSize') / 100;
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
+  customStyle().textContent = String(setting('customCss') ?? '');
+}
+
+function customStyle() {
+  let style = document.getElementById('custom-css');
+  if (!style) {
+    style = document.createElement('style');
+    style.id = 'custom-css';
+    document.head.append(style);
+  }
+  return style;
 }
 
 export function openOptions() {
@@ -202,7 +217,7 @@ function drawRows() {
 
 function row(def) {
   const el = document.createElement('div');
-  el.className = 'setting';
+  el.className = def.type === 'css' ? 'setting wide' : 'setting';
   const text = document.createElement('div');
   const label = document.createElement('div');
   label.textContent = def.label;
@@ -215,6 +230,60 @@ function row(def) {
   }
   el.append(text, control(def));
   return el;
+}
+
+// A theme is a plain CSS file: load one, save the current one, or edit it here
+function cssControl(def, value) {
+  const wrap = document.createElement('div');
+  wrap.className = 'css-editor';
+  const area = document.createElement('textarea');
+  area.className = 'css';
+  area.spellcheck = false;
+  area.rows = 5;
+  area.placeholder = '#prompt { border-color: #7c3aed; }';
+  area.value = value;
+  // Typed CSS lands at once; the dialog keeps its rows so the caret does not jump
+  area.addEventListener('input', () => set(def.key, area.value));
+  const file = document.createElement('input');
+  file.type = 'file';
+  file.accept = '.css,text/css';
+  file.hidden = true;
+  file.addEventListener('change', async () => {
+    const chosen = file.files?.[0];
+    if (chosen) {
+      area.value = await chosen.text();
+      set(def.key, area.value);
+    }
+    file.value = '';
+  });
+  const buttons = document.createElement('div');
+  buttons.className = 'css-buttons';
+  buttons.append(
+    button('Import', () => file.click()),
+    button('Export', () => saveCss(area.value)),
+    button('Clear', () => {
+      area.value = '';
+      set(def.key, '');
+    }),
+  );
+  wrap.append(area, buttons, file);
+  return wrap;
+}
+
+function button(label, onClick) {
+  const b = document.createElement('button');
+  b.textContent = label;
+  b.onclick = onClick;
+  return b;
+}
+
+function saveCss(text) {
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/css' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'forge-theme.css';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function control(def) {
@@ -244,6 +313,9 @@ function control(def) {
       group.append(b);
     }
     return group;
+  }
+  if (def.type === 'css') {
+    return cssControl(def, String(value ?? ''));
   }
   const wrap = document.createElement('div');
   wrap.className = 'slider';

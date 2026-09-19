@@ -1,26 +1,32 @@
-#prompt { position: fixed; left: 16px; bottom: 14px; z-index: 30; width: 290px; display: grid; gap: 8px; padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px #0009; }
-#prompt.waiting { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 10px 30px #0009; }
-#prompt .tools { display: flex; align-items: center; gap: 4px; }
+/* The console: a translucent panel in the corner, clear of the hand, with the question above one wide answer */
+#prompt { position: fixed; left: 16px; bottom: 14px; z-index: 30; width: var(--console-w); display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
+#prompt.waiting { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 12px 34px #000a; }
+#prompt .tools { display: flex; align-items: center; gap: 2px; }
+#prompt .step { margin: 0; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 #prompt .tools .spacer { flex: 1; }
-#prompt .tools button { width: 30px; height: 28px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; }
-#prompt .tools button:hover { background: var(--surface-2); border-color: var(--line); }
-#prompt .tools svg { width: 17px; height: 17px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#prompt .tools button { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; border-radius: 6px; }
+#prompt .tools button:hover { background: var(--surface-2); }
+#prompt .tools svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 #prompt .tools button:hover svg { stroke: var(--text); }
-#prompt .tools .auto-pass.on { background: var(--accent); border-color: var(--accent); }
+#prompt .tools .auto-pass.on { background: var(--accent); }
 #prompt .tools .auto-pass.on svg { stroke: #fff; }
-#prompt .prompt-body { display: flex; gap: 8px; align-items: flex-start; }
-#prompt .prompt-card { width: 46px; border-radius: 4px; flex: none; }
-#prompt .step { margin: 0 0 2px; color: var(--accent-2); font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-#prompt .message { margin: 0; min-height: 2.8em; max-height: 8em; overflow-y: auto; scrollbar-width: thin; }
-#prompt .buttons { display: flex; gap: 8px; }
-#prompt .buttons button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; font-size: 15px; }
-#prompt .ok { font-weight: 600; letter-spacing: .04em; }
-#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 16px var(--accent); }
-#prompt kbd { border: 1px solid #ffffff33; border-radius: 4px; padding: 0 4px; font: 500 10.5px/1.5 system-ui, sans-serif; color: var(--muted); }
-#prompt .ok kbd { color: #fff; }
+#prompt .prompt-body { display: flex; gap: 10px; align-items: flex-start; }
+#prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
+#prompt .prompt-card { width: 44px; border-radius: 4px; flex: none; }
+#prompt .message { margin: 0; min-height: 0; max-height: 8em; overflow-y: auto; scrollbar-width: thin; color: var(--text); font-size: 13.5px; line-height: 1.35; }
+/* One answer bar: the secondary is a narrower segment beside the primary, as the two are always a pair */
+#prompt .buttons { display: flex; gap: 2px; }
+#prompt .buttons button { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 4px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+#prompt .cancel { flex: 0 1 auto; background: var(--surface-2); border-color: var(--line); color: var(--muted); }
+#prompt .cancel:hover:not(:disabled) { color: var(--text); }
+#prompt .ok { flex: 1; border-radius: 4px 8px 8px 4px; }
+#prompt .cancel:first-child { border-radius: 8px 4px 4px 8px; }
+#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
+#prompt kbd { border: 1px solid #ffffff2e; border-radius: 4px; padding: 1px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .04em; color: var(--muted); }
+#prompt .ok kbd { color: #ffffffcc; }
 /* Spectating two AI players leaves nothing to answer, so only the options button stays */
 #prompt.spectating .tools button:not(.cog), #prompt.spectating .buttons, #prompt.spectating .prompt-card { display: none; }
-#prompt.spectating { border-color: var(--line); box-shadow: 0 10px 30px #0009; }
+#prompt.spectating { border-color: var(--line); box-shadow: 0 12px 34px #000a; }
 #prompt.flash { animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 /* Options: one scrolling list with a search box, as the settings are too many for columns */
@@ -40,6 +46,11 @@
 #options .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s, background .12s; }
 #options .switch.on { background: var(--accent); border-color: var(--accent); }
 #options .switch.on::after { left: 20px; background: #fff; }
+#options .setting.wide { display: grid; gap: 6px; }
+#options .css-editor { display: grid; gap: 6px; }
+#options .css-buttons { display: flex; gap: 6px; }
+#options .css-buttons button { padding: 4px 10px; font-size: 12px; }
+#options .css { width: 100%; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px; }
 #options .slider { display: flex; align-items: center; gap: 8px; }
 #options .slider span { color: var(--muted); font-size: 11.5px; width: 34px; text-align: right; }
 #options footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }

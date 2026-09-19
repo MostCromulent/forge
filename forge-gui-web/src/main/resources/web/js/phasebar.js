@@ -1,4 +1,4 @@
-import { deref, isLocal, me, opponents } from './model.js';
+import { deref, isLocal, me, opponents, players } from './model.js';
 import { playerAvatarUrl } from './looks.js';
 
 // A pill on the divider: whose turn it is, then the five phases with the current step named. Clicking it opens a
@@ -30,6 +30,7 @@ const GLYPHS = {
   skip: '<path d="M4.5 6.5l5.5 5.5-5.5 5.5M11 6.5l5.5 5.5-5.5 5.5"/><path d="M19.5 6v12"/>',
   up: '<path d="M6.5 14.5l5.5-5.5 5.5 5.5"/>',
   down: '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>',
+  wait: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
 };
 const glyph = (name, size) => `<svg class="glyph" viewBox="0 0 24 24" style="width:${size}px;height:${size}px;stroke-width:${(1.3 * 24 / size).toFixed(2)}">${GLYPHS[name]}</svg>`;
 
@@ -95,13 +96,15 @@ export function renderPhaseBar(model, g, send) {
       ? `<span class="pips">${p.steps.map(i => `<i class="${i < step ? 'past' : i === step ? 'now' : ''}"></i>`).join('')}</span>` : '';
     return `<span class="phase current">${glyph(step < 0 ? p.glyph : STEPS[step][1], 12)}${name}${pips}</span>`;
   }).join('');
+  const waiting = waitingChip(model);
   const marker = model.controls?.marker;
   let until = '';
   if (marker) {
     const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${escapeHtml(opponentLabel)}'s `;
     until = `<span class="until">${glyph('skip', 12)}until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}</span>`;
   }
-  pill.innerHTML = `${owner}<span class="track">${track}</span>${until}<span class="caret">${glyph(myTurn ? 'up' : 'down', 12)}</span>`;
+  pill.innerHTML = `${owner}<span class="track">${track}</span>${waiting}${until}<span class="caret">${glyph(myTurn ? 'up' : 'down', 12)}</span>`;
+  tickWaiting();
   pill.classList.toggle('open', open);
   pill.classList.toggle('priority', !!me(model)?.HasPriority);
 
@@ -111,6 +114,38 @@ export function renderPhaseBar(model, g, send) {
   panel.classList.toggle('above', myTurn);
   if (open) panel.innerHTML = stopsGrid(model, step, myTurn, opponentLabel);
   if (open) wireGrid(panel);
+}
+
+// Who the game is waiting on, and for how long. Your own priority lights the whole pill instead.
+let waitingFor = null;
+let waitingSince = 0;
+let waitingTimer = 0;
+
+function waitingChip(model) {
+  const holder = players(model).find(p => p.HasPriority && !isLocal(model, p));
+  if (!holder) {
+    waitingFor = null;
+    return '';
+  }
+  if (waitingFor !== holder.$key) {
+    waitingFor = holder.$key;
+    waitingSince = Date.now();
+  }
+  return `<span class="waiting">${glyph('wait', 11)}${escapeHtml(holder.Name ?? '')}<b></b></span>`;
+}
+
+function tickWaiting() {
+  clearInterval(waitingTimer);
+  const show = () => {
+    const el = document.querySelector('#phase-strip .waiting b');
+    if (el) {
+      el.textContent = `${((Date.now() - waitingSince) / 1000).toFixed(1)}s`;
+    }
+  };
+  if (document.querySelector('#phase-strip .waiting b')) {
+    show();
+    waitingTimer = setInterval(show, 100);
+  }
 }
 
 function stopsGrid(model, step, myTurn, opponentLabel) {

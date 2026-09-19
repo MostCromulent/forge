@@ -1,5 +1,6 @@
 /* As in Arena, the hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
-#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
+/* The console sits in the corner, so the hand centres in what is left of the row */
+#hand { padding-left: calc(var(--console-w) + 24px); display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
