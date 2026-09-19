@@ -55,9 +55,11 @@ public final class WebGuiBase implements IGuiBase {
         if (new File(cwd, "res").isDirectory()) {
             return withSlash(cwd.getAbsolutePath());
         }
-        final File sibling = new File(cwd.getParentFile(), "forge-gui");
-        if (new File(sibling, "res").isDirectory()) {
-            return withSlash(sibling.getAbsolutePath());
+        // Launched from the repo root or from a module directory
+        for (final File candidate : new File[]{new File(cwd, "forge-gui"), new File(cwd.getParentFile(), "forge-gui")}) {
+            if (new File(candidate, "res").isDirectory()) {
+                return withSlash(candidate.getAbsolutePath());
+            }
         }
         return "";
     }
