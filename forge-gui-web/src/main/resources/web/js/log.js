@@ -1,11 +1,18 @@
-import { imageUrl } from './cards.js';
+import { imageUrl, setSymbolText } from './images.js';
 import { setting } from './settings.js';
-import { hoverCard } from './detail.js';
+import { hoverable } from './detail.js';
 
 const MAX_ENTRIES = 400;
 const COLLAPSED_KEY = 'forge.logCollapsed';
 
+// The log follows the game unless the player scrolls back through it
+let stick = true;
+
 export function initLog() {
+  const log = document.getElementById('log');
+  log.addEventListener('scroll', () => {
+    stick = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+  });
   const button = document.querySelector('#side .log-toggle');
   const apply = collapsed => {
     document.getElementById('match').classList.toggle('log-collapsed', collapsed);
@@ -35,8 +42,10 @@ export function initLog() {
 // The server replays the whole log on connect (full) and sends new entries after that
 export function appendLog(msg) {
   const root = document.getElementById('log');
-  if (msg.full) root.replaceChildren();
-  const atBottom = root.scrollHeight - root.scrollTop - root.clientHeight < 20;
+  if (msg.full) {
+    root.replaceChildren();
+    stick = true;
+  }
   for (const entry of msg.entries) {
     const el = document.createElement('div');
     el.className = `log-entry ${entry.type.toLowerCase()}`;
@@ -49,15 +58,22 @@ export function appendLog(msg) {
       thumb.dataset.key = entry.card;
       thumb.dataset.zoom = thumb.src;
       thumb.addEventListener('error', () => thumb.remove());
-      thumb.addEventListener('mouseenter', () => hoverCard(thumb));
-      thumb.addEventListener('mouseleave', () => hoverCard(null));
+      // A thumbnail arriving after the entry makes the log taller, which would leave the newest line off screen
+      thumb.addEventListener('load', () => toBottom(root));
+      hoverable(thumb);
       el.append(thumb);
     }
     const text = document.createElement('span');
-    text.textContent = entry.message;
+    setSymbolText(text, entry.message);
     el.append(text);
     root.append(el);
   }
   while (root.childElementCount > MAX_ENTRIES) root.firstChild.remove();
-  if (atBottom || msg.full) root.scrollTop = root.scrollHeight;
+  toBottom(root);
+}
+
+function toBottom(root) {
+  if (stick) {
+    root.scrollTop = root.scrollHeight;
+  }
 }

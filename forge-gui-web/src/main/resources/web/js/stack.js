@@ -1,22 +1,23 @@
 import { reconcile } from './render.js';
-import { imageUrl } from './cards.js';
+import { cardImageSrc, noImageOnError, setImage } from './images.js';
 import { game, deref, stateOf } from './model.js';
 import { hoverCard } from './detail.js';
 import { hoverStackItem, stackTargets } from './overlay.js';
 
-// The stack as a pile of cards over the board's right edge. The top item (first in the list) is in front on the
-// right; older items fan out to the left behind it. Hovering an item lifts it and spreads its neighbours apart.
-const OFFSET_X = 36;
-const OFFSET_Y = 4;
-const PUSH_X = 42;
+// The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
+// cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
+const STEP_MAX = 42;
+const STEP_MIN = 14;
+const PUSH_Y = 26;
 
 let hovered = null;
 let collapsed = false;
-let lastModel = null;
 let send = () => {};
+let schedule = () => {};
 
-export function initStack(sendFn) {
+export function initStack(sendFn, scheduleFn) {
   send = sendFn;
+  schedule = scheduleFn;
   document.addEventListener('click', e => {
     if (!e.target.closest('#stack-menu')) closeMenu();
   });
@@ -26,13 +27,12 @@ export function initStack(sendFn) {
 }
 
 export function renderStack(model) {
-  lastModel = model;
   const root = document.getElementById('stack');
   if (!root.firstChild) {
-    root.innerHTML = '<div class="pile"></div><button class="collapse"></button>';
+    root.innerHTML = '<div class="head"><b>Stack</b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
     root.querySelector('.collapse').onclick = () => {
       collapsed = !collapsed;
-      renderStack(lastModel);
+      schedule();
     };
     window.addEventListener('resize', () => place(root));
   }
@@ -40,18 +40,19 @@ export function renderStack(model) {
   if (!items.some(i => i.$key === hovered)) hovered = null;
   root.hidden = items.length === 0;
   root.classList.toggle('collapsed', collapsed);
-  root.querySelector('.collapse').textContent = collapsed ? `Stack · ${items.length}` : 'Hide';
-  root.querySelector('.collapse').title = collapsed ? 'Show the stack' : 'Collapse the stack to the edge';
+  root.querySelector('.count').textContent = items.length;
+  root.querySelector('.collapse').textContent = collapsed ? 'Show' : 'Hide';
+  root.querySelector('.collapse').title = collapsed ? 'Show the stack' : 'Collapse the stack to its heading';
   const pile = root.querySelector('.pile');
   reconcile(pile, items, i => i.$key, createItem, (el, item) => updateItem(el, model, item));
-  layout(pile, items.length);
   place(root);
+  layout(pile, items.length);
 }
 
-// Just above the phase strip, so the pile never covers the turn line
+// The panel hangs from the top of the board and stops short of the hand
 function place(root) {
-  const strip = document.getElementById('phase-strip').getBoundingClientRect();
-  root.style.top = `${Math.max(8, strip.top - root.offsetHeight - 8)}px`;
+  const hand = document.getElementById('hand').getBoundingClientRect();
+  root.querySelector('.pile').style.setProperty('--stack-room', `${Math.max(120, hand.top - root.getBoundingClientRect().top - 48)}px`);
 }
 
 function createItem() {
@@ -59,7 +60,7 @@ function createItem() {
   el.className = 'stack-item';
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"></div><div class="caption"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
   const img = el.querySelector('img');
-  img.addEventListener('error', () => el.classList.add('noimg'));
+  noImageOnError(el, img);
   el.addEventListener('mouseenter', () => {
     hovered = Number(el.dataset.key);
     layout(el.parentElement, el.parentElement.childElementCount);
@@ -84,12 +85,10 @@ function createItem() {
 function updateItem(el, model, item) {
   const source = deref(model, item.SourceCard);
   const state = source ? stateOf(model, source) : {};
-  const src = source && model.visible.has(source.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
+  const src = cardImageSrc(model, source);
   const img = el.querySelector('img');
-  if (img.getAttribute('src') !== src) {
-    el.classList.toggle('noimg', !src);
-    if (src) img.src = src;
-  }
+  setImage(img, src);
+  el.classList.toggle('noimg', !src);
   img.dataset.key = source?.$key ?? '';
   img.dataset.zoom = src;
   el.querySelector('.frame').textContent = state.Name ?? '';
@@ -100,14 +99,20 @@ function updateItem(el, model, item) {
   el.querySelector('.targets').textContent = targets.length ? `→ ${targets.join(', ')}` : '';
 }
 
+// Every item keeps a strip of itself visible, so a deep stack simply cascades more tightly
 function layout(pile, n) {
   const items = [...pile.children];
+  if (!items.length) {
+    return;
+  }
   const h = items.findIndex(el => Number(el.dataset.key) === hovered);
-  pile.style.setProperty('--span', `${Math.max(0, n - 1) * OFFSET_X + 2 * PUSH_X}px`);
+  const card = items[0].offsetHeight;
+  const room = parseFloat(getComputedStyle(pile).getPropertyValue('--stack-room')) || 400;
+  const step = n > 1 ? Math.min(STEP_MAX, Math.max(STEP_MIN, (room - card) / (n - 1))) : 0;
+  pile.style.height = `${(n - 1) * step + card}px`;
   items.forEach((el, i) => {
-    const push = h < 0 || i === h ? 0 : (i < h ? PUSH_X : -PUSH_X);
-    el.style.left = `${(n - 1 - i) * OFFSET_X + PUSH_X + push}px`;
-    el.style.top = `${i * OFFSET_Y}px`;
+    const push = h < 0 || i === h ? 0 : (i < h ? -PUSH_Y : PUSH_Y);
+    el.style.top = `${i * step + push}px`;
     el.style.zIndex = h < 0 ? n - i : 200 - Math.abs(i - h) * 10 + (i === h ? 5 : 0);
     el.classList.toggle('top', i === 0);
     el.classList.toggle('lifted', i === h);
@@ -119,11 +124,13 @@ let menuAt = null;
 // The server answers a right-click with what applies to that item and the current settings
 export function onStackMenu(msg) {
   if (!menuAt) return;
+  const at = menuAt;
+  menuAt = null;
   closeMenu();
   const menu = document.createElement('div');
   menu.id = 'stack-menu';
-  menu.style.left = `${menuAt.x}px`;
-  menu.style.top = `${menuAt.y}px`;
+  menu.style.left = `${at.x}px`;
+  menu.style.top = `${at.y}px`;
   const item = (label, action, checked) => {
     const b = document.createElement('button');
     b.textContent = (checked === undefined ? '' : checked ? '✓ ' : '    ') + label;

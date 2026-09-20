@@ -8,7 +8,7 @@ const clips = new Map();
 let music = null;
 
 export function playSound(msg) {
-  if (!setting('sounds')) {
+  if (volume('soundVolume') <= 0) {
     return;
   }
   let clip = clips.get(msg.name);
@@ -26,7 +26,7 @@ export function playSound(msg) {
 }
 
 export function startMusic() {
-  if (!setting('music') || music) {
+  if (volume('musicVolume') <= 0 || music) {
     return;
   }
   music = new Audio();
@@ -54,10 +54,12 @@ function nextTrack() {
 }
 
 export function applyAudioSettings() {
-  if (!setting('music')) {
+  if (volume('musicVolume') <= 0) {
     stopMusic();
   } else if (music) {
     music.volume = volume('musicVolume');
+  } else {
+    startMusic();
   }
 }
 

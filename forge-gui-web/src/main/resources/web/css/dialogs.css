@@ -1,8 +1,11 @@
-.backdrop { position: fixed; inset: 0; background: #0009; display: grid; place-items: center; z-index: 50; }
-.dialog { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: 85vh; overflow: auto; display: grid; gap: 10px; }
+.backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
+.dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
 .dialog h3 { margin: 0; }
 .dialog .hint { margin: 0; color: var(--muted); font-size: 12px; }
 .dialog .options { display: flex; flex-wrap: wrap; gap: 8px; }
+.dialog .options.grid { display: grid; grid-template-columns: repeat(3, max-content); gap: 12px 16px; align-items: start; justify-content: center; }
+.dialog .options .section { grid-column: 1 / -1; width: 100%; margin-top: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.dialog .options .section:first-child { margin-top: 0; }
 .dialog .ordered { flex-direction: column; flex-wrap: nowrap; }
 .dialog .ordered-item, .dialog .row { display: flex; align-items: center; gap: 8px; }
 .dialog .picked { box-shadow: 0 0 0 3px var(--select); }

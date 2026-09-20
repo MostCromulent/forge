@@ -1,3 +1,4 @@
+import { setImage } from './images.js';
 import { avatarUrl, sleeveUrl, pickLook } from './looks.js';
 import { startMusic } from './audio.js';
 
@@ -71,16 +72,13 @@ function renderLooks(root, seat, available) {
     wire(root.querySelector('.avatar-look'), 'avatars', available.avatarCount, avatarUrl);
     wire(root.querySelector('.sleeve-look'), 'sleeves', available.sleeveCount, sleeveUrl);
   }
-  setSrc(root.querySelector('.avatar-look img'), avatarUrl(looks.avatars[seat]));
-  setSrc(root.querySelector('.sleeve-look img'), sleeveUrl(looks.sleeves[seat]));
-}
-
-function setSrc(img, src) {
-  if (img.getAttribute('src') !== src) img.src = src;
+  setImage(root.querySelector('.avatar-look img'), avatarUrl(looks.avatars[seat]));
+  setImage(root.querySelector('.sleeve-look img'), sleeveUrl(looks.sleeves[seat]));
 }
 
 function fillDecks(select, decks) {
-  if (select.options.length === decks.length) return;
+  if (select.dataset.decks === String(decks.length) && select.options.length === decks.length) return;
+  select.dataset.decks = String(decks.length);
   const chosen = select.value;
   select.replaceChildren(...decks.map(d => {
     const o = new Option(d.problem ? `${d.name} (not legal)` : d.name, d.key);

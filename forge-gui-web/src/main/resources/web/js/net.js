@@ -1,4 +1,4 @@
-// The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here.
+// The server replays full state, prompt, zones and open requests on every connect, so a reconnect needs no bookkeeping here
 export function connect(onMessage, onStatus) {
   let socket;
   let retry = 250;

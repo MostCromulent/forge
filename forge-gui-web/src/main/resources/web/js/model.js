@@ -1,8 +1,9 @@
-// Browser copy of the game's object table; forge.web.BrowserModel implements the same apply-and-prune rules.
+// Browser copy of the game's object table; forge.web.BrowserModel implements the same apply-and-prune rules
 export function createModel() {
   return {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
-    prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null,
+    prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
+    looks: null, spectating: false,
     inMatch: false, playerName: '', decks: [], error: null,
   };
 }

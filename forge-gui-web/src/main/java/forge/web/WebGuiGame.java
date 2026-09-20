@@ -11,9 +11,7 @@ import forge.LobbyPlayer;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
-import forge.game.GameLogEntry;
-import forge.game.GameLogEntryType;
-import forge.game.GameLogVerbosity;
+import forge.game.event.GameEventBlockersDeclared;
 import forge.game.event.GameEventGameOutcome;
 import forge.game.GameState;
 import forge.game.GameView;
@@ -26,6 +24,7 @@ import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
 import forge.game.player.PlayerView;
 import forge.game.spellability.SpellAbilityView;
+import forge.item.PaperCard;
 import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.NextGameDecision;
@@ -37,8 +36,6 @@ import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
 import forge.gui.card.CardDetailUtil;
 import forge.interfaces.IGameController;
-import forge.item.PaperCard;
-import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
@@ -92,11 +89,14 @@ public class WebGuiGame extends NetworkGuiGame {
     private final Set<Integer> highlighted = new LinkedHashSet<>();
     private final Map<String, JsonObject> shownZones = new LinkedHashMap<>();
     // Written on the dispatch thread, replayed to a reloading browser from the socket thread
-    private final List<JsonObject> logEntries = new ArrayList<>();
-    private GameLog loggedLog;
-    private int loggedCount;
+    private final WebGameLog gameLog = new WebGameLog(this::mayView);
     private volatile BrowserChannel browser;
     private volatile JsonObject gameOver;
+
+    /** Frees the thread that sends to the browser; the match it belongs to is over. */
+    public void close() {
+        dispatch.shutdown();
+    }
 
     public Executor dispatchExecutor() {
         return task -> dispatch.execute(() -> {
@@ -111,7 +111,13 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
+    /** Sends on the caller's thread. A browser reconnects while a request is open, and the thread that applies
+     *  deltas is blocked on that request until the new browser answers it, so waiting for it here would hang. */
     public void attach(final BrowserChannel channel) {
+        sendFullState(channel);
+    }
+
+    private void sendFullState(final BrowserChannel channel) {
         browser = channel;
         channel.send(model.fullState());
         synchronized (promptLock) {
@@ -119,9 +125,7 @@ public class WebGuiGame extends NetworkGuiGame {
             channel.send(zonesMessage());
         }
         channel.send(controlsMessage());
-        synchronized (logEntries) {
-            channel.send(logMessage(logEntries, true));
-        }
+        channel.send(gameLog.all());
         requests.replay(channel::send);
         final JsonObject over = gameOver;
         if (over != null) {
@@ -255,7 +259,10 @@ public class WebGuiGame extends NetworkGuiGame {
             return;
         }
         log.getEventVisitor().recieve(event);
-        forwardNewLogEntries(log);
+        final JsonObject entries = gameLog.added(log);
+        if (entries != null) {
+            send(entries);
+        }
         forwardSound(event);
     }
 
@@ -264,13 +271,20 @@ public class WebGuiGame extends NetworkGuiGame {
         @Override
         public SoundEffectType visit(final GameEventGameOutcome event) {
             final PlayerView local = getCurrentPlayer();
-            return local != null && local.getName().equals(event.winningPlayerName())
+            return local != null && local.getLobbyPlayerName().equals(event.winningPlayerName())
                     ? SoundEffectType.WinDuel : SoundEffectType.LoseDuel;
+        }
+
+        @Override
+        public SoundEffectType visit(final GameEventBlockersDeclared event) {
+            // Your own blocks already made their sound as you declared them
+            return isLocalPlayer(event.defendingPlayer()) ? null : SoundEffectType.Block;
         }
     };
 
     private void forwardSound(final GameEvent event) {
-        if (!FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_SOUNDS)) {
+        if (!FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_SOUNDS)
+                || FModel.getPreferences().getPrefInt(FPref.UI_VOL_SOUNDS) <= 0) {
             return;
         }
         final SoundEffectType effect = event.visit(sounds);
@@ -288,64 +302,14 @@ public class WebGuiGame extends NetworkGuiGame {
         send(m);
     }
 
-    private void forwardNewLogEntries(final GameLog log) {
-        final List<GameLogEntry> all = log.getAllEntries();
-        final boolean newGame = log != loggedLog;
-        if (newGame) {
-            loggedLog = log;
-            loggedCount = 0;
-        }
-        final Set<GameLogEntryType> shown = shownLogTypes();
-        final List<JsonObject> added = new ArrayList<>();
-        for (final GameLogEntry entry : all.subList(loggedCount, all.size())) {
-            if (shown.contains(entry.type())) {
-                final JsonObject e = new JsonObject();
-                e.addProperty("type", entry.type().name());
-                e.addProperty("message", entry.message());
-                final CardView card = entry.sourceCard();
-                if (card != null && card.getCurrentState() != null && mayView(card)) {
-                    e.addProperty("card", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()));
-                    e.addProperty("imageKey", card.getCurrentState().getImageKey());
-                }
-                added.add(e);
-            }
-        }
-        loggedCount = all.size();
-        synchronized (logEntries) {
-            if (newGame) {
-                logEntries.clear();
-            }
-            logEntries.addAll(added);
-        }
-        if (newGame || !added.isEmpty()) {
-            send(logMessage(added, newGame));
-        }
-    }
-
-    // The desktop log's verbosity preference
-    private static Set<GameLogEntryType> shownLogTypes() {
-        final ForgePreferences prefs = FModel.getPreferences();
-        final GameLogVerbosity verbosity = GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE));
-        return verbosity == GameLogVerbosity.CUSTOM ? prefs.getCustomLogTypes() : verbosity.getIncludedTypes();
-    }
-
-    private static JsonObject logMessage(final List<JsonObject> entries, final boolean full) {
-        final JsonObject m = JsonCodec.message("log");
-        m.addProperty("full", full);
-        final JsonArray a = new JsonArray();
-        entries.forEach(a::add);
-        m.add("entries", a);
-        return m;
-    }
-
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
     private JsonObject controlsMessage() {
         final JsonObject m = JsonCodec.message("controls");
-        m.add("myStops", stops(FPref.PHASES_HUMAN));
-        m.add("otherStops", stops(FPref.PHASES_AI));
+        m.add("myStops", WebSettings.stops(FPref.PHASES_HUMAN));
+        m.add("otherStops", WebSettings.stops(FPref.PHASES_AI));
         m.addProperty("autoPass", FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
         m.addProperty("dayTime", getDayTime());
-        m.add("settings", settings());
+        m.add("settings", WebSettings.values());
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
         final YieldMarker marker = yields == null ? null : yields.getAutoPassUntilMarker();
@@ -356,60 +320,6 @@ public class WebGuiGame extends NetworkGuiGame {
             m.add("marker", mk);
         }
         return m;
-    }
-
-    // Settings the options dialog shares with the desktop client, as their preference values
-    private static final Map<String, FPref> SETTING_PREFS = Map.of(
-            "interruptAttackers", FPref.YIELD_INTERRUPT_ON_ATTACKERS,
-            "interruptOpponentSpell", FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL,
-            "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
-            "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
-            "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
-            "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
-            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW,
-            "sounds", FPref.UI_ENABLE_SOUNDS,
-            "music", FPref.UI_ENABLE_MUSIC);
-
-    private static JsonObject settings() {
-        final ForgePreferences prefs = FModel.getPreferences();
-        final JsonObject s = new JsonObject();
-        SETTING_PREFS.forEach((key, pref) -> s.addProperty(key, prefs.getPrefBoolean(pref)));
-        s.addProperty("autoPassNoActions", prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
-        s.addProperty("autoYieldMode", ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability");
-        s.addProperty("logDetail", GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)).name());
-        s.addProperty("arrows", prefs.getPref(FPref.UI_TARGETING_OVERLAY));
-        s.addProperty("highlightColor", "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR));
-        s.addProperty("soundVolume", prefs.getPrefInt(FPref.UI_VOL_SOUNDS));
-        s.addProperty("musicVolume", prefs.getPrefInt(FPref.UI_VOL_MUSIC));
-        return s;
-    }
-
-    private void setSetting(final IGameController controller, final String key, final String value) {
-        final ForgePreferences prefs = FModel.getPreferences();
-        final FPref pref = SETTING_PREFS.get(key);
-        if (pref != null) {
-            prefs.setPref(pref, Boolean.parseBoolean(value));
-        } else if ("autoPassNoActions".equals(key)) {
-            if (Boolean.parseBoolean(value) != prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
-                YieldController.toggleAutoPassNoActions(controller);
-            }
-            return;
-        } else if ("autoYieldMode".equals(key)) {
-            prefs.setPref(FPref.UI_AUTO_DECISION_MODE,
-                    "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
-        } else if ("logDetail".equals(key)) {
-            prefs.setPref(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
-        } else if ("arrows".equals(key)) {
-            prefs.setPref(FPref.UI_TARGETING_OVERLAY, value);
-        } else if ("soundVolume".equals(key)) {
-            prefs.setPref(FPref.UI_VOL_SOUNDS, value);
-        } else if ("musicVolume".equals(key)) {
-            prefs.setPref(FPref.UI_VOL_MUSIC, value);
-        } else {
-            Logger.warn("Web client: unknown setting {}", key);
-            return;
-        }
-        prefs.save();
     }
 
     @Override
@@ -423,30 +333,15 @@ public class WebGuiGame extends NetworkGuiGame {
         send(controlsMessage());
     }
 
-    private static JsonArray stops(final FPref[] keys) {
-        final JsonArray out = new JsonArray();
-        final PhaseType[] phases = PhaseType.values();
-        for (int i = 1; i < phases.length; i++) {
-            if (FModel.getPreferences().getPrefBoolean(keys[i - 1])) {
-                out.add(phases[i].name());
-            }
-        }
-        return out;
-    }
-
     private void toggleStop(final PhaseType phase, final boolean mine) {
         if (phase.ordinal() > 0) {
-            setStop(phase, mine, !FModel.getPreferences().getPrefBoolean(stopKey(phase, mine)));
+            setStop(phase, mine, !FModel.getPreferences().getPrefBoolean(WebSettings.stopKey(phase, mine)));
         }
-    }
-
-    private static FPref stopKey(final PhaseType phase, final boolean mine) {
-        return (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
     }
 
     private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
         final ForgePreferences prefs = FModel.getPreferences();
-        prefs.setPref(stopKey(phase, mine), stop);
+        prefs.setPref(WebSettings.stopKey(phase, mine), stop);
         prefs.save();
         for (final PlayerView p : getGameView().getPlayers()) {
             if (isLocalPlayer(p) == mine) {
@@ -472,7 +367,6 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    // Desktop's avatar tooltip: life, counters, hand and land counts, commander damage and tax, and so on
     private static JsonObject playerDetailMessage(final PlayerView player) {
         final JsonObject m = JsonCodec.message("playerDetail");
         m.addProperty("key", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()));
@@ -631,6 +525,8 @@ public class WebGuiGame extends NetworkGuiGame {
             prompt.add("ok", button(label1, enable1));
             prompt.add("cancel", button(label2, enable2));
             prompt.addProperty("focusOk", focus1);
+            // Only a mana payment offers Auto, and the browser holds the card being paid for while it does
+            prompt.addProperty("paying", Localizer.getInstance().getMessage("lblAuto").equals(label1));
             sendPrompt();
         }
     }
@@ -655,11 +551,9 @@ public class WebGuiGame extends NetworkGuiGame {
         super.setWeaklySelectable(cards);
         final JsonArray playable = new JsonArray();
         final JsonArray autoTap = new JsonArray();
-        final Set<CardView> seen = new HashSet<>();
-        for (final CardView c : cards) {
-            if (seen.add(c)) {
-                playable.add(cardRef(c));
-            } else {
+        for (final CardView c : new HashSet<>(Lists.newArrayList(cards))) {
+            playable.add(cardRef(c));
+            if (getWeakSelectableStrength(c) >= 2) {
                 autoTap.add(cardRef(c));
             }
         }
@@ -866,8 +760,10 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
             } else if (item instanceof PlayerView player) {
                 o.add("player", JsonCodec.ref(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()));
+            } else if (item instanceof PaperCard paper) {
+                o.addProperty("name", paper.getName());
+                o.addProperty("imageKey", paper.getImageKey(false));
             } else if (item instanceof CardFaceView face) {
-                // Naming a card: show the card itself
                 o.addProperty("name", face.getName());
                 o.addProperty("imageKey", ImageKeys.CARD_PREFIX + face.getName());
             }
@@ -964,19 +860,31 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final List<T> choices, final List<T> selected, final FSerializableFunction<T, String> display) {
+        if (min < 0 && max < 0) {
+            // AbstractGuiGame.reveal: display only, the return value is ignored
+            ask("reveal", choicesRequest(message, min, max, choices, selected, display), new JsonArray(), v -> true);
+            return new ArrayList<>();
+        }
+        final int need = Math.min(Math.max(min, 0), choices.size());
+        return askChoices(message, need, max, choices, selected, display, range(0, need));
+    }
+
+    private <T> JsonObject choicesRequest(final String message, final int min, final int max, final List<T> items,
+            final List<T> selected, final FSerializableFunction<T, String> display) {
         final JsonObject p = new JsonObject();
         p.addProperty("message", message);
         p.addProperty("min", min);
         p.addProperty("max", max);
-        p.add("options", options(choices, display));
-        p.add("selected", indicesOf(choices, selected));
-        if (min < 0 && max < 0) {
-            // AbstractGuiGame.reveal: display only, the return value is ignored
-            ask("reveal", p, new JsonArray(), v -> true);
-            return new ArrayList<>();
-        }
-        final int need = Math.min(Math.max(min, 0), choices.size());
-        return pick(choices, ask("choices", p, range(0, need), indexList(choices.size(), need, max)));
+        p.add("options", options(items, display));
+        p.add("selected", indicesOf(items, selected));
+        return p;
+    }
+
+    /** Asks the browser to pick from a list; {@code onDefault} is the answer taken when it cannot. */
+    private <T> List<T> askChoices(final String message, final int min, final int max, final List<T> items,
+            final List<T> selected, final FSerializableFunction<T, String> display, final JsonArray onDefault) {
+        final JsonObject p = choicesRequest(message, min, max, items, selected, display);
+        return pick(items, ask("choices", p, onDefault, indexList(items.size(), min, max)));
     }
 
     @Override
@@ -1077,13 +985,7 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = isOptional || list.isEmpty() ? 0 : 1;
-        final JsonObject p = new JsonObject();
-        p.addProperty("message", title);
-        p.addProperty("min", need);
-        p.addProperty("max", 1);
-        p.add("options", options(list, null));
-        p.add("selected", new JsonArray());
-        final List<GameEntityView> picked = pick(list, ask("choices", p, range(0, need), indexList(list.size(), need, 1)));
+        final List<GameEntityView> picked = askChoices(title, need, 1, list, null, null, range(0, need));
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -1092,24 +994,43 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = Math.min(Math.max(min, 0), list.size());
-        final JsonObject p = new JsonObject();
-        p.addProperty("message", title);
-        p.addProperty("min", need);
-        p.addProperty("max", max);
-        p.add("options", options(list, null));
-        p.add("selected", new JsonArray());
-        return pick(list, ask("choices", p, range(0, need), indexList(list.size(), need, max)));
+        return askChoices(title, need, max, list, null, null, range(0, need));
+    }
+
+    /** A click from the browser: the right button asks for the card's list of abilities, as it does on desktop. */
+    private record BrowserClick(boolean menu) implements ITriggerEvent {
+        @Override
+        public int getButton() {
+            return menu ? 3 : 1;
+        }
+
+        @Override
+        public int getX() {
+            return 0;
+        }
+
+        @Override
+        public int getY() {
+            return 0;
+        }
     }
 
     @Override
     public SpellAbilityView getAbilityToPlay(final CardView hostCard, final List<SpellAbilityView> abilities, final ITriggerEvent triggerEvent) {
-        final JsonObject p = new JsonObject();
-        p.addProperty("message", hostCard == null ? "" : hostCard.getName());
-        p.addProperty("min", 0);
-        p.addProperty("max", 1);
-        p.add("options", options(abilities, null));
-        p.add("selected", new JsonArray());
-        final List<SpellAbilityView> picked = pick(abilities, ask("choices", p, new JsonArray(), indexList(abilities.size(), 0, 1)));
+        if (abilities.isEmpty()) {
+            return null;
+        }
+        // One thing to do needs no asking, unless the ability itself says to ask, as on desktop
+        if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
+            return abilities.get(0);
+        }
+        // A left-click plays what the card leads with; the list is what the right button is for
+        if (triggerEvent != null && triggerEvent.getButton() != 3) {
+            return abilities.stream().filter(SpellAbilityView::canPlay).findFirst().orElse(null);
+        }
+        // No answer means no ability chosen, which is how a cancelled click reads
+        final List<SpellAbilityView> picked = askChoices(hostCard == null ? "" : hostCard.getName(), 0, 1,
+                abilities, null, null, new JsonArray());
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -1119,8 +1040,7 @@ public class WebGuiGame extends NetworkGuiGame {
         int remaining = damage;
         for (int i = 0; i < blockers.size() && remaining > 0; i++) {
             final CardView blocker = blockers.get(i);
-            final int toughness = blocker.getCurrentState() == null ? 0 : blocker.getCurrentState().getToughness();
-            final int lethal = Math.max(0, toughness - blocker.getDamage());
+            final int lethal = Math.max(0, blocker.getLethalDamage());
             final int assigned = Math.min(remaining, lethal);
             split[i] = assigned;
             remaining -= assigned;
@@ -1272,7 +1192,8 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "selectCard" -> {
                     final CardView card = lookup(msg, TrackableTypes.CardViewType);
                     if (card != null) {
-                        controller.selectCard(card, null, null);
+                        // A right-click asks for the list of what the card can do; a left-click takes the first
+                        controller.selectCard(card, null, new BrowserClick(msg.has("menu") && msg.get("menu").getAsBoolean()));
                     }
                 }
                 case "selectPlayer" -> {
@@ -1294,13 +1215,10 @@ public class WebGuiGame extends NetworkGuiGame {
                     toggleStop(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
                     send(controlsMessage());
                 }
-                case "toggleMarker" -> {
-                    toggleMarker(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
-                    send(controlsMessage());
-                }
+                case "toggleMarker" -> toggleMarker(PhaseType.valueOf(msg.get("phase").getAsString()), msg.get("mine").getAsBoolean());
                 case "useMana" -> controller.useMana(msg.get("color").getAsByte());
                 case "setSetting" -> {
-                    setSetting(controller, msg.get("key").getAsString(), msg.get("value").getAsString());
+                    WebSettings.set(controller, msg.get("key").getAsString(), msg.get("value").getAsString());
                     send(controlsMessage());
                 }
                 case "stackMenu" -> {

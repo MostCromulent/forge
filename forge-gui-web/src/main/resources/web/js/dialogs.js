@@ -1,5 +1,6 @@
-import { createCard, updateCard, imageUrl } from './cards.js';
-import { hoverCard } from './detail.js';
+import { createCard, updateCard } from './cards.js';
+import { imageUrl, noImageOnError, setSymbolText } from './images.js';
+import { hoverable } from './detail.js';
 
 let shownId = null;
 
@@ -54,7 +55,14 @@ function wrap(dlg) {
   return backdrop;
 }
 
+// A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
+const SECTION = /^=+\s*(.*?)\s*=+$/;
+
 function optionElement(model, opt, onClick) {
+  const section = SECTION.exec(opt.label ?? '');
+  if (section && !opt.card && !opt.imageKey) {
+    return el('div', 'section', section[1]);
+  }
   const card = opt.card ? model.objects.get(opt.card.ref) : null;
   if (card) {
     const c = createCard(onClick);
@@ -67,28 +75,37 @@ function optionElement(model, opt, onClick) {
     const c = el('div', 'card inline');
     const img = el('img');
     img.alt = '';
-    // Long lists of card images load as they scroll into view
     img.loading = 'lazy';
-    img.src = imageUrl(opt.imageKey ?? '');
-    img.onerror = () => c.classList.add('noimg');
+    if (opt.imageKey) {
+      img.src = imageUrl(opt.imageKey);
+      c.dataset.zoom = img.src;
+    } else {
+      c.classList.add('noimg');
+    }
+    noImageOnError(c, img);
     const frame = el('div', 'frame', opt.name ?? opt.label);
     c.append(img, frame);
     c.title = opt.label ?? opt.name ?? '';
-    c.dataset.zoom = img.src;
-    c.addEventListener('mouseenter', () => hoverCard(c));
-    c.addEventListener('mouseleave', () => hoverCard(null));
+    hoverable(c);
     c.onclick = onClick;
     return c;
   }
-  const b = el('button', 'text-option', opt.label);
+  const b = el('button', 'text-option');
+  setSymbolText(b, opt.label);
   b.onclick = onClick;
   return b;
 }
 
 function build(req, model, answer) {
   const dlg = el('div', 'dialog');
-  dlg.append(el('h3', '', req.title || req.message || ''));
-  if (req.title && req.message) dlg.append(el('p', '', req.message));
+  const title = el('h3');
+  setSymbolText(title, req.title || req.message || '');
+  dlg.append(title);
+  if (req.title && req.message) {
+    const text = el('p');
+    setSymbolText(text, req.message);
+    dlg.append(text);
+  }
   switch (req.kind) {
     case 'choices':
     case 'reveal': return choices(dlg, req, model, answer);
@@ -108,10 +125,14 @@ function build(req, model, answer) {
 const SEARCH_FROM = 20;
 const SHOW_AT_MOST = 200;
 
+// Drawing a long list costs an image request per option, so typing waits for a pause
+const SEARCH_DELAY_MS = 200;
+let searchTimer = 0;
+
 function choices(dlg, req, model, answer) {
   const reveal = req.kind === 'reveal';
   const picked = new Set(reveal ? [] : req.selected);
-  const list = el('div', 'options');
+  const list = el('div', reveal ? 'options grid' : 'options');
   const note = el('p', 'hint');
   const confirm = button(reveal ? 'OK' : 'Confirm', true, () => answer(reveal ? [] : [...picked]));
   const search = req.options.length > SEARCH_FROM ? el('input', 'choice-search') : null;
@@ -144,7 +165,10 @@ function choices(dlg, req, model, answer) {
   };
   if (search) {
     search.placeholder = `Search ${req.options.length} options`;
-    search.addEventListener('input', draw);
+    search.addEventListener('input', () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(draw, SEARCH_DELAY_MS);
+    });
     dlg.append(search);
   }
   dlg.append(list, note, actions(confirm));

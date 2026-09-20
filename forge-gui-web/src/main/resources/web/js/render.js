@@ -1,4 +1,4 @@
-// Reuses child elements by key, so a card keeps its element (and its CSS transitions) across renders.
+// Reuses child elements by key, so a card keeps its element (and its CSS transitions) across renders
 export function reconcile(parent, items, keyOf, create, update) {
   const existing = new Map([...parent.children].map(el => [el.dataset.key, el]));
   let prev = null;

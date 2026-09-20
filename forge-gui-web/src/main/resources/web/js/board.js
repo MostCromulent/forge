@@ -1,29 +1,32 @@
 import { reconcile } from './render.js';
-import { imageUrl } from './cards.js';
+import { cardImageSrc, hideOnError, noImageOnError, setImage } from './images.js';
 import { game, me, opponents, players, zone, deref, stateOf, isLocal } from './model.js';
 import { renderHand } from './hand.js';
 import { renderZones, togglePile } from './zones.js';
 import { renderBattlefield } from './battlefield.js';
-import { hoverCard, hoverPlayer } from './detail.js';
+import { hoverPlayer, hoverable } from './detail.js';
 import { renderStack } from './stack.js';
 import { renderPhaseBar } from './phasebar.js';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks.js';
+import { animateCardMoves } from './motion.js';
 
 const MANA = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
 export function renderMatch(model, send) {
   const g = game(model);
   if (!g) return;
-  const select = el => send({ t: 'selectCard', key: Number(el.dataset.key) });
+  const select = (el, menu) => send({ t: 'selectCard', key: Number(el.dataset.key), menu: !!menu });
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
   renderSeat(document.getElementById('opponent'), model, opponents(model)[0], onField, send, select);
   renderSeat(document.getElementById('me'), model, me(model), onField, send, select);
+  announceTurn(model, g);
   renderPhaseBar(model, g, send);
   renderStack(model);
   renderHand(model, me(model), select);
   renderZones(model, select);
   renderGameOver(model, g, send);
+  animateCardMoves(model);
 }
 
 function renderSeat(root, model, player, onField, send, select) {
@@ -51,16 +54,13 @@ function renderSeat(root, model, player, onField, send, select) {
   const avatar = root.querySelector('.avatar');
   root.querySelector('.initial').textContent = (player.Name ?? '?').slice(0, 1).toUpperCase();
   const portrait = root.querySelector('.portrait');
-  const portraitSrc = playerAvatarUrl(player);
-  if ((portrait.getAttribute('src') ?? '') !== portraitSrc) {
+  if (setImage(portrait, playerAvatarUrl(player))) {
     portrait.hidden = true;
     portrait.onload = () => { portrait.hidden = false; };
-    if (portraitSrc) portrait.src = portraitSrc;
-    else portrait.removeAttribute('src');
   }
   avatar.classList.toggle('ai', !!player.IsAI);
   root.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(player)));
-  root.querySelector('.life').textContent = player.Life ?? 0;
+  showLife(root.querySelector('.life'), avatar, player.Life ?? 0, isLocal(model, player));
   root.querySelector('.name').textContent = player.Name ?? '';
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r?.ref === player.$key));
@@ -110,32 +110,86 @@ function renderZoneTiles(root, model, player) {
     zoneName => {
       const el = document.createElement('button');
       el.className = 'zone-tile';
+      el.dataset.zone = zoneName;
       el.innerHTML = '<img alt="" draggable="false"><span class="zone-name"></span><span class="zone-count"></span>';
       el.querySelector('.zone-name').textContent = zoneName;
-      el.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
+      hideOnError(el.querySelector('img'));
       el.onclick = () => togglePile(Number(el.closest('.seat').dataset.player), zoneName);
       // The hover data sits on the image: the tile's own data-key is how the render finds it again
-      el.addEventListener('mouseenter', () => hoverCard(el.querySelector('img')));
-      el.addEventListener('mouseleave', () => hoverCard(null));
+      hoverable(el, el.querySelector('img'));
       return el;
     },
     (el, zoneName) => {
       const cards = zone(model, player, zoneName);
       // New cards go to the end of the graveyard and exile lists, so the last is on top
       const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : undefined;
-      const state = top ? stateOf(model, top) : {};
-      const src = top && model.visible.has(top.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
+      const src = cardImageSrc(model, top);
       const img = el.querySelector('img');
-      if (img.getAttribute('src') !== src) {
-        img.hidden = !src;
-        if (src) img.src = src;
-      }
+      setImage(img, src);
+      img.hidden = !src;
       img.dataset.key = top?.$key ?? '';
       img.dataset.zoom = src;
       el.classList.toggle('back', (zoneName === 'Library' || zoneName === 'Hand') && cards.length > 0);
       el.classList.toggle('empty', cards.length === 0);
       el.querySelector('.zone-count').textContent = cards.length;
     });
+}
+
+// Whose turn it is, said once as the turn begins
+let announced = null;
+
+function announceTurn(model, g) {
+  const active = deref(model, g.PlayerTurn);
+  const turn = `${g.Turn ?? 0}/${active?.$key ?? ''}`;
+  if (!active || announced === turn) {
+    return;
+  }
+  const first = announced === null;
+  announced = turn;
+  if (first) {
+    return;
+  }
+  const banner = document.createElement('div');
+  banner.className = `turn-banner${isLocal(model, active) ? ' mine' : ''}`;
+  banner.textContent = isLocal(model, active) ? 'Your turn' : `${active.Name}'s turn`;
+  document.body.append(banner);
+  banner.addEventListener('animationend', () => banner.remove());
+}
+
+// A life change is easy to miss as a number, so the amount floats off the avatar and the ring answers
+function showLife(el, avatar, life, local) {
+  const before = el.dataset.life === undefined ? life : Number(el.dataset.life);
+  el.dataset.life = life;
+  el.textContent = life;
+  const change = life - before;
+  if (!change) {
+    return;
+  }
+  const hurt = change < 0;
+  el.classList.remove('hurt', 'healed');
+  void el.offsetWidth;
+  el.classList.add(hurt ? 'hurt' : 'healed');
+  const float = document.createElement('span');
+  float.className = `life-change ${hurt ? 'hurt' : 'healed'}`;
+  float.textContent = `${hurt ? '' : '+'}${change}`;
+  avatar.append(float);
+  float.addEventListener('animationend', () => float.remove());
+  if (hurt && local) {
+    takeHit(-change);
+  }
+}
+
+// Damage to your own life shakes the board and washes the edges, so it cannot be missed
+function takeHit(amount) {
+  const match = document.getElementById('match');
+  match.classList.remove('hit', 'hit-hard');
+  void match.offsetWidth;
+  match.classList.add(amount >= 5 ? 'hit-hard' : 'hit');
+  match.addEventListener('animationend', () => match.classList.remove('hit', 'hit-hard'), { once: true });
+  const flash = document.createElement('div');
+  flash.className = 'hit-flash';
+  document.body.append(flash);
+  flash.addEventListener('animationend', () => flash.remove());
 }
 
 // The command zone: the monarch, the initiative, emblems and commanders, shown as round tokens beside the player
@@ -145,20 +199,16 @@ function renderEmblems(root, model, cards, select) {
       const el = document.createElement('div');
       el.className = 'emblem';
       el.innerHTML = '<img alt="" draggable="false"><span class="initials"></span>';
-      el.querySelector('img').addEventListener('error', () => el.classList.add('noimg'));
+      noImageOnError(el, el.querySelector('img'));
       el.onclick = () => select(el);
-      el.addEventListener('mouseenter', () => hoverCard(el));
-      el.addEventListener('mouseleave', () => hoverCard(null));
+      hoverable(el);
       return el;
     },
     (el, card) => {
       const state = stateOf(model, card);
-      const src = model.visible.has(card.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
-      const img = el.querySelector('img');
-      if (img.getAttribute('src') !== src) {
-        el.classList.toggle('noimg', !src);
-        if (src) img.src = src;
-      }
+      const src = cardImageSrc(model, card);
+      setImage(el.querySelector('img'), src);
+      el.classList.toggle('noimg', !src);
       el.dataset.zoom = src;
       el.title = state.Name ?? '';
       const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));

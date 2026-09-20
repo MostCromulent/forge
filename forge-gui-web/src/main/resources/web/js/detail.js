@@ -1,15 +1,22 @@
-import { imageUrl } from './cards.js';
+import { appendSymbolText, hideOnError, imageUrl, setImage, setSymbolText } from './images.js';
 
-// Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop).
+// Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop)
 let send = () => {};
 let hovered = null;
 let faceIndex = 0;
 const details = new Map();
 
+export function resetDetail() {
+  details.clear();
+  playerDetails.clear();
+  hovered = null;
+  draw();
+}
+
 export function initDetail(sendFn) {
   send = sendFn;
   document.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() !== 'f' || e.target instanceof HTMLInputElement || !hovered) return;
+    if (e.key.toLowerCase() !== 'f' || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || !hovered) return;
     const count = details.get(hovered.key)?.faces.length ?? 0;
     if (count > 1) {
       faceIndex = (faceIndex + 1) % count;
@@ -30,6 +37,11 @@ export function hoverCard(el) {
   hovered = { key: Number.isInteger(key) ? key : null, src: el.dataset.zoom };
   if (hovered.key !== null) send({ t: 'detail', key: hovered.key });
   draw();
+}
+
+export function hoverable(el, target = el) {
+  el.addEventListener('mouseenter', () => hoverCard(target));
+  el.addEventListener('mouseleave', () => hoverCard(null));
 }
 
 // Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
@@ -65,15 +77,11 @@ function draw() {
   ensureZoom(zoom);
   const img = zoom.querySelector('img');
   img.hidden = false;
-  const src = face?.imageKey ? imageUrl(face.imageKey) : hovered.src;
-  if (img.getAttribute('src') !== src) {
-    img.hidden = false;
-    img.src = src;
-  }
+  setImage(img, face?.imageKey ? imageUrl(face.imageKey) : hovered.src);
   zoom.querySelector('.detail').hidden = !face;
   if (!face) return;
   zoom.querySelector('.name').textContent = face.name ?? '';
-  zoom.querySelector('.cost').textContent = face.cost ?? '';
+  setSymbolText(zoom.querySelector('.cost'), face.cost);
   zoom.querySelector('.type').textContent = face.type ?? '';
   setRulesText(zoom.querySelector('.text'), face.text ?? '');
   zoom.querySelector('.pt').textContent = face.pt ?? '';
@@ -88,10 +96,7 @@ function setRulesText(el, html) {
   const walk = (node, muted) => {
     for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
-        const span = document.createElement('span');
-        if (muted) span.className = 'muted';
-        span.textContent = child.textContent;
-        el.append(span);
+        appendSymbolText(el, child.textContent, muted ? 'muted' : '');
       } else if (child.nodeName === 'BR') {
         el.append('\n');
       } else if (child.nodeType === Node.ELEMENT_NODE) {
@@ -105,7 +110,7 @@ function setRulesText(el, html) {
 function ensureZoom(zoom) {
   if (zoom.firstChild) return;
   zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
-  zoom.querySelector('img').addEventListener('error', e => { e.target.hidden = true; });
+  hideOnError(zoom.querySelector('img'));
 }
 
 function drawPlayer(zoom, d) {

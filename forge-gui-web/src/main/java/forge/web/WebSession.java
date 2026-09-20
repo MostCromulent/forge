@@ -114,6 +114,7 @@ public final class WebSession implements WebServer.Endpoint {
         m.add("avatars", seatIndices(FPref.UI_AVATARS));
         m.add("sleeves", seatIndices(FPref.UI_SLEEVES));
         m.addProperty("avatarCount", SkinSprites.avatarCount());
+        m.add("playmats", Playmats.list());
         m.addProperty("sleeveCount", SkinSprites.sleeveCount());
         return m;
     }
@@ -201,6 +202,7 @@ public final class WebSession implements WebServer.Endpoint {
         saveSeatIndices(FPref.UI_AVATARS, msg, "avatars", SkinSprites.avatarCount());
         saveSeatIndices(FPref.UI_SLEEVES, msg, "sleeves", SkinSprites.sleeveCount());
         FModel.getPreferences().save();
+        closeMatch();
         final WebGuiGame gui = new WebGuiGame();
         match = gui;
         final BrowserChannel b = browser;
@@ -215,7 +217,7 @@ public final class WebSession implements WebServer.Endpoint {
             }
         } catch (final RuntimeException e) {
             Logger.error(e, "Could not start the match");
-            match = null;
+            closeMatch();
             local.endMatch();
             channel.send(error("Could not start the match: " + e.getMessage()));
             channel.send(hello());
@@ -223,7 +225,7 @@ public final class WebSession implements WebServer.Endpoint {
     }
 
     private void leave() {
-        match = null;
+        closeMatch();
         local.endMatch();
         final BrowserChannel b = browser;
         if (b != null) {
@@ -234,10 +236,19 @@ public final class WebSession implements WebServer.Endpoint {
     private void quit() {
         final WebGuiGame m = match;
         if (m != null) {
-            m.onBrowserMessage(JsonCodec.message("concede"));
+            m.concede();
         }
-        match = null;
+        closeMatch();
         local.shutdown();
         onQuit.run();
+    }
+
+    /** Each match holds a thread of its own, so the one being replaced has to let go of it. */
+    private void closeMatch() {
+        final WebGuiGame m = match;
+        match = null;
+        if (m != null) {
+            m.close();
+        }
     }
 }

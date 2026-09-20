@@ -47,6 +47,10 @@
 #options .switch.on { background: var(--accent); border-color: var(--accent); }
 #options .switch.on::after { left: 20px; background: #fff; }
 #options .setting.wide { display: grid; gap: 6px; }
+#options .mat-grid { display: grid; grid-template-columns: repeat(auto-fill, 64px); gap: 6px; }
+#options .mat { width: 64px; height: 40px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2) center / cover no-repeat; }
+#options .mat.chosen { border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-2); }
+#options .setting:has(.mat-grid) { display: grid; gap: 6px; }
 #options .css-editor { display: grid; gap: 6px; }
 #options .css-buttons { display: flex; gap: 6px; }
 #options .css-buttons button { padding: 4px 10px; font-size: 12px; }

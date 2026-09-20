@@ -1,8 +1,12 @@
-/* As in Arena, the hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
+/* The hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
 /* The console sits in the corner, so the hand centres in what is left of the row */
 #hand { padding-left: calc(var(--console-w) + 24px); display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
+/* The cost to cast sits over the card's top-right corner as bare symbols, sized from the card */
+#hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.09); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 2px; filter: drop-shadow(0 1px 2px #000c); }
+#hand .card .cost-badge:empty { display: none; }
+#hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.2); width: calc(var(--hand-w) * 0.2); margin: 0; }
 #hand .card { flex: none; transform: translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .12s ease; }
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }

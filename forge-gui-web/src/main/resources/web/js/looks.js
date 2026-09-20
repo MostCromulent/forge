@@ -1,4 +1,4 @@
-import { imageUrl } from './cards.js';
+import { imageUrl } from './images.js';
 
 // Avatars and sleeves are numbered cells of the skin's sprite sheets, the same numbers desktop stores
 export const avatarUrl = index => `avatar?i=${index}`;

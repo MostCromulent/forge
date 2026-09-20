@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Plays the web seat to a script: waits at its first own main phase until released, then uses the named cards in
  * order (clicking a card in hand plays it, clicking one on the battlefield activates it) and passes priority after.
- * Every request is held open before it is answered, and the browser reloads once, on the third request.
+ * Every request is held open before it is answered, and the browser reloads once, while the first one is open.
  */
 final class ScriptedBrowser implements BrowserChannel {
     final BrowserModel model = new BrowserModel();
@@ -30,6 +30,7 @@ final class ScriptedBrowser implements BrowserChannel {
     volatile boolean reloaded;
     private final WebGuiGame gui;
     private final long holdMillis;
+    private static final int MAX_RETRIES = 12;
     private final ScheduledExecutorService actions = Executors.newSingleThreadScheduledExecutor(r -> {
         final Thread t = new Thread(r, "ScriptedBrowser");
         t.setDaemon(true);
@@ -38,6 +39,9 @@ final class ScriptedBrowser implements BrowserChannel {
     private final Deque<String> cardsToUse = new ConcurrentLinkedDeque<>();
     private final Set<Integer> answered = ConcurrentHashMap.newKeySet();
     private final AtomicInteger requests = new AtomicInteger();
+    private final AtomicInteger retries = new AtomicInteger();
+    /** Set once the game has refused the same click this many times running; the prompt it stalled on. */
+    volatile String stuck;
     private final AtomicLong promptVersion = new AtomicLong();
     private volatile boolean released;
     private volatile JsonObject lastPrompt;
@@ -47,6 +51,24 @@ final class ScriptedBrowser implements BrowserChannel {
     ScriptedBrowser(final WebGuiGame gui, final long holdMillis) {
         this.gui = gui;
         this.holdMillis = holdMillis;
+    }
+
+    /** The turn the browser has been told about, or 0 before the first one. */
+    int turn() {
+        final JsonObject game = model.objectsCopy().get(root);
+        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
+    }
+
+    /** The most permanents any one player has, as the browser knows it. */
+    int widestBattlefield() {
+        int widest = 0;
+        final Map<Integer, JsonObject> objects = model.objectsCopy();
+        for (final JsonObject o : objects.values()) {
+            if (o.has("Battlefield")) {
+                widest = Math.max(widest, o.getAsJsonArray("Battlefield").size());
+            }
+        }
+        return widest;
     }
 
     void release(final String... cardNames) {
@@ -69,6 +91,7 @@ final class ScriptedBrowser implements BrowserChannel {
             case "request" -> onRequest(m);
             case "prompt" -> {
                 lastPrompt = m;
+                retries.set(0);
                 actOnLatestPrompt();
             }
             default -> { }
@@ -82,7 +105,7 @@ final class ScriptedBrowser implements BrowserChannel {
             return;
         }
         requestKinds.merge(m.get("kind").getAsString(), 1, Integer::sum);
-        if (requests.incrementAndGet() == 3 && !reloaded) {
+        if (requests.incrementAndGet() == 1 && !reloaded) {
             reloaded = true;
             actions.schedule(() -> {
                 answered.remove(id);
@@ -125,12 +148,18 @@ final class ScriptedBrowser implements BrowserChannel {
             atOwnMain.countDown();
             return;
         }
-        // A rejected click sends no new prompt; act again if nothing arrives
+        // A rejected click sends no new prompt; act again if nothing arrives, but a click the game will never
+        // accept would otherwise retry until the test times out, so give up and let the wait fail instead
         final long seen = promptVersion.get();
         actions.schedule(() -> {
-            if (promptVersion.get() == seen) {
-                actOnLatestPrompt();
+            if (promptVersion.get() != seen) {
+                return;
             }
+            if (retries.incrementAndGet() > MAX_RETRIES) {
+                stuck = prompt.toString();
+                return;
+            }
+            actOnLatestPrompt();
         }, 1500, TimeUnit.MILLISECONDS);
         if (!prompt.getAsJsonObject("ok").get("enabled").getAsBoolean()) {
             selectUnchosen(prompt);

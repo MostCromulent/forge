@@ -114,7 +114,7 @@ public final class WebServer implements AutoCloseable {
         group.shutdownGracefully();
     }
 
-    static File cardImage(final String imageKey) {
+    private static File cardImage(final String imageKey) {
         String key = imageKey;
         final boolean backFace = key.endsWith(ImageKeys.BACKFACE_POSTFIX);
         if (backFace) {
@@ -281,6 +281,26 @@ public final class WebServer implements AutoCloseable {
                 final List<String> index = q.parameters().get("i");
                 final Integer i = index == null ? null : Ints.tryParse(index.get(0));
                 final byte[] png = i == null ? null : SkinSprites.png("/avatar".equals(path), i);
+                if (png == null) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                } else {
+                    respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
+                }
+                return;
+            }
+            if ("/playmat".equals(path)) {
+                final List<String> id = q.parameters().get("id");
+                final byte[] image = id == null ? null : Playmats.image(id.get(0));
+                if (image == null) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                } else {
+                    respond(ctx, HttpResponseStatus.OK, image, "image/jpeg", false);
+                }
+                return;
+            }
+            if ("/mana".equals(path)) {
+                final List<String> symbol = q.parameters().get("s");
+                final byte[] png = symbol == null ? null : SkinSprites.manaPng(symbol.get(0));
                 if (png == null) {
                     respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
                 } else {

@@ -1,18 +1,21 @@
 import { stateOf } from './model.js';
-import { hoverCard } from './detail.js';
+import { hoverable } from './detail.js';
+import { cardImageSrc, noImageOnError, setImage, setSymbolText } from './images.js';
 import { playerSleeveUrl, cssUrl } from './looks.js';
-
-export const imageUrl = key => `img?key=${encodeURIComponent(key)}`;
 
 // onClick receives the card element; the board selects the card, dialogs toggle an option
 export function createCard(onClick) {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span>';
-  el.querySelector('img').addEventListener('error', () => el.classList.add('noimg'));
-  el.addEventListener('click', () => onClick(el));
-  el.addEventListener('mouseenter', () => hoverCard(el));
-  el.addEventListener('mouseleave', () => hoverCard(null));
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span>';
+  noImageOnError(el, el.querySelector('img'));
+  el.addEventListener('click', () => onClick(el, false));
+  // The right button asks what else the card can do, as it does on desktop
+  el.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    onClick(el, true);
+  });
+  hoverable(el);
   return el;
 }
 
@@ -35,20 +38,26 @@ export function updateCard(el, model, card) {
   el.classList.toggle('attacking', !!card.Attacking);
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
-  const src = visible && state.ImageKey ? imageUrl(state.ImageKey) : '';
-  const img = el.querySelector('img');
-  if (img.dataset.src !== src) {
-    img.dataset.src = src;
+  const src = cardImageSrc(model, card);
+  if (setImage(el.querySelector('img'), src)) {
     el.classList.remove('noimg');
-    if (src) img.src = src;
-    else img.removeAttribute('src');
   }
   el.dataset.zoom = src;
   el.querySelector('.name').textContent = visible ? (state.Name ?? '') : '';
-  el.querySelector('.cost').textContent = visible ? (state.ManaCost ?? '') : '';
+  setSymbolText(el.querySelector('.cost'), visible ? state.ManaCost : '');
+  setSymbolText(el.querySelector('.cost-badge'), visible ? state.ManaCost : '');
   el.querySelector('.type').textContent = type;
-  el.querySelector('.pt').textContent = /Creature/.test(type) ? `${state.Power ?? 0}/${state.Toughness ?? 0}`
-    : /Planeswalker/.test(type) ? (state.Loyalty ?? '') : '';
+  const pt = el.querySelector('.pt');
+  const shown = /Creature/.test(type) ? `${state.Power ?? 0}/${state.Toughness ?? 0}`
+    : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}` : '';
+  // A pump, a counter or a loyalty change is a number the player must notice
+  if (pt.textContent && shown && pt.textContent !== shown) {
+    pt.classList.remove('changed');
+    void pt.offsetWidth;
+    pt.classList.add('changed');
+  }
+  pt.textContent = shown;
+  showDamage(el, card.Damage ?? 0);
   const badges = [];
   if (card.Damage) badges.push(`${card.Damage} dmg`);
   if (card.IsRingBearer) badges.push('Ring-bearer');
@@ -56,7 +65,29 @@ export function updateCard(el, model, card) {
   el.querySelector('.badges').textContent = badges.join(' · ');
 }
 
-export function setPileCount(el, count) {
+// New damage jolts the card and throws the number off it, so combat is legible without the log
+function showDamage(el, damage) {
+  const before = el.dataset.damage === undefined ? damage : Number(el.dataset.damage);
+  el.dataset.damage = damage;
+  if (damage <= before) {
+    return;
+  }
+  el.classList.remove('struck');
+  void el.offsetWidth;
+  el.classList.add('struck');
+  const hit = document.createElement('span');
+  hit.className = 'hit-number';
+  hit.textContent = `-${damage - before}`;
+  el.append(hit);
+  hit.addEventListener('animationend', () => hit.remove());
+}
+
+export function setPileCount(el, count, opened) {
   el.classList.toggle('pile', count > 1);
-  el.querySelector('.count').textContent = count > 1 ? `×${count}` : '';
+  // Up to three edges show behind the top card, so a pile of two never looks like a pile of five
+  el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
+  const badge = el.querySelector('.count');
+  badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';
+  badge.classList.toggle('opened', !!opened);
+  badge.title = opened ? 'Put the pile back together' : count > 1 ? 'Lay the pile out' : '';
 }

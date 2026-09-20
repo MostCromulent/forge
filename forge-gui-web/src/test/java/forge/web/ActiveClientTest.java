@@ -53,15 +53,6 @@ public class ActiveClientTest {
         Assert.fail("game did not start");
     }
 
-    private static RemoteClientGuiGame remoteGui(final HostedMatch match) {
-        for (final Player p : match.getGame().getPlayers()) {
-            if (p.getController() instanceof PlayerControllerHuman pch && pch.getGui() instanceof RemoteClientGuiGame r) {
-                return r;
-            }
-        }
-        throw new AssertionError("no remote human seat");
-    }
-
     // GameState names the first player "human" and the second "ai", whoever controls them
     private static void giveWebSeat(final Game game, final String hand, final String battlefield, final String library) {
         giveWebSeat(game, hand, battlefield, library, "");
@@ -102,7 +93,7 @@ public class ActiveClientTest {
             giveWebSeat(local.hostedMatch().getGame(), "Temple of Enlightenment", "Evolving Wilds", "Plains;Plains;Plains;Plains;Plains");
             Thread.sleep(500);
             // Placing cards fires no game event; the host's own resync sends them while the engine waits on this seat
-            remoteGui(local.hostedMatch()).updateGameView();
+            WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             // One card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
             for (int i = 0; i < 300 && !browser.requestKinds.containsKey("manipulate"); i++) {
@@ -115,7 +106,7 @@ public class ActiveClientTest {
                 Thread.sleep(100);
             }
             Assert.assertTrue(browser.zonesShown.contains("Library"), "no library search reached the browser: " + browser.zonesShown);
-            Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
+            Assert.assertTrue(browser.reloaded, "no reload happened mid-request; requests seen: " + browser.requestKinds);
             Assert.assertEquals(gui.skippedProperties(), 0);
             gui.onBrowserMessage(FakeBrowser.action("concede"));
         } finally {
@@ -161,19 +152,20 @@ public class ActiveClientTest {
         final LocalGame local = new LocalGame();
         try {
             final WebGuiGame gui = new WebGuiGame();
-            // Never passes priority, so only End Turn can move the game on
-            final FakeBrowser browser = new FakeBrowser(gui, false, true);
+            // Holds at its own first main phase and never passes priority, so only End Turn can move the game on
+            final ScriptedBrowser browser = new ScriptedBrowser(gui, 50);
             gui.attach(browser);
             onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
-            final int held = keepAndHoldPriority(gui, browser);
+            Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
+            final int held = browser.turn();
             Thread.sleep(2000);
-            Assert.assertEquals(turn(browser), held, "the game moved on while the seat held priority");
+            Assert.assertEquals(browser.turn(), held, "the game moved on while the seat held priority");
 
             gui.onBrowserMessage(FakeBrowser.action("endTurn"));
-            for (int i = 0; i < 300 && turn(browser) == held; i++) {
+            for (int i = 0; i < 300 && browser.turn() == held; i++) {
                 Thread.sleep(100);
             }
-            Assert.assertTrue(turn(browser) > held, "End Turn did not pass the turn");
+            Assert.assertTrue(browser.turn() > held, "End Turn did not pass the turn");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
         } finally {
             onUi(local::shutdown);
@@ -222,7 +214,7 @@ public class ActiveClientTest {
             final Game game = local.hostedMatch().getGame();
             giveWebSeat(game, "Fire // Ice", "Delver of Secrets;Grizzly Bears|FaceDown", "Plains;Plains;Plains", "Grizzly Bears|FaceDown");
             Thread.sleep(500);
-            remoteGui(local.hostedMatch()).updateGameView();
+            WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             final int delver = cardKey(game, ZoneType.Battlefield, true, "Delver of Secrets", false);
             final int split = cardKey(game, ZoneType.Hand, true, "Fire // Ice", false);
             final int ownFaceDown = cardKey(game, ZoneType.Battlefield, true, "Grizzly Bears", true);
@@ -276,7 +268,7 @@ public class ActiveClientTest {
                     ai + "library=Forest;Forest;Forest;Forest;Forest"));
             state.applyToGame(game);
             Thread.sleep(500);
-            remoteGui(local.hostedMatch()).updateGameView();
+            WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             final Player seat = game.getPlayers().get(webFirst ? 0 : 1);
             final int turn = game.getPhaseHandler().getTurn();
             browser.release();
@@ -309,7 +301,7 @@ public class ActiveClientTest {
             onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
             awaitStarted(local);
 
-            final RemoteClientGuiGame seat = remoteGui(local.hostedMatch());
+            final RemoteClientGuiGame seat = WebTestSupport.remoteGui(local.hostedMatch());
             final CompletableFuture<Boolean> probe = new CompletableFuture<>();
             GuiBase.getInterface().invokeInEdtLater(() -> probe.complete(seat.showConfirmDialog("Hold", "Hold", "Yes", "No", true)));
             Assert.assertNotNull(browser.awaitLast("request", 20000), "request did not reach the browser");

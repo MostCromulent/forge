@@ -138,7 +138,7 @@ public final class BrowserModel {
         objects.keySet().retainAll(reachable);
     }
 
-    static void collectRefs(final JsonElement e, final Deque<Integer> out) {
+    private static void collectRefs(final JsonElement e, final Deque<Integer> out) {
         if (e.isJsonArray()) {
             for (final JsonElement item : e.getAsJsonArray()) {
                 collectRefs(item, out);

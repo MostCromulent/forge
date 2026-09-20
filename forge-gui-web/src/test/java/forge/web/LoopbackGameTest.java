@@ -2,11 +2,9 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
-import forge.game.player.Player;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
-import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -26,15 +24,6 @@ public class LoopbackGameTest {
 
     private static void onUi(final Runnable r) {
         GuiBase.getInterface().invokeInEdtAndWait(r);
-    }
-
-    private static RemoteClientGuiGame remoteGui(final HostedMatch match) {
-        for (final Player p : match.getGame().getPlayers()) {
-            if (p.getController() instanceof PlayerControllerHuman pch && pch.getGui() instanceof RemoteClientGuiGame r) {
-                return r;
-            }
-        }
-        throw new AssertionError("no remote human seat");
     }
 
     private static void awaitGameStarted(final LocalGame local, final FakeBrowser browser) throws InterruptedException {
@@ -77,7 +66,7 @@ public class LoopbackGameTest {
             awaitGameStarted(local, browser);
 
             // The host UI thread blocks on a client reply; the client must answer without that thread
-            final RemoteClientGuiGame remote = remoteGui(local.hostedMatch());
+            final RemoteClientGuiGame remote = WebTestSupport.remoteGui(local.hostedMatch());
             final CompletableFuture<Boolean> probe = new CompletableFuture<>();
             GuiBase.getInterface().invokeInEdtLater(() -> probe.complete(remote.showConfirmDialog("probe", "probe", "Yes", "No", true)));
             Assert.assertTrue(probe.get(20, TimeUnit.SECONDS));

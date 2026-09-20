@@ -1,10 +1,14 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.game.player.Player;
+import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgeNetPreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.player.PlayerControllerHuman;
 import org.testng.SkipException;
 
 final class WebTestSupport {
@@ -24,6 +28,17 @@ final class WebTestSupport {
             });
         }
         FModel.getNetPreferences().setPref(ForgeNetPreferences.FNetPref.UPnP, "NEVER");
+    }
+
+    /** The host's own view of the web seat. Seeding cards with a {@link forge.game.GameState} fires no game event,
+     *  so a test that places them must call {@code updateGameView()} on this to send them. */
+    static RemoteClientGuiGame remoteGui(final HostedMatch match) {
+        for (final Player p : match.getGame().getPlayers()) {
+            if (p.getController() instanceof PlayerControllerHuman pch && pch.getGui() instanceof RemoteClientGuiGame r) {
+                return r;
+            }
+        }
+        throw new AssertionError("no remote human seat");
     }
 
     static void skipUnlessStress() {

@@ -1,8 +1,8 @@
-import { imageUrl } from './cards.js';
-import { game, stateOf } from './model.js';
-import { hoverCard } from './detail.js';
-import { stepName } from './phasebar.js';
-import { openOptions, closeOptions } from './settings.js';
+import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images.js';
+import { game } from './model.js';
+import { hoverable } from './detail.js';
+import { stepName, stopsOpen } from './phasebar.js';
+import { openOptions, closeOptions } from './options.js';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
@@ -43,14 +43,16 @@ export function renderPrompt(model, send) {
     root.querySelector('.end-turn').onclick = () => send({ t: 'endTurn' });
     root.querySelector('.auto-pass').onclick = () => send({ t: 'autoPass' });
     root.querySelector('.undo').onclick = () => send({ t: 'undo' });
-    root.querySelector('.cog').onclick = openOptions;
+    root.querySelector('.cog').onclick = () => openOptions(() => send({ t: 'concede' }));
     document.addEventListener('keydown', e => {
       if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = root.querySelector('.ok');
       const cancel = root.querySelector('.cancel');
-      if (e.key === 'Escape' && document.getElementById('options')) {
-        closeOptions();
-      } else if (document.getElementById('options')) {
+      if (document.getElementById('options') || stopsOpen()) {
+        // Escape belongs to whatever is open over the board; the prompt keeps its answer
+        if (e.key === 'Escape' && document.getElementById('options')) {
+          closeOptions();
+        }
         return;
       } else if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
         e.preventDefault();
@@ -83,7 +85,7 @@ export function renderPrompt(model, send) {
   // A heading, not a sentence: short, and with nothing that ends a sentence
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]);
   root.querySelector('.step').textContent = heading ? lines[0] : p.priority ? 'Priority' : stepName(game(model)?.Phase);
-  root.querySelector('.message').textContent = (heading ? lines.slice(1) : lines).join(' ').trim();
+  setSymbolText(root.querySelector('.message'), (heading ? lines.slice(1) : lines).join(' ').trim());
   renderPromptCard(root.querySelector('.prompt-card'), model, p.card);
   setButton(root.querySelector('.ok'), p.ok);
   setButton(root.querySelector('.cancel'), p.cancel);
@@ -95,24 +97,19 @@ export function renderPrompt(model, send) {
 function renderPromptCard(img, model, ref) {
   if (!img.dataset.wired) {
     img.dataset.wired = '1';
-    img.addEventListener('error', () => { img.hidden = true; });
-    img.addEventListener('mouseenter', () => hoverCard(img));
-    img.addEventListener('mouseleave', () => hoverCard(null));
+    hideOnError(img);
+    hoverable(img);
   }
   const card = ref ? model.objects.get(ref.ref) : null;
-  const state = card ? stateOf(model, card) : {};
-  const src = card && model.visible.has(card.$key) && state.ImageKey ? imageUrl(state.ImageKey) : '';
+  const src = cardImageSrc(model, card);
   img.dataset.key = card?.$key ?? '';
   img.dataset.zoom = src;
-  if ((img.getAttribute('src') ?? '') !== src) {
-    img.hidden = !src;
-    if (src) img.src = src;
-    else img.removeAttribute('src');
-  }
+  setImage(img, src);
+  img.hidden = !src;
 }
 
 function setButton(button, spec) {
-  button.querySelector('.label').textContent = spec?.label ?? '';
+  setSymbolText(button.querySelector('.label'), spec?.label);
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;
 }

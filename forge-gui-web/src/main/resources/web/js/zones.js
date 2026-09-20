@@ -4,17 +4,24 @@ import { zone } from './model.js';
 
 // Piles the player opened by clicking, on top of the zones the game asks to show
 const opened = new Set();
-let last = null;
+let schedule = () => {};
+
+export function initZones(scheduleFn) {
+  schedule = scheduleFn;
+}
+
+export function resetZones() {
+  opened.clear();
+}
 
 export function togglePile(playerKey, zoneName) {
   const k = `${playerKey}/${zoneName}`;
   if (opened.has(k)) opened.delete(k);
   else opened.add(k);
-  if (last) renderZones(...last);
+  schedule();
 }
 
 export function renderZones(model, select) {
-  last = [model, select];
   const panels = new Map();
   for (const z of model.zones) panels.set(`${z.player.ref}/${z.zone}`, { player: z.player.ref, zone: z.zone, forced: true });
   for (const k of opened) {

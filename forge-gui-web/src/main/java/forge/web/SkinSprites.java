@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
@@ -21,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class SkinSprites {
     private static List<BufferedImage> avatars;
+    private static BufferedImage manaIcons;
     private static List<BufferedImage> sleeves;
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
@@ -44,29 +46,68 @@ final class SkinSprites {
         if (index < 0 || index >= cells.size()) {
             return null;
         }
-        return encoded.computeIfAbsent((avatar ? "a" : "s") + index, k -> {
-            final ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
-                ImageIO.write(cells.get(index), "png", out);
-            } catch (final IOException e) {
-                Logger.warn("Could not encode sprite {}: {}", k, e.getMessage());
+        return encoded.computeIfAbsent((avatar ? "a" : "s") + index, k -> encode(cells.get(index), k));
+    }
+
+    /** PNG bytes of one mana or tap symbol, cut from the skin's icon sheet, or null for a symbol it has no image for. */
+    static byte[] manaPng(final String symbol) {
+        final FSkinProp prop = FSkinProp.MANA_IMG.get(symbol);
+        if (prop == null) {
+            return null;
+        }
+        return encoded.computeIfAbsent("m" + symbol, k -> {
+            final BufferedImage sheet = manaSheet();
+            final int[] at = prop.getCoords();
+            if (sheet == null || at.length < 4 || at[0] + at[2] > sheet.getWidth() || at[1] + at[3] > sheet.getHeight()) {
                 return null;
             }
-            return out.toByteArray();
+            return encode(sheet.getSubimage(at[0], at[1], at[2], at[3]), k);
         });
+    }
+
+    private static synchronized BufferedImage manaSheet() {
+        if (manaIcons == null) {
+            manaIcons = read(skinFile(ForgeConstants.SPRITE_MANAICONS_FILE));
+        }
+        return manaIcons;
     }
 
     private static List<BufferedImage> avatars() {
         if (avatars == null) {
-            final String skin = FModel.getPreferences().getPref(FPref.UI_SKIN).toLowerCase().replace(' ', '_');
-            final File preferred = new File((skin.isEmpty() || skin.equals("default") ? ForgeConstants.DEFAULT_SKINS_DIR
-                    : ForgeConstants.CACHE_SKINS_DIR + skin + "/") + ForgeConstants.SPRITE_AVATARS_FILE);
-            final File sheet = preferred.exists() ? preferred : new File(ForgeConstants.DEFAULT_SKINS_DIR + ForgeConstants.SPRITE_AVATARS_FILE);
+            final File sheet = skinFile(ForgeConstants.SPRITE_AVATARS_FILE);
             avatars = new ArrayList<>();
             // The top-left cell is not an avatar
             cut(sheet, 100, 100, true, avatars);
         }
         return avatars;
+    }
+
+    private static byte[] encode(final BufferedImage image, final String name) {
+        final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            ImageIO.write(image, "png", out);
+        } catch (final IOException e) {
+            Logger.warn("Could not encode sprite {}: {}", name, e.getMessage());
+            return null;
+        }
+        return out.toByteArray();
+    }
+
+    /** The player's skin if it has the sheet, otherwise the default skin. */
+    private static File skinFile(final String name) {
+        final String skin = FModel.getPreferences().getPref(FPref.UI_SKIN).toLowerCase().replace(' ', '_');
+        final File preferred = new File((skin.isEmpty() || skin.equals("default") ? ForgeConstants.DEFAULT_SKINS_DIR
+                : ForgeConstants.CACHE_SKINS_DIR + skin + "/") + name);
+        return preferred.exists() ? preferred : new File(ForgeConstants.DEFAULT_SKINS_DIR + name);
+    }
+
+    private static BufferedImage read(final File file) {
+        try {
+            return file.exists() ? ImageIO.read(file) : null;
+        } catch (final IOException e) {
+            Logger.warn("Could not read {}: {}", file, e.getMessage());
+            return null;
+        }
     }
 
     private static List<BufferedImage> sleeves() {
@@ -80,13 +121,7 @@ final class SkinSprites {
 
     // A cell whose centre pixel is transparent is empty and takes no index
     private static void cut(final File file, final int w, final int h, final boolean skipFirst, final List<BufferedImage> out) {
-        final BufferedImage sheet;
-        try {
-            sheet = file.exists() ? ImageIO.read(file) : null;
-        } catch (final IOException e) {
-            Logger.warn("Could not read {}: {}", file, e.getMessage());
-            return;
-        }
+        final BufferedImage sheet = read(file);
         if (sheet == null) {
             return;
         }

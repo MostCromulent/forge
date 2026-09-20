@@ -1,3 +1,4 @@
+import { reconcile } from './render.js';
 import { deref, isLocal, me, opponents, players } from './model.js';
 import { playerAvatarUrl } from './looks.js';
 
@@ -51,31 +52,18 @@ export const stepName = phase => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 
 let open = false;
 let wired = false;
-let lastSend = () => {};
-let last = null;
+let schedule = () => {};
+
+export const stopsOpen = () => open;
+
+export function initPhaseBar(scheduleFn) {
+  schedule = scheduleFn;
+}
 
 export function renderPhaseBar(model, g, send) {
-  lastSend = send;
-  last = [model, g];
   const root = document.getElementById('phase-strip');
   if (!wired) {
-    root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
-    root.querySelector('.pill').onclick = () => {
-      open = !open;
-      renderPhaseBar(...last, lastSend);
-    };
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && open) {
-        open = false;
-        root.querySelector('.stops').hidden = true;
-      }
-    });
-    document.addEventListener('mousedown', e => {
-      if (open && !e.target.closest('#phase-strip')) {
-        open = false;
-        root.querySelector('.stops').hidden = true;
-      }
-    });
+    build(root);
     wired = true;
   }
   const active = deref(model, g.PlayerTurn);
@@ -87,24 +75,17 @@ export function renderPhaseBar(model, g, send) {
   const phase = step < 0 ? 0 : PHASES.findIndex(p => p.steps.includes(step));
   const pill = root.querySelector('.pill');
   const avatar = active ? playerAvatarUrl(active) : '';
-  const owner = `<span class="owner">${avatar ? `<img alt="" src="${avatar}">` : ''}<b>${myTurn ? 'Your turn' : escapeHtml(active?.Name ?? '')}</b><span class="turn">T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}</span></span>`;
-  const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
-  const track = PHASES.map((p, n) => {
-    if (n !== phase) return `<span class="phase ${p.steps.some(i => stops.has(STEPS[i][0])) ? 'stop' : ''}">${glyph(p.glyph, 12)}<i></i></span>`;
-    const name = step < 0 ? 'Untap' : STEPS[step][3];
-    const pips = p.steps.length > 1
-      ? `<span class="pips">${p.steps.map(i => `<i class="${i < step ? 'past' : i === step ? 'now' : ''}"></i>`).join('')}</span>` : '';
-    return `<span class="phase current">${glyph(step < 0 ? p.glyph : STEPS[step][1], 12)}${name}${pips}</span>`;
-  }).join('');
-  const waiting = waitingChip(model);
-  const marker = model.controls?.marker;
-  let until = '';
-  if (marker) {
-    const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${escapeHtml(opponentLabel)}'s `;
-    until = `<span class="until">${glyph('skip', 12)}until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}</span>`;
+  const portrait = pill.querySelector('.owner img');
+  portrait.hidden = !avatar;
+  if (avatar) {
+    portrait.src = avatar;
   }
-  pill.innerHTML = `${owner}<span class="track">${track}</span>${waiting}${until}<span class="caret">${glyph(myTurn ? 'up' : 'down', 12)}</span>`;
-  tickWaiting();
+  pill.querySelector('.owner b').textContent = myTurn ? 'Your turn' : active?.Name ?? '';
+  pill.querySelector('.owner .turn').textContent = `T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}`;
+  drawTrack(pill, model, step, phase, myTurn, send);
+  drawWaiting(pill, model);
+  drawUntil(pill, model, myTurn, opponentLabel);
+  pill.querySelector('.caret').innerHTML = glyph(myTurn ? 'up' : 'down', 12);
   pill.classList.toggle('open', open);
   pill.classList.toggle('priority', !!me(model)?.HasPriority);
 
@@ -112,39 +93,141 @@ export function renderPhaseBar(model, g, send) {
   panel.hidden = !open;
   // Opens away from the player who is acting, so their half of the board stays visible
   panel.classList.toggle('above', myTurn);
-  if (open) panel.innerHTML = stopsGrid(model, step, myTurn, opponentLabel);
-  if (open) wireGrid(panel);
+  if (open) {
+    panel.innerHTML = stopsGrid(model, step, myTurn, opponentLabel);
+    wireGrid(panel, send);
+  }
 }
 
-// Who the game is waiting on, and for how long. Your own priority lights the whole pill instead.
+// The pill is built once and updated in place, so the step can slide from one phase to the next
+function build(root) {
+  root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
+  const pill = root.querySelector('.pill');
+  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="label"></span><span class="pips"></span><i></i></span>`).join('');
+  pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
+    + `<span class="track">${track}</span>`
+    + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
+    + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
+    + '<span class="caret"></span>';
+  pill.onclick = () => {
+    open = !open;
+    schedule();
+  };
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && open) {
+      open = false;
+      root.querySelector('.stops').hidden = true;
+    }
+  });
+  document.addEventListener('mousedown', e => {
+    if (open && !e.target.closest('#phase-strip')) {
+      open = false;
+      root.querySelector('.stops').hidden = true;
+    }
+  });
+}
+
+// Hovering a phase opens it into its steps: click one to stop there, right-click to pass priority until it
+let hoveredPhase = -1;
+
+function drawTrack(pill, model, step, phase, myTurn, send) {
+  const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
+  const marker = model.controls?.marker;
+  pill.querySelectorAll('.track .phase').forEach((el, n) => {
+    const p = PHASES[n];
+    const current = n === phase;
+    const opened = n === hoveredPhase;
+    if (!el.dataset.wired) {
+      el.dataset.wired = '1';
+      el.addEventListener('mouseenter', () => {
+        hoveredPhase = n;
+        schedule();
+      });
+      el.addEventListener('mouseleave', () => {
+        if (hoveredPhase === n) {
+          hoveredPhase = -1;
+          schedule();
+        }
+      });
+    }
+    el.classList.toggle('current', current);
+    el.classList.toggle('opened', opened);
+    el.classList.toggle('stop', !current && !opened && p.steps.some(i => stops.has(STEPS[i][0])));
+    el.querySelector('.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
+    el.querySelector('.label').textContent = current ? (step < 0 ? 'Untap' : STEPS[step][3]) : '';
+    const pips = el.querySelector('.pips');
+    pips.hidden = !current && !opened;
+    if (!pips.hidden) {
+      drawPips(pips, p, step, current, stops, marker, myTurn, send);
+    }
+  });
+}
+
+// The same pips throughout: they simply grow into targets while the phase is open
+function drawPips(root, phase, step, current, stops, marker, myTurn, send) {
+  reconcile(root, phase.steps, i => i,
+    () => {
+      const b = document.createElement('button');
+      b.className = 'pip';
+      b.onclick = e => {
+        e.stopPropagation();
+        send({ t: 'toggleStop', phase: b.dataset.phase, mine: myTurn });
+      };
+      b.oncontextmenu = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        send({ t: 'toggleMarker', phase: b.dataset.phase, mine: myTurn });
+      };
+      return b;
+    },
+    (b, i) => {
+      b.dataset.phase = STEPS[i][0];
+      b.title = `${STEPS[i][2]}. Click: stop here. Right-click: pass priority until here.`;
+      b.classList.toggle('past', current && i < step);
+      b.classList.toggle('now', i === step);
+      b.classList.toggle('on', stops.has(STEPS[i][0]));
+      b.classList.toggle('marked', !!marker && marker.mine === myTurn && marker.phase === STEPS[i][0]);
+    });
+}
+
+function drawUntil(pill, model, myTurn, opponentLabel) {
+  const marker = model.controls?.marker;
+  const until = pill.querySelector('.until');
+  until.hidden = !marker;
+  if (marker) {
+    const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${opponentLabel}'s `;
+    until.querySelector('.text').textContent = `until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}`;
+  }
+}
+
+// Who the game is waiting on, and for how long. Your own priority lights the whole pill instead
 let waitingFor = null;
 let waitingSince = 0;
 let waitingTimer = 0;
 
-function waitingChip(model) {
-  const holder = players(model).find(p => p.HasPriority && !isLocal(model, p));
+function drawWaiting(pill, model) {
+  // Nobody is waited on while the game is waiting on you, whether that is priority or a declaration to make
+  const onMe = me(model)?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled;
+  const holder = onMe ? null : players(model).find(p => p.HasPriority && !isLocal(model, p));
+  const chip = pill.querySelector('.waiting');
+  chip.hidden = !holder;
   if (!holder) {
     waitingFor = null;
-    return '';
+    clearInterval(waitingTimer);
+    waitingTimer = 0;
+    return;
   }
   if (waitingFor !== holder.$key) {
     waitingFor = holder.$key;
     waitingSince = Date.now();
   }
-  return `<span class="waiting">${glyph('wait', 11)}${escapeHtml(holder.Name ?? '')}<b></b></span>`;
-}
-
-function tickWaiting() {
-  clearInterval(waitingTimer);
+  chip.querySelector('.who').textContent = holder.Name ?? '';
   const show = () => {
-    const el = document.querySelector('#phase-strip .waiting b');
-    if (el) {
-      el.textContent = `${((Date.now() - waitingSince) / 1000).toFixed(1)}s`;
-    }
+    chip.querySelector('b').textContent = `${Math.floor((Date.now() - waitingSince) / 1000)}s`;
   };
-  if (document.querySelector('#phase-strip .waiting b')) {
-    show();
-    waitingTimer = setInterval(show, 100);
+  show();
+  if (!waitingTimer) {
+    waitingTimer = setInterval(show, 500);
   }
 }
 
@@ -163,17 +246,16 @@ function stopsGrid(model, step, myTurn, opponentLabel) {
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + '</tr>').join('');
-  return `<div class="title">Phase stops<span class="hint"><kbd>Esc</kbd> or click outside to close</span></div><table>${head}${body}</table>`
-    + '<p class="foot">Click a square to stop there on that player\'s turns. Right-click to pass priority until that step.</p>';
+  return `<div class="title">Phase stops</div><table>${head}${body}</table>`;
 }
 
-function wireGrid(panel) {
+function wireGrid(panel, send) {
   for (const b of panel.querySelectorAll('.cell')) {
     const msg = type => ({ t: type, phase: b.dataset.phase, mine: b.dataset.mine === 'true' });
-    b.onclick = () => lastSend(msg('toggleStop'));
+    b.onclick = () => send(msg('toggleStop'));
     b.oncontextmenu = e => {
       e.preventDefault();
-      lastSend(msg('toggleMarker'));
+      send(msg('toggleMarker'));
     };
   }
 }

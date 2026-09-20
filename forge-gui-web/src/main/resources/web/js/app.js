@@ -5,31 +5,42 @@ import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
 import { appendLog, initLog } from './log.js';
-import { initDetail, onDetail, onPlayerDetail } from './detail.js';
+import { initDetail, onDetail, onPlayerDetail, resetDetail } from './detail.js';
+import { initZones, resetZones } from './zones.js';
+import { initPhaseBar } from './phasebar.js';
+import { initBattlefield } from './battlefield.js';
 import { initStack, onStackMenu } from './stack.js';
 import { initOverlay, drawOverlay } from './overlay.js';
-import { initSettings, onServerSettings } from './settings.js';
+import { initSettings, onServerSettings, setPlaymats } from './settings.js';
+import { refreshOptions } from './options.js';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio.js';
+import { initPace, pace, resetPace } from './pace.js';
 
 const model = createModel();
 let scheduled = false;
-const send = connect(onMessage, online => { document.getElementById('banner').hidden = online; });
+initPace(apply);
+const send = connect(pace, online => { document.getElementById('banner').hidden = online; });
 initDetail(send);
-initStack(send);
-initOverlay();
+initZones(schedule);
+initPhaseBar(schedule);
+initBattlefield(schedule);
+initStack(send, schedule);
+initOverlay(schedule);
 initLog();
-initSettings(send, () => send({ t: 'concede' }), () => {
+initSettings(send, () => {
   applyAudioSettings();
   schedule();
 });
 
-function onMessage(msg) {
+function apply(msg) {
   switch (msg.t) {
     case 'hello':
+      resetPace();
       model.inMatch = msg.inMatch;
       model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
       if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
+      setPlaymats(msg.playmats);
       model.error = null;
       // The server replays open requests after every hello
       model.requests.clear();
@@ -43,7 +54,15 @@ function onMessage(msg) {
     case 'error': model.error = msg.message; break;
     case 'state':
       applyState(model, msg);
-      if (msg.full) model.gameOver = false;
+      // The next game of a match reuses the card keys of the last one, so nothing keyed on them may survive
+      if (msg.full) {
+        model.gameOver = false;
+        model.prompt = null;
+        model.zones = [];
+        model.playable = null;
+        resetDetail();
+        resetZones();
+      }
       break;
     case 'prompt': model.prompt = msg; break;
     case 'zones': model.zones = msg.show; break;
@@ -59,6 +78,7 @@ function onMessage(msg) {
     case 'controls':
       model.controls = msg;
       onServerSettings(msg.settings);
+      refreshOptions();
       break;
     case 'log': appendLog(msg); return;
     case 'detail': onDetail(msg); return;
