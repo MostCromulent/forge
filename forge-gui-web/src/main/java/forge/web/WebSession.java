@@ -1,17 +1,12 @@
 package forge.web;
 
 import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import forge.deck.DeckProxy;
-import forge.game.GameType;
-import forge.gamemodes.quest.QuestController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -19,7 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 /** One browser at a time: the start page, the current match, and shutdown when no browser has been connected for a while. */
 public final class WebSession implements WebServer.Endpoint {
-    private static final String AI_NAME = "Forge AI";
+    private static final int CARD_SEARCH_LIMIT = 60;
+    private final Lobby lobby = new Lobby();
     private final WebGuiBase ui;
     private final LocalGame local;
     private final long idleMillis;
@@ -29,12 +25,13 @@ public final class WebSession implements WebServer.Endpoint {
         t.setDaemon(true);
         return t;
     });
-    private final Map<String, DeckProxy> decks = new ConcurrentHashMap<>();
     private ScheduledFuture<?> idle;
     private volatile BrowserChannel browser;
     private volatile WebGuiGame match;
     /** True when an AI plays the web seat and the browser only spectates. */
     private volatile boolean spectating;
+    /** True once the browser has opened match setup, so a reconnect lands back on it rather than the menu. */
+    private volatile boolean inLobby;
 
     public WebSession(final WebGuiBase ui, final LocalGame local, final long idleMillis, final Runnable onQuit) {
         this.ui = ui;
@@ -91,7 +88,46 @@ public final class WebSession implements WebServer.Endpoint {
     @Override
     public void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
-            case "decks" -> channel.send(deckList());
+            case "decks" -> channel.send(lobby.decks());
+            case "lobby" -> {
+                inLobby = true;
+                channel.send(hello());
+                channel.send(lobby.decks());
+                channel.send(lobby.state());
+            }
+            case "leaveLobby" -> {
+                inLobby = false;
+                channel.send(hello());
+            }
+            case "setFormat" -> {
+                lobby.setFormat(msg.get("format").getAsString());
+                channel.send(lobby.decks());
+                channel.send(lobby.state());
+            }
+            case "addSeat" -> {
+                lobby.addSeat();
+                channel.send(lobby.state());
+            }
+            case "removeSeat" -> {
+                lobby.removeSeat(msg.get("index").getAsInt());
+                channel.send(lobby.state());
+            }
+            case "setSeat" -> {
+                applySeat(msg);
+                channel.send(lobby.state());
+            }
+            case "deckDetails" -> {
+                final JsonObject details = lobby.deckDetails(msg.get("key").getAsString());
+                if (details != null) {
+                    channel.send(details);
+                }
+            }
+            case "cardSearch" -> channel.send(cardSearch(msg));
+            case "printings" -> channel.send(printings(msg));
+            case "sleeveArt" -> {
+                lobby.setSleeveArt(msg.get("index").getAsInt(), msg.get("key").getAsString(), msg.get("offset").getAsInt());
+                channel.send(lobby.state());
+            }
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             case "start" -> ui.invokeInEdtLater(() -> start(channel, msg));
             case "leave" -> ui.invokeInEdtLater(this::leave);
@@ -105,9 +141,39 @@ public final class WebSession implements WebServer.Endpoint {
         }
     }
 
+    private void applySeat(final JsonObject msg) {
+        final int index = msg.get("index").getAsInt();
+        if (msg.has("name")) {
+            lobby.setName(index, msg.get("name").getAsString());
+        }
+        if (msg.has("deck")) {
+            lobby.setDeck(index, msg.get("deck").isJsonNull() ? null : msg.get("deck").getAsString());
+        }
+        if (msg.has("avatar")) {
+            lobby.setAvatar(index, msg.get("avatar").getAsInt());
+        }
+        if (msg.has("sleeve")) {
+            lobby.setSleeve(index, msg.get("sleeve").getAsInt());
+        }
+    }
+
+    private static JsonObject cardSearch(final JsonObject msg) {
+        final JsonObject m = JsonCodec.message("cardSearch");
+        m.add("names", DeckCatalog.searchCardNames(msg.get("query").getAsString(), CARD_SEARCH_LIMIT));
+        return m;
+    }
+
+    private static JsonObject printings(final JsonObject msg) {
+        final JsonObject m = JsonCodec.message("printings");
+        m.addProperty("name", msg.get("name").getAsString());
+        m.add("printings", DeckCatalog.printings(msg.get("name").getAsString()));
+        return m;
+    }
+
     private JsonObject hello() {
         final JsonObject m = JsonCodec.message("hello");
         m.addProperty("inMatch", match != null);
+        m.addProperty("inLobby", inLobby && match == null);
         m.addProperty("spectating", spectating);
         m.addProperty("playerName", FModel.getPreferences().getPref(FPref.PLAYER_NAME));
         // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
@@ -116,6 +182,7 @@ public final class WebSession implements WebServer.Endpoint {
         m.addProperty("avatarCount", SkinSprites.avatarCount());
         m.add("playmats", Playmats.list());
         m.addProperty("sleeveCount", SkinSprites.sleeveCount());
+        m.add("sleeveArt", DeckCatalog.savedSleeveArt());
         return m;
     }
 
@@ -126,82 +193,21 @@ public final class WebSession implements WebServer.Endpoint {
         return a;
     }
 
-    // Kept only when both entries are real indices, so a bad message cannot corrupt the shared preference
-    private static void saveSeatIndices(final FPref pref, final JsonObject msg, final String field, final int count) {
-        if (!msg.has(field) || !msg.get(field).isJsonArray() || msg.getAsJsonArray(field).size() != 2) {
-            return;
-        }
-        final int[] v = new int[2];
-        for (int i = 0; i < 2; i++) {
-            final JsonElement e = msg.getAsJsonArray(field).get(i);
-            if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber() || e.getAsInt() < 0 || e.getAsInt() >= count) {
-                return;
-            }
-            v[i] = e.getAsInt();
-        }
-        FModel.getPreferences().setPref(pref, v[0] + "," + v[1]);
-    }
-
     private static JsonObject error(final String message) {
         final JsonObject m = JsonCodec.message("error");
         m.addProperty("message", message);
         return m;
     }
 
-    private JsonObject deckList() {
-        decks.clear();
-        final JsonArray list = new JsonArray();
-        addDecks(list, DeckProxy.getAllConstructedDecks(), "user", "");
-        addDecks(list, DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), "precon", "Precon: ");
-        final JsonObject m = JsonCodec.message("decks");
-        m.add("decks", list);
-        return m;
-    }
-
-    private void addDecks(final JsonArray list, final Iterable<DeckProxy> source, final String keyPrefix, final String labelPrefix) {
-        for (final DeckProxy proxy : source) {
-            final String key = keyPrefix + ":" + proxy.getPath() + "/" + proxy.getName();
-            decks.put(key, proxy);
-            final JsonObject d = new JsonObject();
-            d.addProperty("key", key);
-            d.addProperty("name", labelPrefix + proxy.getName());
-            d.addProperty("problem", GameType.Constructed.getDeckFormat().getDeckConformanceProblem(proxy.getDeck()));
-            list.add(d);
-        }
-    }
-
-    // Checked here so the lobby's deck-legality confirm dialog never opens on the host
-    private static String legalityProblem(final DeckProxy... chosen) {
-        if (!FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            return null;
-        }
-        for (final DeckProxy d : chosen) {
-            final String problem = GameType.Constructed.getDeckFormat().getDeckConformanceProblem(d.getDeck());
-            if (problem != null) {
-                return d.getName() + ": " + problem;
-            }
-        }
-        return null;
-    }
-
     private void start(final BrowserChannel channel, final JsonObject msg) {
         spectating = msg.has("spectate") && msg.get("spectate").getAsBoolean();
-        final String name = msg.get("playerName").getAsString().trim();
-        final DeckProxy mine = decks.get(msg.get("playerDeck").getAsString());
-        final DeckProxy theirs = decks.get(msg.get("aiDeck").getAsString());
-        final String problem = name.isEmpty() ? "Enter a player name."
-                : mine == null || theirs == null ? "Choose both decks."
-                : legalityProblem(mine, theirs);
-        if (problem != null) {
-            channel.send(error(problem));
+        final List<String> problems = lobby.problems();
+        if (!problems.isEmpty()) {
+            channel.send(error(problems.get(0)));
             return;
         }
-        // Set before the match so HostedMatch never reaches the first-run name prompt
-        FModel.getPreferences().setPref(FPref.PLAYER_NAME, name);
-        // The web seat joins with the first saved avatar and sleeve, as any netplay client does
-        saveSeatIndices(FPref.UI_AVATARS, msg, "avatars", SkinSprites.avatarCount());
-        saveSeatIndices(FPref.UI_SLEEVES, msg, "sleeves", SkinSprites.sleeveCount());
-        FModel.getPreferences().save();
+        // Saved before the match so HostedMatch never reaches the first-run name prompt
+        lobby.saveLooks();
         closeMatch();
         final WebGuiGame gui = new WebGuiGame();
         match = gui;
@@ -211,7 +217,7 @@ public final class WebSession implements WebServer.Endpoint {
             gui.attach(b);
         }
         try {
-            local.startMatch(name, mine.getDeck(), AI_NAME, theirs.getDeck(), gui);
+            local.startMatch(lobby.toSeats(), lobby.format(), gui);
             if (spectating) {
                 local.spectate();
             }
@@ -225,6 +231,7 @@ public final class WebSession implements WebServer.Endpoint {
     }
 
     private void leave() {
+        inLobby = true;
         closeMatch();
         local.endMatch();
         final BrowserChannel b = browser;

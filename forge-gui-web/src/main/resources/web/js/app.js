@@ -1,6 +1,9 @@
 import { connect } from './net.js';
 import { createModel, applyState } from './model.js';
-import { renderStart } from './start.js';
+import { renderMenu } from './menu.js';
+import { renderLobby } from './lobby.js';
+import { onDeckDetails, onDecks, deckFinderOpen, closeDeckFinder } from './deckfinder.js';
+import { initSleeves, onCardNames, onPrintings } from './sleeves.js';
 import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
@@ -37,9 +40,11 @@ function apply(msg) {
     case 'hello':
       resetPace();
       model.inMatch = msg.inMatch;
+      model.inLobby = !!msg.inLobby;
       model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
       if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
+      initSleeves(msg.sleeveCount, msg.sleeveArt);
       setPlaymats(msg.playmats);
       model.error = null;
       // The server replays open requests after every hello
@@ -50,7 +55,14 @@ function apply(msg) {
         send({ t: 'decks' });
       }
       break;
-    case 'decks': model.decks = msg.decks; break;
+    case 'decks':
+      model.decks = msg.decks;
+      onDecks(msg.decks);
+      break;
+    case 'lobby': model.lobby = msg; break;
+    case 'deckDetails': onDeckDetails(msg.deck); return;
+    case 'cardSearch': onCardNames(msg.names); return;
+    case 'printings': onPrintings(msg.printings); return;
     case 'error': model.error = msg.message; break;
     case 'state':
       applyState(model, msg);
@@ -98,10 +110,13 @@ function schedule() {
 }
 
 function render() {
-  document.getElementById('start').hidden = model.inMatch;
+  document.getElementById('menu').hidden = model.inMatch || model.inLobby;
+  document.getElementById('lobby').hidden = model.inMatch || !model.inLobby;
   document.getElementById('match').hidden = !model.inMatch;
   if (!model.inMatch) {
-    renderStart(model, send);
+    if (deckFinderOpen() && !model.inLobby) closeDeckFinder();
+    if (model.inLobby) renderLobby(model, send);
+    else renderMenu(model, send);
     return;
   }
   renderMatch(model, send);

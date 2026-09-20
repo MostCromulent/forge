@@ -1,0 +1,185 @@
+/* The menu and match setup. Both sit on the same dark ground as the board, so starting a game is one
+   continuous place rather than three unrelated screens. */
+
+.wordmark { font-weight: 700; letter-spacing: -.02em; font-size: 20px; }
+
+/* --- menu ------------------------------------------------------------- */
+
+.menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 28px; padding: 40px 20px; }
+.menu-page .wordmark { font-size: 40px; }
+.modes { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); max-width: 820px; width: 100%; }
+
+.mode {
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  text-align: left;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.mode:hover:not(:disabled) { border-color: var(--accent-2); }
+.mode-name { font-size: 17px; font-weight: 600; }
+.mode-blurb { color: var(--muted); }
+/* What this mode holds for you right now, which is the part worth reading twice */
+.mode-status { color: var(--accent-2); font-size: 12px; margin-top: 4px; }
+.mode:disabled .mode-status { color: var(--muted); }
+.menu-foot { display: flex; align-items: center; gap: 16px; color: var(--muted); }
+
+/* --- lobby ------------------------------------------------------------ */
+
+#lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+.lobby-head { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.spectate { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+
+.formats { display: flex; flex-wrap: wrap; gap: 6px; }
+.format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
+.format[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--text); font-weight: 600; }
+
+.seats { display: grid; justify-content: center; align-content: center; gap: 18px; padding: 24px 20px; grid-auto-flow: column; }
+/* Three or four seats read as a grid rather than a row that wraps unevenly */
+.seats[data-count="3"], .seats[data-count="4"] { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
+.seats[data-count="3"] .plate, .seats[data-count="4"] .plate { width: 376px; }
+
+.plate {
+  display: flex;
+  gap: 14px;
+  width: 466px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.plate.mine { border-color: var(--accent); }
+.plate-body { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; flex: 1; }
+
+/* The sleeve is the seat's subject: a card back at true card aspect, and the only sleeve control */
+.plate .sleeve { padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; flex: none; background: var(--surface-2); }
+.seats[data-count="3"] .plate .sleeve, .seats[data-count="4"] .plate .sleeve { width: 76px; height: 106px; }
+.plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+/* A seat with no deck keeps its sleeve, drained and outlined, so the gap reads without colour */
+.plate .sleeve.empty img { filter: grayscale(1) brightness(.5); }
+.plate .sleeve.empty::after {
+  content: 'no deck';
+  position: absolute;
+  inset: auto 0 6px;
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+.plate .sleeve.empty { position: relative; outline: 2px dashed var(--line); outline-offset: -4px; }
+
+.who { display: flex; align-items: center; gap: 8px; }
+.who .avatar { padding: 0; width: 32px; height: 32px; border-radius: 6px; overflow: hidden; flex: none; }
+.who .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.who .avatar:hover { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+.who-name { font-weight: 600; font-size: 16px; min-width: 40px; }
+.who-name[contenteditable]:focus { outline: 1px solid var(--accent-2); border-radius: 3px; }
+.kind { color: var(--muted); font-size: 12px; }
+.drop { margin-left: auto; padding: 2px 8px; color: var(--muted); }
+
+.deck-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+.deck-row .deck-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.deck-row.unset .deck-name { color: var(--muted); }
+.deck-row .deck-size { color: var(--muted); font-size: 12px; }
+.seat-problem { margin: 0; color: var(--select); font-size: 12px; }
+
+.seat-add { display: flex; justify-content: center; }
+.seat-add button { border-radius: 999px; color: var(--muted); }
+
+.play-row { display: grid; justify-items: center; gap: 10px; padding: 18px 20px 30px; }
+.play { min-width: 240px; font-size: 17px; padding: 10px 24px; }
+.play:disabled { opacity: .5; }
+.match-line { margin: 0; color: var(--muted); }
+
+/* A blocked start says what is wrong in place, rather than hiding it in a tooltip */
+.not-yet { background: var(--surface); border: 1px solid var(--select); border-radius: 8px; padding: 10px 16px; max-width: 560px; }
+.not-yet b { color: var(--select); }
+.not-yet ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+
+/* --- deck finder ------------------------------------------------------ */
+
+.finder-back, .sleeves-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .7); display: grid; place-items: center; z-index: 60; }
+.finder, .sleeves { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; width: min(1500px, 94vw); height: min(880px, 92vh); display: grid; grid-template-rows: auto 1fr auto; }
+.finder-head, .sleeves-head { display: flex; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.finder-head h2, .sleeves-head h2 { margin: 0; font-size: 17px; }
+.finder-head .dk-close, .sleeves-head .dk-close { margin-left: auto; }
+.finder-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
+
+/* Results are narrow so the panel can carry the whole decklist */
+.finder-body { display: grid; grid-template-columns: 660px minmax(0, 1fr); min-height: 0; }
+.results { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 14px; border-right: 1px solid var(--line); min-height: 0; }
+.find { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; color: var(--text); font: inherit; }
+.facets { display: flex; flex-wrap: wrap; gap: 6px; }
+.facet { border-radius: 999px; padding: 4px 12px; color: var(--muted); font-size: 13px; }
+.facet[aria-pressed="true"] { border-color: var(--accent); color: var(--text); }
+.facet .dk-count { margin-left: 6px; color: var(--muted); font-size: 11px; }
+.dk-hits { overflow: auto; display: grid; align-content: start; gap: 2px; }
+
+.dk-hit { display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }
+.dk-hit:hover { background: var(--surface-2); }
+.dk-hit[aria-pressed="true"] { background: var(--surface-2); border-left-color: var(--accent); }
+.dk-hit-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tag { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+/* Legality differs by word and weight as well as colour */
+.legal { font-size: 11px; font-weight: 600; }
+.legal.yes { color: var(--muted); }
+.legal.no { color: var(--select); }
+
+.dk-chosen { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
+.dk-chosen-head { padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.dk-chosen-head h3 { margin: 0 0 4px; }
+.verdict { margin: 0; font-size: 13px; }
+.verdict.yes { color: var(--muted); }
+.verdict.no { color: var(--select); }
+.dk-cards { overflow: auto; padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-content: start; }
+.group { margin-bottom: 14px; }
+.group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+.line { display: flex; gap: 8px; font-size: 13px; padding: 1px 0; }
+.line .n { color: var(--muted); min-width: 16px; text-align: right; }
+.none { color: var(--muted); padding: 18px; }
+
+/* --- sleeve picker ---------------------------------------------------- */
+
+.sleeves { width: min(1100px, 92vw); grid-template-rows: auto 1fr; }
+.sleeves-body { overflow: auto; padding: 16px 18px; display: grid; gap: 20px; align-content: start; }
+.sleeves-body h3 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.art-grid, .sleeve-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+.art-tile, .sleeve-tile { padding: 0; aspect-ratio: 5 / 7; overflow: hidden; border-radius: 6px; }
+.art-tile img, .sleeve-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art-tile[aria-pressed="true"], .sleeve-tile[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.art-tile.add { display: grid; place-items: center; font-size: 24px; color: var(--muted); border-style: dashed; }
+
+.sleeves.picking .saved, .sleeves.picking .numbered { display: none; }
+.back-to-sleeves { grid-column: 1 / -1; justify-self: start; color: var(--muted); }
+.art-picker { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 240px 1fr 260px; gap: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+.names { display: grid; grid-template-rows: auto 1fr; gap: 8px; min-height: 0; }
+.card-find { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--text); font: inherit; }
+.name-list { overflow: auto; display: grid; align-content: start; max-height: 340px; }
+.dk-cardname { text-align: left; background: none; border: 0; padding: 5px 8px; border-radius: 4px; }
+.dk-cardname:hover { background: var(--surface-2); }
+.dk-cardname[aria-pressed="true"] { background: var(--surface-2); color: var(--accent-2); }
+.prints { overflow: auto; display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); align-content: start; max-height: 380px; }
+.print { padding: 4px; display: grid; gap: 4px; justify-items: center; font-size: 11px; color: var(--muted); }
+.print img { width: 100%; border-radius: 4px; display: block; }
+.print[aria-pressed="true"] { border-color: var(--accent); }
+
+.preview { display: grid; gap: 8px; justify-items: center; align-content: start; }
+.preview-title { margin: 0; color: var(--muted); font-size: 12px; }
+/* Framed and cropped the way the sleeve itself is, so what you frame is what you get */
+.preview-frame { width: 200px; aspect-ratio: 5 / 7; background: #262526; padding: 4%; border-radius: 6px; cursor: move; touch-action: none; }
+.preview-frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.preview .dk-hint { margin: 0; color: var(--muted); font-size: 11px; font-style: italic; }
+
+@media (max-width: 1200px) {
+  .finder-body { grid-template-columns: 560px minmax(0, 1fr); }
+  .dk-cards { grid-template-columns: 1fr; }
+  .art-picker { grid-template-columns: 200px 1fr; }
+  .preview { grid-column: 1 / -1; }
+}

@@ -69,6 +69,7 @@ public final class WebServer implements AutoCloseable {
     }
 
     private static final String COOKIE = "forge_token";
+    private static final int SLEEVE_ART_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final String token;
     // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
@@ -129,6 +130,36 @@ public final class WebServer implements AutoCloseable {
         }
         final File file = ImageKeys.getImageFile(key);
         return file != null && file.isFile() ? file : null;
+    }
+
+    /** As {@link #serveImage}: never wait on the download here, or the thread that serves every other
+     *  request waits with it. */
+    private void serveSleeveArt(final ChannelHandlerContext ctx, final String key) throws IOException {
+        final File cached = SleeveArtCache.file(key);
+        if (cached != null) {
+            respondImage(ctx, cached);
+            return;
+        }
+        final AtomicBoolean answered = new AtomicBoolean();
+        GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, () -> {
+            if (answered.compareAndSet(false, true)) {
+                final File fetched = SleeveArtCache.file(key);
+                try {
+                    if (fetched != null) {
+                        respondImage(ctx, fetched);
+                        return;
+                    }
+                } catch (final IOException e) {
+                    Logger.warn("Could not send sleeve art {}: {}", key, e.getMessage());
+                }
+                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            }
+        }));
+        ctx.executor().schedule(() -> {
+            if (answered.compareAndSet(false, true)) {
+                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            }
+        }, SLEEVE_ART_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     // A missing image is downloaded as on desktop, and the request answered when it lands
@@ -285,6 +316,15 @@ public final class WebServer implements AutoCloseable {
                     respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
                 } else {
                     respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
+                }
+                return;
+            }
+            if ("/sleeveart".equals(path)) {
+                final List<String> key = q.parameters().get("key");
+                if (key == null) {
+                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                } else {
+                    serveSleeveArt(ctx, key.get(0));
                 }
                 return;
             }

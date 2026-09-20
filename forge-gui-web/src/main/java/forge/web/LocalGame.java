@@ -2,6 +2,7 @@ package forge.web;
 
 import com.google.common.primitives.Ints;
 import forge.deck.Deck;
+import forge.game.GameType;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
@@ -17,6 +18,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -24,14 +26,37 @@ import java.util.concurrent.TimeUnit;
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
     private static final int SPECTATE_WAIT_MILLIS = 5000;
-    /** The lobby slot the browser sits in; slot 0 is the AI opponent. */
-    private static final int WEB_SEAT = 1;
+    /** The lobby slot the browser sits in, chosen when the match starts. */
+    private int webSeat = 1;
     private final FServerManager server = FServerManager.getInstance();
     private int port = -1;
     private ServerGameLobby lobby;
     private FGameClient client;
 
+    /** One seat of the offline lobby. The browser plays exactly one of them; the host plays the rest. */
+    public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
+    }
+
     public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck, final WebGuiGame gui) {
+        startMatch(List.of(
+                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck),
+                new Seat(playerName, false, 0, 0, playerDeck)), GameType.Constructed, gui);
+    }
+
+    /** Seats are taken in the order given; exactly one must be the browser's. */
+    public void startMatch(final List<Seat> seats, final GameType format, final WebGuiGame gui) {
+        webSeat = -1;
+        for (int i = 0; i < seats.size(); i++) {
+            if (!seats.get(i).ai()) {
+                if (webSeat >= 0) {
+                    throw new IllegalArgumentException("Only one seat can be the browser's");
+                }
+                webSeat = i;
+            }
+        }
+        if (webSeat < 0) {
+            throw new IllegalArgumentException("No seat for the browser");
+        }
         if (port < 0) {
             port = server.startLoopbackServer();
             server.setLobbyListener(new LogOnlyListener());
@@ -39,18 +64,32 @@ public final class LocalGame {
         endMatch();
         lobby = new ServerGameLobby();
         server.setLobby(lobby);
-        final LobbySlot ai = lobby.getSlot(0);
-        ai.setType(LobbySlotType.AI);
-        ai.setName(aiName);
-        ai.setDeck(aiDeck);
-        // Slot 0 would otherwise carry the host's own avatar and sleeve
-        ai.setAvatarIndex(storedIndex(FPref.UI_AVATARS, 1));
-        ai.setSleeveIndex(storedIndex(FPref.UI_SLEEVES, 1));
-        ai.setIsReady(true);
-        final LobbySlot seat = lobby.getSlot(WEB_SEAT);
-        seat.setType(LobbySlotType.OPEN);
-        seat.setDeck(playerDeck);
-        seat.setIsReady(false);
+        // Constructed is the absence of a format variant rather than one of its own, as the desktop lobby has it
+        if (format != GameType.Constructed) {
+            lobby.applyVariant(format);
+        }
+        while (lobby.getNumberOfSlots() < seats.size()) {
+            lobby.addSlot();
+        }
+        for (int i = 0; i < seats.size(); i++) {
+            final Seat s = seats.get(i);
+            final LobbySlot slot = lobby.getSlot(i);
+            slot.setDeck(s.deck());
+            if (i == webSeat) {
+                // The browser's own name, avatar and sleeve arrive with the client's login
+                slot.setType(LobbySlotType.OPEN);
+                slot.setIsReady(false);
+                continue;
+            }
+            slot.setType(LobbySlotType.AI);
+            slot.setName(s.name());
+            // A host slot would otherwise carry the host's own avatar and sleeve
+            slot.setAvatarIndex(s.avatar());
+            slot.setSleeveIndex(s.sleeve());
+            slot.setIsReady(true);
+        }
+        final String playerName = seats.get(webSeat).name();
+        final LobbySlot seat = lobby.getSlot(webSeat);
 
         final ClientGameLobby clientLobby = new ClientGameLobby();
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
@@ -95,7 +134,7 @@ public final class LocalGame {
                 return;
             }
         }
-        final RemoteClient client = server.getClientBySlotIndex(WEB_SEAT);
+        final RemoteClient client = server.getClientBySlotIndex(webSeat);
         if (client == null) {
             Logger.warn("No web seat to hand to the AI");
             return;
