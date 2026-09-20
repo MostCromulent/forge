@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.game.GameType;
+import forge.gamemodes.match.LobbySlotType;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 
@@ -11,9 +12,16 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Match setup before a game starts: a format and the seats that will play it. Seat 0 is the browser's; the
- * rest are played by the host. Everything here is offline, so a seat is something you add rather than an
- * empty slot waiting to be filled.
+ * Match setup before a game starts: a format and the seats that will play it. Everything here is offline, so
+ * a seat is something you add rather than an empty slot waiting to be filled.
+ *
+ * <p>A seat carries the same {@link LobbySlotType} a netplay lobby slot does, so the browser can already tell
+ * the kinds apart rather than reading a boolean. Only LOCAL and AI occur offline.
+ *
+ * <p>TODO: seat 0 is assumed to be yours and every other seat an AI, which the validation messages and the
+ * removal rule both rely on. Joining someone else's game breaks that assumption: the authority over the seats
+ * moves to the host's ServerGameLobby and this class becomes a view of replicated state rather than the state
+ * itself. Do not build on "seat 0 is me".
  */
 final class Lobby {
     static final int MAX_SEATS = 4;
@@ -27,28 +35,32 @@ final class Lobby {
 
     private static final class SeatState {
         String name;
-        final boolean ai;
+        final LobbySlotType type;
         int avatar;
         int sleeve;
         String deckKey;
 
-        SeatState(final String name, final boolean ai, final int avatar, final int sleeve) {
+        SeatState(final String name, final LobbySlotType type, final int avatar, final int sleeve) {
             this.name = name;
-            this.ai = ai;
+            this.type = type;
             this.avatar = avatar;
             this.sleeve = sleeve;
+        }
+
+        boolean ai() {
+            return type == LobbySlotType.AI;
         }
     }
 
     Lobby() {
-        seats.add(new SeatState(FModel.getPreferences().getPref(FPref.PLAYER_NAME), false,
+        seats.add(new SeatState(FModel.getPreferences().getPref(FPref.PLAYER_NAME), LobbySlotType.LOCAL,
                 LocalGame.storedIndex(FPref.UI_AVATARS, 0), LocalGame.storedIndex(FPref.UI_SLEEVES, 0)));
         seats.add(aiSeat(1));
     }
 
     // Numbered past the first, so three of them are told apart in the seat list and in what blocks Play
     private static SeatState aiSeat(final int index) {
-        return new SeatState(index > 1 ? AI_NAME + " " + index : AI_NAME, true,
+        return new SeatState(index > 1 ? AI_NAME + " " + index : AI_NAME, LobbySlotType.AI,
                 LocalGame.storedIndex(FPref.UI_AVATARS, index), LocalGame.storedIndex(FPref.UI_SLEEVES, index));
     }
 
@@ -60,7 +72,14 @@ final class Lobby {
     JsonObject decks() {
         final JsonObject m = JsonCodec.message("decks");
         m.add("decks", catalog.refresh(format));
+        m.add("cardFormats", DeckCatalog.cardFormats());
         return m;
+    }
+
+    /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
+    JsonObject loadNetDecks() {
+        catalog.loadNetDecks(format);
+        return decks();
     }
 
     JsonObject deckDetails(final String key) {
@@ -90,7 +109,7 @@ final class Lobby {
             final Deck deck = catalog.deck(s.deckKey);
             final JsonObject j = new JsonObject();
             j.addProperty("name", s.name);
-            j.addProperty("ai", s.ai);
+            j.addProperty("type", s.type.name());
             j.addProperty("avatar", s.avatar);
             j.addProperty("sleeve", s.sleeve);
             j.addProperty("deck", s.deckKey);
@@ -202,7 +221,7 @@ final class Lobby {
     List<LocalGame.Seat> toSeats() {
         final List<LocalGame.Seat> out = new ArrayList<>();
         for (final SeatState s : seats) {
-            out.add(new LocalGame.Seat(s.name, s.ai, s.avatar, s.sleeve, catalog.deck(s.deckKey)));
+            out.add(new LocalGame.Seat(s.name, s.ai(), s.avatar, s.sleeve, catalog.deck(s.deckKey)));
         }
         return out;
     }

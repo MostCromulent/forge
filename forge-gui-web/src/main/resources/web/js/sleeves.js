@@ -74,6 +74,7 @@ function build(seat) {
         <section class="saved">
           <h3>Card art</h3>
           <div class="art-grid"></div>
+          <p class="no-deck-why" hidden>Card art is saved on the deck, so choose a deck for this seat first.</p>
         </section>
         <section class="numbered">
           <h3>Sleeves</h3>
@@ -128,6 +129,10 @@ function showPicker(on) {
 }
 
 function renderSaved(seat) {
+  // Every card-art route writes to the seat's deck; with no deck the choice would be silently dropped
+  const section = overlay.querySelector('.saved');
+  section.classList.toggle('no-deck', !seat.deck);
+  section.querySelector('.no-deck-why').hidden = !!seat.deck;
   const grid = overlay.querySelector('.art-grid');
   const tiles = saved.map(art => {
     const b = document.createElement('button');

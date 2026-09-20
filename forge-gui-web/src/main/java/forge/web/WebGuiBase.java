@@ -1,5 +1,7 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.download.GuiDownloadService;
@@ -43,9 +45,15 @@ public final class WebGuiBase implements IGuiBase {
     private final String assetsDir = resolveAssetsDir();
     private final ImageFetcher imageFetcher = new WebImageFetcher();
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
+    private final HostRequests hostRequests = new HostRequests();
 
     public void setNoticeSink(final Consumer<JsonObject> sink) {
         noticeSink = sink;
+        hostRequests.setSink(sink);
+    }
+
+    HostRequests hostRequests() {
+        return hostRequests;
     }
 
     static String resolveAssetsDir() {
@@ -144,15 +152,28 @@ public final class WebGuiBase implements IGuiBase {
         return initialInput;
     }
 
+    /** A choice the host needs outside a match, such as a net deck category. The browser answers it. */
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final Collection<T> choices, final Collection<T> selected, final FSerializableFunction<T, String> display) {
-        Logger.warn("Host choice dialog answered with its default: {}", message);
+        final List<T> all = new ArrayList<>(choices);
+        final JsonArray options = new JsonArray();
+        for (final T choice : all) {
+            options.add(display == null ? String.valueOf(choice) : display.apply(choice));
+        }
+        final JsonElement answer = hostRequests.ask("choices", message, options, min, max);
         final List<T> result = new ArrayList<>();
-        for (final T choice : choices) {
-            if (result.size() >= min) {
-                break;
+        if (answer != null && answer.isJsonArray()) {
+            for (final JsonElement index : answer.getAsJsonArray()) {
+                final int i = index.getAsInt();
+                if (i >= 0 && i < all.size()) {
+                    result.add(all.get(i));
+                }
             }
-            result.add(choice);
+        }
+        // Nobody answered, so fall back to what the host would have done on its own
+        if (result.isEmpty() && min > 0) {
+            Logger.warn("Host choice unanswered, taking the first: {}", message);
+            result.add(all.get(0));
         }
         return result;
     }
@@ -192,7 +213,9 @@ public final class WebGuiBase implements IGuiBase {
     @Override public int getSleevesCount() { return 0; }
     @Override public float getScreenScale() { return 1f; }
     @Override public void preventSystemSleep(final boolean preventSleep) { }
-    @Override public void download(final GuiDownloadService service, final Consumer<Boolean> callback) { callback.accept(false); }
+    @Override public void download(final GuiDownloadService service, final Consumer<Boolean> callback) {
+        WebDownloads.run(service, callback, noticeSink);
+    }
     @Override public void copyToClipboard(final String text) { }
     @Override public void showCardList(final String title, final String message, final List<PaperCard> list) { }
     @Override public boolean showBoxedProduct(final String title, final String message, final List<PaperCard> list) { return false; }

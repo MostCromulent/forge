@@ -1,6 +1,9 @@
 // Match setup. Each seat is a plate anchored by its deck's sleeve: the sleeve is the largest thing on it,
 // clicking it chooses one, and a deck with card art on its sleeve shows that art instead of a numbered back.
 // Seats are added, never presented as empty slots waiting to be filled.
+//
+// A seat's type is the one a netplay lobby slot carries, so OPEN and REMOTE already have a place to land;
+// offline only ever sends LOCAL and AI.
 
 import { sleeveUrl, avatarUrl, pickLook } from './looks.js';
 import { setImage } from './images.js';
@@ -77,10 +80,14 @@ function renderSeats(root, lobby, model) {
   root.querySelector('#add-seat').hidden = lobby.seats.length >= lobby.maxSeats;
 }
 
+// The seat kinds a netplay lobby can hold; offline shows only the first two
+const KIND = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
+
 function plate(seat, index, lobby, model) {
   const el = document.createElement('div');
   el.className = 'plate';
-  el.classList.toggle('mine', !seat.ai);
+  const mine = seat.type === 'LOCAL';
+  el.classList.toggle('mine', mine);
   el.innerHTML = `
     <button class="sleeve" title="Choose a sleeve"><img alt=""></button>
     <div class="plate-body">
@@ -114,16 +121,16 @@ function plate(seat, index, lobby, model) {
     }
   };
   const name = el.querySelector('.who-name');
-  name.textContent = seat.name || (seat.ai ? 'Computer' : 'You');
-  if (!seat.ai) {
+  name.textContent = seat.name || KIND[seat.type] || seat.type;
+  if (mine) {
     name.contentEditable = 'plaintext-only';
     name.spellcheck = false;
     name.onblur = () => send({ t: 'setSeat', index, name: name.textContent.trim() });
   }
-  el.querySelector('.kind').textContent = seat.ai ? 'Computer' : 'You';
+  el.querySelector('.kind').textContent = KIND[seat.type] ?? seat.type;
 
   const drop = el.querySelector('.drop');
-  drop.hidden = index === 0 || lobby.seats.length <= 2;
+  drop.hidden = mine || lobby.seats.length <= 2;
   drop.onclick = () => send({ t: 'removeSeat', index });
 
   const deck = el.querySelector('.deck-row');

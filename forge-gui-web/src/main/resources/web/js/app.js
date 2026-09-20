@@ -4,6 +4,7 @@ import { renderMenu } from './menu.js';
 import { renderLobby } from './lobby.js';
 import { onDeckDetails, onDecks, deckFinderOpen, closeDeckFinder } from './deckfinder.js';
 import { initSleeves, onCardNames, onPrintings } from './sleeves.js';
+import { initHostChoice, onHostChoice } from './hostchoice.js';
 import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
@@ -23,6 +24,7 @@ const model = createModel();
 let scheduled = false;
 initPace(apply);
 const send = connect(pace, online => { document.getElementById('banner').hidden = online; });
+initHostChoice(send);
 initDetail(send);
 initZones(schedule);
 initPhaseBar(schedule);
@@ -57,12 +59,13 @@ function apply(msg) {
       break;
     case 'decks':
       model.decks = msg.decks;
-      onDecks(msg.decks);
+      onDecks(msg.decks, msg.cardFormats);
       break;
     case 'lobby': model.lobby = msg; break;
     case 'deckDetails': onDeckDetails(msg.deck); return;
     case 'cardSearch': onCardNames(msg.names); return;
     case 'printings': onPrintings(msg.printings); return;
+    case 'hostChoice': onHostChoice(msg); return;
     case 'error': model.error = msg.message; break;
     case 'state':
       applyState(model, msg);

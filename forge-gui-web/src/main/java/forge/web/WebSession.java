@@ -61,6 +61,7 @@ public final class WebSession implements WebServer.Endpoint {
             m.detach(previous);
         }
         channel.send(hello());
+        ui.hostRequests().replay(channel::send);
         if (m != null) {
             m.attach(channel);
         }
@@ -122,6 +123,9 @@ public final class WebSession implements WebServer.Endpoint {
                     channel.send(details);
                 }
             }
+            case "hostChoice" -> ui.hostRequests().answer(msg.get("id").getAsInt(), msg.get("value"));
+            // Core opens a choice and blocks on it, so this cannot run on the socket thread
+            case "netDecks" -> ui.runBackgroundTask("Net decks", () -> channel.send(lobby.loadNetDecks()));
             case "cardSearch" -> channel.send(cardSearch(msg));
             case "printings" -> channel.send(printings(msg));
             case "sleeveArt" -> {

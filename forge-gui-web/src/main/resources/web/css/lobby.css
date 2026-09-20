@@ -114,9 +114,10 @@
 
 /* Results are narrow so the panel can carry the whole decklist */
 .finder-body { display: grid; grid-template-columns: 660px minmax(0, 1fr); min-height: 0; }
-.results { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 14px; border-right: 1px solid var(--line); min-height: 0; }
+/* Every control sizes to itself; only the list takes what is left */
+.results { display: grid; grid-template-rows: repeat(6, auto) 1fr; gap: 10px; padding: 14px; border-right: 1px solid var(--line); min-height: 0; }
 .find { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; color: var(--text); font: inherit; }
-.facets { display: flex; flex-wrap: wrap; gap: 6px; }
+.facets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .facet { border-radius: 999px; padding: 4px 12px; color: var(--muted); font-size: 13px; }
 .facet[aria-pressed="true"] { border-color: var(--accent); color: var(--text); }
 .facet .dk-count { margin-left: 6px; color: var(--muted); font-size: 11px; }
@@ -183,3 +184,100 @@
   .art-picker { grid-template-columns: 200px 1fr; }
   .preview { grid-column: 1 / -1; }
 }
+
+/* --- finder: filters, statistics and the card peek ---------------------- */
+
+.find-row { display: flex; gap: 10px; align-items: center; }
+.find-row .find { flex: 1; }
+.sort { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+
+.colours { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.colour { display: flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 4px; }
+.colour[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+
+/* A pip carries its letter, so colour identity never rests on hue alone */
+.pip {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  color: #14171c;
+  background: var(--muted);
+}
+
+.pip-W { background: #f4f0dc; }
+.pip-U { background: #7fb6e0; }
+.pip-B { background: #9a92a8; }
+.pip-R { background: #eb9274; }
+.pip-G { background: #86bb8c; }
+.pip-C { background: #c2c8d2; }
+.pips { display: inline-flex; gap: 2px; vertical-align: middle; }
+
+.shown { margin: 0; color: var(--faint, var(--muted)); font-size: 12px; }
+.dk-hit .size { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
+
+.sizes { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.stats { display: grid; grid-template-columns: auto 1fr; gap: 18px; margin-top: 12px; }
+.curve h4, .types h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.bars { display: flex; align-items: flex-end; gap: 4px; }
+.bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 22px; gap: 3px; }
+.bar i { width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; display: block; }
+.bar em { font-style: normal; font-size: 10px; color: var(--muted); }
+.types { display: grid; align-content: start; gap: 1px; }
+.type { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
+.type b { color: var(--text); font-variant-numeric: tabular-nums; }
+.type.avg { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 4px; }
+
+.dk-line { display: flex; gap: 8px; font-size: 13px; padding: 1px 0; cursor: default; }
+.dk-line:hover { background: var(--surface-2); }
+.dk-line .n { color: var(--muted); min-width: 16px; text-align: right; }
+
+/* The hovered card, shown beside the list as it is over the table */
+.deck-peek { position: absolute; width: 240px; pointer-events: none; z-index: 5; }
+.deck-peek img { width: 100%; border-radius: 10px; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
+.finder { position: relative; }
+
+/* --- sleeve picker: fill the dialog rather than leaving it half empty --- */
+
+.sleeves-body { min-height: 0; }
+.sleeves.picking .sleeves-body { display: grid; grid-template-rows: 1fr; }
+.sleeves.picking .art-picker { min-height: 0; height: 100%; grid-template-rows: auto 1fr; }
+.art-picker .names, .art-picker .prints { min-height: 0; }
+.art-picker .name-list, .art-picker .prints { max-height: none; }
+.prints { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); align-content: start; }
+
+/* Card art is saved on the deck, so without one there is nothing to save it to */
+.saved.no-deck .art-tile { opacity: .4; pointer-events: none; }
+.no-deck-why { margin: 6px 0 0; color: var(--select); font-size: 12px; }
+
+.legal-only { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+
+/* The formats a deck's cards are legal in, as the desktop chooser words it */
+.deck-formats {
+  color: var(--muted);
+  font-size: 11px;
+  width: 150px;
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.dk-hit .note { flex: 1; color: var(--muted); font-size: 12px; }
+.dk-hit.generated .dk-hit-name { flex: none; }
+
+.get-net { justify-self: start; color: var(--muted); font-size: 12px; padding: 3px 10px; }
+
+/* A question the host is blocked on, so it sits above everything else */
+.host-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .75); display: grid; place-items: center; z-index: 80; }
+.host-choice { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(520px, 92vw); display: grid; gap: 12px; }
+.host-choice h2 { margin: 0; font-size: 16px; }
+.host-options { display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
+.host-option { text-align: left; }
+.host-choice footer { display: flex; justify-content: flex-end; }
