@@ -7,10 +7,6 @@ import forge.model.FModel;
 import org.tinylog.Logger;
 
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 /** One browser: its start page, its seat and its match. The host's session also owns shutting the process down. */
 public final class WebSession {
@@ -21,14 +17,7 @@ public final class WebSession {
     /** True for the browser on the machine running the game, which is the only one that may set the table. */
     private final boolean isHost;
     private final LocalGame local = new LocalGame();
-    private final long idleMillis;
     private final Runnable onQuit;
-    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
-        final Thread t = new Thread(r, "WebIdle");
-        t.setDaemon(true);
-        return t;
-    });
-    private ScheduledFuture<?> idle;
     private volatile BrowserChannel browser;
     private volatile WebGuiGame match;
     /** The seat's GUI, made when the lobby opens because the client plays through it from then on. */
@@ -40,25 +29,21 @@ public final class WebSession {
     /** Whether the open game was made to be joined, so leaving a match lands back in the same kind of lobby. */
     private volatile boolean inviting;
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean isHost, final long idleMillis,
-            final Runnable onQuit) {
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean isHost, final Runnable onQuit) {
         this.ui = ui;
         this.sessions = sessions;
         this.isHost = isHost;
         this.lobby = new Lobby(local);
-        this.idleMillis = idleMillis;
         this.onQuit = onQuit;
-        if (!isHost) {
-            return;
+        // Host dialogs belong to the machine running the game
+        if (isHost) {
+            ui.setNoticeSink(notice -> {
+                final BrowserChannel b = browser;
+                if (b != null) {
+                    b.send(notice);
+                }
+            });
         }
-        // Host dialogs belong to the machine running the game, and so does giving up on an idle browser
-        ui.setNoticeSink(notice -> {
-            final BrowserChannel b = browser;
-            if (b != null) {
-                b.send(notice);
-            }
-        });
-        idle = timer.schedule(this::quitIfStillIdle, idleMillis, TimeUnit.MILLISECONDS);
     }
 
     /** The loopback port guests take a seat on. */
@@ -67,10 +52,6 @@ public final class WebSession {
     }
 
     synchronized void connected(final BrowserChannel channel) {
-        if (idle != null) {
-            idle.cancel(false);
-            idle = null;
-        }
         final BrowserChannel previous = browser;
         browser = channel;
         final WebGuiGame m = match;
@@ -98,15 +79,6 @@ public final class WebSession {
         final WebGuiGame m = match;
         if (m != null) {
             m.detach(channel);
-        }
-        if (isHost) {
-            idle = timer.schedule(this::quitIfStillIdle, idleMillis, TimeUnit.MILLISECONDS);
-        }
-    }
-
-    private synchronized void quitIfStillIdle() {
-        if (browser == null) {
-            ui.invokeInEdtLater(this::quit);
         }
     }
 
@@ -413,7 +385,6 @@ public final class WebSession {
     void shutdown() {
         closeMatch();
         local.shutdown();
-        timer.shutdownNow();
     }
 
     private void quit() {

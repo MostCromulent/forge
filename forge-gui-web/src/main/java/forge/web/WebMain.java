@@ -15,7 +15,8 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 public final class WebMain {
-    private static final long IDLE_MILLIS = 60_000;
+    /** How long the process waits after the last browser goes. The status window is the way to end it sooner. */
+    private static final long IDLE_MILLIS = 15_000;
 
     private WebMain() {}
 
@@ -25,13 +26,20 @@ public final class WebMain {
         FModel.initialize(null, prefs -> null);
         final CountDownLatch quit = new CountDownLatch(1);
         final WebSessions sessions = new WebSessions(ui, IDLE_MILLIS, quit::countDown);
+        StatusWindow window = null;
         try (WebServer server = new WebServer(sessions, newToken())) {
             sessions.setServer(server);
             System.out.println("Forge web UI: " + server.url());
+            // The browser is the whole interface, so without this there is nothing to show the game is running
+            window = StatusWindow.open(server.url(), ui, quit::countDown);
             if (!Boolean.getBoolean("forge.web.noBrowser")) {
                 openBrowser(server.url(), ui);
             }
             quit.await();
+        } finally {
+            if (window != null) {
+                window.close();
+            }
         }
         // Engine and netplay threads are not all daemons
         System.exit(0);

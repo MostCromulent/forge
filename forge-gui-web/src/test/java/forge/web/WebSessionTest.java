@@ -56,7 +56,7 @@ public class WebSessionTest {
         Assert.assertTrue(r.await("decks").get("decks").isJsonArray());
     }
 
-/** Fails if a browser off this machine could take the host's place and set the table. */
+    /** Fails if a browser off this machine could take the host's place and set the table. */
     @Test
     public void aRemoteBrowserCannotHost() throws Exception {
         final WebSessions sessions = opened();
@@ -89,18 +89,35 @@ public class WebSessionTest {
         Assert.assertTrue(quit.await(2, TimeUnit.SECONDS));
     }
 
+    /** Fails if the host closing their browser ends a game a guest is still playing. */
     @Test
-    public void idleSessionQuitsAndReconnectCancelsIt() throws Exception {
+    public void quittingWaitsForTheLastBrowserToGo() throws Exception {
         final CountDownLatch quit = new CountDownLatch(1);
         final WebSessions sessions = new WebSessions(new WebGuiBase(), 200, quit::countDown);
+        final Recorder host = new Recorder();
+        final Recorder guest = new Recorder();
+        sessions.connected(host, "host", true);
+        sessions.connected(guest, "guest", false);
+
+        sessions.disconnected(host);
+        Assert.assertFalse(quit.await(600, TimeUnit.MILLISECONDS),
+                "Forge quit while a guest was still attached");
+
+        sessions.disconnected(guest);
+        Assert.assertTrue(quit.await(2, TimeUnit.SECONDS),
+                "Forge did not quit once every browser had gone");
+    }
+
+    /** Fails if a browser that comes back within the countdown does not stop it. */
+    @Test
+    public void reconnectingStopsTheCountdown() throws Exception {
+        final CountDownLatch quit = new CountDownLatch(1);
+        final WebSessions sessions = new WebSessions(new WebGuiBase(), 400, quit::countDown);
         final Recorder first = new Recorder();
         sessions.connected(first, "host", true);
         sessions.disconnected(first);
         sessions.connected(new Recorder(), "host", true);
-        Assert.assertFalse(quit.await(500, TimeUnit.MILLISECONDS));
-        final Recorder second = new Recorder();
-        sessions.connected(second, "host", true);
-        sessions.disconnected(second);
-        Assert.assertTrue(quit.await(2, TimeUnit.SECONDS));
+        Assert.assertFalse(quit.await(900, TimeUnit.MILLISECONDS),
+                "Forge quit although a browser had come back");
     }
 }

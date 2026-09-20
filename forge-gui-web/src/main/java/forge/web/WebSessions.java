@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
+import org.tinylog.Logger;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,14 +31,15 @@ final class WebSessions implements WebServer.Endpoint {
         t.setDaemon(true);
         return t;
     });
-    /** Covers a browser that never opens at all; once the host has one, its own session takes over. */
-    private final ScheduledFuture<?> unopened;
+    /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
+    private ScheduledFuture<?> idle;
 
     WebSessions(final WebGuiBase ui, final long idleMillis, final Runnable onQuit) {
         this.ui = ui;
         this.idleMillis = idleMillis;
         this.onQuit = onQuit;
-        unopened = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
+        // Also covers a browser that never opens at all
+        idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
     }
 
     /** The server is built around this endpoint, so it can only be handed over once it exists. */
@@ -49,7 +51,23 @@ final class WebSessions implements WebServer.Endpoint {
     public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
         final WebSession session = sessionFor(channel, clientId, local);
         byChannel.put(channel, session);
+        holdOpen();
         session.connected(channel);
+    }
+
+    /** The process lives while any browser is attached, so the host closing theirs does not end a guest's game. */
+    private synchronized void holdOpen() {
+        if (idle != null) {
+            idle.cancel(false);
+            idle = null;
+        }
+    }
+
+    private synchronized void letGo() {
+        if (idle == null && byChannel.isEmpty()) {
+            Logger.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
+            idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
+        }
     }
 
     private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean local) {
@@ -61,9 +79,8 @@ final class WebSessions implements WebServer.Endpoint {
         // The game belongs to the machine running it, so only a browser on that machine can host. A guest that
         // arrives before there is a game still gets a session, and is told to join once the host opens one.
         final boolean hosting = host == null && local;
-        final WebSession session = new WebSession(ui, this, hosting, idleMillis, onQuit);
+        final WebSession session = new WebSession(ui, this, hosting, onQuit);
         if (hosting) {
-            unopened.cancel(false);
             host = session;
         }
         byId.put(key, session);
@@ -76,6 +93,7 @@ final class WebSessions implements WebServer.Endpoint {
         if (session != null) {
             session.disconnected(channel);
         }
+        letGo();
     }
 
     @Override
@@ -88,7 +106,7 @@ final class WebSessions implements WebServer.Endpoint {
 
     /** Drops every seat and stops the server, guests first so none of them outlives the game they were in. */
     synchronized void shutdown() {
-        unopened.cancel(false);
+        holdOpen();
         timer.shutdownNow();
         for (final WebSession session : byId.values()) {
             if (session != host) {
