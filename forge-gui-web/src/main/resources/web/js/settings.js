@@ -162,6 +162,8 @@ function apply() {
   // relative one asks board.css's own folder for it. cssUrl makes it absolute, as it does for sleeves.
   const mat = setting('playmat');
   root.style.setProperty('--playmat', cssUrl(mat ? `playmat?id=${encodeURIComponent(mat)}` : ''));
+  // Every playmat Forge ships is already dark, so the table's own wash lifts off one rather than burying it
+  root.classList.toggle('has-playmat', !!mat);
 }
 
 function customStyle() {

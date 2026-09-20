@@ -38,7 +38,10 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
+/* The ground is painted on the root, not on the body. The board's backdrop layers sit at a negative
+   z-index, which puts them above the page canvas but behind any background the body paints itself. */
+html { background: var(--bg); }
+html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
 [hidden] { display: none !important; }
 button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 button:disabled { opacity: .4; cursor: default; }
