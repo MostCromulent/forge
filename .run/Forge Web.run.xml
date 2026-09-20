@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Forge Web" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="forge.web.WebMain" />
+    <module name="forge-gui-web" />
+    <!-- Serves the page from source, so a change to the JavaScript or CSS needs only a browser reload -->
+    <option name="VM_PARAMETERS" value="-Dforge.web.pageDir=forge-gui-web/src/main/resources/web" />
+    <!-- Card data and skins are found relative to the repository root -->
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
