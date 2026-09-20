@@ -26,11 +26,13 @@ let legalOnly = false;
 let cardFormats = [];
 let timer = 0;
 let details = null;
+let isHost = true;
 
 export function openDeckFinder(index, seat, model, sendFn) {
   seatIndex = index;
   send = sendFn;
   decks = model.decks ?? [];
+  isHost = model.host !== false;
   chosen = seat.deck ?? null;
   query = '';
   source = 'all';
@@ -114,7 +116,10 @@ function build() {
   overlay.querySelector('.cancel').onclick = closeDeckFinder;
   overlay.querySelector('.use').onclick = useChosen;
   overlay.querySelector('.sort-by').onchange = e => { sort = e.target.value; renderResults(); };
-  overlay.querySelector('.get-net').onclick = () => send({ t: 'netDecks' });
+  const net = overlay.querySelector('.get-net');
+  // Core asks which category through a dialog on the host's screen, so only the host can answer it
+  net.hidden = !isHost;
+  net.onclick = () => send({ t: 'netDecks' });
   overlay.querySelector('.format-by').onchange = e => { cardFormat = e.target.value; renderResults(); };
   overlay.querySelector('.legal-only input').onchange = e => { legalOnly = e.target.checked; renderResults(); };
   const find = overlay.querySelector('.find');
@@ -188,7 +193,7 @@ function renderColours() {
 function matching() {
   const list = decks.filter(d => (source === 'all' || d.source === source)
     && (!query || d.name.toLowerCase().includes(query))
-    && (d.generated || !colours.size || [...colours].some(c => (d.colors ?? '').includes(c)))
+    && (!colours.size || [...colours].some(c => (d.colors ?? '').includes(c)))
     && (d.generated || !legalOnly || !d.problem)
     && (d.generated || cardFormat === 'any' || (d.legalIn ?? []).includes(cardFormat)));
   const byName = (a, b) => a.name.localeCompare(b.name);
@@ -226,7 +231,9 @@ function row(d) {
   // A generator has nothing to measure until it has built something, so it says what it is instead
   if (d.generated) {
     el.classList.add('generated');
-    el.innerHTML = `<span class="dk-hit-name">${d.name}</span><span class="note">${d.note ?? ''}</span>`
+    el.innerHTML = `<span class="dk-hit-name">${d.name}</span>`
+      + `<span class="pips">${pips(d.colors)}</span>`
+      + `<span class="note">${d.note ?? ''}</span>`
       + `<span class="tag">${d.source}</span>`;
     el.onclick = () => choose(d.key);
     el.ondblclick = () => { choose(d.key); useChosen(); };

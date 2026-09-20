@@ -2,8 +2,9 @@ import { reconcile } from './render.js';
 import { deref, isLocal, me, opponents, players } from './model.js';
 import { playerAvatarUrl } from './looks.js';
 
-// A pill on the divider: whose turn it is, then the five phases with the current step named. Clicking it opens a
-// grid of phase stops, one row for your turns and one for your opponents'.
+// A pill on the divider: whose turn it is, then the five phases with the current step named. The track is a
+// read-out and never changes shape under the cursor; clicking the pill opens the grid of phase stops, one row
+// for your turns and one for your opponents', which is where a stop is set.
 
 function star() {
   let d = '';
@@ -43,9 +44,13 @@ const STEPS = [
   ['COMBAT_DAMAGE', 'dmg', 'Combat damage', 'Damage'], ['COMBAT_END', 'eoc', 'End of combat', 'End combat'],
   ['MAIN2', 'main2', 'Main 2', 'Main 2'], ['END_OF_TURN', 'end', 'End step', 'End step'], ['CLEANUP', 'cleanup', 'Cleanup', 'Cleanup'],
 ];
+// A segment covers more than the step its glyph is named for, so it is named for what it spans
 const PHASES = [
-  { glyph: 'upkeep', steps: [0, 1] }, { glyph: 'main1', steps: [2] }, { glyph: 'boc', steps: [3, 4, 5, 6, 7, 8] },
-  { glyph: 'main2', steps: [9] }, { glyph: 'end', steps: [10, 11] },
+  { glyph: 'upkeep', name: 'Upkeep and draw', steps: [0, 1] },
+  { glyph: 'main1', name: 'Main 1', steps: [2] },
+  { glyph: 'boc', name: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
+  { glyph: 'main2', name: 'Main 2', steps: [9] },
+  { glyph: 'end', name: 'End of turn', steps: [10, 11] },
 ];
 const stepIndex = phase => STEPS.findIndex(s => s[0] === phase);
 export const stepName = phase => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
@@ -127,66 +132,44 @@ function build(root) {
   });
 }
 
-// Hovering a phase opens it into its steps: click one to stop there, right-click to pass priority until it
-let hoveredPhase = -1;
-
 function drawTrack(pill, model, step, phase, myTurn, send) {
   const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
   const marker = model.controls?.marker;
   pill.querySelectorAll('.track .phase').forEach((el, n) => {
     const p = PHASES[n];
     const current = n === phase;
-    const opened = n === hoveredPhase;
-    if (!el.dataset.wired) {
-      el.dataset.wired = '1';
-      el.addEventListener('mouseenter', () => {
-        hoveredPhase = n;
-        schedule();
-      });
-      el.addEventListener('mouseleave', () => {
-        if (hoveredPhase === n) {
-          hoveredPhase = -1;
-          schedule();
-        }
-      });
-    }
     el.classList.toggle('current', current);
-    el.classList.toggle('opened', opened);
-    el.classList.toggle('stop', !current && !opened && p.steps.some(i => stops.has(STEPS[i][0])));
+    el.classList.toggle('stop', !current && p.steps.some(i => stops.has(STEPS[i][0])));
+    // Desktop passes priority until a phase by right-clicking it, so the pill offers the same gesture and
+    // not only the grid behind it. The marker lands on the first step the segment covers.
+    el.title = `${p.name}. Right-click: pass priority until here.`;
+    el.oncontextmenu = e => {
+      e.preventDefault();
+      send({ t: 'toggleMarker', phase: STEPS[p.steps[0]][0], mine: myTurn });
+    };
     el.querySelector('.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
     el.querySelector('.label').textContent = current ? (step < 0 ? 'Untap' : STEPS[step][3]) : '';
     const pips = el.querySelector('.pips');
-    pips.hidden = !current && !opened;
-    if (!pips.hidden) {
-      drawPips(pips, p, step, current, stops, marker, myTurn, send);
+    pips.hidden = !current;
+    if (current) {
+      drawPips(pips, p, step, stops, marker, myTurn);
     }
   });
 }
 
-// The same pips throughout: they simply grow into targets while the phase is open
-function drawPips(root, phase, step, current, stops, marker, myTurn, send) {
+/** How far the turn has reached within the current phase, and which of its steps are set to stop. */
+function drawPips(root, phase, step, stops, marker, myTurn) {
   reconcile(root, phase.steps, i => i,
     () => {
-      const b = document.createElement('button');
-      b.className = 'pip';
-      b.onclick = e => {
-        e.stopPropagation();
-        send({ t: 'toggleStop', phase: b.dataset.phase, mine: myTurn });
-      };
-      b.oncontextmenu = e => {
-        e.preventDefault();
-        e.stopPropagation();
-        send({ t: 'toggleMarker', phase: b.dataset.phase, mine: myTurn });
-      };
-      return b;
+      const el = document.createElement('span');
+      el.className = 'pip';
+      return el;
     },
-    (b, i) => {
-      b.dataset.phase = STEPS[i][0];
-      b.title = `${STEPS[i][2]}. Click: stop here. Right-click: pass priority until here.`;
-      b.classList.toggle('past', current && i < step);
-      b.classList.toggle('now', i === step);
-      b.classList.toggle('on', stops.has(STEPS[i][0]));
-      b.classList.toggle('marked', !!marker && marker.mine === myTurn && marker.phase === STEPS[i][0]);
+    (el, i) => {
+      el.classList.toggle('past', i < step);
+      el.classList.toggle('now', i === step);
+      el.classList.toggle('on', stops.has(STEPS[i][0]));
+      el.classList.toggle('marked', !!marker && marker.mine === myTurn && marker.phase === STEPS[i][0]);
     });
 }
 

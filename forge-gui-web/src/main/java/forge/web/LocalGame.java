@@ -10,10 +10,13 @@ import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.event.MessageEvent;
+import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
+import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
@@ -21,98 +24,210 @@ import org.tinylog.Logger;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 
-/** The loopback netplay host local games run on, and the web client's seat in each match. Call on the host UI thread. */
+/**
+ * The netplay seat one browser plays from, and the game behind it when that browser is the host. Every browser
+ * is a client of the same loopback server: the host starts it and takes a seat, and each guest takes another.
+ * Nothing is served to the network here, so only the web port is ever reachable from outside this machine.
+ *
+ * <p>There is one of these per browser. Call on the host UI thread.
+ */
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
     private static final int SPECTATE_WAIT_MILLIS = 5000;
-    /** The lobby slot the browser sits in, chosen when the match starts. */
-    private int webSeat = 1;
+
     private final FServerManager server = FServerManager.getInstance();
     private int port = -1;
-    private ServerGameLobby lobby;
+    /** The lobby this session owns, or null when another browser is hosting the game. */
+    private ServerGameLobby hosted;
+    /** Whether this session started the server. It outlives any one game, so the open lobby cannot say. */
+    private boolean startedServer;
+    private ClientGameLobby joined;
     private FGameClient client;
+    private int webSeat = -1;
 
-    /** One seat of the offline lobby. The browser plays exactly one of them; the host plays the rest. */
+    /** One seat of a game set up in a single call. */
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
     }
 
-    public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck, final WebGuiGame gui) {
-        startMatch(List.of(
-                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck),
-                new Seat(playerName, false, 0, 0, playerDeck)), GameType.Constructed, gui);
+    public ServerGameLobby hostedLobby() {
+        return hosted;
     }
 
-    /** Seats are taken in the order given; exactly one must be the browser's. */
-    public void startMatch(final List<Seat> seats, final GameType format, final WebGuiGame gui) {
-        webSeat = -1;
-        for (int i = 0; i < seats.size(); i++) {
-            if (!seats.get(i).ai()) {
-                if (webSeat >= 0) {
-                    throw new IllegalArgumentException("Only one seat can be the browser's");
-                }
-                webSeat = i;
-            }
-        }
-        if (webSeat < 0) {
-            throw new IllegalArgumentException("No seat for the browser");
-        }
+    public ClientGameLobby clientLobby() {
+        return joined;
+    }
+
+    public boolean isHost() {
+        return hosted != null;
+    }
+
+    /** The seat the browser sits in, or -1 before it has one. */
+    public int webSeat() {
+        return webSeat;
+    }
+
+    /** Starts a game this machine owns and takes a seat in it, with an AI in each of the others. */
+    public void openHost(final String playerName, final WebGuiGame gui, final Runnable onUpdate,
+            final BiConsumer<String, String> onChat) {
+        endMatch();
+        // Stopping the server frees its event loops before it finishes recreating them, so a restart can find
+        // them terminated. It costs nothing to leave running, so it outlives every game it serves.
         if (port < 0) {
             port = server.startLoopbackServer();
-            server.setLobbyListener(new LogOnlyListener());
+            startedServer = true;
         }
-        endMatch();
-        lobby = new ServerGameLobby();
-        server.setLobby(lobby);
-        // Constructed is the absence of a format variant rather than one of its own, as the desktop lobby has it
-        if (format != GameType.Constructed) {
-            lobby.applyVariant(format);
-        }
-        while (lobby.getNumberOfSlots() < seats.size()) {
-            lobby.addSlot();
-        }
-        for (int i = 0; i < seats.size(); i++) {
-            final Seat s = seats.get(i);
-            final LobbySlot slot = lobby.getSlot(i);
-            slot.setDeck(s.deck());
-            if (i == webSeat) {
-                // The browser's own name, avatar and sleeve arrive with the client's login
-                slot.setType(LobbySlotType.OPEN);
-                slot.setIsReady(false);
-                continue;
+        openHosted(playerName, gui, onUpdate, onChat);
+        // The browser took the first open seat, so the rest of the table is the host's to fill
+        for (int i = 0; i < hosted.getNumberOfSlots(); i++) {
+            if (i != webSeat) {
+                final LobbySlot slot = hosted.getSlot(i);
+                slot.setType(LobbySlotType.AI);
+                slot.setName("Forge AI");
+                slot.setIsReady(true);
             }
-            slot.setType(LobbySlotType.AI);
-            slot.setName(s.name());
-            // A host slot would otherwise carry the host's own avatar and sleeve
-            slot.setAvatarIndex(s.avatar());
-            slot.setSleeveIndex(s.sleeve());
-            slot.setIsReady(true);
         }
-        final String playerName = seats.get(webSeat).name();
-        final LobbySlot seat = lobby.getSlot(webSeat);
+        // The client took its seat before these were filled, so its copy of the table is a step behind
+        pushLobby();
+    }
 
-        final ClientGameLobby clientLobby = new ClientGameLobby();
+    private void openHosted(final String playerName, final WebGuiGame gui, final Runnable onUpdate,
+            final BiConsumer<String, String> onChat) {
+        hosted = new ServerGameLobby();
+        server.setLobby(hosted);
+        // Slot 0 starts as the host's own local seat; the browser plays through a client, so it is opened up
+        hosted.getSlot(0).setType(LobbySlotType.OPEN);
+        hosted.setListener(new IUpdateable() {
+            @Override public void update(final boolean fullUpdate) {
+                server.updateLobbyState();
+                onUpdate.run();
+            }
+            @Override public void update(final int slot, final LobbySlotType type) { }
+        });
+        server.setLobbyListener(new HostChat(onChat));
+        // The host reads chat through its own listener, so the client one would only repeat it. Its own
+        // connection ends only because the host ended it, which has already told the browser.
+        connect(playerName, gui, "127.0.0.1", port, onUpdate, (from, text) -> { }, () -> { });
+    }
+
+    /** Takes a seat in a game another browser on this machine is hosting. Nothing is served from here. */
+    public void openGuest(final String playerName, final WebGuiGame gui, final int hostPort,
+            final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
+        close();
+        hosted = null;
+        port = hostPort;
+        connect(playerName, gui, "127.0.0.1", hostPort, onUpdate, onChat, onClosed);
+    }
+
+    private void connect(final String playerName, final WebGuiGame gui, final String host, final int onPort,
+            final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
+        joined = new ClientGameLobby();
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
-        gui.setClientLobby(clientLobby);
-        final CountDownLatch joined = new CountDownLatch(1);
-        client = new FGameClient(playerName, gui, "127.0.0.1", port);
+        gui.setClientLobby(joined);
+        final CountDownLatch ready = new CountDownLatch(1);
+        client = new FGameClient(playerName, gui, host, onPort);
         client.setDispatchExecutor(gui.dispatchExecutor());
-        client.addLobbyListener(new ClientListener(clientLobby, joined));
+        client.addLobbyListener(new ClientListener(joined, ready, onChat, onClosed, seat -> {
+            webSeat = seat;
+            onUpdate.run();
+        }));
         client.connect();
         try {
-            if (!joined.await(JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("The web client did not take its seat");
+            if (!ready.await(JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("No seat was free in that game");
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while joining", e);
         }
-        seat.setIsReady(true);
-        final Runnable start = lobby.startGame();
+    }
+
+    /** The loopback port this game is served on, which is where its other seats connect. */
+    public int port() {
+        return port;
+    }
+
+    /**
+     * Sends the table out to every client. A slot edited straight on the server does not announce itself, so
+     * without this the browser's own copy of the lobby keeps the old answer.
+     */
+    public void pushLobby() {
+        if (hosted != null) {
+            server.updateLobbyState();
+        }
+    }
+
+    /** Changes to the browser's own seat travel as they would from any client. */
+    public void updateOwnSeat(final UpdateLobbyPlayerEvent event) {
+        if (client != null) {
+            client.send(event);
+        }
+    }
+
+    public void sendChat(final String message) {
+        if (client != null) {
+            client.send(new MessageEvent(message));
+        }
+    }
+
+    /** Starts the match. Only the machine hosting it can. */
+    public void start() {
+        if (hosted == null) {
+            throw new IllegalStateException("Only the host can start the match");
+        }
+        final Runnable start = hosted.startGame();
         if (start == null) {
             throw new IllegalStateException("The lobby refused to start the match");
         }
         start.run();
+    }
+
+    /** Sets a game up and starts it at once, which is what a test wants. */
+    public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck,
+            final WebGuiGame gui) {
+        startMatch(List.of(
+                new Seat(playerName, false, 0, 0, playerDeck),
+                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)),
+                GameType.Constructed, gui);
+    }
+
+    /** Seats are taken in the order given; exactly one must be the browser's. */
+    public void startMatch(final List<Seat> seats, final GameType format, final WebGuiGame gui) {
+        final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
+        openHost(mine.name(), gui, () -> { }, (from, text) -> { });
+        if (format != GameType.Constructed) {
+            hosted.applyVariant(format);
+        }
+        while (hosted.getNumberOfSlots() < seats.size()) {
+            hosted.addSlot();
+        }
+        int next = 0;
+        for (final Seat seat : seats) {
+            final int index = seat.ai() ? nextAiSlot(next) : webSeat;
+            if (seat.ai()) {
+                next = index + 1;
+                final LobbySlot slot = hosted.getSlot(index);
+                slot.setType(LobbySlotType.AI);
+                slot.setName(seat.name());
+                slot.setAvatarIndex(seat.avatar());
+                slot.setSleeveIndex(seat.sleeve());
+                slot.setIsReady(true);
+            }
+            hosted.getSlot(index).setDeck(seat.deck());
+        }
+        hosted.getSlot(webSeat).setIsReady(true);
+        start();
+    }
+
+    private int nextAiSlot(final int from) {
+        for (int i = from; i < hosted.getNumberOfSlots(); i++) {
+            if (i != webSeat) {
+                return i;
+            }
+        }
+        throw new IllegalStateException("No seat left for an AI");
     }
 
     /** The saved avatar or sleeve for a lobby seat, falling back to the seat number as the desktop lobby does. */
@@ -123,8 +238,12 @@ public final class LocalGame {
     }
 
     /** Hands the web seat to an AI, the way the host does for a player who never reconnects, so the browser
-     *  spectates two AI players instead of playing one of them. */
+     *  spectates instead of playing. Only the host can: the seat belongs to its server. */
     public void spectate() {
+        if (hosted == null) {
+            Logger.warn("Only the host can hand its seat to the AI");
+            return;
+        }
         final HostedMatch match = hostedMatch();
         for (int i = 0; i < SPECTATE_WAIT_MILLIS / 50 && (match == null || match.getGame() == null); i++) {
             try {
@@ -134,16 +253,16 @@ public final class LocalGame {
                 return;
             }
         }
-        final RemoteClient client = server.getClientBySlotIndex(webSeat);
-        if (client == null) {
+        final RemoteClient seat = server.getClientBySlotIndex(webSeat);
+        if (seat == null) {
             Logger.warn("No web seat to hand to the AI");
             return;
         }
-        server.convertToAI(client);
+        server.convertToAI(seat);
     }
 
     public HostedMatch hostedMatch() {
-        return lobby == null ? null : lobby.getHostedMatch();
+        return hosted == null ? null : hosted.getHostedMatch();
     }
 
     public void endMatch() {
@@ -151,37 +270,51 @@ public final class LocalGame {
             client.close();
             client = null;
         }
-        if (port >= 0) {
+        // Every seat's GUI lives on the one server, so only the host may clear them
+        if (hosted != null) {
             server.clearPlayerGuis();
         }
-        lobby = null;
+        hosted = null;
+        joined = null;
+        webSeat = -1;
     }
 
+    /** Leaves whatever game is open. The server stays up, ready for the next one. */
+    public void close() {
+        endMatch();
+    }
+
+    /** Gives up the seat for good. Only the host stops the server, because only the host started it. */
     public void shutdown() {
         endMatch();
-        if (port >= 0) {
+        if (startedServer) {
             server.stopServer();
-            port = -1;
+            startedServer = false;
         }
+        port = -1;
     }
 
-    private record ClientListener(ClientGameLobby clientLobby, CountDownLatch joined) implements ILobbyListener {
-        @Override public void message(final String source, final String message, final ChatMessage.MessageType type) { }
+    private record ClientListener(ClientGameLobby clientLobby, CountDownLatch ready, BiConsumer<String, String> onChat,
+            Runnable onClosed, java.util.function.IntConsumer onSeat) implements ILobbyListener {
+        @Override public void message(final String source, final String message, final ChatMessage.MessageType type) {
+            onChat.accept(source, message);
+        }
         @Override public void update(final GameLobbyData state, final int slot) {
             clientLobby.setData(state);
             clientLobby.setLocalPlayer(slot);
             if (slot >= 0) {
-                joined.countDown();
+                onSeat.accept(slot);
+                ready.countDown();
             }
         }
-        @Override public void close() { }
+        @Override public void close() { onClosed.run(); }
         @Override public ClientGameLobby getLobby() { return clientLobby; }
     }
 
-    // FServerManager requires a lobby listener: a client dropping mid-match calls it without a null check
-    private static final class LogOnlyListener implements ILobbyListener {
+    /** The host sees chat through its own listener; a joined client gets it through the client's. */
+    private record HostChat(BiConsumer<String, String> onChat) implements ILobbyListener {
         @Override public void message(final String source, final String message, final ChatMessage.MessageType type) {
-            Logger.info("Local host: {}", message);
+            onChat.accept(source, message);
         }
         @Override public void update(final GameLobbyData state, final int slot) { }
         @Override public void close() { }

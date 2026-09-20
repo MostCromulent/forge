@@ -23,10 +23,10 @@ public final class WebMain {
         final WebGuiBase ui = new WebGuiBase();
         GuiBase.setInterface(ui);
         FModel.initialize(null, prefs -> null);
-        final LocalGame local = new LocalGame();
         final CountDownLatch quit = new CountDownLatch(1);
-        final WebSession session = new WebSession(ui, local, IDLE_MILLIS, quit::countDown);
-        try (WebServer server = new WebServer(session, newToken())) {
+        final WebSessions sessions = new WebSessions(ui, IDLE_MILLIS, quit::countDown);
+        try (WebServer server = new WebServer(sessions, newToken())) {
+            sessions.setServer(server);
             System.out.println("Forge web UI: " + server.url());
             if (!Boolean.getBoolean("forge.web.noBrowser")) {
                 openBrowser(server.url(), ui);

@@ -1,6 +1,8 @@
 // Every setting the options dialog offers. Settings marked server:true are Forge preferences shared with the
 // desktop client; the rest live in this browser.
 
+import { cssUrl } from './looks.js';
+
 const LOCAL_KEY = 'forge.settings';
 const DEFAULTS_KEY = 'forge.defaults';
 
@@ -156,8 +158,10 @@ function apply() {
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
   customStyle().textContent = String(setting('customCss') ?? '');
+  // A url() inside a custom property resolves against the stylesheet that uses it, not the page, so a
+  // relative one asks board.css's own folder for it. cssUrl makes it absolute, as it does for sleeves.
   const mat = setting('playmat');
-  root.style.setProperty('--playmat', mat ? `url("playmat?id=${encodeURIComponent(mat)}")` : 'none');
+  root.style.setProperty('--playmat', cssUrl(mat ? `playmat?id=${encodeURIComponent(mat)}` : ''));
 }
 
 function customStyle() {

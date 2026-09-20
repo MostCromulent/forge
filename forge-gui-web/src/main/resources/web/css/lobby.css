@@ -6,7 +6,12 @@
 /* --- menu ------------------------------------------------------------- */
 
 .menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 28px; padding: 40px 20px; }
-.menu-page .wordmark { font-size: 40px; }
+/* The one place Magic's five colours are pure decoration: no card art nearby and nothing encoded by hue */
+.menu-page .wordmark {
+  font-size: 40px;
+  padding-bottom: 9px;
+  background: linear-gradient(90deg, var(--mtg-w), var(--mtg-u), var(--mtg-b), var(--mtg-r), var(--mtg-g)) bottom / 100% 2px no-repeat;
+}
 .modes { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); max-width: 820px; width: 100%; }
 
 .mode {
@@ -20,7 +25,7 @@
   border-radius: 10px;
 }
 
-.mode:hover:not(:disabled) { border-color: var(--accent-2); }
+.mode:hover:not(:disabled) { border-color: var(--accent-2); background: var(--surface-3); }
 .mode-name { font-size: 17px; font-weight: 600; }
 .mode-blurb { color: var(--muted); }
 /* What this mode holds for you right now, which is the part worth reading twice */
@@ -30,7 +35,9 @@
 
 /* --- lobby ------------------------------------------------------------ */
 
-#lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr auto; }
+#lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
+/* Seats, Add a seat and Play sit together as one block rather than being pushed to opposite edges */
+.lobby-main { display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
 .lobby-head { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .spectate { color: var(--muted); display: flex; align-items: center; gap: 6px; }
@@ -39,7 +46,7 @@
 .format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
 .format[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--text); font-weight: 600; }
 
-.seats { display: grid; justify-content: center; align-content: center; gap: 18px; padding: 24px 20px; grid-auto-flow: column; }
+.seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
 /* Three or four seats read as a grid rather than a row that wraps unevenly */
 .seats[data-count="3"], .seats[data-count="4"] { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
 .seats[data-count="3"] .plate, .seats[data-count="4"] .plate { width: 376px; }
@@ -54,29 +61,40 @@
   border-radius: 12px;
 }
 
-.plate.mine { border-color: var(--accent); }
+/* Your own seat is washed with the accent rather than merely outlined in it */
+.plate.mine { border-color: var(--accent); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }
 .plate-body { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; flex: 1; }
 
 /* The sleeve is the seat's subject: a card back at true card aspect, and the only sleeve control */
-.plate .sleeve { padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; flex: none; background: var(--surface-2); }
+.sleeve-slot { position: relative; flex: none; }
+.plate .sleeve { padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; display: block; background: var(--surface-2); }
 .seats[data-count="3"] .plate .sleeve, .seats[data-count="4"] .plate .sleeve { width: 76px; height: 106px; }
+/* Secondary to the sleeve it sits on, so it stays out of the way until the pointer is over the slot */
+.sleeve-style { position: absolute; right: 4px; bottom: 4px; padding: 2px 7px; font-size: 11px; border-radius: 6px; background: #0b0e14cc; opacity: 0; transition: opacity .12s ease; }
+.sleeve-slot:hover .sleeve-style, .sleeve-style:focus-visible { opacity: 1; }
+.seats[data-count="3"] .who .avatar, .seats[data-count="4"] .who .avatar { width: 38px; height: 38px; }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-/* A seat with no deck keeps its sleeve, drained and outlined, so the gap reads without colour */
-.plate .sleeve.empty img { filter: grayscale(1) brightness(.5); }
-.plate .sleeve.empty::after {
-  content: 'no deck';
-  position: absolute;
-  inset: auto 0 6px;
-  text-align: center;
-  font-size: 10.5px;
-  font-weight: 600;
-  color: var(--text);
+/* An empty slot is a card-shaped outline, not a sleeve: there is nothing sleeved yet */
+.plate .sleeve.empty {
+  position: relative;
+  background: none;
+  border: 2px dashed var(--line);
+  display: grid;
+  place-items: center;
 }
-.plate .sleeve.empty { position: relative; outline: 2px dashed var(--line); outline-offset: -4px; }
+
+.plate .sleeve.empty::after {
+  content: attr(data-label);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.plate .sleeve.empty:hover { border-color: var(--accent-2); }
 
 .who { display: flex; align-items: center; gap: 8px; }
-.who .avatar { padding: 0; width: 32px; height: 32px; border-radius: 6px; overflow: hidden; flex: none; }
+.who .avatar { padding: 0; width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex: none; }
 .who .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .who .avatar:hover { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .who-name { font-weight: 600; font-size: 16px; min-width: 40px; }
@@ -93,7 +111,7 @@
 .seat-add { display: flex; justify-content: center; }
 .seat-add button { border-radius: 999px; color: var(--muted); }
 
-.play-row { display: grid; justify-items: center; gap: 10px; padding: 18px 20px 30px; }
+.play-row { display: grid; justify-items: center; gap: 10px; }
 .play { min-width: 240px; font-size: 17px; padding: 10px 24px; }
 .play:disabled { opacity: .5; }
 .match-line { margin: 0; color: var(--muted); }
@@ -210,12 +228,12 @@
   background: var(--muted);
 }
 
-.pip-W { background: #f4f0dc; }
-.pip-U { background: #7fb6e0; }
-.pip-B { background: #9a92a8; }
-.pip-R { background: #eb9274; }
-.pip-G { background: #86bb8c; }
-.pip-C { background: #c2c8d2; }
+.pip-W { background: var(--mtg-w); }
+.pip-U { background: var(--mtg-u); }
+.pip-B { background: var(--mtg-b); }
+.pip-R { background: var(--mtg-r); }
+.pip-G { background: var(--mtg-g); }
+.pip-C { background: var(--mtg-c); }
 .pips { display: inline-flex; gap: 2px; vertical-align: middle; }
 
 .shown { margin: 0; color: var(--faint, var(--muted)); font-size: 12px; }
@@ -281,3 +299,40 @@
 .host-options { display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
 .host-option { text-align: left; }
 .host-choice footer { display: flex; justify-content: flex-end; }
+
+/* --- multiplayer ------------------------------------------------------ */
+
+.menu-note { color: var(--muted); min-height: 1.2em; max-width: 520px; text-align: center; }
+/* A failure is marked by weight and a bar, not by colour alone */
+.menu-note.bad { color: var(--text); font-weight: 600; border-left: 3px solid var(--danger); padding-left: 8px; text-align: left; }
+
+/* A seat nobody has taken yet, drawn as an outline so it reads as absence rather than as a broken plate */
+.plate.waiting { border-style: dashed; }
+.kind { background: none; border: none; padding: 0; color: var(--muted); }
+.kind:disabled { opacity: 1; }
+.kind:not(:disabled):hover { color: var(--accent-2); text-decoration: underline; }
+
+
+.lobby-net { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); width: min(100%, 960px); }
+.share, .chat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.share h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
+.share-list { display: grid; gap: 6px; }
+
+.share-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: 7px;
+}
+
+.share-label { color: var(--muted); font-size: 12px; }
+/* An invite link is long, so it takes the width and the Copy button sits beside the label */
+.share-url { grid-column: 1 / -1; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.share-copy { color: var(--accent-2); font-size: 12px; }
+.chat { display: grid; grid-template-rows: 1fr auto; gap: 8px; }
+.chat-log { min-height: 92px; max-height: 160px; overflow: auto; display: grid; align-content: end; gap: 3px; }
+.chat-log .chat-line b { color: var(--accent-2); font-weight: 600; }
+.chat input { width: 100%; padding: 7px 9px; border-radius: 7px; }

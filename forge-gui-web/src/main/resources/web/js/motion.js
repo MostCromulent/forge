@@ -2,6 +2,8 @@
 // while its cost is paid, and one put back flies home. Only your hand and the stack are measured each render,
 // so a wide board costs nothing.
 
+import { hoverable } from './detail.js';
+
 const inHand = new Map();
 const onStack = new Map();
 const onBoard = new Map();
@@ -23,13 +25,18 @@ export function mergeInto(keys, rect) {
   }
 }
 const waiting = new Map();
+/** Where a spell sat while its cost was paid, remembered after the ghost goes so a cancelled cast flies
+ *  home from that spot rather than from the library, which is where an unknown card comes from. */
+const waited = new Map();
 const FLIGHT_MS = 240;
 const DEAL_MS = 320;
 const STAGGER_MS = 55;
 const SETTLE_MS = 900;
+const WAITED_MEMORY_MS = 8000;
 const POP_MS = 220;
 
 export function animateCardMoves(model) {
+  notePiles();
   const arrived = new Set();
   // A card cast from hand stops on the stack before it reaches the table, so every hop is followed
   for (const el of [...document.querySelectorAll('.row .card[data-key], .slot .card[data-key]'), ...stackItems()]) {
@@ -53,7 +60,7 @@ export function animateCardMoves(model) {
   for (const el of hand) {
     const key = el.dataset.key;
     // A cancelled cost comes back from where it waited, a bounced permanent from where it stood, the rest are drawn
-    const back = waiting.get(key)?.rect ?? onBoard.get(key) ?? onStack.get(key);
+    const back = waiting.get(key)?.rect ?? onBoard.get(key) ?? onStack.get(key) ?? recentWait(key);
     if (back) {
       land(key);
       fly(el, back, FLIGHT_MS, 0);
@@ -79,6 +86,11 @@ export function animateCardMoves(model) {
   for (const [key, held] of waiting) {
     if (!paying && Date.now() - held.since > SETTLE_MS) {
       land(key);
+    }
+  }
+  for (const [key, w] of waited) {
+    if (Date.now() - w.at > WAITED_MEMORY_MS) {
+      waited.delete(key);
     }
   }
   leaveTheBoard();
@@ -120,7 +132,33 @@ function tileFor(key) {
 }
 
 function onScreen(key) {
-  return !!document.querySelector(`.card[data-key="${key}"]`) || stackItems().some(el => keyOf(el) === key);
+  return covered.has(key) || !!document.querySelector(`.card[data-key="${key}"]`)
+    || stackItems().some(el => keyOf(el) === key);
+}
+
+/** The keys a pile is holding behind its top card. They have no element, and they have not gone anywhere. */
+let covered = new Set();
+
+function notePiles() {
+  covered = new Set();
+  for (const { keys, top } of pileSlots()) {
+    for (const key of keys) {
+      if (key !== top.dataset.key) {
+        covered.add(key);
+      }
+    }
+  }
+}
+
+function pileSlots() {
+  const out = [];
+  for (const slot of document.querySelectorAll('.slot[data-members]')) {
+    const top = slot.querySelector(':scope > .card:last-child');
+    if (top) {
+      out.push({ keys: slot.dataset.members.split(','), top });
+    }
+  }
+  return out;
 }
 
 function note(hand) {
@@ -141,6 +179,17 @@ function note(hand) {
     onBoard.set(el.dataset.key, el.getBoundingClientRect());
     gaveGhost.set(el.dataset.key, el.cloneNode(true));
   }
+  // A copy folded into a pile stands where the pile's top card stands, so it leaves from there if it leaves
+  for (const { keys, top } of pileSlots()) {
+    const rect = onBoard.get(top.dataset.key);
+    const ghost = gaveGhost.get(top.dataset.key);
+    for (const key of keys) {
+      if (key !== top.dataset.key && rect) {
+        onBoard.set(key, rect);
+        gaveGhost.set(key, ghost.cloneNode(true));
+      }
+    }
+  }
 }
 
 // A spell waits beside the stack, where it is about to go, rather than over the cards on the table
@@ -159,6 +208,9 @@ function hold(key, was) {
   const spot = waitingSpot(was.rect);
   const ghost = place(was.ghost, was.rect);
   ghost.classList.add('paying');
+  // A card waiting to be paid for is still a card you want to read, so it answers the pointer
+  ghost.style.pointerEvents = 'auto';
+  hoverable(ghost, ghost.querySelector('img') ?? ghost);
   ghost.animate([
     { transform: 'none' },
     {
@@ -167,6 +219,14 @@ function hold(key, was) {
     },
   ], { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
   waiting.set(key, { rect: spot, ghost, since: Date.now() });
+  waited.set(key, { rect: spot, at: Date.now() });
+}
+
+/** The spot a spell waited in, if it did so lately. Answered once, because it only flies home once. */
+function recentWait(key) {
+  const w = waited.get(key);
+  waited.delete(key);
+  return w && Date.now() - w.at <= WAITED_MEMORY_MS ? w.rect : null;
 }
 
 function land(key) {

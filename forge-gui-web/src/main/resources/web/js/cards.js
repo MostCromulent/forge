@@ -9,11 +9,11 @@ export function createCard(onClick) {
   el.className = 'card';
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span>';
   noImageOnError(el, el.querySelector('img'));
-  el.addEventListener('click', () => onClick(el, false));
+  el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
   el.addEventListener('contextmenu', e => {
     e.preventDefault();
-    onClick(el, true);
+    onClick(el, true, e);
   });
   hoverable(el);
   return el;

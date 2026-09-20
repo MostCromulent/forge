@@ -23,14 +23,20 @@ public class WebServerTest {
     private volatile BrowserChannel connected;
     private WebServer server;
 
+    private String origin() {
+        return "http://127.0.0.1:" + server.port();
+    }
+
     @BeforeClass
     public void setUp() throws Exception {
         WebTestSupport.initModel();
         server = new WebServer(new WebServer.Endpoint() {
-            @Override public void connected(final BrowserChannel channel) { connected = channel; }
+            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
+                connected = channel;
+            }
             @Override public void disconnected(final BrowserChannel channel) { }
             @Override public void onMessage(final BrowserChannel channel, final JsonObject message) { received.add(message); }
-        }, "secret");
+        }, "secret", 0);
     }
 
     @AfterClass
@@ -39,7 +45,7 @@ public class WebServerTest {
     }
 
     private HttpResponse<String> get(final String pathAndQuery, final String cookie) throws Exception {
-        final HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(server.origin() + pathAndQuery));
+        final HttpRequest.Builder b = HttpRequest.newBuilder(URI.create(origin() + pathAndQuery));
         if (cookie != null) {
             b.header("Cookie", cookie);
         }
@@ -86,7 +92,7 @@ public class WebServerTest {
     @Test
     public void socketCarriesMessagesBothWays() throws Exception {
         final List<String> texts = new CopyOnWriteArrayList<>();
-        final WebSocket ws = openSocket(server.origin(), texts);
+        final WebSocket ws = openSocket(origin(), texts);
         ws.sendText("{\"t\":\"ping\"}", true).get(5, TimeUnit.SECONDS);
         for (int i = 0; i < 100 && received.isEmpty(); i++) {
             Thread.sleep(20);

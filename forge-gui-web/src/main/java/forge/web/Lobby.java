@@ -4,7 +4,11 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.game.GameType;
+import forge.gamemodes.match.GameLobby;
+import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
+import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 
@@ -12,16 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Match setup before a game starts: a format and the seats that will play it. Everything here is offline, so
- * a seat is something you add rather than an empty slot waiting to be filled.
- *
- * <p>A seat carries the same {@link LobbySlotType} a netplay lobby slot does, so the browser can already tell
- * the kinds apart rather than reading a boolean. Only LOCAL and AI occur offline.
- *
- * <p>TODO: seat 0 is assumed to be yours and every other seat an AI, which the validation messages and the
- * removal rule both rely on. Joining someone else's game breaks that assumption: the authority over the seats
- * moves to the host's ServerGameLobby and this class becomes a view of replicated state rather than the state
- * itself. Do not build on "seat 0 is me".
+ * Match setup, read from the lobby the engine keeps. The browser always shows its own client's view of it, so
+ * one screen serves a game you host and one you have joined; what differs is only what you may change. Your
+ * own seat travels as an update from a client, and the rest of the table is the host's to set.
  */
 final class Lobby {
     static final int MAX_SEATS = 4;
@@ -30,60 +27,60 @@ final class Lobby {
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander);
 
     private final DeckCatalog catalog = new DeckCatalog();
-    private final List<SeatState> seats = new ArrayList<>();
-    private GameType format = GameType.Constructed;
+    private final LocalGame local;
+    /** Which deck each seat was given, by catalogue key: the lobby slot holds the deck, this holds the choice. */
+    private final List<String> deckKeys = new ArrayList<>();
+    /** True once the game was opened for others to join, which is when a link is worth showing. */
+    private boolean shareable;
 
-    private static final class SeatState {
-        String name;
-        final LobbySlotType type;
-        int avatar;
-        int sleeve;
-        String deckKey;
-
-        SeatState(final String name, final LobbySlotType type, final int avatar, final int sleeve) {
-            this.name = name;
-            this.type = type;
-            this.avatar = avatar;
-            this.sleeve = sleeve;
-        }
-
-        boolean ai() {
-            return type == LobbySlotType.AI;
-        }
+    Lobby(final LocalGame local) {
+        this.local = local;
     }
 
-    Lobby() {
-        seats.add(new SeatState(FModel.getPreferences().getPref(FPref.PLAYER_NAME), LobbySlotType.LOCAL,
-                LocalGame.storedIndex(FPref.UI_AVATARS, 0), LocalGame.storedIndex(FPref.UI_SLEEVES, 0)));
-        seats.add(aiSeat(1));
+    void setShareable(final boolean value) {
+        shareable = value;
     }
 
-    // Numbered past the first, so three of them are told apart in the seat list and in what blocks Play
-    private static SeatState aiSeat(final int index) {
-        return new SeatState(index > 1 ? AI_NAME + " " + index : AI_NAME, LobbySlotType.AI,
-                LocalGame.storedIndex(FPref.UI_AVATARS, index), LocalGame.storedIndex(FPref.UI_SLEEVES, index));
+    private GameLobby view() {
+        return local.clientLobby();
     }
 
+    private ServerGameLobby host() {
+        return local.hostedLobby();
+    }
+
+    /**
+     * The format, read from the variants the lobby carries rather than from its game type. A lobby's game type
+     * is a plain field that its serialised data leaves out, so on a client it never moves off Constructed.
+     */
     GameType format() {
-        return format;
+        final GameLobby lobby = view();
+        if (lobby != null) {
+            for (final GameType variant : FORMATS) {
+                if (variant != GameType.Constructed && lobby.hasVariant(variant)) {
+                    return variant;
+                }
+            }
+        }
+        return GameType.Constructed;
     }
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
     JsonObject decks() {
         final JsonObject m = JsonCodec.message("decks");
-        m.add("decks", catalog.refresh(format));
+        m.add("decks", catalog.refresh(format()));
         m.add("cardFormats", DeckCatalog.cardFormats());
         return m;
     }
 
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
     JsonObject loadNetDecks() {
-        catalog.loadNetDecks(format);
+        catalog.loadNetDecks(format());
         return decks();
     }
 
     JsonObject deckDetails(final String key) {
-        final JsonObject details = catalog.details(key, format);
+        final JsonObject details = catalog.details(key, format());
         if (details == null) {
             return null;
         }
@@ -94,7 +91,15 @@ final class Lobby {
 
     JsonObject state() {
         final JsonObject m = JsonCodec.message("lobby");
-        m.addProperty("format", format.name());
+        final GameLobby lobby = view();
+        m.addProperty("open", lobby != null);
+        if (lobby == null) {
+            return m;
+        }
+        m.addProperty("host", local.isHost());
+        m.addProperty("mySeat", local.webSeat());
+        m.addProperty("shareable", shareable);
+        m.addProperty("format", format().name());
         final JsonArray formats = new JsonArray();
         for (final GameType t : FORMATS) {
             final JsonObject f = new JsonObject();
@@ -104,144 +109,242 @@ final class Lobby {
         }
         m.add("formats", formats);
         m.addProperty("maxSeats", MAX_SEATS);
-        final JsonArray list = new JsonArray();
-        for (final SeatState s : seats) {
-            final Deck deck = catalog.deck(s.deckKey);
-            final JsonObject j = new JsonObject();
-            j.addProperty("name", s.name);
-            j.addProperty("type", s.type.name());
-            j.addProperty("avatar", s.avatar);
-            j.addProperty("sleeve", s.sleeve);
-            j.addProperty("deck", s.deckKey);
-            j.addProperty("deckName", deck == null ? null : deck.getName());
-            j.addProperty("deckSize", deck == null ? 0 : deck.getMain().countAll());
-            j.addProperty("problem", DeckCatalog.problem(deck, format));
-            // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
-            j.addProperty("sleeveArt", deck == null ? "" : deck.getSleeveArtKey());
-            j.addProperty("sleeveOffset", deck == null ? 0 : deck.getSleeveArtOffset());
-            list.add(j);
+        final JsonArray seats = new JsonArray();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            seats.add(seat(lobby, i));
         }
-        m.add("seats", list);
+        m.add("seats", seats);
         final JsonArray problems = new JsonArray();
         for (final String p : problems()) {
             problems.add(p);
         }
         m.add("problems", problems);
-        m.addProperty("canStart", problems.isEmpty());
+        // Only the machine running the game can start it; everyone else waits on the host
+        m.addProperty("canStart", local.isHost() && problems.isEmpty());
         return m;
+    }
+
+    private JsonObject seat(final GameLobby lobby, final int index) {
+        final LobbySlot slot = lobby.getSlot(index);
+        final Deck deck = deckAt(index);
+        final JsonObject j = new JsonObject();
+        j.addProperty("name", slot.getName());
+        j.addProperty("type", slot.getType().name());
+        j.addProperty("mine", index == local.webSeat());
+        // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs.
+        j.addProperty("mayEdit",
+                index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI));
+        j.addProperty("ready", slot.isReady());
+        j.addProperty("avatar", slot.getAvatarIndex());
+        j.addProperty("sleeve", slot.getSleeveIndex());
+        j.addProperty("deck", key(index));
+        j.addProperty("deckName", deck == null ? null : deck.getName());
+        j.addProperty("deckSize", deck == null ? 0 : deck.getMain().countAll());
+        j.addProperty("colors", deck == null ? "" : DeckCatalog.colors(deck));
+        j.addProperty("problem", deck == null ? null : DeckCatalog.problem(deck, format()));
+        // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
+        j.addProperty("sleeveArt", deck == null ? "" : deck.getSleeveArtKey());
+        j.addProperty("sleeveOffset", deck == null ? 0 : deck.getSleeveArtOffset());
+        return j;
+    }
+
+    private String key(final int index) {
+        return index >= 0 && index < deckKeys.size() ? deckKeys.get(index) : null;
+    }
+
+    private Deck deckAt(final int index) {
+        return catalog.deck(key(index));
     }
 
     /** What stops the match starting, in the order the seats appear. */
     List<String> problems() {
         final List<String> out = new ArrayList<>();
-        if (seats.get(0).name == null || seats.get(0).name.isBlank()) {
-            out.add("Enter a name for yourself.");
+        final GameLobby lobby = view();
+        if (lobby == null) {
+            return out;
         }
-        for (int i = 0; i < seats.size(); i++) {
-            final SeatState s = seats.get(i);
-            final String who = i == 0 ? "You have" : s.name + " has";
-            final Deck deck = catalog.deck(s.deckKey);
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            final LobbySlot slot = lobby.getSlot(i);
+            if (slot.getType() == LobbySlotType.OPEN) {
+                out.add("A seat is still open.");
+                continue;
+            }
+            final String who = i == local.webSeat() ? "You have" : slot.getName() + " has";
+            final Deck deck = deckAt(i);
             if (deck == null) {
                 out.add(who + " no deck.");
-            } else {
-                final String problem = DeckCatalog.problem(deck, format);
-                if (problem != null) {
-                    out.add(deck.getName() + ": " + problem);
-                }
+                continue;
+            }
+            final String problem = DeckCatalog.problem(deck, format());
+            if (problem != null) {
+                out.add(deck.getName() + ": " + problem);
+            }
+            if (!slot.isReady()) {
+                out.add(slot.getName() + " is not ready.");
             }
         }
         return out;
     }
 
+    /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */
+    void forget() {
+        deckKeys.clear();
+    }
+
+    /** The format belongs to the game, so only the host sets it. */
     void setFormat(final String id) {
-        for (final GameType t : FORMATS) {
-            if (t.name().equals(id)) {
-                if (t != format) {
-                    format = t;
-                    // A deck legal in one format is rarely legal in another, and its key is not in the new pool
-                    catalog.refresh(format);
-                    for (final SeatState s : seats) {
-                        s.deckKey = null;
-                    }
-                }
-                return;
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return;
+        }
+        for (final GameType wanted : FORMATS) {
+            if (!wanted.name().equals(id) || wanted == format()) {
+                continue;
             }
+            // Constructed is the absence of a format variant rather than one of its own
+            for (final GameType other : FORMATS) {
+                if (other != GameType.Constructed) {
+                    lobby.removeVariant(other);
+                }
+            }
+            if (wanted != GameType.Constructed) {
+                lobby.applyVariant(wanted);
+            }
+            // A deck legal in one format is rarely legal in another, and its key is not in the new pool
+            deckKeys.clear();
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                lobby.getSlot(i).setDeck(null);
+            }
+            local.pushLobby();
+            return;
         }
     }
 
     void addSeat() {
-        if (seats.size() < MAX_SEATS) {
-            seats.add(aiSeat(seats.size()));
+        final ServerGameLobby lobby = host();
+        if (lobby != null && lobby.getNumberOfSlots() < MAX_SEATS) {
+            lobby.addSlot();
+            aiSeat(lobby.getNumberOfSlots() - 1);
         }
     }
 
-    /** Removes one seat. Yours is not removable, and two are needed for a match. */
+    /** Leaves a seat for someone to join, rather than filling it with an AI. */
+    void openSeat(final int index) {
+        final ServerGameLobby lobby = host();
+        if (lobby != null && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
+            final LobbySlot slot = lobby.getSlot(index);
+            slot.setType(LobbySlotType.OPEN);
+            slot.setName(null);
+            slot.setIsReady(false);
+            local.pushLobby();
+        }
+    }
+
+    void aiSeat(final int index) {
+        final ServerGameLobby lobby = host();
+        if (lobby != null && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
+            final LobbySlot slot = lobby.getSlot(index);
+            slot.setType(LobbySlotType.AI);
+            slot.setName(index > 1 ? AI_NAME + " " + index : AI_NAME);
+            slot.setIsReady(true);
+            local.pushLobby();
+        }
+    }
+
     void removeSeat(final int index) {
-        if (index > 0 && index < seats.size() && seats.size() > 2) {
-            seats.remove(index);
+        final ServerGameLobby lobby = host();
+        if (lobby != null && index != local.webSeat() && lobby.getNumberOfSlots() > 2) {
+            lobby.removeSlot(index);
+            if (index < deckKeys.size()) {
+                deckKeys.remove(index);
+            }
         }
     }
 
     void setName(final int index, final String name) {
-        if (index >= 0 && index < seats.size() && name != null) {
-            seats.get(index).name = name.trim();
+        if (name == null || name.isBlank()) {
+            return;
+        }
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.nameUpdate(name.trim()));
+        } else if (host() != null) {
+            host().getSlot(index).setName(name.trim());
+            local.pushLobby();
         }
     }
 
     void setDeck(final int index, final String key) {
-        if (index >= 0 && index < seats.size()) {
-            seats.get(index).deckKey = key;
+        while (deckKeys.size() <= index) {
+            deckKeys.add(null);
+        }
+        deckKeys.set(index, key);
+        final Deck deck = catalog.deck(key);
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
+            // A seat with a deck has said all it needs to, so readiness follows the deck rather than a button
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(deck != null));
+        } else if (host() != null) {
+            host().getSlot(index).setDeck(deck);
+            local.pushLobby();
         }
     }
 
     void setAvatar(final int index, final int value) {
-        if (index >= 0 && index < seats.size() && value >= 0 && value < SkinSprites.avatarCount()) {
-            seats.get(index).avatar = value;
+        if (value < 0 || value >= SkinSprites.avatarCount()) {
+            return;
+        }
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.avatarUpdate(value));
+        } else if (host() != null) {
+            host().getSlot(index).setAvatarIndex(value);
+            local.pushLobby();
         }
     }
 
     void setSleeve(final int index, final int value) {
-        if (index >= 0 && index < seats.size() && value >= 0 && value < SkinSprites.sleeveCount()) {
-            seats.get(index).sleeve = value;
+        if (value < 0 || value >= SkinSprites.sleeveCount()) {
+            return;
         }
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.sleeveUpdate(value));
+        } else if (host() != null) {
+            host().getSlot(index).setSleeveIndex(value);
+            local.pushLobby();
+        }
+    }
+
+    void setReady(final boolean ready) {
+        local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(ready));
     }
 
     /** Writes a card-art sleeve onto the seat's deck, where every client reads it from. */
     void setSleeveArt(final int index, final String imageKey, final int offset) {
-        if (index >= 0 && index < seats.size()) {
-            catalog.saveSleeveArt(seats.get(index).deckKey, imageKey, offset);
-        }
-    }
-
-    String playerName() {
-        return seats.get(0).name;
-    }
-
-    /** The seats as the host takes them, in the order they were set up. */
-    List<LocalGame.Seat> toSeats() {
-        final List<LocalGame.Seat> out = new ArrayList<>();
-        for (final SeatState s : seats) {
-            out.add(new LocalGame.Seat(s.name, s.ai(), s.avatar, s.sleeve, catalog.deck(s.deckKey)));
-        }
-        return out;
+        catalog.saveSleeveArt(key(index), imageKey, offset);
     }
 
     /** Saves the avatars and sleeves the seats chose, which the desktop lobby shares. */
     void saveLooks() {
-        FModel.getPreferences().setPref(FPref.UI_AVATARS, joined(true));
-        FModel.getPreferences().setPref(FPref.UI_SLEEVES, joined(false));
-        FModel.getPreferences().setPref(FPref.PLAYER_NAME, playerName());
-        FModel.getPreferences().save();
-    }
-
-    private String joined(final boolean avatars) {
-        final StringBuilder sb = new StringBuilder();
-        for (final SeatState s : seats) {
-            if (sb.length() > 0) {
-                sb.append(',');
-            }
-            sb.append(avatars ? s.avatar : s.sleeve);
+        final GameLobby lobby = view();
+        // Several browsers share one set of preferences, so only the machine running the game writes them
+        if (lobby == null || !local.isHost()) {
+            return;
         }
-        return sb.toString();
+        final StringBuilder avatars = new StringBuilder();
+        final StringBuilder sleeves = new StringBuilder();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            if (i > 0) {
+                avatars.append(',');
+                sleeves.append(',');
+            }
+            avatars.append(lobby.getSlot(i).getAvatarIndex());
+            sleeves.append(lobby.getSlot(i).getSleeveIndex());
+        }
+        FModel.getPreferences().setPref(FPref.UI_AVATARS, avatars.toString());
+        FModel.getPreferences().setPref(FPref.UI_SLEEVES, sleeves.toString());
+        final int mine = local.webSeat();
+        if (mine >= 0 && lobby.getSlot(mine).getName() != null) {
+            FModel.getPreferences().setPref(FPref.PLAYER_NAME, lobby.getSlot(mine).getName());
+        }
+        FModel.getPreferences().save();
     }
 }

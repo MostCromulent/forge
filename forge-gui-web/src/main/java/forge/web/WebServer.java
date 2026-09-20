@@ -46,7 +46,6 @@ import org.tinylog.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
@@ -60,15 +59,21 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/** Serves the page, its files and card images, and the browser's WebSocket; 127.0.0.1 only, behind a per-launch token. */
+/**
+ * Serves the page, its files and card images, and the browser's WebSocket. It listens on every interface so a
+ * player elsewhere can open the link, and the per-launch token in that link is what keeps everyone else out.
+ */
 public final class WebServer implements AutoCloseable {
     public interface Endpoint {
-        void connected(BrowserChannel channel);
+        /** A browser arrived. The id tells one browser from another across a reload; local marks this machine's own. */
+        void connected(BrowserChannel channel, String clientId, boolean local);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
     }
 
     private static final String COOKIE = "forge_token";
+    /** One past Forge's netplay port, so the two can be forwarded without colliding. */
+    private static final int DEFAULT_PORT = 36744;
     private static final int SLEEVE_ART_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final String token;
@@ -77,6 +82,11 @@ public final class WebServer implements AutoCloseable {
     private final Channel channel;
 
     public WebServer(final Endpoint endpoint, final String token) throws InterruptedException {
+        this(endpoint, token, Integer.getInteger("forge.web.port", DEFAULT_PORT));
+    }
+
+    /** A port of 0 takes whichever one is free, which is what a test wants. */
+    WebServer(final Endpoint endpoint, final String token, final int port) throws InterruptedException {
         this.token = token;
         final ServerBootstrap b = new ServerBootstrap()
                 .group(group)
@@ -94,19 +104,21 @@ public final class WebServer implements AutoCloseable {
                                 new BrowserSocket(endpoint));
                     }
                 });
-        channel = b.bind(InetAddress.getLoopbackAddress(), 0).sync().channel();
+        channel = b.bind(port).sync().channel();
     }
 
     public int port() {
         return ((InetSocketAddress) channel.localAddress()).getPort();
     }
 
+    /** The link for this machine's own browser. */
     public String url() {
-        return origin() + "/?token=" + token;
+        return "http://127.0.0.1:" + port() + "/?token=" + token;
     }
 
-    String origin() {
-        return "http://127.0.0.1:" + port();
+    /** The link to send someone, at whichever address they can reach this machine by. */
+    public String inviteUrl(final String address) {
+        return "http://" + address + ":" + port() + "/?token=" + token;
     }
 
     @Override
@@ -198,6 +210,17 @@ public final class WebServer implements AutoCloseable {
 
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
         respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), file.getName().endsWith(".png") ? "image/png" : "image/jpeg", false);
+    }
+
+    /** True when the socket's page came from this server, whichever address the browser reached it by. */
+    private static boolean sameOrigin(final FullHttpRequest req) {
+        final String origin = req.headers().get(HttpHeaderNames.ORIGIN);
+        final String host = req.headers().get(HttpHeaderNames.HOST);
+        if (origin == null || host == null) {
+            return false;
+        }
+        final int slashes = origin.indexOf("//");
+        return slashes >= 0 && host.equals(origin.substring(slashes + 2));
     }
 
     private boolean queryToken(final QueryStringDecoder q) {
@@ -292,8 +315,8 @@ public final class WebServer implements AutoCloseable {
             if (msg instanceof FullHttpRequest req) {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
-                // Any page in the same browser can reach 127.0.0.1; the token, cookie and origin keep them out
-                if (!hasToken(req, q) || (socket && !origin().equals(req.headers().get(HttpHeaderNames.ORIGIN)))) {
+                // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
+                if (!hasToken(req, q) || (socket && !sameOrigin(req))) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain", false);
                     return;
@@ -373,6 +396,11 @@ public final class WebServer implements AutoCloseable {
         }
     }
 
+    /** Whether the browser is on the machine running the game, which is how the host is told from a guest. */
+    private static boolean isLocal(final Channel ch) {
+        return ch.remoteAddress() instanceof InetSocketAddress remote && remote.getAddress().isLoopbackAddress();
+    }
+
     private static final class BrowserSocket extends SimpleChannelInboundHandler<WebSocketFrame> {
         private final Endpoint endpoint;
         private BrowserChannel browser;
@@ -383,10 +411,11 @@ public final class WebServer implements AutoCloseable {
 
         @Override
         public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
-            if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete) {
+            if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete done) {
                 final Channel ch = ctx.channel();
                 browser = message -> ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
-                endpoint.connected(browser);
+                final List<String> id = new QueryStringDecoder(done.requestUri()).parameters().get("client");
+                endpoint.connected(browser, id == null ? "" : id.get(0), isLocal(ch));
             } else {
                 ctx.fireUserEventTriggered(evt);
             }

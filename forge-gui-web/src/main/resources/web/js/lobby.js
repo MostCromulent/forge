@@ -1,18 +1,22 @@
-// Match setup. Each seat is a plate anchored by its deck's sleeve: the sleeve is the largest thing on it,
-// clicking it chooses one, and a deck with card art on its sleeve shows that art instead of a numbered back.
+// Match setup. Each seat is a plate anchored by its deck's sleeve. The sleeve stands for the deck, so it is
+// the largest thing on the plate and clicking it chooses the deck, empty or not. Which sleeve to wear is a
+// property of a deck you already have, so it hangs off a small button in the corner of a filled one.
 // Seats are added, never presented as empty slots waiting to be filled.
 //
-// A seat's type is the one a netplay lobby slot carries, so OPEN and REMOTE already have a place to land;
-// offline only ever sends LOCAL and AI.
+// A seat's type is the one a netplay lobby slot carries. The browser reaches the game through a client even
+// when it hosts it, so your own seat arrives as REMOTE and is recognised by its "mine" flag, not its type.
 
 import { sleeveUrl, avatarUrl, pickLook } from './looks.js';
 import { setImage } from './images.js';
 import { openDeckFinder } from './deckfinder.js';
 import { openSleevePicker } from './sleeves.js';
 import { startMusic } from './audio.js';
+import { wireChatInput, paintChat } from './chat.js';
 
 let built = false;
 let send = null;
+// Finding the external address is a web request on the host, so it is asked for once per lobby
+let askedAddresses = false;
 
 export function renderLobby(model, sendFn) {
   send = sendFn;
@@ -27,6 +31,7 @@ export function renderLobby(model, sendFn) {
           <button id="lobby-back">Back</button>
         </div>
       </header>
+      <div class="lobby-main">
       <div class="seats" id="seats"></div>
       <div class="seat-add"><button id="add-seat">+ Add a seat</button></div>
       <div class="play-row">
@@ -36,8 +41,20 @@ export function renderLobby(model, sendFn) {
           <b>Not playable yet</b>
           <ul id="problems"></ul>
         </div>
+      </div>
+      <div class="lobby-net" id="lobby-net" hidden>
+        <section class="share" id="share" hidden>
+          <h3>Others join at</h3>
+          <div class="share-list" id="share-list"></div>
+        </section>
+        <section class="chat">
+          <div class="chat-log" id="lobby-chat-log"></div>
+          <input id="lobby-chat-in" type="text" placeholder="Say something" maxlength="240">
+        </section>
+      </div>
       </div>`;
     root.querySelector('#lobby-back').onclick = () => send({ t: 'leaveLobby' });
+    wireChatInput(root.querySelector('#lobby-chat-in'));
     root.querySelector('#add-seat').onclick = () => send({ t: 'addSeat' });
     root.querySelector('#play').onclick = () => {
       // A browser plays nothing before a click, so the music starts on this one
@@ -54,6 +71,52 @@ export function renderLobby(model, sendFn) {
   renderFormats(root, lobby);
   renderSeats(root, lobby, model);
   renderVerdict(root, lobby);
+  renderNet(root, lobby, model);
+}
+
+function renderNet(root, lobby, model) {
+  // A game only this machine can reach has nothing to share and nobody to talk to
+  root.querySelector('#lobby-net').hidden = !lobby.shareable && lobby.host;
+  // The table belongs to the host, so a joined client changes only its own seat, and has no menu to go back to
+  root.querySelector('#add-seat').disabled = !lobby.host;
+  root.querySelector('#lobby-back').hidden = !lobby.host;
+  for (const b of root.querySelectorAll('.format')) b.disabled = !lobby.host;
+  const share = root.querySelector('#share');
+  share.hidden = !lobby.shareable;
+  if (lobby.shareable && !model.addresses && !askedAddresses) {
+    askedAddresses = true;
+    send({ t: 'addresses' });
+  }
+  if (!lobby.shareable) {
+    askedAddresses = false;
+  }
+  if (lobby.shareable) {
+    renderAddresses(root, model.addresses ?? []);
+  }
+  paintChat(root.querySelector('#lobby-chat-log'));
+}
+
+function renderAddresses(root, list) {
+  const box = root.querySelector('#share-list');
+  if (box.childElementCount === list.length && box.dataset.first === (list[0]?.url ?? '')) {
+    return;
+  }
+  box.dataset.first = list[0]?.url ?? '';
+  box.replaceChildren(...list.map(a => {
+    const row = document.createElement('button');
+    row.className = 'share-row';
+    row.innerHTML = `<span class="share-label"></span><code class="share-url"></code><span class="share-copy">Copy</span>`;
+    row.querySelector('.share-label').textContent = a.label;
+    row.querySelector('.share-url').textContent = a.url;
+    row.onclick = async () => {
+      await navigator.clipboard.writeText(a.url);
+      row.querySelector('.share-copy').textContent = 'Copied';
+    };
+    return row;
+  }));
+  if (!list.length) {
+    box.textContent = 'Working out your address…';
+  }
 }
 
 function renderFormats(root, lobby) {
@@ -86,34 +149,53 @@ const KIND = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another
 function plate(seat, index, lobby, model) {
   const el = document.createElement('div');
   el.className = 'plate';
-  const mine = seat.type === 'LOCAL';
+  // Your own seat is the one the server dealt you, whatever type it wears on the host's side
+  const mine = seat.mine;
   el.classList.toggle('mine', mine);
+  el.classList.toggle('waiting', seat.type === 'OPEN');
   el.innerHTML = `
-    <button class="sleeve" title="Choose a sleeve"><img alt=""></button>
+    <div class="sleeve-slot">
+      <button class="sleeve" title="Choose a deck"><img alt=""></button>
+      <button class="sleeve-style" title="Choose a sleeve" hidden>Sleeve</button>
+    </div>
     <div class="plate-body">
       <div class="who">
         <button class="avatar" title="Choose an avatar"><img alt=""></button>
         <span class="who-name"></span>
-        <span class="kind"></span>
+        <button class="kind"></button>
         <button class="drop" title="Remove this seat" hidden>&times;</button>
       </div>
-      <button class="deck-row"><span class="deck-name"></span><span class="deck-size"></span></button>
+      <button class="deck-row"><span class="pips"></span><span class="deck-name"></span><span class="deck-size"></span></button>
       <p class="seat-problem" hidden></p>
     </div>`;
 
+  const waiting = seat.type === 'OPEN';
   const sleeve = el.querySelector('.sleeve');
-  // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
-  const art = seat.sleeveArt
-    ? `/sleeveart?key=${encodeURIComponent(seat.sleeveArt)}`
-    : sleeveUrl(seat.sleeve);
-  setImage(sleeve.querySelector('img'), art);
-  sleeve.querySelector('img').style.objectPosition = objectPosition(seat.sleeveOffset);
-  sleeve.classList.toggle('card-art', !!seat.sleeveArt);
+  // Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve
   sleeve.classList.toggle('empty', !seat.deck);
-  sleeve.onclick = () => openSleevePicker(index, seat, send);
+  sleeve.dataset.label = seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck');
+  sleeve.classList.toggle('card-art', !!seat.sleeveArt);
+  const img = sleeve.querySelector('img');
+  if (seat.deck) {
+    // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
+    setImage(img, seat.sleeveArt ? `/sleeveart?key=${encodeURIComponent(seat.sleeveArt)}` : sleeveUrl(seat.sleeve));
+    img.style.objectPosition = objectPosition(seat.sleeveOffset);
+    img.hidden = false;
+  } else {
+    img.hidden = true;
+  }
+  sleeve.disabled = !seat.mayEdit;
+  sleeve.onclick = () => openDeckFinder(index, seat, model, send);
+  // A sleeve is worn by a deck, so there is nothing to choose until there is one
+  const style = el.querySelector('.sleeve-style');
+  style.hidden = !seat.deck || !seat.mayEdit;
+  style.onclick = () => openSleevePicker(index, seat, send);
 
   const avatar = el.querySelector('.avatar');
+  // A seat nobody has taken has no face to show
+  avatar.hidden = waiting;
   setImage(avatar.querySelector('img'), avatarUrl(seat.avatar));
+  avatar.disabled = !seat.mayEdit;
   avatar.onclick = async () => {
     const chosen = await pickLook(`Choose an avatar for ${seat.name}`, model.looks?.avatarCount ?? 0, avatarUrl, seat.avatar, false);
     if (chosen !== null) {
@@ -121,22 +203,34 @@ function plate(seat, index, lobby, model) {
     }
   };
   const name = el.querySelector('.who-name');
+  // A seat nobody holds has no name of its own, and its kind beside it would only say the same thing twice
+  name.hidden = !seat.name && !mine;
   name.textContent = seat.name || KIND[seat.type] || seat.type;
   if (mine) {
     name.contentEditable = 'plaintext-only';
     name.spellcheck = false;
     name.onblur = () => send({ t: 'setSeat', index, name: name.textContent.trim() });
   }
-  el.querySelector('.kind').textContent = KIND[seat.type] ?? seat.type;
+  // The host turns a seat between a computer and one someone can join; everyone else only reads it
+  const kind = el.querySelector('.kind');
+  kind.textContent = mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type);
+  const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
+  kind.disabled = !swappable;
+  kind.title = swappable ? 'Swap between a computer and an open seat' : '';
+  kind.onclick = () => send({ t: seat.type === 'AI' ? 'openSeat' : 'aiSeat', index });
 
   const drop = el.querySelector('.drop');
-  drop.hidden = mine || lobby.seats.length <= 2;
+  drop.hidden = mine || !lobby.host || lobby.seats.length <= 2;
   drop.onclick = () => send({ t: 'removeSeat', index });
 
   const deck = el.querySelector('.deck-row');
-  deck.querySelector('.deck-name').textContent = seat.deckName ?? 'Choose a deck';
+  deck.querySelector('.pips').innerHTML = [...(seat.colors ?? '')].map(c => `<i class="pip pip-${c}">${c}</i>`).join('');
+  deck.querySelector('.deck-name').textContent = seat.deckName ?? (waiting ? 'Waiting for a player' : '');
   deck.querySelector('.deck-size').textContent = seat.deck ? seat.deckSize : '';
   deck.classList.toggle('unset', !seat.deck);
+  // With no deck the sleeve above already offers to choose one, so an empty row would only repeat it
+  deck.hidden = !seat.deck && !waiting;
+  deck.disabled = !seat.mayEdit;
   deck.onclick = () => openDeckFinder(index, seat, model, send);
 
   const problem = el.querySelector('.seat-problem');
@@ -156,6 +250,15 @@ function renderVerdict(root, lobby) {
   const line = root.querySelector('#match-line');
   const panel = root.querySelector('#not-yet');
   root.querySelector('#play').disabled = !lobby.canStart;
+  // Only the host can start, so a joined client is told what it is waiting for rather than shown a dead button
+  root.querySelector('#play').hidden = !lobby.host;
+  root.querySelector('.spectate').hidden = !lobby.host;
+  if (!lobby.host) {
+    panel.hidden = true;
+    line.hidden = false;
+    line.textContent = problems.length ? problems[0] : 'Waiting for the host to start the match.';
+    return;
+  }
   panel.hidden = lobby.canStart;
   line.hidden = !lobby.canStart;
   if (lobby.canStart) {

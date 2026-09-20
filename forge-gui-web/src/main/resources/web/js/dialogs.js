@@ -1,6 +1,7 @@
 import { createCard, updateCard } from './cards.js';
 import { imageUrl, noImageOnError, setSymbolText } from './images.js';
 import { hoverable } from './detail.js';
+import { awaitStackPick } from './stack.js';
 
 let shownId = null;
 
@@ -25,8 +26,16 @@ export function renderDialogs(model, send, schedule) {
     model.requests.delete(req.id);
     send({ t: 'reply', id: req.id, value });
     shownId = null;
+    awaitStackPick(null, null);
     schedule();
   };
+  // Choosing between spells that are on the stack is done on the stack, so no list is drawn for it
+  if (req.stackKeys) {
+    layer.replaceChildren();
+    awaitStackPick(req.stackKeys, index => answer([index]));
+    schedule();
+    return;
+  }
   layer.replaceChildren(build(req, model, answer));
 }
 
@@ -49,8 +58,15 @@ function actions(...buttons) {
   return a;
 }
 
-function wrap(dlg) {
+function wrap(dlg, at) {
   const backdrop = el('div', 'backdrop');
+  // A list of what one card can do belongs on that card, the way desktop opens its menu under the cursor
+  if (at) {
+    backdrop.classList.add('anchored');
+    dlg.classList.add('at-card');
+    dlg.style.left = `${at.x}px`;
+    dlg.style.top = `${at.y}px`;
+  }
   backdrop.append(dlg);
   return backdrop;
 }
@@ -174,12 +190,13 @@ function choices(dlg, req, model, answer) {
   dlg.append(list, note, actions(confirm));
   draw();
   if (search) requestAnimationFrame(() => search.focus());
-  return wrap(dlg);
+  return wrap(dlg, req.atX || req.atY ? { x: req.atX, y: req.atY } : null);
 }
 
 function order(dlg, req, model, answer) {
   const chosen = [...req.selected];
   let remember = false;
+  let dragFrom = null;
   const pool = el('div', 'options');
   const picked = el('div', 'options ordered');
   const confirm = button('Confirm', true, () => answer({ indices: chosen, remember }));
@@ -187,16 +204,38 @@ function order(dlg, req, model, answer) {
     pool.replaceChildren(...req.options.flatMap((o, i) => chosen.includes(i) ? [] : [optionElement(model, o, () => { chosen.push(i); redraw(); })]));
     picked.replaceChildren(...chosen.map((i, pos) => {
       const row = el('div', 'ordered-item');
-      row.append(optionElement(model, req.options[i], () => { chosen.splice(pos, 1); redraw(); }),
+      row.draggable = true;
+      // The number is the order they go back in, which is the question the dialog is asking
+      row.append(el('span', 'order-number', String(pos + 1)),
+        optionElement(model, req.options[i], () => { chosen.splice(pos, 1); redraw(); }),
         button('↑', false, () => {
           if (pos > 0) [chosen[pos - 1], chosen[pos]] = [chosen[pos], chosen[pos - 1]];
           redraw();
         }));
+      row.ondragstart = e => {
+        dragFrom = pos;
+        e.dataTransfer.effectAllowed = 'move';
+      };
+      row.ondragover = e => {
+        e.preventDefault();
+        row.classList.add('drop-here');
+      };
+      row.ondragleave = () => row.classList.remove('drop-here');
+      row.ondrop = e => {
+        e.preventDefault();
+        row.classList.remove('drop-here');
+        if (dragFrom !== null && dragFrom !== pos) {
+          chosen.splice(pos, 0, chosen.splice(dragFrom, 1)[0]);
+          redraw();
+        }
+        dragFrom = null;
+      };
       return row;
     }));
     confirm.disabled = chosen.length < req.min || chosen.length > req.max;
   };
-  dlg.append(el('p', 'hint', req.top || 'Pick in order'), pool, el('p', 'hint', 'Chosen, first to last'), picked);
+  dlg.append(el('p', 'hint', req.top || 'Pick in order'), pool,
+    el('p', 'hint', 'Chosen, first to last. Drag to reorder.'), picked);
   if (req.remember) {
     const label = el('label');
     const box = el('input');

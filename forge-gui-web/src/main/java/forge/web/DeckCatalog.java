@@ -32,8 +32,12 @@ final class DeckCatalog {
     private static final String MINE = "yours";
     private static final String PRECON = "precons";
     private static final String QUEST = "quest";
-    private static final String GENERATED = "build one";
+    /** Sources that make a deck when you pick one, rather than loading a saved deck. */
+    private static final String GENERATED = "generated";
     private static final String NET = "net";
+    /** A colour generator knows its own colour before it builds anything; the other generators do not. */
+    private static final Map<String, String> COLOUR_LETTERS = Map.of(
+            "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** Mana values 0 to 5, then everything 6 and above in the last one. */
     private static final int CURVE_BUCKETS = 7;
 
@@ -230,30 +234,33 @@ final class DeckCatalog {
         for (final Map.Entry<String, String> c : colours.entrySet()) {
             final String key = "gen:color:" + c.getKey();
             byKey.put(key, new Entry(null, GENERATED, true, null));
-            generated(out, key, c.getValue(), "Built when you pick it");
+            generated(out, key, c.getValue(), "Built when you pick it", COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
         }
         for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
             byKey.put("gen:theme:" + theme.getName(), new Entry(theme, GENERATED, true, null));
-            generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck");
+            generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck", "");
         }
         if (FModel.isdeckGenMatrixLoaded()) {
             for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
                 for (final DeckProxy archetype : ArchetypeDeckGenerator.getMatrixDecks(f, false)) {
                     final String key = "gen:archetype:" + f.getName() + ":" + archetype.getName();
                     byKey.put(key, new Entry(archetype, GENERATED, true, null));
-                    generated(out, key, archetype.getName(), f.getName() + " archetype");
+                    generated(out, key, archetype.getName(), f.getName() + " archetype", "");
                 }
             }
         }
     }
 
-    private static void generated(final JsonArray out, final String key, final String name, final String note) {
+    private static void generated(final JsonArray out, final String key, final String name, final String note,
+            final String colours) {
         final JsonObject d = new JsonObject();
         d.addProperty("key", key);
         d.addProperty("name", name);
         d.addProperty("source", GENERATED);
         d.addProperty("generated", true);
         d.addProperty("note", note);
+        // Empty where the colours are not known until the deck is built, which a colour filter treats as no match
+        d.addProperty("colors", colours);
         out.add(d);
     }
 

@@ -32,56 +32,75 @@ public class WebSessionTest {
         WebTestSupport.initModel();
     }
 
+    /** The host's browser, which is the one on this machine. */
+    private static WebSessions opened() {
+        return new WebSessions(new WebGuiBase(), 60_000, () -> { });
+    }
+
     @Test
     public void connectingSendsHello() throws Exception {
-        final WebSession session = new WebSession(new WebGuiBase(), new LocalGame(), 60_000, () -> { });
+        final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        session.connected(r);
+        sessions.connected(r, "host", true);
         final JsonObject hello = r.await("hello");
         Assert.assertFalse(hello.get("inMatch").getAsBoolean());
+        Assert.assertTrue(hello.get("host").getAsBoolean());
     }
 
     @Test
     public void deckListAnswers() throws Exception {
-        final WebSession session = new WebSession(new WebGuiBase(), new LocalGame(), 60_000, () -> { });
+        final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        session.connected(r);
-        session.onMessage(r, JsonCodec.message("decks"));
+        sessions.connected(r, "host", true);
+        sessions.onMessage(r, JsonCodec.message("decks"));
         Assert.assertTrue(r.await("decks").get("decks").isJsonArray());
+    }
+
+/** Fails if a browser off this machine could take the host's place and set the table. */
+    @Test
+    public void aRemoteBrowserCannotHost() throws Exception {
+        final WebSessions sessions = opened();
+        final Recorder guest = new Recorder();
+        sessions.connected(guest, "guest", false);
+        Assert.assertFalse(guest.await("hello").get("host").getAsBoolean());
+        // The first browser on this machine takes the host's place, even though a guest was connected first
+        final Recorder late = new Recorder();
+        sessions.connected(late, "late", true);
+        Assert.assertTrue(late.await("hello").get("host").getAsBoolean());
     }
 
     @Test
     public void startWithUnknownDecksReportsAnError() throws Exception {
-        final WebSession session = new WebSession(new WebGuiBase(), new LocalGame(), 60_000, () -> { });
+        final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        session.connected(r);
+        sessions.connected(r, "host", true);
         final JsonObject start = JsonCodec.message("start");
         start.addProperty("playerName", "Tester");
         start.addProperty("playerDeck", "nope");
         start.addProperty("aiDeck", "nope");
-        session.onMessage(r, start);
+        sessions.onMessage(r, start);
         Assert.assertNotNull(r.await("error"));
     }
 
     @Test
-    public void sessionWithNoBrowserQuits() throws Exception {
+    public void aBrowserThatNeverOpensQuits() throws Exception {
         final CountDownLatch quit = new CountDownLatch(1);
-        new WebSession(new WebGuiBase(), new LocalGame(), 200, quit::countDown);
+        new WebSessions(new WebGuiBase(), 200, quit::countDown);
         Assert.assertTrue(quit.await(2, TimeUnit.SECONDS));
     }
 
     @Test
     public void idleSessionQuitsAndReconnectCancelsIt() throws Exception {
         final CountDownLatch quit = new CountDownLatch(1);
-        final WebSession session = new WebSession(new WebGuiBase(), new LocalGame(), 200, quit::countDown);
+        final WebSessions sessions = new WebSessions(new WebGuiBase(), 200, quit::countDown);
         final Recorder first = new Recorder();
-        session.connected(first);
-        session.disconnected(first);
-        session.connected(new Recorder());
+        sessions.connected(first, "host", true);
+        sessions.disconnected(first);
+        sessions.connected(new Recorder(), "host", true);
         Assert.assertFalse(quit.await(500, TimeUnit.MILLISECONDS));
         final Recorder second = new Recorder();
-        session.connected(second);
-        session.disconnected(second);
+        sessions.connected(second, "host", true);
+        sessions.disconnected(second);
         Assert.assertTrue(quit.await(2, TimeUnit.SECONDS));
     }
 }

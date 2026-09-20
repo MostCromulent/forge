@@ -1,16 +1,35 @@
 :root {
-  --bg: #0e1116;
-  --surface: #161b22;
-  --surface-2: #1f2630;
-  --line: #2b3440;
+  /* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle */
+  --bg: #10141c;
+  --bg-deep: #070910;
+  /* Six rungs, not four: a panel resting on a panel has to read as raised, and a hover needs its own step */
+  --surface: #171d27;
+  --surface-2: #212936;
+  --surface-3: #26303d;
+  --line: #303a49;
+  --line-bright: #414d5f;
   --text: #e6edf3;
   --muted: #8b96a5;
+  --faint: #6b7686;
   --accent: #7c3aed;
   --accent-2: #a78bfa;
+  /* Tinted forms of the accent, so violet can sit behind something instead of only filling or outlining it */
+  --accent-soft: #7c3aed2e;
+  --accent-glow: #a78bfa73;
   /* Selection and attack cues differ in luminance and shape, never only in red versus green */
   --select: #ffcc33;
   --attack: #ffffff;
   --danger: #f59e0b;
+  --scrim: #070910b8;
+  --scrim-deep: #05070ce0;
+  /* Magic's five colours, kept low in chroma because they sit beside card art. The letter inside each pip
+     carries the meaning; the hue only decorates, which is why red and green may sit next to each other. */
+  --mtg-w: #f4f0dc;
+  --mtg-u: #7fb6e0;
+  --mtg-b: #9a92a8;
+  --mtg-r: #eb9274;
+  --mtg-g: #86bb8c;
+  --mtg-c: #c2c8d2;
   --card-w: 88px;
   --card-h: 123px;
   --tile-w: 58px;
@@ -23,6 +42,8 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
 [hidden] { display: none !important; }
 button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 button:disabled { opacity: .4; cursor: default; }
+input { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+input:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
 button.primary { background: var(--accent); border-color: var(--accent); font-weight: 600; }
 #banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: var(--danger); color: #000; padding: 4px 16px; border-radius: 0 0 6px 6px; z-index: 100; }
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 90; }

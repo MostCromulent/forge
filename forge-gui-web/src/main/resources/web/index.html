@@ -19,7 +19,17 @@
   <section id="opponent" class="seat"></section>
   <section id="phase-strip"></section>
   <section id="me" class="seat"></section>
-  <aside id="side"><button class="log-toggle"></button><div id="log"></div></aside>
+  <aside id="side" data-log="open" data-chat="shut">
+    <section class="side-panel" id="log-panel">
+      <button class="side-toggle" data-panel="log">Log</button>
+      <div id="log"></div>
+    </section>
+    <section class="side-panel" id="chat-panel" hidden>
+      <button class="side-toggle" data-panel="chat">Chat</button>
+      <div id="match-chat-log"></div>
+      <input id="match-chat-in" type="text" placeholder="Say something" maxlength="240">
+    </section>
+  </aside>
   <section id="stack" hidden></section>
   <section id="hand"></section>
   <section id="prompt"></section>

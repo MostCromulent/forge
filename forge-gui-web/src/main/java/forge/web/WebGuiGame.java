@@ -866,7 +866,39 @@ public class WebGuiGame extends NetworkGuiGame {
             return new ArrayList<>();
         }
         final int need = Math.min(Math.max(min, 0), choices.size());
-        return askChoices(message, need, max, choices, selected, display, range(0, need));
+        final JsonObject request = choicesRequest(message, need, max, choices, selected, display);
+        // Spells being chosen are already drawn on the stack, so they are picked there rather than from a list
+        final JsonArray onStack = stackKeysFor(choices);
+        if (onStack != null) {
+            request.add("stackKeys", onStack);
+        }
+        return pick(choices, ask("choices", request, range(0, need), indexList(choices.size(), need, max)));
+    }
+
+    /** The stack item each choice is, in the same order, or null unless every choice is a spell on the stack. */
+    private <T> JsonArray stackKeysFor(final List<T> choices) {
+        final GameView gv = getGameView();
+        if (gv == null || gv.getStack() == null || choices.isEmpty()) {
+            return null;
+        }
+        final JsonArray keys = new JsonArray();
+        for (final T choice : choices) {
+            if (!(choice instanceof SpellAbilityView spell) || spell.getHostCard() == null) {
+                return null;
+            }
+            Integer found = null;
+            for (final StackItemView item : gv.getStack()) {
+                if (item.getSourceCard() != null && item.getSourceCard().getId() == spell.getHostCard().getId()) {
+                    found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId());
+                    break;
+                }
+            }
+            if (found == null) {
+                return null;
+            }
+            keys.add(found);
+        }
+        return keys;
     }
 
     private <T> JsonObject choicesRequest(final String message, final int min, final int max, final List<T> items,
@@ -998,7 +1030,7 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /** A click from the browser: the right button asks for the card's list of abilities, as it does on desktop. */
-    private record BrowserClick(boolean menu) implements ITriggerEvent {
+    private record BrowserClick(boolean menu, int x, int y) implements ITriggerEvent {
         @Override
         public int getButton() {
             return menu ? 3 : 1;
@@ -1006,12 +1038,12 @@ public class WebGuiGame extends NetworkGuiGame {
 
         @Override
         public int getX() {
-            return 0;
+            return x;
         }
 
         @Override
         public int getY() {
-            return 0;
+            return y;
         }
     }
 
@@ -1029,8 +1061,14 @@ public class WebGuiGame extends NetworkGuiGame {
             return abilities.stream().filter(SpellAbilityView::canPlay).findFirst().orElse(null);
         }
         // No answer means no ability chosen, which is how a cancelled click reads
-        final List<SpellAbilityView> picked = askChoices(hostCard == null ? "" : hostCard.getName(), 0, 1,
-                abilities, null, null, new JsonArray());
+        final JsonObject request = choicesRequest(hostCard == null ? "" : hostCard.getName(), 0, 1,
+                abilities, null, null);
+        if (triggerEvent instanceof BrowserClick click) {
+            request.addProperty("atX", click.x());
+            request.addProperty("atY", click.y());
+        }
+        final List<SpellAbilityView> picked = pick(abilities,
+                ask("choices", request, new JsonArray(), indexList(abilities.size(), 0, 1)));
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -1193,7 +1231,10 @@ public class WebGuiGame extends NetworkGuiGame {
                     final CardView card = lookup(msg, TrackableTypes.CardViewType);
                     if (card != null) {
                         // A right-click asks for the list of what the card can do; a left-click takes the first
-                        controller.selectCard(card, null, new BrowserClick(msg.has("menu") && msg.get("menu").getAsBoolean()));
+                        controller.selectCard(card, null, new BrowserClick(
+                                msg.has("menu") && msg.get("menu").getAsBoolean(),
+                                msg.has("x") ? msg.get("x").getAsInt() : 0,
+                                msg.has("y") ? msg.get("y").getAsInt() : 0));
                     }
                 }
                 case "selectPlayer" -> {

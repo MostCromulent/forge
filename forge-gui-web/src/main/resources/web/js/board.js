@@ -15,7 +15,14 @@ const MANA = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 export function renderMatch(model, send) {
   const g = game(model);
   if (!g) return;
-  const select = (el, menu) => send({ t: 'selectCard', key: Number(el.dataset.key), menu: !!menu });
+  // The click position travels with the click, so an ability list opens on the card as desktop's menu does
+  const select = (el, menu, e) => send({
+    t: 'selectCard',
+    key: Number(el.dataset.key),
+    menu: !!menu,
+    x: Math.round(e?.clientX ?? 0),
+    y: Math.round(e?.clientY ?? 0),
+  });
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
   renderSeat(document.getElementById('opponent'), model, opponents(model)[0], onField, send, select);
@@ -152,8 +159,15 @@ function announceTurn(model, g) {
   const banner = document.createElement('div');
   banner.className = `turn-banner${isLocal(model, active) ? ' mine' : ''}`;
   banner.textContent = isLocal(model, active) ? 'Your turn' : `${active.Name}'s turn`;
-  document.body.append(banner);
-  banner.addEventListener('animationend', () => banner.remove());
+  // The banner takes the pill's place for as long as it shows, rather than covering it. The pill animates
+  // its own width, so anything sized to cover it is measuring a number that is about to change.
+  const strip = document.getElementById('phase-strip');
+  strip.append(banner);
+  strip.classList.add('announcing');
+  banner.addEventListener('animationend', () => {
+    banner.remove();
+    strip.classList.remove('announcing');
+  });
 }
 
 // A life change is easy to miss as a number, so the amount floats off the avatar and the ring answers

@@ -14,10 +14,11 @@ export function onHostChoice(msg) {
   overlay.className = 'host-back';
   overlay.innerHTML = `
     <div class="host-choice">
-      <h2>${msg.message || 'Choose'}</h2>
+      <h2></h2>
       <div class="host-options"></div>
       <footer><button class="host-cancel">Cancel</button></footer>
     </div>`;
+  overlay.querySelector('h2').textContent = msg.message || 'Choose';
   document.getElementById('dialog-layer').append(overlay);
   const list = overlay.querySelector('.host-options');
   list.replaceChildren(...msg.options.map((name, i) => {

@@ -9,6 +9,8 @@ import { renderMatch } from './board.js';
 import { renderPrompt, flash, showNotice } from './prompt.js';
 import { renderDialogs } from './dialogs.js';
 import { appendLog, initLog } from './log.js';
+import { initChat, addChat, clearChat } from './chat.js';
+import { initSide, setChatAvailable, renderSide } from './side.js';
 import { initDetail, onDetail, onPlayerDetail, resetDetail } from './detail.js';
 import { initZones, resetZones } from './zones.js';
 import { initPhaseBar } from './phasebar.js';
@@ -32,6 +34,8 @@ initBattlefield(schedule);
 initStack(send, schedule);
 initOverlay(schedule);
 initLog();
+initChat(send);
+initSide();
 initSettings(send, () => {
   applyAudioSettings();
   schedule();
@@ -41,6 +45,7 @@ function apply(msg) {
   switch (msg.t) {
     case 'hello':
       resetPace();
+      model.host = msg.host !== false;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;
       model.spectating = !!msg.spectating;
@@ -49,6 +54,10 @@ function apply(msg) {
       initSleeves(msg.sleeveCount, msg.sleeveArt);
       setPlaymats(msg.playmats);
       model.error = null;
+      // A new lobby has an address and a conversation of its own
+      model.addresses = null;
+      clearChat();
+      setChatAvailable(!!msg.networked);
       // The server replays open requests after every hello
       model.requests.clear();
       if (!msg.inMatch) {
@@ -62,6 +71,8 @@ function apply(msg) {
       onDecks(msg.decks, msg.cardFormats);
       break;
     case 'lobby': model.lobby = msg; break;
+    case 'addresses': model.addresses = msg.list; break;
+    case 'chat': addChat(msg.from, msg.text); break;
     case 'deckDetails': onDeckDetails(msg.deck); return;
     case 'cardSearch': onCardNames(msg.names); return;
     case 'printings': onPrintings(msg.printings); return;
@@ -122,6 +133,7 @@ function render() {
     else renderMenu(model, send);
     return;
   }
+  renderSide();
   renderMatch(model, send);
   renderPrompt(model, send);
   renderDialogs(model, send, schedule);

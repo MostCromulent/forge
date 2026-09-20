@@ -26,6 +26,29 @@ export function initStack(sendFn, scheduleFn) {
   });
 }
 
+let pickable = null;
+let onPick = null;
+
+/** A choice the browser answers by clicking a spell on the stack rather than reading it from a list. */
+export function awaitStackPick(keys, answer) {
+  pickable = keys;
+  onPick = answer;
+}
+
+export function stackPickWanted() {
+  return !!pickable;
+}
+
+function pickStack(key) {
+  const index = (pickable ?? []).indexOf(key);
+  if (index >= 0 && onPick) {
+    const answer = onPick;
+    pickable = null;
+    onPick = null;
+    answer(index);
+  }
+}
+
 export function renderStack(model) {
   const root = document.getElementById('stack');
   if (!root.firstChild) {
@@ -40,11 +63,16 @@ export function renderStack(model) {
   if (!items.some(i => i.$key === hovered)) hovered = null;
   root.hidden = items.length === 0;
   root.classList.toggle('collapsed', collapsed);
+  // The battlefield rows have no idea the panel is there, so the board is told to keep clear of it
+  document.getElementById('match').classList.toggle('stack-open', !root.hidden && !collapsed);
   root.querySelector('.count').textContent = items.length;
   root.querySelector('.collapse').textContent = collapsed ? 'Show' : 'Hide';
   root.querySelector('.collapse').title = collapsed ? 'Show the stack' : 'Collapse the stack to its heading';
   const pile = root.querySelector('.pile');
-  reconcile(pile, items, i => i.$key, createItem, (el, item) => updateItem(el, model, item));
+  reconcile(pile, items, i => i.$key, createItem, (el, item) => {
+    updateItem(el, model, item);
+    el.classList.toggle('targetable', (pickable ?? []).includes(item.$key));
+  });
   place(root);
   layout(pile, items.length);
 }
@@ -61,6 +89,8 @@ function createItem() {
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"></div><div class="caption"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
   const img = el.querySelector('img');
   noImageOnError(el, img);
+  // A spell being targeted is picked on the stack, where it already is
+  el.addEventListener('click', () => pickStack(Number(el.dataset.key)));
   el.addEventListener('mouseenter', () => {
     hovered = Number(el.dataset.key);
     layout(el.parentElement, el.parentElement.childElementCount);

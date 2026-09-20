@@ -133,16 +133,27 @@ public final class WebGuiBase implements IGuiBase {
 
     @Override
     public int showOptionDialog(final String message, final String title, final FSkinProp icon, final List<String> options, final int defaultOption) {
-        // A single-option dialog is a message box (SOptionPane.showMessageDialog); anything else has no browser UI on the host side yet
-        final JsonObject notice = new JsonObject();
-        notice.addProperty("t", "notice");
-        notice.addProperty("title", title);
-        notice.addProperty("message", message);
-        notice.addProperty("error", icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING);
-        noticeSink.accept(notice);
-        if (options != null && options.size() > 1) {
-            Logger.warn("Host dialog answered with its default: {} / {}", title, message);
+        // A single-option dialog is a message box (SOptionPane.showMessageDialog), which needs no answer
+        if (options == null || options.size() <= 1) {
+            final JsonObject notice = new JsonObject();
+            notice.addProperty("t", "notice");
+            notice.addProperty("title", title);
+            notice.addProperty("message", message);
+            notice.addProperty("error", icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING);
+            noticeSink.accept(notice);
+            return defaultOption;
         }
+        final JsonArray choices = new JsonArray();
+        options.forEach(choices::add);
+        final JsonElement answer = hostRequests.ask("choices", title == null ? message : title + " — " + message,
+                choices, 1, 1);
+        if (answer != null && answer.isJsonArray() && !answer.getAsJsonArray().isEmpty()) {
+            final int picked = answer.getAsJsonArray().get(0).getAsInt();
+            if (picked >= 0 && picked < options.size()) {
+                return picked;
+            }
+        }
+        Logger.warn("Host dialog answered with its default: {} / {}", title, message);
         return defaultOption;
     }
 
