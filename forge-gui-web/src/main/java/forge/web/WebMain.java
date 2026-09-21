@@ -32,6 +32,9 @@ public final class WebMain {
             System.out.println("Forge web UI: " + server.url());
             // The browser is the whole interface, so without this there is nothing to show the game is running
             window = StatusWindow.open(server.url(), ui, quit::countDown);
+            if (window != null) {
+                sessions.visibleElsewhere();
+            }
             if (!Boolean.getBoolean("forge.web.noBrowser")) {
                 openBrowser(server.url(), ui);
             }

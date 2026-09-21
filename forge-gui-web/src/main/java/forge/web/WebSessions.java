@@ -26,6 +26,8 @@ final class WebSessions implements WebServer.Endpoint {
     private final Map<BrowserChannel, WebSession> byChannel = new ConcurrentHashMap<>();
     private volatile WebSession host;
     private volatile WebServer server;
+    /** An empty server that nobody has reached yet is waiting, not finished, so it does not close itself. */
+    private boolean mayGiveUp;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         final Thread t = new Thread(r, "WebStartIdle");
         t.setDaemon(true);
@@ -55,6 +57,16 @@ final class WebSessions implements WebServer.Endpoint {
         byChannel.put(channel, session);
         holdOpen();
         session.connected(channel);
+    }
+
+    /**
+     * Stops the process giving up before anyone has connected. The countdown exists because nothing else
+     * showed Forge was running; with a window on screen that reason is gone, and a server started ahead of
+     * the players who will use it has to keep waiting.
+     */
+    synchronized void visibleElsewhere() {
+        holdOpen();
+        mayGiveUp = true;
     }
 
     /** Whether this session could take the host's seat right now, which is what the browser offers. */
@@ -92,6 +104,7 @@ final class WebSessions implements WebServer.Endpoint {
 
     /** The process lives while any browser is attached, so the host closing theirs does not end a guest's game. */
     private synchronized void holdOpen() {
+        mayGiveUp = true;
         if (idle != null) {
             idle.cancel(false);
             idle = null;
@@ -99,7 +112,7 @@ final class WebSessions implements WebServer.Endpoint {
     }
 
     private synchronized void letGo() {
-        if (idle == null && byChannel.isEmpty()) {
+        if (idle == null && mayGiveUp && byChannel.isEmpty()) {
             Logger.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
             idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
         }
