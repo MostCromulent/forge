@@ -31,6 +31,8 @@ final class WebSessions implements WebServer.Endpoint {
         t.setDaemon(true);
         return t;
     });
+    /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
+    private static final long HOST_GRACE_MILLIS = 20_000;
     /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
     private ScheduledFuture<?> idle;
 
@@ -48,11 +50,44 @@ final class WebSessions implements WebServer.Endpoint {
     }
 
     @Override
-    public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
-        final WebSession session = sessionFor(channel, clientId, local);
+    public void connected(final BrowserChannel channel, final String clientId) {
+        final WebSession session = sessionFor(channel, clientId);
         byChannel.put(channel, session);
         holdOpen();
         session.connected(channel);
+    }
+
+    /** Whether this session could take the host's seat right now, which is what the browser offers. */
+    synchronized boolean hostSeatFree(final WebSession asking) {
+        return host == null && asking != null;
+    }
+
+    /**
+     * Takes the host's seat for this session, if it is still free. One claim wins and the rest are told no,
+     * so two browsers pressing at the same moment cannot both end up setting the table.
+     */
+    synchronized boolean claimHost(final WebSession session) {
+        if (host != null) {
+            return host == session;
+        }
+        host = session;
+        session.becomeHost();
+        Logger.info("A browser has taken the host's seat.");
+        announceSeat();
+        return true;
+    }
+
+    /**
+     * Frees the host's seat once its browser has been gone a while and it is holding no game. A reload gets
+     * the seat back, and a game in progress keeps it reserved, so only an abandoned server opens up.
+     */
+    private synchronized void releaseHostIfAbandoned() {
+        if (host == null || host.attached() || host.hasGame()) {
+            return;
+        }
+        Logger.info("The host's browser has not come back. The seat is free again.");
+        host = null;
+        announceSeat();
     }
 
     /** The process lives while any browser is attached, so the host closing theirs does not end a guest's game. */
@@ -70,19 +105,14 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
-    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean local) {
+    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId) {
         final String key = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
         final WebSession known = byId.get(key);
         if (known != null) {
             return known;
         }
-        // The game belongs to the machine running it, so only a browser on that machine can host. A guest that
-        // arrives before there is a game still gets a session, and is told to join once the host opens one.
-        final boolean hosting = host == null && local;
-        final WebSession session = new WebSession(ui, this, hosting, onQuit);
-        if (hosting) {
-            host = session;
-        }
+        // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it.
+        final WebSession session = new WebSession(ui, this, onQuit);
         byId.put(key, session);
         return session;
     }
@@ -94,6 +124,8 @@ final class WebSessions implements WebServer.Endpoint {
             session.disconnected(channel);
         }
         letGo();
+        // A seat held by a browser that never comes back would leave nobody able to set the table
+        timer.schedule(this::releaseHostIfAbandoned, HOST_GRACE_MILLIS, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -129,6 +161,13 @@ final class WebSessions implements WebServer.Endpoint {
 
     boolean isHost(final WebSession session) {
         return host == session;
+    }
+
+    /** Tells every browser without a seat that the host's seat has changed hands, or come free. */
+    private void announceSeat() {
+        for (final WebSession session : byId.values()) {
+            session.hostSeatChanged();
+        }
     }
 
     /** Tells the guests waiting on a game that there is now one to join. */

@@ -1,8 +1,8 @@
 // The first screen: what you can do, and where each one stands. A mode says what it holds for you
 // ("14 decks", "no decks yet") rather than repeating its own name, so the page is worth reading once.
 //
-// Only the browser on the machine running the game sees this. Anyone who opens the invite link is a guest
-// and goes straight to the lobby, because the one thing they came to do is take a seat.
+// Only the browser holding the host's seat sees this. Nobody holds it by arriving: the seat is offered to
+// whoever asks first, and every other browser goes straight to a seat in the host's game.
 
 let built = false;
 
@@ -16,9 +16,9 @@ const MODES = [
 
 export function renderMenu(model, send) {
   const root = document.getElementById('menu');
-  // A browser is a host or a guest for as long as it is open, so which page this is never changes under it
+  // A browser without the host's seat has no menu: it is offered the seat, or told to wait for one
   if (model.host === false) {
-    renderWaiting(root);
+    renderWaiting(root, model, send);
     return;
   }
   if (!built) {
@@ -59,17 +59,65 @@ export function renderMenu(model, send) {
   note.classList.toggle('bad', !!model.error);
 }
 
-/** A guest with no game to sit in. It joins the host's the moment there is one, so there is nothing to press. */
-function renderWaiting(root) {
-  if (root.dataset.page === 'waiting') {
+/** Remembered so the browser that runs this server does not have to say so on every launch. */
+const HOSTED_KEY = 'forge.hostedBefore';
+
+function hostedBefore() {
+  try {
+    return localStorage.getItem(HOSTED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+let claimed = false;
+
+/**
+ * A browser with no seat. Nobody hosts by arriving, so while the host's seat is free this offers it, and a
+ * browser that has hosted this server before takes it back without being asked again.
+ */
+function renderWaiting(root, model, send) {
+  if (model.canClaimHost && hostedBefore() && !claimed) {
+    claimed = true;
+    send({ t: 'claimHost' });
+  }
+  const page = model.canClaimHost ? 'claim' : 'waiting';
+  if (root.dataset.page === page) {
     return;
   }
-  root.dataset.page = 'waiting';
-  root.innerHTML = `
+  root.dataset.page = page;
+  root.innerHTML = model.canClaimHost ? `
+    <div class="menu-page">
+      <h1 class="wordmark">Forge</h1>
+      <p class="menu-note">Nobody is running a game on this server yet.</p>
+      <div class="connect">
+        <section class="connect-card">
+          <h2>Host the game</h2>
+          <p>You set the table, pick the format and start the match. Everyone else joins you.</p>
+          <button id="be-host" class="primary">Host</button>
+        </section>
+        <section class="connect-card">
+          <h2>Wait for a host</h2>
+          <p>Someone else takes the seat. You are given one of your own as soon as they open a game.</p>
+        </section>
+      </div>
+    </div>` : `
     <div class="menu-page">
       <h1 class="wordmark">Forge</h1>
       <p class="menu-note">Waiting for the host to open a game.</p>
     </div>`;
+  const host = root.querySelector('#be-host');
+  if (host) {
+    host.onclick = () => {
+      try {
+        localStorage.setItem(HOSTED_KEY, '1');
+      } catch {
+        // Storage can be unavailable; the choice then has to be made again next launch
+      }
+      claimed = true;
+      send({ t: 'claimHost' });
+    };
+  }
 }
 
 function status(root, id, text) {

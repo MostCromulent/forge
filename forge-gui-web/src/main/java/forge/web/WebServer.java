@@ -65,8 +65,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public final class WebServer implements AutoCloseable {
     public interface Endpoint {
-        /** A browser arrived. The id tells one browser from another across a reload; local marks this machine's own. */
-        void connected(BrowserChannel channel, String clientId, boolean local);
+        /** A browser arrived. The id tells one browser from another across a reload. */
+        void connected(BrowserChannel channel, String clientId);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
     }
@@ -396,11 +396,6 @@ public final class WebServer implements AutoCloseable {
         }
     }
 
-    /** Whether the browser is on the machine running the game, which is how the host is told from a guest. */
-    private static boolean isLocal(final Channel ch) {
-        return ch.remoteAddress() instanceof InetSocketAddress remote && remote.getAddress().isLoopbackAddress();
-    }
-
     private static final class BrowserSocket extends SimpleChannelInboundHandler<WebSocketFrame> {
         private final Endpoint endpoint;
         private BrowserChannel browser;
@@ -415,7 +410,7 @@ public final class WebServer implements AutoCloseable {
                 final Channel ch = ctx.channel();
                 browser = message -> ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
                 final List<String> id = new QueryStringDecoder(done.requestUri()).parameters().get("client");
-                endpoint.connected(browser, id == null ? "" : id.get(0), isLocal(ch));
+                endpoint.connected(browser, id == null ? "" : id.get(0));
             } else {
                 ctx.fireUserEventTriggered(evt);
             }

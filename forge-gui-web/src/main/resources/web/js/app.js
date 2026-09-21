@@ -46,6 +46,8 @@ function apply(msg) {
     case 'hello':
       resetPace();
       model.host = msg.host !== false;
+      model.canClaimHost = !!msg.canClaimHost;
+      model.canClaimHost = !!msg.canClaimHost;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;
       model.spectating = !!msg.spectating;

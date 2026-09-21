@@ -95,8 +95,10 @@ public class GuestSeatTest {
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
         final Recorder hostBrowser = new Recorder();
-        sessions.connected(hostBrowser, "host", true);
-        Assert.assertTrue(hostBrowser.await("hello").get("host").getAsBoolean(), "the local browser did not host");
+        sessions.connected(hostBrowser, "host");
+        sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
+        Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()),
+                "asking for the host's seat did not take it");
 
         sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
         final JsonObject hosted = hostBrowser.awaitLobbyWithSeat();
@@ -104,7 +106,7 @@ public class GuestSeatTest {
         Assert.assertTrue(hosted.get("shareable").getAsBoolean(), "an invited game offered no link");
 
         final Recorder guestBrowser = new Recorder();
-        sessions.connected(guestBrowser, "guest", false);
+        sessions.connected(guestBrowser, "guest");
         final JsonObject seated = guestBrowser.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat");
         Assert.assertFalse(seated.get("host").getAsBoolean(), "the guest was treated as the host");
@@ -132,7 +134,8 @@ public class GuestSeatTest {
     @Test(timeOut = 120_000)
     public void aSeatTurnsBetweenComputerAndOpen() throws Exception {
         final Recorder browser = new Recorder();
-        sessions.connected(browser, "host", true);
+        sessions.connected(browser, "host");
+        sessions.onMessage(browser, JsonCodec.message("claimHost"));
         browser.forget();
         sessions.onMessage(browser, JsonCodec.message("lobby"));
         // Whichever seat the computer holds, because another browser may be sitting in one of them
@@ -177,16 +180,17 @@ public class GuestSeatTest {
      */
     @Test(timeOut = 120_000)
     public void pickingCommanderChangesTheFormat() throws Exception {
-        // The same id as the other test, because the host is whichever session claimed that place first
+        // The same id as the other test, because the host's seat is held by whichever session claimed it
         final Recorder browser = new Recorder();
-        sessions.connected(browser, "host", true);
+        sessions.connected(browser, "host");
+        sessions.onMessage(browser, JsonCodec.message("claimHost"));
         sessions.onMessage(browser, JsonCodec.message("lobby"));
         Assert.assertNotNull(browser.awaitLobbyWithSeat(), "no game was opened");
 
         final JsonObject pick = JsonCodec.message("setFormat");
         pick.addProperty("format", "Commander");
         sessions.onMessage(browser, pick);
-        Assert.assertNotNull(browser.awaitLobby(l -> "Commander".equals(l.get("format").getAsString())),
+        Assert.assertNotNull(browser.awaitLobby(l -> l.has("format") && "Commander".equals(l.get("format").getAsString())),
                 "the lobby stayed on Constructed after Commander was picked");
     }
 }

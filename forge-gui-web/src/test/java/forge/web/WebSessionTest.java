@@ -14,6 +14,22 @@ public class WebSessionTest {
     private static final class Recorder implements BrowserChannel {
         final List<JsonObject> got = new CopyOnWriteArrayList<>();
         @Override public void send(final JsonObject message) { got.add(message); }
+        /** The most recent message of a type, which is what matters when hello is sent more than once. */
+        JsonObject awaitLast(final String type) throws InterruptedException {
+            JsonObject found = null;
+            for (int i = 0; i < 200 && found == null; i++) {
+                for (final JsonObject m : got) {
+                    if (type.equals(m.get("t").getAsString())) {
+                        found = m;
+                    }
+                }
+                if (found == null) {
+                    Thread.sleep(10);
+                }
+            }
+            return found;
+        }
+
         JsonObject await(final String type) throws InterruptedException {
             for (int i = 0; i < 200; i++) {
                 for (final JsonObject m : got) {
@@ -32,17 +48,22 @@ public class WebSessionTest {
         WebTestSupport.initModel();
     }
 
-    /** The host's browser, which is the one on this machine. */
     private static WebSessions opened() {
         return new WebSessions(new WebGuiBase(), 60_000, () -> { });
+    }
+
+    /** Connects a browser and has it take the host's seat, which nobody gets by arriving. */
+    private static void connectAsHost(final WebSessions sessions, final Recorder r, final String id) {
+        sessions.connected(r, id);
+        sessions.onMessage(r, JsonCodec.message("claimHost"));
     }
 
     @Test
     public void connectingSendsHello() throws Exception {
         final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        sessions.connected(r, "host", true);
-        final JsonObject hello = r.await("hello");
+        connectAsHost(sessions, r, "host");
+        final JsonObject hello = r.awaitLast("hello");
         Assert.assertFalse(hello.get("inMatch").getAsBoolean());
         Assert.assertTrue(hello.get("host").getAsBoolean());
     }
@@ -51,29 +72,35 @@ public class WebSessionTest {
     public void deckListAnswers() throws Exception {
         final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        sessions.connected(r, "host", true);
+        sessions.connected(r, "host");
         sessions.onMessage(r, JsonCodec.message("decks"));
         Assert.assertTrue(r.await("decks").get("decks").isJsonArray());
     }
 
-    /** Fails if a browser off this machine could take the host's place and set the table. */
+    /** Fails if the host's seat is handed out by arriving, or if two browsers can both end up holding it. */
     @Test
-    public void aRemoteBrowserCannotHost() throws Exception {
+    public void theFirstBrowserToAskGetsTheHostSeat() throws Exception {
         final WebSessions sessions = opened();
-        final Recorder guest = new Recorder();
-        sessions.connected(guest, "guest", false);
-        Assert.assertFalse(guest.await("hello").get("host").getAsBoolean());
-        // The first browser on this machine takes the host's place, even though a guest was connected first
-        final Recorder late = new Recorder();
-        sessions.connected(late, "late", true);
-        Assert.assertTrue(late.await("hello").get("host").getAsBoolean());
+        final Recorder first = new Recorder();
+        final Recorder second = new Recorder();
+        sessions.connected(first, "first");
+        sessions.connected(second, "second");
+        Assert.assertFalse(first.awaitLast("hello").get("host").getAsBoolean(), "a browser hosted by arriving");
+        Assert.assertTrue(first.awaitLast("hello").get("canClaimHost").getAsBoolean(), "the seat was not offered");
+
+        sessions.onMessage(first, JsonCodec.message("claimHost"));
+        Assert.assertTrue(first.awaitLast("hello").get("host").getAsBoolean(), "asking did not take the seat");
+
+        sessions.onMessage(second, JsonCodec.message("claimHost"));
+        Assert.assertFalse(second.awaitLast("hello").get("host").getAsBoolean(), "two browsers took the same seat");
+        Assert.assertNotNull(second.await("error"), "the second browser was not told why");
     }
 
     @Test
     public void startWithUnknownDecksReportsAnError() throws Exception {
         final WebSessions sessions = opened();
         final Recorder r = new Recorder();
-        sessions.connected(r, "host", true);
+        connectAsHost(sessions, r, "host");
         final JsonObject start = JsonCodec.message("start");
         start.addProperty("playerName", "Tester");
         start.addProperty("playerDeck", "nope");
@@ -96,8 +123,8 @@ public class WebSessionTest {
         final WebSessions sessions = new WebSessions(new WebGuiBase(), 200, quit::countDown);
         final Recorder host = new Recorder();
         final Recorder guest = new Recorder();
-        sessions.connected(host, "host", true);
-        sessions.connected(guest, "guest", false);
+        sessions.connected(host, "host");
+        sessions.connected(guest, "guest");
 
         sessions.disconnected(host);
         Assert.assertFalse(quit.await(600, TimeUnit.MILLISECONDS),
@@ -114,9 +141,9 @@ public class WebSessionTest {
         final CountDownLatch quit = new CountDownLatch(1);
         final WebSessions sessions = new WebSessions(new WebGuiBase(), 400, quit::countDown);
         final Recorder first = new Recorder();
-        sessions.connected(first, "host", true);
+        sessions.connected(first, "host");
         sessions.disconnected(first);
-        sessions.connected(new Recorder(), "host", true);
+        sessions.connected(new Recorder(), "host");
         Assert.assertFalse(quit.await(900, TimeUnit.MILLISECONDS),
                 "Forge quit although a browser had come back");
     }

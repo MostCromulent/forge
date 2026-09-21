@@ -31,7 +31,7 @@ public class WebServerTest {
     public void setUp() throws Exception {
         WebTestSupport.initModel();
         server = new WebServer(new WebServer.Endpoint() {
-            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean local) {
+            @Override public void connected(final BrowserChannel channel, final String clientId) {
                 connected = channel;
             }
             @Override public void disconnected(final BrowserChannel channel) { }

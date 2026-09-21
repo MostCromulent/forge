@@ -14,8 +14,8 @@ public final class WebSession {
     private final Lobby lobby;
     private final WebGuiBase ui;
     private final WebSessions sessions;
-    /** True for the browser on the machine running the game, which is the only one that may set the table. */
-    private final boolean isHost;
+    /** True for the browser that claimed the host's seat, which is the only one that may set the table. */
+    private volatile boolean isHost;
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
@@ -29,21 +29,44 @@ public final class WebSession {
     /** Whether the open game was made to be joined, so leaving a match lands back in the same kind of lobby. */
     private volatile boolean inviting;
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final boolean isHost, final Runnable onQuit) {
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit) {
         this.ui = ui;
         this.sessions = sessions;
-        this.isHost = isHost;
         this.lobby = new Lobby(local);
         this.onQuit = onQuit;
-        // Host dialogs belong to the machine running the game
-        if (isHost) {
-            ui.setNoticeSink(notice -> {
-                final BrowserChannel b = browser;
-                if (b != null) {
-                    b.send(notice);
-                }
-            });
+    }
+
+    /** Takes the host's seat. Host dialogs belong to whoever holds it, so they are pointed here. */
+    void becomeHost() {
+        isHost = true;
+        ui.setNoticeSink(notice -> {
+            final BrowserChannel b = browser;
+            if (b != null) {
+                b.send(notice);
+            }
+        });
+    }
+
+    boolean isHost() {
+        return isHost;
+    }
+
+    /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
+    boolean hasGame() {
+        return inLobby || match != null;
+    }
+
+    /** The seat came free or was taken, so a browser waiting on it is told again what it may do. */
+    void hostSeatChanged() {
+        final BrowserChannel b = browser;
+        if (b != null && !isHost) {
+            b.send(hello());
         }
+    }
+
+    /** Whether a browser is attached to this session right now. */
+    boolean attached() {
+        return browser != null;
     }
 
     /** The loopback port guests take a seat on. */
@@ -85,6 +108,12 @@ public final class WebSession {
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
             case "decks" -> channel.send(lobby.decks());
+            case "claimHost" -> {
+                if (!sessions.claimHost(this)) {
+                    channel.send(error("Someone else is already hosting."));
+                }
+                channel.send(hello());
+            }
             // Opening a game connects a client to a server, which the host UI thread owns
             case "lobby" -> ui.invokeInEdtLater(() -> openLobby(channel, false));
             case "invite" -> ui.invokeInEdtLater(() -> openLobby(channel, true));
@@ -302,6 +331,8 @@ public final class WebSession {
         m.addProperty("inLobby", inLobby && match == null);
         m.addProperty("spectating", spectating);
         m.addProperty("host", isHost);
+        // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
+        m.addProperty("canClaimHost", !isHost && sessions.hostSeatFree(this));
         // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
         m.addProperty("networked", inviting || !isHost);
         m.addProperty("playerName", FModel.getPreferences().getPref(FPref.PLAYER_NAME));

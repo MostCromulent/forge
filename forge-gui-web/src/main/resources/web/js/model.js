@@ -5,7 +5,7 @@ export function createModel() {
     prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
     looks: null, spectating: false,
     inMatch: false, playerName: '', decks: [], error: null,
-    lobby: null, addresses: null, host: true,
+    lobby: null, addresses: null, host: true, canClaimHost: false, canClaimHost: false,
   };
 }
 
