@@ -72,8 +72,12 @@ public final class WebServer implements AutoCloseable {
     }
 
     private static final String COOKIE = "forge_token";
-    /** One past Forge's netplay port, so the two can be forwarded without colliding. */
-    private static final int DEFAULT_PORT = 36744;
+    /**
+     * Forge's own netplay port. Anyone who has hosted a game from the desktop client has already opened it,
+     * and this server never binds it for netplay, because every seat here reaches the game over loopback.
+     * Hosting from the desktop client at the same time needs {@code -Dforge.web.port}.
+     */
+    private static final int DEFAULT_PORT = 36743;
     private static final int SLEEVE_ART_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final String token;
