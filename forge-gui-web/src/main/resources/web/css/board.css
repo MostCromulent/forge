@@ -47,8 +47,9 @@
 #hand { grid-area: hand; }
 .seat { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
-/* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player */
-#me .battlefield { flex-direction: column-reverse; }
+/* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
+   the hand rather than floating in the middle of its half, so the two read as one side of the table. */
+#me .battlefield { flex-direction: column-reverse; align-self: end; }
 /* A tapped card is 11px wider each side than its box. That room is held on every slot rather than added
    when one taps, because adding it would slide the whole row and could throw a card onto the next line. */
 .row { display: flex; flex-wrap: wrap; gap: 0; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; justify-content: center; align-items: flex-end; }
