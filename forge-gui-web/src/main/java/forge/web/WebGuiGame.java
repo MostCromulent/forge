@@ -9,20 +9,11 @@ import forge.LobbyPlayer;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
-import forge.game.event.GameEventAttackersDeclared;
-import forge.game.event.GameEventBlockersDeclared;
-import forge.game.event.GameEventCardChangeZone;
-import forge.game.event.GameEventCardDamaged;
-import forge.game.event.GameEventGameOutcome;
 import forge.game.GameState;
 import forge.game.GameView;
 import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
-import forge.game.card.CardView.CardStateView;
 import forge.game.event.GameEvent;
-import forge.game.event.GameEventPlayerDamaged;
-import forge.game.event.GameEventShuffle;
-import forge.game.zone.ZoneView;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
@@ -38,12 +29,9 @@ import forge.gamemodes.match.YieldUpdate;
 import forge.gamemodes.net.DeltaPacket;
 import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
-import forge.gui.card.CardDetailUtil;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
-import forge.sound.EventVisualizer;
-import forge.sound.SoundEffectType;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
@@ -65,15 +53,9 @@ import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.StackYield;
 import forge.web.FromBrowser.UseMana;
 import forge.web.FromBrowser.YieldAction;
-import forge.web.ToBrowser.Attack;
-import forge.web.ToBrowser.AttackersDeclared;
-import forge.web.ToBrowser.CardDamaged;
-import forge.web.ToBrowser.CardFace;
-import forge.web.ToBrowser.CardMoved;
 import forge.web.ToBrowser.ChoiceKind;
 import forge.web.ToBrowser.ChoicesRequest;
 import forge.web.ToBrowser.Controls;
-import forge.web.ToBrowser.Detail;
 import forge.web.ToBrowser.DistributeRequest;
 import forge.web.ToBrowser.Flash;
 import forge.web.ToBrowser.GameOver;
@@ -83,16 +65,10 @@ import forge.web.ToBrowser.OptionRequest;
 import forge.web.ToBrowser.OrderAnswer;
 import forge.web.ToBrowser.OrderRequest;
 import forge.web.ToBrowser.Playable;
-import forge.web.ToBrowser.Place;
-import forge.web.ToBrowser.PlayerDamaged;
-import forge.web.ToBrowser.PlayerDetail;
-import forge.web.ToBrowser.Prompt;
-import forge.web.ToBrowser.PromptButton;
 import forge.web.ToBrowser.Ref;
 import forge.web.ToBrowser.RequestOption;
 import forge.web.ToBrowser.ShownZone;
 import forge.web.ToBrowser.SideboardEntry;
-import forge.web.ToBrowser.Shuffled;
 import forge.web.ToBrowser.SideboardRequest;
 import forge.web.ToBrowser.Sound;
 import forge.web.ToBrowser.StackMenu;
@@ -106,10 +82,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -129,22 +103,13 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PendingRequests requests = new PendingRequests(this::send);
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
-    // The prompt is written from the dispatch thread and from AbstractGuiGame's final timer methods on the host UI thread
-    private final Object promptLock = new Object();
-    private String promptMessage = "";
-    private boolean priority;
-    private Ref promptCard;
-    private PromptButton ok = new PromptButton("", false);
-    private PromptButton cancel = new PromptButton("", false);
-    private boolean focusOk;
-    private boolean paying;
-    private List<Ref> selectable = List.of();
-    private int selectableMin;
-    private List<Ref> selectablePlayers = List.of();
-    private final Set<Integer> highlighted = new LinkedHashSet<>();
+    private final PromptState prompt = new PromptState(this::send);
+    // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
+    private final Object zonesLock = new Object();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
     // Written on the dispatch thread, replayed to a reloading browser from the socket thread
     private final WebGameLog gameLog;
+    private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer, this::isLocalPlayer);
     /** The settings of the player this GUI is the view of, which are not the shared preferences unless it is the host. */
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
@@ -190,8 +155,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private void sendFullState(final BrowserChannel channel) {
         browser = channel;
         channel.send(model.fullState());
-        synchronized (promptLock) {
-            channel.send(prompt());
+        prompt.sendTo(channel::send);
+        synchronized (zonesLock) {
             channel.send(zonesMessage());
         }
         channel.send(controlsMessage());
@@ -344,7 +309,7 @@ public class WebGuiGame extends NetworkGuiGame {
     public void handleGameEvent(final GameEvent event) {
         // The log, the sound and what the browser animates. FControlGameEventHandler would post to the host UI
         // thread, and everything else comes from state
-        final Record forwarded = forwarded(event);
+        final Record forwarded = BrowserEvents.forwarded(event);
         if (forwarded != null) {
             events.add(forwarded);
         }
@@ -358,72 +323,12 @@ public class WebGuiGame extends NetworkGuiGame {
         if (entries != null) {
             send(entries);
         }
-        forwardSound(event);
-    }
-
-    /** The events a renderer can show, as the browser names them; null for the rest, which the state covers. */
-    static Record forwarded(final GameEvent event) {
-        if (event instanceof GameEventCardChangeZone e && e.card() != null) {
-            return new CardMoved(Ref.card(e.card().getId()), place(e.from()), place(e.to()));
-        }
-        if (event instanceof GameEventCardDamaged e && e.card() != null) {
-            return new CardDamaged(Ref.card(e.card().getId()), e.source() == null ? null : Ref.card(e.source().getId()), e.amount());
-        }
-        if (event instanceof GameEventPlayerDamaged e && e.target() != null) {
-            return new PlayerDamaged(Ref.player(e.target().getId()), e.source() == null ? null : Ref.card(e.source().getId()),
-                    e.amount(), e.combat());
-        }
-        if (event instanceof GameEventAttackersDeclared e && e.player() != null) {
-            final List<Attack> attacks = new ArrayList<>();
-            for (final Map.Entry<GameEntityView, CardView> attack : e.attackersMap().entries()) {
-                final GameEntityView defender = attack.getKey();
-                attacks.add(new Attack(Ref.card(attack.getValue().getId()),
-                        defender instanceof CardView c ? Ref.card(c.getId())
-                                : defender instanceof PlayerView p ? Ref.player(p.getId()) : null));
+        if (settings.getBoolean(FPref.UI_ENABLE_SOUNDS) && settings.getInt(FPref.UI_VOL_SOUNDS) > 0) {
+            final Sound sound = sounds.soundFor(event);
+            if (sound != null) {
+                send(sound);
             }
-            return new AttackersDeclared(Ref.player(e.player().getId()), attacks);
         }
-        if (event instanceof GameEventShuffle e && e.player() != null) {
-            return new Shuffled(Ref.player(e.player().getId()));
-        }
-        return null;
-    }
-
-    private static Place place(final ZoneView zone) {
-        return zone == null || zone.zoneType() == null ? null
-                : new Place(zone.zoneType(), zone.player() == null ? null : Ref.player(zone.player().getId()));
-    }
-
-    // Desktop plays the same sounds from the same events; here the browser plays them, so only the name travels
-    private final EventVisualizer sounds = new EventVisualizer(null) {
-        @Override
-        public SoundEffectType visit(final GameEventGameOutcome event) {
-            final PlayerView local = getCurrentPlayer();
-            return local != null && local.getLobbyPlayerName().equals(event.winningPlayerName())
-                    ? SoundEffectType.WinDuel : SoundEffectType.LoseDuel;
-        }
-
-        @Override
-        public SoundEffectType visit(final GameEventBlockersDeclared event) {
-            // Your own blocks already made their sound as you declared them
-            return isLocalPlayer(event.defendingPlayer()) ? null : SoundEffectType.Block;
-        }
-    };
-
-    private void forwardSound(final GameEvent event) {
-        if (!settings.getBoolean(FPref.UI_ENABLE_SOUNDS) || settings.getInt(FPref.UI_VOL_SOUNDS) <= 0) {
-            return;
-        }
-        final SoundEffectType effect = event.visit(sounds);
-        if (effect == null) {
-            return;
-        }
-        final String name = effect == SoundEffectType.ScriptedEffect
-                ? sounds.getScriptedSoundEffectName(event) : effect.getResourceFileName();
-        if (name == null || name.isEmpty()) {
-            return;
-        }
-        send(new Sound(name, effect.isSynced()));
     }
 
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's
@@ -494,17 +399,6 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    private static PlayerDetail playerDetailMessage(final PlayerView player) {
-        final List<String> lines = new ArrayList<>();
-        final String[] parts = player.getDetails().split("\n");
-        for (int i = 1; i < parts.length; i++) {
-            if (!parts[i].isBlank()) {
-                lines.add(parts[i]);
-            }
-        }
-        return new PlayerDetail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()), player.getName(), lines);
-    }
-
     // Desktop's right-click menu on a stack item: auto-yield to an ability, always accept or decline an optional
     // trigger of your own, and yield to the stack
     private StackMenu stackMenuMessage(final IGameController controller, final StackItemView item) {
@@ -533,30 +427,6 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    // mayFlip hides an opponent's face-down card but shows the owner theirs, as on desktop
-    private Detail detailMessage(final CardView card) {
-        final List<CardFace> faces = new ArrayList<>();
-        if (mayView(card)) {
-            faces.add(face(card.getCurrentState()));
-            if (card.isSplitCard() && card.hasLeftSplitState() && card.hasRightSplitState()) {
-                faces.add(face(card.getLeftSplitState()));
-                faces.add(face(card.getRightSplitState()));
-            } else if (mayFlip(card)) {
-                faces.add(face(card.getAlternateState()));
-            }
-        }
-        return new Detail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), faces);
-    }
-
-    private CardFace face(final CardStateView state) {
-        final String pt = state.isCreature() ? state.getPower() + "/" + state.getToughness()
-                : state.isPlaneswalker() ? state.getLoyalty()
-                : state.isBattle() ? state.getDefense() : null;
-        return new CardFace(state.getName(), JsonCodec.manaCost(state.getManaCost()),
-                state.getType() == null ? "" : state.getType().toString(), pt,
-                CardDetailUtil.composeCardText(state, getGameView(), true).trim(), state.getImageKey());
-    }
-
     @Override
     public void showWaitingTimer(final PlayerView forPlayer, final String waitingForPlayerName) {
         // Its timer posts through FThreads to the host UI thread
@@ -566,60 +436,18 @@ public class WebGuiGame extends NetworkGuiGame {
     protected void updateCurrentPlayer(final PlayerView player) {
     }
 
-    /** The prompt as it stands. Called holding the prompt lock. */
-    private Prompt prompt() {
-        return new Prompt(promptMessage, priority, promptCard, ok, cancel, focusOk, paying, selectable, selectableMin,
-                selectablePlayers, List.copyOf(highlighted));
-    }
-
-    private void sendPrompt() {
-        send(prompt());
-    }
-
     private static Ref cardRef(final CardView card) {
-        return card == null ? null : Ref.card(card.getId());
+        return PromptState.cardRef(card);
     }
 
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
-        synchronized (promptLock) {
-            final String trimmed = withoutTurnState(message);
-            promptMessage = trimmed;
-            priority = !trimmed.equals(message);
-            promptCard = cardRef(card);
-            sendPrompt();
-        }
-    }
-
-    // The phase pill and the stack pile carry the turn, the step and what is waiting, so the priority prompt
-    // keeps only the lines that add something, such as the storm count or a macro being recorded
-    private static String withoutTurnState(final String message) {
-        final Localizer loc = Localizer.getInstance();
-        if (!message.startsWith(loc.getMessage("lblPriority") + ":")) {
-            return message;
-        }
-        final List<String> labels = List.of(loc.getMessage("lblPriority"), loc.getMessage("lblTurn"),
-                loc.getMessage("lblPhase"), loc.getMessage("lblStack"));
-        final StringBuilder kept = new StringBuilder();
-        for (final String line : message.split("\n")) {
-            if (line.isBlank() || labels.stream().anyMatch(label -> line.startsWith(label + ":"))) {
-                continue;
-            }
-            kept.append(kept.isEmpty() ? "" : "\n").append(line);
-        }
-        return kept.toString();
+        prompt.message(message, card);
     }
 
     @Override
     public void updateButtons(final PlayerView owner, final String label1, final String label2, final boolean enable1, final boolean enable2, final boolean focus1) {
-        synchronized (promptLock) {
-            ok = new PromptButton(label1, enable1);
-            cancel = new PromptButton(label2, enable2);
-            focusOk = focus1;
-            // Only a mana payment offers Auto, and the browser holds the card being paid for while it does
-            paying = Localizer.getInstance().getMessage("lblAuto").equals(label1);
-            sendPrompt();
-        }
+        prompt.buttons(label1, label2, enable1, enable2, focus1);
     }
 
     @Override
@@ -629,11 +457,7 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final CardView c : cards) {
             refs.add(cardRef(c));
         }
-        synchronized (promptLock) {
-            selectable = refs;
-            selectableMin = min;
-            sendPrompt();
-        }
+        prompt.selectable(refs, min);
     }
 
     // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
@@ -667,45 +491,24 @@ public class WebGuiGame extends NetworkGuiGame {
         for (final PlayerView p : players) {
             keys.add(Ref.player(p.getId()));
         }
-        synchronized (promptLock) {
-            selectablePlayers = keys;
-            sendPrompt();
-        }
+        prompt.selectablePlayers(keys);
     }
 
     @Override
     public void clearSelectables() {
         super.clearSelectables();
-        synchronized (promptLock) {
-            selectable = List.of();
-            selectablePlayers = List.of();
-            selectableMin = 0;
-            sendPrompt();
-        }
+        prompt.clearSelectables();
     }
 
     @Override
     public void setHighlighted(final Iterable<GameEntityView> entities, final boolean b) {
         super.setHighlighted(entities, b);
-        synchronized (promptLock) {
-            for (final GameEntityView e : entities) {
-                final int key = DeltaPacket.makeDeltaKey(e instanceof CardView ? DeltaPacket.TYPE_CARD_VIEW : DeltaPacket.TYPE_PLAYER_VIEW, e.getId());
-                if (b) {
-                    highlighted.add(key);
-                } else {
-                    highlighted.remove(key);
-                }
-            }
-            sendPrompt();
-        }
+        prompt.highlight(entities, b);
     }
 
     @Override
     public void setCard(final CardView card) {
-        synchronized (promptLock) {
-            promptCard = cardRef(card);
-            sendPrompt();
-        }
+        prompt.card(card);
     }
 
     @Override
@@ -737,7 +540,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public Iterable<PlayerZoneUpdate> tempShowZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        synchronized (promptLock) {
+        synchronized (zonesLock) {
             for (final PlayerZoneUpdate update : zonesToUpdate) {
                 for (final ZoneType zone : update.getZones()) {
                     // The browser always shows the battlefield and the viewer's own hand
@@ -757,7 +560,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (zonesToUpdate == null) {
             return;
         }
-        synchronized (promptLock) {
+        synchronized (zonesLock) {
             for (final PlayerZoneUpdate update : zonesToUpdate) {
                 for (final ZoneType zone : update.getZones()) {
                     shownZones.remove(zoneKey(update.getPlayer(), zone));
@@ -842,84 +645,6 @@ public class WebGuiGame extends NetworkGuiGame {
         return out;
     }
 
-    private static <T> List<Integer> indicesOf(final List<T> items, final Collection<T> subset) {
-        final List<Integer> out = new ArrayList<>();
-        if (subset != null) {
-            for (int i = 0; i < items.size(); i++) {
-                if (subset.contains(items.get(i))) {
-                    out.add(i);
-                }
-            }
-        }
-        return out;
-    }
-
-    static List<Integer> range(final int from, final int to) {
-        final List<Integer> a = new ArrayList<>();
-        for (int i = from; i < to; i++) {
-            a.add(i);
-        }
-        return a;
-    }
-
-    static Predicate<JsonElement> indexList(final int size, final int min, final int max) {
-        return v -> {
-            if (!v.isJsonArray()) {
-                return false;
-            }
-            final Set<Integer> seen = new HashSet<>();
-            for (final JsonElement e : v.getAsJsonArray()) {
-                if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber()) {
-                    return false;
-                }
-                final int i = e.getAsInt();
-                if (i < 0 || i >= size || !seen.add(i)) {
-                    return false;
-                }
-            }
-            return seen.size() >= min && (max < 0 || seen.size() <= max);
-        };
-    }
-
-    static Predicate<JsonElement> singleIndex(final int size) {
-        return v -> v.isJsonPrimitive() && v.getAsJsonPrimitive().isNumber() && v.getAsInt() >= 0 && v.getAsInt() < size;
-    }
-
-    static Predicate<JsonElement> amounts(final int count, final int total, final int perMin, final boolean maySkip) {
-        return v -> {
-            if (v.isJsonNull()) {
-                return maySkip;
-            }
-            if (!v.isJsonArray() || v.getAsJsonArray().size() != count) {
-                return false;
-            }
-            int sum = 0;
-            for (final JsonElement e : v.getAsJsonArray()) {
-                if (!e.isJsonPrimitive() || !e.getAsJsonPrimitive().isNumber() || e.getAsInt() < perMin) {
-                    return false;
-                }
-                sum += e.getAsInt();
-            }
-            return sum == total;
-        };
-    }
-
-    private static <T> List<T> pick(final List<T> items, final JsonElement indices) {
-        final List<T> out = new ArrayList<>();
-        for (final JsonElement e : indices.getAsJsonArray()) {
-            out.add(items.get(e.getAsInt()));
-        }
-        return out;
-    }
-
-    private static List<Integer> toList(final int[] values) {
-        final List<Integer> a = new ArrayList<>();
-        for (final int v : values) {
-            a.add(v);
-        }
-        return a;
-    }
-
     private void revealFirst(final DelayedReveal reveal) {
         if (reveal == null) {
             return;
@@ -938,8 +663,8 @@ public class WebGuiGame extends NetworkGuiGame {
         final int need = Math.min(Math.max(min, 0), choices.size());
         // Spells being chosen are already drawn on the stack, so they are picked there rather than from a list
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, need, max, choices, selected, display,
-                stackKeysFor(choices), null, range(0, need));
-        return pick(choices, ask(request, indexList(choices.size(), need, max)));
+                stackKeysFor(choices), null, Answers.range(0, need));
+        return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
     }
 
     /** The stack item each choice is, in the same order, or null unless every choice is a spell on the stack. */
@@ -971,7 +696,7 @@ public class WebGuiGame extends NetworkGuiGame {
     private <T> ChoicesRequest choicesRequest(final ChoiceKind kind, final String message, final int min, final int max,
             final List<T> items, final List<T> selected, final FSerializableFunction<T, String> display,
             final List<Integer> stackKeys, final BrowserClick at, final List<Integer> onDefault) {
-        return new ChoicesRequest(kind, message, min, max, options(items, display), indicesOf(items, selected), stackKeys,
+        return new ChoicesRequest(kind, message, min, max, options(items, display), Answers.indicesOf(items, selected), stackKeys,
                 at == null ? null : at.x(), at == null ? null : at.y(), onDefault);
     }
 
@@ -980,7 +705,7 @@ public class WebGuiGame extends NetworkGuiGame {
             final List<T> selected, final FSerializableFunction<T, String> display, final List<Integer> onDefault) {
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, min, max, items, selected, display,
                 null, null, onDefault);
-        return pick(items, ask(request, indexList(items.size(), min, max)));
+        return Answers.pick(items, ask(request, Answers.indexList(items.size(), min, max)));
     }
 
     @Override
@@ -992,13 +717,13 @@ public class WebGuiGame extends NetworkGuiGame {
         final int remainingMax = remainingObjectsMax < 0 ? items.size() : Math.min(remainingObjectsMax, items.size());
         final int min = Math.max(0, items.size() - remainingMax);
         final int max = Math.max(min, items.size() - Math.max(remainingObjectsMin, 0));
-        final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? range(0, min) : range(sourceChoices.size(), items.size());
+        final List<Integer> preselected = destChoices == null || destChoices.isEmpty() ? Answers.range(0, min) : Answers.range(sourceChoices.size(), items.size());
         final OrderRequest request = new OrderRequest(title, top, min, max, options(items, null), preselected,
                 showRememberCheckbox, cardRef(referenceCard), new OrderAnswer(preselected, false));
-        final Predicate<JsonElement> indicesOk = indexList(items.size(), min, max);
+        final Predicate<JsonElement> indicesOk = Answers.indexList(items.size(), min, max);
         final JsonElement reply = ask(request, v -> v.isJsonObject() && v.getAsJsonObject().has("indices") && indicesOk.test(v.getAsJsonObject().get("indices")));
         final JsonObject r = reply.getAsJsonObject();
-        return new OrderResult<>(pick(items, r.get("indices")), r.has("remember") && r.get("remember").getAsBoolean());
+        return new OrderResult<>(Answers.pick(items, r.get("indices")), r.has("remember") && r.get("remember").getAsBoolean());
     }
 
     @Override
@@ -1006,15 +731,15 @@ public class WebGuiGame extends NetworkGuiGame {
         final List<CardView> list = Lists.newArrayList(cards);
         // The original order is always a valid answer; arrangeForMove throws on an empty list
         final ManipulateRequest request = new ManipulateRequest(title, options(list, null),
-                indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, toAnywhere, range(0, list.size()));
-        return pick(list, ask(request, indexList(list.size(), list.size(), list.size())));
+                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, toAnywhere, Answers.range(0, list.size()));
+        return Answers.pick(list, ask(request, Answers.indexList(list.size(), list.size(), list.size())));
     }
 
     private int askOption(final String title, final String message, final CardView card, final List<String> labels, final int defaultIndex) {
         final int def = Math.max(0, Math.min(defaultIndex, labels.size() - 1));
         final OptionRequest request = new OptionRequest(title, message, card != null && isInMirror(card) ? cardRef(card) : null,
                 new ArrayList<>(labels), def);
-        return ask(request, singleIndex(labels.size())).getAsInt();
+        return ask(request, Answers.singleIndex(labels.size())).getAsInt();
     }
 
     @Override
@@ -1056,7 +781,7 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = isOptional || list.isEmpty() ? 0 : 1;
-        final List<GameEntityView> picked = askChoices(title, need, 1, list, null, null, range(0, need));
+        final List<GameEntityView> picked = askChoices(title, need, 1, list, null, null, Answers.range(0, need));
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -1065,7 +790,7 @@ public class WebGuiGame extends NetworkGuiGame {
         revealFirst(delayedReveal);
         final List<GameEntityView> list = new ArrayList<>(optionList);
         final int need = Math.min(Math.max(min, 0), list.size());
-        return askChoices(title, need, max, list, null, null, range(0, need));
+        return askChoices(title, need, max, list, null, null, Answers.range(0, need));
     }
 
     /** A click from the browser: the right button asks for the card's list of abilities, as it does on desktop. */
@@ -1102,25 +827,8 @@ public class WebGuiGame extends NetworkGuiGame {
         // No answer means no ability chosen, which is how a cancelled click reads
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, hostCard == null ? "" : hostCard.getName(), 0, 1,
                 abilities, null, null, null, triggerEvent instanceof BrowserClick click ? click : null, List.of());
-        final List<SpellAbilityView> picked = pick(abilities, ask(request, indexList(abilities.size(), 0, 1)));
+        final List<SpellAbilityView> picked = Answers.pick(abilities, ask(request, Answers.indexList(abilities.size(), 0, 1)));
         return picked.isEmpty() ? null : picked.get(0);
-    }
-
-    static int[] defaultCombatSplit(final List<CardView> blockers, final int damage, final boolean hasDefender) {
-        final int n = blockers.size() + (hasDefender ? 1 : 0);
-        final int[] split = new int[n];
-        int remaining = damage;
-        for (int i = 0; i < blockers.size() && remaining > 0; i++) {
-            final CardView blocker = blockers.get(i);
-            final int lethal = Math.max(0, blocker.getLethalDamage());
-            final int assigned = Math.min(remaining, lethal);
-            split[i] = assigned;
-            remaining -= assigned;
-        }
-        if (n > 0) {
-            split[n - 1] += remaining;
-        }
-        return split;
     }
 
     @Override
@@ -1130,8 +838,8 @@ public class WebGuiGame extends NetworkGuiGame {
             recipients.add(defender);
         }
         final DistributeRequest request = new DistributeRequest(attacker == null ? "" : attacker.getName(), damage, 0,
-                options(recipients, null), cardRef(attacker), maySkip, toList(defaultCombatSplit(blockers, damage, defender != null)));
-        final JsonElement reply = ask(request, amounts(recipients.size(), damage, 0, maySkip));
+                options(recipients, null), cardRef(attacker), maySkip, Answers.toList(Answers.defaultCombatSplit(blockers, damage, defender != null)));
+        final JsonElement reply = ask(request, Answers.amounts(recipients.size(), damage, 0, maySkip));
         if (reply.isJsonNull()) {
             return null;
         }
@@ -1158,8 +866,8 @@ public class WebGuiGame extends NetworkGuiGame {
             def[0] += Math.max(0, remaining);
         }
         final DistributeRequest request = new DistributeRequest(amountLabel, amount, perMin, options(recipients, null),
-                cardRef(effectSource), false, toList(def));
-        final JsonArray reply = ask(request, amounts(recipients.size(), amount, perMin, false)).getAsJsonArray();
+                cardRef(effectSource), false, Answers.toList(def));
+        final JsonArray reply = ask(request, Answers.amounts(recipients.size(), amount, perMin, false)).getAsJsonArray();
         final Map<Object, Integer> result = new LinkedHashMap<>();
         for (int i = 0; i < recipients.size(); i++) {
             result.put(recipients.get(i), reply.get(i).getAsInt());
@@ -1229,7 +937,7 @@ public class WebGuiGame extends NetworkGuiGame {
             if ("detail".equals(type)) {
                 final CardView card = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.CardViewType);
                 if (card != null) {
-                    send(detailMessage(card));
+                    send(CardDetails.card(card, getGameView(), mayView(card), mayFlip(card)));
                 }
                 return;
             }
@@ -1243,7 +951,7 @@ public class WebGuiGame extends NetworkGuiGame {
             if ("playerDetail".equals(type)) {
                 final PlayerView player = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.PlayerViewType);
                 if (player != null) {
-                    send(playerDetailMessage(player));
+                    send(CardDetails.player(player));
                 }
                 return;
             }

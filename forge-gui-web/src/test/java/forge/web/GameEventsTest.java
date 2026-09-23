@@ -33,7 +33,7 @@ public class GameEventsTest {
 
     @Test
     public void aCardChangingZoneNamesTheCardAndBothPlaces() {
-        final JsonObject moved = json(WebGuiGame.forwarded(new GameEventCardChangeZone(card,
+        final JsonObject moved = json(BrowserEvents.forwarded(new GameEventCardChangeZone(card,
                 new ZoneView(player, ZoneType.Hand), new ZoneView(null, ZoneType.Stack))));
         Assert.assertEquals(moved.get("kind").getAsString(), "cardMoved");
         Assert.assertEquals(moved.getAsJsonObject("card").get("ref").getAsInt(),
@@ -48,19 +48,19 @@ public class GameEventsTest {
 
     @Test
     public void aCardThatComesIntoBeingHasNoOrigin() {
-        final JsonObject made = json(WebGuiGame.forwarded(new GameEventCardChangeZone(card, null,
+        final JsonObject made = json(BrowserEvents.forwarded(new GameEventCardChangeZone(card, null,
                 new ZoneView(player, ZoneType.Battlefield))));
         Assert.assertFalse(made.has("from"), "a token has nowhere it came from");
     }
 
     @Test
     public void aShuffleNamesThePlayer() {
-        final JsonObject shuffled = json(WebGuiGame.forwarded(new GameEventShuffle(player)));
+        final JsonObject shuffled = json(BrowserEvents.forwarded(new GameEventShuffle(player)));
         Assert.assertEquals(shuffled.get("kind").getAsString(), "shuffled");
     }
 
     @Test
     public void anEventTheStateAlreadyShowsIsNotForwarded() {
-        Assert.assertNull(WebGuiGame.forwarded(new GameEventGameStarted(null, (PlayerView) null, java.util.List.<PlayerView>of())));
+        Assert.assertNull(BrowserEvents.forwarded(new GameEventGameStarted(null, (PlayerView) null, java.util.List.<PlayerView>of())));
     }
 }
