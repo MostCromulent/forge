@@ -123,6 +123,10 @@ public final class WebSession {
         }
         if (m != null) {
             m.attach(channel);
+        } else if (inLobby) {
+            // A reload in match setup lands back at the same table, which only this message describes
+            channel.send(lobby.decks());
+            channel.send(lobby.state());
         }
         // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
         if (!isHost && !inLobby && name != null) {

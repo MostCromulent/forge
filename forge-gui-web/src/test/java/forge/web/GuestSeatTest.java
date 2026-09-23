@@ -134,6 +134,16 @@ public class GuestSeatTest {
                         .get("type").getAsString())),
                 "the host's table never showed the guest arriving");
 
+        // A reload lands back at the same table, which the browser cannot draw until it is sent again
+        sessions.disconnected(guestBrowser);
+        final Recorder reloaded = new Recorder();
+        sessions.connected(reloaded, "guest");
+        final JsonObject again = reloaded.awaitLobbyWithSeat();
+        Assert.assertNotNull(again, "a guest that reloaded in match setup was never shown the table again");
+        Assert.assertEquals(again.get("mySeat").getAsInt(), guestSeat, "a guest that reloaded lost its seat");
+        sessions.disconnected(reloaded);
+        sessions.connected(guestBrowser, "guest");
+
         // The guest's deck is theirs, chosen from their own list, and the host has to see it or cannot start
         sessions.onMessage(guestBrowser, JsonCodec.message("decks"));
         final String deck = legalDeck(guestBrowser.await("decks"));

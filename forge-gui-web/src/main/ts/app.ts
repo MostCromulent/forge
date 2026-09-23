@@ -215,7 +215,7 @@ function render(): void {
   byId('menu').hidden = page !== 'menu' && page !== 'name';
   byId('lobby').hidden = page !== 'lobby';
   byId('match').hidden = page !== 'match';
-  askForWhatIsMissing();
+  reclaimHostSeat();
   renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {
     return;
@@ -227,13 +227,9 @@ function render(): void {
   drawOverlay(model);
 }
 
-// What a screen needs and the server has not sent. A browser that has hosted this server before takes the free host
-// seat back without being asked, and match setup has nothing to draw until the table arrives.
-function askForWhatIsMissing(): void {
+// A browser that has hosted this server before takes the free host seat back without being asked
+function reclaimHostSeat(): void {
   if (!model.host && model.canClaimHost && !claimed && hostedBefore()) {
     actions.claimHost();
-  }
-  if (model.inLobby && !model.inMatch && !model.lobby) {
-    wire.openLobby(false);
   }
 }
