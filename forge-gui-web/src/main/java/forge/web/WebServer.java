@@ -432,12 +432,6 @@ public final class WebServer implements AutoCloseable {
                 }
                 return;
             }
-            if ("/playmat".equals(path)) {
-                final List<String> id = q.parameters().get("id");
-                final byte[] image = id == null ? null : Playmats.image(id.get(0));
-                respondOrNotFound(ctx, image, "image/jpeg");
-                return;
-            }
             if ("/mana".equals(path)) {
                 final List<String> symbol = q.parameters().get("s");
                 final byte[] png = symbol == null ? null : SkinSprites.manaPng(symbol.get(0));

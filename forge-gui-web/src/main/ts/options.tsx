@@ -1,8 +1,7 @@
 // The cog dialog: one scrolling list of settings with a search box, and the concede button under it
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { SETTINGS, playmatList, set, setting, type SettingDef } from './settings';
-import { playmatUrl } from './looks';
+import { SETTINGS, set, setting, type SettingDef } from './settings';
 
 export function Options({ close, concede }: { close: () => void; concede: () => void }) {
   const [query, setQuery] = useState('');
@@ -74,8 +73,6 @@ function Control({ def }: { def: SettingDef }) {
           {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} onClick={() => set(def.key, v)}>{label}</button>)}
         </div>
       );
-    case 'playmat':
-      return <Playmats def={def} value={String(value ?? '')} />;
     case 'css':
       return <CssEditor def={def} value={String(value ?? '')} />;
     case 'slider':
@@ -87,19 +84,6 @@ function Control({ def }: { def: SettingDef }) {
         </div>
       );
   }
-}
-
-// The playmats an installation has are its skins' own table images, so the picker is built from what the server sends
-function Playmats({ def, value }: { def: SettingDef; value: string }) {
-  return (
-    <div class="mat-grid">
-      {[{ id: '', label: 'Plain' }, ...playmatList()].map(mat => (
-        <button key={mat.id} class={mat.id === value ? 'mat chosen' : 'mat'} title={mat.label}
-          style={{ backgroundImage: mat.id ? `url("${playmatUrl(mat.id)}")` : 'none' }}
-          onClick={() => set(def.key, mat.id)} />
-      ))}
-    </div>
-  );
 }
 
 // A theme is a plain CSS file: load one, save the current one, or edit it here. Typed CSS lands at once.

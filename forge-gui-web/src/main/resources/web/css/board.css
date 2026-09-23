@@ -1,22 +1,14 @@
-/* The playmat sits behind everything, dimmed so the cards keep their contrast. Under it the table is lit
-   at the centre and falls away at the edges, which also vignettes a playmat towards the middle of the board. */
+/* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle. The wash
+   over it is what holds the cards' contrast against the lit middle. */
 #match::after {
   content: ''; position: fixed; inset: -16px; z-index: -3;
-  background: var(--playmat, none) center / cover no-repeat,
-              radial-gradient(120% 90% at 50% 42%, var(--bg) 0%, var(--bg-deep) 100%);
+  background: radial-gradient(120% 90% at 50% 42%, var(--bg) 0%, var(--bg-deep) 100%);
 }
 #match::before {
   content: ''; position: fixed; inset: -16px; z-index: -3;
   background: radial-gradient(120% 90% at 50% 42%,
               color-mix(in srgb, var(--bg) 42%, transparent) 0%,
               color-mix(in srgb, var(--bg-deep) 68%, transparent) 100%);
-}
-/* The wash is there to hold card contrast over a bright table. Forge's own playmats are near-black
-   already, so over one it only has to take the edges down. */
-.has-playmat #match::before {
-  background: radial-gradient(120% 90% at 50% 42%,
-              color-mix(in srgb, var(--bg) 8%, transparent) 0%,
-              color-mix(in srgb, var(--bg-deep) 42%, transparent) 100%);
 }
 /* The player column holds three zone tiles abreast, and the console in the corner below it is as wide */
 #match { --side-gap: 280px; --seat-w: calc(var(--tile-w) * 3 + 24px); --console-w: var(--seat-w); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }

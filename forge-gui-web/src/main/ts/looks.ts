@@ -4,8 +4,6 @@ import type { PlayerView } from './protocol';
 // Avatars and sleeves are numbered cells of the skin's sprite sheets, the same numbers desktop stores
 export const avatarUrl = (index: number): string => `avatar?i=${index}`;
 export const sleeveUrl = (index: number): string => `sleeve?i=${index}`;
-// A playmat is one of the skins' table images, named by its id
-export const playmatUrl = (id: string): string => `playmat?id=${encodeURIComponent(id)}`;
 
 // Packets leave out values still at their default, so a missing index means 0; -1 means none.
 // A card-art avatar, when the player has one, wins over the sprite

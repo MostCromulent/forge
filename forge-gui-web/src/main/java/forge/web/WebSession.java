@@ -514,7 +514,7 @@ public final class WebSession {
                 playerName(),
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
-                SkinSprites.avatarCount(), SkinSprites.sleeveCount(), Playmats.list(), DeckCatalog.savedSleeveArt());
+                SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt());
     }
 
     private static boolean invited(final Stage stage) {

@@ -1,8 +1,7 @@
 // Every setting the player can change: in the options dialog, or in the volume control for those marked with it.
 // Settings marked server:true are Forge preferences shared with the desktop client; the rest live in this browser.
 
-import { cssUrl, playmatUrl } from './looks';
-import type { Playmat, ServerSettings } from './protocol';
+import type { ServerSettings } from './protocol';
 
 const LOCAL_KEY = 'forge.settings';
 const DEFAULTS_KEY = 'forge.defaults';
@@ -26,7 +25,6 @@ export type SettingDef = SettingBase & (
   | { type: 'toggle'; def: boolean }
   | { type: 'choice'; options: [string, string][]; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
-  | { type: 'playmat'; def: string }
   | { type: 'css'; def: string }
 );
 
@@ -92,10 +90,6 @@ export const SETTINGS: SettingDef[] = [
     section: 'Sound', key: 'musicVolume', label: 'Music', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   {
-    section: 'Theme', key: 'playmat', label: 'Playmat', hint: 'The table the board is played on.',
-    type: 'playmat', def: '',
-  },
-  {
     section: 'Theme', key: 'customCss', label: 'Custom CSS',
     hint: 'Applied to every screen as you type, and kept in this browser.', type: 'css', def: '',
   },
@@ -124,15 +118,6 @@ export function initSettings(save: (key: string, value: string) => void, schedul
   }
   apply();
 }
-
-let playmats: Playmat[] = [];
-
-export function setPlaymats(list: Playmat[] | undefined): void {
-  playmats = list ?? [];
-  apply();
-}
-
-export const playmatList = (): Playmat[] => playmats;
 
 export function setting(key: string): SettingValue {
   const def = byKey.get(key);
@@ -209,7 +194,7 @@ export function set(key: string, value: SettingValue): void {
   redraw();
 }
 
-// Pushes card and hand size, the highlight colour, the playmat and the custom CSS into CSS; the rest is read where it is used
+// Pushes card and hand size, the highlight colour and the custom CSS into CSS; the rest is read where it is used
 function apply(): void {
   const root = document.documentElement;
   // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog
@@ -221,12 +206,6 @@ function apply(): void {
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
   customStyle().textContent = String(setting('customCss') ?? '');
-  // A url() inside a custom property resolves against the stylesheet that uses it, not the page, so a
-  // relative one asks board.css's own folder for it. cssUrl makes it absolute, as it does for sleeves.
-  const mat = String(setting('playmat'));
-  root.style.setProperty('--playmat', cssUrl(mat ? playmatUrl(mat) : ''));
-  // Every playmat Forge ships is already dark, so the table's own wash lifts off one rather than burying it
-  root.classList.toggle('has-playmat', !!mat);
 }
 
 function customStyle(): HTMLStyleElement {

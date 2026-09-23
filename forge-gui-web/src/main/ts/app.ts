@@ -16,7 +16,7 @@ import { initSide, renderSide } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
-import { initSettings, onServerSettings, restoreGuestSettings, setGuest, setPlaymats } from './settings';
+import { initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
@@ -142,7 +142,6 @@ function apply(msg: ServerMessage): void {
       }
       model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
-      setPlaymats(msg.playmats);
       model.error = null;
       // A new lobby has an address and a conversation of its own
       model.addresses = null;

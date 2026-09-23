@@ -16,7 +16,6 @@ export interface Hello {
   sleeves: number[];
   avatarCount: number;
   sleeveCount: number;
-  playmats: Playmat[];
   sleeveArt: SavedSleeveArt[];
 }
 
@@ -500,11 +499,6 @@ export type GameEvent =
   | PlayerDamaged
   | AttackersDeclared
   | Shuffled;
-
-export interface Playmat {
-  id: string;
-  label: string;
-}
 
 export interface SavedSleeveArt {
   key: string;
