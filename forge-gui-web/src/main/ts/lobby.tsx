@@ -31,19 +31,19 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
     <>
       <header class="lobby-head">
         <span class="wordmark">Forge</span>
-        <div class="formats" id="formats">
+        <div class="formats">
           {lobby.formats.map(f => (
-            <button key={f.id} class="format" data-format={f.id} aria-pressed={f.id === lobby.format}
+            <button key={f.id} class="format" aria-pressed={f.id === lobby.format}
               disabled={!lobby.host} onClick={() => actions.setFormat(f.id)}>{f.name}</button>
           ))}
         </div>
         <div class="head-right">
           <label class="spectate" hidden={!lobby.host}>
-            <input id="spectate" type="checkbox" checked={ui.spectate}
+            <input type="checkbox" checked={ui.spectate}
               onChange={e => { const on = e.currentTarget.checked; changeUi(u => { u.spectate = on; }); }} /> Watch the computer play
           </label>
           {/* The table belongs to the host, so a joined client has no menu to go back to */}
-          <button id="lobby-back" hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
+          <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
         </div>
       </header>
       <div class="lobby-main">
@@ -52,15 +52,15 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} />)}
         </div>
         <div class="seat-add">
-          <button id="add-seat" hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
+          <button hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
             onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
         <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />
         {/* A game only this machine can reach has nothing to share and nobody to talk to */}
-        <div class="lobby-net" id="lobby-net" hidden={!lobby.shareable && lobby.host}>
-          <section class="share" id="share" hidden={!lobby.shareable}>
+        <div class="lobby-net" hidden={!lobby.shareable && lobby.host}>
+          <section class="share" hidden={!lobby.shareable}>
             <h3>Others join at</h3>
-            <div class="share-list" id="share-list">
+            <div class="share-list">
               {lobby.shareable && <Addresses list={model.addresses ?? []} />}
             </div>
           </section>
@@ -180,7 +180,7 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   if (!lobby.host) {
     return (
       <div class="play-row">
-        <p class="match-line" id="match-line">{problems.length ? problems[0] : 'Waiting for the host to start the match.'}</p>
+        <p class="match-line">{problems.length ? problems[0] : 'Waiting for the host to start the match.'}</p>
       </div>
     );
   }
@@ -188,12 +188,12 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   return (
     <div class="play-row">
       <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start}>Play</button>
-      <p class="match-line" id="match-line" hidden={!lobby.canStart}>
+      <p class="match-line" hidden={!lobby.canStart}>
         {`${format} · ${lobby.seats.length} players · Enter starts the match.`}
       </p>
-      <div class="not-yet" id="not-yet" hidden={lobby.canStart}>
+      <div class="not-yet" hidden={lobby.canStart}>
         <b>Not playable yet</b>
-        <ul id="problems">{problems.map(p => <li key={p}>{p}</li>)}</ul>
+        <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
       </div>
     </div>
   );

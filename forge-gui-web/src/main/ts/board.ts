@@ -14,13 +14,14 @@ import type { CardClick } from './cards';
 import type { Actions } from './actions';
 import type { CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
 
+// The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
 export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
-  const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), !!menu, e?.clientX ?? 0, e?.clientY ?? 0);
+  const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
   renderSeat(byId('opponent'), model, opponents(model)[0], onField, actions, select);
@@ -74,7 +75,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   showLife(q(root, '.life'), avatar, player.Life ?? 0, isLocal(model, player));
   q(root, '.name').textContent = player.Name ?? '';
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
-  avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r?.ref === player.$key));
+  avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   renderZoneTiles(q(root, '.zone-tiles'), model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
@@ -233,7 +234,7 @@ function renderEmblems(root: HTMLElement, model: Model, cards: CardView[], selec
       el.title = state.Name ?? '';
       const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
       q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
-      el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r?.ref === card.$key));
+      el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
     });
 }
 

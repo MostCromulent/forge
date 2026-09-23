@@ -9,6 +9,7 @@ import type { ZoneType } from './protocol';
 interface Panel {
   player: number;
   zone: ZoneType;
+  /** The game is showing it, so the game, not a Close button, puts it away. */
   forced: boolean;
 }
 

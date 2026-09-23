@@ -19,7 +19,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
     return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => setRenaming(false)} />;
   }
   // A browser without the host's seat has no menu: it is offered the seat, or told to wait for one
-  if (model.host === false) {
+  if (!model.host) {
     return <Waiting model={model} actions={actions} />;
   }
   const decks = model.decks?.length ?? 0;
@@ -28,18 +28,18 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   return (
     <div class="menu-page">
       <h1 class="wordmark">Forge</h1>
-      <div class="modes" id="modes">
+      <div class="modes">
         <Mode id="play" name="Offline" blurb="A match against the computer"
           status={decks ? `${decks} decks ready` : 'no decks yet — a precon will do'} onClick={() => actions.openLobby(false)} />
         <Mode id="multiplayer" name="Multiplayer" blurb="Send a friend a link to your game"
           status="opens a seat and gives you a link" onClick={() => actions.openLobby(true)} />
         <Mode id="editor" name="Deck editor" blurb="Build and change decks" status="not built yet" />
       </div>
-      <p class={model.error ? 'menu-note bad' : 'menu-note'} id="menu-note">{model.error ?? ''}</p>
+      <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
       <div class="menu-foot">
-        <span id="menu-who">{model.playerName ? `Playing as ${model.playerName}` : ''}</span>
-        <button class="link" id="menu-rename" onClick={() => setRenaming(true)}>Change name</button>
-        <button id="menu-quit" onClick={() => actions.quit()}>Quit</button>
+        <span>{model.playerName ? `Playing as ${model.playerName}` : ''}</span>
+        <button class="link" onClick={() => setRenaming(true)}>Change name</button>
+        <button onClick={() => actions.quit()}>Quit</button>
       </div>
     </div>
   );
@@ -50,7 +50,7 @@ function Mode({ id, name, blurb, status, onClick }: { id: string; name: string; 
     <button class="mode" data-mode={id} disabled={!onClick} onClick={onClick}>
       <span class="mode-name">{name}</span>
       <span class="mode-blurb">{blurb}</span>
-      <span class="mode-status" data-status={id}>{status}</span>
+      <span class="mode-status">{status}</span>
     </button>
   );
 }

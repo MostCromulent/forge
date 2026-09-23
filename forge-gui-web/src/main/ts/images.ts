@@ -23,9 +23,9 @@ export function noImageOnError(container: HTMLElement, img: HTMLImageElement): v
 }
 
 // {2}{B} and {T} are drawn from the skin's icon sheet; a symbol the sheet has no image for keeps its text
-export function setSymbolText(el: HTMLElement, text: string | null | undefined, className?: string): void {
+export function setSymbolText(el: HTMLElement, text: string | null | undefined): void {
   el.replaceChildren();
-  appendSymbolText(el, text ?? '', className);
+  appendSymbolText(el, text ?? '');
 }
 
 export function appendSymbolText(el: HTMLElement, text: string, className?: string): void {

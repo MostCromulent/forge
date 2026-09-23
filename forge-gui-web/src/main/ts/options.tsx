@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { SETTINGS, playmatList, set, setting, type SettingDef } from './settings';
+import { playmatUrl } from './looks';
 
 export function Options({ close, concede }: { close: () => void; concede: () => void }) {
   const [query, setQuery] = useState('');
@@ -94,7 +95,7 @@ function Playmats({ def, value }: { def: SettingDef; value: string }) {
     <div class="mat-grid">
       {[{ id: '', label: 'Plain' }, ...playmatList()].map(mat => (
         <button key={mat.id} class={mat.id === value ? 'mat chosen' : 'mat'} title={mat.label}
-          style={{ backgroundImage: mat.id ? `url("playmat?id=${encodeURIComponent(mat.id)}")` : 'none' }}
+          style={{ backgroundImage: mat.id ? `url("${playmatUrl(mat.id)}")` : 'none' }}
           onClick={() => set(def.key, mat.id)} />
       ))}
     </div>

@@ -115,7 +115,7 @@ function apply(msg: ServerMessage): void {
   switch (msg.t) {
     case 'hello':
       resetPace();
-      model.host = msg.host !== false;
+      model.host = msg.host;
       setGuest(!model.host);
       // Before any game opens, so the game is seeded with them rather than corrected afterwards
       if (!model.host && !restored) {
@@ -123,12 +123,12 @@ function apply(msg: ServerMessage): void {
         restoreGuestSettings();
         stopMemory.restore(actions.setStops);
       }
-      model.canClaimHost = !!msg.canClaimHost;
+      model.canClaimHost = msg.canClaimHost;
       model.inMatch = msg.inMatch;
-      model.inLobby = !!msg.inLobby;
+      model.inLobby = msg.inLobby;
       // A picker belongs to the table it was opened over
       if (!model.inLobby) ui.picker = null;
-      model.spectating = !!msg.spectating;
+      model.spectating = msg.spectating;
       model.playerName = msg.playerName ?? '';
       model.nameSent = false;
       if (model.playerName) {
@@ -136,7 +136,7 @@ function apply(msg: ServerMessage): void {
       } else {
         offerRememberedName();
       }
-      if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
+      model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
       setPlaymats(msg.playmats);
       model.error = null;
@@ -144,7 +144,7 @@ function apply(msg: ServerMessage): void {
       model.addresses = null;
       askedAddresses = false;
       model.chat = [];
-      model.networked = !!msg.networked;
+      model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
       if (!msg.inMatch) {

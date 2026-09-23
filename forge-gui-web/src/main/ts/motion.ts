@@ -302,7 +302,7 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
-function sendTo(was: { rect: DOMRect; ghost: HTMLElement | null }, target: DOMRect, endOpacity: number): void {
+function sendTo(was: Snapshot, target: DOMRect, endOpacity: number): void {
   if (!was.ghost) {
     return;
   }

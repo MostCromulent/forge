@@ -47,6 +47,9 @@ export function renderPrompt(model: Model, actions: Actions): void {
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
+    const card = q<HTMLImageElement>(root, '.prompt-card');
+    hideOnError(card);
+    hoverable(card);
     built = true;
   }
   root.classList.toggle('spectating', !!model.spectating);
@@ -77,11 +80,6 @@ export function renderPrompt(model: Model, actions: Actions): void {
 
 // The card the prompt is about (the spell being targeted, the trigger being paid for), as desktop shows it
 function renderPromptCard(img: HTMLImageElement, model: Model, ref: Ref | null | undefined): void {
-  if (!img.dataset.wired) {
-    img.dataset.wired = '1';
-    hideOnError(img);
-    hoverable(img);
-  }
   const card = ref ? model.objects.get(ref.ref) : null;
   const src = cardImageSrc(model, card);
   img.dataset.key = String(card?.$key ?? '');

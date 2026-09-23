@@ -40,7 +40,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       default: {
         // A kind this browser does not know yet still gets an answer, so the game is never left waiting
         const unknown = req as { default?: unknown };
-        return <Actions><Button primary onClick={() => answer(unknown.default)}>OK</Button></Actions>;
+        return <ButtonRow><Button primary onClick={() => answer(unknown.default)}>OK</Button></ButtonRow>;
       }
     }
   })();
@@ -66,7 +66,7 @@ function Button({ primary, disabled, onClick, children }: {
   return <button class={primary ? 'primary' : ''} disabled={disabled} onClick={onClick}>{children}</button>;
 }
 
-function Actions({ children }: { children: ComponentChildren }) {
+function ButtonRow({ children }: { children: ComponentChildren }) {
   return <div class="actions">{children}</div>;
 }
 
@@ -176,7 +176,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
         {shown.map(i => <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
       </div>
       <p class="hint">{note}</p>
-      <Actions><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? 'OK' : 'Confirm'}</Button></Actions>
+      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? 'OK' : 'Confirm'}</Button></ButtonRow>
     </>
   );
 }
@@ -225,10 +225,10 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
         ))}
       </div>
       {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> Remember this order</label>}
-      <Actions>
+      <ButtonRow>
         <Button primary disabled={chosen.length < req.min || chosen.length > req.max}
           onClick={() => answer({ indices: chosen, remember })}>Confirm</Button>
-      </Actions>
+      </ButtonRow>
     </>
   );
 }
@@ -265,7 +265,7 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
       <p class="hint">{`${rest.length} other cards`}</p>
       <p class="hint">Bottom of library, last is at the bottom</p>
       {pile('bottom')}
-      <Actions><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>Confirm</Button></Actions>
+      <ButtonRow><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>Confirm</Button></ButtonRow>
     </>
   );
 }
@@ -275,7 +275,7 @@ function Option({ req, model, answer }: { req: OptionRequest; model: Model; answ
   return (
     <>
       {card && <BoardCard model={model} card={card} />}
-      <Actions>{req.labels.map((label, i) => <Button key={i} primary={i === req.default} onClick={() => answer(i)}>{label}</Button>)}</Actions>
+      <ButtonRow>{req.labels.map((label, i) => <Button key={i} primary={i === req.default} onClick={() => answer(i)}>{label}</Button>)}</ButtonRow>
     </>
   );
 }
@@ -289,7 +289,7 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
   return (
     <>
       <input ref={input} type={req.numeric ? 'number' : 'text'} value={value} onInput={e => setValue(e.currentTarget.value)} />
-      <Actions><Button primary onClick={() => answer(value)}>OK</Button></Actions>
+      <ButtonRow><Button primary onClick={() => answer(value)}>OK</Button></ButtonRow>
     </>
   );
 }
@@ -314,10 +314,10 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
         </div>
       ))}
       <p class="hint">{`${left} left to assign`}</p>
-      <Actions>
+      <ButtonRow>
         {req.maySkip && <Button onClick={() => answer(null)}>Skip</Button>}
         <Button primary disabled={left !== 0} onClick={() => answer(values)}>Confirm</Button>
-      </Actions>
+      </ButtonRow>
     </>
   );
 }
@@ -349,10 +349,10 @@ function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model
           <div class="sb-list">{req.entries.map((e, i) => (e.total - inMain[i] > 0 ? row(i, e.total - inMain[i], '←', 1) : null))}</div>
         </div>
       </div>
-      <Actions>
+      <ButtonRow>
         <Button onClick={() => setInMain([...req.main])}>Reset</Button>
         <Button primary onClick={() => answer(inMain)}>Done</Button>
-      </Actions>
+      </ButtonRow>
     </>
   );
 }

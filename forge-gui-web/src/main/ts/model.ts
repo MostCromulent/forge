@@ -4,14 +4,13 @@ import type {
   StackMenu, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
+/** How many avatars and sleeves the skin's sprite sheets hold. */
 export interface Looks {
-  avatars?: number[];
-  sleeves?: number[];
   avatarCount: number;
   sleeveCount: number;
 }
 
-// Browser copy of the game's object table; forge.web.BrowserModel implements the same apply-and-prune rules
+// Everything the browser knows. objects is its copy of the game's table, which forge.web.BrowserModel applies and prunes by the same rules
 export interface Model {
   objects: Map<number, TrackedObject>;
   root: number;

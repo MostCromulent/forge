@@ -1,7 +1,7 @@
 // Every setting the options dialog offers. Settings marked server:true are Forge preferences shared with the
 // desktop client; the rest live in this browser.
 
-import { cssUrl } from './looks';
+import { cssUrl, playmatUrl } from './looks';
 import type { Playmat, ServerSettings } from './protocol';
 
 const LOCAL_KEY = 'forge.settings';
@@ -92,7 +92,7 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: 'Theme', key: 'customCss', label: 'Custom CSS',
-    hint: 'Applied to the match screen as you type, and kept in this browser.', type: 'css', def: '',
+    hint: 'Applied to every screen as you type, and kept in this browser.', type: 'css', def: '',
   },
 ];
 
@@ -204,7 +204,7 @@ export function set(key: string, value: SettingValue): void {
   redraw();
 }
 
-// Card and hand size scale the shared card variables; the rest is read where it is used
+// Pushes card and hand size, the highlight colour, the playmat and the custom CSS into CSS; the rest is read where it is used
 function apply(): void {
   const root = document.documentElement;
   // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog
@@ -219,7 +219,7 @@ function apply(): void {
   // A url() inside a custom property resolves against the stylesheet that uses it, not the page, so a
   // relative one asks board.css's own folder for it. cssUrl makes it absolute, as it does for sleeves.
   const mat = String(setting('playmat'));
-  root.style.setProperty('--playmat', cssUrl(mat ? `playmat?id=${encodeURIComponent(mat)}` : ''));
+  root.style.setProperty('--playmat', cssUrl(mat ? playmatUrl(mat) : ''));
   // Every playmat Forge ships is already dark, so the table's own wash lifts off one rather than burying it
   root.classList.toggle('has-playmat', !!mat);
 }

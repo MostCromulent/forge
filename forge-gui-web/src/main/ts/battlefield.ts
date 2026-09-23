@@ -72,10 +72,10 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
   }
   const hosts = cards.filter(c => !hostOf(c));
   const marks = [
-    new Set(((model.prompt?.selectableMin ?? 0) > 0 ? model.prompt?.selectable ?? [] : []).map(r => r?.ref)),
-    new Set((model.prompt?.highlighted ?? [])),
-    new Set((model.playable?.cards ?? []).map(r => r?.ref)),
-    new Set((model.playable?.autoTap ?? []).map(r => r?.ref)),
+    new Set(((model.prompt?.selectableMin ?? 0) > 0 ? model.prompt?.selectable ?? [] : []).map(r => r.ref)),
+    new Set(model.prompt?.highlighted ?? []),
+    new Set((model.playable?.cards ?? []).map(r => r.ref)),
+    new Set((model.playable?.autoTap ?? []).map(r => r.ref)),
   ];
   const piles = new Map<string, Slot>();
   const slots: Slot[] = [];
@@ -99,12 +99,15 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
 function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
-  // Only a creature is held back by summoning sickness, so a land played this turn is no different from the
-  // lands played before it and belongs in their pile
-  const sick = !!card.Sickness && /Creature/.test(s.Type ?? '');
+  // A land played this turn is no different from the lands played before it, so it belongs in their pile
   return JSON.stringify([s.Name, s.ImageKey, s.Power, s.Toughness, s.Loyalty, card.Tapped, card.Counters, card.Damage,
-    card.Attacking, card.Blocking, sick, card.PhasedOut, card.Token, card.EntityAttachedTo, card.IsRingBearer,
+    card.Attacking, card.Blocking, isSick(model, card), card.PhasedOut, card.Token, card.EntityAttachedTo, card.IsRingBearer,
     ...marks.map(m => m.has(card.$key))]);
+}
+
+// Only a creature is held back by summoning sickness; the engine flags other cards too
+function isSick(model: Model, card: CardView): boolean {
+  return !!card.Sickness && /Creature/.test(stateOf(model, card).Type ?? '');
 }
 
 function createSlot(): HTMLElement {
@@ -119,15 +122,16 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
     updateCard(c, model, card);
     // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
-    c.classList.toggle('sickness', !!card.Sickness && /Creature/.test(stateOf(model, card).Type ?? ''));
+    c.classList.toggle('sickness', isSick(model, card));
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));
   el.classList.toggle('attacking', !!slot.top.Attacking);
   const sig = slot.sig;
-  const spreadable = !!sig && (slot.members.length > 1 || ui.openPiles.has(sig));
+  const opened = !!sig && ui.openPiles.has(sig);
+  const spreadable = opened || (!!sig && slot.members.length > 1);
   const top = el.lastChild as HTMLElement;
-  setPileCount(top, slot.members.length, spreadable && ui.openPiles.has(sig as string));
+  setPileCount(top, slot.members.length, opened);
   const count = q(top, '.count');
   count.onclick = spreadable && sig ? e => {
     e.stopPropagation();

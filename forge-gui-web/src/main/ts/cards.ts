@@ -23,7 +23,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
   return el;
 }
 
-const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r?.ref === key);
+const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
 
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
@@ -93,6 +93,6 @@ export function setPileCount(el: HTMLElement, count: number, opened: boolean): v
   el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';
-  badge.classList.toggle('opened', !!opened);
+  badge.classList.toggle('opened', opened);
   badge.title = opened ? 'Put the pile back together' : count > 1 ? 'Lay the pile out' : '';
 }

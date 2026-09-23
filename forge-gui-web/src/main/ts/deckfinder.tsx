@@ -119,7 +119,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
               ))}
             </div>
             {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
-            <button class="get-net" hidden={model.host === false} onClick={() => actions.fetchNetDecks()}>Get net decks…</button>
+            <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>Get net decks…</button>
             <div class="colours">
               {COLOURS.map(([letter, name]) => (
                 <button key={letter} class="colour" title={name} aria-pressed={filter.colours.has(letter)} onClick={() => {
@@ -184,8 +184,7 @@ function Hit({ deck: d, chosen, choose, use }: { deck: DeckSummary; chosen: bool
   );
 }
 
-// The last bucket holds everything at that mana value and above. Heights are in pixels because a
-// percentage would resolve against an auto-sized row and collapse to nothing.
+// Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
 const CURVE_PX = 42;
 
 // Hovering a card in the list shows it, the way hovering one on the table does: beside the line being pointed at,
@@ -218,6 +217,7 @@ function Chosen({ details }: { details: DeckDetails }) {
             <h4>Mana curve</h4>
             <div class="bars">
               {s.curve.map((n, i) => {
+                // The last bucket holds everything at that mana value and above
                 const label = i === s.curve.length - 1 ? `${i}+` : `${i}`;
                 const h = n === 0 ? 2 : Math.max(3, Math.round((n / tallest) * CURVE_PX));
                 return <span key={i} class="bar" title={`${n} at ${label}`}><i style={{ height: `${h}px` }} /><em>{label}</em></span>;

@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { deref, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
-import { q } from './dom';
+import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { GameView, PhaseType, TurnMarker } from './protocol';
@@ -64,12 +64,13 @@ const PHASES: Phase[] = [
 ];
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
 export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
+const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
 
 let wired = false;
 
 export function renderPhaseBar(model: Model, g: GameView, actions: Actions): void {
   const open = ui.stopsOpen;
-  const root = document.getElementById('phase-strip') as HTMLElement;
+  const root = byId('phase-strip');
   if (!wired) {
     build(root);
     wired = true;
@@ -80,7 +81,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   const opponentLabel = opponent.length === 1 ? opponent[0].Name ?? '' : 'Opponents';
   const step = stepIndex(g.Phase);
   // Untap (index -1) belongs to the beginning phase
-  const phase = step < 0 ? 0 : PHASES.findIndex(p => p.steps.includes(step));
+  const phase = step < 0 ? 0 : phaseOf(step);
   const pill = q(root, '.pill');
   const avatar = active ? playerAvatarUrl(active) : '';
   const portrait = q<HTMLImageElement>(pill, '.owner img');
@@ -213,7 +214,7 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: s
     { mine: false, label: `${escapeHtml(opponentLabel)}'s turns`, stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
     { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
   ];
-  const gap = (i: number) => (i > 0 && PHASES.findIndex(p => p.steps.includes(i)) !== PHASES.findIndex(p => p.steps.includes(i - 1))) ? '<td class="gap"></td>' : '';
+  const gap = (i: number) => (i > 0 && phaseOf(i) !== phaseOf(i - 1)) ? '<td class="gap"></td>' : '';
   const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th title="${s[2]}"><span class="head ${i === step ? 'current' : ''}">${glyph(s[1], 13)}</span><span class="name">${s[3]}</span></th>`).join('') + '</tr>';
   const body = rows.map(r => '<tr>' + `<td class="who">${r.label}${r.now ? ' <span class="now">now</span>' : ''}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
