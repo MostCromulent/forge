@@ -193,8 +193,8 @@
 #phase-strip .stops .title { margin-bottom: 4px; font-weight: 650; }
 #phase-strip .stops table { border-collapse: separate; border-spacing: 0; }
 #phase-strip .stops td, #phase-strip .stops th { padding: 0; height: 22px; text-align: center; font-weight: 400; }
-#phase-strip .stops th { width: 46px; vertical-align: top; padding-bottom: 4px; }
-#phase-strip .stops th .name { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; line-height: 1.15; }
+#phase-strip .stops th { width: 50px; vertical-align: top; padding: 0 3px 5px; }
+#phase-strip .stops th .name { display: block; margin-top: 4px; color: var(--muted); font-size: 9.5px; line-height: 1.25; }
 #phase-strip .stops th .current + .name { color: var(--text); font-weight: 650; }
 #phase-strip .stops td.who { text-align: left; padding: 0 10px 0 8px; white-space: nowrap; }
 /* Each phase heads its steps with a bracket, and a gap sets one phase apart from the next */

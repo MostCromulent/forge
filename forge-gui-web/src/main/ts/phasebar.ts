@@ -65,7 +65,9 @@ const PHASES: Phase[] = [
   { glyph: 'end', name: 'End of turn', group: 'Ending', steps: [10, 11] },
 ];
 /** Under its phase's heading a step needs less of a name: a lone step none, and combat's own steps no "combat". */
-const GRID_NAMES: Partial<Record<PhaseType, string>> = { COMBAT_BEGIN: 'Begin', COMBAT_END: 'End' };
+const GRID_NAMES: Partial<Record<PhaseType, string>> = {
+  COMBAT_BEGIN: 'Begin', COMBAT_DECLARE_ATTACKERS: 'Attack', COMBAT_DECLARE_BLOCKERS: 'Block', COMBAT_END: 'End',
+};
 const gridName = (i: number): string =>
   PHASES[phaseOf(i)].steps.length === 1 ? '' : GRID_NAMES[STEPS[i][0]] ?? STEPS[i][3];
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
