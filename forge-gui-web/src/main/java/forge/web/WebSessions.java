@@ -74,8 +74,8 @@ final class WebSessions implements WebServer.Endpoint {
 
     /**
      * Stops the process giving up before anyone has connected. The countdown exists because nothing else
-     * showed Forge was running; with a window on screen that reason is gone, and a server started ahead of
-     * the players who will use it has to keep waiting.
+     * showed Forge was running; with the console on screen that reason is gone, and a server started ahead
+     * of the players who will use it has to keep waiting.
      */
     synchronized void visibleElsewhere() {
         holdOpen();

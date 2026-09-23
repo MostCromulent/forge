@@ -15,7 +15,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 public final class WebMain {
-    /** How long the process waits after the last browser goes. The status window is the way to end it sooner. */
+    /** How long the process waits after the last browser goes. The console is the way to end it sooner. */
     private static final long IDLE_MILLIS = 15_000;
 
     private WebMain() {}
@@ -23,16 +23,18 @@ public final class WebMain {
     public static void main(final String[] args) throws Exception {
         final WebGuiBase ui = new WebGuiBase();
         GuiBase.setInterface(ui);
-        FModel.initialize(null, prefs -> null);
         final CountDownLatch quit = new CountDownLatch(1);
+        // Opened before the cards are read, because reading them takes long enough to look like a failure
+        final ServerConsole console = ServerConsole.open(quit::countDown);
+        FModel.initialize(console, prefs -> null);
         final WebSessions sessions = new WebSessions(ui, IDLE_MILLIS, quit::countDown);
-        StatusWindow window = null;
-        try (WebServer server = new WebServer(sessions, newToken(), newToken())) {
+        // The console's own link is the host's; the addresses it lists are for other players, so they carry the guest token
+        final String guestToken = newToken();
+        try (WebServer server = new WebServer(sessions, newToken(), guestToken)) {
             sessions.setServer(server);
             System.out.println("Forge web UI: " + server.url());
-            // The browser is the whole interface, so without this there is nothing to show the game is running
-            window = StatusWindow.open(server.url(), ui, quit::countDown);
-            if (window != null) {
+            if (console != null) {
+                console.serving(server.url(), server.port(), guestToken, ui);
                 sessions.visibleElsewhere();
             }
             if (!Boolean.getBoolean("forge.web.noBrowser")) {
@@ -40,8 +42,8 @@ public final class WebMain {
             }
             quit.await();
         } finally {
-            if (window != null) {
-                window.close();
+            if (console != null) {
+                console.close();
             }
         }
         // Engine and netplay threads are not all daemons

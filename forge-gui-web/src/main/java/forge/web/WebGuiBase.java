@@ -61,16 +61,37 @@ public final class WebGuiBase implements IGuiBase {
             return withSlash(new File(configured).getAbsolutePath());
         }
         final File cwd = new File(System.getProperty("user.dir"));
-        if (new File(cwd, "res").isDirectory()) {
-            return withSlash(cwd.getAbsolutePath());
+        final String fromWorkingDirectory = findAssets(cwd);
+        if (fromWorkingDirectory != null) {
+            return fromWorkingDirectory;
         }
-        // Launched from the repo root or from a module directory
-        for (final File candidate : new File[]{new File(cwd, "forge-gui"), new File(cwd.getParentFile(), "forge-gui")}) {
-            if (new File(candidate, "res").isDirectory()) {
-                return withSlash(candidate.getAbsolutePath());
+        // A packaged JAR is often launched from its target directory or by double-clicking it. In that
+        // case user.dir is unrelated to the installation, so also look upward from the JAR/classes path.
+        try {
+            final File codeSource = new File(WebGuiBase.class.getProtectionDomain().getCodeSource()
+                    .getLocation().toURI());
+            final String fromCodeSource = findAssets(codeSource.isDirectory() ? codeSource : codeSource.getParentFile());
+            if (fromCodeSource != null) {
+                return fromCodeSource;
             }
+        } catch (final Exception ignored) {
+            // An explicit forge.assets.dir remains available for unusual launchers.
         }
         return "";
+    }
+
+    /** Finds either an assets folder itself or the forge-gui module below one of its ancestors. */
+    private static String findAssets(final File start) {
+        for (File directory = start; directory != null; directory = directory.getParentFile()) {
+            if (new File(directory, "res").isDirectory()) {
+                return withSlash(directory.getAbsolutePath());
+            }
+            final File gui = new File(directory, "forge-gui");
+            if (new File(gui, "res").isDirectory()) {
+                return withSlash(gui.getAbsolutePath());
+            }
+        }
+        return null;
     }
 
     private static String withSlash(final String path) {
