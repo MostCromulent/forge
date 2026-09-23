@@ -112,6 +112,9 @@ public class WebSettingsTest {
         final List<String> told = new ArrayList<>();
         WebSettings.applyAll(guest, recording(told));
         Assert.assertTrue(told.contains(FPref.YIELD_AUTO_PASS_NO_ACTIONS + "=true"), told.toString());
+        Assert.assertTrue(told.contains(FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS + "=true"),
+                "the interrupts are offered as what stops auto-passing, so auto-pass has to respect them: " + told);
+        Assert.assertEquals(guest.get(FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS), "false", "it is the game's, not a saved setting");
         Assert.assertEquals(told.size(), PlayerSettings.PER_PLAYER_ON_HOST.size(),
                 "every setting the host keeps per player should be sent, and the auto-yield mode, which it does not, should not");
     }
