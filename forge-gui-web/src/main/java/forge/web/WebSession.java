@@ -26,8 +26,32 @@ import org.tinylog.Logger;
 
 import java.util.List;
 
-/** One browser: its start page, its seat and its match. The host's session also owns shutting the process down. */
+/**
+ * One browser: its start page, its seat and its match. The host's session also owns shutting the process down.
+ *
+ * <p>Where the browser is lives in one {@link Stage}, and every move between stages goes through {@link #move}, which
+ * closes whatever the stage being left held and tells the browser where it is now. A reconnecting browser is put
+ * back by the same stage, so a reload and a first visit cannot disagree about what the page should show.</p>
+ */
 public final class WebSession {
+    /** Where the browser is. Each stage holds what exists there and nothing else. */
+    sealed interface Stage permits Menu, Opening, Setup, Playing { }
+
+    /** The start page; for a guest, waiting for the host to open a game. */
+    record Menu() implements Stage { }
+
+    /**
+     * Taking a seat: the host opening a game of its own, or a guest joining the host's. The table is built while the
+     * browser waits, and nothing may change it until the seat is taken.
+     */
+    record Opening() implements Stage { }
+
+    /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
+    record Setup(WebGuiGame gui, boolean invited) implements Stage { }
+
+    /** In a match, playing it or watching the computer play it. */
+    record Playing(WebGuiGame gui, boolean invited, boolean spectating) implements Stage { }
+
     private static final int CARD_SEARCH_LIMIT = 60;
     /** Long enough for any name a player types, short enough to fit on a seat plate. */
     static final int MAX_NAME_LENGTH = 24;
@@ -39,15 +63,7 @@ public final class WebSession {
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
-    private volatile WebGuiGame match;
-    /** The seat's GUI, made when the lobby opens because the client plays through it from then on. */
-    private volatile WebGuiGame lobbyGui;
-    /** True when an AI plays the web seat and the browser only spectates. */
-    private volatile boolean spectating;
-    /** True once the browser has opened match setup, so a reconnect lands back on it rather than the menu. */
-    private volatile boolean inLobby;
-    /** Whether the open game was made to be joined, so leaving a match lands back in the same kind of lobby. */
-    private volatile boolean inviting;
+    private volatile Stage stage = new Menu();
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
 
@@ -75,7 +91,40 @@ public final class WebSession {
 
     /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
     boolean hasGame() {
-        return inLobby || match != null;
+        final Stage now = stage;
+        return now instanceof Setup || now instanceof Playing;
+    }
+
+    Stage stage() {
+        return stage;
+    }
+
+    /**
+     * Moves from one stage to the next, if the browser is still where the caller found it: a guest's seat can
+     * vanish while it is being taken, and a match can end under a lobby being opened. Closes the GUI the old stage
+     * held unless the new one carries it on, and tells the browser where it now is.
+     */
+    private synchronized boolean move(final Stage from, final Stage next) {
+        if (stage != from) {
+            return false;
+        }
+        stage = next;
+        final WebGuiGame old = guiOf(from);
+        if (old != null && old != guiOf(next)) {
+            old.close();
+        }
+        final BrowserChannel b = browser;
+        if (b != null) {
+            b.send(hello());
+        }
+        return true;
+    }
+
+    private static WebGuiGame guiOf(final Stage stage) {
+        if (stage instanceof Setup s) {
+            return s.gui();
+        }
+        return stage instanceof Playing p ? p.gui() : null;
     }
 
     /** The seat came free or was taken, so a browser waiting on it is told again what it may do. */
@@ -110,26 +159,26 @@ public final class WebSession {
         return local.isHost() ? local.port() : -1;
     }
 
+    /** A browser arrived, first or again. It is put back where its stage says it is. */
     synchronized void connected(final BrowserChannel channel) {
         final BrowserChannel previous = browser;
         browser = channel;
-        final WebGuiGame m = match;
-        if (m != null && previous != null) {
-            m.detach(previous);
+        final Stage now = stage;
+        if (now instanceof Playing p && previous != null) {
+            p.gui().detach(previous);
         }
         channel.send(hello());
         if (isHost) {
             ui.hostRequests().replay(channel::send);
         }
-        if (m != null) {
-            m.attach(channel);
-        } else if (inLobby) {
-            // A reload in match setup lands back at the same table, which only this message describes
+        if (now instanceof Playing p) {
+            p.gui().attach(channel);
+        } else if (now instanceof Setup) {
+            // Match setup is drawn from the table, which only these messages describe
             channel.send(lobby.decks());
             channel.send(lobby.state());
-        }
-        // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
-        if (!isHost && !inLobby && name != null) {
+        } else if (now instanceof Menu) {
+            // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
             joinHostGame();
         }
     }
@@ -139,9 +188,8 @@ public final class WebSession {
             return;
         }
         browser = null;
-        final WebGuiGame m = match;
-        if (m != null) {
-            m.detach(channel);
+        if (stage instanceof Playing p) {
+            p.gui().detach(channel);
         }
     }
 
@@ -159,40 +207,21 @@ public final class WebSession {
             case "lobby" -> ui.invokeInEdtLater(() -> openLobby(channel, false));
             case "invite" -> ui.invokeInEdtLater(() -> openLobby(channel, true));
             case "leaveLobby" -> ui.invokeInEdtLater(() -> {
-                inLobby = false;
-                local.close();
-                channel.send(hello());
-                if (isHost) {
-                    sessions.hostGameClosed();
+                final Stage now = stage;
+                if (now instanceof Setup && move(now, new Menu())) {
+                    local.close();
+                    if (isHost) {
+                        sessions.hostGameClosed();
+                    }
                 }
             });
-            case "ready" -> {
-                lobby.setReady(Wire.decode(msg, Ready.class).ready());
-                channel.send(lobby.state());
-            }
-            case "openSeat", "aiSeat", "removeSeat" -> {
-                final SeatCommand seat = Wire.decode(msg, SeatCommand.class);
-                switch (seat.t()) {
-                    case openSeat -> lobby.openSeat(seat.index());
-                    case aiSeat -> lobby.aiSeat(seat.index());
-                    case removeSeat -> lobby.removeSeat(seat.index());
+            // The table can be changed only while it is set up: not while it is being built, and not once it is played
+            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "addSeat", "setSeat", "sleeveArt" -> {
+                if (stage instanceof Setup) {
+                    onSetup(channel, msg);
                 }
-                channel.send(lobby.state());
             }
             case "chat" -> local.sendChat(Wire.decode(msg, Say.class).text());
-            case "setFormat" -> {
-                lobby.setFormat(Wire.decode(msg, SetFormat.class).format());
-                channel.send(lobby.decks());
-                channel.send(lobby.state());
-            }
-            case "addSeat" -> {
-                lobby.addSeat();
-                channel.send(lobby.state());
-            }
-            case "setSeat" -> {
-                applySeat(channel, Wire.decode(msg, SetSeat.class));
-                channel.send(lobby.state());
-            }
             case "deckDetails" -> {
                 final ToBrowser.DeckDetailsMessage details = lobby.deckDetails(Wire.decode(msg, AskDeckDetails.class).key());
                 if (details != null) {
@@ -220,11 +249,6 @@ public final class WebSession {
                 final String name = Wire.decode(msg, AskPrintings.class).name();
                 channel.send(new Printings(name, DeckCatalog.printings(name)));
             }
-            case "sleeveArt" -> {
-                final SleeveArt art = Wire.decode(msg, SleeveArt.class);
-                lobby.setSleeveArt(art.index(), art.key(), art.offset());
-                channel.send(lobby.state());
-            }
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             case "start" -> {
                 final Start start = Wire.decode(msg, Start.class);
@@ -238,12 +262,40 @@ public final class WebSession {
                 }
             }
             default -> {
-                final WebGuiGame m = match;
-                if (m != null) {
-                    m.onBrowserMessage(msg);
+                if (stage instanceof Playing p) {
+                    p.gui().onBrowserMessage(msg);
                 }
             }
         }
+    }
+
+    /** A change to the table, made while it is being set up. */
+    private void onSetup(final BrowserChannel channel, final JsonObject msg) {
+        switch (msg.get("t").getAsString()) {
+            case "ready" -> lobby.setReady(Wire.decode(msg, Ready.class).ready());
+            case "openSeat", "aiSeat", "removeSeat" -> {
+                final SeatCommand seat = Wire.decode(msg, SeatCommand.class);
+                switch (seat.t()) {
+                    case openSeat -> lobby.openSeat(seat.index());
+                    case aiSeat -> lobby.aiSeat(seat.index());
+                    case removeSeat -> lobby.removeSeat(seat.index());
+                }
+            }
+            case "setFormat" -> {
+                lobby.setFormat(Wire.decode(msg, SetFormat.class).format());
+                channel.send(lobby.decks());
+            }
+            case "addSeat" -> lobby.addSeat();
+            case "setSeat" -> applySeat(channel, Wire.decode(msg, SetSeat.class));
+            case "sleeveArt" -> {
+                final SleeveArt art = Wire.decode(msg, SleeveArt.class);
+                lobby.setSleeveArt(art.index(), art.key(), art.offset());
+            }
+            default -> {
+                return;
+            }
+        }
+        channel.send(lobby.state());
     }
 
     /** Opens match setup: a game of this machine's own, or a seat in the host's. Tells the browser how it went. */
@@ -252,24 +304,37 @@ public final class WebSession {
             joinHostGame();
             return;
         }
-        inviting = invite;
+        final Stage from = stage;
+        final Opening opening = new Opening();
+        // Leaving the old stage closes the match or table it held before the new one is built
+        if (from instanceof Opening || !move(from, opening)) {
+            return;
+        }
+        // A new table replaces the old one, so anyone seated at it is told it has gone before it is taken down
+        if (from instanceof Setup || from instanceof Playing) {
+            sessions.hostGameClosed();
+        }
+        final WebGuiGame gui = new WebGuiGame();
         lobby.forget();
         lobby.setShareable(invite);
         try {
-            local.openHost(playerName(), seatGui(), this::lobbyChanged, this::chatted);
+            local.openHost(playerName(), gui, this::lobbyChanged, this::chatted);
             if (invite) {
                 // Somebody has to be able to sit down, so the second seat is left open rather than filled
                 lobby.openSeat(1);
             }
         } catch (final RuntimeException e) {
             Logger.error(e, "Could not open the lobby");
-            // hello() clears the browser's last error, so the reason has to follow it
-            channel.send(hello());
+            gui.close();
+            move(opening, new Menu());
+            // The move's hello clears the browser's last error, so the reason has to follow it
             channel.send(error("Could not open the lobby: " + e.getMessage()));
             return;
         }
-        inLobby = true;
-        channel.send(hello());
+        if (!move(opening, new Setup(gui, invite))) {
+            gui.close();
+            return;
+        }
         channel.send(lobby.decks());
         channel.send(lobby.state());
         sessions.hostGameOpened();
@@ -278,69 +343,69 @@ public final class WebSession {
     /** Takes a seat in the host's game. Runs off the host UI thread, because taking one waits on the server. */
     void joinHostGame() {
         final int port = sessions.hostPort();
-        final BrowserChannel channel = browser;
         final String seatName = name;
-        if (isHost || inLobby || port < 0 || channel == null || seatName == null) {
+        final Opening joining = new Opening();
+        final Stage from = stage;
+        // Only one seat is taken at a time: the stage says a join is under way until it lands or fails
+        if (isHost || !(from instanceof Menu) || port < 0 || browser == null || seatName == null
+                || !move(from, joining)) {
             return;
         }
         ui.runBackgroundTask("Joining", () -> {
             lobby.forget();
+            final WebGuiGame gui = new WebGuiGame();
+            gui.whenOpened(() -> guestMatchOpened(gui));
             try {
-                final WebGuiGame gui = seatGui();
-                gui.whenOpened(() -> guestMatchOpened(gui));
                 local.openGuest(seatName, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
                 Logger.error(e, "Could not take a seat");
-                channel.send(hello());
-                channel.send(error("Could not take a seat: " + e.getMessage()));
+                gui.close();
+                move(joining, new Menu());
+                final BrowserChannel b = browser;
+                if (b != null) {
+                    b.send(error("Could not take a seat: " + e.getMessage()));
+                }
                 return;
             }
-            inLobby = true;
-            channel.send(hello());
-            channel.send(lobby.decks());
-            channel.send(lobby.state());
+            if (!move(joining, new Setup(gui, true))) {
+                // The game went while the seat was being taken
+                gui.close();
+                local.close();
+                return;
+            }
+            final BrowserChannel b = browser;
+            if (b != null) {
+                b.send(lobby.decks());
+                b.send(lobby.state());
+            }
         });
     }
 
     /** The host started the match, so this guest's browser follows its seat into the game. */
     private void guestMatchOpened(final WebGuiGame gui) {
-        if (match == gui || lobbyGui != gui) {
-            return;
-        }
-        match = gui;
-        final BrowserChannel b = browser;
-        if (b != null) {
-            b.send(hello());
-            gui.attach(b);
+        final Stage now = stage;
+        if (now instanceof Setup s && s.gui() == gui && move(now, new Playing(gui, true, false))) {
+            final BrowserChannel b = browser;
+            if (b != null) {
+                gui.attach(b);
+            }
         }
     }
 
     /** The host's game ended under this guest, so its seat goes and its browser waits for the next one. */
     void gameGone() {
-        if (!inLobby && match == null) {
-            return;
-        }
-        inLobby = false;
-        closeMatch();
-        local.close();
-        final BrowserChannel b = browser;
-        if (b != null) {
-            b.send(hello());
+        final Stage now = stage;
+        if (!(now instanceof Menu) && move(now, new Menu())) {
+            local.close();
         }
     }
 
+    /** The table changed. The browser sees it only once it is set up; until then it is still being built. */
     private void lobbyChanged() {
         final BrowserChannel b = browser;
-        if (b != null) {
+        if (b != null && stage instanceof Setup) {
             b.send(lobby.state());
         }
-    }
-
-    /** One GUI serves the lobby and then the match it becomes. */
-    private WebGuiGame seatGui() {
-        closeMatch();
-        lobbyGui = new WebGuiGame();
-        return lobbyGui;
     }
 
     private void chatted(final String from, final String text) {
@@ -363,9 +428,7 @@ public final class WebSession {
         }
         name = wanted.trim();
         channel.send(hello());
-        if (!isHost && !inLobby) {
-            joinHostGame();
-        }
+        joinHostGame();
     }
 
     /** Why a name cannot be this player's, or null if it can. */
@@ -409,15 +472,23 @@ public final class WebSession {
     }
 
     private Hello hello() {
-        return new Hello(match != null, inLobby && match == null, spectating, isHost,
+        final Stage now = stage;
+        return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Playing p && p.spectating(), isHost,
                 // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
                 !isHost && sessions.hostSeatFree(this),
                 // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
-                inviting || !isHost,
+                invited(now) || !isHost,
                 playerName(),
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), Playmats.list(), DeckCatalog.savedSleeveArt());
+    }
+
+    private static boolean invited(final Stage stage) {
+        if (stage instanceof Setup s) {
+            return s.invited();
+        }
+        return stage instanceof Playing p && p.invited();
     }
 
     private static List<Integer> seatIndices(final FPref pref) {
@@ -433,7 +504,11 @@ public final class WebSession {
             channel.send(error("Only the host can start the match."));
             return;
         }
-        spectating = msg.spectate();
+        final Stage from = stage;
+        if (!(from instanceof Setup setup)) {
+            channel.send(error("No lobby is open."));
+            return;
+        }
         final List<String> problems = lobby.problems();
         if (!problems.isEmpty()) {
             channel.send(error(problems.get(0)));
@@ -441,70 +516,64 @@ public final class WebSession {
         }
         // Saved before the match so HostedMatch never reaches the first-run name prompt
         lobby.saveLooks();
-        final WebGuiGame gui = lobbyGui;
-        if (gui == null) {
-            channel.send(error("No lobby is open."));
+        final Playing playing = new Playing(setup.gui(), setup.invited(), msg.spectate());
+        if (!move(from, playing)) {
             return;
         }
-        match = gui;
         final BrowserChannel b = browser;
         if (b != null) {
-            b.send(hello());
-            gui.attach(b);
+            playing.gui().attach(b);
         }
         try {
             local.start();
-            if (spectating) {
+            if (playing.spectating()) {
                 local.spectate();
             }
         } catch (final RuntimeException e) {
             Logger.error(e, "Could not start the match");
-            closeMatch();
             local.endMatch();
-            channel.send(hello());
+            move(playing, new Menu());
             channel.send(error("Could not start the match: " + e.getMessage()));
         }
     }
 
     /** Back to match setup after a game, into the same kind of lobby as before it. */
     private void leave() {
-        closeMatch();
-        final BrowserChannel b = browser;
-        if (b == null) {
+        final Stage from = stage;
+        if (!(from instanceof Playing playing)) {
             return;
         }
-        if (isHost) {
-            openLobby(b, inviting);
-        } else {
-            inLobby = false;
+        final BrowserChannel b = browser;
+        if (isHost && b != null) {
+            // Opening the lobby moves on from the match, and closes it
+            openLobby(b, playing.invited());
+        } else if (move(from, new Menu())) {
             joinHostGame();
         }
     }
 
     /** Lets go of this browser's match and seat without stopping the process. */
     void shutdown() {
-        closeMatch();
+        closeGui();
         local.shutdown();
     }
 
     private void quit() {
         sessions.hostGameClosed();
-        final WebGuiGame m = match;
-        if (m != null) {
-            m.concede();
+        if (stage instanceof Playing p) {
+            p.gui().concede();
         }
-        closeMatch();
+        closeGui();
         local.shutdown();
         onQuit.run();
     }
 
-    /** Each match holds a thread of its own, so the one being replaced has to let go of it. */
-    private void closeMatch() {
-        final WebGuiGame m = match;
-        match = null;
-        lobbyGui = null;
-        if (m != null) {
-            m.close();
+    /** Each GUI holds a thread of its own, so a session going away has to let go of it. */
+    private synchronized void closeGui() {
+        final WebGuiGame gui = guiOf(stage);
+        stage = new Menu();
+        if (gui != null) {
+            gui.close();
         }
     }
 }

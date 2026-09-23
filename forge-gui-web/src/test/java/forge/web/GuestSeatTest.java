@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -80,6 +81,25 @@ public class GuestSeatTest {
         sessions = new WebSessions(new WebGuiBase(), 120_000, () -> { });
     }
 
+    /** Every browser a test connects. Each is let go after its test, or a guest from one test takes the seat the next
+     *  test's guest wants: a waiting guest takes a seat by itself whenever the host opens a game. */
+    private final List<Recorder> browsers = new CopyOnWriteArrayList<>();
+
+    private Recorder connect(final String id) {
+        final Recorder browser = new Recorder();
+        browsers.add(browser);
+        sessions.connected(browser, id);
+        return browser;
+    }
+
+    @AfterMethod(alwaysRun = true)
+    public void disconnectBrowsers() {
+        for (final Recorder browser : browsers) {
+            sessions.disconnected(browser);
+        }
+        browsers.clear();
+    }
+
     @AfterClass
     public void tearDown() {
         if (sessions != null) {
@@ -96,11 +116,12 @@ public class GuestSeatTest {
      */
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
-        final Recorder hostBrowser = new Recorder();
-        sessions.connected(hostBrowser, "host");
+        final Recorder hostBrowser = connect("host");
         sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
         Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()),
                 "asking for the host's seat did not take it");
+        // Another test may have left the host at a table, which a reconnect is shown again; only the new one counts
+        hostBrowser.forget();
 
         sessions.onMessage(hostBrowser, named("Host"));
         sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
@@ -110,8 +131,7 @@ public class GuestSeatTest {
 
         // Every browser shares the server's preferences, so a guest has no name until it chooses one, and two
         // players of one name cannot share a game
-        final Recorder guestBrowser = new Recorder();
-        sessions.connected(guestBrowser, "guest");
+        final Recorder guestBrowser = connect("guest");
         final JsonObject greeted = guestBrowser.await("hello");
         Assert.assertNotNull(greeted, "the guest was never greeted");
         Assert.assertFalse(greeted.has("playerName"), "the guest was given a name it never chose");
@@ -136,8 +156,7 @@ public class GuestSeatTest {
 
         // A reload lands back at the same table, which the browser cannot draw until it is sent again
         sessions.disconnected(guestBrowser);
-        final Recorder reloaded = new Recorder();
-        sessions.connected(reloaded, "guest");
+        final Recorder reloaded = connect("guest");
         final JsonObject again = reloaded.awaitLobbyWithSeat();
         Assert.assertNotNull(again, "a guest that reloaded in match setup was never shown the table again");
         Assert.assertEquals(again.get("mySeat").getAsInt(), guestSeat, "a guest that reloaded lost its seat");
@@ -150,11 +169,11 @@ public class GuestSeatTest {
         final JsonObject choose = seatMessage("setSeat", guestSeat);
         choose.addProperty("deck", deck);
         sessions.onMessage(guestBrowser, choose);
-        Assert.assertNotNull(hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat
-                        && l.getAsJsonArray("seats").get(guestSeat).getAsJsonObject().has("deckName")),
-                "the host's table never showed the guest's deck");
-        // The host's own seat has no deck yet, and is named as "You"; any other seat without one is the guest's
-        final JsonObject table = hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat);
+        final JsonObject table = hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat
+                && l.getAsJsonArray("seats").get(guestSeat).getAsJsonObject().has("deckName"));
+        Assert.assertNotNull(table, "the host's table never showed the guest's deck");
+        // The host's own seat has no deck yet, and is named as "You". The table that shows the guest's deck is the
+        // one to read, because the host's copy of the table can trail the server's by an update.
         for (final var problem : table.getAsJsonArray("problems")) {
             Assert.assertFalse(problem.getAsString().endsWith(" has no deck."),
                     "the host still counted the guest as having no deck: " + problem.getAsString());
@@ -167,14 +186,48 @@ public class GuestSeatTest {
                 "the guest was left in a lobby the host had closed");
     }
 
+    /** Fails if the guest's browser stays in match setup when the host starts the match, or is never shown the table. */
+    @Test(timeOut = 120_000)
+    public void aGuestFollowsTheHostIntoTheMatch() throws Exception {
+        final Recorder host = connect("host");
+        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("invite"));
+        final JsonObject hosted = host.awaitLobbyWithSeat();
+        Assert.assertNotNull(hosted, "the host never got a seat in its own game");
+
+        final Recorder guest = connect("player");
+        sessions.onMessage(guest, named("Player"));
+        final JsonObject seated = guest.awaitLobbyWithSeat();
+        Assert.assertNotNull(seated, "the guest never took a seat" + diagnosis(host, guest));
+
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String deck = legalDeck(host.await("decks"));
+        for (final Recorder browser : List.of(host, guest)) {
+            final JsonObject choose = seatMessage("setSeat", (browser == host ? hosted : seated).get("mySeat").getAsInt());
+            choose.addProperty("deck", deck);
+            sessions.onMessage(browser, choose);
+        }
+        Assert.assertNotNull(host.awaitLobby(l -> l.get("canStart").getAsBoolean()),
+                "the host could not start once both seats had a deck");
+
+        guest.forget();
+        final JsonObject start = JsonCodec.message("start");
+        start.addProperty("spectate", false);
+        sessions.onMessage(host, start);
+        Assert.assertNotNull(guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean()),
+                "the guest was left in match setup when the host started the match" + diagnosis(host, guest));
+        Assert.assertNotNull(guest.awaitMatching("state", m -> m.get("full").getAsBoolean()),
+                "the guest was taken into the match but never shown the table");
+    }
+
     /**
      * Fails if turning a seat between a computer and an open one does nothing. A slot edited straight on the
      * server does not announce itself, so the browser's copy keeps the old answer unless the table is resent.
      */
     @Test(timeOut = 120_000)
     public void aSeatTurnsBetweenComputerAndOpen() throws Exception {
-        final Recorder browser = new Recorder();
-        sessions.connected(browser, "host");
+        final Recorder browser = connect("host");
         sessions.onMessage(browser, JsonCodec.message("claimHost"));
         browser.forget();
         sessions.onMessage(browser, JsonCodec.message("lobby"));
@@ -211,6 +264,30 @@ public class GuestSeatTest {
         return m;
     }
 
+    /** What each browser was told last and what every thread is doing, for a wait that ran out. */
+    private static String diagnosis(final Recorder... browsers) {
+        final StringBuilder out = new StringBuilder();
+        for (final Recorder b : browsers) {
+            out.append("\n--- last messages:\n");
+            final List<JsonObject> got = b.got;
+            for (final JsonObject m : got.subList(Math.max(0, got.size() - 4), got.size())) {
+                final String text = m.toString();
+                out.append(text, 0, Math.min(300, text.length())).append('\n');
+            }
+        }
+        for (final java.lang.management.ThreadInfo t
+                : java.lang.management.ManagementFactory.getThreadMXBean().dumpAllThreads(true, true)) {
+            final String name = t.getThreadName();
+            if (name.startsWith("Web") || name.startsWith("Game") || name.startsWith("main")) {
+                out.append("\n--- ").append(name).append(' ').append(t.getThreadState());
+                for (final StackTraceElement e : t.getStackTrace()) {
+                    out.append("\n    ").append(e);
+                }
+            }
+        }
+        return out.toString();
+    }
+
     private static JsonObject seatMessage(final String type, final int index) {
         final JsonObject m = JsonCodec.message(type);
         m.addProperty("index", index);
@@ -239,11 +316,11 @@ public class GuestSeatTest {
     @Test(timeOut = 120_000)
     public void pickingCommanderChangesTheFormat() throws Exception {
         // The same id as the other test, because the host's seat is held by whichever session claimed it
-        final Recorder browser = new Recorder();
-        sessions.connected(browser, "host");
+        final Recorder browser = connect("host");
         sessions.onMessage(browser, JsonCodec.message("claimHost"));
+        browser.forget();
         sessions.onMessage(browser, JsonCodec.message("lobby"));
-        Assert.assertNotNull(browser.awaitLobbyWithSeat(), "no game was opened");
+        Assert.assertNotNull(browser.awaitLobbyWithSeat(), "no game was opened" + diagnosis(browser));
 
         final JsonObject pick = JsonCodec.message("setFormat");
         pick.addProperty("format", "Commander");

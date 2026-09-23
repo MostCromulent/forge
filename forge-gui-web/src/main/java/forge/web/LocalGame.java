@@ -35,6 +35,10 @@ import java.util.function.BiConsumer;
  */
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
+    /** How long a new table waits for the last one's connections to be gone. */
+    private static final long FREE_SEATS_TIMEOUT_MILLIS = 5_000;
+    /** More seats than any table has, so every connection a table can hold is checked. */
+    private static final int MOST_SEATS = 16;
     private static final int SPECTATE_WAIT_MILLIS = 5000;
 
     private final FServerManager server = FServerManager.getInstance();
@@ -72,6 +76,7 @@ public final class LocalGame {
     public void openHost(final String playerName, final WebGuiGame gui, final Runnable onUpdate,
             final BiConsumer<String, String> onChat) {
         endMatch();
+        awaitOldSeatsFreed();
         // Stopping the server frees its event loops before it finishes recreating them, so a restart can find
         // them terminated. It costs nothing to leave running, so it outlives every game it serves.
         if (port < 0) {
@@ -109,6 +114,39 @@ public final class LocalGame {
         // The host reads chat through its own listener, so the client one would only repeat it. Its own
         // connection ends only because the host ended it, which has already told the browser.
         connect(playerName, gui, "127.0.0.1", port, onUpdate, (from, text) -> { }, () -> { });
+    }
+
+    /**
+     * Waits until no connection from an earlier table is left on the server. A connection closes in the background,
+     * and the server frees its seat when it notices, in whichever lobby is current by then: were the new table set up
+     * first, a seat in it would be cleared under whoever had just taken it.
+     */
+    private void awaitOldSeatsFreed() {
+        if (port < 0) {
+            return;
+        }
+        final long giveUp = System.currentTimeMillis() + FREE_SEATS_TIMEOUT_MILLIS;
+        while (anySeatConnected()) {
+            if (System.currentTimeMillis() > giveUp) {
+                Logger.warn("A connection from the last table is still open; setting up the new one anyway.");
+                return;
+            }
+            try {
+                Thread.sleep(10);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return;
+            }
+        }
+    }
+
+    private boolean anySeatConnected() {
+        for (int i = 0; i < MOST_SEATS; i++) {
+            if (server.findClientByIndex(i) != null) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Takes a seat in a game another browser on this machine is hosting. Nothing is served from here. */
