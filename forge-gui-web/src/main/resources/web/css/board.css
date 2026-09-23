@@ -292,14 +292,14 @@
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
-/* The cards under the top one show as fanned edges, not blank slabs */
-.card.pile::before, .card.pile::after { content: ''; position: absolute; inset: 0; display: none; border-radius: var(--radius); background: var(--surface-2); box-shadow: inset 0 0 0 1px var(--line-bright), 0 2px 8px #0009; }
-.card.pile::after { transform: translate(calc(4.5px * var(--fit, 1)), calc(-3px * var(--fit, 1))) rotate(1.3deg); z-index: -1; }
-.card.pile::before { transform: translate(calc(9px * var(--fit, 1)), calc(-6px * var(--fit, 1))) rotate(2.6deg); z-index: -2; background: var(--surface); }
+/* The cards under the top one show as the stack seen edge-on, beside the card rather than behind it */
+.card.pile::before, .card.pile::after { content: ''; position: absolute; display: none; width: calc(4px * var(--fit, 1)); border-radius: 3px 0 0 3px; background: linear-gradient(180deg, var(--line-bright), var(--surface-2)); box-shadow: inset -1px 0 0 #0009; }
+.card.pile::after { left: calc(-5px * var(--fit, 1)); top: calc(3px * var(--fit, 1)); bottom: calc(3px * var(--fit, 1)); }
+.card.pile::before { left: calc(-10px * var(--fit, 1)); top: calc(6px * var(--fit, 1)); bottom: calc(6px * var(--fit, 1)); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
-/* The fourth card and beyond share one deeper edge, since the fan stops being countable past three */
-.card.pile[data-depth="3"]::before { box-shadow: inset 0 0 0 1px var(--line-bright), 4.5px -3px 0 0 var(--bg), 4.5px -3px 0 1px var(--line-bright), 0 2px 8px #0009; }
+/* The fourth card and beyond share one thicker edge, since the edges stop being countable past three */
+.card.pile[data-depth="3"]::before { left: calc(-15px * var(--fit, 1)); width: calc(8px * var(--fit, 1)); }
 .card .count { display: none; position: absolute; right: 4px; top: 4px; z-index: 3; min-width: 22px; height: 20px; padding: 0 5px; place-items: center; background: #0e1116e6; color: var(--text); border: 1px solid var(--accent-2); border-radius: 11px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { border-style: dashed; color: var(--muted); }
@@ -323,24 +323,34 @@
   z-index: 75;
   pointer-events: none;
   transform: translate(-50%, -50%);
-  padding: 7px 26px;
-  border-radius: 19px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: 0 6px 22px #000b;
+  overflow: hidden;
+  padding: 9px 34px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 45%, color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--accent-2) 42%, #000), 0 10px 24px #000a;
   font-size: 15px;
-  font-weight: 700;
-  letter-spacing: .1em;
+  font-weight: 800;
+  letter-spacing: .16em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--accent) 32%, #000);
   animation: turn-sweep 2.4s cubic-bezier(.2,.8,.3,1) forwards;
 }
 
-/* Your own turn is the one worth noticing, so it takes the accent */
-.turn-banner.mine { color: var(--text); border-color: var(--accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 25%, transparent); }
+/* A light travels across the plate as it lands */
+.turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 38%, #ffffff5c 47%, #ffffffad 50%, #ffffff5c 53%, transparent 62%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
+@keyframes turn-sheen { to { transform: translateX(120%); } }
+
+/* The opponent's turn is the same plate in pewter: darker, and without the brass */
+.turn-banner:not(.mine) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--muted) 55%, #fff) 0%, var(--muted) 45%, color-mix(in srgb, var(--muted) 70%, #000) 100%);
+  border-color: color-mix(in srgb, var(--muted) 45%, #fff);
+  box-shadow: 0 2px 0 color-mix(in srgb, var(--muted) 45%, #000), 0 10px 24px #000a;
+  color: #101319;
+}
 /* Who goes first is said once a game, so it stays up a little longer */
 .turn-banner.opening { animation-duration: 3.2s; }
-@keyframes turn-sweep { from { opacity: 0; transform: translate(-50%, -50%) scale(.88); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 84% { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.06); } }
+@keyframes turn-sweep { from { opacity: 0; transform: translate(-50%, -50%) translateY(-14px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, -50%) translateY(2px) scale(1.02); } 20% { transform: translate(-50%, -50%) translateY(0) scale(1); } 84% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) translateY(0) scale(1.05); } }
 /* A hit on your own life: the board lurches and the edges wash warm for a moment */
 #match.hit { animation: hit-shake .32s ease-out; }
 #match.hit-hard { animation: hit-shake-hard .42s ease-out; }
