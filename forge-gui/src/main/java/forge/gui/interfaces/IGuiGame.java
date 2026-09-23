@@ -290,6 +290,22 @@ public interface IGuiGame {
     void awaitNextInput();
     void cancelAwaitNextInput();
 
+    /**
+     * Priority is about to be passed for the player without asking, after a short pause so the game does not jump
+     * ahead too fast. The pause is taken here, so a GUI can show it coming. Returns false if the player stopped it,
+     * in which case they are asked for priority as usual.
+     */
+    default boolean confirmAutoPass(final int delayMs) {
+        if (delayMs > 0) {
+            try {
+                Thread.sleep(delayMs);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        return true;
+    }
+
     /** Signal to start a client-side elapsed timer for waiting display. */
     void showWaitingTimer(PlayerView forPlayer, String waitingForPlayerName);
 

@@ -80,6 +80,7 @@ public enum ProtocolMethod implements IHasForgeLog {
     applyDelta          (Mode.SERVER, Void.TYPE, DeltaPacket.class),
     /** Server→client push of authoritative yield-state changes. */
     applyYieldUpdate    (Mode.SERVER, Void.TYPE, YieldUpdate.class),
+    confirmAutoPass     (Mode.SERVER, Boolean.TYPE, Integer.TYPE),
 
     // Client -> Server
     // Note: these should all return void, to avoid awkward situations in
