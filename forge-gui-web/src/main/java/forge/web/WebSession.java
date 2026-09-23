@@ -64,6 +64,8 @@ public final class WebSession {
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
     private volatile Stage stage = new Menu();
+    /** This player's settings: a guest's own, or the host's, which are Forge's preferences. */
+    private volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
 
@@ -77,6 +79,7 @@ public final class WebSession {
     /** Takes the host's seat. Host dialogs belong to whoever holds it, so they are pointed here. */
     void becomeHost() {
         isHost = true;
+        settings = PlayerSettings.saved();
         ui.setNoticeSink(notice -> {
             final BrowserChannel b = browser;
             if (b != null) {
@@ -314,7 +317,7 @@ public final class WebSession {
         if (from instanceof Setup || from instanceof Playing) {
             sessions.hostGameClosed();
         }
-        final WebGuiGame gui = new WebGuiGame();
+        final WebGuiGame gui = new WebGuiGame(settings);
         lobby.forget();
         lobby.setShareable(invite);
         try {
@@ -353,7 +356,7 @@ public final class WebSession {
         }
         ui.runBackgroundTask("Joining", () -> {
             lobby.forget();
-            final WebGuiGame gui = new WebGuiGame();
+            final WebGuiGame gui = new WebGuiGame(settings);
             gui.whenOpened(() -> guestMatchOpened(gui));
             try {
                 local.openGuest(seatName, gui, port, this::lobbyChanged, this::chatted, this::gameGone);

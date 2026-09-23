@@ -3,12 +3,9 @@ package forge.web;
 import com.google.common.primitives.Ints;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
-import forge.gamemodes.match.YieldController;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
-import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
-import forge.model.FModel;
 import forge.web.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
 
@@ -16,7 +13,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/** What the options dialog reads and writes: Forge preferences the desktop client shares, and the phase stops. */
+/**
+ * What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}), and the phase
+ * stops. The host's are the Forge preferences the desktop client shares.
+ */
 final class WebSettings {
     private WebSettings() {
     }
@@ -30,62 +30,50 @@ final class WebSettings {
             "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
             "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
 
-    static ServerSettings values() {
-        final ForgePreferences prefs = FModel.getPreferences();
+    static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptAttackers")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptOpponentSpell")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptTargeting")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptTriggers")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptMassRemoval")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("highlightPlayable")),
-                prefs.getPrefBoolean(BOOLEAN_PREFS.get("autoTapPreview")),
-                prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
-                ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
-                GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)),
-                prefs.getPref(FPref.UI_TARGETING_OVERLAY),
-                "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
+                player.getBoolean(BOOLEAN_PREFS.get("interruptAttackers")),
+                player.getBoolean(BOOLEAN_PREFS.get("interruptOpponentSpell")),
+                player.getBoolean(BOOLEAN_PREFS.get("interruptTargeting")),
+                player.getBoolean(BOOLEAN_PREFS.get("interruptTriggers")),
+                player.getBoolean(BOOLEAN_PREFS.get("interruptMassRemoval")),
+                player.getBoolean(BOOLEAN_PREFS.get("highlightPlayable")),
+                player.getBoolean(BOOLEAN_PREFS.get("autoTapPreview")),
+                player.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
+                ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
+                GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
+                player.get(FPref.UI_TARGETING_OVERLAY),
+                "#" + player.get(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
                 // A volume of zero is the off switch, so the two preferences are reported as one number
-                prefs.getPrefBoolean(FPref.UI_ENABLE_SOUNDS) ? prefs.getPrefInt(FPref.UI_VOL_SOUNDS) : 0,
-                prefs.getPrefBoolean(FPref.UI_ENABLE_MUSIC) ? prefs.getPrefInt(FPref.UI_VOL_MUSIC) : 0);
+                player.getBoolean(FPref.UI_ENABLE_SOUNDS) ? player.getInt(FPref.UI_VOL_SOUNDS) : 0,
+                player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0);
     }
 
-    /** A value off the socket reaches the file the desktop client shares, so an illegal one is dropped. */
-    /** Saves a setting. The controller is the game's, if one has started: the browser can change a setting
-     *  (its first-run defaults do) while a match is still being set up, and that must not be lost. */
-    static void set(final IGameController controller, final String key, final String value) {
-        final ForgePreferences prefs = FModel.getPreferences();
+    /**
+     * Saves a setting. A value off the socket can reach the file the desktop client shares, so an illegal one is
+     * dropped. The controller is the game's, if one has started: a browser can change a setting (its first-run
+     * defaults do) before a match begins, and that must not be lost.
+     */
+    static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
-            final boolean on = Boolean.parseBoolean(value);
-            prefs.setPref(pref, on);
             // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
-            // game opened, so a change mid-game has to reach it as well, as it does from desktop's yield settings.
-            // Before then the seed carries it.
-            if (controller != null) {
-                controller.setYieldPref(pref, String.valueOf(on));
-            }
+            // game opened, so a change mid-game has to reach it as well. Before then the seed carries it.
+            setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
         } else if ("autoPassNoActions".equals(key)) {
-            if (Boolean.parseBoolean(value) == prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
-                return;
-            }
-            if (controller != null) {
-                YieldController.toggleAutoPassNoActions(controller);
-                return;
-            }
-            prefs.setPref(FPref.YIELD_AUTO_PASS_NO_ACTIONS, Boolean.parseBoolean(value));
+            setEverywhere(player, controller, FPref.YIELD_AUTO_PASS_NO_ACTIONS, String.valueOf(Boolean.parseBoolean(value)));
         } else if ("autoYieldMode".equals(key)) {
-            prefs.setPref(FPref.UI_AUTO_DECISION_MODE,
+            setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
         } else if ("logDetail".equals(key)) {
-            prefs.setPref(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
+            player.set(FPref.DEV_LOG_ENTRY_TYPE, GameLogVerbosity.fromString(value).toString());
         } else if ("arrows".equals(key)) {
             final Integer mode = Ints.tryParse(value);
             if (mode == null || mode < 0 || mode > 2) {
                 Logger.warn("Web client: bad arrows setting {}", value);
                 return;
             }
-            prefs.setPref(FPref.UI_TARGETING_OVERLAY, value);
+            player.set(FPref.UI_TARGETING_OVERLAY, value);
         } else if ("soundVolume".equals(key) || "musicVolume".equals(key)) {
             final Integer volume = Ints.tryParse(value);
             if (volume == null || volume < 0 || volume > 100) {
@@ -93,22 +81,52 @@ final class WebSettings {
                 return;
             }
             final boolean effects = "soundVolume".equals(key);
-            prefs.setPref(effects ? FPref.UI_VOL_SOUNDS : FPref.UI_VOL_MUSIC, value);
+            player.set(effects ? FPref.UI_VOL_SOUNDS : FPref.UI_VOL_MUSIC, value);
             // Silence is off: the desktop client reads the switch, not the volume
-            prefs.setPref(effects ? FPref.UI_ENABLE_SOUNDS : FPref.UI_ENABLE_MUSIC, volume > 0);
+            player.set(effects ? FPref.UI_ENABLE_SOUNDS : FPref.UI_ENABLE_MUSIC, volume > 0);
         } else {
             Logger.warn("Web client: unknown setting {}", key);
             return;
         }
-        prefs.save();
+        player.save();
+    }
+
+    /** A setting the game reads as well as the player: the player's own copy, and the game's copy of it, if any. */
+    private static void setEverywhere(final PlayerSettings player, final IGameController controller, final FPref pref,
+            final String value) {
+        player.set(pref, value);
+        if (controller != null) {
+            applyTo(controller, pref, value);
+        }
+    }
+
+    /**
+     * Gives a game this player's settings in place of the shared preferences it would otherwise read: the host's
+     * engine keeps a copy per player, and the client's own controller reads the auto-yield mode.
+     */
+    static void applyAll(final PlayerSettings player, final IGameController controller) {
+        for (final FPref pref : PlayerSettings.PER_PLAYER_ON_HOST) {
+            applyTo(controller, pref, player.get(pref));
+        }
+        applyTo(controller, FPref.UI_AUTO_DECISION_MODE, player.get(FPref.UI_AUTO_DECISION_MODE));
+    }
+
+    private static void applyTo(final IGameController controller, final FPref pref, final String value) {
+        if (controller.getYieldController() != null) {
+            controller.getYieldController().setPref(pref, value);
+        }
+        // The host's engine keeps no copy of the auto-yield mode: the client decides how a choice is stored
+        if (pref != FPref.UI_AUTO_DECISION_MODE) {
+            controller.setYieldPref(pref, value);
+        }
     }
 
     /** The phases one row of the stop grid has a stop on; untap takes no stop, as on desktop. */
-    static List<PhaseType> stops(final FPref[] keys) {
+    static List<PhaseType> stops(final PlayerSettings player, final FPref[] keys) {
         final List<PhaseType> out = new ArrayList<>();
         final PhaseType[] phases = PhaseType.values();
         for (int i = 1; i < phases.length; i++) {
-            if (FModel.getPreferences().getPrefBoolean(keys[i - 1])) {
+            if (player.getBoolean(keys[i - 1])) {
                 out.add(phases[i]);
             }
         }

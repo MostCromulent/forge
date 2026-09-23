@@ -40,12 +40,10 @@ import forge.gamemodes.net.NetworkGuiGame;
 import forge.gamemodes.net.server.DeltaSyncManager;
 import forge.gui.card.CardDetailUtil;
 import forge.interfaces.IGameController;
-import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.sound.EventVisualizer;
 import forge.sound.SoundEffectType;
-import forge.model.FModel;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
 import forge.player.PlayerZoneUpdates;
@@ -145,12 +143,24 @@ public class WebGuiGame extends NetworkGuiGame {
     private final Set<Integer> highlighted = new LinkedHashSet<>();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
     // Written on the dispatch thread, replayed to a reloading browser from the socket thread
-    private final WebGameLog gameLog = new WebGameLog(this::mayView);
+    private final WebGameLog gameLog;
+    /** The settings of the player this GUI is the view of, which are not the shared preferences unless it is the host. */
+    private final PlayerSettings settings;
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
     /** What the game did since the last state message, in order. Filled and drained on the dispatch thread: a packet's
      *  events are handled inside its applyDelta, so they leave with the state change they explain. */
     private final List<Record> events = new ArrayList<>();
+
+    /** A GUI for the host's own seat, whose settings are Forge's preferences. */
+    public WebGuiGame() {
+        this(PlayerSettings.saved());
+    }
+
+    WebGuiGame(final PlayerSettings settings) {
+        this.settings = settings;
+        this.gameLog = new WebGameLog(this::mayView, settings);
+    }
 
     /** Frees the thread that sends to the browser; the match it belongs to is over. */
     public void close() {
@@ -311,6 +321,11 @@ public class WebGuiGame extends NetworkGuiGame {
         send(model.fullState());
         // A remote seat skips phases only from what the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
         seedYieldStateOnHost();
+        // The seed read the shared preferences for everything else, so this player's own follow it
+        final IGameController controller = getGameController();
+        if (controller != null) {
+            WebSettings.applyAll(settings, controller);
+        }
         onOpen.run();
     }
 
@@ -321,7 +336,7 @@ public class WebGuiGame extends NetworkGuiGame {
             return false;
         }
         final FPref[] keys = isLocalPlayer(playerTurn) ? FPref.PHASES_HUMAN : FPref.PHASES_AI;
-        return !FModel.getPreferences().getPrefBoolean(keys[index - 1]);
+        return !settings.getBoolean(keys[index - 1]);
     }
 
     @Override
@@ -395,8 +410,7 @@ public class WebGuiGame extends NetworkGuiGame {
     };
 
     private void forwardSound(final GameEvent event) {
-        if (!FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_SOUNDS)
-                || FModel.getPreferences().getPrefInt(FPref.UI_VOL_SOUNDS) <= 0) {
+        if (!settings.getBoolean(FPref.UI_ENABLE_SOUNDS) || settings.getInt(FPref.UI_VOL_SOUNDS) <= 0) {
             return;
         }
         final SoundEffectType effect = event.visit(sounds);
@@ -416,10 +430,10 @@ public class WebGuiGame extends NetworkGuiGame {
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
         final YieldMarker marker = yields == null ? null : yields.getAutoPassUntilMarker();
-        return new Controls(WebSettings.stops(FPref.PHASES_HUMAN), WebSettings.stops(FPref.PHASES_AI),
-                FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS), getDayTime(),
+        return new Controls(WebSettings.stops(settings, FPref.PHASES_HUMAN), WebSettings.stops(settings, FPref.PHASES_AI),
+                settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS), getDayTime(),
                 marker == null ? null : new TurnMarker(marker.getPhase(), isLocalPlayer(marker.getPhaseOwner())),
-                WebSettings.values());
+                WebSettings.values(settings));
     }
 
     @Override
@@ -435,14 +449,13 @@ public class WebGuiGame extends NetworkGuiGame {
 
     private void toggleStop(final PhaseType phase, final boolean mine) {
         if (phase.ordinal() > 0) {
-            setStop(phase, mine, !FModel.getPreferences().getPrefBoolean(WebSettings.stopKey(phase, mine)));
+            setStop(phase, mine, !settings.getBoolean(WebSettings.stopKey(phase, mine)));
         }
     }
 
     private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
-        final ForgePreferences prefs = FModel.getPreferences();
-        prefs.setPref(WebSettings.stopKey(phase, mine), stop);
-        prefs.save();
+        settings.set(WebSettings.stopKey(phase, mine), stop);
+        settings.save();
         for (final PlayerView p : getGameView().getPlayers()) {
             if (isLocalPlayer(p) == mine) {
                 pushSkipPhaseToControllers(p, phase);
@@ -1209,7 +1222,7 @@ public class WebGuiGame extends NetworkGuiGame {
             if ("setSetting".equals(type)) {
                 // A setting belongs to the player, not the game, so one sent before the game has a controller still counts
                 final SetSetting setting = Wire.decode(msg, SetSetting.class);
-                WebSettings.set(getGameController(), setting.key(), setting.value());
+                WebSettings.set(settings, getGameController(), setting.key(), setting.value());
                 send(controlsMessage());
                 return;
             }
@@ -1245,7 +1258,8 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
                 case "undo" -> controller.undoLastAction();
                 case "autoPass" -> {
-                    YieldController.toggleAutoPassNoActions(controller);
+                    WebSettings.set(settings, controller, "autoPassNoActions",
+                            String.valueOf(!settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)));
                     send(controlsMessage());
                 }
                 case "toggleStop" -> {

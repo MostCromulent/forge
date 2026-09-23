@@ -35,7 +35,7 @@ public class WebSettingsTest {
         final ForgePreferences prefs = FModel.getPreferences();
         final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
         try {
-            WebSettings.set(null, "highlightPlayable", String.valueOf(!was));
+            WebSettings.set(PlayerSettings.saved(), null, "highlightPlayable", String.valueOf(!was));
             Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
         } finally {
             prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
@@ -69,12 +69,49 @@ public class WebSettingsTest {
         final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
         final List<String> told = new ArrayList<>();
         try {
-            WebSettings.set(recording(told), "highlightPlayable", String.valueOf(!was));
+            WebSettings.set(PlayerSettings.saved(), recording(told), "highlightPlayable", String.valueOf(!was));
             Assert.assertEquals(told, List.of(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS + "=" + !was));
             Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
         } finally {
             prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
             prefs.save();
         }
+    }
+
+    // Every browser shares the process's preferences, which are the host's, so a guest's choice must stay its own
+    @Test
+    public void aGuestsSettingLeavesTheHostsAlone() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final boolean was = prefs.getPrefBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS);
+        final PlayerSettings guest = PlayerSettings.fresh();
+        WebSettings.set(guest, null, "interruptAttackers", String.valueOf(!was));
+        Assert.assertEquals(guest.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS), !was);
+        Assert.assertEquals(prefs.getPrefBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS), was,
+                "a guest's setting reached the host's preferences");
+    }
+
+    @Test
+    public void aGuestStartsFromForgesDefaultsNotTheHostsChoices() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final String was = prefs.getPref(FPref.UI_TARGETING_OVERLAY);
+        try {
+            prefs.setPref(FPref.UI_TARGETING_OVERLAY, "0".equals(FPref.UI_TARGETING_OVERLAY.getDefault()) ? "2" : "0");
+            Assert.assertEquals(PlayerSettings.fresh().get(FPref.UI_TARGETING_OVERLAY), FPref.UI_TARGETING_OVERLAY.getDefault());
+            Assert.assertEquals(PlayerSettings.saved().get(FPref.UI_TARGETING_OVERLAY), prefs.getPref(FPref.UI_TARGETING_OVERLAY));
+        } finally {
+            prefs.setPref(FPref.UI_TARGETING_OVERLAY, was);
+        }
+    }
+
+    // The host's engine and the client's own controller each keep a copy, seeded from the shared preferences
+    @Test
+    public void aGamesCopyOfTheSettingsIsThisPlayers() {
+        final PlayerSettings guest = PlayerSettings.fresh();
+        guest.set(FPref.YIELD_AUTO_PASS_NO_ACTIONS, true);
+        final List<String> told = new ArrayList<>();
+        WebSettings.applyAll(guest, recording(told));
+        Assert.assertTrue(told.contains(FPref.YIELD_AUTO_PASS_NO_ACTIONS + "=true"), told.toString());
+        Assert.assertEquals(told.size(), PlayerSettings.PER_PLAYER_ON_HOST.size(),
+                "every setting the host keeps per player should be sent, and the auto-yield mode, which it does not, should not");
     }
 }

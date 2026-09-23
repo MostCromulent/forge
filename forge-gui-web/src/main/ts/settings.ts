@@ -6,6 +6,9 @@ import type { Playmat, ServerSettings } from './protocol';
 
 const LOCAL_KEY = 'forge.settings';
 const DEFAULTS_KEY = 'forge.defaults';
+/** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
+ *  remembers them and gives them back to a server that has forgotten them. */
+const GUEST_KEY = 'forge.guestSettings';
 
 export type SettingValue = string | number | boolean;
 
@@ -99,6 +102,12 @@ let server: Partial<ServerSettings> = {};
 /** Saves a setting the server keeps. */
 let saveOnServer: (key: string, value: string) => void = () => {};
 let redraw: () => void = () => {};
+/** The host's server settings are Forge's preferences, which outlive the server; a guest's do not. */
+let guest = false;
+
+export function setGuest(value: boolean): void {
+  guest = value;
+}
 
 export function initSettings(save: (key: string, value: string) => void, schedule: () => void): void {
   saveOnServer = save;
@@ -130,8 +139,30 @@ export function setting(key: string): SettingValue {
 // The server sends its preference values with the rest of the turn controls
 export function onServerSettings(values: ServerSettings | undefined): void {
   server = values ?? {};
+  if (guest) {
+    restoreGuestSettings();
+  }
   applyWebDefaults();
   apply();
+}
+
+// Only what differs is sent back, so a server that already has these settings is told nothing
+function restoreGuestSettings(): void {
+  const known = server as Record<string, SettingValue | undefined>;
+  for (const [key, value] of Object.entries(guestSettings())) {
+    if (byKey.get(key)?.server && known[key] !== value) {
+      known[key] = value;
+      saveOnServer(key, String(value));
+    }
+  }
+}
+
+function guestSettings(): Record<string, SettingValue> {
+  try {
+    return JSON.parse(localStorage.getItem(GUEST_KEY) ?? '{}') ?? {};
+  } catch {
+    return {};
+  }
 }
 
 // Forge ships with playable-card highlighting off; this UI wants it on. A browser turns it on once, and after
@@ -156,6 +187,13 @@ export function set(key: string, value: SettingValue): void {
   if (def.server) {
     (server as Record<string, SettingValue>)[key] = value;
     saveOnServer(key, String(value));
+    if (guest) {
+      try {
+        localStorage.setItem(GUEST_KEY, JSON.stringify({ ...guestSettings(), [key]: value }));
+      } catch {
+        // A browser with storage blocked keeps the setting for this session only
+      }
+    }
   } else {
     local[key] = value;
     try {

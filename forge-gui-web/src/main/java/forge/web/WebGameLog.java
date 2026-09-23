@@ -6,7 +6,6 @@ import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.card.CardView;
 import forge.gamemodes.net.DeltaPacket;
-import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.web.ToBrowser.LogEntry;
@@ -20,12 +19,14 @@ import java.util.function.Predicate;
 /** The game log as the browser sees it: the entries this seat may read, sent as they arrive and replayed on connect. */
 final class WebGameLog {
     private final Predicate<CardView> mayView;
+    private final PlayerSettings settings;
     private final List<LogEntry> entries = new ArrayList<>();
     private GameLog logged;
     private int loggedCount;
 
-    WebGameLog(final Predicate<CardView> mayView) {
+    WebGameLog(final Predicate<CardView> mayView, final PlayerSettings settings) {
         this.mayView = mayView;
+        this.settings = settings;
     }
 
     /** The entries added since the last call, or every entry when the match has moved to a new game. */
@@ -69,10 +70,10 @@ final class WebGameLog {
         return new LogEntry(entry.type(), entry.message(), null, null);
     }
 
-    private static Set<GameLogEntryType> shownTypes() {
-        final ForgePreferences prefs = FModel.getPreferences();
-        final GameLogVerbosity verbosity = GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE));
-        return verbosity == GameLogVerbosity.CUSTOM ? prefs.getCustomLogTypes() : verbosity.getIncludedTypes();
+    // A custom list of entry types is chosen on desktop, so it is the host's; the web offers only the named levels
+    private Set<GameLogEntryType> shownTypes() {
+        final GameLogVerbosity verbosity = GameLogVerbosity.fromString(settings.get(FPref.DEV_LOG_ENTRY_TYPE));
+        return verbosity == GameLogVerbosity.CUSTOM ? FModel.getPreferences().getCustomLogTypes() : verbosity.getIncludedTypes();
     }
 
     private static LogMessage message(final List<LogEntry> list, final boolean full) {

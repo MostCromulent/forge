@@ -15,7 +15,7 @@ import { initSide, renderSide } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
-import { initSettings, onServerSettings, setPlaymats } from './settings';
+import { initSettings, onServerSettings, setGuest, setPlaymats } from './settings';
 import { applyAudioSettings, playSound, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
 import { byId } from './dom';
@@ -77,6 +77,7 @@ function apply(msg: ServerMessage): void {
     case 'hello':
       resetPace();
       model.host = msg.host !== false;
+      setGuest(!model.host);
       model.canClaimHost = !!msg.canClaimHost;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;
