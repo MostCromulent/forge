@@ -1,0 +1,112 @@
+import type {
+  Address, CardStateView, CardView, Controls, DeckSummary, GameView, LobbyState, Playable, PlayerView, Prompt, Ref,
+  Request, ShownZone, StateMessage, TrackedObject, ZoneName,
+} from './protocol';
+
+export interface Looks {
+  avatars?: number[];
+  sleeves?: number[];
+  avatarCount: number;
+  sleeveCount: number;
+}
+
+// Browser copy of the game's object table; forge.web.BrowserModel implements the same apply-and-prune rules
+export interface Model {
+  objects: Map<number, TrackedObject>;
+  root: number;
+  visible: Set<number>;
+  localPlayers: number[];
+  prompt: Prompt | null;
+  zones: ShownZone[];
+  requests: Map<number, Request>;
+  gameOver: boolean;
+  controls: Controls | null;
+  playable: Playable | null;
+  looks: Looks | null;
+  spectating: boolean;
+  inMatch: boolean;
+  inLobby: boolean;
+  playerName: string;
+  decks: DeckSummary[];
+  error: string | null;
+  lobby: LobbyState | null;
+  addresses: Address[] | null;
+  host: boolean;
+  canClaimHost: boolean;
+}
+
+export function createModel(): Model {
+  return {
+    objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
+    prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
+    looks: null, spectating: false,
+    inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
+    lobby: null, addresses: null, host: true, canClaimHost: false,
+  };
+}
+
+export function applyState(model: Model, msg: StateMessage): void {
+  if (msg.full) {
+    model.objects.clear();
+    model.root = msg.root;
+  }
+  for (const [k, props] of Object.entries(msg.newObjects)) {
+    model.objects.set(Number(k), { ...props, $key: Number(k) });
+  }
+  for (const [k, props] of Object.entries(msg.deltas)) {
+    const target = model.objects.get(Number(k)) as Record<string, unknown> | undefined;
+    if (!target) continue;
+    for (const [name, value] of Object.entries(props)) {
+      if (value === null) delete target[name];
+      else target[name] = value;
+    }
+  }
+  prune(model);
+  model.visible = new Set(msg.visible);
+  model.localPlayers = msg.localPlayers;
+}
+
+// Packets carry no removal signal, so anything the game no longer reaches is dropped here
+function prune(model: Model): void {
+  if (!model.objects.has(model.root)) return;
+  const reachable = new Set<number>();
+  const todo = [model.root];
+  while (todo.length) {
+    const key = todo.pop() as number;
+    if (reachable.has(key)) continue;
+    reachable.add(key);
+    const o = model.objects.get(key);
+    if (o) collectRefs(o, todo);
+  }
+  for (const key of [...model.objects.keys()]) {
+    if (!reachable.has(key)) model.objects.delete(key);
+  }
+}
+
+function collectRefs(value: unknown, out: number[]): void {
+  if (Array.isArray(value)) {
+    value.forEach(v => collectRefs(v, out));
+  } else if (value && typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 1 && keys[0] === 'ref') {
+      out.push((value as Ref).ref);
+      return;
+    }
+    for (const [k, v] of Object.entries(value)) {
+      if (k !== '$key') collectRefs(v, out);
+    }
+  }
+}
+
+export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>
+  (v && typeof v === 'object' && 'ref' in v) ? model.objects.get(v.ref) : undefined;
+export const derefAll = (model: Model, list: Ref[] | null | undefined): TrackedObject[] =>
+  (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
+export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
+export const players = (model: Model): PlayerView[] => derefAll(model, game(model)?.Players);
+export const isLocal = (model: Model, player: PlayerView): boolean => model.localPlayers.includes(player.$key);
+export const me = (model: Model): PlayerView | undefined => players(model).find(p => isLocal(model, p));
+export const opponents = (model: Model): PlayerView[] => players(model).filter(p => !isLocal(model, p));
+export const zone = (model: Model, player: PlayerView | undefined, name: ZoneName): CardView[] =>
+  derefAll(model, player?.[name]);
+export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};

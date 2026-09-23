@@ -2,12 +2,14 @@
   <configuration default="false" name="Forge Web" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="forge.web.WebMain" />
     <module name="forge-gui-web" />
-    <!-- Serves the page from source, so a change to the JavaScript or CSS needs only a browser reload -->
+    <!-- Serves the page from source, so a change to the CSS, or to the TypeScript once rebuilt, needs only a browser reload -->
     <option name="VM_PARAMETERS" value="-Dforge.web.pageDir=forge-gui-web/src/main/resources/web" />
     <!-- Card data and skins are found relative to the repository root -->
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
     <method v="2">
       <option name="Make" enabled="true" />
+      <!-- Compiles the TypeScript into web/js before launch; npm run watch in forge-gui-web rebuilds on save instead -->
+      <option name="Maven.BeforeRunTask" enabled="true" file="$PROJECT_DIR$/pom.xml" goal="-pl forge-gui-web frontend:install-node-and-npm@install-node frontend:npm@npm-ci frontend:npm@npm-build" />
     </method>
   </configuration>
 </component>
