@@ -87,22 +87,24 @@ final class Lobby {
     }
 
     LobbyMessage state() {
-        final GameLobby lobby = view();
-        if (lobby == null) {
-            return new LobbyMessage(null);
+        synchronized (DeckCatalog.DECKS) {
+            final GameLobby lobby = view();
+            if (lobby == null) {
+                return new LobbyMessage(null);
+            }
+            final List<Format> formats = new ArrayList<>();
+            for (final GameType t : FORMATS) {
+                formats.add(new Format(t.name(), t.toString()));
+            }
+            final List<Seat> seats = new ArrayList<>();
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                seats.add(seat(lobby, i));
+            }
+            final List<String> problems = problems();
+            // Only the machine running the game can start it; everyone else waits on the host
+            return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
+                    MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
         }
-        final List<Format> formats = new ArrayList<>();
-        for (final GameType t : FORMATS) {
-            formats.add(new Format(t.name(), t.toString()));
-        }
-        final List<Seat> seats = new ArrayList<>();
-        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-            seats.add(seat(lobby, i));
-        }
-        final List<String> problems = problems();
-        // Only the machine running the game can start it; everyone else waits on the host
-        return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
-                MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
     }
 
     private Seat seat(final GameLobby lobby, final int index) {
@@ -140,32 +142,34 @@ final class Lobby {
 
     /** What stops the match starting, in the order the seats appear. */
     List<String> problems() {
-        final List<String> out = new ArrayList<>();
-        final GameLobby lobby = view();
-        if (lobby == null) {
+        synchronized (DeckCatalog.DECKS) {
+            final List<String> out = new ArrayList<>();
+            final GameLobby lobby = view();
+            if (lobby == null) {
+                return out;
+            }
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                final LobbySlot slot = lobby.getSlot(i);
+                if (slot.getType() == LobbySlotType.OPEN) {
+                    out.add("A seat is still open.");
+                    continue;
+                }
+                final String who = i == local.webSeat() ? "You have" : slot.getName() + " has";
+                final Deck deck = deckAt(i);
+                if (deck == null) {
+                    out.add(who + " no deck.");
+                    continue;
+                }
+                final String problem = DeckCatalog.problem(deck, format());
+                if (problem != null) {
+                    out.add(deck.getName() + ": " + problem);
+                }
+                if (!slot.isReady()) {
+                    out.add(slot.getName() + " is not ready.");
+                }
+            }
             return out;
         }
-        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
-            final LobbySlot slot = lobby.getSlot(i);
-            if (slot.getType() == LobbySlotType.OPEN) {
-                out.add("A seat is still open.");
-                continue;
-            }
-            final String who = i == local.webSeat() ? "You have" : slot.getName() + " has";
-            final Deck deck = deckAt(i);
-            if (deck == null) {
-                out.add(who + " no deck.");
-                continue;
-            }
-            final String problem = DeckCatalog.problem(deck, format());
-            if (problem != null) {
-                out.add(deck.getName() + ": " + problem);
-            }
-            if (!slot.isReady()) {
-                out.add(slot.getName() + " is not ready.");
-            }
-        }
-        return out;
     }
 
     /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */

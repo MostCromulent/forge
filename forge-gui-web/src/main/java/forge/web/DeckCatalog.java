@@ -79,46 +79,61 @@ final class DeckCatalog {
     /** Categories the browser has asked for and core has downloaded, kept so a refresh does not lose them. */
     private final List<NetDeckCategory> netCategories = new ArrayList<>();
 
+    /**
+     * Held while anything reads or changes a deck. Every browser's catalogue reads the same decks from Forge's deck
+     * storage, and a deck loads its sections the first time it is read, which is not safe from two threads at once:
+     * two browsers opening match setup together could each find a deck half loaded. Match setup reads decks too,
+     * so it takes the same lock.
+     */
+    static final Object DECKS = new Object();
+
     /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
     void loadNetDecks(final GameType format) {
+        // Picking waits on the host's answer, so the decks are locked only to record what was picked
         final NetDeckCategory category = NetDeckCategory.selectAndLoad(format);
-        if (category != null && !netCategories.contains(category)) {
-            netCategories.add(category);
+        synchronized (DECKS) {
+            if (category != null && !netCategories.contains(category)) {
+                netCategories.add(category);
+            }
         }
     }
 
     /** Rebuilds the catalogue for a format and returns every deck in it. */
     List<DeckSummary> refresh(final GameType format) {
-        byKey.clear();
-        final List<DeckSummary> out = new ArrayList<>();
-        final boolean commander = format == GameType.Commander;
-        add(out, format, commander ? DeckProxy.getAllCommanderDecks() : DeckProxy.getAllConstructedDecks(), MINE);
-        add(out, format, commander ? DeckProxy.getAllCommanderPreconDecks()
-                : DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
-        if (!commander) {
-            add(out, format, DeckProxy.getAllQuestEventAndChallenges(), QUEST);
-            addGenerators(out);
+        synchronized (DECKS) {
+            byKey.clear();
+            final List<DeckSummary> out = new ArrayList<>();
+            final boolean commander = format == GameType.Commander;
+            add(out, format, commander ? DeckProxy.getAllCommanderDecks() : DeckProxy.getAllConstructedDecks(), MINE);
+            add(out, format, commander ? DeckProxy.getAllCommanderPreconDecks()
+                    : DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
+            if (!commander) {
+                add(out, format, DeckProxy.getAllQuestEventAndChallenges(), QUEST);
+                addGenerators(out);
+            }
+            for (final NetDeckCategory category : netCategories) {
+                add(out, format, DeckProxy.getNetDecks(category), NET + " " + category.getName());
+            }
+            return out;
         }
-        for (final NetDeckCategory category : netCategories) {
-            add(out, format, DeckProxy.getNetDecks(category), NET + " " + category.getName());
-        }
-        return out;
     }
 
     Deck deck(final String key) {
-        final Entry e = key == null ? null : byKey.get(key);
-        if (e == null) {
-            return null;
+        synchronized (DECKS) {
+            final Entry e = key == null ? null : byKey.get(key);
+            if (e == null) {
+                return null;
+            }
+            // A generator has no deck until it is asked for one, and builds a different deck each time
+            if (e.built() != null) {
+                return e.built();
+            }
+            final Deck deck = e.proxy() == null ? buildColours(key) : e.proxy().getDeck();
+            if (e.generated()) {
+                byKey.put(key, new Entry(e.proxy(), e.source(), true, deck));
+            }
+            return deck;
         }
-        // A generator has no deck until it is asked for one, and builds a different deck each time
-        if (e.built() != null) {
-            return e.built();
-        }
-        final Deck deck = e.proxy() == null ? buildColours(key) : e.proxy().getDeck();
-        if (e.generated()) {
-            byKey.put(key, new Entry(e.proxy(), e.source(), true, deck));
-        }
-        return deck;
     }
 
     /** Builds the colour generator behind a "gen:color:" key, whose suffix names what the engine expects. */
@@ -129,26 +144,30 @@ final class DeckCatalog {
 
     /** Writes a card-art sleeve onto a deck and saves it, the way the desktop lobby does. */
     boolean saveSleeveArt(final String key, final String imageKey, final int offset) {
-        final Entry e = key == null ? null : byKey.get(key);
-        final Deck deck = e == null ? null : e.proxy().getDeck();
-        if (deck == null) {
-            return false;
+        synchronized (DECKS) {
+            final Entry e = key == null ? null : byKey.get(key);
+            final Deck deck = e == null ? null : e.proxy().getDeck();
+            if (deck == null) {
+                return false;
+            }
+            deck.setSleeveArtKey(imageKey);
+            deck.setSleeveArtOffset(SleeveArt.clampOffset(offset));
+            rememberSleeveArt(imageKey, offset);
+            return e.proxy().saveDeck();
         }
-        deck.setSleeveArtKey(imageKey);
-        deck.setSleeveArtOffset(SleeveArt.clampOffset(offset));
-        rememberSleeveArt(imageKey, offset);
-        return e.proxy().saveDeck();
     }
 
     /** The chosen deck's card list, grouped the way a decklist is read, for the panel beside the results. */
     DeckDetails details(final String key, final GameType format) {
-        final Deck deck = deck(key);
-        if (deck == null) {
-            return null;
+        synchronized (DECKS) {
+            final Deck deck = deck(key);
+            if (deck == null) {
+                return null;
+            }
+            return new DeckDetails(key, deck.getName(), problem(deck, format), colors(deck), stats(deck),
+                    groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
+                    deck.getSleeveArtOffset());
         }
-        return new DeckDetails(key, deck.getName(), problem(deck, format), colors(deck), stats(deck),
-                groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
-                deck.getSleeveArtOffset());
     }
 
     /** The deck's colour identity as WUBRG letters, or "C" when it has none. */
