@@ -79,7 +79,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('auto-passing', !!passing);
   if (passing) {
     q(root, '.step').textContent = 'Passing';
-    q(root, '.message').textContent = 'Nothing to play here, so priority passes. Stop it to act instead.';
+    q(root, '.message').textContent = 'Nothing to play.';
     renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
     setButton(ok, { label: 'Pass', enabled: true });
     setButton(cancel, { label: 'Stop', enabled: true });
