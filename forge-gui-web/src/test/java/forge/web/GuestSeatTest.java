@@ -225,6 +225,14 @@ public class GuestSeatTest {
         Assert.assertNotNull(host.awaitLobby(l -> l.get("canStart").getAsBoolean()),
                 "the host could not start once both seats had a deck");
 
+        // Stops set in match setup are the player's, and the match opens with them rather than correcting them later
+        final JsonObject stops = JsonCodec.message("setStops");
+        stops.addProperty("mine", true);
+        final com.google.gson.JsonArray phases = new com.google.gson.JsonArray();
+        phases.add("MAIN2");
+        stops.add("phases", phases);
+        sessions.onMessage(guest, stops);
+
         guest.forget();
         final JsonObject start = JsonCodec.message("start");
         start.addProperty("spectate", false);
@@ -233,6 +241,10 @@ public class GuestSeatTest {
                 "the guest was left in match setup when the host started the match" + diagnosis(host, guest));
         Assert.assertNotNull(guest.awaitMatching("state", m -> m.get("full").getAsBoolean()),
                 "the guest was taken into the match but never shown the table");
+        final JsonObject controls = guest.await("controls");
+        Assert.assertNotNull(controls, "the guest was never sent its controls");
+        Assert.assertEquals(controls.get("myStops").toString(), "[\"MAIN2\"]",
+                "the match did not open with the stops the guest set in match setup");
     }
 
     /**

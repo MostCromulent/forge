@@ -359,19 +359,14 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /** Every stop of one row: those listed on, the rest off. Untap takes no stop, as on desktop. */
-    private void setStops(final List<PhaseType> phases, final boolean mine) {
-        for (final PhaseType phase : PhaseType.values()) {
-            if (phase.ordinal() > 0 && settings.getBoolean(WebSettings.stopKey(phase, mine)) != phases.contains(phase)) {
-                setStop(phase, mine, phases.contains(phase));
-            }
-        }
-    }
-
     private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
         settings.set(WebSettings.stopKey(phase, mine), stop);
         settings.save();
-        // A stop set before the game has a view is read from the settings when the game's players are seeded
+        pushStop(phase, mine);
+    }
+
+    /** Tells the game a stop changed. One set before the game has players is read when they are seeded instead. */
+    private void pushStop(final PhaseType phase, final boolean mine) {
         if (getGameView() == null) {
             return;
         }
@@ -948,6 +943,15 @@ public class WebGuiGame extends NetworkGuiGame {
                 send(controlsMessage());
                 return;
             }
+            if ("setStops".equals(type)) {
+                // Stops are the player's too; the game, once it has players, is told of each one that changed
+                final SetStops stops = Wire.decode(msg, SetStops.class);
+                for (final PhaseType phase : WebSettings.setStops(settings, stops.mine(), stops.phases())) {
+                    pushStop(phase, stops.mine());
+                }
+                send(controlsMessage());
+                return;
+            }
             if ("playerDetail".equals(type)) {
                 final PlayerView player = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.PlayerViewType);
                 if (player != null) {
@@ -987,11 +991,6 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "toggleStop" -> {
                     final PhaseCommand stop = Wire.decode(msg, PhaseCommand.class);
                     toggleStop(stop.phase(), stop.mine());
-                    send(controlsMessage());
-                }
-                case "setStops" -> {
-                    final SetStops stops = Wire.decode(msg, SetStops.class);
-                    setStops(stops.phases(), stops.mine());
                     send(controlsMessage());
                 }
                 case "toggleMarker" -> {

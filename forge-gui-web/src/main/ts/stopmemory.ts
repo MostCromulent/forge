@@ -1,9 +1,7 @@
-// A guest's phase stops, remembered by its browser. The server keeps a guest's stops only as long as its session,
-// so a browser that reaches a server without them (after a restart) gives them back, once per connection.
-//
-// A stop is toggled on the server, so the browser learns the result only from the next controls message, and a
-// message already on its way can still carry the old stops. The memory therefore follows the server only once the
-// server shows the stops it was given back; until then it would be remembering what it is about to replace.
+// A guest's phase stops, remembered by its browser. The server keeps a guest's stops only as long as its session, so
+// a browser gives them back whenever it connects, before any game opens: the game's players are seeded with them,
+// and nothing has to be corrected once play has begun. Setting a row is the same whatever the server had, so the
+// browser need not know what that was.
 
 import type { Controls, PhaseType } from './protocol';
 
@@ -18,50 +16,28 @@ export interface StopStore {
 }
 
 export interface StopMemory {
-  /** A new connection: the server may have forgotten the stops, so they are offered again. */
-  reset(): void;
+  /** Gives the server the stops this browser remembers, if it remembers any. */
+  restore(setStops: (mine: boolean, phases: PhaseType[]) => void): void;
+  /** Remembers a guest's stops as the server has them. The host's are Forge's preferences, which outlive the server. */
   onControls(controls: Controls, guest: boolean): void;
 }
 
-export function createStopMemory(store: StopStore, setStops: (mine: boolean, phases: PhaseType[]) => void): StopMemory {
-  let phase: 'restore' | 'waiting' | 'following' = 'restore';
-  let given: RememberedStops | null = null;
+export function createStopMemory(store: StopStore): StopMemory {
   return {
-    reset() {
-      phase = 'restore';
-      given = null;
+    restore(setStops) {
+      const saved = store.load();
+      if (saved) {
+        setStops(true, saved.mine);
+        setStops(false, saved.others);
+      }
     },
     onControls(controls, guest) {
-      // The host's stops are Forge's preferences, which outlive the server
-      if (!guest) {
-        return;
+      if (guest) {
+        store.save({ mine: controls.myStops, others: controls.otherStops });
       }
-      const now = { mine: controls.myStops, others: controls.otherStops };
-      if (phase === 'restore') {
-        const saved = store.load();
-        if (saved && !same(saved, now)) {
-          if (!sameRow(saved.mine, now.mine)) setStops(true, saved.mine);
-          if (!sameRow(saved.others, now.others)) setStops(false, saved.others);
-          given = saved;
-          phase = 'waiting';
-          return;
-        }
-        phase = 'following';
-      }
-      if (phase === 'waiting') {
-        if (!given || !same(given, now)) {
-          return;
-        }
-        phase = 'following';
-      }
-      store.save(now);
     },
   };
 }
-
-const sameRow = (a: readonly PhaseType[], b: readonly PhaseType[]): boolean =>
-  a.length === b.length && a.every(p => b.includes(p));
-const same = (a: RememberedStops, b: RememberedStops): boolean => sameRow(a.mine, b.mine) && sameRow(a.others, b.others);
 
 /** The browser's storage, which can be unavailable; the stops then last as long as the session. */
 export function localStopStore(key: string): StopStore {

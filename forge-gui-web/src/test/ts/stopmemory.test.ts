@@ -10,43 +10,31 @@ const controls = (mine: PhaseType[], others: PhaseType[]): Controls => ({
 function setup(saved: RememberedStops | null) {
   const store = { stops: saved, load: () => store.stops, save: (s: RememberedStops) => { store.stops = s; } };
   const sent: [boolean, PhaseType[]][] = [];
-  const memory = createStopMemory(store, (mine, phases) => sent.push([mine, phases]));
-  return { store, sent, memory };
+  return { store, sent, memory: createStopMemory(store), setStops: (mine: boolean, phases: PhaseType[]) => sent.push([mine, phases]) };
 }
 
 describe('a guest\'s remembered phase stops', () => {
-  it('gives a server that has forgotten them only the rows that differ', () => {
-    const { sent, memory } = setup({ mine: ['MAIN1', 'MAIN2'], others: ['END_OF_TURN'] });
-    memory.onControls(controls(['MAIN1', 'MAIN2'], []), true);
-    expect(sent).toEqual([[false, ['END_OF_TURN']]]);
+  it('gives both rows back as they were remembered', () => {
+    const { sent, memory, setStops } = setup({ mine: ['MAIN1', 'MAIN2'], others: ['END_OF_TURN'] });
+    memory.restore(setStops);
+    expect(sent).toEqual([[true, ['MAIN1', 'MAIN2']], [false, ['END_OF_TURN']]]);
   });
 
-  // A controls message already on its way still carries the server's old stops
-  it('does not remember what it is replacing before the server has taken them', () => {
-    const { store, memory } = setup({ mine: ['MAIN1'], others: [] });
-    memory.onControls(controls(['MAIN2'], []), true);
-    memory.onControls(controls(['MAIN2'], []), true);
-    expect(store.stops).toEqual({ mine: ['MAIN1'], others: [] });
-    memory.onControls(controls(['MAIN1'], []), true);
-    memory.onControls(controls(['MAIN1', 'COMBAT_DECLARE_ATTACKERS'], []), true);
-    expect(store.stops).toEqual({ mine: ['MAIN1', 'COMBAT_DECLARE_ATTACKERS'], others: [] });
-  });
-
-  it('offers them again only on a new connection', () => {
-    const { sent, memory } = setup({ mine: ['MAIN1'], others: [] });
-    memory.onControls(controls(['MAIN1'], []), true);
-    memory.onControls(controls(['MAIN1'], []), true);
+  it('gives nothing back when it remembers nothing', () => {
+    const { sent, memory, setStops } = setup(null);
+    memory.restore(setStops);
     expect(sent).toEqual([]);
-    // The server restarted, and has its defaults again
-    memory.reset();
-    memory.onControls(controls([], []), true);
-    expect(sent).toEqual([[true, ['MAIN1']]]);
+  });
+
+  it('remembers a guest\'s stops as the server has them', () => {
+    const { store, memory } = setup(null);
+    memory.onControls(controls(['MAIN1'], ['COMBAT_DECLARE_ATTACKERS']), true);
+    expect(store.stops).toEqual({ mine: ['MAIN1'], others: ['COMBAT_DECLARE_ATTACKERS'] });
   });
 
   it('leaves the host\'s alone, which are Forge\'s preferences', () => {
-    const { store, sent, memory } = setup({ mine: ['MAIN1'], others: [] });
+    const { store, memory } = setup({ mine: ['MAIN1'], others: [] });
     memory.onControls(controls([], []), false);
-    expect(sent).toEqual([]);
     expect(store.stops).toEqual({ mine: ['MAIN1'], others: [] });
   });
 });

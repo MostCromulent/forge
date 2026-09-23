@@ -16,7 +16,7 @@ import { initSide, renderSide } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
-import { initSettings, onServerSettings, setGuest, setPlaymats } from './settings';
+import { initSettings, onServerSettings, restoreGuestSettings, setGuest, setPlaymats } from './settings';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
 import { createStopMemory, localStopStore } from './stopmemory';
@@ -29,7 +29,12 @@ let scheduled = false;
 let claimed = false;
 let askedAddresses = false;
 initPace(apply);
-const send = connect(pace, online => { byId('banner').hidden = online; });
+// A guest's settings live in its session on the server, so each connection is given back what the browser remembers
+let restored = false;
+const send = connect(pace, online => {
+  byId('banner').hidden = online;
+  if (!online) restored = false;
+});
 
 const wire = createActions(send);
 const actions: Actions = {
@@ -62,7 +67,7 @@ const actions: Actions = {
   },
 };
 
-const stopMemory = createStopMemory(localStopStore('forge.guestStops'), actions.setStops);
+const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule);
 initDetail(actions);
@@ -112,7 +117,12 @@ function apply(msg: ServerMessage): void {
       resetPace();
       model.host = msg.host !== false;
       setGuest(!model.host);
-      stopMemory.reset();
+      // Before any game opens, so the game is seeded with them rather than corrected afterwards
+      if (!model.host && !restored) {
+        restored = true;
+        restoreGuestSettings();
+        stopMemory.restore(actions.setStops);
+      }
       model.canClaimHost = !!msg.canClaimHost;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;

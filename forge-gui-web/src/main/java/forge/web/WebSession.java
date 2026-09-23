@@ -11,6 +11,8 @@ import forge.web.FromBrowser.SeatCommand;
 import forge.web.FromBrowser.SetFormat;
 import forge.web.FromBrowser.SetName;
 import forge.web.FromBrowser.SetSeat;
+import forge.web.FromBrowser.SetSetting;
+import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.SleeveArt;
 import forge.web.FromBrowser.Start;
 import forge.web.ToBrowser.Addresses;
@@ -262,6 +264,19 @@ public final class WebSession {
             case "quit" -> {
                 if (isHost) {
                     ui.invokeInEdtLater(this::quit);
+                }
+            }
+            // A setting is the player's, whatever the browser is doing: set before a match, it is what the match is seeded
+            // with; during one, the game is told as well
+            case "setSetting", "setStops" -> {
+                if (stage instanceof Playing p) {
+                    p.gui().onBrowserMessage(msg);
+                } else if ("setSetting".equals(msg.get("t").getAsString())) {
+                    final SetSetting setting = Wire.decode(msg, SetSetting.class);
+                    WebSettings.set(settings, null, setting.key(), setting.value());
+                } else {
+                    final SetStops stops = Wire.decode(msg, SetStops.class);
+                    WebSettings.setStops(settings, stops.mine(), stops.phases());
                 }
             }
             default -> {

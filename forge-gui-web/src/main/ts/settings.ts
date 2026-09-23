@@ -7,7 +7,7 @@ import type { Playmat, ServerSettings } from './protocol';
 const LOCAL_KEY = 'forge.settings';
 const DEFAULTS_KEY = 'forge.defaults';
 /** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
- *  remembers them and gives them back to a server that has forgotten them. */
+ *  remembers them and gives them back whenever it connects. */
 const GUEST_KEY = 'forge.guestSettings';
 
 export type SettingValue = string | number | boolean;
@@ -139,19 +139,17 @@ export function setting(key: string): SettingValue {
 // The server sends its preference values with the rest of the turn controls
 export function onServerSettings(values: ServerSettings | undefined): void {
   server = values ?? {};
-  if (guest) {
-    restoreGuestSettings();
-  }
   applyWebDefaults();
   apply();
 }
 
-// Only what differs is sent back, so a server that already has these settings is told nothing
-function restoreGuestSettings(): void {
-  const known = server as Record<string, SettingValue | undefined>;
+/**
+ * Gives the server the settings this guest's browser remembers. Sent as the browser connects, before any game
+ * opens, so the game is seeded with them; each one sets a value, so it does not matter what the server had.
+ */
+export function restoreGuestSettings(): void {
   for (const [key, value] of Object.entries(guestSettings())) {
-    if (byKey.get(key)?.server && known[key] !== value) {
-      known[key] = value;
+    if (byKey.get(key)?.server) {
       saveOnServer(key, String(value));
     }
   }

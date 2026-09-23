@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.game.phase.PhaseType;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -113,5 +114,16 @@ public class WebSettingsTest {
         Assert.assertTrue(told.contains(FPref.YIELD_AUTO_PASS_NO_ACTIONS + "=true"), told.toString());
         Assert.assertEquals(told.size(), PlayerSettings.PER_PLAYER_ON_HOST.size(),
                 "every setting the host keeps per player should be sent, and the auto-yield mode, which it does not, should not");
+    }
+
+    @Test
+    public void settingARowOfStopsSetsItWhateverItWasAndSaysWhatChanged() {
+        final PlayerSettings guest = PlayerSettings.fresh();
+        WebSettings.setStops(guest, true, List.of(PhaseType.MAIN1, PhaseType.MAIN2));
+        Assert.assertEquals(WebSettings.stops(guest, FPref.PHASES_HUMAN), List.of(PhaseType.MAIN1, PhaseType.MAIN2));
+        Assert.assertEquals(WebSettings.setStops(guest, true, List.of(PhaseType.MAIN2)), List.of(PhaseType.MAIN1),
+                "only the stop that went off changed");
+        Assert.assertEquals(WebSettings.setStops(guest, true, List.of(PhaseType.MAIN2)), List.of(), "setting it again changes nothing");
+        Assert.assertEquals(WebSettings.stops(guest, FPref.PHASES_HUMAN), List.of(PhaseType.MAIN2));
     }
 }

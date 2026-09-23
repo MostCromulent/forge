@@ -133,6 +133,25 @@ final class WebSettings {
         return out;
     }
 
+    /**
+     * Sets every stop of one row: those listed on, the rest off. Untap takes no stop, as on desktop. Answers the
+     * phases that changed, which a game already under way has to be told of.
+     */
+    static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
+        final List<PhaseType> changed = new ArrayList<>();
+        for (final PhaseType phase : PhaseType.values()) {
+            final boolean stop = phases.contains(phase);
+            if (phase.ordinal() > 0 && player.getBoolean(stopKey(phase, mine)) != stop) {
+                player.set(stopKey(phase, mine), stop);
+                changed.add(phase);
+            }
+        }
+        if (!changed.isEmpty()) {
+            player.save();
+        }
+        return changed;
+    }
+
     static FPref stopKey(final PhaseType phase, final boolean mine) {
         return (mine ? FPref.PHASES_HUMAN : FPref.PHASES_AI)[phase.ordinal() - 1];
     }
