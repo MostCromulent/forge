@@ -22,7 +22,7 @@
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok { flex: 1; border-radius: 4px 8px 8px 4px; }
 #prompt .cancel:first-child { border-radius: 8px 4px 4px 8px; }
-#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
+#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent); }
 #prompt kbd { font: 600 9px/1 system-ui, sans-serif; letter-spacing: .08em; color: var(--muted); }
 #prompt .ok kbd { color: #ffffffcc; }
 /* Spectating two AI players leaves nothing to answer, so only the volume and options buttons stay */

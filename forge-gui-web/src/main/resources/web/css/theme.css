@@ -15,7 +15,11 @@
   --accent-2: #a78bfa;
   /* Tinted forms of the accent, so violet can sit behind something instead of only filling or outlining it */
   --accent-soft: #7c3aed2e;
-  --accent-glow: #a78bfa73;
+  --accent-glow: #a78bfa40;
+  /* A card back with no sleeve: a quiet stripe in the accent's family */
+  --back-a: #2a2140;
+  --back-b: #231b36;
+  --back-edge: #3b2f5c;
   /* Selection and attack cues differ in luminance and shape, never only in red versus green */
   --select: #ffcc33;
   --attack: #ffffff;
