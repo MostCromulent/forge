@@ -304,6 +304,13 @@ public final class LocalGame {
     }
 
     public void endMatch() {
+        // The server notices a closed connection later, in whichever lobby it is serving by then. Left with this
+        // table's, it would count a finished match whose players have not yet chosen what next as still going, and
+        // hold the seat for a reconnect under the player's name, which the next table's seat of that name then
+        // walks into instead of taking a seat. An empty lobby of its own takes those disconnects instead.
+        if (hosted != null) {
+            server.setLobby(new ServerGameLobby());
+        }
         if (client != null) {
             client.close();
             client = null;

@@ -30,6 +30,26 @@ export async function inviteLink(page: Page, serverUrl: string): Promise<string>
   return (shared ?? '').replace(/^https?:\/\/[^/]+/, new URL(serverUrl).origin);
 }
 
+/** Answers whatever the game asks in a dialog with its first choice, until none is open. */
+export async function answerDialogs(page: Page): Promise<void> {
+  const dialog = page.locator('#dialog-layer .dialog');
+  for (let i = 0; i < 10 && await dialog.count(); i++) {
+    const choice = dialog.locator('.options .card, .options .text-option').first();
+    if (await choice.count()) await choice.click();
+    await dialog.locator('.actions button').last().click();
+    await page.waitForTimeout(300);
+  }
+}
+
+/** Concedes from the options dialog, which asks twice. */
+export async function concede(page: Page): Promise<void> {
+  await answerDialogs(page);
+  await page.click('#prompt .cog');
+  await page.locator('#options .concede').click();
+  await page.locator('#options .concede').click();
+  await expect(page.locator('#game-over')).toBeVisible();
+}
+
 export async function say(page: Page, input: string, text: string): Promise<void> {
   await page.fill(input, text);
   await page.press(input, 'Enter');
