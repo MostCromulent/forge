@@ -341,6 +341,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return new Controls(WebSettings.stops(settings, FPref.PHASES_HUMAN), WebSettings.stops(settings, FPref.PHASES_AI),
                 settings.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS), getDayTime(),
                 marker == null ? null : new TurnMarker(marker.getPhase(), isLocalPlayer(marker.getPhaseOwner())),
+                yields != null && yields.autoPassUntilEndOfTurn(), yields != null && yields.autoPassUntilStackEmpty(),
                 WebSettings.values(settings));
     }
 

@@ -124,6 +124,8 @@ export interface Controls {
   autoPass: boolean;
   dayTime?: string;
   marker?: TurnMarker;
+  untilEndOfTurn: boolean;
+  untilStackEmpty: boolean;
   settings: ServerSettings;
 }
 

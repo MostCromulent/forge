@@ -175,14 +175,22 @@ function drawPips(root: HTMLElement, phase: Phase, step: number, stops: Set<stri
     });
 }
 
+// Only one yield runs at a time, so the chip names whichever it is and where it stops
 function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, opponentLabel: string): void {
-  const marker = model.controls?.marker;
-  const until = q(pill, '.until');
-  until.hidden = !marker;
+  const controls = model.controls;
+  const marker = controls?.marker;
+  let text = '';
   if (marker) {
     const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${opponentLabel}'s `;
-    q(until, '.text').textContent = `until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}`;
+    text = `until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}`;
+  } else if (controls?.untilEndOfTurn) {
+    text = myTurn ? 'until end of your turn' : `until end of ${opponentLabel}'s turn`;
+  } else if (controls?.untilStackEmpty) {
+    text = 'until the stack clears';
   }
+  const until = q(pill, '.until');
+  until.hidden = !text;
+  q(until, '.text').textContent = text;
 }
 
 // Who the game is waiting on, and for how long. Your own priority lights the whole pill instead

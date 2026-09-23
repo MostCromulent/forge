@@ -201,7 +201,7 @@ final class ToBrowser {
 
     @Message("controls")
     record Controls(List<PhaseType> myStops, List<PhaseType> otherStops, boolean autoPass, @Nullable String dayTime,
-            @Nullable TurnMarker marker, ServerSettings settings) {
+            @Nullable TurnMarker marker, boolean untilEndOfTurn, boolean untilStackEmpty, ServerSettings settings) {
     }
 
     /** Pass priority until this phase of this side's turn. */

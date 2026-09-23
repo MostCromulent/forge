@@ -4,7 +4,7 @@ import type { Controls, PhaseType } from '../../main/ts/protocol';
 
 const controls = (mine: PhaseType[], others: PhaseType[]): Controls => ({
   t: 'controls', myStops: mine, otherStops: others, autoPass: false,
-  settings: {} as Controls['settings'],
+  untilEndOfTurn: false, untilStackEmpty: false, settings: {} as Controls['settings'],
 });
 
 function setup(saved: RememberedStops | null) {
