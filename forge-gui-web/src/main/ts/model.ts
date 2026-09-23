@@ -1,5 +1,5 @@
 import type {
-  Address, CardStateView, CardView, Controls, DeckSummary, GameView, LobbyTable, Playable, PlayerView, PlayerZone,
+  Address, CardStateView, CardView, Controls, DeckSummary, GameEvent, GameView, LobbyTable, Playable, PlayerView, PlayerZone,
   Prompt, Ref, Refs, Request, ShownZone, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
@@ -33,6 +33,9 @@ export interface Model {
   addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
+  /** What the game did since the board was last drawn, oldest first. The render hands them to whatever animates
+   *  them and empties the list, so each is shown once. */
+  events: GameEvent[];
 }
 
 export function createModel(): Model {
@@ -41,7 +44,7 @@ export function createModel(): Model {
     prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
     looks: null, spectating: false,
     inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
-    lobby: null, addresses: null, host: true, canClaimHost: false,
+    lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
   };
 }
 
@@ -49,7 +52,10 @@ export function applyState(model: Model, msg: StateMessage): void {
   if (msg.full) {
     model.objects.clear();
     model.root = msg.root;
+    // A whole new table has nothing to move from
+    model.events = [];
   }
+  model.events.push(...msg.events);
   for (const [k, props] of Object.entries(msg.newObjects)) {
     model.objects.set(Number(k), { ...withoutNulls(props), $key: Number(k) });
   }

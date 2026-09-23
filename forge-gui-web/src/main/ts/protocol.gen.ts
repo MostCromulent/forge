@@ -89,6 +89,7 @@ export interface StateMessage {
   deltas: Record<string, TrackedDelta>;
   visible: number[];
   localPlayers: number[];
+  events: GameEvent[];
 }
 
 export interface Prompt {
@@ -435,6 +436,48 @@ export type ClientMessage =
   | SetSetting
   | NextGame;
 
+// ---- Game events: what happened, carried by the state message that shows its result ----
+
+export interface CardMoved {
+  kind: 'cardMoved';
+  card: Ref;
+  from?: Place;
+  to?: Place;
+}
+
+export interface CardDamaged {
+  kind: 'cardDamaged';
+  card: Ref;
+  source?: Ref;
+  amount: number;
+}
+
+export interface PlayerDamaged {
+  kind: 'playerDamaged';
+  player: Ref;
+  source?: Ref;
+  amount: number;
+  combat: boolean;
+}
+
+export interface AttackersDeclared {
+  kind: 'attackersDeclared';
+  player: Ref;
+  attacks: Attack[];
+}
+
+export interface Shuffled {
+  kind: 'shuffled';
+  player: Ref;
+}
+
+export type GameEvent =
+  | CardMoved
+  | CardDamaged
+  | PlayerDamaged
+  | AttackersDeclared
+  | Shuffled;
+
 export interface Playmat {
   id: string;
   label: string;
@@ -574,6 +617,16 @@ export interface SideboardEntry {
 export type YieldAction = 'autoYield' | 'alwaysYes' | 'alwaysNo' | 'yieldToStack' | 'yieldToEntireStack';
 
 export type NextGameDecision = 'NEW' | 'CONTINUE' | 'QUIT';
+
+export interface Place {
+  zone: ZoneType;
+  player?: Ref;
+}
+
+export interface Attack {
+  attacker: Ref;
+  defender?: Ref;
+}
 
 export interface DeckStats {
   main: number;

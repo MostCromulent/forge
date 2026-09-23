@@ -127,6 +127,9 @@ function schedule(): void {
 }
 
 function render(): void {
+  // What happened since the last frame is shown once, by this frame
+  const events = model.events;
+  model.events = [];
   byId('menu').hidden = model.inMatch || model.inLobby;
   byId('lobby').hidden = model.inMatch || !model.inLobby;
   byId('match').hidden = !model.inMatch;
@@ -137,7 +140,7 @@ function render(): void {
     return;
   }
   renderSide();
-  renderMatch(model, send);
+  renderMatch(model, send, events);
   renderPrompt(model, send);
   renderDialogs(model, send, schedule);
   drawOverlay(model);

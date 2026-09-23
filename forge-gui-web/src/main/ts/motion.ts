@@ -1,22 +1,31 @@
-// Cards move rather than jump: one drawn flies from the library into the hand, one cast waits beside the stack
-// while its cost is paid, and one put back flies home. Only your hand and the stack are measured each render,
-// so a wide board costs nothing.
+// Cards move rather than jump. The game says what moved (a cardMoved event from one zone to another); this file
+// decides how that looks, from where each card stood when the board was last drawn to where it stands now. A spell
+// being cast goes onto the stack before its cost is paid, so it waits beside the stack until its item appears there,
+// or flies home if the cast is cancelled, which is the one move the game makes without an event.
 
 import { hoverable } from './detail';
+import type { CardMoved, GameEvent, Place } from './protocol';
 import type { Model } from './model';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
 interface Snapshot {
   rect: DOMRect;
-  ghost: HTMLElement;
+  ghost: HTMLElement | null;
 }
 
-const inHand = new Map<string, Snapshot>();
-const onStack = new Map<string, DOMRect>();
-const onBoard = new Map<string, DOMRect>();
-const gaveGhost = new Map<string, HTMLElement>();
+/** Every card drawn last frame (hand, board, stack, open zones), by its key. */
+const lastSeen = new Map<string, Snapshot>();
+/** Spells that have gone onto the stack and are waiting for their cost, by card key. */
+const waiting = new Map<string, Snapshot & { since: number }>();
 const fromHint = new Map<string, DOMRect>();
 const intoHint = new Map<string, DOMRect>();
+
+const FLIGHT_MS = 240;
+const DEAL_MS = 320;
+const STAGGER_MS = 55;
+/** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
+const SETTLE_MS = 900;
+const POP_MS = 220;
 
 /** The cards of a pile that has just been laid out all start where the pile stood. */
 export function spreadFrom(keys: string[], rect: DOMRect): void {
@@ -31,118 +40,149 @@ export function mergeInto(keys: string[], rect: DOMRect): void {
     intoHint.set(key, rect);
   }
 }
-const waiting = new Map<string, Snapshot & { since: number }>();
-/** Where a spell sat while its cost was paid, remembered after the ghost goes so a cancelled cast flies
- *  home from that spot rather than from the library, which is where an unknown card comes from. */
-const waited = new Map<string, { rect: DOMRect; at: number }>();
-const FLIGHT_MS = 240;
-const DEAL_MS = 320;
-const STAGGER_MS = 55;
-const SETTLE_MS = 900;
-const WAITED_MEMORY_MS = 8000;
-const POP_MS = 220;
 
-export function animateCardMoves(model: Model): void {
+/** Animates what happened since the last frame. Runs after the board is drawn, so both ends can be measured. */
+export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   notePiles();
-  const arrived = new Set<string>();
-  // A card cast from hand stops on the stack before it reaches the table, so every hop is followed
-  for (const el of [...document.querySelectorAll<HTMLElement>('.row .card[data-key], .slot .card[data-key]'), ...stackItems()]) {
-    const key = keyOf(el);
-    if (key === undefined) continue;
-    // Only a card that has just arrived from somewhere else flies; one the row merely shuffled along stays put
-    const was = waiting.get(key)?.rect ?? inHand.get(key)?.rect ?? fromHint.get(key)
-      ?? (onBoard.has(key) ? null : onStack.get(key));
-    if (was) {
-      arrived.add(key);
-      land(key);
-      fly(el, was, FLIGHT_MS, 0);
-    } else if (!onBoard.has(key) && !onStack.has(key) && !el.classList.contains('stack-item')) {
-      // A token, or anything else that arrives from nowhere, grows into place rather than blinking on
-      arrived.add(key);
-      pop(el);
-    }
-  }
-  const hand = [...document.querySelectorAll<HTMLElement>('#hand .card[data-key]')];
-  const library = document.querySelector('#me .zone-tile[data-zone="Library"]')?.getBoundingClientRect();
   let dealt = 0;
-  for (const el of hand) {
-    const key = el.dataset.key as string;
-    // A cancelled cost comes back from where it waited, a bounced permanent from where it stood, the rest are drawn
-    const back = waiting.get(key)?.rect ?? onBoard.get(key) ?? onStack.get(key) ?? recentWait(key);
-    if (back) {
+  for (const [key, move] of journeys(events)) {
+    const start = waiting.get(key)?.rect ?? lastSeen.get(key)?.rect ?? placeRect(move.from);
+    const el = elementFor(key);
+    // A spell on the stack with no item yet is having its cost paid
+    if (move.to?.zone === 'Stack' && !el) {
+      if (start) {
+        hold(key, start, lastSeen.get(key)?.ghost ?? null);
+      }
+      continue;
+    }
+    if (el) {
+      const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
       land(key);
-      fly(el, back, FLIGHT_MS, 0);
-    } else if (library && !inHand.has(key)) {
-      fly(el, library, DEAL_MS, dealt++ * STAGGER_MS);
+      if (start) {
+        fly(el, start, drawn ? DEAL_MS : FLIGHT_MS, drawn ? dealt++ * STAGGER_MS : 0);
+      } else {
+        // A token, or anything else that comes into being, grows into place rather than blinking on
+        pop(el);
+      }
+      continue;
+    }
+    // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
+    const ghost = waiting.get(key)?.ghost ?? lastSeen.get(key)?.ghost ?? null;
+    land(key);
+    if (ghost && start) {
+      const target = tileImageRect(key) ?? placeRect(move.to);
+      sendTo({ rect: start, ghost }, target ?? start, target ? 0.25 : 0);
     }
   }
-  // A whole hand leaving at once is a mulligan; a single card is a spell on its way out, so it waits and sees
-  const gone = [...inHand].filter(([key]) => !arrived.has(key) && !onScreen(key) && !waiting.has(key));
-  for (const [key, was] of gone) {
-    // A card that has turned up on a zone tile went there: discarded, milled or exiled, not cast
-    const tile = tileFor(key);
-    if (tile) {
-      sendTo(was, tile, 0.25);
-    } else if (gone.length === 1) {
-      hold(key, was);
-    } else if (library) {
-      sendTo(was, library, 0.2);
+  settleWaiting(!!model.prompt?.paying);
+  layOutPiles();
+  note();
+}
+
+/** Each card's first origin and last destination this frame; a card that went out and back in one step moved once. */
+function journeys(events: readonly GameEvent[]): Map<string, CardMoved> {
+  const out = new Map<string, CardMoved>();
+  for (const e of events) {
+    if (e.kind !== 'cardMoved') {
+      continue;
     }
+    const key = String(e.card.ref);
+    const earlier = out.get(key);
+    out.set(key, earlier ? { ...e, from: earlier.from } : e);
   }
-  // A card still missing once the payment prompt has gone was never cast, so it stops waiting
-  const paying = !!model?.prompt?.paying;
+  return out;
+}
+
+// A paid spell's item has appeared on the stack, so it flies there from where it waited. A cancelled cast is put
+// back without the game saying so (Forge undoes it rather than moving it), so a waiting card that is drawn in a zone
+// again flies home from beside the stack
+function settleWaiting(paying: boolean): void {
   for (const [key, held] of waiting) {
-    if (!paying && Date.now() - held.since > SETTLE_MS) {
+    const arrived = stackItemFor(key) ?? cardElement(key);
+    if (arrived) {
+      land(key);
+      fly(arrived, held.rect, FLIGHT_MS, 0);
+    } else if (!paying && Date.now() - held.since > SETTLE_MS) {
       land(key);
     }
   }
-  for (const [key, w] of waited) {
-    if (Date.now() - w.at > WAITED_MEMORY_MS) {
-      waited.delete(key);
+}
+
+// Opening or closing a pile is the player's doing, not the game's, so it is animated from the hints it left
+function layOutPiles(): void {
+  for (const [key, from] of fromHint) {
+    const el = cardElement(key);
+    if (el) {
+      fly(el, from, FLIGHT_MS, 0);
     }
   }
-  leaveTheBoard();
+  for (const [key, into] of intoHint) {
+    const was = lastSeen.get(key);
+    if (was?.ghost && !cardElement(key)) {
+      sendTo(was, into, 1);
+    }
+  }
   fromHint.clear();
   intoHint.clear();
-  note(hand);
 }
 
-// A permanent that has left the table goes to the graveyard, or simply fades where it stood
-function leaveTheBoard(): void {
-  for (const [key, was] of onBoard) {
-    if (onScreen(key) || waiting.has(key)) {
-      continue;
-    }
-    const ghost = gaveGhost.get(key);
-    if (!ghost) {
-      continue;
-    }
-    const merge = intoHint.get(key);
-    const target = merge ?? tileFor(key) ?? graveyardFor(was);
-    sendTo({ rect: was, ghost }, target ?? was, merge ? 1 : 0);
-  }
-}
+// ---- Finding things on the board ---------------------------------------------------------------------------------
 
-function graveyardFor(rect: DOMRect): DOMRect | null {
-  const mine = rect.top > innerHeight / 2 ? '#me' : '#opponent';
-  const tile = document.querySelector(`${mine} .zone-tile[data-zone="Graveyard"]`);
-  return tile ? tile.getBoundingClientRect() : null;
-}
-
+const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-key], #zones .card[data-key]';
 const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item')];
+
+function cardElement(key: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`#me .card[data-key="${key}"], #opponent .card[data-key="${key}"], `
+    + `#hand .card[data-key="${key}"], #zones .card[data-key="${key}"]`);
+}
+
 // A stack item is keyed by the item, not the card, so the card's own key comes off its picture
-const keyOf = (el: HTMLElement): string | undefined =>
-  (el.classList.contains('stack-item') ? el.querySelector('img')?.dataset.key : el.dataset.key);
+function stackItemFor(key: string): HTMLElement | null {
+  return stackItems().find(el => el.querySelector('img')?.dataset.key === key) ?? null;
+}
+
+/** Where a card is drawn now: its own element, its stack item, or the top of the pile it joined. */
+function elementFor(key: string): HTMLElement | null {
+  return cardElement(key) ?? stackItemFor(key) ?? pileTopFor(key);
+}
+
+function pileTopFor(key: string): HTMLElement | null {
+  for (const { keys, top } of pileSlots()) {
+    if (keys.includes(key)) {
+      return top;
+    }
+  }
+  return null;
+}
 
 // The top card of a graveyard or exile pile is drawn on its tile, which is where a card sent there lands
-function tileFor(key: string): DOMRect | null {
+function tileImageRect(key: string): DOMRect | null {
   const img = document.querySelector(`.zone-tile img[data-key="${key}"]`);
   return img ? img.getBoundingClientRect() : null;
 }
 
-function onScreen(key: string): boolean {
-  return covered.has(key) || !!document.querySelector(`.card[data-key="${key}"]`)
-    || stackItems().some(el => keyOf(el) === key);
+/** Roughly where a zone is drawn, for a card with no element of its own at one end of its trip. */
+function placeRect(place: Place | undefined): DOMRect | null {
+  if (!place) {
+    return null;
+  }
+  const seat = place.player ? document.querySelector<HTMLElement>(`.seat[data-player="${place.player.ref}"]`) : null;
+  const rectOf = (el: Element | null | undefined) => (el ? el.getBoundingClientRect() : null);
+  switch (place.zone) {
+    case 'Stack': {
+      const stack = document.getElementById('stack');
+      return stack && !stack.hidden ? stack.getBoundingClientRect() : null;
+    }
+    case 'Hand':
+      // Your own hand is laid out along the bottom; everyone else's is a tile by their name
+      return seat?.id === 'me' ? rectOf(document.getElementById('hand')) : rectOf(seat?.querySelector('.zone-tile[data-zone="Hand"]'));
+    case 'Battlefield':
+      return rectOf(seat?.querySelector('.battlefield'));
+    case 'Command':
+      return rectOf(seat?.querySelector('.emblems'));
+    default:
+      return rectOf(seat?.querySelector(`.zone-tile[data-zone="${place.zone}"]`));
+  }
 }
 
 /** The keys a pile is holding behind its top card. They have no element, and they have not gone anywhere. */
@@ -170,36 +210,30 @@ function pileSlots(): { keys: string[]; top: HTMLElement }[] {
   return out;
 }
 
-function note(hand: HTMLElement[]): void {
-  inHand.clear();
-  for (const el of hand) {
-    inHand.set(el.dataset.key as string, { rect: el.getBoundingClientRect(), ghost: el.cloneNode(true) as HTMLElement });
+/** Remembers where every card stands now, for the moves the next frame brings. */
+function note(): void {
+  lastSeen.clear();
+  for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
+    lastSeen.set(el.dataset.key as string, { rect: el.getBoundingClientRect(), ghost: el.cloneNode(true) as HTMLElement });
   }
-  onStack.clear();
   for (const el of stackItems()) {
-    const key = keyOf(el);
-    if (key) {
-      onStack.set(key, el.getBoundingClientRect());
+    const key = el.querySelector('img')?.dataset.key;
+    if (key && !lastSeen.has(key)) {
+      lastSeen.set(key, { rect: el.getBoundingClientRect(), ghost: null });
     }
-  }
-  onBoard.clear();
-  gaveGhost.clear();
-  for (const el of document.querySelectorAll<HTMLElement>('.row .card[data-key], .slot .card[data-key]')) {
-    onBoard.set(el.dataset.key as string, el.getBoundingClientRect());
-    gaveGhost.set(el.dataset.key as string, el.cloneNode(true) as HTMLElement);
   }
   // A copy folded into a pile stands where the pile's top card stands, so it leaves from there if it leaves
   for (const { keys, top } of pileSlots()) {
-    const rect = onBoard.get(top.dataset.key as string);
-    const ghost = gaveGhost.get(top.dataset.key as string);
+    const shown = lastSeen.get(top.dataset.key as string);
     for (const key of keys) {
-      if (key !== top.dataset.key && rect && ghost) {
-        onBoard.set(key, rect);
-        gaveGhost.set(key, ghost.cloneNode(true) as HTMLElement);
+      if (shown && covered.has(key)) {
+        lastSeen.set(key, { rect: shown.rect, ghost: shown.ghost?.cloneNode(true) as HTMLElement | null });
       }
     }
   }
 }
+
+// ---- Moving things -----------------------------------------------------------------------------------------------
 
 // A spell waits beside the stack, where it is about to go, rather than over the cards on the table
 function waitingSpot(rect: DOMRect): DOMRect {
@@ -213,33 +247,29 @@ function waitingSpot(rect: DOMRect): DOMRect {
   return new DOMRect(right - width - 12, top, width, height);
 }
 
-function hold(key: string, was: Snapshot): void {
-  const spot = waitingSpot(was.rect);
-  const ghost = place(was.ghost, was.rect);
-  ghost.classList.add('paying');
+function hold(key: string, from: DOMRect, ghost: HTMLElement | null): void {
+  const spot = waitingSpot(from);
+  if (!ghost) {
+    // Nothing to show waiting (an opponent's card), but its item still flies in from where it came
+    waiting.set(key, { rect: from, ghost: null, since: Date.now() });
+    return;
+  }
+  const shown = place(ghost, from);
+  shown.classList.add('paying');
   // A card waiting to be paid for is still a card you want to read, so it answers the pointer
-  ghost.style.pointerEvents = 'auto';
-  hoverable(ghost, ghost.querySelector('img') ?? ghost);
-  ghost.animate([
+  shown.style.pointerEvents = 'auto';
+  hoverable(shown, shown.querySelector('img') ?? shown);
+  shown.animate([
     { transform: 'none' },
     {
-      transform: `translate(${spot.left - was.rect.left}px, ${spot.top - was.rect.top}px)`
-        + ` scale(${spot.width / was.rect.width})`,
+      transform: `translate(${spot.left - from.left}px, ${spot.top - from.top}px) scale(${spot.width / from.width})`,
     },
   ], { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
-  waiting.set(key, { rect: spot, ghost, since: Date.now() });
-  waited.set(key, { rect: spot, at: Date.now() });
-}
-
-/** The spot a spell waited in, if it did so lately. Answered once, because it only flies home once. */
-function recentWait(key: string): DOMRect | null {
-  const w = waited.get(key);
-  waited.delete(key);
-  return w && Date.now() - w.at <= WAITED_MEMORY_MS ? w.rect : null;
+  waiting.set(key, { rect: spot, ghost: shown, since: Date.now() });
 }
 
 function land(key: string): void {
-  waiting.get(key)?.ghost.remove();
+  waiting.get(key)?.ghost?.remove();
   waiting.delete(key);
 }
 
@@ -272,7 +302,10 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
-function sendTo(was: Snapshot, target: DOMRect, endOpacity: number): void {
+function sendTo(was: { rect: DOMRect; ghost: HTMLElement | null }, target: DOMRect, endOpacity: number): void {
+  if (!was.ghost) {
+    return;
+  }
   const ghost = place(was.ghost, was.rect);
   ghost.animate([
     { transform: 'none', opacity: 1 },

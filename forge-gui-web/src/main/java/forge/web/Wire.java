@@ -53,6 +53,13 @@ final class Wire {
         String value() default "";
     }
 
+    /** Something that happened in the game, sent as {@code {"kind": value, ...}} inside a state message. */
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target(ElementType.TYPE)
+    @interface Event {
+        String value();
+    }
+
     /** A component that may be null, and is then left out. */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.RECORD_COMPONENT)
@@ -120,6 +127,10 @@ final class Wire {
         }
         if (value instanceof Record r) {
             final JsonObject o = new JsonObject();
+            final Event event = r.getClass().getAnnotation(Event.class);
+            if (event != null) {
+                o.addProperty("kind", event.value());
+            }
             fill(o, r);
             return o;
         }

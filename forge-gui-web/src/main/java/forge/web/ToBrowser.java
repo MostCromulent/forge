@@ -8,6 +8,7 @@ import forge.game.phase.PhaseType;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.net.DeltaPacket;
 import forge.player.AutoYieldStore.TriggerDecision;
+import forge.web.Wire.Event;
 import forge.web.Wire.Message;
 import forge.web.Wire.Name;
 import forge.web.Wire.Nullable;
@@ -138,13 +139,47 @@ final class ToBrowser {
 
     // ---- Match -------------------------------------------------------------------------------------------------
 
-    /** Changes to the game's object table. A property set to null in a delta has gone back to its default. */
+    /** Changes to the game's object table, and what happened in the game to cause them. A property set to null in
+     *  a delta has gone back to its default. The events are in the order the game fired them. */
     @Message("state")
     record StateMessage(boolean full, long seq, int root,
             @Ts("Record<string, TrackedProps>") Map<String, JsonObject> newObjects,
             @Ts("Record<string, TrackedDelta>") Map<String, JsonObject> deltas,
-            List<Integer> visible, List<Integer> localPlayers) {
+            List<Integer> visible, List<Integer> localPlayers, @Ts("GameEvent[]") List<Record> events) {
     }
+
+    // ---- Game events: what happened, never how to show it ------------------------------------------------------
+
+    /** A zone of one player's, or of nobody's (the stack). */
+    record Place(ZoneType zone, @Nullable Ref player) {
+    }
+
+    /** A card went from one zone to another. No from means it came into being there (a token, a copy). */
+    @Event("cardMoved")
+    record CardMoved(Ref card, @Nullable Place from, @Nullable Place to) {
+    }
+
+    @Event("cardDamaged")
+    record CardDamaged(Ref card, @Nullable Ref source, int amount) {
+    }
+
+    @Event("playerDamaged")
+    record PlayerDamaged(Ref player, @Nullable Ref source, int amount, boolean combat) {
+    }
+
+    record Attack(Ref attacker, @Nullable Ref defender) {
+    }
+
+    @Event("attackersDeclared")
+    record AttackersDeclared(Ref player, List<Attack> attacks) {
+    }
+
+    @Event("shuffled")
+    record Shuffled(Ref player) {
+    }
+
+    static final List<Class<? extends Record>> EVENTS = List.of(CardMoved.class, CardDamaged.class,
+            PlayerDamaged.class, AttackersDeclared.class, Shuffled.class);
 
     @Message("prompt")
     record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,

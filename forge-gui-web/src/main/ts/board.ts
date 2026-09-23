@@ -11,11 +11,11 @@ import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
 import { byId, q } from './dom';
 import type { CardClick } from './cards';
-import type { CardView, GameView, PlayerView, Send, ZoneName } from './protocol';
+import type { CardView, GameEvent, GameView, PlayerView, Send, ZoneName } from './protocol';
 
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
-export function renderMatch(model: Model, send: Send): void {
+export function renderMatch(model: Model, send: Send, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
@@ -36,7 +36,7 @@ export function renderMatch(model: Model, send: Send): void {
   renderHand(model, me(model), select);
   renderZones(model, select);
   renderGameOver(model, g, send);
-  animateCardMoves(model);
+  animateCardMoves(model, events);
 }
 
 interface Badge {

@@ -9,7 +9,10 @@ import forge.LobbyPlayer;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
+import forge.game.event.GameEventAttackersDeclared;
 import forge.game.event.GameEventBlockersDeclared;
+import forge.game.event.GameEventCardChangeZone;
+import forge.game.event.GameEventCardDamaged;
 import forge.game.event.GameEventGameOutcome;
 import forge.game.GameState;
 import forge.game.GameView;
@@ -17,6 +20,9 @@ import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
 import forge.game.card.CardView.CardStateView;
 import forge.game.event.GameEvent;
+import forge.game.event.GameEventPlayerDamaged;
+import forge.game.event.GameEventShuffle;
+import forge.game.zone.ZoneView;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
@@ -60,7 +66,11 @@ import forge.web.FromBrowser.SetSetting;
 import forge.web.FromBrowser.StackYield;
 import forge.web.FromBrowser.UseMana;
 import forge.web.FromBrowser.YieldAction;
+import forge.web.ToBrowser.Attack;
+import forge.web.ToBrowser.AttackersDeclared;
+import forge.web.ToBrowser.CardDamaged;
 import forge.web.ToBrowser.CardFace;
+import forge.web.ToBrowser.CardMoved;
 import forge.web.ToBrowser.ChoiceKind;
 import forge.web.ToBrowser.ChoicesRequest;
 import forge.web.ToBrowser.Controls;
@@ -74,6 +84,8 @@ import forge.web.ToBrowser.OptionRequest;
 import forge.web.ToBrowser.OrderAnswer;
 import forge.web.ToBrowser.OrderRequest;
 import forge.web.ToBrowser.Playable;
+import forge.web.ToBrowser.Place;
+import forge.web.ToBrowser.PlayerDamaged;
 import forge.web.ToBrowser.PlayerDetail;
 import forge.web.ToBrowser.Prompt;
 import forge.web.ToBrowser.PromptButton;
@@ -81,6 +93,7 @@ import forge.web.ToBrowser.Ref;
 import forge.web.ToBrowser.RequestOption;
 import forge.web.ToBrowser.ShownZone;
 import forge.web.ToBrowser.SideboardEntry;
+import forge.web.ToBrowser.Shuffled;
 import forge.web.ToBrowser.SideboardRequest;
 import forge.web.ToBrowser.Sound;
 import forge.web.ToBrowser.StackMenu;
@@ -135,6 +148,9 @@ public class WebGuiGame extends NetworkGuiGame {
     private final WebGameLog gameLog = new WebGameLog(this::mayView);
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
+    /** What the game did since the last state message, in order. Filled and drained on the dispatch thread: a packet's
+     *  events are handled inside its applyDelta, so they leave with the state change they explain. */
+    private final List<Record> events = new ArrayList<>();
 
     /** Frees the thread that sends to the browser; the match it belongs to is over. */
     public void close() {
@@ -232,6 +248,8 @@ public class WebGuiGame extends NetworkGuiGame {
             return;
         }
         gameOver = false;
+        // A whole new state has nothing to animate from, so what led up to it is dropped
+        events.clear();
         model.reset(rootKey(gv));
         model.apply(encode(snapshot), Map.of());
         model.setVisible(visibleCardKeys());
@@ -247,10 +265,12 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         final Map<Integer, JsonObject> newObjects = encode(packet.getNewObjects());
         final Map<Integer, JsonObject> deltas = encode(packet.getObjectDeltas());
-        if (!newObjects.isEmpty() || !deltas.isEmpty()) {
+        if (!newObjects.isEmpty() || !deltas.isEmpty() || !events.isEmpty()) {
             model.apply(newObjects, deltas);
             model.setVisible(visibleCardKeys());
-            send(model.stateMessage(false, packet.getSequenceNumber(), newObjects, deltas));
+            final List<Record> happened = List.copyOf(events);
+            events.clear();
+            send(model.stateMessage(false, packet.getSequenceNumber(), newObjects, deltas, happened));
         }
         if (gv.isGameOver() && !gameOver) {
             // Replaces finishGame from FControlGameEventHandler, which does not run here
@@ -298,7 +318,12 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void handleGameEvent(final GameEvent event) {
-        // Only the game log: FControlGameEventHandler would post to the host UI thread, and the rest comes from state
+        // The log, the sound and what the browser animates. FControlGameEventHandler would post to the host UI
+        // thread, and everything else comes from state
+        final Record forwarded = forwarded(event);
+        if (forwarded != null) {
+            events.add(forwarded);
+        }
         final GameView gv = getGameView();
         final GameLog log = gv == null ? null : gv.getGameLog();
         if (log == null) {
@@ -310,6 +335,39 @@ public class WebGuiGame extends NetworkGuiGame {
             send(entries);
         }
         forwardSound(event);
+    }
+
+    /** The events a renderer can show, as the browser names them; null for the rest, which the state covers. */
+    static Record forwarded(final GameEvent event) {
+        if (event instanceof GameEventCardChangeZone e && e.card() != null) {
+            return new CardMoved(Ref.card(e.card().getId()), place(e.from()), place(e.to()));
+        }
+        if (event instanceof GameEventCardDamaged e && e.card() != null) {
+            return new CardDamaged(Ref.card(e.card().getId()), e.source() == null ? null : Ref.card(e.source().getId()), e.amount());
+        }
+        if (event instanceof GameEventPlayerDamaged e && e.target() != null) {
+            return new PlayerDamaged(Ref.player(e.target().getId()), e.source() == null ? null : Ref.card(e.source().getId()),
+                    e.amount(), e.combat());
+        }
+        if (event instanceof GameEventAttackersDeclared e && e.player() != null) {
+            final List<Attack> attacks = new ArrayList<>();
+            for (final Map.Entry<GameEntityView, CardView> attack : e.attackersMap().entries()) {
+                final GameEntityView defender = attack.getKey();
+                attacks.add(new Attack(Ref.card(attack.getValue().getId()),
+                        defender instanceof CardView c ? Ref.card(c.getId())
+                                : defender instanceof PlayerView p ? Ref.player(p.getId()) : null));
+            }
+            return new AttackersDeclared(Ref.player(e.player().getId()), attacks);
+        }
+        if (event instanceof GameEventShuffle e && e.player() != null) {
+            return new Shuffled(Ref.player(e.player().getId()));
+        }
+        return null;
+    }
+
+    private static Place place(final ZoneView zone) {
+        return zone == null || zone.zoneType() == null ? null
+                : new Place(zone.zoneType(), zone.player() == null ? null : Ref.player(zone.player().getId()));
     }
 
     // Desktop plays the same sounds from the same events; here the browser plays them, so only the name travels

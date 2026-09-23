@@ -57,6 +57,11 @@ final class ProtocolTypes {
             record(c, t.isEmpty() ? "" : "  t: '" + t + "';\n");
         }
         union("ClientMessage", FromBrowser.COMMANDS);
+        out.append("// ---- Game events: what happened, carried by the state message that shows its result ----\n\n");
+        for (final Class<? extends Record> e : ToBrowser.EVENTS) {
+            record(e, "  kind: '" + e.getAnnotation(Wire.Event.class).value() + "';\n");
+        }
+        union("GameEvent", ToBrowser.EVENTS);
         drain();
         out.append("// ---- Game objects: TrackableProperty values as JsonCodec encodes them ----\n\n");
         trackedProps();
