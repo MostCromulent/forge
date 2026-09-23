@@ -1,6 +1,5 @@
 package forge.web;
 
-import com.google.common.collect.Multimap;
 import forge.game.GameEntityView;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
@@ -10,12 +9,12 @@ import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardDamaged;
 import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventShuffle;
+import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.player.PlayerView;
+import forge.game.zone.ZoneType;
 import forge.game.zone.ZoneView;
 import forge.web.ToBrowser.Attack;
 import forge.web.ToBrowser.AttackersDeclared;
-import forge.web.ToBrowser.Block;
-import forge.web.ToBrowser.BlockersDeclared;
 import forge.web.ToBrowser.CardDamaged;
 import forge.web.ToBrowser.CardMoved;
 import forge.web.ToBrowser.Place;
@@ -24,8 +23,11 @@ import forge.web.ToBrowser.Ref;
 import forge.web.ToBrowser.Shuffled;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * What happened in the game, as the browser animates it. Forge bundles its events with the state change they caused;
@@ -57,22 +59,54 @@ final class BrowserEvents {
             }
             return new AttackersDeclared(Ref.player(e.player().getId()), attacks);
         }
-        if (event instanceof GameEventBlockersDeclared e && e.defendingPlayer() != null) {
-            final List<Block> blocks = new ArrayList<>();
-            for (final Multimap<CardView, CardView> byAttacker : e.blockers().values()) {
-                for (final Map.Entry<CardView, CardView> block : byAttacker.entries()) {
-                    // Forge lists an unblocked attacker as blocking itself
-                    if (!block.getKey().equals(block.getValue())) {
-                        blocks.add(new Block(Ref.card(block.getKey().getId()), Ref.card(block.getValue().getId())));
-                    }
-                }
-            }
-            return new BlockersDeclared(Ref.player(e.defendingPlayer().getId()), blocks);
-        }
         if (event instanceof GameEventShuffle e && e.player() != null) {
             return new Shuffled(Ref.player(e.player().getId()));
         }
         return null;
+    }
+
+    /** Zones everyone can see into, where a card arriving or leaving is something to look at. */
+    private static final Set<ZoneType> OPEN = EnumSet.of(ZoneType.Battlefield, ZoneType.Stack, ZoneType.Graveyard,
+            ZoneType.Exile, ZoneType.Command);
+
+    /**
+     * Whether an event is something the player would want to see before the game passes priority for them: another
+     * player acting in the open, or anything being dealt damage. What the player did themselves they have seen, and
+     * what nobody can see (an opponent's draw) there is nothing to look at.
+     */
+    static boolean worthSeeing(final GameEvent event, final Predicate<PlayerView> mine) {
+        if (event instanceof GameEventSpellAbilityCast e) {
+            return e.si() != null && !mine.test(e.si().getActivatingPlayer());
+        }
+        // Forge declares attackers every combat, even when nobody attacks
+        if (event instanceof GameEventAttackersDeclared e) {
+            return !mine.test(e.player()) && !e.attackersMap().isEmpty();
+        }
+        if (event instanceof GameEventBlockersDeclared e) {
+            return !mine.test(e.defendingPlayer());
+        }
+        if (event instanceof GameEventCardChangeZone e) {
+            return e.card() != null && !mine.test(mover(e)) && (isOpen(e.from()) || isOpen(e.to()));
+        }
+        return event instanceof GameEventCardDamaged || event instanceof GameEventPlayerDamaged;
+    }
+
+    /**
+     * Whose card moved. A card that has just left a zone can arrive as a copy with no controller, so then it is whoever
+     * owns the zones it moved between: a discard is from its own player's hand to their own graveyard.
+     */
+    private static PlayerView mover(final GameEventCardChangeZone e) {
+        if (e.card().getController() != null) {
+            return e.card().getController();
+        }
+        if (e.from() != null && e.from().player() != null) {
+            return e.from().player();
+        }
+        return e.to() == null ? null : e.to().player();
+    }
+
+    private static boolean isOpen(final ZoneView zone) {
+        return zone != null && OPEN.contains(zone.zoneType());
     }
 
     static Place place(final ZoneView zone) {

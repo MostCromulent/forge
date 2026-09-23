@@ -18,7 +18,6 @@ import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, restoreGuestSettings, setGuest, setPlaymats } from './settings';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
-import { initPace, pace, resetPace } from './pace';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId } from './dom';
@@ -29,10 +28,11 @@ let scheduled = false;
 // Asked once each, so a slow answer is not asked for again on every message that arrives meanwhile
 let claimed = false;
 let askedAddresses = false;
-initPace(apply);
 // A guest's settings live in its session on the server, so each connection is given back what the browser remembers
 let restored = false;
-const send = connect(pace, online => {
+// The game is paced where it runs: it holds for the player on a pass they have something new to see before
+// (autopass.ts), so every message is shown as it arrives
+const send = connect(apply, online => {
   byId('banner').hidden = online;
   if (!online) restored = false;
 });
@@ -119,7 +119,6 @@ function runKey(command: KeyCommand): void {
 function apply(msg: ServerMessage): void {
   switch (msg.t) {
     case 'hello':
-      resetPace();
       model.host = msg.host;
       setGuest(!model.host);
       // Before any game opens, so the game is seeded with them rather than corrected afterwards

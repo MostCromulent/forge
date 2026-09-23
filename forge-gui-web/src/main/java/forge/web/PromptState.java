@@ -41,6 +41,11 @@ final class PromptState {
         to.accept(current());
     }
 
+    /** Whether the prompt now showing gives the player priority. */
+    synchronized boolean priority() {
+        return priority;
+    }
+
     synchronized void message(final String text, final CardView about) {
         final String trimmed = withoutTurnState(text);
         message = trimmed;

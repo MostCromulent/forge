@@ -105,6 +105,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
     private final PromptState prompt = new PromptState(this::send);
+    /** Something the player would want to see has happened since they last held priority or watched a pass. */
+    private volatile boolean unseen;
     // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
     private final Object zonesLock = new Object();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
@@ -306,6 +308,9 @@ public class WebGuiGame extends NetworkGuiGame {
     public void handleGameEvent(final GameEvent event) {
         // The log, the sound and what the browser animates. FControlGameEventHandler would post to the host UI
         // thread, and everything else comes from state
+        if (BrowserEvents.worthSeeing(event, this::isLocalPlayer)) {
+            unseen = true;
+        }
         final Record forwarded = BrowserEvents.forwarded(event);
         if (forwarded != null) {
             events.add(forwarded);
@@ -435,6 +440,10 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
         prompt.message(message, card);
+        // Holding priority, the player is looking at the board as it stands
+        if (prompt.priority()) {
+            unseen = false;
+        }
     }
 
     @Override
@@ -735,16 +744,19 @@ public class WebGuiGame extends NetworkGuiGame {
     }
 
     /**
-     * Shown coming on the browser's pass button, which the player can stop. A yield the player asked for, such as End
-     * Turn, is them skipping ahead on purpose, so it keeps Forge's own short pause with nothing to stop.
+     * This is what paces the game. Priority does not pass for the player while something has happened they have not
+     * seen: the pass is shown coming on the browser's pass button, and the game waits for it, or for the player to
+     * stop it. With nothing new it goes by with only Forge's own pause. A yield the player asked for, such as End
+     * Turn, is them skipping ahead on purpose, so it is not held either.
      */
     @Override
     public boolean confirmAutoPass(final int delayMs) {
         final IGameController controller = getGameController();
         final YieldController yields = controller == null ? null : controller.getYieldController();
-        if (delayMs <= 0 || (yields != null && yields.isYieldActive())) {
+        if (!unseen || (yields != null && yields.isYieldActive())) {
             return super.confirmAutoPass(delayMs);
         }
+        unseen = false;
         return ask(new AutoPassRequest(delayMs, true), JsonElement::isJsonPrimitive).getAsBoolean();
     }
 

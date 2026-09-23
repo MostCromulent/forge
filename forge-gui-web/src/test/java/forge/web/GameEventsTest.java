@@ -2,7 +2,10 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.game.card.CardView;
+import com.google.common.collect.ArrayListMultimap;
+import forge.game.event.GameEventAttackersDeclared;
 import forge.game.event.GameEventCardChangeZone;
+import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventGameStarted;
 import forge.game.event.GameEventShuffle;
 import forge.game.player.PlayerView;
@@ -62,5 +65,33 @@ public class GameEventsTest {
     @Test
     public void anEventTheStateAlreadyShowsIsNotForwarded() {
         Assert.assertNull(BrowserEvents.forwarded(new GameEventGameStarted(null, (PlayerView) null, java.util.List.<PlayerView>of())));
+    }
+
+    // The game waits on a pass only when there is something new to see, which is what keeps the computer readable
+    @Test
+    public void onlyWhatOthersDoInTheOpenAndDamageAreWorthHoldingAPassFor() {
+        final PlayerView me = new PlayerView(3, tracker);
+        final java.util.function.Predicate<PlayerView> mine = p -> p == me;
+        Assert.assertTrue(BrowserEvents.worthSeeing(new GameEventCardChangeZone(card,
+                new ZoneView(player, ZoneType.Hand), new ZoneView(player, ZoneType.Battlefield)), mine),
+                "an opponent playing a card");
+        Assert.assertFalse(BrowserEvents.worthSeeing(new GameEventCardChangeZone(card,
+                new ZoneView(player, ZoneType.Library), new ZoneView(player, ZoneType.Hand)), mine),
+                "an opponent's draw, which nobody can see");
+        final ArrayListMultimap<forge.game.GameEntityView, CardView> attack = ArrayListMultimap.create();
+        attack.put(me, card);
+        Assert.assertTrue(BrowserEvents.worthSeeing(new GameEventAttackersDeclared(player, attack), mine),
+                "an opponent attacking");
+        Assert.assertFalse(BrowserEvents.worthSeeing(new GameEventAttackersDeclared(player, ArrayListMultimap.create()), mine),
+                "an opponent's combat with no attack in it");
+        Assert.assertFalse(BrowserEvents.worthSeeing(new GameEventAttackersDeclared(me, attack), mine),
+                "my own attack, which I have seen");
+        Assert.assertTrue(BrowserEvents.worthSeeing(new GameEventPlayerDamaged(me, card, 3, true, false), mine),
+                "damage, whoever dealt it");
+        Assert.assertFalse(BrowserEvents.worthSeeing(new GameEventShuffle(player), mine), "a shuffle");
+        // A card leaving a zone can come as a copy with no controller; the hand it left says whose it was
+        Assert.assertFalse(BrowserEvents.worthSeeing(new GameEventCardChangeZone(card,
+                new ZoneView(me, ZoneType.Hand), new ZoneView(me, ZoneType.Graveyard)), mine),
+                "my own discard, which I made");
     }
 }

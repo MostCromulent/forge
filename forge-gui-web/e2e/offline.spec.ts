@@ -90,13 +90,20 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
   await page.locator('#prompt .auto-pass').click();
   await expect(page.locator('#prompt .auto-pass')).toHaveClass(/\bon\b/);
 
-  // Answer whatever the game asks until it has nothing for us to do and a pass is on its way
+  // Answer whatever the game asks until the computer has done something and a pass is on its way
   const passing = page.locator('#prompt.auto-passing');
-  for (let i = 0; i < 120 && !(await passing.count()); i++) {
-    if (await page.locator('#prompt .ok').isEnabled()) await page.keyboard.press(' ');
-    await page.waitForTimeout(500);
-  }
-  await expect(passing).toBeVisible();
+  const playOnUntilPassing = async () => {
+    for (let i = 0; i < 240 && !(await passing.count()); i++) {
+      if (/discard/i.test(await page.locator('#prompt .message').textContent() ?? '')) {
+        await page.locator('#hand .card').first().click();
+      } else if (await page.locator('#prompt .ok').isEnabled()) {
+        await page.keyboard.press(' ');
+      }
+      await page.waitForTimeout(250);
+    }
+    await expect(passing).toBeVisible();
+  };
+  await playOnUntilPassing();
   await expect(page.locator('#prompt .ok')).toHaveClass(/filling/);
   await page.screenshot({ path: test.info().outputPath('passing.png'), timeout: 10_000 }).catch(() => {});
 
@@ -106,7 +113,6 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
   await expect(page.locator('#prompt .ok .label')).not.toHaveText('Pass');
 
   // Left alone, the next one goes ahead by itself
-  await page.keyboard.press(' ');
-  await expect(passing).toBeVisible({ timeout: 60_000 });
+  await playOnUntilPassing();
   await expect(passing).toHaveCount(0, { timeout: 5_000 });
 });

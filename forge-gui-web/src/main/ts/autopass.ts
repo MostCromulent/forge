@@ -1,5 +1,6 @@
-// When the game is about to pass priority for you, the pass button fills for a moment first, so you see it coming
-// and can stop it to act instead. The game waits on the answer, so nothing moves on while the button fills.
+// This is what paces the game. When it is about to pass priority for you and something has happened you have not
+// seen, the pass button fills for a moment first: the game waits on it, so what the computer just did stays on the
+// board to be read, and you can stop the pass to act instead. The server decides when a pass is worth showing.
 
 import { setting } from './settings';
 import type { AutoPassRequest } from './protocol';
