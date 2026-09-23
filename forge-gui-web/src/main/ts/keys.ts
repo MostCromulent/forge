@@ -6,7 +6,7 @@ import { oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
 
 export type KeyCommand =
-  | 'closeOptions' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
+  | 'closeOptions' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch';
 
 export interface KeyPress {
@@ -36,6 +36,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState): KeyComma
   }
   if (ui.optionsOpen) {
     return escape ? 'closeOptions' : null;
+  }
+  if (ui.volumeOpen) {
+    return escape ? 'closeVolume' : null;
   }
   if (ui.stackMenuAt) {
     return escape ? 'closeStackMenu' : null;

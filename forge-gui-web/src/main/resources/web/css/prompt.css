@@ -24,8 +24,8 @@
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
 #prompt kbd { border: 1px solid #ffffff2e; border-radius: 4px; padding: 1px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .04em; color: var(--muted); }
 #prompt .ok kbd { color: #ffffffcc; }
-/* Spectating two AI players leaves nothing to answer, so only the options button stays */
-#prompt.spectating .tools button:not(.cog), #prompt.spectating .buttons, #prompt.spectating .prompt-card { display: none; }
+/* Spectating two AI players leaves nothing to answer, so only the volume and options buttons stay */
+#prompt.spectating .tools button:not(.cog):not(.volume), #prompt.spectating .buttons, #prompt.spectating .prompt-card { display: none; }
 #prompt.spectating { border-color: var(--line); box-shadow: 0 12px 34px #000a; }
 #prompt.flash { animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -60,3 +60,8 @@
 #options footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
 #options .concede { display: flex; align-items: center; gap: 6px; border-color: var(--danger); color: var(--danger); }
 #options .concede.armed { background: var(--danger); color: #000; font-weight: 600; }
+#prompt .tools .volume.open { background: var(--surface-2); }
+/* Volume: a small panel over its button, for turning the sound down without the options list */
+#volume .volume-panel { position: fixed; display: grid; gap: 8px; padding: 10px 12px; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px #000a; }
+#volume .volume-row { display: grid; grid-template-columns: 48px 1fr 34px; align-items: center; gap: 8px; font-size: 12.5px; }
+#volume .volume-row .value { color: var(--muted); font-size: 11.5px; text-align: right; }

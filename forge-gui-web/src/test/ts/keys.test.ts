@@ -9,7 +9,7 @@ const press = (key: string, typing = false): KeyPress => ({ key, typing, modifie
 function freshUi(): UiState {
   return {
     openPiles: new Set(), openZones: new Set(), stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
-    stopsOpen: false, optionsOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0,
+    stopsOpen: false, optionsOpen: false, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0,
     sidePanels: { log: true, chat: false },
   };
 }
@@ -47,6 +47,12 @@ describe('keys in a match', () => {
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeStops');
     ui.optionsOpen = true;
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeOptions');
+  });
+
+  it('closes the volume control on Escape, without passing priority', () => {
+    ui.volumeOpen = true;
+    expect(keyCommand(press('Escape'), model, ui)).toBe('closeVolume');
+    expect(keyCommand(press(' '), model, ui)).toBeNull();
   });
 
   it('leaves a disabled button alone', () => {

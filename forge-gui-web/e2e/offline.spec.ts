@@ -46,3 +46,33 @@ test('a new player names themselves, hosts a game against the computer, and play
   await expect(page.locator('#match')).toBeVisible();
   await expect(page.locator('#me')).toContainText('Alice');
 });
+
+test('the sound is turned down from a control beside the options, not from the options list', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await hostTable(page, false);
+  const seats = page.locator('#seats .plate');
+  await chooseDeck(page, seats.nth(0));
+  await chooseDeck(page, seats.nth(1));
+  await page.keyboard.press('Enter');
+  await expect(page.locator('#match')).toBeVisible();
+
+  // A match that has just opened resets what is open over the board, so wait until the game asks something
+  await expect(page.locator('#prompt .message')).not.toBeEmpty();
+  await page.locator('#prompt .volume').click();
+  const music = page.locator('#volume .volume-row', { hasText: 'Music' }).locator('input');
+  await music.fill('0');
+  await expect(page.locator('#volume .volume-row', { hasText: 'Music' })).toContainText('Off');
+  await page.locator('#volume .volume-row', { hasText: 'Effects' }).locator('input').fill('0');
+  await expect(page.locator('#prompt .volume')).toHaveAttribute('data-silent', 'true');
+  await page.screenshot({ path: test.info().outputPath('volume.png'), timeout: 10_000 }).catch(() => {});
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#volume')).toHaveCount(0);
+
+  // The setting outlives a reload, and the options list no longer carries it
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#prompt .volume')).toHaveAttribute('data-silent', 'true');
+  await page.locator('#prompt .cog').click();
+  await expect(page.locator('#options')).toBeVisible();
+  await expect(page.locator('#options .rows')).not.toContainText('Music');
+});

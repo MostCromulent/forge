@@ -1,5 +1,5 @@
-// Every setting the options dialog offers. Settings marked server:true are Forge preferences shared with the
-// desktop client; the rest live in this browser.
+// Every setting the player can change: in the options dialog, or in the volume control for those marked with it.
+// Settings marked server:true are Forge preferences shared with the desktop client; the rest live in this browser.
 
 import { cssUrl, playmatUrl } from './looks';
 import type { Playmat, ServerSettings } from './protocol';
@@ -18,6 +18,8 @@ interface SettingBase {
   label: string;
   hint?: string;
   server?: boolean;
+  /** Set from the volume control beside the options button rather than in the options dialog. */
+  volume?: boolean;
 }
 
 export type SettingDef = SettingBase & (
@@ -79,12 +81,10 @@ export const SETTINGS: SettingDef[] = [
     options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
   },
   {
-    section: 'Sound', key: 'soundVolume', label: 'Sound effects', hint: 'Zero turns them off.',
-    type: 'slider', server: true, min: 0, max: 100, def: 100,
+    section: 'Sound', key: 'soundVolume', label: 'Effects', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   {
-    section: 'Sound', key: 'musicVolume', label: 'Music', hint: 'Zero turns it off.',
-    type: 'slider', server: true, min: 0, max: 100, def: 100,
+    section: 'Sound', key: 'musicVolume', label: 'Music', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   {
     section: 'Theme', key: 'playmat', label: 'Playmat', hint: 'The table the board is played on.',

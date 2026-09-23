@@ -9,6 +9,7 @@ import { Lobby } from './lobby';
 import { Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
+import { Volume } from './volume';
 import { Notices } from './notices';
 import { ChatInput, ChatLog } from './chat';
 import { byId } from './dom';
@@ -28,6 +29,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
   </> : null, byId('match-chat'));
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
+    {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {page === 'match' && ui.optionsOpen && (
       <Options close={() => changeUi(u => { u.optionsOpen = false; })} concede={() => actions.concede()} />
     )}

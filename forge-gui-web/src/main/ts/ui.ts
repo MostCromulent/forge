@@ -26,6 +26,8 @@ export interface UiState {
   stopsOpen: boolean;
   /** The options dialog is open. */
   optionsOpen: boolean;
+  /** The volume control beside the options button is open. */
+  volumeOpen: boolean;
   /** Match setup's picker for a seat's deck, sleeve or avatar. */
   picker: Picker | null;
   /** The host has chosen to watch the computer play its seat. */
@@ -47,6 +49,7 @@ export const ui: UiState = {
   stackMenuAt: null,
   stopsOpen: false,
   optionsOpen: false,
+  volumeOpen: false,
   picker: null,
   spectate: false,
   hover: null,
@@ -74,6 +77,7 @@ export function resetMatchUi(): void {
   ui.stackMenuAt = null;
   ui.stopsOpen = false;
   ui.optionsOpen = false;
+  ui.volumeOpen = false;
   ui.picker = null;
   ui.hover = null;
   ui.faceIndex = 0;

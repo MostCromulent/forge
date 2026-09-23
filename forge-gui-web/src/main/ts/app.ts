@@ -98,6 +98,7 @@ document.addEventListener('keydown', e => {
 function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
+    case 'closeVolume': changeUi(u => { u.volumeOpen = false; }); break;
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
     case 'closePicker': changeUi(u => { u.picker = null; }); break;
