@@ -3,6 +3,7 @@ import { createCard, updateCard, setPileCount, type CardClick } from './cards';
 import { stateOf, type Model } from './model';
 import { mergeInto, spreadFrom } from './motion';
 import { q } from './dom';
+import { changeUi, ui } from './ui';
 import type { CardView } from './protocol';
 
 // A slot is one spot on the battlefield: a card with its attachments tucked under it, or a pile of identical permanents
@@ -11,13 +12,6 @@ interface Slot {
   members: CardView[];
   attached: CardView[];
   sig: string | null;
-}
-
-const spread = new Set<string>();
-let schedule: () => void = () => {};
-
-export function initBattlefield(scheduleFn: () => void): void {
-  schedule = scheduleFn;
 }
 
 export function renderBattlefield(root: HTMLElement, model: Model, cards: CardView[], onField: CardView[], select: CardClick): void {
@@ -89,7 +83,7 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     const attached = under.get(c.$key) ?? [];
     const sig = attached.length ? null : signature(model, c, marks);
     // A pile the player has opened lays its cards out one by one until they are put back
-    const pile = sig && !spread.has(sig) && piles.get(sig);
+    const pile = sig && !ui.openPiles.has(sig) && piles.get(sig);
     if (pile) {
       pile.members.push(c);
       continue;
@@ -131,22 +125,23 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   el.style.setProperty('--attached', String(slot.attached.length));
   el.classList.toggle('attacking', !!slot.top.Attacking);
   const sig = slot.sig;
-  const spreadable = !!sig && (slot.members.length > 1 || spread.has(sig));
+  const spreadable = !!sig && (slot.members.length > 1 || ui.openPiles.has(sig));
   const top = el.lastChild as HTMLElement;
-  setPileCount(top, slot.members.length, spreadable && spread.has(sig as string));
+  setPileCount(top, slot.members.length, spreadable && ui.openPiles.has(sig as string));
   const count = q(top, '.count');
   count.onclick = spreadable && sig ? e => {
     e.stopPropagation();
     // The cards fan out of the pile, or fold back into it, rather than appearing beside it
     const keys = slot.members.map(c => String(c.$key));
     const from = top.getBoundingClientRect();
-    if (spread.delete(sig)) {
-      mergeInto(keys, from);
-    } else {
-      spread.add(sig);
-      spreadFrom(keys, from);
-    }
-    schedule();
+    changeUi(u => {
+      if (u.openPiles.delete(sig)) {
+        mergeInto(keys, from);
+      } else {
+        u.openPiles.add(sig);
+        spreadFrom(keys, from);
+      }
+    });
   } : null;
   el.dataset.members = slot.members.map(c => c.$key).join(',');
 }

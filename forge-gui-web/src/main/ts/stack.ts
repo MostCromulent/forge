@@ -2,9 +2,11 @@ import { reconcile } from './render';
 import { cardImageSrc, noImageOnError, setImage } from './images';
 import { game, deref, derefAll, stateOf, type Model } from './model';
 import { hoverCard } from './detail';
-import { hoverStackItem, stackTargets } from './overlay';
+import { stackTargets } from './overlay';
 import { byId, q } from './dom';
-import type { Send, StackItemView, StackMenu, YieldAction } from './protocol';
+import { changeUi, ui } from './ui';
+import type { Actions } from './actions';
+import type { ChoicesRequest, StackItemView, YieldAction } from './protocol';
 
 // The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
 // cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
@@ -12,57 +14,39 @@ const STEP_MAX = 42;
 const STEP_MIN = 14;
 const PUSH_Y = 26;
 
-let hovered: number | null = null;
-let collapsed = false;
-let send: Send = () => {};
-let schedule: () => void = () => {};
+let actions: Actions | null = null;
 
-export function initStack(sendFn: Send, scheduleFn: () => void): void {
-  send = sendFn;
-  schedule = scheduleFn;
+export function initStack(actionsFor: Actions): void {
+  actions = actionsFor;
   document.addEventListener('click', e => {
-    if (!(e.target instanceof Element && e.target.closest('#stack-menu'))) closeMenu();
+    if (ui.stackMenuAt && !(e.target instanceof Element && e.target.closest('#stack-menu'))) {
+      changeUi(u => { u.stackMenuAt = null; });
+    }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeMenu();
+    if (e.key === 'Escape' && ui.stackMenuAt) changeUi(u => { u.stackMenuAt = null; });
   });
 }
 
-let pickable: number[] | null = null;
-let onPick: ((index: number) => void) | null = null;
-
-/** A choice the browser answers by clicking a spell on the stack rather than reading it from a list. */
-export function awaitStackPick(keys: number[] | null, answer: ((index: number) => void) | null): void {
-  pickable = keys;
-  onPick = answer;
-}
-
-export function stackPickWanted(): boolean {
-  return !!pickable;
-}
-
-function pickStack(key: number): void {
-  const index = (pickable ?? []).indexOf(key);
-  if (index >= 0 && onPick) {
-    const answer = onPick;
-    pickable = null;
-    onPick = null;
-    answer(index);
-  }
+/** The question the game is asking, when it is which spell on the stack to choose: that is answered by clicking
+ *  the spell where it already is, rather than from a list. */
+export function stackPick(model: Model): ChoicesRequest | null {
+  const oldest = [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
+  return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;
 }
 
 export function renderStack(model: Model): void {
   const root = byId('stack');
   if (!root.firstChild) {
     root.innerHTML = '<div class="head"><b>Stack</b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
-    q(root, '.collapse').onclick = () => {
-      collapsed = !collapsed;
-      schedule();
-    };
+    q(root, '.collapse').onclick = () => changeUi(u => { u.stackCollapsed = !u.stackCollapsed; });
     window.addEventListener('resize', () => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
-  if (!items.some(i => i.$key === hovered)) hovered = null;
+  if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
+    ui.hoveredStackItem = null;
+  }
+  const collapsed = ui.stackCollapsed;
   root.hidden = items.length === 0;
   root.classList.toggle('collapsed', collapsed);
   // The battlefield rows have no idea the panel is there, so the board is told to keep clear of it
@@ -72,12 +56,14 @@ export function renderStack(model: Model): void {
   collapse.textContent = collapsed ? 'Show' : 'Hide';
   collapse.title = collapsed ? 'Show the stack' : 'Collapse the stack to its heading';
   const pile = q(root, '.pile');
-  reconcile(pile, items, i => i.$key, createItem, (el, item) => {
+  const pick = stackPick(model);
+  reconcile(pile, items, i => i.$key, () => createItem(model), (el, item) => {
     updateItem(el, model, item);
-    el.classList.toggle('targetable', (pickable ?? []).includes(item.$key));
+    el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(item.$key));
   });
   place(root);
   layout(pile, items.length);
+  renderMenu(model);
 }
 
 // The panel hangs from the top of the board and stops short of the hand
@@ -86,32 +72,38 @@ function place(root: HTMLElement): void {
   q(root, '.pile').style.setProperty('--stack-room', `${Math.max(120, hand.top - root.getBoundingClientRect().top - 48)}px`);
 }
 
-function createItem(): HTMLElement {
+function createItem(model: Model): HTMLElement {
   const el = document.createElement('div');
   el.className = 'stack-item';
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"></div><div class="caption"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
   const img = q<HTMLImageElement>(el, 'img');
   noImageOnError(el, img);
-  // A spell being targeted is picked on the stack, where it already is
-  el.addEventListener('click', () => pickStack(Number(el.dataset.key)));
+  // A spell being chosen is picked on the stack, where it already is
+  el.addEventListener('click', () => {
+    const pick = stackPick(model);
+    const index = (pick?.stackKeys ?? []).indexOf(Number(el.dataset.key));
+    if (pick && index >= 0) {
+      actions?.answer(pick.id, [index]);
+    }
+  });
   el.addEventListener('mouseenter', () => {
-    hovered = Number(el.dataset.key);
     const pile = el.parentElement as HTMLElement;
+    // Lifted at once, rather than on the next frame, so the pile answers the pointer as it moves along it
+    ui.hoveredStackItem = Number(el.dataset.key);
     layout(pile, pile.childElementCount);
-    hoverStackItem(hovered);
     hoverCard(img);
   });
   // Desktop's stack menu: auto-yield, always accept or decline your optional trigger, yield to the stack
   el.addEventListener('contextmenu', e => {
     e.preventDefault();
-    menuAt = { x: e.clientX, y: e.clientY };
-    send({ t: 'stackMenu', key: Number(el.dataset.key) });
+    const key = Number(el.dataset.key);
+    changeUi(u => { u.stackMenuAt = { key, x: e.clientX, y: e.clientY }; });
+    actions?.askStackMenu(key);
   });
   el.addEventListener('mouseleave', () => {
-    hovered = null;
     const pile = el.parentElement as HTMLElement;
+    ui.hoveredStackItem = null;
     layout(pile, pile.childElementCount);
-    hoverStackItem(null);
     hoverCard(null);
   });
   return el;
@@ -140,7 +132,7 @@ function layout(pile: HTMLElement, n: number): void {
   if (!items.length) {
     return;
   }
-  const h = items.findIndex(el => Number(el.dataset.key) === hovered);
+  const h = items.findIndex(el => Number(el.dataset.key) === ui.hoveredStackItem);
   const card = items[0].offsetHeight;
   const room = parseFloat(getComputedStyle(pile).getPropertyValue('--stack-room')) || 400;
   const step = n > 1 ? Math.min(STEP_MAX, Math.max(STEP_MIN, (room - card) / (n - 1))) : 0;
@@ -154,14 +146,23 @@ function layout(pile: HTMLElement, n: number): void {
   });
 }
 
-let menuAt: { x: number; y: number } | null = null;
+/** What the menu open on the page was drawn for, so it is rebuilt only when that changes. */
+let menuDrawn = '';
 
-// The server answers a right-click with what applies to that item and the current settings
-export function onStackMenu(msg: StackMenu): void {
-  if (!menuAt) return;
-  const at = menuAt;
-  menuAt = null;
-  closeMenu();
+// The server answers a right-click with what applies to that item and the current settings; the menu opens where
+// the click was once that answer is in
+function renderMenu(model: Model): void {
+  const at = ui.stackMenuAt;
+  const answer = model.stackMenu;
+  const wanted = at && answer && answer.key === at.key ? JSON.stringify([at, answer]) : '';
+  if (wanted === menuDrawn) {
+    return;
+  }
+  menuDrawn = wanted;
+  document.getElementById('stack-menu')?.remove();
+  if (!at || !answer || !wanted) {
+    return;
+  }
   const menu = document.createElement('div');
   menu.id = 'stack-menu';
   menu.style.left = `${at.x}px`;
@@ -170,21 +171,17 @@ export function onStackMenu(msg: StackMenu): void {
     const b = document.createElement('button');
     b.textContent = (checked === undefined ? '' : checked ? '✓ ' : '    ') + label;
     b.onclick = () => {
-      send({ t: 'stackYield', key: msg.key, action });
-      closeMenu();
+      actions?.stackYield(answer.key, action);
+      changeUi(u => { u.stackMenuAt = null; });
     };
     menu.append(b);
   };
-  if (msg.autoYield !== undefined) item('Auto-yield to this ability', 'autoYield', msg.autoYield);
-  if (msg.trigger !== undefined) {
-    item('Always accept this trigger', 'alwaysYes', msg.trigger === 'ACCEPT');
-    item('Always decline this trigger', 'alwaysNo', msg.trigger === 'DECLINE');
+  if (answer.autoYield !== undefined) item('Auto-yield to this ability', 'autoYield', answer.autoYield);
+  if (answer.trigger !== undefined) {
+    item('Always accept this trigger', 'alwaysYes', answer.trigger === 'ACCEPT');
+    item('Always decline this trigger', 'alwaysNo', answer.trigger === 'DECLINE');
   }
   item('Yield until this resolves', 'yieldToStack');
   item('Yield until the stack is empty', 'yieldToEntireStack');
   document.body.append(menu);
-}
-
-function closeMenu(): void {
-  document.getElementById('stack-menu')?.remove();
 }

@@ -57,7 +57,7 @@ export function renderLobby(model: Model, sendFn: Send): void {
       </div>
       </div>`;
     q(root, '#lobby-back').onclick = () => send({ t: 'leaveLobby' });
-    wireChatInput(q<HTMLInputElement>(root, '#lobby-chat-in'));
+    wireChatInput(q<HTMLInputElement>(root, '#lobby-chat-in'), text => send({ t: 'chat', text }));
     q(root, '#add-seat').onclick = () => send({ t: 'addSeat' });
     q(root, '#play').onclick = () => {
       // A browser plays nothing before a click, so the music starts on this one
@@ -96,7 +96,7 @@ function renderNet(root: HTMLElement, lobby: LobbyTable, model: Model): void {
   if (lobby.shareable) {
     renderAddresses(root, model.addresses ?? []);
   }
-  paintChat(q(root, '#lobby-chat-log'));
+  paintChat(q(root, '#lobby-chat-log'), model);
 }
 
 function renderAddresses(root: HTMLElement, list: Address[]): void {

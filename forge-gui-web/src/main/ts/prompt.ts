@@ -1,10 +1,12 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images';
 import { game, type Model } from './model';
 import { hoverable } from './detail';
-import { stepName, stopsOpen } from './phasebar';
+import { stepName } from './phasebar';
 import { openOptions, closeOptions } from './options';
 import { byId, q } from './dom';
-import type { Notice, PromptButton, Ref, Send } from './protocol';
+import { ui } from './ui';
+import type { Actions } from './actions';
+import type { Notice, PromptButton, Ref } from './protocol';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
@@ -20,7 +22,7 @@ const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden
 
 let built = false;
 
-export function renderPrompt(model: Model, send: Send): void {
+export function renderPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   if (!built) {
     root.innerHTML = `
@@ -40,17 +42,17 @@ export function renderPrompt(model: Model, send: Send): void {
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
       </div>`;
-    q(root, '.ok').onclick = () => send({ t: 'ok' });
-    q(root, '.cancel').onclick = () => send({ t: 'cancel' });
-    q(root, '.end-turn').onclick = () => send({ t: 'endTurn' });
-    q(root, '.auto-pass').onclick = () => send({ t: 'autoPass' });
-    q(root, '.undo').onclick = () => send({ t: 'undo' });
-    q(root, '.cog').onclick = () => openOptions(() => send({ t: 'concede' }));
+    q(root, '.ok').onclick = () => actions.ok();
+    q(root, '.cancel').onclick = () => actions.cancel();
+    q(root, '.end-turn').onclick = () => actions.endTurn();
+    q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
+    q(root, '.undo').onclick = () => actions.undo();
+    q(root, '.cog').onclick = () => openOptions(() => actions.concede());
     document.addEventListener('keydown', e => {
       if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = q<HTMLButtonElement>(root, '.ok');
       const cancel = q<HTMLButtonElement>(root, '.cancel');
-      if (document.getElementById('options') || stopsOpen()) {
+      if (document.getElementById('options') || ui.stopsOpen) {
         // Escape belongs to whatever is open over the board; the prompt keeps its answer
         if (e.key === 'Escape' && document.getElementById('options')) {
           closeOptions();
@@ -62,9 +64,9 @@ export function renderPrompt(model: Model, send: Send): void {
       } else if (e.key === 'Escape' && !cancel.disabled) {
         cancel.click();
       } else if (e.key.toLowerCase() === 'e') {
-        send({ t: 'endTurn' });
+        actions.endTurn();
       } else if (e.key.toLowerCase() === 'z') {
-        send({ t: 'undo' });
+        actions.undo();
       }
     });
     built = true;

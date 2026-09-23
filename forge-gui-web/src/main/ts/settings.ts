@@ -2,7 +2,7 @@
 // desktop client; the rest live in this browser.
 
 import { cssUrl } from './looks';
-import type { Playmat, Send, ServerSettings } from './protocol';
+import type { Playmat, ServerSettings } from './protocol';
 
 const LOCAL_KEY = 'forge.settings';
 const DEFAULTS_KEY = 'forge.defaults';
@@ -96,11 +96,12 @@ export const SETTINGS: SettingDef[] = [
 const byKey = new Map(SETTINGS.map(s => [s.key, s]));
 let local: Record<string, SettingValue> = {};
 let server: Partial<ServerSettings> = {};
-let send: Send = () => {};
+/** Saves a setting the server keeps. */
+let saveOnServer: (key: string, value: string) => void = () => {};
 let redraw: () => void = () => {};
 
-export function initSettings(sendFn: Send, schedule: () => void): void {
-  send = sendFn;
+export function initSettings(save: (key: string, value: string) => void, schedule: () => void): void {
+  saveOnServer = save;
   redraw = schedule;
   try {
     local = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}');
@@ -154,7 +155,7 @@ export function set(key: string, value: SettingValue): void {
   if (!def) throw new Error(`No setting ${key}`);
   if (def.server) {
     (server as Record<string, SettingValue>)[key] = value;
-    send({ t: 'setSetting', key, value: String(value) });
+    saveOnServer(key, String(value));
   } else {
     local[key] = value;
     try {

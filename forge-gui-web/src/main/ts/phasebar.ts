@@ -2,7 +2,9 @@ import { reconcile } from './render';
 import { deref, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { q } from './dom';
-import type { GameView, PhaseType, Send, TurnMarker } from './protocol';
+import { changeUi, ui } from './ui';
+import type { Actions } from './actions';
+import type { GameView, PhaseType, TurnMarker } from './protocol';
 
 // A pill on the divider: whose turn it is, then the five phases with the current step named. The track is a
 // read-out and never changes shape under the cursor; clicking the pill opens the grid of phase stops, one row
@@ -63,17 +65,10 @@ const PHASES: Phase[] = [
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
 export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 
-let open = false;
 let wired = false;
-let schedule: () => void = () => {};
 
-export const stopsOpen = (): boolean => open;
-
-export function initPhaseBar(scheduleFn: () => void): void {
-  schedule = scheduleFn;
-}
-
-export function renderPhaseBar(model: Model, g: GameView, send: Send): void {
+export function renderPhaseBar(model: Model, g: GameView, actions: Actions): void {
+  const open = ui.stopsOpen;
   const root = document.getElementById('phase-strip') as HTMLElement;
   if (!wired) {
     build(root);
@@ -95,7 +90,7 @@ export function renderPhaseBar(model: Model, g: GameView, send: Send): void {
   }
   q(pill, '.owner b').textContent = myTurn ? 'Your turn' : active?.Name ?? '';
   q(pill, '.owner .turn').textContent = `T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}`;
-  drawTrack(pill, model, step, phase, myTurn, send);
+  drawTrack(pill, model, step, phase, myTurn, actions);
   drawWaiting(pill, model);
   drawUntil(pill, model, myTurn, opponentLabel);
   q(pill, '.caret').innerHTML = glyph(myTurn ? 'up' : 'down', 12);
@@ -108,7 +103,7 @@ export function renderPhaseBar(model: Model, g: GameView, send: Send): void {
   panel.classList.toggle('above', myTurn);
   if (open) {
     panel.innerHTML = stopsGrid(model, step, myTurn, opponentLabel);
-    wireGrid(panel, send);
+    wireGrid(panel, actions);
   }
 }
 
@@ -122,25 +117,20 @@ function build(root: HTMLElement): void {
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
     + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
     + '<span class="caret"></span>';
-  pill.onclick = () => {
-    open = !open;
-    schedule();
-  };
+  pill.onclick = () => changeUi(u => { u.stopsOpen = !u.stopsOpen; });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && open) {
-      open = false;
-      q(root, '.stops').hidden = true;
+    if (e.key === 'Escape' && ui.stopsOpen) {
+      changeUi(u => { u.stopsOpen = false; });
     }
   });
   document.addEventListener('mousedown', e => {
-    if (open && !(e.target instanceof Element && e.target.closest('#phase-strip'))) {
-      open = false;
-      q(root, '.stops').hidden = true;
+    if (ui.stopsOpen && !(e.target instanceof Element && e.target.closest('#phase-strip'))) {
+      changeUi(u => { u.stopsOpen = false; });
     }
   });
 }
 
-function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number, myTurn: boolean, send: Send): void {
+function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number, myTurn: boolean, actions: Actions): void {
   const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
   const marker = model.controls?.marker;
   pill.querySelectorAll<HTMLElement>('.track .phase').forEach((el, n) => {
@@ -153,7 +143,7 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     el.title = `${p.name}. Right-click: pass priority until here.`;
     el.oncontextmenu = e => {
       e.preventDefault();
-      send({ t: 'toggleMarker', phase: STEPS[p.steps[0]][0], mine: myTurn });
+      actions.toggleMarker(STEPS[p.steps[0]][0], myTurn);
     };
     q(el, '.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
     q(el, '.label').textContent = current ? (step < 0 ? 'Untap' : STEPS[step][3]) : '';
@@ -240,14 +230,15 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: s
   return `<div class="title">Phase stops</div><table>${head}${body}</table>`;
 }
 
-function wireGrid(panel: HTMLElement, send: Send): void {
+function wireGrid(panel: HTMLElement, actions: Actions): void {
   for (const b of panel.querySelectorAll<HTMLElement>('.cell')) {
     // The cell was drawn from STEPS, so its phase is one of them
-    const msg = (type: 'toggleStop' | 'toggleMarker') => ({ t: type, phase: b.dataset.phase as PhaseType, mine: b.dataset.mine === 'true' });
-    b.onclick = () => send(msg('toggleStop'));
+    const phase = b.dataset.phase as PhaseType;
+    const mine = b.dataset.mine === 'true';
+    b.onclick = () => actions.toggleStop(phase, mine);
     b.oncontextmenu = e => {
       e.preventDefault();
-      send(msg('toggleMarker'));
+      actions.toggleMarker(phase, mine);
     };
   }
 }

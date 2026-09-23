@@ -11,31 +11,26 @@ import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
 import { byId, q } from './dom';
 import type { CardClick } from './cards';
-import type { CardView, GameEvent, GameView, PlayerView, Send, ZoneName } from './protocol';
+import type { Actions } from './actions';
+import type { CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
 
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
-export function renderMatch(model: Model, send: Send, events: readonly GameEvent[]): void {
+export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
-  const select: CardClick = (el, menu, e) => send({
-    t: 'selectCard',
-    key: Number(el.dataset.key),
-    menu: !!menu,
-    x: Math.round(e?.clientX ?? 0),
-    y: Math.round(e?.clientY ?? 0),
-  });
+  const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), !!menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
-  renderSeat(byId('opponent'), model, opponents(model)[0], onField, send, select);
-  renderSeat(byId('me'), model, me(model), onField, send, select);
+  renderSeat(byId('opponent'), model, opponents(model)[0], onField, actions, select);
+  renderSeat(byId('me'), model, me(model), onField, actions, select);
   announceTurn(model, g);
-  renderPhaseBar(model, g, send);
+  renderPhaseBar(model, g, actions);
   renderStack(model);
   renderHand(model, me(model), select);
   renderZones(model, select);
-  renderGameOver(model, g, send);
+  renderGameOver(model, g, actions);
   animateCardMoves(model, events);
 }
 
@@ -45,7 +40,7 @@ interface Badge {
   title: string;
 }
 
-function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefined, onField: CardView[], send: Send, select: CardClick): void {
+function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefined, onField: CardView[], actions: Actions, select: CardClick): void {
   if (!player) {
     root.replaceChildren();
     return;
@@ -62,7 +57,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       </div>
       <div class="battlefield"><div class="row lands"></div><div class="row permanents"></div></div>`;
     const avatarEl = q(root, '.avatar');
-    avatarEl.onclick = () => send({ t: 'selectPlayer', key: Number(root.dataset.player) });
+    avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
     avatarEl.addEventListener('mouseenter', () => hoverPlayer(Number(root.dataset.player)));
     avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
   }
@@ -82,7 +77,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r?.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   renderZoneTiles(q(root, '.zone-tiles'), model, player);
-  renderManaPool(q(root, '.mana'), player, isLocal(model, player), send);
+  renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
   for (const { card, value } of player.CommanderDamage ?? []) {
     const commander = deref(model, card);
@@ -105,13 +100,13 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
 }
 
 // Clicking your own mana pays with that colour, as on desktop
-function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, send: Send): void {
+function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, actions: Actions): void {
   const pool = MANA.filter(([bit]) => player.Mana?.[bit]);
   reconcile<[number, string], HTMLButtonElement>(root, pool, ([bit]) => bit,
     ([bit]) => {
       const el = document.createElement('button');
       el.className = 'mana-button';
-      el.onclick = () => send({ t: 'useMana', color: bit });
+      el.onclick = () => actions.useMana(bit);
       return el;
     },
     (el, [bit, sym]) => {
@@ -242,24 +237,24 @@ function renderEmblems(root: HTMLElement, model: Model, cards: CardView[], selec
     });
 }
 
-function renderGameOver(model: Model, g: GameView, send: Send): void {
+function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   root.hidden = !model.gameOver;
   if (!model.gameOver) return;
   const matchOver = !!g.MatchOver;
   root.innerHTML = '<div class="panel"><h2></h2><div class="actions"></div></div>';
   q(root, 'h2').textContent = g.WinningPlayerName ? `${g.WinningPlayerName} wins` : 'Game over';
-  const actions = q(root, '.actions');
+  const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
     b.textContent = label;
     if (primary) b.className = 'primary';
     b.onclick = onClick;
-    actions.append(b);
+    buttons.append(b);
   };
-  if (!matchOver) add('Next game', true, () => send({ t: 'nextGame', decision: 'CONTINUE' }));
+  if (!matchOver) add('Next game', true, () => actions.nextGame());
   add(matchOver ? 'Back to start' : 'Quit match', matchOver, () => {
-    if (!matchOver) send({ t: 'nextGame', decision: 'QUIT' });
-    send({ t: 'leave' });
+    if (!matchOver) actions.quitMatch();
+    actions.leave();
   });
 }

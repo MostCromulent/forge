@@ -1,11 +1,12 @@
 import { createCard, updateCard } from './cards';
 import { imageUrl, noImageOnError, setSymbolText } from './images';
 import { hoverable } from './detail';
-import { awaitStackPick } from './stack';
+import { stackPick } from './stack';
+import type { Actions } from './actions';
 import { byId } from './dom';
 import type { Model } from './model';
 import type {
-  ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption, Send,
+  ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
   SideboardRequest, TextRequest,
 } from './protocol';
 
@@ -13,8 +14,8 @@ type Answer = (value: unknown) => void;
 
 let shownId: number | null = null;
 
-// Shows the oldest open request; its answer goes back as {t:'reply'} and the request leaves the local model at once
-export function renderDialogs(model: Model, send: Send, schedule: () => void): void {
+// Shows the oldest open request; answering it takes it out of the model at once
+export function renderDialogs(model: Model, actions: Actions): void {
   const layer = byId('dialog-layer');
   const req = [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
   if (!req) {
@@ -31,17 +32,12 @@ export function renderDialogs(model: Model, send: Send, schedule: () => void): v
   }
   shownId = req.id;
   const answer: Answer = value => {
-    model.requests.delete(req.id);
-    send({ t: 'reply', id: req.id, value });
     shownId = null;
-    awaitStackPick(null, null);
-    schedule();
+    actions.answer(req.id, value);
   };
   // Choosing between spells that are on the stack is done on the stack, so no list is drawn for it
-  if (req.kind === 'choices' && req.stackKeys) {
+  if (stackPick(model) === req) {
     layer.replaceChildren();
-    awaitStackPick(req.stackKeys, index => answer([index]));
-    schedule();
     return;
   }
   layer.replaceChildren(build(req, model, answer));

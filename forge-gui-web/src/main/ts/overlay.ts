@@ -1,6 +1,7 @@
 import { game, derefAll, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
+import { ui } from './ui';
 import type { Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
@@ -26,20 +27,12 @@ interface Point {
   y: number;
 }
 
-let hoveredStackItem: number | null = null;
 let settleTimer = 0;
-let schedule: () => void = () => {};
 
-export function initOverlay(scheduleFn: () => void): void {
-  schedule = scheduleFn;
+export function initOverlay(schedule: () => void): void {
   window.addEventListener('resize', schedule);
   // A scrolling log or zone panel moves the cards the arrows point at; schedule coalesces to one render per frame
   document.addEventListener('scroll', schedule, true);
-}
-
-export function hoverStackItem(key: number | null): void {
-  hoveredStackItem = key;
-  schedule();
 }
 
 export function drawOverlay(model: Model): void {
@@ -80,7 +73,7 @@ function paint(model: Model): void {
       }
     });
   }
-  const item = hoveredStackItem !== null ? model.objects.get(hoveredStackItem) : null;
+  const item = ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
   if (item) {
     const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
     const targets = stackTargets(model, item);

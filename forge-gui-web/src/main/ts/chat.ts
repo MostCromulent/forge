@@ -1,25 +1,10 @@
-import type { Send } from './protocol';
+// The conversation with the other players, shown in match setup and again beside the board. Both places read the
+// model's one list, so a line said in the lobby is still there when the game starts.
 
-// The conversation with the other players, shown in match setup and again beside the board. Both places
-// read the same list, so a line said in the lobby is still there when the game starts.
-
-let send: Send = () => {};
-let lines: { from: string; text: string }[] = [];
-
-export function initChat(sendFn: Send): void {
-  send = sendFn;
-}
-
-export function addChat(from: string, text: string): void {
-  lines = [...lines, { from, text }];
-}
-
-export function clearChat(): void {
-  lines = [];
-}
+import type { Model } from './model';
 
 /** Sends on Enter. The field is left empty whether or not anything was said. */
-export function wireChatInput(input: HTMLInputElement): void {
+export function wireChatInput(input: HTMLInputElement, say: (text: string) => void): void {
   input.onkeydown = e => {
     if (e.key !== 'Enter') {
       return;
@@ -29,12 +14,13 @@ export function wireChatInput(input: HTMLInputElement): void {
     const text = input.value.trim();
     input.value = '';
     if (text) {
-      send({ t: 'chat', text });
+      say(text);
     }
   };
 }
 
-export function paintChat(log: HTMLElement): void {
+export function paintChat(log: HTMLElement, model: Model): void {
+  const lines = model.chat;
   if (log.childElementCount === lines.length) {
     return;
   }

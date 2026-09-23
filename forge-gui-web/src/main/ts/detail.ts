@@ -1,47 +1,39 @@
 import { appendSymbolText, hideOnError, imageUrl, setImage, setSymbolText } from './images';
 import { byId, q } from './dom';
-import type { Detail, PlayerDetail, Send } from './protocol';
+import { changeUi, ui } from './ui';
+import type { Actions } from './actions';
+import type { Model } from './model';
+import type { PlayerDetail } from './protocol';
 
-// Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop)
-type Hovered = { key: number | null; src: string; player?: undefined } | { player: number };
+// Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
+// it arrives in the model a moment after the pointer does
 
-let send: Send = () => {};
-let hovered: Hovered | null = null;
-let faceIndex = 0;
-const details = new Map<number, Detail>();
+let actions: Actions | null = null;
 
-export function resetDetail(): void {
-  details.clear();
-  playerDetails.clear();
-  hovered = null;
-  draw();
+export function initDetail(actionsFor: Actions): void {
+  actions = actionsFor;
 }
 
-export function initDetail(sendFn: Send): void {
-  send = sendFn;
-  document.addEventListener('keydown', e => {
-    if (e.key.toLowerCase() !== 'f' || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || !hovered) return;
-    const count = 'key' in hovered && hovered.key !== null ? details.get(hovered.key)?.faces.length ?? 0 : 0;
-    if (count > 1) {
-      faceIndex = (faceIndex + 1) % count;
-      draw();
-    }
-  });
+/** The F key turns the hovered card to its next face. Needs the model, which knows how many faces it has. */
+export function nextFace(model: Model): void {
+  const hover = ui.hover;
+  const count = hover && 'card' in hover && hover.card !== null ? model.cardDetails.get(hover.card)?.faces.length ?? 0 : 0;
+  if (count > 1) {
+    changeUi(u => { u.faceIndex = (u.faceIndex + 1) % count; });
+  }
 }
 
 // el carries data-key (the card) and data-zoom (its image, empty when the viewer may not see it)
 export function hoverCard(el: HTMLElement | null): void {
-  faceIndex = 0;
   if (!el || !el.dataset.zoom) {
-    hovered = null;
-    draw();
+    changeUi(u => { u.hover = null; u.faceIndex = 0; });
     return;
   }
   const key = Number(el.dataset.key);
-  const card = { key: Number.isInteger(key) ? key : null, src: el.dataset.zoom };
-  hovered = card;
-  if (card.key !== null) send({ t: 'detail', key: card.key });
-  draw();
+  const card = Number.isInteger(key) ? key : null;
+  const src = el.dataset.zoom;
+  changeUi(u => { u.hover = { card, src }; u.faceIndex = 0; });
+  if (card !== null) actions?.inspectCard(card);
 }
 
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
@@ -50,39 +42,26 @@ export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
 }
 
 // Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
-const playerDetails = new Map<number, PlayerDetail>();
-
 export function hoverPlayer(key: number | null): void {
-  faceIndex = 0;
-  hovered = key === null ? null : { player: key };
-  if (key !== null) send({ t: 'playerDetail', key });
-  draw();
+  changeUi(u => { u.hover = key === null ? null : { player: key }; u.faceIndex = 0; });
+  if (key !== null) actions?.inspectPlayer(key);
 }
 
-export function onPlayerDetail(msg: PlayerDetail): void {
-  playerDetails.set(msg.key, msg);
-  if (hovered?.player === msg.key) draw();
-}
-
-export function onDetail(msg: Detail): void {
-  details.set(msg.key, msg);
-  if (hovered && 'key' in hovered && hovered.key === msg.key) draw();
-}
-
-function draw(): void {
+export function renderDetail(model: Model): void {
   const zoom = byId('zoom');
-  zoom.hidden = !hovered;
-  if (!hovered) return;
-  if (hovered.player !== undefined) {
-    drawPlayer(zoom, playerDetails.get(hovered.player));
+  const hover = ui.hover;
+  zoom.hidden = !hover;
+  if (!hover) return;
+  if ('player' in hover) {
+    drawPlayer(zoom, model.playerDetails.get(hover.player));
     return;
   }
-  const d = hovered.key !== null ? details.get(hovered.key) : undefined;
-  const face = d?.faces[faceIndex] ?? d?.faces[0];
+  const d = hover.card !== null ? model.cardDetails.get(hover.card) : undefined;
+  const face = d?.faces[ui.faceIndex] ?? d?.faces[0];
   ensureZoom(zoom);
   const img = q<HTMLImageElement>(zoom, 'img');
   img.hidden = false;
-  setImage(img, face?.imageKey ? imageUrl(face.imageKey) : hovered.src);
+  setImage(img, face?.imageKey ? imageUrl(face.imageKey) : hover.src);
   q(zoom, '.detail').hidden = !face;
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
@@ -90,7 +69,7 @@ function draw(): void {
   q(zoom, '.type').textContent = face.type ?? '';
   setRulesText(q(zoom, '.text'), face.text ?? '');
   q(zoom, '.pt').textContent = face.pt ?? '';
-  q(zoom, '.hint').textContent = d.faces.length > 1 ? `F: next face (${faceIndex + 1}/${d.faces.length})` : '';
+  q(zoom, '.hint').textContent = d.faces.length > 1 ? `F: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
 }
 
 // CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other

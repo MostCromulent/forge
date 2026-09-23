@@ -1,5 +1,5 @@
 import type {
-  Address, CardStateView, CardView, Controls, DeckSummary, GameEvent, GameView, LobbyTable, Playable, PlayerView, PlayerZone,
+  Address, CardStateView, CardView, Controls, DeckSummary, Detail, GameEvent, GameView, LobbyTable, PlayerDetail, StackMenu, Playable, PlayerView, PlayerZone,
   Prompt, Ref, Refs, Request, ShownZone, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
@@ -36,6 +36,15 @@ export interface Model {
   /** What the game did since the board was last drawn, oldest first. The render hands them to whatever animates
    *  them and empties the list, so each is shown once. */
   events: GameEvent[];
+  /** Rules text the server composed for cards and players the pointer has been over, kept for the match. */
+  cardDetails: Map<number, Detail>;
+  playerDetails: Map<number, PlayerDetail>;
+  /** What a right-click on a stack item may do, as the server last answered it. */
+  stackMenu: StackMenu | null;
+  /** The conversation with the other players, in the lobby and beside the board. */
+  chat: { from: string; text: string }[];
+  /** Someone else is at the table, so there is someone to talk to. */
+  networked: boolean;
 }
 
 export function createModel(): Model {
@@ -45,6 +54,7 @@ export function createModel(): Model {
     looks: null, spectating: false,
     inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
+    cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], networked: false,
   };
 }
 

@@ -1,5 +1,11 @@
+// The controller. It is the only place that talks to the server: messages from it update the model, what the player
+// does arrives as actions and leaves as messages, and one render per frame draws the model and the table's
+// arrangement. Nothing it draws with sends anything itself.
+
 import { connect } from './net';
 import { createModel, applyState } from './model';
+import { createActions, type Actions } from './actions';
+import { initUi, resetMatchUi } from './ui';
 import { renderMenu } from './menu';
 import { renderLobby } from './lobby';
 import { onDeckDetails, onDecks, deckFinderOpen, closeDeckFinder } from './deckfinder';
@@ -9,17 +15,13 @@ import { renderMatch } from './board';
 import { renderPrompt, flash, showNotice } from './prompt';
 import { renderDialogs } from './dialogs';
 import { appendLog, initLog } from './log';
-import { initChat, addChat, clearChat } from './chat';
-import { initSide, setChatAvailable, renderSide } from './side';
-import { initDetail, onDetail, onPlayerDetail, resetDetail } from './detail';
-import { initZones, resetZones } from './zones';
-import { initPhaseBar } from './phasebar';
-import { initBattlefield } from './battlefield';
-import { initStack, onStackMenu } from './stack';
+import { initSide, renderSide } from './side';
+import { initDetail, nextFace, renderDetail } from './detail';
+import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, setPlaymats } from './settings';
 import { refreshOptions } from './options';
-import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
+import { applyAudioSettings, playSound, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
 import { byId } from './dom';
 import type { ServerMessage } from './protocol';
@@ -28,19 +30,39 @@ const model = createModel();
 let scheduled = false;
 initPace(apply);
 const send = connect(pace, online => { byId('banner').hidden = online; });
+
+const wire = createActions(send);
+const actions: Actions = {
+  ...wire,
+  // An answered question leaves the model at once, so its dialog closes without waiting for the server
+  answer: (id, value) => {
+    model.requests.delete(id);
+    wire.answer(id, value);
+    schedule();
+  },
+  // An earlier answer is for an earlier menu, so the new one opens only when its own answer is in
+  askStackMenu: key => {
+    model.stackMenu = null;
+    wire.askStackMenu(key);
+  },
+};
+
+initUi(schedule);
 initHostChoice(send);
-initDetail(send);
-initZones(schedule);
-initPhaseBar(schedule);
-initBattlefield(schedule);
-initStack(send, schedule);
+initDetail(actions);
+initStack(actions);
 initOverlay(schedule);
 initLog();
-initChat(send);
-initSide();
-initSettings(send, () => {
+initSide(actions);
+initSettings(actions.setSetting, () => {
   applyAudioSettings();
   schedule();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key.toLowerCase() === 'f' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+    nextFace(model);
+  }
 });
 
 function apply(msg: ServerMessage): void {
@@ -59,8 +81,8 @@ function apply(msg: ServerMessage): void {
       model.error = null;
       // A new lobby has an address and a conversation of its own
       model.addresses = null;
-      clearChat();
-      setChatAvailable(!!msg.networked);
+      model.chat = [];
+      model.networked = !!msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
       if (!msg.inMatch) {
@@ -75,7 +97,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'lobby': model.lobby = msg.table ?? null; break;
     case 'addresses': model.addresses = msg.list; break;
-    case 'chat': addChat(msg.from ?? '', msg.text); break;
+    case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text }]; break;
     case 'deckDetails': onDeckDetails(msg.deck); return;
     case 'cardSearch': onCardNames(msg.names); return;
     case 'printings': onPrintings(msg.printings); return;
@@ -89,8 +111,10 @@ function apply(msg: ServerMessage): void {
         model.prompt = null;
         model.zones = [];
         model.playable = null;
-        resetDetail();
-        resetZones();
+        model.cardDetails.clear();
+        model.playerDetails.clear();
+        model.stackMenu = null;
+        resetMatchUi();
       }
       break;
     case 'prompt': model.prompt = msg; break;
@@ -110,9 +134,9 @@ function apply(msg: ServerMessage): void {
       refreshOptions();
       break;
     case 'log': appendLog(msg); return;
-    case 'detail': onDetail(msg); return;
-    case 'playerDetail': onPlayerDetail(msg); return;
-    case 'stackMenu': onStackMenu(msg); return;
+    case 'detail': model.cardDetails.set(msg.key, msg); break;
+    case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
+    case 'stackMenu': model.stackMenu = msg; break;
     case 'notice': showNotice(msg); return;
     case 'flash': flash(); return;
     default: break;
@@ -139,9 +163,10 @@ function render(): void {
     else renderMenu(model, send);
     return;
   }
-  renderSide();
-  renderMatch(model, send, events);
-  renderPrompt(model, send);
-  renderDialogs(model, send, schedule);
+  renderSide(model);
+  renderMatch(model, actions, events);
+  renderPrompt(model, actions);
+  renderDialogs(model, actions);
+  renderDetail(model);
   drawOverlay(model);
 }

@@ -3,72 +3,45 @@
 
 import { wireChatInput, paintChat } from './chat';
 import { byId, q } from './dom';
+import { changeUi, rememberSidePanels, ui } from './ui';
+import type { Actions } from './actions';
+import type { Model } from './model';
 
 const PANELS = ['log', 'chat'] as const;
-type PanelName = typeof PANELS[number];
-const KEY = 'forge.sidePanels';
 
-// A panel that is not there cannot be open, so chat starts shut and stays shut in an offline game
-let open: Record<PanelName, boolean> = { log: true, chat: false };
-let hasChat = false;
-
-export function initSide(): void {
+export function initSide(actions: Actions): void {
   const side = byId('side');
-  open = { ...open, ...stored() };
   for (const panel of PANELS) {
-    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => {
-      open[panel] = !open[panel];
-      remember();
-      apply();
-    };
+    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => changeUi(u => {
+      u.sidePanels[panel] = !u.sidePanels[panel];
+      rememberSidePanels();
+    });
   }
-  wireChatInput(byId<HTMLInputElement>('match-chat-in'));
-  apply();
+  wireChatInput(byId<HTMLInputElement>('match-chat-in'), actions.say);
 }
 
-/** Chat only exists once there is someone else to talk to. */
-export function setChatAvailable(available: boolean): void {
-  if (hasChat === available) {
+/** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
+let drawn = '';
+
+// A panel that is not there cannot be open, so chat stays shut in a game nobody else is in
+export function renderSide(model: Model): void {
+  const hasChat = model.networked;
+  if (hasChat) {
+    paintChat(byId('match-chat-log'), model);
+  }
+  const shown = { log: ui.sidePanels.log, chat: ui.sidePanels.chat && hasChat };
+  const state = `${hasChat}/${shown.log}/${shown.chat}`;
+  if (state === drawn) {
     return;
   }
-  hasChat = available;
-  apply();
-}
-
-export function renderSide(): void {
-  if (hasChat) {
-    paintChat(byId('match-chat-log'));
-  }
-}
-
-function apply(): void {
+  drawn = state;
   const side = byId('side');
   q(side, '#chat-panel').hidden = !hasChat;
   for (const panel of PANELS) {
-    const shown = open[panel] && (panel !== 'chat' || hasChat);
-    side.dataset[panel] = shown ? 'open' : 'shut';
-    const button = q(side, `.side-toggle[data-panel="${panel}"]`);
-    button.setAttribute('aria-expanded', String(shown));
+    side.dataset[panel] = shown[panel] ? 'open' : 'shut';
+    q(side, `.side-toggle[data-panel="${panel}"]`).setAttribute('aria-expanded', String(shown[panel]));
   }
-  const folded = !open.log && !(hasChat && open.chat);
-  byId('match').classList.toggle('side-folded', folded);
+  byId('match').classList.toggle('side-folded', !shown.log && !shown.chat);
   // The board changes width; anything placed by measuring it must be placed again
   window.dispatchEvent(new Event('resize'));
-}
-
-function stored(): Partial<Record<PanelName, boolean>> {
-  try {
-    return JSON.parse(localStorage.getItem(KEY) ?? 'null') ?? {};
-  } catch {
-    // Storage can be unavailable or hold something else; the defaults then last until reload
-    return {};
-  }
-}
-
-function remember(): void {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(open));
-  } catch {
-    // As above
-  }
 }
