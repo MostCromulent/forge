@@ -75,9 +75,44 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     }
   }
   settleWaiting(!!model.prompt?.paying);
+  shiftBoard(new Set(journeys(events).keys()));
   layOutPiles();
   note();
 }
+
+/**
+ * A card that stays on the battlefield but stands somewhere else now slides there: out of a pile it has left, into
+ * a pile it has joined, or along the row as its neighbours come and go. The game says nothing of these, so they are
+ * read off where each card stood last frame. The slide is added to whatever the card is doing (turning as it taps),
+ * never in place of it.
+ */
+function shiftBoard(travelled: Set<string>): void {
+  for (const el of document.querySelectorAll<HTMLElement>(BOARD_CARDS)) {
+    const key = el.dataset.key as string;
+    const was = lastSeen.get(key);
+    if (!was || travelled.has(key) || fromHint.has(key)) {
+      continue;
+    }
+    const now = el.getBoundingClientRect();
+    const dx = centre(was.rect).x - centre(now).x;
+    const dy = centre(was.rect).y - centre(now).y;
+    if (Math.abs(dx) + Math.abs(dy) > 2) {
+      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+        { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', composite: 'add' });
+    }
+  }
+  // A card that had a place of its own and is now folded into a pile slides onto the pile's top card
+  for (const { keys, top } of pileSlots()) {
+    for (const key of keys) {
+      const was = lastSeen.get(key);
+      if (was && ownPlace.has(key) && key !== top.dataset.key && !travelled.has(key) && !intoHint.has(key)) {
+        sendTo(was, top.getBoundingClientRect(), 1);
+      }
+    }
+  }
+}
+
+const centre = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
 
 /** Each card's first origin and last destination this frame; a card that went out and back in one step moved once. */
 export function journeys(events: readonly GameEvent[]): Map<string, CardMoved> {
@@ -129,6 +164,7 @@ function layOutPiles(): void {
 // ---- Finding things on the board ---------------------------------------------------------------------------------
 
 const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-key], #zones .card[data-key]';
+const BOARD_CARDS = '#me .battlefield .card[data-key], #opponent .battlefield .card[data-key]';
 const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item')];
 
 function cardElement(key: string): HTMLElement | null {
@@ -187,6 +223,8 @@ function placeRect(place: Place | undefined): DOMRect | null {
 
 /** The keys a pile is holding behind its top card. They have no element, and they have not gone anywhere. */
 let covered = new Set<string>();
+/** The cards drawn last frame with an element of their own, rather than folded into a pile. */
+const ownPlace = new Set<string>();
 
 function notePiles(): void {
   covered = new Set();
@@ -213,8 +251,10 @@ function pileSlots(): { keys: string[]; top: HTMLElement }[] {
 /** Remembers where every card stands now, for the moves the next frame brings. */
 function note(): void {
   lastSeen.clear();
+  ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
     lastSeen.set(el.dataset.key as string, { rect: el.getBoundingClientRect(), ghost: el.cloneNode(true) as HTMLElement });
+    ownPlace.add(el.dataset.key as string);
   }
   for (const el of stackItems()) {
     const key = el.querySelector('img')?.dataset.key;

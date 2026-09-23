@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { signature } from '../../main/ts/battlefield';
+import { signature, slotsFor } from '../../main/ts/battlefield';
 import { createModel, type Model } from '../../main/ts/model';
 
 const swampArt = 'c:Swamp|KTK|1';
@@ -45,3 +45,18 @@ describe('which cards pile', () => {
     expect(sig(model, 2)).toBe(sig(model, 1));
   });
 });
+
+describe('where piles sit', () => {
+  // A land tapped out of its pile used to land wherever its card came in the zone, across the row from the pile
+  it('keeps cards of one name side by side, so a split pile stays together', () => {
+    const model = createModel();
+    put(model, 1, {}, {});
+    put(model, 2, {}, { Name: 'Forest', ImageKey: 'c:Forest|KTK|1', Type: 'Basic Land - Forest' });
+    put(model, 3, {}, {});
+    put(model, 4, { Tapped: true }, {});
+    const cards = [1, 2, 3, 4].map(k => model.objects.get(k) as never);
+    const slots = slotsFor(model, cards, cards);
+    expect(slots.map(s => s.members.map(m => m.$key))).toEqual([[1, 3], [4], [2]]);
+  });
+});
+

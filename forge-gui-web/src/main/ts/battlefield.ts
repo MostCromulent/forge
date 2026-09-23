@@ -53,7 +53,7 @@ function fitCards(root: HTMLElement, lands: number, others: number): void {
 }
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
-function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
+export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {
   const byKey = new Map(onField.map(c => [c.$key, c]));
   const hostOf = (c: CardView) => (c.EntityAttachedTo ? byKey.get(c.EntityAttachedTo.ref) : undefined);
   const rootOf = (c: CardView) => {
@@ -96,7 +96,16 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
     if (sig) piles.set(sig, slot);
     slots.push(slot);
   }
-  return slots;
+  // Cards of one name stay side by side, in the order the name first appears, so a pile that splits (a land
+  // tapped out of it) splits in place rather than across the row
+  const firstOf = new Map<string, number>();
+  slots.forEach((slot, i) => {
+    const name = stateOf(model, slot.top).Name ?? '';
+    if (!firstOf.has(name)) firstOf.set(name, i);
+  });
+  const order = new Map(slots.map((slot, i) => [slot, i]));
+  const rank = (slot: Slot) => firstOf.get(stateOf(model, slot.top).Name ?? '') ?? 0;
+  return slots.sort((a, b) => rank(a) - rank(b) || order.get(a)! - order.get(b)!);
 }
 
 // Everything a player can see or act on must match, so a pile never hides a difference. Nothing else may keep
