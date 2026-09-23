@@ -99,4 +99,53 @@ public class LoopbackGameTest {
             onUi(local::shutdown);
         }
     }
+
+    /**
+     * Fails if a game left unfinished when its table closes keeps its thread. The thread waits on players who have
+     * gone, so a server that hosts one table after another would hold every game it ever started.
+     */
+    @Test(timeOut = 120000)
+    public void aGameLeftUnfinishedEndsWithItsTable() throws Exception {
+        final LocalGame local = new LocalGame();
+        final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
+        final Deck islands = TestDecks.of("Islands", "Island", 40);
+        final WebGuiGame gui = new WebGuiGame();
+        try {
+            final FakeBrowser browser = new FakeBrowser(gui, false);
+            gui.attach(browser);
+            onUi(() -> local.startMatch("Web Player", islands, "AI", bears, gui));
+            // Nobody answers, so the game waits on the web player from its first question
+            awaitGameStarted(local, browser);
+            Assert.assertTrue(threadsInAGame() > 0, "the game never started a thread of its own");
+
+            onUi(local::endMatch);
+            for (int i = 0; i < 100 && threadsInAGame() > 0; i++) {
+                Thread.sleep(100);
+            }
+            Assert.assertEquals(threadsInAGame(), 0, "the game's thread outlived its table:" + gameStacks());
+        } finally {
+            gui.close();
+            onUi(local::shutdown);
+        }
+    }
+
+    private static String gameStacks() {
+        final StringBuilder out = new StringBuilder();
+        Thread.getAllStackTraces().forEach((t, stack) -> {
+            if (java.util.Arrays.stream(stack).anyMatch(f -> "forge.game.Match".equals(f.getClassName()))) {
+                out.append("\n").append(t.getName());
+                for (int i = 0; i < Math.min(stack.length, 16); i++) {
+                    out.append("\n    ").append(stack[i]);
+                }
+            }
+        });
+        return out.toString();
+    }
+
+    /** Threads running a game, which a game's pool thread is not while it waits for the next one. */
+    private static long threadsInAGame() {
+        return Thread.getAllStackTraces().values().stream()
+                .filter(stack -> java.util.Arrays.stream(stack).anyMatch(f -> "forge.game.Match".equals(f.getClassName())))
+                .count();
+    }
 }

@@ -2,7 +2,10 @@ package forge.web;
 
 import com.google.common.primitives.Ints;
 import forge.deck.Deck;
+import forge.game.Game;
+import forge.game.GameEndReason;
 import forge.game.GameType;
+import forge.game.player.Player;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
@@ -18,9 +21,11 @@ import forge.gamemodes.net.server.ServerGameLobby;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.player.PlayerControllerHuman;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -304,6 +309,7 @@ public final class LocalGame {
     }
 
     public void endMatch() {
+        abandonGame();
         // The server notices a closed connection later, in whichever lobby it is serving by then. Left with this
         // table's, it would count a finished match whose players have not yet chosen what next as still going, and
         // hold the seat for a reconnect under the player's name, which the next table's seat of that name then
@@ -322,6 +328,33 @@ public final class LocalGame {
         hosted = null;
         joined = null;
         webSeat = -1;
+    }
+
+    /**
+     * Ends a game still being played at a table that is closing. Its thread is waiting on players who are leaving
+     * and will never answer, so without this it waits for good, holding the whole game. Ended the way a concession
+     * ends one: the game is over, and every human's waiting input is let go so the thread can finish.
+     */
+    private void abandonGame() {
+        final HostedMatch match = hostedMatch();
+        final Game game = match == null ? null : match.getGame();
+        if (game == null || game.isGameOver()) {
+            return;
+        }
+        // Remote players' controllers have no event handler here to let their inputs go, as in concede(), and ending
+        // the game clears the players' controllers, so they are found first
+        final List<PlayerControllerHuman> humans = new ArrayList<>();
+        for (final Player p : game.getRegisteredPlayers()) {
+            if (p.getController() instanceof PlayerControllerHuman human) {
+                humans.add(human);
+            }
+        }
+        game.getAction().invoke(() -> {
+            game.setGameOver(GameEndReason.Draw);
+            for (final PlayerControllerHuman human : humans) {
+                human.getInputQueue().onGameOver(true);
+            }
+        });
     }
 
     /** Leaves whatever game is open. The server stays up, ready for the next one. */
