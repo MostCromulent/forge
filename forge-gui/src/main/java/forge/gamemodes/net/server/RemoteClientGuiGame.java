@@ -449,10 +449,6 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public boolean confirmAutoPass(final int delayMs) {
-        // With no pause there is nothing to show, so no round trip either
-        if (delayMs <= 0) {
-            return true;
-        }
         final Boolean result = syncAndSendAndWait(ProtocolMethod.confirmAutoPass, delayMs);
         return result == null || result;
     }

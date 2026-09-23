@@ -291,9 +291,10 @@ public interface IGuiGame {
     void cancelAwaitNextInput();
 
     /**
-     * Priority is about to be passed for the player without asking, after a short pause so the game does not jump
-     * ahead too fast. The pause is taken here, so a GUI can show it coming. Returns false if the player stopped it,
-     * in which case they are asked for priority as usual.
+     * Priority is about to be passed for the player without asking. Called for every such pass, with the pause the
+     * game would take first so it does not jump ahead too fast, which may be none. The pause is taken here, so a GUI
+     * can decide when to show the pass coming. Returns false if the player stopped it, in which case they are asked
+     * for priority as usual.
      */
     default boolean confirmAutoPass(final int delayMs) {
         if (delayMs > 0) {
