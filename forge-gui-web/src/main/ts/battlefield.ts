@@ -14,16 +14,32 @@ interface Slot {
   sig: string | null;
 }
 
+/**
+ * Which of the four groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
+ * row nearest the player's own edge; creatures and the tokens they make share the row nearest the middle.
+ * A token that is not a creature — a Treasure, a Clue — belongs with the other artifacts rather than beside the
+ * creatures. A planeswalker sits among the creatures because that is where an attack can be aimed at it.
+ */
+type Group = 'lands' | 'support' | 'creatures' | 'tokens';
+
+function groupOf(model: Model, slot: Slot): Group {
+  const type = stateOf(model, slot.top).Type ?? '';
+  if (/Land/.test(type)) return 'lands';
+  if (/Creature/.test(type)) return slot.top.Token ? 'tokens' : 'creatures';
+  if (/Planeswalker/.test(type)) return 'creatures';
+  return 'support';
+}
+
 export function renderBattlefield(root: HTMLElement, model: Model, cards: CardView[], onField: CardView[], select: CardClick): void {
   const slots = slotsFor(model, cards, onField);
-  const isLand = (slot: Slot) => /Land/.test(stateOf(model, slot.top).Type ?? '');
-  const draw = (rowEl: HTMLElement, rowSlots: Slot[]) =>
-    reconcile(rowEl, rowSlots, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select));
-  const lands = slots.filter(isLand);
-  const others = slots.filter(s => !isLand(s));
-  draw(q(root, '.lands'), lands);
-  draw(q(root, '.permanents'), others);
-  fitCards(root, lands.length, others.length);
+  const of = (group: Group) => slots.filter(s => groupOf(model, s) === group);
+  const groups: Record<Group, Slot[]> = {
+    lands: of('lands'), support: of('support'), creatures: of('creatures'), tokens: of('tokens'),
+  };
+  for (const [name, list] of Object.entries(groups)) {
+    reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select));
+  }
+  fitCards(root, groups.lands.length + groups.support.length, groups.creatures.length + groups.tokens.length);
 }
 
 /** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */
@@ -36,12 +52,12 @@ const LINES_PER_ROW = 2;
  * Measured against the seat, whose size the page grid fixes, so the answer cannot feed back into itself
  * the way measuring the cards themselves would.
  */
-function fitCards(root: HTMLElement, lands: number, others: number): void {
+function fitCards(root: HTMLElement, support: number, creatures: number): void {
   const field = q(root, '.battlefield');
   const style = getComputedStyle(root);
   const h = parseFloat(style.getPropertyValue('--card-h')) || 123;
   const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
-  const columns = Math.ceil(Math.max(lands, others, 1) / LINES_PER_ROW);
+  const columns = Math.ceil(Math.max(support, creatures, 1) / LINES_PER_ROW);
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
   const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);

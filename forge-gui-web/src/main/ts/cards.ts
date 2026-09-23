@@ -11,7 +11,7 @@ export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span>';
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
@@ -53,18 +53,25 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   setSymbolText(q(el, '.cost-badge'), visible ? state.ManaCost : '');
   q(el, '.type').textContent = type;
   const pt = q(el, '.pt');
-  const shown = /Creature/.test(type) ? `${state.Power ?? 0}/${state.Toughness ?? 0}`
+  const creature = /Creature/.test(type);
+  const damage = card.Damage ?? 0;
+  const power = creature ? `${state.Power ?? 0}/` : '';
+  // Damage comes off the toughness the way a player counts it, rather than being listed beside the card
+  const toughness = creature ? `${(state.Toughness ?? 0) - damage}`
     : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}` : '';
   // A pump, a counter or a loyalty change is a number the player must notice
-  if (pt.textContent && shown && pt.textContent !== shown) {
+  if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
     pt.classList.remove('changed');
     void pt.offsetWidth;
     pt.classList.add('changed');
   }
-  pt.textContent = shown;
-  showDamage(el, card.Damage ?? 0);
+  q(el, '.pt-p').textContent = power;
+  const hurt = q(el, '.pt-t');
+  hurt.textContent = toughness;
+  hurt.classList.toggle('hurt', creature && damage > 0);
+  pt.classList.toggle('on', !!(power + toughness));
+  showDamage(el, damage);
   const badges: string[] = [];
-  if (card.Damage) badges.push(`${card.Damage} dmg`);
   if (card.IsRingBearer) badges.push('Ring-bearer');
   for (const [name, n] of Object.entries(card.Counters ?? {})) badges.push(`${n} ${name}`);
   q(el, '.badges').textContent = badges.join(' · ');

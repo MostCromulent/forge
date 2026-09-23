@@ -47,8 +47,15 @@
    11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
    would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
    two tapped cards side by side never overlap whatever size cards are set to, and keep a little air between. */
-.row { display: flex; flex-wrap: wrap; gap: 0; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; justify-content: center; align-items: flex-end; }
-.row > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
+/* Each row holds two groups that keep to their own ends: lands beside the other permanents, creatures beside
+   their tokens. A group with nothing in it gives up its half, so one kind alone still sits in the middle. */
+.row { display: flex; gap: 20px; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; align-items: flex-end; }
+.row > .group { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: flex-end; }
+.row > .group:first-child { justify-content: flex-start; }
+.row > .group:last-child { justify-content: flex-end; }
+.row:has(> .group:empty) > .group { justify-content: center; }
+.row > .group:empty { display: none; }
+.group > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
 /* Attachments sit behind their host, each showing a strip above the one in front of it */
 .slot > .card:last-child { z-index: 1; }
 .slot { position: relative; padding-top: calc(var(--attached, 0) * 28px); }
@@ -259,7 +266,10 @@
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }
 .card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
-.card .pt { position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
+.card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
+.card .pt.on { display: block; }
+.card .pt i { font-style: normal; }
+.card .pt .hurt { color: #ff7a59; }
 .card .badges { position: absolute; left: 4px; top: 4px; font-size: 10px; background: #000c; border-radius: 4px; padding: 0 3px; }
 .card .badges:empty, .card .pt:empty { display: none; }
 .card.tapped { transform: rotate(90deg) scale(.9); }

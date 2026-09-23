@@ -57,7 +57,10 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
         <div class="zone-tiles"></div>
         <div class="mana" hidden><span class="mana-label">Floating mana</span><div class="mana-chips"></div></div>
       </div>
-      <div class="battlefield"><div class="row lands"></div><div class="row permanents"></div></div>`;
+      <div class="battlefield">
+        <div class="row"><div class="group lands"></div><div class="group support"></div></div>
+        <div class="row"><div class="group creatures"></div><div class="group tokens"></div></div>
+      </div>`;
     const avatarEl = q(root, '.avatar');
     avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
     avatarEl.addEventListener('mouseenter', () => hoverPlayer(Number(root.dataset.player)));
