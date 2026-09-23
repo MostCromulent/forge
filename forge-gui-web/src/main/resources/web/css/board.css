@@ -51,10 +51,12 @@
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
    the hand rather than floating in the middle of its half, so the two read as one side of the table. */
 #me .battlefield { flex-direction: column-reverse; align-self: end; }
-/* A tapped card is 11px wider each side than its box. That room is held on every slot rather than added
-   when one taps, because adding it would slide the whole row and could throw a card onto the next line. */
+/* A tapped card lies on its side at 90% size, so it is (0.9 × height − width) / 2 wider each side than its box,
+   11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
+   would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
+   two tapped cards side by side never overlap whatever size cards are set to, and keep a little air between. */
 .row { display: flex; flex-wrap: wrap; gap: 0; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; justify-content: center; align-items: flex-end; }
-.row > .slot { margin-inline: calc(9px * var(--fit, 1)); }
+.row > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
 /* Attachments sit behind their host, each showing a strip above the one in front of it */
 .slot > .card:last-child { z-index: 1; }
 .slot { position: relative; padding-top: calc(var(--attached, 0) * 28px); }

@@ -39,15 +39,16 @@ const LINES_PER_ROW = 2;
 function fitCards(root: HTMLElement, lands: number, others: number): void {
   const field = q(root, '.battlefield');
   const style = getComputedStyle(root);
-  const w = parseFloat(style.getPropertyValue('--card-w')) || 88;
   const h = parseFloat(style.getPropertyValue('--card-h')) || 123;
+  const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
   const columns = Math.ceil(Math.max(lands, others, 1) / LINES_PER_ROW);
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
   const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
   const height = root.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
-  // 18px is the room every slot holds for a tapped card's overhang, and 32px the two rows' room above their cards
-  const byWidth = width / (columns * (w + 18));
+  // A slot with its room either side is as wide as a tapped card, which lies on its side at 90% (board.css), plus
+  // its air; 32px is the two rows' room above their cards
+  const byWidth = width / (columns * (h * 0.9 + 2 * air));
   const byHeight = (height - 32) / (LINES_PER_ROW * 2 * h);
   root.style.setProperty('--fit', String(Math.max(MIN_FIT, Math.min(1, byWidth, byHeight))));
 }

@@ -42,6 +42,8 @@
   --tile-w: 72px;
   --stack-w: 150px;
   --radius: 6px;
+  /* Air either side of a card on the battlefield, beyond the room a tapped card needs */
+  --slot-gap: 3px;
   /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */
   --glow: 10px;
   color-scheme: dark;
