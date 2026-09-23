@@ -175,12 +175,20 @@ final class ToBrowser {
     record AttackersDeclared(Ref player, List<Attack> attacks) {
     }
 
+    record Block(Ref attacker, Ref blocker) {
+    }
+
+    /** A defending player has blocked, with every attacker it blocked and by what; unblocked attackers are left out. */
+    @Event("blockersDeclared")
+    record BlockersDeclared(Ref player, List<Block> blocks) {
+    }
+
     @Event("shuffled")
     record Shuffled(Ref player) {
     }
 
     static final List<Class<? extends Record>> EVENTS = List.of(CardMoved.class, CardDamaged.class,
-            PlayerDamaged.class, AttackersDeclared.class, Shuffled.class);
+            PlayerDamaged.class, AttackersDeclared.class, BlockersDeclared.class, Shuffled.class);
 
     @Message("prompt")
     record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,

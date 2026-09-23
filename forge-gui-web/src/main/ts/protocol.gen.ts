@@ -479,6 +479,12 @@ export interface AttackersDeclared {
   attacks: Attack[];
 }
 
+export interface BlockersDeclared {
+  kind: 'blockersDeclared';
+  player: Ref;
+  blocks: Block[];
+}
+
 export interface Shuffled {
   kind: 'shuffled';
   player: Ref;
@@ -489,6 +495,7 @@ export type GameEvent =
   | CardDamaged
   | PlayerDamaged
   | AttackersDeclared
+  | BlockersDeclared
   | Shuffled;
 
 export interface Playmat {
@@ -639,6 +646,11 @@ export interface Place {
 export interface Attack {
   attacker: Ref;
   defender?: Ref;
+}
+
+export interface Block {
+  attacker: Ref;
+  blocker: Ref;
 }
 
 export interface DeckStats {

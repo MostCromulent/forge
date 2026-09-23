@@ -1,9 +1,11 @@
 package forge.web;
 
+import com.google.common.collect.Multimap;
 import forge.game.GameEntityView;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventAttackersDeclared;
+import forge.game.event.GameEventBlockersDeclared;
 import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardDamaged;
 import forge.game.event.GameEventPlayerDamaged;
@@ -12,6 +14,8 @@ import forge.game.player.PlayerView;
 import forge.game.zone.ZoneView;
 import forge.web.ToBrowser.Attack;
 import forge.web.ToBrowser.AttackersDeclared;
+import forge.web.ToBrowser.Block;
+import forge.web.ToBrowser.BlockersDeclared;
 import forge.web.ToBrowser.CardDamaged;
 import forge.web.ToBrowser.CardMoved;
 import forge.web.ToBrowser.Place;
@@ -52,6 +56,18 @@ final class BrowserEvents {
                                 : defender instanceof PlayerView p ? Ref.player(p.getId()) : null));
             }
             return new AttackersDeclared(Ref.player(e.player().getId()), attacks);
+        }
+        if (event instanceof GameEventBlockersDeclared e && e.defendingPlayer() != null) {
+            final List<Block> blocks = new ArrayList<>();
+            for (final Multimap<CardView, CardView> byAttacker : e.blockers().values()) {
+                for (final Map.Entry<CardView, CardView> block : byAttacker.entries()) {
+                    // Forge lists an unblocked attacker as blocking itself
+                    if (!block.getKey().equals(block.getValue())) {
+                        blocks.add(new Block(Ref.card(block.getKey().getId()), Ref.card(block.getValue().getId())));
+                    }
+                }
+            }
+            return new BlockersDeclared(Ref.player(e.defendingPlayer().getId()), blocks);
         }
         if (event instanceof GameEventShuffle e && e.player() != null) {
             return new Shuffled(Ref.player(e.player().getId()));
