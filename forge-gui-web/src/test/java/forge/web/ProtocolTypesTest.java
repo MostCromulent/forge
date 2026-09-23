@@ -28,8 +28,14 @@ public class ProtocolTypesTest {
             Files.writeString(file, generated, StandardCharsets.UTF_8);
         }
         final String committed = Files.isRegularFile(file) ? Files.readString(file, StandardCharsets.UTF_8) : "";
-        Assert.assertEquals(committed, generated, ProtocolTypes.FILE + " is out of date with the protocol records."
+        // Git hands a Windows checkout CRLF, and the generator writes LF, which is not the drift this is looking for
+        Assert.assertEquals(sameLineEndings(committed), sameLineEndings(generated),
+                ProtocolTypes.FILE + " is out of date with the protocol records."
                 + " Regenerate it: mvn -pl forge-gui-web test -Dtest=ProtocolTypesTest -Dforge.web.writeProtocol=true");
+    }
+
+    private static String sameLineEndings(final String text) {
+        return text.replace("\r\n", "\n");
     }
 
     private static Path tsDir() {
