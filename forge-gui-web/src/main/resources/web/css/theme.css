@@ -12,16 +12,17 @@
   --muted: #8b96a5;
   --faint: #6b7686;
   /* Brass: antique gold for "your moment", as Arena and Forge desktop use it, dark enough to carry white labels.
-     It fills and outlines; it glows only as a tight halo, so edges stay crisp. */
-  --accent: #86621f;
-  --accent-2: #c9a55e;
+     It fills and outlines; it glows only as a tight halo, so edges stay crisp. Kept well saturated and a little
+     warm: a gold this dark reads as olive once the colour is let out of it. */
+  --accent: #8a5a10;
+  --accent-2: #dfa23c;
   /* Tinted forms of the accent, so it can sit behind something instead of only filling or outlining it */
-  --accent-soft: #c9a55e1f;
-  --accent-glow: #c9a55e30;
+  --accent-soft: #dfa23c1f;
+  --accent-glow: #dfa23c30;
   /* A card back with no sleeve: a quiet stripe in the accent's family */
-  --back-a: #29241a;
-  --back-b: #211d15;
-  --back-edge: #4a3d24;
+  --back-a: #2b2318;
+  --back-b: #231c12;
+  --back-edge: #513f1f;
   /* Selection and attack cues differ in luminance and shape, never only in red versus green. Selection is lime,
      well clear of the gold accent, so a card a prompt asks for never reads as one merely highlighted. */
   --select: #b4f05a;
