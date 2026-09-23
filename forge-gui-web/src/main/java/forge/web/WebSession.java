@@ -262,7 +262,9 @@ public final class WebSession {
             final String name = FModel.getPreferences().getPref(FPref.PLAYER_NAME);
             lobby.forget();
             try {
-                local.openGuest(name, seatGui(), port, this::lobbyChanged, this::chatted, this::gameGone);
+                final WebGuiGame gui = seatGui();
+                gui.whenOpened(() -> guestMatchOpened(gui));
+                local.openGuest(name, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
                 Logger.error(e, "Could not take a seat");
                 channel.send(hello());
@@ -274,6 +276,19 @@ public final class WebSession {
             channel.send(lobby.decks());
             channel.send(lobby.state());
         });
+    }
+
+    /** The host started the match, so this guest's browser follows its seat into the game. */
+    private void guestMatchOpened(final WebGuiGame gui) {
+        if (match == gui || lobbyGui != gui) {
+            return;
+        }
+        match = gui;
+        final BrowserChannel b = browser;
+        if (b != null) {
+            b.send(hello());
+            gui.attach(b);
+        }
     }
 
     /** The host's game ended under this guest, so its seat goes and its browser waits for the next one. */

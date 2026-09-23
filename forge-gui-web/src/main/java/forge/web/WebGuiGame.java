@@ -294,6 +294,13 @@ public class WebGuiGame extends NetworkGuiGame {
         return visible;
     }
 
+    /** Told when the game opens, which for a guest happens on the host's say rather than its own. */
+    private volatile Runnable onOpen = () -> { };
+
+    public void whenOpened(final Runnable action) {
+        onOpen = action;
+    }
+
     @Override
     public void openView(final TrackableCollection<PlayerView> myPlayers) {
         final List<Integer> keys = new ArrayList<>();
@@ -304,6 +311,7 @@ public class WebGuiGame extends NetworkGuiGame {
         send(model.fullState());
         // A remote seat skips phases only from what the client seeds (PlayerControllerHuman.isUiSetToSkipPhase)
         seedYieldStateOnHost();
+        onOpen.run();
     }
 
     @Override
