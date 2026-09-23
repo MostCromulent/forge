@@ -145,6 +145,31 @@ public class WebServerTest {
         }
     }
 
+    private static WebServer.Endpoint quiet() {
+        return new WebServer.Endpoint() {
+            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) { }
+            @Override public void disconnected(final BrowserChannel channel) { }
+            @Override public void onMessage(final BrowserChannel channel, final JsonObject message) { }
+        };
+    }
+
+    /** The console stops and starts the server, so a port it has given up has to be one it can take back. */
+    @Test
+    public void aServerCanTakeBackThePortItGaveUp() throws Exception {
+        final WebServer first = new WebServer(quiet(), "secret", "guest-secret", 0);
+        final int port = first.port();
+        first.close();
+        final WebServer again = new WebServer(quiet(), "secret", "guest-secret", port);
+        try {
+            final HttpResponse<String> page = http.send(
+                    HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/?token=secret")).build(),
+                    HttpResponse.BodyHandlers.ofString());
+            Assert.assertEquals(page.statusCode(), 200, "the server did not serve after being started again");
+        } finally {
+            again.close();
+        }
+    }
+
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {
         return openSocket(origin, "secret", texts);
     }

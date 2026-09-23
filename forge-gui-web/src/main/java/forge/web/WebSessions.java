@@ -31,6 +31,8 @@ final class WebSessions implements WebServer.Endpoint {
     private volatile WebServer server;
     /** An empty server that nobody has reached yet is waiting, not finished, so it does not close itself. */
     private boolean mayGiveUp;
+    /** Set from the console's checkbox; without a console there is nothing else to show Forge is running. */
+    private boolean quitWhenEmpty = true;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
         final Thread t = new Thread(r, "WebStartIdle");
         t.setDaemon(true);
@@ -126,8 +128,23 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
+    /**
+     * Whether the process ends once the last browser has gone. The console can hold it open instead, because
+     * with the console on screen a server nobody is playing on is still plainly there and can be started again.
+     *
+     * <p>Turning it back on takes effect the next time a browser leaves, never at once: a server waiting for its
+     * first player has nobody who has left yet, and must not count itself down before anyone arrives.
+     */
+    synchronized void quitWhenEmpty(final boolean value) {
+        quitWhenEmpty = value;
+        if (!value && idle != null) {
+            idle.cancel(false);
+            idle = null;
+        }
+    }
+
     private synchronized void letGo() {
-        if (idle == null && mayGiveUp && byChannel.isEmpty()) {
+        if (quitWhenEmpty && idle == null && mayGiveUp && byChannel.isEmpty()) {
             Logger.info("No browser is attached. Forge will close in {} seconds.", idleMillis / 1000);
             idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
         }

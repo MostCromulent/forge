@@ -15,7 +15,7 @@ import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
 public final class WebMain {
-    /** How long the process waits after the last browser goes. The console is the way to end it sooner. */
+    /** How long the process waits after the last browser goes, unless the console is told to keep it open. */
     private static final long IDLE_MILLIS = 15_000;
 
     private WebMain() {}
@@ -25,23 +25,25 @@ public final class WebMain {
         GuiBase.setInterface(ui);
         final CountDownLatch quit = new CountDownLatch(1);
         // Opened before the cards are read, because reading them takes long enough to look like a failure
-        final ServerConsole console = ServerConsole.open(quit::countDown);
+        final ServerConsole console = ServerConsole.open(ui, quit::countDown);
         FModel.initialize(console, prefs -> null);
-        final WebSessions sessions = new WebSessions(ui, IDLE_MILLIS, quit::countDown);
-        // The console's own link is the host's; the addresses it lists are for other players, so they carry the guest token
-        final String guestToken = newToken();
-        try (WebServer server = new WebServer(sessions, newToken(), guestToken)) {
-            sessions.setServer(server);
-            System.out.println("Forge web UI: " + server.url());
+        // Two tokens: one for the host's own link, one for every link handed to another player
+        final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null,
+                newToken(), newToken());
+        try {
             if (console != null) {
-                console.serving(server.url(), server.port(), guestToken, ui);
-                sessions.visibleElsewhere();
+                console.starting("Starting the server");
+            }
+            service.start();
+            if (console != null) {
+                console.attach(service);
             }
             if (!Boolean.getBoolean("forge.web.noBrowser")) {
-                openBrowser(server.url(), ui);
+                openBrowser(service.url(), ui);
             }
             quit.await();
         } finally {
+            service.stop();
             if (console != null) {
                 console.close();
             }
