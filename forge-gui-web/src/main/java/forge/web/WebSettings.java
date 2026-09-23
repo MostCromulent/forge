@@ -32,13 +32,13 @@ final class WebSettings {
 
     static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
-                player.getBoolean(BOOLEAN_PREFS.get("interruptAttackers")),
-                player.getBoolean(BOOLEAN_PREFS.get("interruptOpponentSpell")),
-                player.getBoolean(BOOLEAN_PREFS.get("interruptTargeting")),
-                player.getBoolean(BOOLEAN_PREFS.get("interruptTriggers")),
-                player.getBoolean(BOOLEAN_PREFS.get("interruptMassRemoval")),
-                player.getBoolean(BOOLEAN_PREFS.get("highlightPlayable")),
-                player.getBoolean(BOOLEAN_PREFS.get("autoTapPreview")),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_ATTACKERS),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_TARGETING),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_TRIGGERS),
+                player.getBoolean(FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL),
+                player.getBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS),
+                player.getBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW),
                 player.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),

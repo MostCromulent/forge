@@ -27,7 +27,7 @@ import java.util.List;
  */
 final class Lobby {
     static final int MAX_SEATS = 4;
-    private static final String AI_NAME = "Forge AI";
+    static final String AI_NAME = "Forge AI";
     /** The formats the vertical slice covers. Commander is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander);
 

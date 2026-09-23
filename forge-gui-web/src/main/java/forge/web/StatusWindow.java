@@ -14,11 +14,13 @@ import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
+import javax.swing.text.BadLocationException;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.WindowAdapter;
@@ -31,12 +33,12 @@ import java.nio.charset.StandardCharsets;
 /**
  * A small window so the game is visibly running and can be stopped. The browser is the whole interface, so
  * without this a player who closes their tab has no sign the process is still there. Closing this window
- * stops it. A machine with no display, or one told not to, gets nothing and behaves as before.
+ * stops it. A machine with no display, or one told not to (-Dforge.web.noWindow), gets no window.
  */
 final class StatusWindow {
     /** Enough to see what just happened without holding a session's whole output. */
     private static final int MAX_LINES = 300;
-    /** Card loading prints thousands of lines, so the text area is fed on a timer rather than per line. */
+    /** Card loading prints tens of thousands of lines, so the text area is fed on a timer rather than per line. */
     private static final int FLUSH_MILLIS = 250;
 
     private final String url;
@@ -75,7 +77,7 @@ final class StatusWindow {
         text.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
         text.setBackground(new Color(0x10, 0x14, 0x1c));
         text.setForeground(new Color(0xc8, 0xd1, 0xdb));
-        text.setMargin(new java.awt.Insets(6, 8, 6, 8));
+        text.setMargin(new Insets(6, 8, 6, 8));
 
         final JLabel where = new JLabel(url);
         where.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
@@ -186,7 +188,7 @@ final class StatusWindow {
         }
         try {
             text.replaceRange("", 0, text.getLineEndOffset(lines - MAX_LINES - 1));
-        } catch (final javax.swing.text.BadLocationException e) {
+        } catch (final BadLocationException e) {
             text.setText("");
         }
     }

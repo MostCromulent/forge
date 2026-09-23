@@ -90,7 +90,8 @@ public final class WebServer implements AutoCloseable {
      * Hosting from the desktop client at the same time needs {@code -Dforge.web.port}.
      */
     private static final int DEFAULT_PORT = 36743;
-    private static final int SLEEVE_ART_TIMEOUT_SECONDS = 15;
+    /** How long a download is waited on before the browser is told there is no image. */
+    private static final int FETCH_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final String hostToken;
     private final String guestToken;
@@ -146,6 +147,8 @@ public final class WebServer implements AutoCloseable {
         group.shutdownGracefully();
     }
 
+    private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
+
     /**
      * Whether an image key stays inside Forge's image folders. Forge joins a key onto a folder as it is, and tries
      * some with no extension at all, so a ".." in one reached any file on the machine; and Forge deletes a folder it
@@ -154,8 +157,6 @@ public final class WebServer implements AutoCloseable {
     static boolean safeImageKey(final String key) {
         return !PARENT.matcher(key).find();
     }
-
-    private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
 
     private static boolean isImage(final File file) {
         final String name = file.getName().toLowerCase(Locale.ROOT);
@@ -202,14 +203,14 @@ public final class WebServer implements AutoCloseable {
                 } catch (final IOException e) {
                     Logger.warn("Could not send sleeve art {}: {}", key, e.getMessage());
                 }
-                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                notFound(ctx);
             }
         }));
         ctx.executor().schedule(() -> {
             if (answered.compareAndSet(false, true)) {
-                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                notFound(ctx);
             }
-        }, SLEEVE_ART_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     // A missing image is downloaded as on desktop, and the request answered when it lands
@@ -221,7 +222,7 @@ public final class WebServer implements AutoCloseable {
         }
         if (!safeImageKey(key) || unavailableImages.contains(key)
                 || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
-            respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            notFound(ctx);
             return;
         }
         final AtomicBoolean answered = new AtomicBoolean();
@@ -232,10 +233,10 @@ public final class WebServer implements AutoCloseable {
                     if (fetched != null) {
                         respondImage(ctx, fetched);
                     } else {
-                        respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                        notFound(ctx);
                     }
                 } catch (final IOException e) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                    notFound(ctx);
                 }
             }
         }));
@@ -245,13 +246,13 @@ public final class WebServer implements AutoCloseable {
                     unavailableImages.clear();
                 }
                 unavailableImages.add(key);
-                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                notFound(ctx);
             }
-        }, 15, TimeUnit.SECONDS);
+        }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), file.getName().endsWith(".png") ? "image/png" : "image/jpeg", false);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), file.getName().endsWith(".png") ? "image/png" : "image/jpeg");
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -307,9 +308,21 @@ public final class WebServer implements AutoCloseable {
         return Access.NONE;
     }
 
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
-            final boolean setCookie) {
-        respond(ctx, status, body, type, setCookie ? hostToken : null);
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
+        respond(ctx, status, body, type, null);
+    }
+
+    private void notFound(final ChannelHandlerContext ctx) {
+        respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
+    }
+
+    /** Sends what was found, or says there was nothing. */
+    private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type) {
+        if (body == null) {
+            notFound(ctx);
+        } else {
+            respond(ctx, HttpResponseStatus.OK, body, type);
+        }
     }
 
     /** Answers a request; a cookie, when given, is the token the page was loaded with. */
@@ -356,11 +369,11 @@ public final class WebServer implements AutoCloseable {
                 ? SoundSystem.instance.getSoundResource(name)
                 : sound ? null : musicTrack();
         if (file == null || !file.isFile()) {
-            respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+            notFound(ctx);
             return;
         }
         final String type = file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg";
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type, false);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type);
     }
 
     private static File musicTrack() {
@@ -389,7 +402,7 @@ public final class WebServer implements AutoCloseable {
                 // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
                 if (access == Access.NONE || (socket && !sameOrigin(req))) {
                     req.release();
-                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain", null);
+                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
                     return;
                 }
                 ctx.channel().attr(ACCESS).set(access);
@@ -407,17 +420,13 @@ public final class WebServer implements AutoCloseable {
                 final List<String> index = q.parameters().get("i");
                 final Integer i = index == null ? null : Ints.tryParse(index.get(0));
                 final byte[] png = i == null ? null : SkinSprites.png("/avatar".equals(path), i);
-                if (png == null) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
-                } else {
-                    respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
-                }
+                respondOrNotFound(ctx, png, "image/png");
                 return;
             }
             if ("/sleeveart".equals(path)) {
                 final List<String> key = q.parameters().get("key");
                 if (key == null) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                    notFound(ctx);
                 } else {
                     serveSleeveArt(ctx, key.get(0));
                 }
@@ -426,21 +435,13 @@ public final class WebServer implements AutoCloseable {
             if ("/playmat".equals(path)) {
                 final List<String> id = q.parameters().get("id");
                 final byte[] image = id == null ? null : Playmats.image(id.get(0));
-                if (image == null) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
-                } else {
-                    respond(ctx, HttpResponseStatus.OK, image, "image/jpeg", false);
-                }
+                respondOrNotFound(ctx, image, "image/jpeg");
                 return;
             }
             if ("/mana".equals(path)) {
                 final List<String> symbol = q.parameters().get("s");
                 final byte[] png = symbol == null ? null : SkinSprites.manaPng(symbol.get(0));
-                if (png == null) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
-                } else {
-                    respond(ctx, HttpResponseStatus.OK, png, "image/png", false);
-                }
+                respondOrNotFound(ctx, png, "image/png");
                 return;
             }
             if ("/sound".equals(path) || "/music".equals(path)) {
@@ -451,7 +452,7 @@ public final class WebServer implements AutoCloseable {
             if ("/img".equals(path)) {
                 final List<String> key = q.parameters().get("key");
                 if (key == null) {
-                    respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                    notFound(ctx);
                 } else {
                     serveImage(ctx, key.get(0));
                 }
@@ -461,7 +462,7 @@ public final class WebServer implements AutoCloseable {
             final byte[] body = resource.contains("..") ? null : readResource(resource);
             final String type = contentType(resource);
             if (body == null) {
-                respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
+                notFound(ctx);
                 return;
             }
             // The page keeps the link's token as a cookie, so its later requests come in on the same link

@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Every browser attached to this process. The first one on this machine hosts the game; anyone who opens the
@@ -78,7 +79,6 @@ final class WebSessions implements WebServer.Endpoint {
      */
     synchronized void visibleElsewhere() {
         holdOpen();
-        mayGiveUp = true;
     }
 
     /** Whether this session could take the host's seat right now, which is what the browser offers. */
@@ -214,10 +214,6 @@ final class WebSessions implements WebServer.Endpoint {
         return h != null && h.computerNames().stream().anyMatch(name::equalsIgnoreCase);
     }
 
-    boolean isHost(final WebSession session) {
-        return host == session;
-    }
-
     /** Tells every browser without a seat that the host's seat has changed hands, or come free. */
     private void announceSeat() {
         for (final WebSession session : byId.values()) {
@@ -235,7 +231,7 @@ final class WebSessions implements WebServer.Endpoint {
         forEachGuest(WebSession::gameGone);
     }
 
-    private void forEachGuest(final java.util.function.Consumer<WebSession> action) {
+    private void forEachGuest(final Consumer<WebSession> action) {
         for (final WebSession session : byId.values()) {
             if (session != host) {
                 action.accept(session);
@@ -252,15 +248,11 @@ final class WebSessions implements WebServer.Endpoint {
         }
         final String external = FServerManager.getExternalAddress();
         if (external != null) {
-            list.add(invite("Over the internet", s.inviteUrl(external)));
+            list.add(new Address("Over the internet", s.inviteUrl(external)));
         }
         for (final Map.Entry<String, String> e : FServerManager.getAllLocalAddresses().entrySet()) {
-            list.add(invite(e.getKey(), s.inviteUrl(e.getValue())));
+            list.add(new Address(e.getKey(), s.inviteUrl(e.getValue())));
         }
         return list;
-    }
-
-    private static Address invite(final String label, final String url) {
-        return new Address(label, url);
     }
 }

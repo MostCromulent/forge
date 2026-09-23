@@ -1,6 +1,5 @@
 package forge.web;
 
-import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 
@@ -91,8 +90,7 @@ final class PlayerSettings {
     /** Keeps what was set. Only the host's settings outlive the process; a guest's browser remembers its own. */
     void save() {
         if (own == null) {
-            final ForgePreferences prefs = FModel.getPreferences();
-            prefs.save();
+            FModel.getPreferences().save();
         }
     }
 }

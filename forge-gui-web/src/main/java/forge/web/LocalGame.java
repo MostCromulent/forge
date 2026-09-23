@@ -30,13 +30,15 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
+import java.util.function.IntConsumer;
 
 /**
  * The netplay seat one browser plays from, and the game behind it when that browser is the host. Every browser
  * is a client of the same loopback server: the host starts it and takes a seat, and each guest takes another.
  * Nothing is served to the network here, so only the web port is ever reachable from outside this machine.
  *
- * <p>There is one of these per browser. Call on the host UI thread.
+ * <p>There is one of these per browser. The host's calls come on the host UI thread; a guest's join runs on a
+ * background thread, because taking a seat waits on the server.
  */
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
@@ -94,7 +96,7 @@ public final class LocalGame {
             if (i != webSeat) {
                 final LobbySlot slot = hosted.getSlot(i);
                 slot.setType(LobbySlotType.AI);
-                slot.setName("Forge AI");
+                slot.setName(Lobby.AI_NAME);
                 slot.setIsReady(true);
             }
         }
@@ -118,7 +120,7 @@ public final class LocalGame {
         server.setLobbyListener(new HostChat(onChat));
         // The host reads chat through its own listener, so the client one would only repeat it. Its own
         // connection ends only because the host ended it, which has already told the browser.
-        connect(playerName, gui, "127.0.0.1", port, onUpdate, (from, text) -> { }, () -> { });
+        connect(playerName, gui, port, onUpdate, (from, text) -> { }, () -> { });
     }
 
     /**
@@ -158,18 +160,18 @@ public final class LocalGame {
     public void openGuest(final String playerName, final WebGuiGame gui, final int hostPort,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
         close();
-        hosted = null;
         port = hostPort;
-        connect(playerName, gui, "127.0.0.1", hostPort, onUpdate, onChat, onClosed);
+        connect(playerName, gui, hostPort, onUpdate, onChat, onClosed);
     }
 
-    private void connect(final String playerName, final WebGuiGame gui, final String host, final int onPort,
+    /** Every seat, the host's included, reaches the game over loopback. */
+    private void connect(final String playerName, final WebGuiGame gui, final int onPort,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
         joined = new ClientGameLobby();
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
         gui.setClientLobby(joined);
         final CountDownLatch ready = new CountDownLatch(1);
-        client = new FGameClient(playerName, gui, host, onPort);
+        client = new FGameClient(playerName, gui, "127.0.0.1", onPort);
         client.setDispatchExecutor(gui.dispatchExecutor());
         client.addLobbyListener(new ClientListener(joined, ready, onChat, onClosed, seat -> {
             webSeat = seat;
@@ -373,7 +375,7 @@ public final class LocalGame {
     }
 
     private record ClientListener(ClientGameLobby clientLobby, CountDownLatch ready, BiConsumer<String, String> onChat,
-            Runnable onClosed, java.util.function.IntConsumer onSeat) implements ILobbyListener {
+            Runnable onClosed, IntConsumer onSeat) implements ILobbyListener {
         @Override public void message(final String source, final String message, final ChatMessage.MessageType type) {
             onChat.accept(source, message);
         }

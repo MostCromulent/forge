@@ -17,7 +17,7 @@ final class Playmats {
     private Playmats() {
     }
 
-    /** Every playmat this installation has, as {@code {id, label}} pairs the browser shows as thumbnails. */
+    /** Every playmat this installation has, for the browser to show as thumbnails. */
     static List<Playmat> list() {
         final List<Playmat> out = new ArrayList<>();
         for (final File skin : skins()) {

@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
@@ -323,6 +324,6 @@ final class ToBrowser {
 
     /** The answer a request takes when nobody gives one, read back off its JSON. */
     static JsonElement defaultOf(final JsonObject request) {
-        return request.has("default") ? request.get("default") : com.google.gson.JsonNull.INSTANCE;
+        return request.has("default") ? request.get("default") : JsonNull.INSTANCE;
     }
 }

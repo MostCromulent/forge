@@ -109,10 +109,6 @@ public final class WebSession {
         return now instanceof Setup || now instanceof Playing;
     }
 
-    Stage stage() {
-        return stage;
-    }
-
     /**
      * Moves from one stage to the next, if the browser is still where the caller found it: a guest's seat can
      * vanish while it is being taken, and a match can end under a lobby being opened. Closes the GUI the old stage
@@ -600,8 +596,7 @@ public final class WebSession {
         if (stage instanceof Playing p) {
             p.gui().concede();
         }
-        closeGui();
-        local.shutdown();
+        shutdown();
         onQuit.run();
     }
 

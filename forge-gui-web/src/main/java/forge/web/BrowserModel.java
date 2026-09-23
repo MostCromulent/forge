@@ -94,18 +94,13 @@ public final class BrowserModel {
     }
 
     public synchronized JsonObject stateMessage(final boolean full, final long seq, final Map<Integer, JsonObject> newObjects,
-            final Map<Integer, JsonObject> deltas) {
-        return stateMessage(full, seq, newObjects, deltas, List.of());
-    }
-
-    public synchronized JsonObject stateMessage(final boolean full, final long seq, final Map<Integer, JsonObject> newObjects,
             final Map<Integer, JsonObject> deltas, final List<Record> events) {
         return Wire.encode(new StateMessage(full, seq, root, byKey(newObjects), byKey(deltas), ints(visible),
                 ints(localPlayers), events));
     }
 
     public synchronized JsonObject fullState() {
-        return stateMessage(true, -1, objects, Map.of());
+        return stateMessage(true, -1, objects, Map.of(), List.of());
     }
 
     public synchronized Map<Integer, JsonObject> objectsCopy() {

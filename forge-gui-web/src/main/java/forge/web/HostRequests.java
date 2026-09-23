@@ -23,6 +23,8 @@ final class HostRequests {
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
 
     private final Map<Integer, CompletableFuture<List<Integer>>> open = new ConcurrentHashMap<>();
+    /** The questions still waiting, to ask a browser that reloaded. */
+    private final Map<Integer, HostChoice> pending = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger();
     private volatile Consumer<JsonObject> toBrowser = message -> { };
 
@@ -32,15 +34,10 @@ final class HostRequests {
 
     /** Sends the open questions again, so a browser that reloaded can still answer them. */
     void replay(final Consumer<JsonObject> sink) {
-        for (final Map.Entry<Integer, CompletableFuture<List<Integer>>> e : open.entrySet()) {
-            final HostChoice again = pending.get(e.getKey());
-            if (again != null) {
-                sink.accept(Wire.encode(again));
-            }
+        for (final HostChoice again : pending.values()) {
+            sink.accept(Wire.encode(again));
         }
     }
-
-    private final Map<Integer, HostChoice> pending = new ConcurrentHashMap<>();
 
     /** Asks the browser to pick from a list and waits. Returns the indices chosen, or null when nobody answers. */
     List<Integer> ask(final String kind, final String message, final List<String> options, final int min, final int max) {

@@ -86,16 +86,9 @@ final class WebDownloads {
         }
     }
 
-    /** Holds the command the service assigns, so it can be run without anyone clicking. */
+    /** The dialog's Start button. Nothing presses it here: the service is run directly. */
     private static final class StartButton implements IButton {
-        private UiCommand command;
         private boolean enabled;
-
-        void press() {
-            if (command != null && enabled) {
-                command.run();
-            }
-        }
 
         @Override public boolean isEnabled() { return enabled; }
         @Override public void setEnabled(final boolean b) { enabled = b; }
@@ -107,7 +100,7 @@ final class WebDownloads {
         @Override public void setText(final String text) { }
         @Override public void setSelected(final boolean b) { }
         @Override public boolean isSelected() { return false; }
-        @Override public void setCommand(final UiCommand command0) { command = command0; }
+        @Override public void setCommand(final UiCommand command0) { }
         @Override public void setImage(final FSkinProp color) { }
         @Override public void setTextColor(final int r, final int g, final int b) { }
         @Override public boolean requestFocusInWindow() { return false; }

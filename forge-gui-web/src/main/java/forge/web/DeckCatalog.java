@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.StaticData;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
@@ -12,6 +13,7 @@ import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.SleeveArt;
 import forge.web.ToBrowser.DeckCard;
@@ -30,8 +32,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The decks a seat may choose from, and what the browser shows about each one. Sources are the ones the
- * vertical slice covers: your own saved decks and the preconstructed ones, for Constructed and Commander.
+ * The decks a seat may choose from, and what the browser shows about each one: your own, the preconstructed ones,
+ * quest opponents, generated decks and downloaded net decks, for Constructed and Commander.
  */
 final class DeckCatalog {
     /** Where a deck came from, which the browser tags each row with. */
@@ -50,9 +52,9 @@ final class DeckCatalog {
     private final Map<String, Entry> byKey = new ConcurrentHashMap<>();
 
     /** A generator's deck is built on demand and kept, so the panel and the match see the same cards. */
-    private record Entry(DeckProxy proxy, String source, boolean generated, Deck built) {
-        Entry(final DeckProxy proxy, final String source) {
-            this(proxy, source, false, null);
+    private record Entry(DeckProxy proxy, boolean generated, Deck built) {
+        Entry(final DeckProxy proxy) {
+            this(proxy, false, null);
         }
     }
 
@@ -130,7 +132,7 @@ final class DeckCatalog {
             }
             final Deck deck = e.proxy() == null ? buildColours(key) : e.proxy().getDeck();
             if (e.generated()) {
-                byKey.put(key, new Entry(e.proxy(), e.source(), true, deck));
+                byKey.put(key, new Entry(e.proxy(), true, deck));
             }
             return deck;
         }
@@ -241,18 +243,18 @@ final class DeckCatalog {
         }
         for (final Map.Entry<String, String> c : colours.entrySet()) {
             final String key = "gen:color:" + c.getKey();
-            byKey.put(key, new Entry(null, GENERATED, true, null));
+            byKey.put(key, new Entry(null, true, null));
             generated(out, key, c.getValue(), "Built when you pick it", COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
         }
         for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
-            byKey.put("gen:theme:" + theme.getName(), new Entry(theme, GENERATED, true, null));
+            byKey.put("gen:theme:" + theme.getName(), new Entry(theme, true, null));
             generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck", "");
         }
         if (FModel.isdeckGenMatrixLoaded()) {
             for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
                 for (final DeckProxy archetype : ArchetypeDeckGenerator.getMatrixDecks(f, false)) {
                     final String key = "gen:archetype:" + f.getName() + ":" + archetype.getName();
-                    byKey.put(key, new Entry(archetype, GENERATED, true, null));
+                    byKey.put(key, new Entry(archetype, true, null));
                     generated(out, key, archetype.getName(), f.getName() + " archetype", "");
                 }
             }
@@ -268,7 +270,7 @@ final class DeckCatalog {
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
         for (final DeckProxy proxy : source) {
             final String key = tag + ":" + proxy.getPath() + "/" + proxy.getName();
-            byKey.put(key, new Entry(proxy, tag));
+            byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
@@ -283,7 +285,7 @@ final class DeckCatalog {
         if (deck == null) {
             return "No deck chosen.";
         }
-        if (!FModel.getPreferences().getPrefBoolean(forge.localinstance.properties.ForgePreferences.FPref.ENFORCE_DECK_LEGALITY)) {
+        if (!FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
             return null;
         }
         return format.getDeckFormat().getDeckConformanceProblem(deck);
@@ -304,11 +306,11 @@ final class DeckCatalog {
         return out;
     }
 
-    /** Main-deck cards under the headings a decklist normally carries. */
     private static DeckCard card(final PaperCard card, final int count) {
         return new DeckCard(card.getName(), count, card.getImageKey(false));
     }
 
+    /** Main-deck cards under the headings a decklist normally carries. */
     private static List<DeckGroup> groups(final CardPool pool) {
         final Map<String, List<DeckCard>> sections = new LinkedHashMap<>();
         for (final String heading : List.of("Creatures", "Planeswalkers", "Instants", "Sorceries",
@@ -357,7 +359,7 @@ final class DeckCatalog {
     static List<SavedSleeveArt> savedSleeveArt() {
         final List<SavedSleeveArt> out = new ArrayList<>();
         final Map<String, Integer> library = SleeveArt.parseLibrary(
-                FModel.getPreferences().getPref(forge.localinstance.properties.ForgePreferences.FPref.UI_SLEEVE_ART_LIBRARY));
+                FModel.getPreferences().getPref(FPref.UI_SLEEVE_ART_LIBRARY));
         for (final Map.Entry<String, Integer> e : library.entrySet()) {
             out.add(new SavedSleeveArt(e.getKey(), e.getValue()));
         }
@@ -370,7 +372,7 @@ final class DeckCatalog {
             return;
         }
         final var prefs = FModel.getPreferences();
-        final var pref = forge.localinstance.properties.ForgePreferences.FPref.UI_SLEEVE_ART_LIBRARY;
+        final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
         final Map<String, Integer> library = new LinkedHashMap<>(SleeveArt.parseLibrary(prefs.getPref(pref)));
         library.remove(imageKey);
         library.put(imageKey, SleeveArt.clampOffset(offset));
@@ -385,7 +387,7 @@ final class DeckCatalog {
         if (needle.isEmpty()) {
             return out;
         }
-        for (final PaperCard card : forge.StaticData.instance().getCommonCards().getUniqueCards()) {
+        for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
             if (card.getName().toLowerCase().contains(needle)) {
                 out.add(card.getName());
                 if (out.size() >= limit) {
@@ -399,9 +401,7 @@ final class DeckCatalog {
     /** Every printing of one card, so a specific art can be picked for a sleeve. */
     static List<Printing> printings(final String name) {
         final List<Printing> out = new ArrayList<>();
-        final List<PaperCard> prints = new ArrayList<>(
-                forge.StaticData.instance().getCommonCards().getAllCardsNoAlt(name));
-        for (final PaperCard card : prints) {
+        for (final PaperCard card : StaticData.instance().getCommonCards().getAllCardsNoAlt(name)) {
             out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false)));
         }
         return out;

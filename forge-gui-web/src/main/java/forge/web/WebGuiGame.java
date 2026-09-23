@@ -297,12 +297,8 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public boolean isUiSetToSkipPhase(final PlayerView playerTurn, final PhaseType phase) {
-        final int index = phase.ordinal();
-        if (index == 0) {
-            return false;
-        }
-        final FPref[] keys = isLocalPlayer(playerTurn) ? FPref.PHASES_HUMAN : FPref.PHASES_AI;
-        return !settings.getBoolean(keys[index - 1]);
+        // The first phase has no stop of its own
+        return phase.ordinal() > 0 && !settings.getBoolean(WebSettings.stopKey(phase, isLocalPlayer(playerTurn)));
     }
 
     @Override
@@ -424,7 +420,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void showWaitingTimer(final PlayerView forPlayer, final String waitingForPlayerName) {
-        // Its timer posts through FThreads to the host UI thread
+        // AbstractGuiGame's timer posts through FThreads to the host UI thread, so none is started here
     }
 
     @Override

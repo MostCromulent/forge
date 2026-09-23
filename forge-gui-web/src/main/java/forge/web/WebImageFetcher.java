@@ -41,10 +41,10 @@ final class WebImageFetcher extends ImageFetcher {
         }
         final boolean scryfall = urlToDownload.startsWith(ForgeConstants.URL_PIC_SCRYFALL_DOWNLOAD) || urlToDownload.startsWith(ForgeConstants.URL_SCRYFALL_CDN);
         String path = urlToDownload.contains(".fullborder.") || scryfall ? TextUtil.fastReplace(destPath, ".full.", ".fullborder.") : destPath;
-        // An art crop is already named for what it is; renaming it to .fullborder hides it from the sleeve cache
+        // An art crop is already named for what it is; renaming it to .fullborder hides it from the sleeve cache.
+        // Planes and phenomena keep the round-border naming.
         if (!path.contains(".full") && !path.contains(".artcrop") && scryfall
                 && !destPath.startsWith(ForgeConstants.CACHE_TOKEN_PICS_DIR) && !destPath.startsWith(ForgeConstants.CACHE_PLANECHASE_PICS_DIR)) {
-            // Planes and phenomena use the round-border naming
             path = path.replace(".jpg", ".fullborder.jpg");
         }
         ScryfallRateLimiter.acquire(urlToDownload);

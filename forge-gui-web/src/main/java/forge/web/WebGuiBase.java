@@ -201,8 +201,8 @@ public final class WebGuiBase implements IGuiBase {
     }
 
     @Override public HostedMatch hostMatch() { return new HostedMatch(); }
-    // Every web match constructs its WebGuiGame directly (LocalGame); nothing in the slice asks GuiBase for one
-    @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("WebGuiGame is created by LocalGame"); }
+    // Each browser's session builds its own WebGuiGame; nothing asks GuiBase for one
+    @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("WebGuiGame is created by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
 
     @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return null; }

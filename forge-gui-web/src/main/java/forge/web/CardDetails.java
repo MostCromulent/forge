@@ -21,6 +21,7 @@ final class CardDetails {
     static PlayerDetail player(final PlayerView player) {
         final List<String> lines = new ArrayList<>();
         final String[] parts = player.getDetails().split("\n");
+        // The first line is the player's name, which travels separately
         for (int i = 1; i < parts.length; i++) {
             if (!parts[i].isBlank()) {
                 lines.add(parts[i]);
