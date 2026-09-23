@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test';
+import { startServer, type Server } from './server';
+import { chooseDeck, enterName, hostTable } from './steps';
+
+let server: Server;
+test.beforeEach(async () => { server = await startServer(); });
+test.afterEach(async () => { await server.stop(); });
+
+test('a new player names themselves, hosts a game against the computer, and plays it', async ({ page }) => {
+  await page.goto(server.url);
+  await expect(page.getByText('What should the other players call you?')).toBeVisible();
+  await enterName(page, 'Alice');
+
+  await hostTable(page, false);
+  const seats = page.locator('#seats .plate');
+  await expect(seats).toHaveCount(2);
+  await chooseDeck(page, seats.nth(0));
+  await chooseDeck(page, seats.nth(1));
+  await expect(page.locator('#play')).toBeEnabled();
+
+  await page.click('#play');
+  await expect(page.locator('#match')).toBeVisible();
+  await expect(page.locator('#me')).toContainText('Alice');
+  await expect(page.locator('#prompt .message')).not.toBeEmpty();
+
+  // A reload lands back in the same match, known by the same name, without being asked again
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#match')).toBeVisible();
+  await expect(page.locator('#player-name')).toHaveCount(0);
+  await expect(page.locator('#me')).toContainText('Alice');
+});
