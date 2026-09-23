@@ -344,6 +344,8 @@
 
 /* Your own turn is the one worth noticing, so it takes the accent */
 .turn-banner.mine { color: var(--text); border-color: var(--accent); box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 25%, transparent); }
+/* Who goes first is said once a game, so it stays up a little longer */
+.turn-banner.opening { animation-duration: 3.2s; }
 @keyframes turn-sweep { from { opacity: 0; transform: translate(-50%, -50%) scale(.88); } 10% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 84% { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) scale(1.06); } }
 /* A hit on your own life: the board lurches and the edges wash warm for a moment */
 #match.hit { animation: hit-shake .32s ease-out; }

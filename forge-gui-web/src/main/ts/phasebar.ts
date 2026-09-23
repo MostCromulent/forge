@@ -218,9 +218,10 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
 
 function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: string): string {
   const marker = model.controls?.marker;
+  // Your own turns always head the grid, whoever's turn it is now
   const rows = [
-    { mine: false, label: `${escapeHtml(opponentLabel)}'s turns`, stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
     { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
+    { mine: false, label: `${escapeHtml(opponentLabel)}'s turns`, stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
   ];
   const gap = (i: number) => (i > 0 && phaseOf(i) !== phaseOf(i - 1)) ? '<td class="gap"></td>' : '';
   // Steps sit under their phase, which a bracketed heading spans

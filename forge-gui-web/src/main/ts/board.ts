@@ -177,8 +177,14 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): v
     });
 }
 
-// Whose turn it is, said once as the turn begins
+// Whose turn it is, said once as the turn begins. The game's first turn says who goes first. A table first seen
+// part way through a game (a reload) says nothing until the turn changes.
 let announced: string | null = null;
+
+/** A new table: its first turn is announced afresh, even when the same player starts it as last game. */
+export function resetTurnBanner(): void {
+  announced = null;
+}
 
 function announceTurn(model: Model, g: GameView): void {
   const active = deref(model, g.PlayerTurn);
@@ -186,14 +192,17 @@ function announceTurn(model: Model, g: GameView): void {
   if (!active || announced === turn) {
     return;
   }
-  const first = announced === null;
+  const seenBefore = announced !== null;
   announced = turn;
-  if (first) {
+  const opening = g.Turn === 1;
+  if (!seenBefore && !opening) {
     return;
   }
+  const mine = isLocal(model, active);
   const banner = document.createElement('div');
-  banner.className = `turn-banner${isLocal(model, active) ? ' mine' : ''}`;
-  banner.textContent = isLocal(model, active) ? 'Your turn' : `${active.Name}'s turn`;
+  banner.className = `turn-banner${mine ? ' mine' : ''}${opening ? ' opening' : ''}`;
+  banner.textContent = opening ? (mine ? 'You go first' : `${active.Name} goes first`)
+    : mine ? 'Your turn' : `${active.Name}'s turn`;
   // The banner takes the pill's place for as long as it shows, rather than covering it. The pill animates
   // its own width, so anything sized to cover it is measuring a number that is about to change.
   const strip = byId('phase-strip');

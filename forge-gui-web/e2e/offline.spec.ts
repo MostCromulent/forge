@@ -87,6 +87,14 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
   await chooseDeck(page, seats.nth(1));
   await page.keyboard.press('Enter');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();
+  // Once the hands are kept, the first turn says who goes first
+  const opening = page.locator('.turn-banner.opening');
+  for (let i = 0; i < 20 && !(await opening.count()); i++) {
+    if (await page.locator('#prompt .ok').isEnabled()) await page.keyboard.press(' ');
+    await page.waitForTimeout(300);
+  }
+  await expect(opening).toHaveText(/^(You go first|Forge AI goes first)$/i);
+  await page.screenshot({ path: test.info().outputPath('opening.png'), timeout: 10_000 }).catch(() => {});
   await page.locator('#prompt .auto-pass').click();
   await expect(page.locator('#prompt .auto-pass')).toHaveClass(/\bon\b/);
 
