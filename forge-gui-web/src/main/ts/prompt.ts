@@ -102,6 +102,8 @@ function renderPromptCard(img: HTMLImageElement, model: Model, ref: Ref | null |
 
 function setButton(button: HTMLButtonElement, spec: PromptButton | undefined): void {
   setSymbolText(q(button, '.label'), spec?.label);
+  // The console cuts a long label short, so the whole of it is kept where hovering finds it
+  button.title = spec?.label ?? '';
   button.disabled = !spec?.enabled;
   button.hidden = !spec?.label;
 }

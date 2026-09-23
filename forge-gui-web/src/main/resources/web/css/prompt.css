@@ -1,5 +1,5 @@
 /* The console: a translucent panel in the corner, clear of the hand, with the question above one wide answer */
-#prompt { position: fixed; left: 16px; bottom: 14px; z-index: 30; width: var(--console-w); display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
+#prompt { position: fixed; left: 8px; bottom: 14px; z-index: 30; width: var(--console-w); display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
 #prompt.waiting { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 12px 34px #000a; }
 #prompt .tools { display: flex; align-items: center; gap: 2px; }
 #prompt .step { margin: 0; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
@@ -16,13 +16,14 @@
 #prompt .message { margin: 0; min-height: 0; max-height: 8em; overflow-y: auto; scrollbar-width: thin; color: var(--text); font-size: 13.5px; line-height: 1.35; }
 /* One answer bar: the secondary is a narrower segment beside the primary, as the two are always a pair */
 #prompt .buttons { display: flex; gap: 2px; }
-#prompt .buttons button { display: flex; align-items: center; justify-content: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 4px; font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+/* The key sits under its label rather than beside it, so a pair of long answers still fits the narrow console */
+#prompt .buttons button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; height: 42px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 #prompt .cancel { flex: 0 1 auto; background: var(--surface-2); border-color: var(--line); color: var(--muted); }
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok { flex: 1; border-radius: 4px 8px 8px 4px; }
 #prompt .cancel:first-child { border-radius: 8px 4px 4px 8px; }
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 70%, transparent); }
-#prompt kbd { border: 1px solid #ffffff2e; border-radius: 4px; padding: 1px 5px; font: 600 10px/1.4 system-ui, sans-serif; letter-spacing: .04em; color: var(--muted); }
+#prompt kbd { font: 600 9px/1 system-ui, sans-serif; letter-spacing: .08em; color: var(--muted); }
 #prompt .ok kbd { color: #ffffffcc; }
 /* Spectating two AI players leaves nothing to answer, so only the volume and options buttons stay */
 #prompt.spectating .tools button:not(.cog):not(.volume), #prompt.spectating .buttons, #prompt.spectating .prompt-card { display: none; }
@@ -65,3 +66,5 @@
 #volume .volume-panel { position: fixed; display: grid; gap: 8px; padding: 10px 12px; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px #000a; }
 #volume .volume-row { display: grid; grid-template-columns: 48px 1fr 34px; align-items: center; gap: 8px; font-size: 12.5px; }
 #volume .volume-row .value { color: var(--muted); font-size: 11.5px; text-align: right; }
+/* A rare long answer is cut short rather than pushing its partner out of the console; the full text is its title */
+#prompt .buttons .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
