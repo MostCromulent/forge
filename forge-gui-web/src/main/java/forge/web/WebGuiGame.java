@@ -1140,6 +1140,13 @@ public class WebGuiGame extends NetworkGuiGame {
                 }
                 return;
             }
+            if ("setSetting".equals(type)) {
+                // A setting belongs to the player, not the game, so one sent before the game has a controller still counts
+                final SetSetting setting = Wire.decode(msg, SetSetting.class);
+                WebSettings.set(getGameController(), setting.key(), setting.value());
+                send(controlsMessage());
+                return;
+            }
             if ("playerDetail".equals(type)) {
                 final PlayerView player = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.PlayerViewType);
                 if (player != null) {
@@ -1185,11 +1192,6 @@ public class WebGuiGame extends NetworkGuiGame {
                     toggleMarker(marker.phase(), marker.mine());
                 }
                 case "useMana" -> controller.useMana(Wire.decode(msg, UseMana.class).color());
-                case "setSetting" -> {
-                    final SetSetting setting = Wire.decode(msg, SetSetting.class);
-                    WebSettings.set(controller, setting.key(), setting.value());
-                    send(controlsMessage());
-                }
                 case "stackMenu" -> {
                     final StackItemView item = lookup(Wire.decode(msg, KeyCommand.class).key(), TrackableTypes.StackItemViewType);
                     if (item != null) {

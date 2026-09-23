@@ -29,6 +29,38 @@ public class WebSettingsTest {
                 });
     }
 
+    // A browser's first-run defaults are sent as its first match is attached, before the game has a controller
+    @Test
+    public void aSettingSentBeforeTheGameStartsIsKept() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
+        try {
+            WebSettings.set(null, "highlightPlayable", String.valueOf(!was));
+            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
+        } finally {
+            prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
+            prefs.save();
+        }
+    }
+
+    @Test
+    public void aSettingSentToAGuiWithNoGameYetIsKept() {
+        final ForgePreferences prefs = FModel.getPreferences();
+        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
+        try {
+            final WebGuiGame gui = new WebGuiGame();
+            final com.google.gson.JsonObject msg = JsonCodec.message("setSetting");
+            msg.addProperty("key", "highlightPlayable");
+            msg.addProperty("value", String.valueOf(!was));
+            gui.onBrowserMessage(msg);
+            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
+            gui.close();
+        } finally {
+            prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
+            prefs.save();
+        }
+    }
+
     // The host highlights playable cards and interrupts auto-pass from its own copy of these, so a change made
     // mid-game that only reached the preference file would do nothing until the next game
     @Test

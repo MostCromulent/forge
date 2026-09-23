@@ -51,6 +51,8 @@ final class WebSettings {
     }
 
     /** A value off the socket reaches the file the desktop client shares, so an illegal one is dropped. */
+    /** Saves a setting. The controller is the game's, if one has started: the browser can change a setting
+     *  (its first-run defaults do) while a match is still being set up, and that must not be lost. */
     static void set(final IGameController controller, final String key, final String value) {
         final ForgePreferences prefs = FModel.getPreferences();
         final FPref pref = BOOLEAN_PREFS.get(key);
@@ -58,13 +60,20 @@ final class WebSettings {
             final boolean on = Boolean.parseBoolean(value);
             prefs.setPref(pref, on);
             // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
-            // game opened, so a change mid-game has to reach it as well, as it does from desktop's yield settings
-            controller.setYieldPref(pref, String.valueOf(on));
-        } else if ("autoPassNoActions".equals(key)) {
-            if (Boolean.parseBoolean(value) != prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
-                YieldController.toggleAutoPassNoActions(controller);
+            // game opened, so a change mid-game has to reach it as well, as it does from desktop's yield settings.
+            // Before then the seed carries it.
+            if (controller != null) {
+                controller.setYieldPref(pref, String.valueOf(on));
             }
-            return;
+        } else if ("autoPassNoActions".equals(key)) {
+            if (Boolean.parseBoolean(value) == prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
+                return;
+            }
+            if (controller != null) {
+                YieldController.toggleAutoPassNoActions(controller);
+                return;
+            }
+            prefs.setPref(FPref.YIELD_AUTO_PASS_NO_ACTIONS, Boolean.parseBoolean(value));
         } else if ("autoYieldMode".equals(key)) {
             prefs.setPref(FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);
