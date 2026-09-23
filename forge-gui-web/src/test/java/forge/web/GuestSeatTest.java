@@ -47,11 +47,25 @@ public class GuestSeatTest {
             return awaitLobby(l -> l.get("mySeat").getAsInt() >= 0);
         }
 
-        /** The lobby is pushed on every change, so a test waits for the one it is after rather than the latest.
-         *  Answers the open table; a lobby message without one says no game is open. */
+        /**
+         * Waits until the table as it stands now is the one wanted, and answers it. The lobby is pushed on every
+         * change, and one choice can travel as several changes (a deck, then being ready), so an earlier message can
+         * describe a table that has already moved on; only the latest counts.
+         */
         JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
-            final JsonObject m = awaitMatching("lobby", l -> l.has("table") && wanted.test(l.getAsJsonObject("table")));
-            return m == null ? null : m.getAsJsonObject("table");
+            for (int i = 0; i < WAIT_MILLIS / 20; i++) {
+                JsonObject latest = null;
+                for (final JsonObject m : got) {
+                    if ("lobby".equals(m.get("t").getAsString()) && m.has("table")) {
+                        latest = m.getAsJsonObject("table");
+                    }
+                }
+                if (latest != null && wanted.test(latest)) {
+                    return latest;
+                }
+                Thread.sleep(20);
+            }
+            return null;
         }
 
         /** Drops what has been said so far, so a later wait cannot be satisfied by an earlier message. */
