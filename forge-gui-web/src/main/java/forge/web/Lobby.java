@@ -125,8 +125,17 @@ final class Lobby {
         return index >= 0 && index < deckKeys.size() ? deckKeys.get(index) : null;
     }
 
+    /**
+     * The deck at a seat. A seat this browser chose for is found by its key; another player's deck arrives
+     * with their seat, because their catalog is not this one.
+     */
     private Deck deckAt(final int index) {
-        return catalog.deck(key(index));
+        final Deck chosen = catalog.deck(key(index));
+        if (chosen != null) {
+            return chosen;
+        }
+        final GameLobby lobby = view();
+        return lobby != null && index < lobby.getNumberOfSlots() ? lobby.getSlot(index).getDeck() : null;
     }
 
     /** What stops the match starting, in the order the seats appear. */

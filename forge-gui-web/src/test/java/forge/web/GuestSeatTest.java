@@ -122,6 +122,22 @@ public class GuestSeatTest {
                         .get("type").getAsString())),
                 "the host's table never showed the guest arriving");
 
+        // The guest's deck is theirs, chosen from their own list, and the host has to see it or cannot start
+        sessions.onMessage(guestBrowser, JsonCodec.message("decks"));
+        final String deck = legalDeck(guestBrowser.await("decks"));
+        final JsonObject choose = seatMessage("setSeat", guestSeat);
+        choose.addProperty("deck", deck);
+        sessions.onMessage(guestBrowser, choose);
+        Assert.assertNotNull(hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat
+                        && l.getAsJsonArray("seats").get(guestSeat).getAsJsonObject().has("deckName")),
+                "the host's table never showed the guest's deck");
+        // The host's own seat has no deck yet, and is named as "You"; any other seat without one is the guest's
+        final JsonObject table = hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat);
+        for (final var problem : table.getAsJsonArray("problems")) {
+            Assert.assertFalse(problem.getAsString().endsWith(" has no deck."),
+                    "the host still counted the guest as having no deck: " + problem.getAsString());
+        }
+
         // The hello sent before the guest sat down also says inLobby false, so only what follows counts
         guestBrowser.forget();
         sessions.onMessage(hostBrowser, JsonCodec.message("leaveLobby"));
@@ -153,6 +169,18 @@ public class GuestSeatTest {
         sessions.onMessage(browser, seatMessage("aiSeat", seat));
         Assert.assertNotNull(browser.awaitLobby(l -> "AI".equals(typeAt(l, seat))),
                 "the seat never went back to a computer");
+    }
+
+    /** The first deck in a list that is built and legal, rather than generated when the game starts. */
+    private static String legalDeck(final JsonObject decks) {
+        Assert.assertNotNull(decks, "no deck list arrived");
+        for (final var d : decks.getAsJsonArray("decks")) {
+            final JsonObject deck = d.getAsJsonObject();
+            if (!deck.has("problem") && !(deck.has("generated") && deck.get("generated").getAsBoolean())) {
+                return deck.get("key").getAsString();
+            }
+        }
+        throw new AssertionError("no legal deck to choose");
     }
 
     private static JsonObject seatMessage(final String type, final int index) {

@@ -115,6 +115,8 @@ function Plate({ seat, index, lobby, actions, choose }: {
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
   const mine = seat.mine;
   const waiting = seat.type === 'OPEN';
+  // Another player's deck comes from their own catalog, so it has a name here but no key
+  const hasDeck = seat.deck != null || seat.deckName != null;
   // The host turns a seat between a computer and one someone can join; everyone else only reads it
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
@@ -123,14 +125,14 @@ function Plate({ seat, index, lobby, actions, choose }: {
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}`}>
       <div class="sleeve-slot">
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
-        <button class={`sleeve${seat.deck ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title="Choose a deck"
+        <button class={`sleeve${hasDeck ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title="Choose a deck"
           data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
           disabled={!seat.mayEdit} onClick={() => choose('deck')}>
-          <img alt="" hidden={!seat.deck} src={seat.deck ? sleeveSrc : undefined}
+          <img alt="" hidden={!hasDeck} src={hasDeck ? sleeveSrc : undefined}
             style={{ objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
-        <button class="sleeve-style" title="Choose a sleeve" hidden={!seat.deck || !seat.mayEdit}
+        <button class="sleeve-style" title="Choose a sleeve" hidden={!hasDeck || !seat.mayEdit}
           onClick={() => choose('sleeve')}>Sleeve</button>
       </div>
       <div class="plate-body">
@@ -147,13 +149,13 @@ function Plate({ seat, index, lobby, actions, choose }: {
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
         {/* With no deck the sleeve above already offers to choose one, so an empty row would only repeat it */}
-        <button class={`deck-row${seat.deck ? '' : ' unset'}`} hidden={!seat.deck && !waiting} disabled={!seat.mayEdit}
+        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={!hasDeck && !waiting} disabled={!seat.mayEdit}
           onClick={() => choose('deck')}>
           <span class="pips"><Pips colors={seat.colors} /></span>
           <span class="deck-name">{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>
-          <span class="deck-size">{seat.deck ? String(seat.deckSize) : ''}</span>
+          <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
         </button>
-        <p class="seat-problem" hidden={!seat.problem || !seat.deck}>{seat.problem ?? ''}</p>
+        <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
       </div>
     </div>
   );
