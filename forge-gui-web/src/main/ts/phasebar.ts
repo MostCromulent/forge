@@ -120,6 +120,8 @@ function build(root: HTMLElement): void {
   pill.onclick = () => changeUi(u => { u.stopsOpen = !u.stopsOpen; });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && ui.stopsOpen) {
+      // Escape was for the grid, not for the prompt's Cancel
+      e.preventDefault();
       changeUi(u => { u.stopsOpen = false; });
     }
   });

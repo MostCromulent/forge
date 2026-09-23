@@ -24,7 +24,11 @@ export function initStack(actionsFor: Actions): void {
     }
   });
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && ui.stackMenuAt) changeUi(u => { u.stackMenuAt = null; });
+    if (e.key === 'Escape' && ui.stackMenuAt) {
+      // Escape was for the menu, not for the prompt's Cancel
+      e.preventDefault();
+      changeUi(u => { u.stackMenuAt = null; });
+    }
   });
 }
 

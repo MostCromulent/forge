@@ -49,7 +49,8 @@ export function renderPrompt(model: Model, actions: Actions): void {
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.cog').onclick = () => openOptions(() => actions.concede());
     document.addEventListener('keydown', e => {
-      if (e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
+      // A key something open over the board has already answered (a menu closing on Escape) is not the prompt's
+      if (e.defaultPrevented || e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = q<HTMLButtonElement>(root, '.ok');
       const cancel = q<HTMLButtonElement>(root, '.cancel');
       if (document.getElementById('options') || ui.stopsOpen) {
