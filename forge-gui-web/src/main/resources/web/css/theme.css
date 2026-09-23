@@ -32,7 +32,7 @@
   --mtg-c: #c2c8d2;
   --card-w: 88px;
   --card-h: 123px;
-  --tile-w: 58px;
+  --tile-w: 72px;
   --stack-w: 150px;
   --radius: 6px;
   /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */

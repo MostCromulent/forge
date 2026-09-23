@@ -45,7 +45,7 @@
 /* The stack panel floats over the right of the board, so the rows give it room rather than sliding under it */
 #match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }
 #hand { grid-area: hand; }
-.seat { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; min-height: 0; }
+.seat { display: grid; grid-template-columns: calc(var(--tile-w) * 3 + 24px) 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
    the hand rather than floating in the middle of its half, so the two read as one side of the table. */
@@ -83,22 +83,60 @@
 .avatar .life-change.hurt { color: #ff7a59; }
 .avatar .life-change.healed { color: #5cc8ff; }
 @keyframes life-float { from { opacity: 0; transform: translate(-50%, 6px) scale(.7); } 25% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); } to { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
-.zone-tiles { display: grid; grid-template-columns: repeat(2, var(--tile-w)); gap: 6px; }
+.zone-tiles { display: grid; grid-template-columns: repeat(3, var(--tile-w)); gap: 6px; }
 .zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .zone-tile.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, #2a2140 0 6px, #231b36 6px 12px); border: 2px solid #3b2f5c; }
 .zone-tile.empty { background: none; border: 2px dotted var(--line); }
 /* The label rides a dark strip, so it stays readable over a sleeve or a card's art */
-.zone-tile .zone-name { position: absolute; left: 2px; right: 2px; top: 2px; z-index: 2; padding: 1px 2px; border-radius: 4px; background: #000000c4; color: var(--text); font-size: 9.5px; letter-spacing: .03em; text-align: center; }
+.zone-tile .zone-name { position: absolute; left: 2px; right: 2px; top: 2px; z-index: 2; padding: 1px 2px; border-radius: 4px; background: #000000c4; color: var(--text); font-size: 10.5px; letter-spacing: .03em; text-align: center; }
 .zone-tile .zone-count { position: absolute; z-index: 2; right: 3px; bottom: 3px; min-width: 20px; background: var(--bg); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 5px; font-size: 12px; font-weight: 700; color: var(--text); }
 .zone-tile:hover { border-color: var(--accent-2); }
+/* Ash settles through the graveyard and motes circle a slowly turning ring in exile. Each mote has its own lane and
+   start, so the six never move as one. */
+.zone-tile { --ash: #b9a8e0; --void: #9fe7ff; }
+.zone-tile .ambient { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.zone-tile .ambient i { position: absolute; width: 5px; height: 5px; border-radius: 50%; opacity: 0; }
+.zone-tile .ambient i:nth-child(1) { --x: 18%; --d: 0s; }
+.zone-tile .ambient i:nth-child(2) { --x: 72%; --d: -1.3s; }
+.zone-tile .ambient i:nth-child(3) { --x: 44%; --d: -2.6s; }
+.zone-tile .ambient i:nth-child(4) { --x: 30%; --d: -3.9s; }
+.zone-tile .ambient i:nth-child(5) { --x: 84%; --d: -5.2s; }
+.zone-tile .ambient i:nth-child(6) { --x: 58%; --d: -6.5s; }
+.zone-tile[data-zone="Graveyard"] .ambient i { left: var(--x); top: 0; background: var(--ash); box-shadow: 0 0 8px 1px var(--ash); animation: ash 7.8s linear infinite var(--d); }
+@keyframes ash {
+  0% { opacity: 0; transform: translate(0, -6px); }
+  15% { opacity: 1; }
+  50% { transform: translate(4px, calc(var(--tile-w) * .7)); }
+  85% { opacity: .7; }
+  100% { opacity: 0; transform: translate(-2px, calc(var(--tile-w) * 1.4)); }
+}
+/* Exile is drawn in a squashed frame, so the ring and the motes' circles read as a tilted orbit */
+.zone-tile[data-zone="Exile"] .ambient { transform: scaleY(.62); }
+.zone-tile[data-zone="Exile"] .ambient::before { content: ''; position: absolute; left: 50%; top: 50%; width: 64%; aspect-ratio: 1; margin: -32% 0 0 -32%; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--void) 60%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--void) 35%, transparent); animation: spin 26s linear infinite; }
+.zone-tile[data-zone="Exile"] .ambient i { left: 50%; top: 50%; margin: -2px; background: var(--void); box-shadow: 0 0 6px var(--void); animation: orbit 9s linear infinite var(--d), twinkle 3s ease-in-out infinite var(--d); }
+@keyframes spin { to { transform: rotate(1turn); } }
+@keyframes orbit { from { transform: rotate(0) translateX(calc(var(--tile-w) * .34)); } to { transform: rotate(1turn) translateX(calc(var(--tile-w) * .34)); } }
+@keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+@media (prefers-reduced-motion: reduce) { .zone-tile .ambient { display: none; } }
+/* An opponent's hand: up to three backs fanned from one point, in their sleeve, with the count beside them */
+.hand-fan { display: flex; align-items: center; gap: 8px; padding: 2px 8px 2px 4px; background: none; border-color: transparent; border-radius: 8px; }
+.hand-fan:hover { background: var(--surface-2); }
+.hand-fan .backs { position: relative; width: 58px; height: 48px; }
+.hand-fan .backs i { position: absolute; left: 15px; bottom: 0; width: 28px; height: 40px; border-radius: 3px; transform-origin: 50% 100%; background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, #2a2140 0 3px, #231b36 3px 6px); border: 1px solid #3b2f5c; box-shadow: 0 1px 4px #000a; }
+.hand-fan .backs i:nth-child(1) { transform: rotate(-16deg); }
+.hand-fan .backs i:nth-child(3) { transform: rotate(16deg); }
+.hand-fan[data-count="0"] .backs i, .hand-fan[data-count="1"] .backs i:not(:nth-child(2)), .hand-fan[data-count="2"] .backs i:nth-child(3) { display: none; }
+.hand-fan[data-count="2"] .backs i:nth-child(1) { transform: rotate(-8deg); }
+.hand-fan[data-count="2"] .backs i:nth-child(2) { transform: rotate(8deg); }
+.hand-fan .hand-count { font-size: 17px; font-weight: 700; }
 .player-counters { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 .player-counter { font-size: 12px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 8px; }
 .player-counters:empty, .emblems:empty { display: none; }
 .emblems { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.emblem { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-2); background: var(--surface-2); display: grid; place-items: center; cursor: pointer; position: relative; }
+.emblem { width: 54px; height: 54px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-2); background: var(--surface-2); display: grid; place-items: center; cursor: pointer; position: relative; }
 .emblem img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; transform: scale(1.8); }
-.emblem .initials { display: none; font-weight: 700; font-size: 13px; }
+.emblem .initials { display: none; font-weight: 700; font-size: 16px; }
 .emblem.noimg img { display: none; }
 .emblem.noimg .initials { display: block; }
 .emblem.selectable { outline: 2px dashed var(--select); outline-offset: 2px; }

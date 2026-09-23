@@ -51,6 +51,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       <div class="player">
         <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
         <div class="name"></div>
+        <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         <div class="player-counters"></div>
         <div class="emblems"></div>
         <div class="zone-tiles"></div>
@@ -61,6 +62,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
     avatarEl.addEventListener('mouseenter', () => hoverPlayer(Number(root.dataset.player)));
     avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
+    q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
   }
   root.dataset.player = String(player.$key);
   const avatar = q(root, '.avatar');
@@ -77,6 +79,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
+  renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
@@ -128,15 +131,28 @@ function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, act
 
 const MANA_NAMES: Record<string, string> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green', C: 'colourless' };
 
-// Your own hand is laid out along the bottom, so only opponents get a Hand tile
+// An opponent's hand is cards held, not a pile, so it is drawn as a few backs fanned in the hand with the count.
+// Your own hand is laid out along the bottom.
+function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void {
+  const count = zone(model, player, 'Hand').length;
+  el.hidden = isLocal(model, player);
+  el.dataset.count = String(Math.min(count, 3));
+  q(el, '.hand-count').textContent = String(count);
+  el.title = `${count} ${count === 1 ? 'card' : 'cards'} in hand`;
+}
+
+// Cards drift down into a graveyard and circle in exile, so the two piles read as places at a glance
+const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6) + '</span>';
+
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): void {
-  const zones: ZoneName[] = isLocal(model, player) ? ['Library', 'Graveyard', 'Exile'] : ['Hand', 'Library', 'Graveyard', 'Exile'];
+  const zones: ZoneName[] = ['Library', 'Graveyard', 'Exile'];
   reconcile<ZoneName, HTMLButtonElement>(root, zones, z => z,
     zoneName => {
       const el = document.createElement('button');
       el.className = 'zone-tile';
       el.dataset.zone = zoneName;
-      el.innerHTML = '<img alt="" draggable="false"><span class="zone-name"></span><span class="zone-count"></span>';
+      el.innerHTML = '<img alt="" draggable="false">' + (zoneName === 'Library' ? '' : AMBIENT)
+        + '<span class="zone-name"></span><span class="zone-count"></span>';
       q(el, '.zone-name').textContent = zoneName;
       const img = q<HTMLImageElement>(el, 'img');
       hideOnError(img);
@@ -155,7 +171,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): v
       img.hidden = !src;
       img.dataset.key = String(top?.$key ?? '');
       img.dataset.zoom = src;
-      el.classList.toggle('back', (zoneName === 'Library' || zoneName === 'Hand') && cards.length > 0);
+      el.classList.toggle('back', zoneName === 'Library' && cards.length > 0);
       el.classList.toggle('empty', cards.length === 0);
       q(el, '.zone-count').textContent = String(cards.length);
     });

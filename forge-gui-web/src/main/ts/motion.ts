@@ -174,8 +174,8 @@ function placeRect(place: Place | undefined): DOMRect | null {
       return stack && !stack.hidden ? stack.getBoundingClientRect() : null;
     }
     case 'Hand':
-      // Your own hand is laid out along the bottom; everyone else's is a tile by their name
-      return seat?.id === 'me' ? rectOf(document.getElementById('hand')) : rectOf(seat?.querySelector('.zone-tile[data-zone="Hand"]'));
+      // Your own hand is laid out along the bottom; everyone else's is the fan of backs under their name
+      return seat?.id === 'me' ? rectOf(document.getElementById('hand')) : rectOf(seat?.querySelector('.hand-fan'));
     case 'Battlefield':
       return rectOf(seat?.querySelector('.battlefield'));
     case 'Command':
