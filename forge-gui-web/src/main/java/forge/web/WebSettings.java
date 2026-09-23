@@ -55,7 +55,11 @@ final class WebSettings {
         final ForgePreferences prefs = FModel.getPreferences();
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
-            prefs.setPref(pref, Boolean.parseBoolean(value));
+            final boolean on = Boolean.parseBoolean(value);
+            prefs.setPref(pref, on);
+            // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
+            // game opened, so a change mid-game has to reach it as well, as it does from desktop's yield settings
+            controller.setYieldPref(pref, String.valueOf(on));
         } else if ("autoPassNoActions".equals(key)) {
             if (Boolean.parseBoolean(value) != prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS)) {
                 YieldController.toggleAutoPassNoActions(controller);
