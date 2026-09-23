@@ -3,7 +3,7 @@ import { game, type Model } from './model';
 import { hoverable } from './detail';
 import { stepName } from './phasebar';
 import { byId, q } from './dom';
-import { changeUi, ui } from './ui';
+import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { PromptButton, Ref } from './protocol';
 
@@ -47,28 +47,6 @@ export function renderPrompt(model: Model, actions: Actions): void {
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
-    document.addEventListener('keydown', e => {
-      // A key something open over the board has already answered (a menu closing on Escape) is not the prompt's
-      if (e.defaultPrevented || e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
-      const ok = q<HTMLButtonElement>(root, '.ok');
-      const cancel = q<HTMLButtonElement>(root, '.cancel');
-      if (ui.optionsOpen || ui.stopsOpen) {
-        // Escape belongs to whatever is open over the board; the prompt keeps its answer
-        if (e.key === 'Escape' && ui.optionsOpen) {
-          changeUi(u => { u.optionsOpen = false; });
-        }
-        return;
-      } else if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
-        e.preventDefault();
-        ok.click();
-      } else if (e.key === 'Escape' && !cancel.disabled) {
-        cancel.click();
-      } else if (e.key.toLowerCase() === 'e') {
-        actions.endTurn();
-      } else if (e.key.toLowerCase() === 'z') {
-        actions.undo();
-      }
-    });
     built = true;
   }
   root.classList.toggle('spectating', !!model.spectating);

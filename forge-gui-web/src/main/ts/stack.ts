@@ -1,12 +1,12 @@
 import { reconcile } from './render';
 import { cardImageSrc, noImageOnError, setImage } from './images';
-import { game, deref, derefAll, stateOf, type Model } from './model';
+import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
 import { hoverCard } from './detail';
 import { stackTargets } from './overlay';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
-import type { ChoicesRequest, StackItemView, YieldAction } from './protocol';
+import type { StackItemView, YieldAction } from './protocol';
 
 // The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
 // cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
@@ -23,20 +23,6 @@ export function initStack(actionsFor: Actions): void {
       changeUi(u => { u.stackMenuAt = null; });
     }
   });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && ui.stackMenuAt) {
-      // Escape was for the menu, not for the prompt's Cancel
-      e.preventDefault();
-      changeUi(u => { u.stackMenuAt = null; });
-    }
-  });
-}
-
-/** The question the game is asking, when it is which spell on the stack to choose: that is answered by clicking
- *  the spell where it already is, rather than from a list. */
-export function stackPick(model: Model): ChoicesRequest | null {
-  const oldest = [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
-  return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;
 }
 
 export function renderStack(model: Model): void {

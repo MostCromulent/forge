@@ -1,5 +1,5 @@
 import type {
-  Address, CardStateView, CardView, Controls, DeckDetails, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
+  Address, CardStateView, ChoicesRequest, CardView, Controls, DeckDetails, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
   Notice, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
   StackMenu, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
@@ -134,6 +134,18 @@ function collectRefs(value: unknown, out: number[]): void {
       if (k !== '$key') collectRefs(v, out);
     }
   }
+}
+
+/** The game's oldest open question, which is the one shown. */
+export function oldestRequest(model: Model): Request | undefined {
+  return [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
+}
+
+/** The question the game is asking, when it is which spell on the stack to choose: that is answered by clicking
+ *  the spell where it already is, rather than from a list. */
+export function stackPick(model: Model): ChoicesRequest | null {
+  const oldest = oldestRequest(model);
+  return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;
 }
 
 export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>

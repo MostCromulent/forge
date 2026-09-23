@@ -12,12 +12,7 @@ export function HostChoice({ question, actions }: { question: Question; actions:
   }, []);
   const answer = (value: number[]) => actions.answerHostChoice(question.id, value);
   return (
-    <div class="host-back" onKeyDown={e => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        answer([]);
-      }
-    }}>
+    <div class="host-back">
       <div class="host-choice">
         <h2>{question.message || 'Choose'}</h2>
         <div class="host-options">

@@ -118,13 +118,6 @@ function build(root: HTMLElement): void {
     + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
     + '<span class="caret"></span>';
   pill.onclick = () => changeUi(u => { u.stopsOpen = !u.stopsOpen; });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && ui.stopsOpen) {
-      // Escape was for the grid, not for the prompt's Cancel
-      e.preventDefault();
-      changeUi(u => { u.stopsOpen = false; });
-    }
-  });
   document.addEventListener('mousedown', e => {
     if (ui.stopsOpen && !(e.target instanceof Element && e.target.closest('#phase-strip'))) {
       changeUi(u => { u.stopsOpen = false; });

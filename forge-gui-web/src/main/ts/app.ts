@@ -5,7 +5,8 @@
 import { connect } from './net';
 import { createModel, applyState } from './model';
 import { createActions, type Actions } from './actions';
-import { initUi, resetMatchUi } from './ui';
+import { changeUi, initUi, resetMatchUi, ui } from './ui';
+import { keyCommand, type KeyCommand } from './keys';
 import { hostedBefore, rememberName, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
 import { renderMatch } from './board';
@@ -16,7 +17,7 @@ import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, setGuest, setPlaymats } from './settings';
-import { applyAudioSettings, playSound, stopMusic } from './audio';
+import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId } from './dom';
@@ -44,6 +45,11 @@ const actions: Actions = {
     model.stackMenu = null;
     wire.askStackMenu(key);
   },
+  // A browser plays nothing before the player does something, so the music starts on the click or key that starts
+  startMatch: spectate => {
+    startMusic();
+    wire.startMatch(spectate);
+  },
   claimHost: () => {
     claimed = true;
     wire.claimHost();
@@ -69,11 +75,36 @@ initSettings(actions.setSetting, () => {
   schedule();
 });
 
+// Every key the page answers is decided in keys.ts, from what is open
 document.addEventListener('keydown', e => {
-  if (e.key.toLowerCase() === 'f' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
-    nextFace(model);
+  const target = e.target instanceof HTMLElement ? e.target : null;
+  const command = keyCommand({
+    key: e.key,
+    typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
+    modified: e.ctrlKey || e.altKey || e.metaKey,
+  }, model, ui);
+  if (!command) {
+    return;
   }
+  e.preventDefault();
+  runKey(command);
 });
+
+function runKey(command: KeyCommand): void {
+  switch (command) {
+    case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
+    case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
+    case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
+    case 'closePicker': changeUi(u => { u.picker = null; }); break;
+    case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
+    case 'ok': actions.ok(); break;
+    case 'cancel': actions.cancel(); break;
+    case 'endTurn': actions.endTurn(); break;
+    case 'undo': actions.undo(); break;
+    case 'nextFace': nextFace(model); break;
+    case 'startMatch': actions.startMatch(ui.spectate); break;
+  }
+}
 
 function apply(msg: ServerMessage): void {
   switch (msg.t) {
@@ -85,6 +116,8 @@ function apply(msg: ServerMessage): void {
       model.canClaimHost = !!msg.canClaimHost;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;
+      // A picker belongs to the table it was opened over
+      if (!model.inLobby) ui.picker = null;
       model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
       model.nameSent = false;

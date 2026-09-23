@@ -6,6 +6,12 @@
  *  when the viewer may not see it. */
 export type Hover = { card: number | null; src: string } | { player: number };
 
+/** A picker open over match setup, for one seat. */
+export interface Picker {
+  kind: 'deck' | 'sleeve' | 'avatar';
+  seat: number;
+}
+
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
   openPiles: Set<string>;
@@ -20,6 +26,10 @@ export interface UiState {
   stopsOpen: boolean;
   /** The options dialog is open. */
   optionsOpen: boolean;
+  /** Match setup's picker for a seat's deck, sleeve or avatar. */
+  picker: Picker | null;
+  /** The host has chosen to watch the computer play its seat. */
+  spectate: boolean;
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
@@ -37,6 +47,8 @@ export const ui: UiState = {
   stackMenuAt: null,
   stopsOpen: false,
   optionsOpen: false,
+  picker: null,
+  spectate: false,
   hover: null,
   faceIndex: 0,
   sidePanels: { log: true, chat: false, ...storedSidePanels() },
@@ -62,6 +74,7 @@ export function resetMatchUi(): void {
   ui.stackMenuAt = null;
   ui.stopsOpen = false;
   ui.optionsOpen = false;
+  ui.picker = null;
   ui.hover = null;
   ui.faceIndex = 0;
 }

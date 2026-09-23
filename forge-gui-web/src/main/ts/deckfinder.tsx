@@ -88,12 +88,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   }
   const details = model.deckDetails?.key === chosen ? model.deckDetails : null;
   return (
-    <div class="finder-back" onKeyDown={e => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        close();
-      }
-    }}>
+    <div class="finder-back">
       <div class="finder">
         <header class="finder-head">
           <h2>Choose a deck</h2>

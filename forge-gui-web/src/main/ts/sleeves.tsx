@@ -26,12 +26,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
     close();
   };
   return (
-    <div class="sleeves-back" onKeyDown={e => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        close();
-      }
-    }}>
+    <div class="sleeves-back">
       <div class={picking ? 'sleeves picking' : 'sleeves'}>
         <header class="sleeves-head">
           <h2>{picking ? 'Choose a card' : 'Choose a sleeve'}</h2>

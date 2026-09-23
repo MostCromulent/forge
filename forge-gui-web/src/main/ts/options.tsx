@@ -13,14 +13,7 @@ export function Options({ close, concede }: { close: () => void; concede: () => 
   const q = query.trim().toLowerCase();
   const shown = SETTINGS.filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
   return (
-    <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }} onKeyDown={e => {
-      // Escape closes the dialog even from its search box, and goes no further: the prompt answers it otherwise
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        close();
-      }
-    }}>
+    <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="options-dialog" role="dialog" aria-label="Options">
         <header>
           <b>Options</b>

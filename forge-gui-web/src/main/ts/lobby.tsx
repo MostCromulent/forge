@@ -7,30 +7,26 @@
 // when it hosts it, so your own seat arrives as REMOTE and is recognised by its "mine" flag, not its type.
 
 import { useState } from 'preact/hooks';
+import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { DeckFinder } from './deckfinder';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
-import { startMusic } from './audio';
 import { ChatInput, ChatLog } from './chat';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Address, LobbyTable, Seat } from './protocol';
 
-/** A picker open over the table, for one seat. */
-type Picker = { kind: 'deck' | 'sleeve' | 'avatar'; index: number };
-
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
-  const [picker, setPicker] = useState<Picker | null>(null);
-  const [spectate, setSpectate] = useState(false);
+  const picker = ui.picker;
   const lobby = model.lobby;
   if (!lobby) {
     return null;
   }
   // A seat can go while its picker is open, when the host removes it
-  const seat = picker ? lobby.seats[picker.index] : undefined;
-  const close = () => setPicker(null);
+  const seat = picker ? lobby.seats[picker.seat] : undefined;
+  const close = () => changeUi(u => { u.picker = null; });
   return (
     <>
       <header class="lobby-head">
@@ -43,7 +39,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         </div>
         <div class="head-right">
           <label class="spectate" hidden={!lobby.host}>
-            <input id="spectate" type="checkbox" checked={spectate} onChange={e => setSpectate(e.currentTarget.checked)} /> Watch the computer play
+            <input id="spectate" type="checkbox" checked={ui.spectate}
+              onChange={e => { const on = e.currentTarget.checked; changeUi(u => { u.spectate = on; }); }} /> Watch the computer play
           </label>
           {/* The table belongs to the host, so a joined client has no menu to go back to */}
           <button id="lobby-back" hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
@@ -52,17 +49,13 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       <div class="lobby-main">
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
-            choose={kind => setPicker({ kind, index: i })} />)}
+            choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} />)}
         </div>
         <div class="seat-add">
           <button id="add-seat" hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
             onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
-        <Verdict lobby={lobby} start={() => {
-          // A browser plays nothing before a click, so the music starts on this one
-          startMusic();
-          actions.startMatch(spectate);
-        }} />
+        <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />
         {/* A game only this machine can reach has nothing to share and nobody to talk to */}
         <div class="lobby-net" id="lobby-net" hidden={!lobby.shareable && lobby.host}>
           <section class="share" id="share" hidden={!lobby.shareable}>
@@ -77,12 +70,12 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           </section>
         </div>
       </div>
-      {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} index={picker.index} seat={seat} close={close} />}
-      {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.index} seat={seat} close={close} />}
+      {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
+      {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
         <LookPicker title={`Choose an avatar for ${seat.name}`} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
           current={seat.avatar} close={chosen => {
-            if (chosen !== null) actions.setSeat(picker.index, { avatar: chosen });
+            if (chosen !== null) actions.setSeat(picker.seat, { avatar: chosen });
             close();
           }} />
       )}

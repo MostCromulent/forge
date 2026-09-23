@@ -14,11 +14,18 @@ test('a new player names themselves, hosts a game against the computer, and play
   await hostTable(page, false);
   const seats = page.locator('#seats .plate');
   await expect(seats).toHaveCount(2);
+  // Escape closes the deck finder from its search box without choosing anything
+  await seats.nth(0).locator('.sleeve').click();
+  await expect(page.locator('.finder .find')).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.finder')).toHaveCount(0);
+
   await chooseDeck(page, seats.nth(0));
   await chooseDeck(page, seats.nth(1));
   await expect(page.locator('#play')).toBeEnabled();
 
-  await page.click('#play');
+  // As the lobby says, Enter starts the match
+  await page.keyboard.press('Enter');
   await expect(page.locator('#match')).toBeVisible();
   await expect(page.locator('#me')).toContainText('Alice');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();

@@ -6,10 +6,9 @@ import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl } from './images';
 import { hoverCard } from './detail';
-import { stackPick } from './stack';
 import { SymbolText } from './symbols';
 import type { Actions } from './actions';
-import type { Model } from './model';
+import { oldestRequest, stackPick, type Model } from './model';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
   SideboardRequest, TextRequest, TrackedObject,
@@ -18,7 +17,7 @@ import type {
 type Answer = (value: unknown) => void;
 
 export function Requests({ model, actions }: { model: Model; actions: Actions }) {
-  const req = [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
+  const req = oldestRequest(model);
   // Choosing between spells that are on the stack is done on the stack, so no list is drawn for it
   if (!req || stackPick(model) === req) {
     return null;
