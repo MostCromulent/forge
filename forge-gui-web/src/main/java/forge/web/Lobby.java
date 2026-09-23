@@ -46,8 +46,14 @@ final class Lobby {
         shareable = value;
     }
 
+    /**
+     * The table as this browser sees it. The host reads the server's own lobby: its client's copy trails the server
+     * by an update, and reading that could show a seat as it was a moment ago, or refuse to start a match because a
+     * seat did not look ready yet. A guest has only its copy.
+     */
     private GameLobby view() {
-        return local.clientLobby();
+        final GameLobby hosted = local.hostedLobby();
+        return hosted != null ? hosted : local.clientLobby();
     }
 
     private ServerGameLobby host() {
