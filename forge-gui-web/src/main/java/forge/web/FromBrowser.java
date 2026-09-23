@@ -104,6 +104,12 @@ final class FromBrowser {
     record StackYield(int key, YieldAction action) {
     }
 
+    /** Sets every stop of one row at once: your turns (mine) or your opponents'. Setting, not toggling, so a browser
+     *  can give a server back the stops it remembers without knowing what the server has now. */
+    @Command("setStops")
+    record SetStops(boolean mine, List<PhaseType> phases) {
+    }
+
     enum PhaseAction { toggleStop, toggleMarker }
 
     /** A stop, or pass-priority-until marker, at a phase of your turns (mine) or your opponents'. */
@@ -128,5 +134,6 @@ final class FromBrowser {
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
-            KeyCommand.class, StackYield.class, PhaseCommand.class, UseMana.class, SetSetting.class, NextGame.class);
+            KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
+            NextGame.class);
 }

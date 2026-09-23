@@ -18,6 +18,7 @@ import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, setGuest, setPlaymats } from './settings';
 import { applyAudioSettings, playSound, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
+import { createStopMemory, localStopStore } from './stopmemory';
 import { byId } from './dom';
 import type { Notice, ServerMessage } from './protocol';
 
@@ -55,6 +56,8 @@ const actions: Actions = {
   },
 };
 
+const stopMemory = createStopMemory(localStopStore('forge.guestStops'), actions.setStops);
+
 initUi(schedule);
 initDetail(actions);
 initStack(actions);
@@ -78,6 +81,7 @@ function apply(msg: ServerMessage): void {
       resetPace();
       model.host = msg.host !== false;
       setGuest(!model.host);
+      stopMemory.reset();
       model.canClaimHost = !!msg.canClaimHost;
       model.inMatch = msg.inMatch;
       model.inLobby = !!msg.inLobby;
@@ -166,6 +170,7 @@ function apply(msg: ServerMessage): void {
     case 'controls':
       model.controls = msg;
       onServerSettings(msg.settings);
+      stopMemory.onControls(msg, !model.host);
       break;
     case 'log': appendLog(msg); return;
     case 'detail': model.cardDetails.set(msg.key, msg); break;

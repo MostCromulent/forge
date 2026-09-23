@@ -26,6 +26,8 @@ export interface Actions {
   /** Answers one of the game's open questions. */
   answer(requestId: number, value: unknown): void;
   toggleStop(phase: PhaseType, mine: boolean): void;
+  /** Every stop of one row at once; the rest of the row goes off. */
+  setStops(mine: boolean, phases: PhaseType[]): void;
   /** Pass priority until this phase, or stop doing so. */
   toggleMarker(phase: PhaseType, mine: boolean): void;
   /** Asks for a card's rules text, or a player's details, which arrive later in the model. */
@@ -82,6 +84,7 @@ export function createActions(send: Send): Actions {
     leave: () => send({ t: 'leave' }),
     answer: (id, value) => send({ t: 'reply', id, value }),
     toggleStop: (phase, mine) => send({ t: 'toggleStop', phase, mine }),
+    setStops: (mine, phases) => send({ t: 'setStops', mine, phases }),
     toggleMarker: (phase, mine) => send({ t: 'toggleMarker', phase, mine }),
     inspectCard: key => send({ t: 'detail', key }),
     inspectPlayer: key => send({ t: 'playerDetail', key }),

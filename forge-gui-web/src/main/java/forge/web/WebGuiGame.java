@@ -61,6 +61,7 @@ import forge.web.FromBrowser.PhaseCommand;
 import forge.web.FromBrowser.Reply;
 import forge.web.FromBrowser.SelectCard;
 import forge.web.FromBrowser.SetSetting;
+import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.StackYield;
 import forge.web.FromBrowser.UseMana;
 import forge.web.FromBrowser.YieldAction;
@@ -453,9 +454,22 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    /** Every stop of one row: those listed on, the rest off. Untap takes no stop, as on desktop. */
+    private void setStops(final List<PhaseType> phases, final boolean mine) {
+        for (final PhaseType phase : PhaseType.values()) {
+            if (phase.ordinal() > 0 && settings.getBoolean(WebSettings.stopKey(phase, mine)) != phases.contains(phase)) {
+                setStop(phase, mine, phases.contains(phase));
+            }
+        }
+    }
+
     private void setStop(final PhaseType phase, final boolean mine, final boolean stop) {
         settings.set(WebSettings.stopKey(phase, mine), stop);
         settings.save();
+        // A stop set before the game has a view is read from the settings when the game's players are seeded
+        if (getGameView() == null) {
+            return;
+        }
         for (final PlayerView p : getGameView().getPlayers()) {
             if (isLocalPlayer(p) == mine) {
                 pushSkipPhaseToControllers(p, phase);
@@ -1265,6 +1279,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "toggleStop" -> {
                     final PhaseCommand stop = Wire.decode(msg, PhaseCommand.class);
                     toggleStop(stop.phase(), stop.mine());
+                    send(controlsMessage());
+                }
+                case "setStops" -> {
+                    final SetStops stops = Wire.decode(msg, SetStops.class);
+                    setStops(stops.phases(), stops.mine());
                     send(controlsMessage());
                 }
                 case "toggleMarker" -> {

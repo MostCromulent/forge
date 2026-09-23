@@ -50,6 +50,34 @@ test('a guest joins by link under a name of its own and follows the host into th
   await expect(guest.locator('#match-chat-log')).toContainText('good luck');
 });
 
+// The server keeps a guest's settings only as long as it runs, so the guest's browser gives them back to a new one
+test('a guest\'s phase stops outlive a server restart', async ({ page, browser }) => {
+  let guest = await hostAndGuest(page, browser);
+  await startMatch(page, guest);
+  const stopAt = (p: Page, phase: string) => p.locator(`#phase-strip .stops button.cell[data-mine="true"][data-phase="${phase}"] .square`);
+  await guest.click('#phase-strip .pill');
+  const phase = await guest.locator('#phase-strip .stops button.cell[data-mine="true"]').first().getAttribute('data-phase') ?? '';
+  const wasOn = await stopAt(guest, phase).evaluate(el => el.classList.contains('on'));
+  await guest.locator(`#phase-strip .stops button.cell[data-mine="true"][data-phase="${phase}"]`).click();
+  await expect(stopAt(guest, phase)).toHaveClass(wasOn ? /^(?!.*\bon\b)/ : /\bon\b/);
+
+  const context = guest.context();
+  await guest.close();
+  const port = server.port;
+  await server.stop();
+  server = await startServer(port);
+  // Both browsers are known by the names they remember, and the host's takes its seat back without being asked
+  await page.goto(server.url);
+  await page.click('[data-mode=multiplayer]');
+  await expect(page.locator('#seats .plate').first()).toBeVisible();
+  guest = await context.newPage();
+  await guest.goto(await inviteLink(page, server.url));
+  await expect(guest.locator('#lobby')).toBeVisible();
+  await startMatch(page, guest);
+  await guest.click('#phase-strip .pill');
+  await expect(stopAt(guest, phase)).toHaveClass(wasOn ? /^(?!.*\bon\b)/ : /\bon\b/);
+});
+
 test('a guest\'s settings are its own, not the host\'s', async ({ page, browser }) => {
   const guest = await hostAndGuest(page, browser);
   await startMatch(page, guest);

@@ -16,12 +16,14 @@ let nextPort = 36900;
 export interface Server {
   /** The page's address, with the token that lets a browser in. */
   url: string;
+  port: number;
   stop(): Promise<void>;
 }
 
-export async function startServer(): Promise<Server> {
+/** Starts a server; on a given port, to stand in for the same server restarted, which a browser treats as the same site. */
+export async function startServer(onPort?: number): Promise<Server> {
   const home = mkdtempSync(join(tmpdir(), 'forge-e2e-'));
-  const port = nextPort++;
+  const port = onPort ?? nextPort++;
   const java: ChildProcess = spawn('java', [
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
@@ -47,6 +49,7 @@ export async function startServer(): Promise<Server> {
   });
   return {
     url,
+    port,
     async stop() {
       const exited = new Promise(done => java.once('exit', done));
       java.kill();

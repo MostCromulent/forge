@@ -403,6 +403,12 @@ export interface PhaseCommand {
   mine: boolean;
 }
 
+export interface SetStops {
+  t: 'setStops';
+  mine: boolean;
+  phases: PhaseType[];
+}
+
 export interface UseMana {
   t: 'useMana';
   color: number;
@@ -438,6 +444,7 @@ export type ClientMessage =
   | KeyCommand
   | StackYield
   | PhaseCommand
+  | SetStops
   | UseMana
   | SetSetting
   | NextGame;
