@@ -4,8 +4,6 @@
 // Only the browser holding the host's seat sees this. Nobody holds it by arriving: the seat is offered to
 // whoever asks first, and every other browser goes straight to a seat in the host's game.
 
-let built = false;
-
 // Only the ones marked ready are built; the rest are shown so the shape of the product is honest,
 // and greyed so nothing looks broken.
 const MODES = [
@@ -21,7 +19,9 @@ export function renderMenu(model, send) {
     renderWaiting(root, model, send);
     return;
   }
-  if (!built) {
+  // The waiting page shares this element, so the menu is rebuilt whenever it has been replaced, not only once
+  if (root.dataset.page !== 'menu') {
+    root.dataset.page = 'menu';
     root.innerHTML = `
       <div class="menu-page">
         <h1 class="wordmark">Forge</h1>
@@ -47,7 +47,6 @@ export function renderMenu(model, send) {
       list.append(b);
     }
     root.querySelector('#menu-quit').onclick = () => send({ t: 'quit' });
-    built = true;
   }
   const decks = model.decks?.length ?? 0;
   status(root, 'play', decks ? `${decks} decks ready` : 'no decks yet — a precon will do');
