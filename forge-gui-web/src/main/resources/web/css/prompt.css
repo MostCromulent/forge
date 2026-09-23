@@ -1,8 +1,8 @@
 /* The console: a translucent panel in the corner, clear of the hand, with the question above one wide answer */
 #prompt { position: fixed; left: 8px; bottom: 14px; z-index: 30; width: var(--console-w); display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
-#prompt.waiting { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2), 0 12px 34px #000a; }
+#prompt.waiting { border-color: var(--accent-2); }
 #prompt .tools { display: flex; align-items: center; gap: 2px; }
-#prompt .step { margin: 0; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+#prompt .step { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 #prompt .tools .spacer { flex: 1; }
 #prompt .tools button { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; border-radius: 6px; }
 #prompt .tools button:hover { background: var(--surface-2); }
@@ -22,7 +22,7 @@
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok { flex: 1; border-radius: 4px 8px 8px 4px; }
 #prompt .cancel:first-child { border-radius: 8px 4px 4px 8px; }
-#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent); }
+#prompt .ok.focus:not(:disabled) { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); }
 #prompt kbd { font: 600 9px/1 system-ui, sans-serif; letter-spacing: .08em; color: var(--muted); }
 #prompt .ok kbd { color: #ffffffcc; }
 /* Spectating two AI players leaves nothing to answer, so only the volume and options buttons stay */

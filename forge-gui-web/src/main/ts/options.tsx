@@ -107,7 +107,7 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
   const file = useRef<HTMLInputElement>(null);
   return (
     <div class="css-editor">
-      <textarea class="css" spellcheck={false} rows={5} placeholder="#prompt { border-color: #7c3aed; }" value={value}
+      <textarea class="css" spellcheck={false} rows={5} placeholder="#prompt { border-color: #c9a55e; }" value={value}
         onInput={e => set(def.key, e.currentTarget.value)} />
       <div class="css-buttons">
         <button onClick={() => file.current?.click()}>Import</button>

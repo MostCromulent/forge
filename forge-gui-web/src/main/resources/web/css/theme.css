@@ -11,17 +11,20 @@
   --text: #e6edf3;
   --muted: #8b96a5;
   --faint: #6b7686;
-  --accent: #7c3aed;
-  --accent-2: #a78bfa;
-  /* Tinted forms of the accent, so violet can sit behind something instead of only filling or outlining it */
-  --accent-soft: #7c3aed2e;
-  --accent-glow: #a78bfa40;
+  /* Brass: antique gold for "your moment", as Arena and Forge desktop use it, dark enough to carry white labels.
+     It fills and outlines; it glows only as a tight halo, so edges stay crisp. */
+  --accent: #86621f;
+  --accent-2: #c9a55e;
+  /* Tinted forms of the accent, so it can sit behind something instead of only filling or outlining it */
+  --accent-soft: #c9a55e1f;
+  --accent-glow: #c9a55e30;
   /* A card back with no sleeve: a quiet stripe in the accent's family */
-  --back-a: #2a2140;
-  --back-b: #231b36;
-  --back-edge: #3b2f5c;
-  /* Selection and attack cues differ in luminance and shape, never only in red versus green */
-  --select: #ffcc33;
+  --back-a: #29241a;
+  --back-b: #211d15;
+  --back-edge: #4a3d24;
+  /* Selection and attack cues differ in luminance and shape, never only in red versus green. Selection is lime,
+     well clear of the gold accent, so a card a prompt asks for never reads as one merely highlighted. */
+  --select: #b4f05a;
   --attack: #ffffff;
   --danger: #f59e0b;
   --scrim: #070910b8;
@@ -40,7 +43,7 @@
   --stack-w: 150px;
   --radius: 6px;
   /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */
-  --glow: 16px;
+  --glow: 10px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
