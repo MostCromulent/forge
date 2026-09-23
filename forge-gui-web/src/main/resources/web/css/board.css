@@ -196,9 +196,15 @@
 #phase-strip .stops th { width: 46px; vertical-align: top; padding-bottom: 4px; }
 #phase-strip .stops th .name { display: block; margin-top: 3px; color: var(--muted); font-size: 9.5px; line-height: 1.15; }
 #phase-strip .stops th .current + .name { color: var(--text); font-weight: 650; }
-#phase-strip .stops td.who { text-align: left; padding-right: 10px; white-space: nowrap; }
-#phase-strip .stops .now { color: var(--accent-2); font-size: 10px; font-weight: 600; }
-#phase-strip .stops td.gap { width: 8px; }
+#phase-strip .stops td.who { text-align: left; padding: 0 10px 0 8px; white-space: nowrap; }
+/* Each phase heads its steps with a bracket, and a gap sets one phase apart from the next */
+#phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 9.5px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+#phase-strip .stops th.group span { display: block; white-space: nowrap; padding-bottom: 3px; border-bottom: 1px solid var(--line-bright); }
+#phase-strip .stops td.gap { width: 12px; }
+/* The row of the player whose turn it is is lit, as a band across it */
+#phase-strip .stops tr.active td { background: var(--accent-soft); }
+#phase-strip .stops tr.active td:first-child { border-radius: 6px 0 0 6px; box-shadow: inset 2px 0 0 var(--accent-2); color: var(--accent-2); font-weight: 650; }
+#phase-strip .stops tr.active td:last-child { border-radius: 0 6px 6px 0; }
 #phase-strip .stops .head { width: 22px; height: 20px; margin: 0 auto; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
 #phase-strip .stops .head.current { background: var(--accent); color: #fff; }
 #phase-strip .stops .cell { width: 100%; height: 22px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }

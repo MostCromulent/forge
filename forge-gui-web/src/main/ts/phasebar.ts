@@ -53,15 +53,21 @@ const STEPS: [PhaseType, string, string, string][] = [
 interface Phase {
   glyph: string;
   name: string;
+  /** The phase as the stop grid heads its group of steps. */
+  group: string;
   steps: number[];
 }
 const PHASES: Phase[] = [
-  { glyph: 'upkeep', name: 'Upkeep and draw', steps: [0, 1] },
-  { glyph: 'main1', name: 'Main 1', steps: [2] },
-  { glyph: 'boc', name: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
-  { glyph: 'main2', name: 'Main 2', steps: [9] },
-  { glyph: 'end', name: 'End of turn', steps: [10, 11] },
+  { glyph: 'upkeep', name: 'Upkeep and draw', group: 'Beginning', steps: [0, 1] },
+  { glyph: 'main1', name: 'Main 1', group: 'Main 1', steps: [2] },
+  { glyph: 'boc', name: 'Combat', group: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
+  { glyph: 'main2', name: 'Main 2', group: 'Main 2', steps: [9] },
+  { glyph: 'end', name: 'End of turn', group: 'Ending', steps: [10, 11] },
 ];
+/** Under its phase's heading a step needs less of a name: a lone step none, and combat's own steps no "combat". */
+const GRID_NAMES: Partial<Record<PhaseType, string>> = { COMBAT_BEGIN: 'Begin', COMBAT_END: 'End' };
+const gridName = (i: number): string =>
+  PHASES[phaseOf(i)].steps.length === 1 ? '' : GRID_NAMES[STEPS[i][0]] ?? STEPS[i][3];
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
 export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
@@ -215,15 +221,19 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: s
     { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
   ];
   const gap = (i: number) => (i > 0 && phaseOf(i) !== phaseOf(i - 1)) ? '<td class="gap"></td>' : '';
-  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th title="${s[2]}"><span class="head ${i === step ? 'current' : ''}">${glyph(s[1], 13)}</span><span class="name">${s[3]}</span></th>`).join('') + '</tr>';
-  const body = rows.map(r => '<tr>' + `<td class="who">${r.label}${r.now ? ' <span class="now">now</span>' : ''}</td>` + STEPS.map((s, i) => {
+  // Steps sit under their phase, which a bracketed heading spans
+  const groups = '<tr class="groups"><td></td>' + PHASES.map((p, g) =>
+    `${g ? '<td class="gap"></td>' : ''}<th class="group" colspan="${p.steps.length}"><span>${p.group}</span></th>`).join('') + '</tr>';
+  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th title="${s[2]}"><span class="head ${i === step ? 'current' : ''}">${glyph(s[1], 13)}</span><span class="name">${gridName(i)}</span></th>`).join('') + '</tr>';
+  // Whose turn it is lights that player's row, rather than a word beside it
+  const body = rows.map(r => `<tr class="${r.now ? 'active' : ''}">` + `<td class="who">${r.label}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
     const title = `${s[2]} · ${r.mine ? 'your turns' : `${opponentLabel}'s turns`}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + '</tr>').join('');
-  return `<div class="title">Phase stops</div><table>${head}${body}</table>`;
+  return `<div class="title">Phase stops</div><table>${groups}${head}${body}</table>`;
 }
 
 function wireGrid(panel: HTMLElement, actions: Actions): void {
