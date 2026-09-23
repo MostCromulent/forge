@@ -18,7 +18,7 @@ public class GuestSeatTest {
     private static final int WAIT_MILLIS = 20_000;
 
     private static final class Recorder implements BrowserChannel {
-        private final List<JsonObject> got = new CopyOnWriteArrayList<>();
+        final List<JsonObject> got = new CopyOnWriteArrayList<>();
 
         @Override
         public void send(final JsonObject message) {
@@ -102,13 +102,25 @@ public class GuestSeatTest {
         Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()),
                 "asking for the host's seat did not take it");
 
+        sessions.onMessage(hostBrowser, named("Host"));
         sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
         final JsonObject hosted = hostBrowser.awaitLobbyWithSeat();
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
         Assert.assertTrue(hosted.get("shareable").getAsBoolean(), "an invited game offered no link");
 
+        // Every browser shares the server's preferences, so a guest has no name until it chooses one, and two
+        // players of one name cannot share a game
         final Recorder guestBrowser = new Recorder();
         sessions.connected(guestBrowser, "guest");
+        final JsonObject greeted = guestBrowser.await("hello");
+        Assert.assertNotNull(greeted, "the guest was never greeted");
+        Assert.assertFalse(greeted.has("playerName"), "the guest was given a name it never chose");
+        sessions.onMessage(guestBrowser, named("host"));
+        Assert.assertNotNull(guestBrowser.awaitMatching("error", e -> e.get("message").getAsString().contains("already called")),
+                "the guest was let play under the host's name");
+        Assert.assertTrue(guestBrowser.got.stream().noneMatch(m -> "lobby".equals(m.get("t").getAsString())),
+                "the guest took a seat before it had a name");
+        sessions.onMessage(guestBrowser, named("Guest"));
         final JsonObject seated = guestBrowser.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat");
         Assert.assertFalse(seated.get("host").getAsBoolean(), "the guest was treated as the host");
@@ -181,6 +193,12 @@ public class GuestSeatTest {
             }
         }
         throw new AssertionError("no legal deck to choose");
+    }
+
+    private static JsonObject named(final String name) {
+        final JsonObject m = JsonCodec.message("setName");
+        m.addProperty("name", name);
+        return m;
     }
 
     private static JsonObject seatMessage(final String type, final int index) {

@@ -11,7 +11,7 @@ export interface Hello {
   host: boolean;
   canClaimHost: boolean;
   networked: boolean;
-  playerName: string;
+  playerName?: string;
   avatars: number[];
   sleeves: number[];
   avatarCount: number;
@@ -305,6 +305,11 @@ export interface Bare {
   t: 'decks' | 'claimHost' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
+export interface SetName {
+  t: 'setName';
+  name: string;
+}
+
 export interface Say {
   t: 'chat';
   text: string;
@@ -416,6 +421,7 @@ export interface NextGame {
 
 export type ClientMessage =
   | Bare
+  | SetName
   | Say
   | Ready
   | SeatCommand

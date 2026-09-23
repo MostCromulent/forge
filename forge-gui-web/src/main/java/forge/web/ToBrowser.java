@@ -41,7 +41,7 @@ final class ToBrowser {
 
     @Message("hello")
     record Hello(boolean inMatch, boolean inLobby, boolean spectating, boolean host, boolean canClaimHost,
-            boolean networked, String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
+            boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<Playmat> playmats, List<SavedSleeveArt> sleeveArt) {
     }
 

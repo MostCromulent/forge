@@ -243,6 +243,21 @@ final class Lobby {
         }
     }
 
+    /** The names the computer plays under at this table, which a person may not also take. */
+    List<String> computerNames() {
+        final List<String> out = new ArrayList<>();
+        final GameLobby lobby = view();
+        if (lobby != null) {
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                final LobbySlot slot = lobby.getSlot(i);
+                if (slot.getType() == LobbySlotType.AI && slot.getName() != null) {
+                    out.add(slot.getName());
+                }
+            }
+        }
+        return out;
+    }
+
     void setName(final int index, final String name) {
         if (name == null || name.isBlank()) {
             return;

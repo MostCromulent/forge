@@ -32,6 +32,14 @@
 .mode-status { color: var(--accent-2); font-size: 12px; margin-top: 4px; }
 .mode:disabled .mode-status { color: var(--muted); }
 .menu-foot { display: flex; align-items: center; gap: 16px; color: var(--muted); }
+.menu-foot .link { background: none; border: none; padding: 0; color: var(--muted); text-decoration: underline; }
+.menu-foot .link:hover { color: var(--accent-2); }
+
+/* The name a browser plays under, asked for before anything else */
+.name-form { display: grid; gap: 10px; width: min(100%, 360px); }
+.name-form label { color: var(--muted); }
+.name-form input { font-size: 17px; padding: 9px 12px; }
+.name-form .name-buttons { display: flex; gap: 8px; justify-content: flex-end; }
 
 /* --- lobby ------------------------------------------------------------ */
 

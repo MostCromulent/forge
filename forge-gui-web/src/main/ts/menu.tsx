@@ -4,10 +4,20 @@
 // Only the browser holding the host's seat sees this. Nobody holds it by arriving: the seat is offered to
 // whoever asks first, and every other browser goes straight to a seat in the host's game.
 
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Actions } from './actions';
 import type { Model } from './model';
 
+/** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
+const MAX_NAME_LENGTH = 24;
+
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
+  const [renaming, setRenaming] = useState(false);
+  // A new name arriving means the change went through
+  useEffect(() => setRenaming(false), [model.playerName]);
+  if (renaming) {
+    return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => setRenaming(false)} />;
+  }
   // A browser without the host's seat has no menu: it is offered the seat, or told to wait for one
   if (model.host === false) {
     return <Waiting model={model} actions={actions} />;
@@ -28,6 +38,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
       <p class={model.error ? 'menu-note bad' : 'menu-note'} id="menu-note">{model.error ?? ''}</p>
       <div class="menu-foot">
         <span id="menu-who">{model.playerName ? `Playing as ${model.playerName}` : ''}</span>
+        <button class="link" id="menu-rename" onClick={() => setRenaming(true)}>Change name</button>
         <button id="menu-quit" onClick={() => actions.quit()}>Quit</button>
       </div>
     </div>
@@ -42,6 +53,62 @@ function Mode({ id, name, blurb, status, onClick }: { id: string; name: string; 
       <span class="mode-status" data-status={id}>{status}</span>
     </button>
   );
+}
+
+/**
+ * The name to play under, asked for before anything else. Every browser shares the server's one set of
+ * preferences, so nobody can be named from them but the host; and two players of one name cannot share a game.
+ */
+export function NamePrompt({ model, actions, initial = '', cancel }: {
+  model: Model; actions: Actions; initial?: string; cancel?: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    input.current?.focus();
+  }, []);
+  // A name this browser used before is being offered already, so asking again would only flash past
+  if (model.nameSent) {
+    return <div class="menu-page"><h1 class="wordmark">Forge</h1></div>;
+  }
+  return (
+    <div class="menu-page">
+      <h1 class="wordmark">Forge</h1>
+      <form class="name-form" onSubmit={e => {
+        e.preventDefault();
+        if (value.trim()) actions.setName(value.trim());
+      }}>
+        <label for="player-name">What should the other players call you?</label>
+        <input id="player-name" ref={input} value={value} maxLength={MAX_NAME_LENGTH} autocomplete="nickname"
+          onInput={e => setValue(e.currentTarget.value)} />
+        <div class="name-buttons">
+          {cancel && <button type="button" onClick={cancel}>Cancel</button>}
+          <button type="submit" class="primary" disabled={!value.trim()}>{cancel ? 'Change' : 'Continue'}</button>
+        </div>
+      </form>
+      <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
+    </div>
+  );
+}
+
+const NAME_KEY = 'forge.playerName';
+
+/** The name this browser last played under, offered for it when it arrives on a server that does not know it. */
+export function rememberedName(): string | null {
+  try {
+    return localStorage.getItem(NAME_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function rememberName(name: string | null): void {
+  try {
+    if (name) localStorage.setItem(NAME_KEY, name);
+    else localStorage.removeItem(NAME_KEY);
+  } catch {
+    // Storage can be unavailable; the name is then asked for again next time
+  }
 }
 
 /** Remembered so the browser that runs this server does not have to say so on every launch. */

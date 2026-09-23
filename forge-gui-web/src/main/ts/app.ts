@@ -6,8 +6,8 @@ import { connect } from './net';
 import { createModel, applyState } from './model';
 import { createActions, type Actions } from './actions';
 import { initUi, resetMatchUi } from './ui';
-import { hostedBefore } from './menu';
-import { renderScreens } from './screens';
+import { hostedBefore, rememberName, rememberedName } from './menu';
+import { renderScreens, screenOf } from './screens';
 import { renderMatch } from './board';
 import { renderPrompt, flash } from './prompt';
 import { appendLog, initLog } from './log';
@@ -82,6 +82,12 @@ function apply(msg: ServerMessage): void {
       model.inLobby = !!msg.inLobby;
       model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
+      model.nameSent = false;
+      if (model.playerName) {
+        rememberName(model.playerName);
+      } else {
+        offerRememberedName();
+      }
       if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
       setPlaymats(msg.playmats);
@@ -103,8 +109,11 @@ function apply(msg: ServerMessage): void {
       model.decks = msg.decks;
       model.cardFormats = msg.cardFormats ?? [];
       break;
-    case 'lobby':
+    case 'lobby': {
       model.lobby = msg.table ?? null;
+      // Renaming your seat renames you, so the next server you reach knows you by it too
+      const mine = model.lobby?.seats[model.lobby.mySeat]?.name;
+      if (mine) rememberName(mine);
       // Finding the external address is a web request on the host, so it is asked for once per lobby
       if (!model.lobby?.shareable) {
         askedAddresses = false;
@@ -113,13 +122,21 @@ function apply(msg: ServerMessage): void {
         send({ t: 'addresses' });
       }
       break;
+    }
     case 'addresses': model.addresses = msg.list; break;
     case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text }]; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;
     case 'cardSearch': model.cardNames = msg.names ?? []; break;
     case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;
     case 'hostChoice': model.hostChoice = msg; break;
-    case 'error': model.error = msg.message; break;
+    case 'error':
+      // A name remembered from before can belong to someone else here, so the player is asked for another
+      if (model.nameSent) {
+        model.nameSent = false;
+        rememberName(null);
+      }
+      model.error = msg.message;
+      break;
     case 'state':
       applyState(model, msg);
       // The next game of a match reuses the card keys of the last one, so nothing keyed on them may survive
@@ -160,6 +177,15 @@ function apply(msg: ServerMessage): void {
   schedule();
 }
 
+// A browser the server does not know yet, after a restart or on a first visit, is known by the name it last used
+function offerRememberedName(): void {
+  const name = rememberedName();
+  if (name) {
+    model.nameSent = true;
+    send({ t: 'setName', name });
+  }
+}
+
 let noticeId = 0;
 const NOTICE_MS = 6000;
 
@@ -185,9 +211,10 @@ function render(): void {
   // What happened since the last frame is shown once, by this frame
   const events = model.events;
   model.events = [];
-  byId('menu').hidden = model.inMatch || model.inLobby;
-  byId('lobby').hidden = model.inMatch || !model.inLobby;
-  byId('match').hidden = !model.inMatch;
+  const page = screenOf(model);
+  byId('menu').hidden = page !== 'menu' && page !== 'name';
+  byId('lobby').hidden = page !== 'lobby';
+  byId('match').hidden = page !== 'match';
   askForWhatIsMissing();
   renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {

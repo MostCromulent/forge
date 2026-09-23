@@ -27,6 +27,11 @@ final class FromBrowser {
     record Bare(Plain t) {
     }
 
+    /** The name this browser plays under, chosen before anything else. */
+    @Command("setName")
+    record SetName(String name) {
+    }
+
     @Command("chat")
     record Say(String text) {
     }
@@ -120,7 +125,7 @@ final class FromBrowser {
     }
 
     /** Every command record, which is what the TypeScript is generated from. */
-    static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, Say.class, Ready.class,
+    static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, UseMana.class, SetSetting.class, NextGame.class);

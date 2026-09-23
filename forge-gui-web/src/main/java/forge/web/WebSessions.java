@@ -174,6 +174,22 @@ final class WebSessions implements WebServer.Endpoint {
         return h == null ? -1 : h.gamePort();
     }
 
+    /**
+     * Whether another player here already plays under this name, or the computer does at the host's table.
+     * Case is ignored, because two players told apart only by it would be told apart by nobody. A browser that
+     * has gone and holds no seat has given its name up.
+     */
+    boolean nameTaken(final String name, final WebSession asking) {
+        for (final WebSession session : byId.values()) {
+            if (session != asking && (session.attached() || session.hasGame() || session == host)
+                    && name.equalsIgnoreCase(session.playerName())) {
+                return true;
+            }
+        }
+        final WebSession h = host;
+        return h != null && h.computerNames().stream().anyMatch(name::equalsIgnoreCase);
+    }
+
     boolean isHost(final WebSession session) {
         return host == session;
     }

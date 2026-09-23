@@ -9,6 +9,7 @@ import forge.web.FromBrowser.Say;
 import forge.web.FromBrowser.SearchCards;
 import forge.web.FromBrowser.SeatCommand;
 import forge.web.FromBrowser.SetFormat;
+import forge.web.FromBrowser.SetName;
 import forge.web.FromBrowser.SetSeat;
 import forge.web.FromBrowser.SleeveArt;
 import forge.web.FromBrowser.Start;
@@ -17,6 +18,7 @@ import forge.web.ToBrowser.CardSearch;
 import forge.web.ToBrowser.ChatLine;
 import forge.web.ToBrowser.ErrorMessage;
 import forge.web.ToBrowser.Hello;
+import forge.web.ToBrowser.Notice;
 import forge.web.ToBrowser.Printings;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -27,6 +29,8 @@ import java.util.List;
 /** One browser: its start page, its seat and its match. The host's session also owns shutting the process down. */
 public final class WebSession {
     private static final int CARD_SEARCH_LIMIT = 60;
+    /** Long enough for any name a player types, short enough to fit on a seat plate. */
+    static final int MAX_NAME_LENGTH = 24;
     private final Lobby lobby;
     private final WebGuiBase ui;
     private final WebSessions sessions;
@@ -44,6 +48,8 @@ public final class WebSession {
     private volatile boolean inLobby;
     /** Whether the open game was made to be joined, so leaving a match lands back in the same kind of lobby. */
     private volatile boolean inviting;
+    /** The name this browser chose to play under; null until it has chosen one. */
+    private volatile String name;
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit) {
         this.ui = ui;
@@ -80,6 +86,20 @@ public final class WebSession {
         }
     }
 
+    /**
+     * The name this session plays under. Every browser reaches Forge through the one set of preferences, so the
+     * saved player name is the host's: a host that has not chosen one plays under it, and nobody else ever does.
+     */
+    String playerName() {
+        final String chosen = name;
+        return chosen != null || !isHost ? chosen : FModel.getPreferences().getPref(FPref.PLAYER_NAME);
+    }
+
+    /** The names the computer plays under at this session's table. */
+    List<String> computerNames() {
+        return lobby.computerNames();
+    }
+
     /** Whether a browser is attached to this session right now. */
     boolean attached() {
         return browser != null;
@@ -104,8 +124,8 @@ public final class WebSession {
         if (m != null) {
             m.attach(channel);
         }
-        // A guest that arrives while a game is already open takes a seat without being asked
-        if (!isHost && !inLobby) {
+        // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
+        if (!isHost && !inLobby && name != null) {
             joinHostGame();
         }
     }
@@ -124,6 +144,7 @@ public final class WebSession {
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
             case "decks" -> channel.send(lobby.decks());
+            case "setName" -> rename(channel, Wire.decode(msg, SetName.class).name());
             case "claimHost" -> {
                 if (!sessions.claimHost(this)) {
                     channel.send(error("Someone else is already hosting."));
@@ -165,7 +186,7 @@ public final class WebSession {
                 channel.send(lobby.state());
             }
             case "setSeat" -> {
-                applySeat(Wire.decode(msg, SetSeat.class));
+                applySeat(channel, Wire.decode(msg, SetSeat.class));
                 channel.send(lobby.state());
             }
             case "deckDetails" -> {
@@ -227,12 +248,11 @@ public final class WebSession {
             joinHostGame();
             return;
         }
-        final String name = FModel.getPreferences().getPref(FPref.PLAYER_NAME);
         inviting = invite;
         lobby.forget();
         lobby.setShareable(invite);
         try {
-            local.openHost(name, seatGui(), this::lobbyChanged, this::chatted);
+            local.openHost(playerName(), seatGui(), this::lobbyChanged, this::chatted);
             if (invite) {
                 // Somebody has to be able to sit down, so the second seat is left open rather than filled
                 lobby.openSeat(1);
@@ -255,16 +275,16 @@ public final class WebSession {
     void joinHostGame() {
         final int port = sessions.hostPort();
         final BrowserChannel channel = browser;
-        if (isHost || inLobby || port < 0 || channel == null) {
+        final String seatName = name;
+        if (isHost || inLobby || port < 0 || channel == null || seatName == null) {
             return;
         }
         ui.runBackgroundTask("Joining", () -> {
-            final String name = FModel.getPreferences().getPref(FPref.PLAYER_NAME);
             lobby.forget();
             try {
                 final WebGuiGame gui = seatGui();
                 gui.whenOpened(() -> guestMatchOpened(gui));
-                local.openGuest(name, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
+                local.openGuest(seatName, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
                 Logger.error(e, "Could not take a seat");
                 channel.send(hello());
@@ -326,8 +346,51 @@ public final class WebSession {
         }
     }
 
-    private void applySeat(final SetSeat seat) {
-        if (seat.name() != null) {
+    /**
+     * Takes the name this browser asked for, unless another player already has it: two players of one name
+     * cannot share a netplay game, which tells its clients apart by name. A guest waiting for a name takes its
+     * seat as soon as it has one.
+     */
+    private void rename(final BrowserChannel channel, final String wanted) {
+        final String problem = nameProblem(wanted);
+        if (problem != null) {
+            channel.send(error(problem));
+            return;
+        }
+        name = wanted.trim();
+        channel.send(hello());
+        if (!isHost && !inLobby) {
+            joinHostGame();
+        }
+    }
+
+    /** Why a name cannot be this player's, or null if it can. */
+    private String nameProblem(final String wanted) {
+        final String trimmed = wanted == null ? "" : wanted.trim();
+        if (trimmed.isEmpty()) {
+            return "Choose a name to play under.";
+        }
+        if (trimmed.length() > MAX_NAME_LENGTH) {
+            return "That name is too long; keep it to " + MAX_NAME_LENGTH + " characters.";
+        }
+        if (sessions.nameTaken(trimmed, this)) {
+            return "Someone here is already called " + trimmed + ".";
+        }
+        return null;
+    }
+
+    private void applySeat(final BrowserChannel channel, final SetSeat seat) {
+        // Your own name is the one you play under, so it follows the same rules as the one you chose first
+        if (seat.name() != null && seat.index() == local.webSeat()) {
+            final String problem = nameProblem(seat.name());
+            if (problem != null) {
+                // Match setup has no line for errors, and the seat keeps its old name, so this only needs saying
+                channel.send(new Notice("Name not changed", problem, false));
+            } else {
+                name = seat.name().trim();
+                lobby.setName(seat.index(), name);
+            }
+        } else if (seat.name() != null) {
             lobby.setName(seat.index(), seat.name());
         }
         if (seat.deck() != null) {
@@ -347,7 +410,7 @@ public final class WebSession {
                 !isHost && sessions.hostSeatFree(this),
                 // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
                 inviting || !isHost,
-                FModel.getPreferences().getPref(FPref.PLAYER_NAME),
+                playerName(),
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), Playmats.list(), DeckCatalog.savedSleeveArt());

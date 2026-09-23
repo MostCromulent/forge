@@ -57,6 +57,8 @@ export interface Model {
   savedSleeveArt: SavedSleeveArt[];
   /** A question the host is waiting on outside a match. */
   hostChoice: HostChoice | null;
+  /** A name this browser remembered has been offered to the server, whose answer is not in yet. */
+  nameSent: boolean;
   /** Messages from the server, each until it is dismissed or times out. */
   notices: { id: number; notice: Notice }[];
 }
@@ -69,7 +71,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], networked: false,
-    cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, notices: [],
+    cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
   };
 }
 
