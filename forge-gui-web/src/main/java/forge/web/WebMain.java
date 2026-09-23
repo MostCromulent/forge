@@ -27,7 +27,7 @@ public final class WebMain {
         final CountDownLatch quit = new CountDownLatch(1);
         final WebSessions sessions = new WebSessions(ui, IDLE_MILLIS, quit::countDown);
         StatusWindow window = null;
-        try (WebServer server = new WebServer(sessions, newToken())) {
+        try (WebServer server = new WebServer(sessions, newToken(), newToken())) {
             sessions.setServer(server);
             System.out.println("Forge web UI: " + server.url());
             // The browser is the whole interface, so without this there is nothing to show the game is running

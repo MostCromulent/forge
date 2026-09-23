@@ -35,6 +35,11 @@ final class WebSessions implements WebServer.Endpoint {
         t.setDaemon(true);
         return t;
     });
+    /**
+     * The most browsers kept track of at once. Anyone with an invite link can open one after another, so past this
+     * the ones that have gone and hold nothing are forgotten, and if none has, the newcomer is turned away.
+     */
+    static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
     private static final long HOST_GRACE_MILLIS = 20_000;
     /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
@@ -54,8 +59,13 @@ final class WebSessions implements WebServer.Endpoint {
     }
 
     @Override
-    public void connected(final BrowserChannel channel, final String clientId) {
-        final WebSession session = sessionFor(channel, clientId);
+    public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) {
+        final WebSession session = sessionFor(channel, clientId, mayHost);
+        if (session == null) {
+            Logger.warn("Turned a browser away: {} are already here.", MOST_SESSIONS);
+            channel.close();
+            return;
+        }
         byChannel.put(channel, session);
         holdOpen();
         session.connected(channel);
@@ -73,7 +83,7 @@ final class WebSessions implements WebServer.Endpoint {
 
     /** Whether this session could take the host's seat right now, which is what the browser offers. */
     synchronized boolean hostSeatFree(final WebSession asking) {
-        return host == null && asking != null;
+        return host == null && asking != null && asking.mayHost();
     }
 
     /**
@@ -81,6 +91,9 @@ final class WebSessions implements WebServer.Endpoint {
      * so two browsers pressing at the same moment cannot both end up setting the table.
      */
     synchronized boolean claimHost(final WebSession session) {
+        if (!session.mayHost()) {
+            return false;
+        }
         if (host != null) {
             return host == session;
         }
@@ -120,14 +133,25 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
-    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId) {
-        final String key = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
+    /**
+     * The session a browser returns to, or a new one; null when there is no room for one. The link it came in on is
+     * part of the key, so a browser on a guest's link can never pick up a session that may host.
+     */
+    private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean mayHost) {
+        final String id = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
+        final String key = (mayHost ? "host:" : "guest:") + id;
         final WebSession known = byId.get(key);
         if (known != null) {
             return known;
         }
+        if (byId.size() >= MOST_SESSIONS) {
+            byId.values().removeIf(s -> !s.attached() && !s.hasGame() && s != host);
+            if (byId.size() >= MOST_SESSIONS) {
+                return null;
+            }
+        }
         // Nobody hosts by arriving. A browser asks for the seat, and the first to ask while it is free gets it.
-        final WebSession session = new WebSession(ui, this, onQuit);
+        final WebSession session = new WebSession(ui, this, onQuit, mayHost);
         byId.put(key, session);
         return session;
     }

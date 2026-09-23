@@ -6,6 +6,10 @@ import com.google.gson.JsonObject;
 public interface BrowserChannel {
     void send(JsonObject message);
 
+    /** Ends the connection, as when the server has no room for another browser. */
+    default void close() {
+    }
+
     /** Sends one of the messages in {@link ToBrowser}. */
     default void send(final Record message) {
         send(Wire.encode(message));

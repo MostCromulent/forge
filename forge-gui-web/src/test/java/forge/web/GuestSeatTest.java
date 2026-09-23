@@ -99,10 +99,11 @@ public class GuestSeatTest {
      *  test's guest wants: a waiting guest takes a seat by itself whenever the host opens a game. */
     private final List<Recorder> browsers = new CopyOnWriteArrayList<>();
 
+    /** A browser on the host's link as "host", and on a guest's link otherwise. */
     private Recorder connect(final String id) {
         final Recorder browser = new Recorder();
         browsers.add(browser);
-        sessions.connected(browser, id);
+        sessions.connected(browser, id, "host".equals(id));
         return browser;
     }
 
@@ -175,7 +176,7 @@ public class GuestSeatTest {
         Assert.assertNotNull(again, "a guest that reloaded in match setup was never shown the table again");
         Assert.assertEquals(again.get("mySeat").getAsInt(), guestSeat, "a guest that reloaded lost its seat");
         sessions.disconnected(reloaded);
-        sessions.connected(guestBrowser, "guest");
+        sessions.connected(guestBrowser, "guest", false);
 
         // The guest's deck is theirs, chosen from their own list, and the host has to see it or cannot start
         sessions.onMessage(guestBrowser, JsonCodec.message("decks"));

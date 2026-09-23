@@ -40,38 +40,50 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
+import forge.sound.MusicPlaylist;
+import forge.sound.SoundSystem;
 import org.tinylog.Logger;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
-import forge.sound.MusicPlaylist;
-import forge.sound.SoundSystem;
-
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 /**
  * Serves the page, its files and card images, and the browser's WebSocket. It listens on every interface so a
- * player elsewhere can open the link, and the per-launch token in that link is what keeps everyone else out.
+ * player elsewhere can open a link, and the per-launch tokens in the links are what keep everyone else out.
+ *
+ * <p>There are two: the host's, in the link Forge opens itself, and the guests', in the links the host sends. Either
+ * lets a browser in; only the host's lets it take the host's seat, which can set the table and stop the server.</p>
  */
 public final class WebServer implements AutoCloseable {
     public interface Endpoint {
-        /** A browser arrived. The id tells one browser from another across a reload. */
-        void connected(BrowserChannel channel, String clientId);
+        /** A browser arrived. The id tells one browser from another across a reload; mayHost says it came in on the
+         *  host's link. */
+        void connected(BrowserChannel channel, String clientId, boolean mayHost);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
     }
 
     private static final String COOKIE = "forge_token";
+    /** Which link a request came in on, kept on a socket's channel from the request that opened it. */
+    private enum Access { NONE, GUEST, HOST }
+    private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
+    /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
+    private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
      * Forge's own netplay port. Anyone who has hosted a game from the desktop client has already opened it,
      * and this server never binds it for netplay, because every seat here reaches the game over loopback.
@@ -80,18 +92,21 @@ public final class WebServer implements AutoCloseable {
     private static final int DEFAULT_PORT = 36743;
     private static final int SLEEVE_ART_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
-    private final String token;
+    private final String hostToken;
+    private final String guestToken;
     // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
     private final Set<String> unavailableImages = ConcurrentHashMap.newKeySet();
     private final Channel channel;
 
-    public WebServer(final Endpoint endpoint, final String token) throws InterruptedException {
-        this(endpoint, token, Integer.getInteger("forge.web.port", DEFAULT_PORT));
+    public WebServer(final Endpoint endpoint, final String hostToken, final String guestToken) throws InterruptedException {
+        this(endpoint, hostToken, guestToken, Integer.getInteger("forge.web.port", DEFAULT_PORT));
     }
 
     /** A port of 0 takes whichever one is free, which is what a test wants. */
-    WebServer(final Endpoint endpoint, final String token, final int port) throws InterruptedException {
-        this.token = token;
+    WebServer(final Endpoint endpoint, final String hostToken, final String guestToken, final int port)
+            throws InterruptedException {
+        this.hostToken = hostToken;
+        this.guestToken = guestToken;
         final ServerBootstrap b = new ServerBootstrap()
                 .group(group)
                 .channel(NioServerSocketChannel.class)
@@ -115,14 +130,14 @@ public final class WebServer implements AutoCloseable {
         return ((InetSocketAddress) channel.localAddress()).getPort();
     }
 
-    /** The link for this machine's own browser. */
+    /** The host's link, for this machine's own browser. */
     public String url() {
-        return "http://127.0.0.1:" + port() + "/?token=" + token;
+        return "http://127.0.0.1:" + port() + "/?token=" + hostToken;
     }
 
-    /** The link to send someone, at whichever address they can reach this machine by. */
+    /** A guest's link, at whichever address they can reach this machine by. */
     public String inviteUrl(final String address) {
-        return "http://" + address + ":" + port() + "/?token=" + token;
+        return "http://" + address + ":" + port() + "/?token=" + guestToken;
     }
 
     @Override
@@ -131,7 +146,26 @@ public final class WebServer implements AutoCloseable {
         group.shutdownGracefully();
     }
 
+    /**
+     * Whether an image key stays inside Forge's image folders. Forge joins a key onto a folder as it is, and tries
+     * some with no extension at all, so a ".." in one reached any file on the machine; and Forge deletes a folder it
+     * finds where an image should be. A key like that is refused before Forge looks.
+     */
+    static boolean safeImageKey(final String key) {
+        return !PARENT.matcher(key).find();
+    }
+
+    private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
+
+    private static boolean isImage(final File file) {
+        final String name = file.getName().toLowerCase(Locale.ROOT);
+        return name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png");
+    }
+
     private static File cardImage(final String imageKey) {
+        if (!safeImageKey(imageKey)) {
+            return null;
+        }
         String key = imageKey;
         final boolean backFace = key.endsWith(ImageKeys.BACKFACE_POSTFIX);
         if (backFace) {
@@ -145,7 +179,7 @@ public final class WebServer implements AutoCloseable {
             key = backFace ? card.getCardAltImageKey() : card.getCardImageKey();
         }
         final File file = ImageKeys.getImageFile(key);
-        return file != null && file.isFile() ? file : null;
+        return file != null && file.isFile() && isImage(file) ? file : null;
     }
 
     /** As {@link #serveImage}: never wait on the download here, or the thread that serves every other
@@ -185,7 +219,8 @@ public final class WebServer implements AutoCloseable {
             respondImage(ctx, file);
             return;
         }
-        if (unavailableImages.contains(key) || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
+        if (!safeImageKey(key) || unavailableImages.contains(key)
+                || !FModel.getPreferences().getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER)) {
             respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
             return;
         }
@@ -206,6 +241,9 @@ public final class WebServer implements AutoCloseable {
         }));
         ctx.executor().schedule(() -> {
             if (answered.compareAndSet(false, true)) {
+                if (unavailableImages.size() >= MOST_UNAVAILABLE_IMAGES) {
+                    unavailableImages.clear();
+                }
                 unavailableImages.add(key);
                 respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
             }
@@ -227,36 +265,64 @@ public final class WebServer implements AutoCloseable {
         return slashes >= 0 && host.equals(origin.substring(slashes + 2));
     }
 
-    private boolean queryToken(final QueryStringDecoder q) {
-        final List<String> values = q.parameters().get("token");
-        return values != null && token.equals(values.get(0));
+    /** The link a token belongs to. Compared in constant time, so the time a guess takes says nothing of the token. */
+    private Access accessOf(final String presented) {
+        if (presented == null) {
+            return Access.NONE;
+        }
+        final byte[] bytes = presented.getBytes(StandardCharsets.UTF_8);
+        if (MessageDigest.isEqual(bytes, hostToken.getBytes(StandardCharsets.UTF_8))) {
+            return Access.HOST;
+        }
+        if (MessageDigest.isEqual(bytes, guestToken.getBytes(StandardCharsets.UTF_8))) {
+            return Access.GUEST;
+        }
+        return Access.NONE;
     }
 
-    private boolean hasToken(final FullHttpRequest req, final QueryStringDecoder q) {
-        if (queryToken(q)) {
-            return true;
+    /** The token in the link, which a page load then keeps as a cookie. */
+    private static String queryToken(final QueryStringDecoder q) {
+        final List<String> values = q.parameters().get("token");
+        return values == null ? null : values.get(0);
+    }
+
+    /** Which link a request came in on: the token in it, or the one its page load kept. */
+    private Access access(final FullHttpRequest req, final QueryStringDecoder q) {
+        final Access fromQuery = accessOf(queryToken(q));
+        if (fromQuery != Access.NONE) {
+            return fromQuery;
         }
         final String header = req.headers().get(HttpHeaderNames.COOKIE);
         if (header == null) {
-            return false;
+            return Access.NONE;
         }
         for (final Cookie c : ServerCookieDecoder.STRICT.decode(header)) {
-            if (COOKIE.equals(c.name()) && token.equals(c.value())) {
-                return true;
+            if (COOKIE.equals(c.name())) {
+                final Access fromCookie = accessOf(c.value());
+                if (fromCookie != Access.NONE) {
+                    return fromCookie;
+                }
             }
         }
-        return false;
+        return Access.NONE;
     }
 
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type, final boolean setCookie) {
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+            final boolean setCookie) {
+        respond(ctx, status, body, type, setCookie ? hostToken : null);
+    }
+
+    /** Answers a request; a cookie, when given, is the token the page was loaded with. */
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+            final String cookieToken) {
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
         resp.headers()
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
                 .setInt(HttpHeaderNames.CONTENT_LENGTH, body.length)
                 .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
                 .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        if (setCookie) {
-            final DefaultCookie cookie = new DefaultCookie(COOKIE, token);
+        if (cookieToken != null) {
+            final DefaultCookie cookie = new DefaultCookie(COOKIE, cookieToken);
             cookie.setPath("/");
             cookie.setHttpOnly(true);
             cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
@@ -319,12 +385,14 @@ public final class WebServer implements AutoCloseable {
             if (msg instanceof FullHttpRequest req) {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
+                final Access access = access(req, q);
                 // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
-                if (!hasToken(req, q) || (socket && !sameOrigin(req))) {
+                if (access == Access.NONE || (socket && !sameOrigin(req))) {
                     req.release();
-                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain", false);
+                    respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain", null);
                     return;
                 }
+                ctx.channel().attr(ACCESS).set(access);
             }
             ctx.fireChannelRead(msg);
         }
@@ -396,7 +464,9 @@ public final class WebServer implements AutoCloseable {
                 respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain", false);
                 return;
             }
-            respond(ctx, HttpResponseStatus.OK, body, type, queryToken(q));
+            // The page keeps the link's token as a cookie, so its later requests come in on the same link
+            final String token = queryToken(q);
+            respond(ctx, HttpResponseStatus.OK, body, type, accessOf(token) == Access.NONE ? null : token);
         }
     }
 
@@ -412,9 +482,19 @@ public final class WebServer implements AutoCloseable {
         public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
             if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete done) {
                 final Channel ch = ctx.channel();
-                browser = message -> ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
+                browser = new BrowserChannel() {
+                    @Override
+                    public void send(final JsonObject message) {
+                        ch.writeAndFlush(new TextWebSocketFrame(JsonCodec.GSON.toJson(message)));
+                    }
+
+                    @Override
+                    public void close() {
+                        ch.close();
+                    }
+                };
                 final List<String> id = new QueryStringDecoder(done.requestUri()).parameters().get("client");
-                endpoint.connected(browser, id == null ? "" : id.get(0));
+                endpoint.connected(browser, id == null ? "" : id.get(0), ch.attr(ACCESS).get() == Access.HOST);
             } else {
                 ctx.fireUserEventTriggered(evt);
             }

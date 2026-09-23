@@ -55,6 +55,8 @@ public final class WebSession {
     record Playing(WebGuiGame gui, boolean invited, boolean spectating) implements Stage { }
 
     private static final int CARD_SEARCH_LIMIT = 60;
+    /** Chat is shown to every player, so one message is kept to a length a chat box can hold. */
+    private static final int MOST_CHAT_CHARS = 500;
     /** Long enough for any name a player types, short enough to fit on a seat plate. */
     static final int MAX_NAME_LENGTH = 24;
     private final Lobby lobby;
@@ -62,6 +64,8 @@ public final class WebSession {
     private final WebSessions sessions;
     /** True for the browser that claimed the host's seat, which is the only one that may set the table. */
     private volatile boolean isHost;
+    /** Whether this browser came in on the host's link, which is what lets it claim the host's seat. */
+    private final boolean mayHost;
     private final LocalGame local = new LocalGame();
     private final Runnable onQuit;
     private volatile BrowserChannel browser;
@@ -71,7 +75,8 @@ public final class WebSession {
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
 
-    WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit) {
+    WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
+        this.mayHost = mayHost;
         this.ui = ui;
         this.sessions = sessions;
         this.lobby = new Lobby(local);
@@ -92,6 +97,10 @@ public final class WebSession {
 
     boolean isHost() {
         return isHost;
+    }
+
+    boolean mayHost() {
+        return mayHost;
     }
 
     /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
@@ -226,7 +235,12 @@ public final class WebSession {
                     onSetup(channel, msg);
                 }
             }
-            case "chat" -> local.sendChat(Wire.decode(msg, Say.class).text());
+            case "chat" -> {
+                final String text = Wire.decode(msg, Say.class).text();
+                if (text != null && !text.isBlank()) {
+                    local.sendChat(text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
+                }
+            }
             case "deckDetails" -> {
                 final ToBrowser.DeckDetailsMessage details = lobby.deckDetails(Wire.decode(msg, AskDeckDetails.class).key());
                 if (details != null) {
@@ -246,8 +260,13 @@ public final class WebSession {
                     ui.runBackgroundTask("Net decks", () -> channel.send(lobby.loadNetDecks()));
                 }
             }
-            // Finding the external address is a web request, so it cannot run on the socket thread
-            case "addresses" -> ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
+            // The links are the host's to hand out. Finding the external address is a web request, so it cannot run on
+            // the socket thread.
+            case "addresses" -> {
+                if (isHost) {
+                    ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
+                }
+            }
             case "cardSearch" -> channel.send(new CardSearch(
                     DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
             case "printings" -> {
