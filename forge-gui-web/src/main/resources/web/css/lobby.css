@@ -147,6 +147,9 @@
 .facet { border-radius: 999px; padding: 4px 12px; color: var(--muted); font-size: 13px; }
 .facet[aria-pressed="true"] { border-color: var(--accent); color: var(--text); }
 .facet .dk-count { margin-left: 6px; color: var(--muted); font-size: 11px; }
+/* The net categories sit under the facet that opened them */
+.facets.net { margin-left: 14px; padding-left: 12px; border-left: 2px solid var(--line); }
+.facets.net .facet { padding: 3px 10px; font-size: 12px; }
 .dk-hits { overflow: auto; display: grid; align-content: start; gap: 2px; }
 
 .dk-hit { display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }

@@ -31,6 +31,12 @@ describe('narrowing the deck list', () => {
     expect(names(matchingDecks(decks, { ...all, cardFormat: 'Standard' }))).toEqual(['Elves', 'Random deck', 'Zombies']);
   });
 
+  it('treats every net category as one source, and each category on its own', () => {
+    const net = [deck('Burn', { source: 'net Modern' }), deck('Affinity', { source: 'net Legacy' }), deck('Zombies')];
+    expect(names(matchingDecks(net, { ...all, source: 'net' }))).toEqual(['Affinity', 'Burn']);
+    expect(names(matchingDecks(net, { ...all, source: 'net Modern' }))).toEqual(['Burn']);
+  });
+
   it('sorts by size largest first, and puts legal decks first, each falling back to the name', () => {
     expect(names(matchingDecks(decks, { ...all, sort: 'size' }))).toEqual(['Elves', 'Boros Blitz', 'Zombies', 'Random deck']);
     expect(names(matchingDecks(decks, { ...all, sort: 'legal' }))).toEqual(['Elves', 'Random deck', 'Zombies', 'Boros Blitz']);

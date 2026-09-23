@@ -15,6 +15,10 @@ const PEEK_W = 240;
 const PEEK_H = 336;
 // Colour identity, in the order Magic writes it, plus colourless
 const COLOURS: [string, string][] = [['W', 'White'], ['U', 'Blue'], ['B', 'Black'], ['R', 'Red'], ['G', 'Green'], ['C', 'Colourless']];
+/** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
+export const NET = 'net';
+const isNet = (source: string) => source.startsWith(`${NET} `);
+const netName = (source: string) => source.slice(NET.length + 1);
 export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal';
 const SORTS: [SortKey, string][] = [['name', 'Name'], ['colors', 'Colour'], ['formats', 'Format'], ['size', 'Size'], ['legal', 'Legal first']];
 
@@ -33,7 +37,7 @@ export interface DeckFilter {
 
 /** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
-  const list = decks.filter(d => (f.source === 'all' || d.source === f.source)
+  const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
     && (!f.query || d.name.toLowerCase().includes(f.query))
     && (!f.colours.size || [...f.colours].some(c => (d.colors ?? '').includes(c)))
     && (d.generated || !f.legalOnly || !d.problem)
@@ -83,9 +87,13 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   };
   const list = matchingDecks(decks, filter);
   const sources = new Map<string, number>([['all', decks.length]]);
+  const categories = new Map<string, number>();
   for (const d of decks) {
-    sources.set(d.source, (sources.get(d.source) ?? 0) + 1);
+    const group = isNet(d.source) ? NET : d.source;
+    sources.set(group, (sources.get(group) ?? 0) + 1);
+    if (isNet(d.source)) categories.set(d.source, (categories.get(d.source) ?? 0) + 1);
   }
+  const inNet = filter.source === NET || isNet(filter.source);
   const details = model.deckDetails?.key === chosen ? model.deckDetails : null;
   return (
     <div class="finder-back">
@@ -113,11 +121,25 @@ export function DeckFinder({ model, actions, index, seat, close }: {
             </div>
             <div class="facets">
               {[...sources].map(([id, count]) => (
-                <button key={id} class="facet" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
-                  {id === 'all' ? 'All sources' : id}<span class="dk-count">{count}</span>
+                <button key={id} class="facet" aria-pressed={id === NET ? inNet : id === filter.source}
+                  onClick={() => change({ source: id })}>
+                  {id === 'all' ? 'All sources' : id === NET ? 'Net decks' : id}<span class="dk-count">{count}</span>
                 </button>
               ))}
             </div>
+            {/* The categories only appear once net decks are the ones being looked through */}
+            {inNet && categories.size > 1 && (
+              <div class="facets net">
+                <button class="facet" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
+                  Every category
+                </button>
+                {[...categories].map(([id, count]) => (
+                  <button key={id} class="facet" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
+                    {netName(id)}<span class="dk-count">{count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
             {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
             <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>Get net decks…</button>
             <div class="colours">
