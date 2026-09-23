@@ -6,10 +6,12 @@
   "scripts": {
     "build": "tsc && esbuild src/main/ts/app.ts --bundle --format=esm --target=es2022 --sourcemap --log-level=warning --outfile=src/main/resources/web/js/app.js",
     "watch": "esbuild src/main/ts/app.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=src/main/resources/web/js/app.js --watch",
-    "typecheck": "tsc"
+    "typecheck": "tsc",
+    "test": "vitest run"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
-    "typescript": "6.0.3"
+    "typescript": "6.0.3",
+    "vitest": "5.0.1"
   }
 }

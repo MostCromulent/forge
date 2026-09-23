@@ -80,7 +80,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
 }
 
 /** Each card's first origin and last destination this frame; a card that went out and back in one step moved once. */
-function journeys(events: readonly GameEvent[]): Map<string, CardMoved> {
+export function journeys(events: readonly GameEvent[]): Map<string, CardMoved> {
   const out = new Map<string, CardMoved>();
   for (const e of events) {
     if (e.kind !== 'cardMoved') {

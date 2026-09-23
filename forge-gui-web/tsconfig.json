@@ -10,7 +10,8 @@
     "verbatimModuleSyntax": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
-  "include": ["src/main/ts"]
+  "include": ["src/main/ts", "src/test/ts"]
 }

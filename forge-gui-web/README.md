@@ -40,6 +40,19 @@ renames or retypes a game property.
 A record component may be null only when marked `@Nullable`; it is then left out of the JSON and optional in the
 TypeScript. The tests run with assertions on, so a null anywhere else fails them.
 
+## Tests
+
+`mvn test` runs both halves: the Java tests, and the browser client's (Vitest, in `src/test/ts`; `npm test` runs
+just those).
+
+`src/test/resources/traces/whole-game.json` is a recorded game: every state message the browser received, and the
+table they build. `SharedTraceTest` holds `BrowserModel` to it and `model.test.ts` holds `model.ts` to it, so the
+two copies of the model's rules cannot drift apart. To record a fresh one after the rules or the messages change:
+
+    mvn -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
+
+Tests that play whole games are skipped unless `-Drun.stress.tests=true` is given.
+
 ## Layout
 
 - `src/main/java/forge/web/ToBrowser.java` and `FromBrowser.java` define the protocol; `Wire.java` writes and
