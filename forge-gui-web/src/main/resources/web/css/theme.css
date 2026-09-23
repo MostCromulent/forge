@@ -35,6 +35,8 @@
   --tile-w: 58px;
   --stack-w: 150px;
   --radius: 6px;
+  /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */
+  --glow: 16px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }

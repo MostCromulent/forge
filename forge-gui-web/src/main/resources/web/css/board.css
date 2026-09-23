@@ -46,7 +46,7 @@
 #match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }
 #hand { grid-area: hand; }
 .seat { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; min-height: 0; }
-.battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; }
+.battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player */
 #me .battlefield { flex-direction: column-reverse; }
 /* A tapped card is 11px wider each side than its box. That room is held on every slot rather than added
@@ -188,7 +188,7 @@
 #zones { position: fixed; left: 50%; top: 15%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; max-width: 80vw; }
 .zone-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 .zone-panel header { display: flex; justify-content: space-between; margin-bottom: 6px; }
-.zone-panel .cards { display: flex; flex-wrap: wrap; gap: 6px; max-height: 50vh; overflow: auto; }
+.zone-panel .cards { display: flex; flex-wrap: wrap; gap: 6px; max-height: 50vh; overflow: auto; padding: var(--glow); }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
 #zoom { position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
