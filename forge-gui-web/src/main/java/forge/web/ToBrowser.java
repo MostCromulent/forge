@@ -320,6 +320,14 @@ final class ToBrowser {
             @Name("default") List<Integer> defaultAnswer) {
     }
 
+    /**
+     * Priority is about to pass by itself, which the browser shows coming on its pass button for as long as the player
+     * likes, never less than delay; the answer is whether to go ahead. Stopping it asks for priority as usual.
+     */
+    @Request("autoPass")
+    record AutoPassRequest(int delay, @Name("default") boolean defaultAnswer) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
@@ -328,7 +336,7 @@ final class ToBrowser {
             Flash.class, GameOver.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
-            OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class);
+            OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);
 
     /** The answer a request takes when nobody gives one, read back off its JSON. */
     static JsonElement defaultOf(final JsonObject request) {

@@ -258,6 +258,14 @@ export interface SideboardRequest {
   default: number[];
 }
 
+export interface AutoPassRequest {
+  t: 'request';
+  id: number;
+  kind: 'autoPass';
+  delay: number;
+  default: boolean;
+}
+
 export type Request =
   | ChoicesRequest
   | OrderRequest
@@ -265,7 +273,8 @@ export type Request =
   | OptionRequest
   | TextRequest
   | DistributeRequest
-  | SideboardRequest;
+  | SideboardRequest
+  | AutoPassRequest;
 
 export type ServerMessage =
   | Hello
@@ -297,7 +306,8 @@ export type ServerMessage =
   | OptionRequest
   | TextRequest
   | DistributeRequest
-  | SideboardRequest;
+  | SideboardRequest
+  | AutoPassRequest;
 
 // ---- Browser to server ----
 

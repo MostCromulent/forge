@@ -5,6 +5,7 @@ import { stepName } from './phasebar';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import { isSilent } from './volume';
+import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
 import type { PromptButton, Ref } from './protocol';
 
@@ -45,8 +46,6 @@ export function renderPrompt(model: Model, actions: Actions): void {
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
       </div>`;
-    q(root, '.ok').onclick = () => actions.ok();
-    q(root, '.cancel').onclick = () => actions.cancel();
     q(root, '.end-turn').onclick = () => actions.endTurn();
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
@@ -74,6 +73,25 @@ export function renderPrompt(model: Model, actions: Actions): void {
   const autoPassButton = q(root, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
   autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play`;
+  const ok = q<HTMLButtonElement>(root, '.ok');
+  const cancel = q<HTMLButtonElement>(root, '.cancel');
+  const passing = countdown();
+  root.classList.toggle('auto-passing', !!passing);
+  if (passing) {
+    q(root, '.step').textContent = 'Passing';
+    q(root, '.message').textContent = 'Nothing to play here, so priority passes. Stop it to act instead.';
+    renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
+    setButton(ok, { label: 'Pass', enabled: true });
+    setButton(cancel, { label: 'Stop', enabled: true });
+    ok.onclick = () => finishCountdown(true);
+    cancel.onclick = () => finishCountdown(false);
+    fill(ok, passing.id, passing.ms);
+    root.classList.add('waiting');
+    return;
+  }
+  fill(ok, null, 0);
+  ok.onclick = () => actions.ok();
+  cancel.onclick = () => actions.cancel();
   const p = model.prompt;
   if (!p) return;
   // Several prompts open with a short line naming the phase; that line becomes the title rather than repeating
@@ -88,6 +106,21 @@ export function renderPrompt(model: Model, actions: Actions): void {
   setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
   root.classList.toggle('waiting', !!p.ok?.enabled || !!p.cancel?.enabled);
+}
+
+// The pass button fills over the countdown, from empty, once for each pass on its way
+function fill(button: HTMLButtonElement, id: number | null, ms: number): void {
+  const key = id === null ? '' : String(id);
+  if (button.dataset.countdown === key) {
+    return;
+  }
+  button.dataset.countdown = key;
+  button.classList.remove('filling');
+  if (id !== null) {
+    button.style.setProperty('--fill-ms', `${ms}ms`);
+    void button.offsetWidth;
+    button.classList.add('filling');
+  }
 }
 
 // The card the prompt is about (the spell being targeted, the trigger being paid for), as desktop shows it

@@ -81,9 +81,9 @@ function Control({ def }: { def: SettingDef }) {
     case 'slider':
       return (
         <div class="slider">
-          <input type="range" min={def.min} max={def.max} step={5} value={Number(value)}
+          <input type="range" min={def.min} max={def.max} step={def.step ?? 5} value={Number(value)}
             onInput={e => set(def.key, Number(e.currentTarget.value))} />
-          <span>{`${value}%`}</span>
+          <span>{def.unit === 'seconds' ? `${(Number(value) / 1000).toFixed(2).replace(/0$/, '')}s` : `${value}%`}</span>
         </div>
       );
   }

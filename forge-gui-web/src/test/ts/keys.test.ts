@@ -55,6 +55,12 @@ describe('keys in a match', () => {
     expect(keyCommand(press(' '), model, ui)).toBeNull();
   });
 
+  it('gives the pass button\'s keys to a pass on its way', () => {
+    expect(keyCommand(press(' '), model, ui, true)).toBe('passNow');
+    expect(keyCommand(press('Escape'), model, ui, true)).toBe('stopAutoPass');
+    expect(keyCommand(press('e'), model, ui, true)).toBeNull();
+  });
+
   it('leaves a disabled button alone', () => {
     model.prompt = prompt(false, false);
     expect(keyCommand(press(' '), model, ui)).toBeNull();

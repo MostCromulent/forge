@@ -53,6 +53,7 @@ import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.StackYield;
 import forge.web.FromBrowser.UseMana;
 import forge.web.FromBrowser.YieldAction;
+import forge.web.ToBrowser.AutoPassRequest;
 import forge.web.ToBrowser.ChoiceKind;
 import forge.web.ToBrowser.ChoicesRequest;
 import forge.web.ToBrowser.Controls;
@@ -731,6 +732,20 @@ public class WebGuiGame extends NetworkGuiGame {
         final OptionRequest request = new OptionRequest(title, message, card != null && isInMirror(card) ? cardRef(card) : null,
                 new ArrayList<>(labels), def);
         return ask(request, Answers.singleIndex(labels.size())).getAsInt();
+    }
+
+    /**
+     * Shown coming on the browser's pass button, which the player can stop. A yield the player asked for, such as End
+     * Turn, is them skipping ahead on purpose, so it keeps Forge's own short pause with nothing to stop.
+     */
+    @Override
+    public boolean confirmAutoPass(final int delayMs) {
+        final IGameController controller = getGameController();
+        final YieldController yields = controller == null ? null : controller.getYieldController();
+        if (delayMs <= 0 || (yields != null && yields.isYieldActive())) {
+            return super.confirmAutoPass(delayMs);
+        }
+        return ask(new AutoPassRequest(delayMs, true), JsonElement::isJsonPrimitive).getAsBoolean();
     }
 
     @Override

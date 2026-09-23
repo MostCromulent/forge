@@ -76,8 +76,9 @@ export function holdFor(msg: ServerMessage): number {
   return hold;
 }
 
+// A pass on its way is not a question: the board ahead of it is still worth seeing at full pace
 function answerWanted(msg: ServerMessage): boolean {
-  return msg.t === 'request' || (msg.t === 'prompt' && (msg.priority || msg.paying));
+  return (msg.t === 'request' && msg.kind !== 'autoPass') || (msg.t === 'prompt' && (msg.priority || msg.paying));
 }
 
 

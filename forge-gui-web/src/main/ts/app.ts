@@ -19,6 +19,7 @@ import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, restoreGuestSettings, setGuest, setPlaymats } from './settings';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
+import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId } from './dom';
 import type { Notice, ServerMessage } from './protocol';
@@ -37,6 +38,7 @@ const send = connect(pace, online => {
 });
 
 const wire = createActions(send);
+initAutoPass((id, go) => wire.answer(id, go), () => schedule());
 const actions: Actions = {
   ...wire,
   // An answered question leaves the model at once, so its dialog closes without waiting for the server
@@ -87,7 +89,7 @@ document.addEventListener('keydown', e => {
     key: e.key,
     typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
     modified: e.ctrlKey || e.altKey || e.metaKey,
-  }, model, ui);
+  }, model, ui, !!countdown());
   if (!command) {
     return;
   }
@@ -105,6 +107,8 @@ function runKey(command: KeyCommand): void {
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': actions.ok(); break;
     case 'cancel': actions.cancel(); break;
+    case 'passNow': finishCountdown(true); break;
+    case 'stopAutoPass': finishCountdown(false); break;
     case 'endTurn': actions.endTurn(); break;
     case 'undo': actions.undo(); break;
     case 'nextFace': nextFace(model); break;
@@ -148,6 +152,7 @@ function apply(msg: ServerMessage): void {
       model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
+      dropCountdown();
       if (!msg.inMatch) {
         model.objects.clear();
         model.gameOver = false;
@@ -202,9 +207,17 @@ function apply(msg: ServerMessage): void {
       break;
     case 'prompt': model.prompt = msg; break;
     case 'zones': model.zones = msg.show; break;
-    case 'request': model.requests.set(msg.id, msg); break;
+    case 'request':
+      // A pass on its way is shown on the pass button, not asked in a dialog
+      if (msg.kind === 'autoPass') {
+        startCountdown(msg);
+      } else {
+        model.requests.set(msg.id, msg);
+      }
+      break;
     case 'gameOver':
       model.gameOver = true;
+      dropCountdown();
       stopMusic();
       break;
     case 'sound': playSound(msg); return;

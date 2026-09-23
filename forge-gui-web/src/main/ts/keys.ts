@@ -7,7 +7,7 @@ import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
-  | 'ok' | 'cancel' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch';
+  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch';
 
 export interface KeyPress {
   key: string;
@@ -17,7 +17,7 @@ export interface KeyPress {
   modified: boolean;
 }
 
-export function keyCommand(press: KeyPress, model: Model, ui: UiState): KeyCommand | null {
+export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing = false): KeyCommand | null {
   if (press.modified) {
     return null;
   }
@@ -52,6 +52,11 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState): KeyComma
   // Turning the card under the pointer answers nothing, so it works over a question as well
   if (key === 'f') {
     return 'nextFace';
+  }
+  // A pass on its way: its button takes the keys the prompt's would
+  if (passing) {
+    if (key === ' ' || key === 'Enter') return 'passNow';
+    return escape ? 'stopAutoPass' : null;
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   if ((oldestRequest(model) && !stackPick(model)) || model.spectating) {

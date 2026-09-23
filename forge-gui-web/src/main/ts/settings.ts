@@ -25,7 +25,7 @@ interface SettingBase {
 export type SettingDef = SettingBase & (
   | { type: 'toggle'; def: boolean }
   | { type: 'choice'; options: [string, string][]; def: string }
-  | { type: 'slider'; min: number; max: number; def: number }
+  | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'playmat'; def: string }
   | { type: 'css'; def: string }
 );
@@ -58,6 +58,11 @@ export const SETTINGS: SettingDef[] = [
   {
     section: 'Priority', key: 'autoYieldMode', label: 'Remember auto-yields', type: 'choice', server: true,
     options: [['ability', 'Per ability'], ['card', 'Per card']], def: 'ability',
+  },
+  {
+    section: 'Priority', key: 'autoPassDelay', label: 'Auto-pass countdown',
+    hint: 'How long the pass button fills before priority passes by itself, so you can stop it. Zero passes at once.',
+    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
   },
   {
     section: 'Game log', key: 'logDetail', label: 'Detail', type: 'choice', server: true,
