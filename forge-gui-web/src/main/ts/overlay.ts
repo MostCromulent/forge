@@ -5,8 +5,8 @@ import { ui } from './ui';
 import type { Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
-// of the hovered stack item. Each is a soft band with a bright core. Colour names the kind, and width, dash and
-// head repeat it, so nothing rests on telling two hues apart.
+// of the hovered stack item. Each is a band that widens towards its target, with a bright core down the middle.
+// Colour names the kind, and width, dash and head repeat it, so nothing rests on telling two hues apart.
 interface ArrowKind {
   color: string;
   band: number;
@@ -16,10 +16,10 @@ interface ArrowKind {
 }
 
 const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target', ArrowKind> = {
-  attack: { color: '#ff7a59', band: 13, core: 2.4, dash: [], head: 'spear' },
-  block: { color: '#5cc8ff', band: 8, core: 2, dash: [11, 7], head: 'chevron' },
-  plannedBlock: { color: '#8fb7cc', band: 6, core: 2, dash: [2, 8], head: 'chevron' },
-  target: { color: '#ffcc33', band: 6, core: 1.8, dash: [3, 7], head: 'reticle' },
+  attack: { color: '#ff7a59', band: 20, core: 3.8, dash: [], head: 'spear' },
+  block: { color: '#5cc8ff', band: 13, core: 3, dash: [13, 8], head: 'chevron' },
+  plannedBlock: { color: '#8fb7cc', band: 10, core: 2.6, dash: [2, 9], head: 'chevron' },
+  target: { color: '#ffcc33', band: 9, core: 2.2, dash: [3, 8], head: 'reticle' },
 };
 
 interface Point {
@@ -149,15 +149,19 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
     ctx.quadraticCurveTo(bend.x, bend.y, end.x, end.y);
   };
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.setLineDash([]);
-  // The band is the shape; the core is the line the eye follows
-  for (const [style, width] of [['rgba(0,0,0,.5)', kind.band + 4], [rgba(kind.color, 0.12), kind.band],
-    [rgba(kind.color, 0.24), kind.band * 0.45]] as const) {
-    ctx.strokeStyle = style;
-    ctx.lineWidth = width;
-    path();
-    ctx.stroke();
-  }
+  // The band is the shape; the core is the line the eye follows. It narrows at the source and darkens towards
+  // the target, so which end is which reads without following the curve.
+  taper(ctx, a, bend, end, t => (kind.band / 2) * (0.18 + 0.82 * Math.pow(t, 0.75)));
+  ctx.strokeStyle = 'rgba(0,0,0,.55)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  const wash = ctx.createLinearGradient(a.x, a.y, end.x, end.y);
+  wash.addColorStop(0, rgba(kind.color, 0.06));
+  wash.addColorStop(1, rgba(kind.color, 0.34));
+  ctx.fillStyle = wash;
+  ctx.fill();
   ctx.setLineDash(kind.dash);
   ctx.strokeStyle = rgba(kind.color, 0.98);
   ctx.lineWidth = kind.core;
@@ -167,6 +171,30 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   head(ctx, end, Math.atan2(end.y - bend.y, end.x - bend.x), kind);
 }
 
+// The outline of a quadratic curve given a half-width at each point along it
+function taper(ctx: CanvasRenderingContext2D, a: Point, bend: Point, b: Point, half: (t: number) => number): void {
+  const steps = 26;
+  const side: [Point[], Point[]] = [[], []];
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const u = 1 - t;
+    const x = u * u * a.x + 2 * u * t * bend.x + t * t * b.x;
+    const y = u * u * a.y + 2 * u * t * bend.y + t * t * b.y;
+    const dx = 2 * u * (bend.x - a.x) + 2 * t * (b.x - bend.x);
+    const dy = 2 * u * (bend.y - a.y) + 2 * t * (b.y - bend.y);
+    const len = Math.hypot(dx, dy) || 1;
+    const w = half(t);
+    side[0].push({ x: x - (dy / len) * w, y: y + (dx / len) * w });
+    side[1].push({ x: x + (dy / len) * w, y: y - (dx / len) * w });
+  }
+  ctx.beginPath();
+  side[0].forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y)));
+  for (let i = side[1].length - 1; i >= 0; i--) {
+    ctx.lineTo(side[1][i].x, side[1][i].y);
+  }
+  ctx.closePath();
+}
+
 function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: ArrowKind): void {
   const point = (len: number, spread: number): [Point, Point] => [
     { x: at.x - len * Math.cos(angle - spread), y: at.y - len * Math.sin(angle - spread) },
@@ -174,31 +202,40 @@ function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: Arr
   ];
   ctx.strokeStyle = 'rgba(0,0,0,.6)';
   if (kind.head === 'reticle') {
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(at.x, at.y, 9, 0, Math.PI * 2);
+    ctx.arc(at.x, at.y, 11, 0, Math.PI * 2);
     ctx.stroke();
     ctx.strokeStyle = rgba(kind.color, 1);
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.6;
     ctx.stroke();
     return;
   }
-  const [l, r] = point(kind.head === 'spear' ? 17 : 14, 0.45);
-  ctx.beginPath();
-  ctx.moveTo(l.x, l.y);
-  ctx.lineTo(at.x, at.y);
-  ctx.lineTo(r.x, r.y);
   if (kind.head === 'spear') {
+    // A barbed head: the outer points swept back past a waist, so the tip reads at a glance on a busy board
+    const [l, r] = point(23, 0.42);
+    const [wl, wr] = point(13, 0.2);
+    ctx.beginPath();
+    ctx.moveTo(at.x, at.y);
+    ctx.lineTo(l.x, l.y);
+    ctx.lineTo(wl.x, wl.y);
+    ctx.lineTo(wr.x, wr.y);
+    ctx.lineTo(r.x, r.y);
     ctx.closePath();
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 3.5;
     ctx.stroke();
     ctx.fillStyle = rgba(kind.color, 1);
     ctx.fill();
     return;
   }
-  ctx.lineWidth = 6;
+  const [l, r] = point(18, 0.45);
+  ctx.beginPath();
+  ctx.moveTo(l.x, l.y);
+  ctx.lineTo(at.x, at.y);
+  ctx.lineTo(r.x, r.y);
+  ctx.lineWidth = 7.5;
   ctx.stroke();
   ctx.strokeStyle = rgba(kind.color, 1);
-  ctx.lineWidth = 3.2;
+  ctx.lineWidth = 4;
   ctx.stroke();
 }
