@@ -10,9 +10,7 @@ import forge.game.card.Card;
 import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
-import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.DeltaPacket;
-import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
@@ -20,7 +18,6 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 public class ActiveClientTest {
@@ -40,17 +37,6 @@ public class ActiveClientTest {
 
     private static Deck forests() {
         return TestDecks.of("Forests", "Forest", 40);
-    }
-
-    private static void awaitStarted(final LocalGame local) throws InterruptedException {
-        for (int i = 0; i < 300; i++) {
-            final HostedMatch m = local.hostedMatch();
-            if (m != null && m.getGame() != null) {
-                return;
-            }
-            Thread.sleep(100);
-        }
-        Assert.fail("game did not start");
     }
 
     // GameState names the first player "human" and the second "ai", whoever controls them
@@ -285,35 +271,6 @@ public class ActiveClientTest {
             Assert.assertTrue(gruntSurvived, "the cumulative upkeep went unpaid and the Grunt was sacrificed");
             Assert.assertEquals(seat.getCardsIn(ZoneType.Graveyard).size(), 1, "two cards should have left the graveyard");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
-        } finally {
-            onUi(local::shutdown);
-        }
-    }
-
-    @Test(timeOut = 180000)
-    public void concedeDuringAnOpenRequestEndsTheGame() throws Exception {
-        WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, false);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
-            awaitStarted(local);
-
-            final RemoteClientGuiGame seat = WebTestSupport.remoteGui(local.hostedMatch());
-            final CompletableFuture<Boolean> probe = new CompletableFuture<>();
-            GuiBase.getInterface().invokeInEdtLater(() -> probe.complete(seat.showConfirmDialog("Hold", "Hold", "Yes", "No", true)));
-            Assert.assertNotNull(browser.awaitLast("request", 20000), "request did not reach the browser");
-
-            // A reload while the request is open gets it replayed
-            final FakeBrowser reloaded = new FakeBrowser(gui, false);
-            gui.attach(reloaded);
-            Assert.assertNotNull(reloaded.last("request"));
-
-            gui.onBrowserMessage(FakeBrowser.action("concede"));
-            Assert.assertTrue(probe.get(20, TimeUnit.SECONDS), "the open request was not answered with its default");
-            Assert.assertTrue(reloaded.gameOver.await(60, TimeUnit.SECONDS), "concede did not end the game");
         } finally {
             onUi(local::shutdown);
         }

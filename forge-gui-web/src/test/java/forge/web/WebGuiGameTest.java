@@ -104,6 +104,18 @@ public class WebGuiGameTest {
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("a"));
     }
 
+    // Leaving between games is the other way out while the host's engine thread waits on the browser
+    @Test
+    public void quittingBetweenGamesAnswersOpenRequestsWithDefaults() throws Exception {
+        final CompletableFuture<Boolean> answer = CompletableFuture.supplyAsync(
+                () -> gui.showConfirmDialog("Keep?", "Mulligan", "Keep", "Mulligan", true));
+        browser.awaitLast("request", 2000);
+        final JsonObject quit = FakeBrowser.action("nextGame");
+        quit.addProperty("decision", "QUIT");
+        gui.onBrowserMessage(quit);
+        Assert.assertTrue(answer.get(2, TimeUnit.SECONDS));
+    }
+
     @Test
     public void reloadReplaysTheOpenRequest() throws Exception {
         final CompletableFuture<Boolean> answer = CompletableFuture.supplyAsync(
