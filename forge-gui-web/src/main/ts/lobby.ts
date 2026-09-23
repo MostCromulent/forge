@@ -14,7 +14,7 @@ import { startMusic } from './audio';
 import { wireChatInput, paintChat } from './chat';
 import { q } from './dom';
 import type { Model } from './model';
-import type { Address, LobbyState, Seat, Send } from './protocol';
+import type { Address, LobbyTable, Seat, Send } from './protocol';
 
 let built = false;
 let send: Send = () => {};
@@ -77,7 +77,7 @@ export function renderLobby(model: Model, sendFn: Send): void {
   renderNet(root, lobby, model);
 }
 
-function renderNet(root: HTMLElement, lobby: LobbyState, model: Model): void {
+function renderNet(root: HTMLElement, lobby: LobbyTable, model: Model): void {
   // A game only this machine can reach has nothing to share and nobody to talk to
   q(root, '#lobby-net').hidden = !lobby.shareable && lobby.host;
   // The table belongs to the host, so a joined client changes only its own seat, and has no menu to go back to
@@ -122,7 +122,7 @@ function renderAddresses(root: HTMLElement, list: Address[]): void {
   }
 }
 
-function renderFormats(root: HTMLElement, lobby: LobbyState): void {
+function renderFormats(root: HTMLElement, lobby: LobbyTable): void {
   const row = q(root, '#formats');
   if (row.childElementCount !== lobby.formats.length) {
     row.replaceChildren(...lobby.formats.map(f => {
@@ -139,7 +139,7 @@ function renderFormats(root: HTMLElement, lobby: LobbyState): void {
   }
 }
 
-function renderSeats(root: HTMLElement, lobby: LobbyState, model: Model): void {
+function renderSeats(root: HTMLElement, lobby: LobbyTable, model: Model): void {
   const list = q(root, '#seats');
   list.replaceChildren(...lobby.seats.map((seat, i) => plate(seat, i, lobby, model)));
   list.dataset.count = String(lobby.seats.length);
@@ -149,7 +149,7 @@ function renderSeats(root: HTMLElement, lobby: LobbyState, model: Model): void {
 // The seat kinds a netplay lobby can hold; offline shows only the first two
 const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
 
-function plate(seat: Seat, index: number, lobby: LobbyState, model: Model): HTMLElement {
+function plate(seat: Seat, index: number, lobby: LobbyTable, model: Model): HTMLElement {
   const el = document.createElement('div');
   el.className = 'plate';
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
@@ -248,7 +248,7 @@ function objectPosition(offset: number | undefined): string {
   return `${pct} ${pct}`;
 }
 
-function renderVerdict(root: HTMLElement, lobby: LobbyState): void {
+function renderVerdict(root: HTMLElement, lobby: LobbyTable): void {
   const problems = lobby.problems ?? [];
   const line = q(root, '#match-line');
   const panel = q(root, '#not-yet');

@@ -1,0 +1,127 @@
+package forge.web;
+
+import com.google.gson.JsonElement;
+import forge.game.phase.PhaseType;
+import forge.gamemodes.match.NextGameDecision;
+import forge.web.Wire.Command;
+import forge.web.Wire.Nullable;
+import forge.web.Wire.Ts;
+
+import java.util.List;
+
+/**
+ * Every message the browser sends the server. src/main/ts/protocol.gen.ts is generated from this file, so the
+ * browser cannot send a message, or a field, that is not read here.
+ */
+final class FromBrowser {
+    private FromBrowser() {
+    }
+
+    // ---- Start page and lobby ----------------------------------------------------------------------------------
+
+    /** Messages that are only their name. */
+    enum Plain { decks, claimHost, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit,
+        ok, cancel, endTurn, autoPass, undo, concede }
+
+    @Command
+    record Bare(Plain t) {
+    }
+
+    @Command("chat")
+    record Say(String text) {
+    }
+
+    @Command("ready")
+    record Ready(boolean ready) {
+    }
+
+    enum SeatAction { openSeat, aiSeat, removeSeat }
+
+    @Command
+    record SeatCommand(SeatAction t, int index) {
+    }
+
+    /** Changes one or more of a seat's choices; a field left out is left alone. */
+    @Command("setSeat")
+    record SetSeat(int index, @Nullable String name, @Nullable String deck, @Nullable Integer avatar,
+            @Nullable Integer sleeve) {
+    }
+
+    @Command("setFormat")
+    record SetFormat(String format) {
+    }
+
+    @Command("deckDetails")
+    record AskDeckDetails(String key) {
+    }
+
+    @Command("hostChoice")
+    record HostChoiceAnswer(int id, List<Integer> value) {
+    }
+
+    @Command("cardSearch")
+    record SearchCards(String query) {
+    }
+
+    @Command("printings")
+    record AskPrintings(String name) {
+    }
+
+    @Command("sleeveArt")
+    record SleeveArt(int index, String key, int offset) {
+    }
+
+    @Command("start")
+    record Start(boolean spectate) {
+    }
+
+    // ---- Match -------------------------------------------------------------------------------------------------
+
+    @Command("reply")
+    record Reply(int id, @Ts("unknown") JsonElement value) {
+    }
+
+    /** A click on a card; menu is the right button, and x and y place the list of abilities it may open. */
+    @Command("selectCard")
+    record SelectCard(int key, boolean menu, int x, int y) {
+    }
+
+    enum KeyAction { selectPlayer, detail, playerDetail, stackMenu }
+
+    /** Something done to one object in the game's table, named by its delta key. */
+    @Command
+    record KeyCommand(KeyAction t, int key) {
+    }
+
+    enum YieldAction { autoYield, alwaysYes, alwaysNo, yieldToStack, yieldToEntireStack }
+
+    @Command("stackYield")
+    record StackYield(int key, YieldAction action) {
+    }
+
+    enum PhaseAction { toggleStop, toggleMarker }
+
+    /** A stop, or pass-priority-until marker, at a phase of your turns (mine) or your opponents'. */
+    @Command
+    record PhaseCommand(PhaseAction t, PhaseType phase, boolean mine) {
+    }
+
+    /** Pays with one colour of the pool: its bit, as in the player's Mana property. */
+    @Command("useMana")
+    record UseMana(byte color) {
+    }
+
+    @Command("setSetting")
+    record SetSetting(String key, String value) {
+    }
+
+    @Command("nextGame")
+    record NextGame(NextGameDecision decision) {
+    }
+
+    /** Every command record, which is what the TypeScript is generated from. */
+    static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, Say.class, Ready.class,
+            SeatCommand.class, SetSeat.class, SetFormat.class, AskDeckDetails.class, HostChoiceAnswer.class,
+            SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
+            KeyCommand.class, StackYield.class, PhaseCommand.class, UseMana.class, SetSetting.class, NextGame.class);
+}

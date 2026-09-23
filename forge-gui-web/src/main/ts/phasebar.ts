@@ -2,7 +2,7 @@ import { reconcile } from './render';
 import { deref, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { q } from './dom';
-import type { GameView, Send, TurnMarker } from './protocol';
+import type { GameView, PhaseType, Send, TurnMarker } from './protocol';
 
 // A pill on the divider: whose turn it is, then the five phases with the current step named. The track is a
 // read-out and never changes shape under the cursor; clicking the pill opens the grid of phase stops, one row
@@ -40,7 +40,7 @@ const glyph = (name: string, size: number): string => `<svg class="glyph" viewBo
 
 // Untap takes no stop, as on desktop
 // [PhaseType, glyph, full name, short name]
-const STEPS: [string, string, string, string][] = [
+const STEPS: [PhaseType, string, string, string][] = [
   ['UPKEEP', 'upkeep', 'Upkeep', 'Upkeep'], ['DRAW', 'draw', 'Draw', 'Draw'], ['MAIN1', 'main1', 'Main 1', 'Main 1'],
   ['COMBAT_BEGIN', 'boc', 'Beginning of combat', 'Combat'], ['COMBAT_DECLARE_ATTACKERS', 'atk', 'Declare attackers', 'Attackers'],
   ['COMBAT_DECLARE_BLOCKERS', 'blk', 'Declare blockers', 'Blockers'], ['COMBAT_FIRST_STRIKE_DAMAGE', 'fs', 'First-strike damage', 'First strike'],
@@ -60,8 +60,8 @@ const PHASES: Phase[] = [
   { glyph: 'main2', name: 'Main 2', steps: [9] },
   { glyph: 'end', name: 'End of turn', steps: [10, 11] },
 ];
-const stepIndex = (phase: string | undefined): number => STEPS.findIndex(s => s[0] === phase);
-export const stepName = (phase: string | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
+const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
+export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 
 let open = false;
 let wired = false;
@@ -242,7 +242,8 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: s
 
 function wireGrid(panel: HTMLElement, send: Send): void {
   for (const b of panel.querySelectorAll<HTMLElement>('.cell')) {
-    const msg = (type: 'toggleStop' | 'toggleMarker') => ({ t: type, phase: b.dataset.phase ?? '', mine: b.dataset.mine === 'true' });
+    // The cell was drawn from STEPS, so its phase is one of them
+    const msg = (type: 'toggleStop' | 'toggleMarker') => ({ t: type, phase: b.dataset.phase as PhaseType, mine: b.dataset.mine === 'true' });
     b.onclick = () => send(msg('toggleStop'));
     b.oncontextmenu = e => {
       e.preventDefault();

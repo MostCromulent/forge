@@ -24,10 +24,28 @@ reads the page from disk, so a change needs only a browser reload:
 
 Use the Node that Maven installed (`node/node`, `node/npm`) or any Node 22.
 
+## The protocol
+
+Every message between the server and the browser is a Java record in `ToBrowser` (server to browser) or
+`FromBrowser` (browser to server). `src/main/ts/protocol.gen.ts` is generated from those records, and from
+Forge's `TrackableProperty` for the game objects, so a field is named in one place only.
+
+After changing a record, regenerate the TypeScript and let the compiler show what the client must change:
+
+    mvn -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
+
+`ProtocolTypesTest` fails whenever the committed file is out of date, which also catches a Forge update that
+renames or retypes a game property.
+
+A record component may be null only when marked `@Nullable`; it is then left out of the JSON and optional in the
+TypeScript. The tests run with assertions on, so a null anywhere else fails them.
+
 ## Layout
 
-- `src/main/ts/protocol.ts` describes every message in both directions and the game objects inside them. The
-  server writes those messages by hand in `forge.web`, so a field changed there must change here too.
+- `src/main/java/forge/web/ToBrowser.java` and `FromBrowser.java` define the protocol; `Wire.java` writes and
+  reads it.
+- `src/main/ts/protocol.gen.ts` is generated from them; `src/main/ts/protocol.ts` adds the views the client reads
+  game objects through.
 - `src/main/ts/model.ts` is the browser's copy of the game's object table; `forge.web.BrowserModel` applies
   the same rules on the Java side for the tests.
 - `src/main/ts/app.ts` receives every message and schedules one render per frame.

@@ -1,7 +1,7 @@
 import { game, derefAll, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
-import type { StackItemView, TrackedObject } from './protocol';
+import type { Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
 // of the hovered stack item. Each is a soft band with a bright core. Colour names the kind, and width, dash and
@@ -69,13 +69,13 @@ function paint(model: Model): void {
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
   for (const band of mode === '1' ? [] : g.CombatView ?? []) {
-    const attackers = band.attackers ?? [];
+    const attackers = present(band.attackers);
     attackers.forEach((attacker, i) => {
       ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack, i, attackers.length);
-      for (const blocker of band.blockers ?? []) {
+      for (const blocker of present(band.blockers)) {
         ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block, 0, 1);
       }
-      for (const blocker of band.plannedBlockers ?? []) {
+      for (const blocker of present(band.plannedBlockers)) {
         ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock, 0, 1);
       }
     });
@@ -87,6 +87,8 @@ function paint(model: Model): void {
     targets.forEach((target, i) => ribbon(ctx, from, elementFor(target.$key), KINDS.target, i, targets.length));
   }
 }
+
+const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
 
 export function stackTargets(model: Model, item: StackItemView): TrackedObject[] {
   const out: TrackedObject[] = [];

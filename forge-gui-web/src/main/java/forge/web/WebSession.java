@@ -1,7 +1,23 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import forge.web.FromBrowser.AskDeckDetails;
+import forge.web.FromBrowser.AskPrintings;
+import forge.web.FromBrowser.HostChoiceAnswer;
+import forge.web.FromBrowser.Ready;
+import forge.web.FromBrowser.Say;
+import forge.web.FromBrowser.SearchCards;
+import forge.web.FromBrowser.SeatCommand;
+import forge.web.FromBrowser.SetFormat;
+import forge.web.FromBrowser.SetSeat;
+import forge.web.FromBrowser.SleeveArt;
+import forge.web.FromBrowser.Start;
+import forge.web.ToBrowser.Addresses;
+import forge.web.ToBrowser.CardSearch;
+import forge.web.ToBrowser.ChatLine;
+import forge.web.ToBrowser.ErrorMessage;
+import forge.web.ToBrowser.Hello;
+import forge.web.ToBrowser.Printings;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
@@ -126,20 +142,21 @@ public final class WebSession {
                 }
             });
             case "ready" -> {
-                lobby.setReady(msg.get("ready").getAsBoolean());
+                lobby.setReady(Wire.decode(msg, Ready.class).ready());
                 channel.send(lobby.state());
             }
-            case "openSeat" -> {
-                lobby.openSeat(msg.get("index").getAsInt());
+            case "openSeat", "aiSeat", "removeSeat" -> {
+                final SeatCommand seat = Wire.decode(msg, SeatCommand.class);
+                switch (seat.t()) {
+                    case openSeat -> lobby.openSeat(seat.index());
+                    case aiSeat -> lobby.aiSeat(seat.index());
+                    case removeSeat -> lobby.removeSeat(seat.index());
+                }
                 channel.send(lobby.state());
             }
-            case "aiSeat" -> {
-                lobby.aiSeat(msg.get("index").getAsInt());
-                channel.send(lobby.state());
-            }
-            case "chat" -> local.sendChat(msg.get("text").getAsString());
+            case "chat" -> local.sendChat(Wire.decode(msg, Say.class).text());
             case "setFormat" -> {
-                lobby.setFormat(msg.get("format").getAsString());
+                lobby.setFormat(Wire.decode(msg, SetFormat.class).format());
                 channel.send(lobby.decks());
                 channel.send(lobby.state());
             }
@@ -147,16 +164,12 @@ public final class WebSession {
                 lobby.addSeat();
                 channel.send(lobby.state());
             }
-            case "removeSeat" -> {
-                lobby.removeSeat(msg.get("index").getAsInt());
-                channel.send(lobby.state());
-            }
             case "setSeat" -> {
-                applySeat(msg);
+                applySeat(Wire.decode(msg, SetSeat.class));
                 channel.send(lobby.state());
             }
             case "deckDetails" -> {
-                final JsonObject details = lobby.deckDetails(msg.get("key").getAsString());
+                final ToBrowser.DeckDetailsMessage details = lobby.deckDetails(Wire.decode(msg, AskDeckDetails.class).key());
                 if (details != null) {
                     channel.send(details);
                 }
@@ -164,7 +177,8 @@ public final class WebSession {
             // One set of host questions serves the process, so only the host's browser may answer them
             case "hostChoice" -> {
                 if (isHost) {
-                    ui.hostRequests().answer(msg.get("id").getAsInt(), msg.get("value"));
+                    final HostChoiceAnswer answer = Wire.decode(msg, HostChoiceAnswer.class);
+                    ui.hostRequests().answer(answer.id(), answer.value());
                 }
             }
             // Core asks which category through a host question, and blocks on it, so not on the socket thread
@@ -174,19 +188,23 @@ public final class WebSession {
                 }
             }
             // Finding the external address is a web request, so it cannot run on the socket thread
-            case "addresses" -> ui.runBackgroundTask("Addresses", () -> {
-                final JsonObject m = JsonCodec.message("addresses");
-                m.add("list", sessions.inviteUrls());
-                channel.send(m);
-            });
-            case "cardSearch" -> channel.send(cardSearch(msg));
-            case "printings" -> channel.send(printings(msg));
+            case "addresses" -> ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
+            case "cardSearch" -> channel.send(new CardSearch(
+                    DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
+            case "printings" -> {
+                final String name = Wire.decode(msg, AskPrintings.class).name();
+                channel.send(new Printings(name, DeckCatalog.printings(name)));
+            }
             case "sleeveArt" -> {
-                lobby.setSleeveArt(msg.get("index").getAsInt(), msg.get("key").getAsString(), msg.get("offset").getAsInt());
+                final SleeveArt art = Wire.decode(msg, SleeveArt.class);
+                lobby.setSleeveArt(art.index(), art.key(), art.offset());
                 channel.send(lobby.state());
             }
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
-            case "start" -> ui.invokeInEdtLater(() -> start(channel, msg));
+            case "start" -> {
+                final Start start = Wire.decode(msg, Start.class);
+                ui.invokeInEdtLater(() -> start(channel, start));
+            }
             case "leave" -> ui.invokeInEdtLater(this::leave);
             // Quitting stops the process every browser is served from, so it is the host's to do
             case "quit" -> {
@@ -289,82 +307,51 @@ public final class WebSession {
     private void chatted(final String from, final String text) {
         final BrowserChannel b = browser;
         if (b != null) {
-            final JsonObject m = JsonCodec.message("chat");
-            m.addProperty("from", from);
-            m.addProperty("text", text);
-            b.send(m);
+            b.send(new ChatLine(from, text));
         }
     }
 
-    private void applySeat(final JsonObject msg) {
-        final int index = msg.get("index").getAsInt();
-        if (msg.has("name")) {
-            lobby.setName(index, msg.get("name").getAsString());
+    private void applySeat(final SetSeat seat) {
+        if (seat.name() != null) {
+            lobby.setName(seat.index(), seat.name());
         }
-        if (msg.has("deck")) {
-            lobby.setDeck(index, msg.get("deck").isJsonNull() ? null : msg.get("deck").getAsString());
+        if (seat.deck() != null) {
+            lobby.setDeck(seat.index(), seat.deck());
         }
-        if (msg.has("avatar")) {
-            lobby.setAvatar(index, msg.get("avatar").getAsInt());
+        if (seat.avatar() != null) {
+            lobby.setAvatar(seat.index(), seat.avatar());
         }
-        if (msg.has("sleeve")) {
-            lobby.setSleeve(index, msg.get("sleeve").getAsInt());
+        if (seat.sleeve() != null) {
+            lobby.setSleeve(seat.index(), seat.sleeve());
         }
     }
 
-    private static JsonObject cardSearch(final JsonObject msg) {
-        final JsonObject m = JsonCodec.message("cardSearch");
-        m.add("names", DeckCatalog.searchCardNames(msg.get("query").getAsString(), CARD_SEARCH_LIMIT));
-        return m;
+    private Hello hello() {
+        return new Hello(match != null, inLobby && match == null, spectating, isHost,
+                // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
+                !isHost && sessions.hostSeatFree(this),
+                // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
+                inviting || !isHost,
+                FModel.getPreferences().getPref(FPref.PLAYER_NAME),
+                // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
+                seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
+                SkinSprites.avatarCount(), SkinSprites.sleeveCount(), Playmats.list(), DeckCatalog.savedSleeveArt());
     }
 
-    private static JsonObject printings(final JsonObject msg) {
-        final JsonObject m = JsonCodec.message("printings");
-        m.addProperty("name", msg.get("name").getAsString());
-        m.add("printings", DeckCatalog.printings(msg.get("name").getAsString()));
-        return m;
+    private static List<Integer> seatIndices(final FPref pref) {
+        return List.of(LocalGame.storedIndex(pref, 0), LocalGame.storedIndex(pref, 1));
     }
 
-    private JsonObject hello() {
-        final JsonObject m = JsonCodec.message("hello");
-        m.addProperty("inMatch", match != null);
-        m.addProperty("inLobby", inLobby && match == null);
-        m.addProperty("spectating", spectating);
-        m.addProperty("host", isHost);
-        // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
-        m.addProperty("canClaimHost", !isHost && sessions.hostSeatFree(this));
-        // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether
-        m.addProperty("networked", inviting || !isHost);
-        m.addProperty("playerName", FModel.getPreferences().getPref(FPref.PLAYER_NAME));
-        // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
-        m.add("avatars", seatIndices(FPref.UI_AVATARS));
-        m.add("sleeves", seatIndices(FPref.UI_SLEEVES));
-        m.addProperty("avatarCount", SkinSprites.avatarCount());
-        m.add("playmats", Playmats.list());
-        m.addProperty("sleeveCount", SkinSprites.sleeveCount());
-        m.add("sleeveArt", DeckCatalog.savedSleeveArt());
-        return m;
+    private static ErrorMessage error(final String message) {
+        return new ErrorMessage(message);
     }
 
-    private static JsonArray seatIndices(final FPref pref) {
-        final JsonArray a = new JsonArray();
-        a.add(LocalGame.storedIndex(pref, 0));
-        a.add(LocalGame.storedIndex(pref, 1));
-        return a;
-    }
-
-    private static JsonObject error(final String message) {
-        final JsonObject m = JsonCodec.message("error");
-        m.addProperty("message", message);
-        return m;
-    }
-
-    private void start(final BrowserChannel channel, final JsonObject msg) {
+    private void start(final BrowserChannel channel, final Start msg) {
         if (!isHost) {
             channel.send(error("Only the host can start the match."));
             return;
         }
-        spectating = msg.has("spectate") && msg.get("spectate").getAsBoolean();
+        spectating = msg.spectate();
         final List<String> problems = lobby.problems();
         if (!problems.isEmpty()) {
             channel.send(error(problems.get(0)));

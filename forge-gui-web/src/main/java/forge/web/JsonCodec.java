@@ -66,6 +66,7 @@ public final class JsonCodec {
         return out;
     }
 
+    // ProtocolTypes (in the tests) writes the TypeScript type of each of these forms; a new form needs one there too
     @SuppressWarnings("unchecked")
     static JsonElement encodeValue(final TrackableProperty prop, final Object value, final int ownerId) {
         if (value == null) {

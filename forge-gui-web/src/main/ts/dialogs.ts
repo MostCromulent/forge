@@ -82,7 +82,10 @@ function wrap(dlg: HTMLElement, at?: { x: number; y: number } | null): HTMLEleme
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
 
-function optionElement(model: Model, opt: RequestOption, onClick: () => void): HTMLElement {
+/** What an option can show: a card on the table, a card by image and name, or a line of text. */
+type OptionLike = Pick<RequestOption, 'card' | 'name' | 'imageKey'> & { label?: string };
+
+function optionElement(model: Model, opt: OptionLike, onClick: () => void): HTMLElement {
   const section = SECTION.exec(opt.label ?? '');
   if (section && !opt.card && !opt.imageKey) {
     return el('div', 'section', section[1]);
@@ -122,12 +125,15 @@ function optionElement(model: Model, opt: RequestOption, onClick: () => void): H
 
 function build(req: Request, model: Model, answer: Answer): HTMLElement {
   const dlg = el('div', 'dialog');
+  // Not every kind of question has a title or a message; the first there is heads the dialog
+  const heading = 'title' in req ? req.title : undefined;
+  const message = 'message' in req ? req.message : undefined;
   const title = el('h3');
-  setSymbolText(title, req.title || req.message || '');
+  setSymbolText(title, heading || message || '');
   dlg.append(title);
-  if (req.title && req.message) {
+  if (heading && message) {
     const text = el('p');
-    setSymbolText(text, req.message);
+    setSymbolText(text, message);
     dlg.append(text);
   }
   switch (req.kind) {

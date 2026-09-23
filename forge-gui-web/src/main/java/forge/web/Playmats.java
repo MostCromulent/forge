@@ -1,8 +1,7 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import forge.localinstance.properties.ForgeConstants;
+import forge.web.ToBrowser.Playmat;
 import org.tinylog.Logger;
 
 import java.io.File;
@@ -19,15 +18,12 @@ final class Playmats {
     }
 
     /** Every playmat this installation has, as {@code {id, label}} pairs the browser shows as thumbnails. */
-    static JsonArray list() {
-        final JsonArray out = new JsonArray();
+    static List<Playmat> list() {
+        final List<Playmat> out = new ArrayList<>();
         for (final File skin : skins()) {
             for (final String file : FILES) {
                 if (new File(skin, file).isFile()) {
-                    final JsonObject mat = new JsonObject();
-                    mat.addProperty("id", skin.getName() + "/" + file);
-                    mat.addProperty("label", label(skin.getName(), file));
-                    out.add(mat);
+                    out.add(new Playmat(skin.getName() + "/" + file, label(skin.getName(), file)));
                 }
             }
         }

@@ -23,7 +23,8 @@ public class PendingRequestsTest {
     }
 
     private CompletableFuture<JsonElement> ask(final int defaultAnswer) {
-        return CompletableFuture.supplyAsync(() -> requests.await("option", new JsonObject(), new JsonPrimitive(defaultAnswer),
+        final ToBrowser.OptionRequest request = new ToBrowser.OptionRequest("", "", null, List.of("a", "b", "c"), defaultAnswer);
+        return CompletableFuture.supplyAsync(() -> requests.await(request,
                 v -> v.isJsonPrimitive() && v.getAsInt() >= 0 && v.getAsInt() < 3));
     }
 

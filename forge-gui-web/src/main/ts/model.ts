@@ -1,6 +1,6 @@
 import type {
-  Address, CardStateView, CardView, Controls, DeckSummary, GameView, LobbyState, Playable, PlayerView, Prompt, Ref,
-  Request, ShownZone, StateMessage, TrackedObject, ZoneName,
+  Address, CardStateView, CardView, Controls, DeckSummary, GameView, LobbyTable, Playable, PlayerView, PlayerZone,
+  Prompt, Ref, Refs, Request, ShownZone, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
 export interface Looks {
@@ -29,7 +29,7 @@ export interface Model {
   playerName: string;
   decks: DeckSummary[];
   error: string | null;
-  lobby: LobbyState | null;
+  lobby: LobbyTable | null;
   addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
@@ -51,7 +51,7 @@ export function applyState(model: Model, msg: StateMessage): void {
     model.root = msg.root;
   }
   for (const [k, props] of Object.entries(msg.newObjects)) {
-    model.objects.set(Number(k), { ...props, $key: Number(k) });
+    model.objects.set(Number(k), { ...withoutNulls(props), $key: Number(k) });
   }
   for (const [k, props] of Object.entries(msg.deltas)) {
     const target = model.objects.get(Number(k)) as Record<string, unknown> | undefined;
@@ -64,6 +64,11 @@ export function applyState(model: Model, msg: StateMessage): void {
   prune(model);
   model.visible = new Set(msg.visible);
   model.localPlayers = msg.localPlayers;
+}
+
+/** A property still at its default is left out of an object, so a null in a new one means the same. */
+function withoutNulls<T extends object>(props: T): T {
+  return Object.fromEntries(Object.entries(props).filter(([, v]) => v !== null)) as T;
 }
 
 // Packets carry no removal signal, so anything the game no longer reaches is dropped here
@@ -100,13 +105,18 @@ function collectRefs(value: unknown, out: number[]): void {
 
 export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | undefined =>
   (v && typeof v === 'object' && 'ref' in v) ? model.objects.get(v.ref) : undefined;
-export const derefAll = (model: Model, list: Ref[] | null | undefined): TrackedObject[] =>
+export const derefAll = (model: Model, list: Refs | null | undefined): TrackedObject[] =>
   (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
 export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
 export const players = (model: Model): PlayerView[] => derefAll(model, game(model)?.Players);
 export const isLocal = (model: Model, player: PlayerView): boolean => model.localPlayers.includes(player.$key);
 export const me = (model: Model): PlayerView | undefined => players(model).find(p => isLocal(model, p));
 export const opponents = (model: Model): PlayerView[] => players(model).filter(p => !isLocal(model, p));
-export const zone = (model: Model, player: PlayerView | undefined, name: ZoneName): CardView[] =>
-  derefAll(model, player?.[name]);
+const PLAYER_ZONES: ReadonlySet<string> = new Set<PlayerZone>(['Hand', 'Library', 'Graveyard', 'Battlefield', 'Exile',
+  'Flashback', 'Command', 'Sideboard', 'Ante', 'SchemeDeck', 'PlanarDeck', 'AttractionDeck', 'Junkyard', 'ContraptionDeck']);
+const isPlayerZone = (name: ZoneType): name is PlayerZone => PLAYER_ZONES.has(name);
+
+/** The cards in one of a player's zones. A zone that is not a player's (the stack, a merged pile) holds none. */
+export const zone = (model: Model, player: PlayerView | undefined, name: ZoneType): CardView[] =>
+  isPlayerZone(name) ? derefAll(model, player?.[name]) : [];
 export const stateOf = (model: Model, card: CardView): Partial<CardStateView> => deref(model, card.CurrentState) ?? {};

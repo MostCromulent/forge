@@ -1,7 +1,5 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
@@ -16,6 +14,14 @@ import forge.gamemodes.quest.QuestController;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.SleeveArt;
+import forge.web.ToBrowser.DeckCard;
+import forge.web.ToBrowser.DeckDetails;
+import forge.web.ToBrowser.DeckGroup;
+import forge.web.ToBrowser.DeckStats;
+import forge.web.ToBrowser.DeckSummary;
+import forge.web.ToBrowser.Printing;
+import forge.web.ToBrowser.SavedSleeveArt;
+import forge.web.ToBrowser.TypeCount;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -51,8 +57,8 @@ final class DeckCatalog {
     }
 
     /** The sanctioned formats a deck can be filtered by, which is a card-pool question and not the game type. */
-    static JsonArray cardFormats() {
-        final JsonArray out = new JsonArray();
+    static List<String> cardFormats() {
+        final List<String> out = new ArrayList<>();
         for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
             out.add(f.getName());
         }
@@ -60,8 +66,8 @@ final class DeckCatalog {
     }
 
     /** Which of those formats this deck's cards are all legal in. */
-    private static JsonArray legalIn(final Deck deck) {
-        final JsonArray out = new JsonArray();
+    private static List<String> legalIn(final Deck deck) {
+        final List<String> out = new ArrayList<>();
         for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
             if (f.isDeckLegal(deck)) {
                 out.add(f.getName());
@@ -82,9 +88,9 @@ final class DeckCatalog {
     }
 
     /** Rebuilds the catalogue for a format and returns every deck in it. */
-    JsonArray refresh(final GameType format) {
+    List<DeckSummary> refresh(final GameType format) {
         byKey.clear();
-        final JsonArray out = new JsonArray();
+        final List<DeckSummary> out = new ArrayList<>();
         final boolean commander = format == GameType.Commander;
         add(out, format, commander ? DeckProxy.getAllCommanderDecks() : DeckProxy.getAllConstructedDecks(), MINE);
         add(out, format, commander ? DeckProxy.getAllCommanderPreconDecks()
@@ -135,22 +141,14 @@ final class DeckCatalog {
     }
 
     /** The chosen deck's card list, grouped the way a decklist is read, for the panel beside the results. */
-    JsonObject details(final String key, final GameType format) {
+    DeckDetails details(final String key, final GameType format) {
         final Deck deck = deck(key);
         if (deck == null) {
             return null;
         }
-        final JsonObject out = new JsonObject();
-        out.addProperty("key", key);
-        out.addProperty("name", deck.getName());
-        out.addProperty("problem", problem(deck, format));
-        out.addProperty("colors", colors(deck));
-        out.add("stats", stats(deck));
-        out.add("main", groups(deck.get(DeckSection.Main)));
-        out.add("sideboard", cards(deck.get(DeckSection.Sideboard)));
-        out.addProperty("sleeveArt", deck.getSleeveArtKey());
-        out.addProperty("sleeveOffset", deck.getSleeveArtOffset());
-        return out;
+        return new DeckDetails(key, deck.getName(), problem(deck, format), colors(deck), stats(deck),
+                groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
+                deck.getSleeveArtOffset());
     }
 
     /** The deck's colour identity as WUBRG letters, or "C" when it has none. */
@@ -176,9 +174,8 @@ final class DeckCatalog {
     }
 
     /** What the panel reports about a deck beside its card list. */
-    private static JsonObject stats(final Deck deck) {
+    private static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
-        final JsonObject out = new JsonObject();
         final int[] curve = new int[CURVE_BUCKETS];
         final Map<String, Integer> types = new LinkedHashMap<>();
         int lands = 0;
@@ -200,29 +197,21 @@ final class DeckCatalog {
                 totalMana += cmc * n;
             }
         }
-        out.addProperty("main", count(main));
-        out.addProperty("sideboard", count(deck.get(DeckSection.Sideboard)));
-        out.addProperty("lands", lands);
-        out.addProperty("averageMana", spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f);
-        final JsonArray buckets = new JsonArray();
+        final List<Integer> buckets = new ArrayList<>();
         for (final int n : curve) {
             buckets.add(n);
         }
-        out.add("curve", buckets);
-        final JsonArray typeCounts = new JsonArray();
+        final List<TypeCount> typeCounts = new ArrayList<>();
         for (final Map.Entry<String, Integer> e : types.entrySet()) {
-            final JsonObject t = new JsonObject();
-            t.addProperty("name", e.getKey());
-            t.addProperty("count", e.getValue());
-            typeCounts.add(t);
+            typeCounts.add(new TypeCount(e.getKey(), e.getValue()));
         }
-        out.add("types", typeCounts);
-        return out;
+        return new DeckStats(count(main), count(deck.get(DeckSection.Sideboard)), lands,
+                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, buckets, typeCounts);
     }
 
     /** Sources that build a deck when you pick one. They are listed by name only: there is nothing to
      *  measure, and asking each for a deck just to fill a row would build hundreds of them. */
-    private void addGenerators(final JsonArray out) {
+    private void addGenerators(final List<DeckSummary> out) {
         // The tokens the colour generator expects, shown under friendlier names
         final Map<String, String> colours = new LinkedHashMap<>();
         colours.put("Random 1", "Random one colour");
@@ -251,39 +240,22 @@ final class DeckCatalog {
         }
     }
 
-    private static void generated(final JsonArray out, final String key, final String name, final String note,
+    // Colours are empty where they are not known until the deck is built, which a colour filter treats as no match
+    private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
-        final JsonObject d = new JsonObject();
-        d.addProperty("key", key);
-        d.addProperty("name", name);
-        d.addProperty("source", GENERATED);
-        d.addProperty("generated", true);
-        d.addProperty("note", note);
-        // Empty where the colours are not known until the deck is built, which a colour filter treats as no match
-        d.addProperty("colors", colours);
-        out.add(d);
+        out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null));
     }
 
-    private void add(final JsonArray out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
+    private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
         for (final DeckProxy proxy : source) {
             final String key = tag + ":" + proxy.getPath() + "/" + proxy.getName();
             byKey.put(key, new Entry(proxy, tag));
             final Deck deck = proxy.getDeck();
-            final JsonObject d = new JsonObject();
-            d.addProperty("key", key);
-            d.addProperty("name", proxy.getName());
-            d.addProperty("source", tag);
-            d.addProperty("main", count(deck.get(DeckSection.Main)));
-            d.addProperty("sideboard", count(deck.get(DeckSection.Sideboard)));
-            // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there
-            d.addProperty("problem", problem(deck, format));
-            d.addProperty("colors", colors(deck));
-            d.add("legalIn", legalIn(deck));
-            // The same wording the desktop chooser puts in its format column
-            d.addProperty("formats", proxy.getFormatsString());
-            d.addProperty("sleeveArt", deck.getSleeveArtKey());
-            d.addProperty("sleeveOffset", deck.getSleeveArtOffset());
-            out.add(d);
+            // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
+            // Its formats are the same wording the desktop chooser puts in its format column.
+            out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, count(deck.get(DeckSection.Main)),
+                    count(deck.get(DeckSection.Sideboard)), problem(deck, format), legalIn(deck), proxy.getFormatsString(),
+                    deck.getSleeveArtKey(), deck.getSleeveArtOffset()));
         }
     }
 
@@ -302,46 +274,38 @@ final class DeckCatalog {
         return pool == null ? 0 : pool.countAll();
     }
 
-    private static JsonArray cards(final CardPool pool) {
-        final JsonArray out = new JsonArray();
+    private static List<DeckCard> cards(final CardPool pool) {
+        final List<DeckCard> out = new ArrayList<>();
         if (pool == null) {
             return out;
         }
         for (final Map.Entry<PaperCard, Integer> e : pool) {
-            final JsonObject c = new JsonObject();
-            c.addProperty("name", e.getKey().getName());
-            c.addProperty("count", e.getValue());
-            c.addProperty("image", e.getKey().getImageKey(false));
-            out.add(c);
+            out.add(card(e.getKey(), e.getValue()));
         }
         return out;
     }
 
     /** Main-deck cards under the headings a decklist normally carries. */
-    private static JsonArray groups(final CardPool pool) {
-        final Map<String, JsonArray> sections = new LinkedHashMap<>();
+    private static DeckCard card(final PaperCard card, final int count) {
+        return new DeckCard(card.getName(), count, card.getImageKey(false));
+    }
+
+    private static List<DeckGroup> groups(final CardPool pool) {
+        final Map<String, List<DeckCard>> sections = new LinkedHashMap<>();
         for (final String heading : List.of("Creatures", "Planeswalkers", "Instants", "Sorceries",
                 "Artifacts", "Enchantments", "Battles", "Lands")) {
-            sections.put(heading, new JsonArray());
+            sections.put(heading, new ArrayList<>());
         }
         if (pool != null) {
             for (final Map.Entry<PaperCard, Integer> e : pool) {
-                final JsonObject c = new JsonObject();
-                c.addProperty("name", e.getKey().getName());
-                c.addProperty("count", e.getValue());
-                c.addProperty("image", e.getKey().getImageKey(false));
-                sections.get(heading(e.getKey())).add(c);
+                sections.get(heading(e.getKey())).add(card(e.getKey(), e.getValue()));
             }
         }
-        final JsonArray out = new JsonArray();
-        for (final Map.Entry<String, JsonArray> e : sections.entrySet()) {
-            if (e.getValue().isEmpty()) {
-                continue;
+        final List<DeckGroup> out = new ArrayList<>();
+        for (final Map.Entry<String, List<DeckCard>> e : sections.entrySet()) {
+            if (!e.getValue().isEmpty()) {
+                out.add(new DeckGroup(e.getKey(), e.getValue()));
             }
-            final JsonObject g = new JsonObject();
-            g.addProperty("heading", e.getKey());
-            g.add("cards", e.getValue());
-            out.add(g);
         }
         return out;
     }
@@ -371,15 +335,12 @@ final class DeckCatalog {
     }
 
     /** The card-art sleeves already saved, shared with the desktop client. */
-    static JsonArray savedSleeveArt() {
-        final JsonArray out = new JsonArray();
+    static List<SavedSleeveArt> savedSleeveArt() {
+        final List<SavedSleeveArt> out = new ArrayList<>();
         final Map<String, Integer> library = SleeveArt.parseLibrary(
                 FModel.getPreferences().getPref(forge.localinstance.properties.ForgePreferences.FPref.UI_SLEEVE_ART_LIBRARY));
         for (final Map.Entry<String, Integer> e : library.entrySet()) {
-            final JsonObject s = new JsonObject();
-            s.addProperty("key", e.getKey());
-            s.addProperty("offset", e.getValue());
-            out.add(s);
+            out.add(new SavedSleeveArt(e.getKey(), e.getValue()));
         }
         return out;
     }
@@ -399,8 +360,8 @@ final class DeckCatalog {
     }
 
     /** Card names matching what has been typed, for the card-art sleeve picker. */
-    static JsonArray searchCardNames(final String query, final int limit) {
-        final JsonArray out = new JsonArray();
+    static List<String> searchCardNames(final String query, final int limit) {
+        final List<String> out = new ArrayList<>();
         final String needle = query == null ? "" : query.trim().toLowerCase();
         if (needle.isEmpty()) {
             return out;
@@ -417,16 +378,12 @@ final class DeckCatalog {
     }
 
     /** Every printing of one card, so a specific art can be picked for a sleeve. */
-    static JsonArray printings(final String name) {
-        final JsonArray out = new JsonArray();
+    static List<Printing> printings(final String name) {
+        final List<Printing> out = new ArrayList<>();
         final List<PaperCard> prints = new ArrayList<>(
                 forge.StaticData.instance().getCommonCards().getAllCardsNoAlt(name));
         for (final PaperCard card : prints) {
-            final JsonObject p = new JsonObject();
-            p.addProperty("name", card.getName());
-            p.addProperty("edition", card.getEdition());
-            p.addProperty("key", card.getImageKey(false));
-            out.add(p);
+            out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false)));
         }
         return out;
     }

@@ -1,7 +1,5 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.gamemodes.match.HostedMatch;
 import forge.gui.download.GuiDownloadService;
@@ -15,6 +13,7 @@ import forge.sound.IAudioMusic;
 import forge.util.BuildInfo;
 import forge.util.FSerializableFunction;
 import forge.util.ImageFetcher;
+import forge.web.ToBrowser.Notice;
 import org.jupnp.UpnpServiceConfiguration;
 import org.tinylog.Logger;
 
@@ -135,20 +134,13 @@ public final class WebGuiBase implements IGuiBase {
     public int showOptionDialog(final String message, final String title, final FSkinProp icon, final List<String> options, final int defaultOption) {
         // A single-option dialog is a message box (SOptionPane.showMessageDialog), which needs no answer
         if (options == null || options.size() <= 1) {
-            final JsonObject notice = new JsonObject();
-            notice.addProperty("t", "notice");
-            notice.addProperty("title", title);
-            notice.addProperty("message", message);
-            notice.addProperty("error", icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING);
-            noticeSink.accept(notice);
+            noticeSink.accept(Wire.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
             return defaultOption;
         }
-        final JsonArray choices = new JsonArray();
-        options.forEach(choices::add);
-        final JsonElement answer = hostRequests.ask("choices", title == null ? message : title + " — " + message,
-                choices, 1, 1);
-        if (answer != null && answer.isJsonArray() && !answer.getAsJsonArray().isEmpty()) {
-            final int picked = answer.getAsJsonArray().get(0).getAsInt();
+        final List<Integer> answer = hostRequests.ask("choices", title == null ? message : title + " — " + message,
+                options, 1, 1);
+        if (answer != null && !answer.isEmpty()) {
+            final int picked = answer.get(0);
             if (picked >= 0 && picked < options.size()) {
                 return picked;
             }
@@ -167,15 +159,14 @@ public final class WebGuiBase implements IGuiBase {
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final Collection<T> choices, final Collection<T> selected, final FSerializableFunction<T, String> display) {
         final List<T> all = new ArrayList<>(choices);
-        final JsonArray options = new JsonArray();
+        final List<String> options = new ArrayList<>();
         for (final T choice : all) {
             options.add(display == null ? String.valueOf(choice) : display.apply(choice));
         }
-        final JsonElement answer = hostRequests.ask("choices", message, options, min, max);
+        final List<Integer> answer = hostRequests.ask("choices", message, options, min, max);
         final List<T> result = new ArrayList<>();
-        if (answer != null && answer.isJsonArray()) {
-            for (final JsonElement index : answer.getAsJsonArray()) {
-                final int i = index.getAsInt();
+        if (answer != null) {
+            for (final int i : answer) {
                 if (i >= 0 && i < all.size()) {
                     result.add(all.get(i));
                 }

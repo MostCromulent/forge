@@ -2,7 +2,7 @@ import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { zone, type Model } from './model';
 import { byId, q } from './dom';
-import type { ZoneName } from './protocol';
+import type { ZoneType } from './protocol';
 
 // Piles the player opened by clicking, on top of the zones the game asks to show
 const opened = new Set<string>();
@@ -10,7 +10,7 @@ let schedule: () => void = () => {};
 
 interface Panel {
   player: number;
-  zone: ZoneName;
+  zone: ZoneType;
   forced: boolean;
 }
 
@@ -22,7 +22,7 @@ export function resetZones(): void {
   opened.clear();
 }
 
-export function togglePile(playerKey: number, zoneName: ZoneName): void {
+export function togglePile(playerKey: number, zoneName: ZoneType): void {
   const k = `${playerKey}/${zoneName}`;
   if (opened.has(k)) opened.delete(k);
   else opened.add(k);
@@ -35,7 +35,7 @@ export function renderZones(model: Model, select: CardClick): void {
   for (const k of opened) {
     if (panels.has(k)) continue;
     const [player, zoneName] = k.split('/');
-    panels.set(k, { player: Number(player), zone: zoneName as ZoneName, forced: false });
+    panels.set(k, { player: Number(player), zone: zoneName as ZoneType, forced: false });
   }
   reconcile(byId('zones'), [...panels.entries()], ([k]) => k,
     () => {

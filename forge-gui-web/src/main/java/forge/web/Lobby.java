@@ -1,7 +1,5 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.game.GameType;
 import forge.gamemodes.match.GameLobby;
@@ -11,6 +9,13 @@ import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.web.ToBrowser.DeckDetails;
+import forge.web.ToBrowser.DeckDetailsMessage;
+import forge.web.ToBrowser.Decks;
+import forge.web.ToBrowser.Format;
+import forge.web.ToBrowser.LobbyMessage;
+import forge.web.ToBrowser.LobbyTable;
+import forge.web.ToBrowser.Seat;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,86 +71,54 @@ final class Lobby {
     }
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
-    JsonObject decks() {
-        final JsonObject m = JsonCodec.message("decks");
-        m.add("decks", catalog.refresh(format()));
-        m.add("cardFormats", DeckCatalog.cardFormats());
-        return m;
+    Decks decks() {
+        return new Decks(catalog.refresh(format()), DeckCatalog.cardFormats());
     }
 
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
-    JsonObject loadNetDecks() {
+    Decks loadNetDecks() {
         catalog.loadNetDecks(format());
         return decks();
     }
 
-    JsonObject deckDetails(final String key) {
-        final JsonObject details = catalog.details(key, format());
-        if (details == null) {
-            return null;
-        }
-        final JsonObject m = JsonCodec.message("deckDetails");
-        m.add("deck", details);
-        return m;
+    DeckDetailsMessage deckDetails(final String key) {
+        final DeckDetails details = catalog.details(key, format());
+        return details == null ? null : new DeckDetailsMessage(details);
     }
 
-    JsonObject state() {
-        final JsonObject m = JsonCodec.message("lobby");
+    LobbyMessage state() {
         final GameLobby lobby = view();
-        m.addProperty("open", lobby != null);
         if (lobby == null) {
-            return m;
+            return new LobbyMessage(null);
         }
-        m.addProperty("host", local.isHost());
-        m.addProperty("mySeat", local.webSeat());
-        m.addProperty("shareable", shareable);
-        m.addProperty("format", format().name());
-        final JsonArray formats = new JsonArray();
+        final List<Format> formats = new ArrayList<>();
         for (final GameType t : FORMATS) {
-            final JsonObject f = new JsonObject();
-            f.addProperty("id", t.name());
-            f.addProperty("name", t.toString());
-            formats.add(f);
+            formats.add(new Format(t.name(), t.toString()));
         }
-        m.add("formats", formats);
-        m.addProperty("maxSeats", MAX_SEATS);
-        final JsonArray seats = new JsonArray();
+        final List<Seat> seats = new ArrayList<>();
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
             seats.add(seat(lobby, i));
         }
-        m.add("seats", seats);
-        final JsonArray problems = new JsonArray();
-        for (final String p : problems()) {
-            problems.add(p);
-        }
-        m.add("problems", problems);
+        final List<String> problems = problems();
         // Only the machine running the game can start it; everyone else waits on the host
-        m.addProperty("canStart", local.isHost() && problems.isEmpty());
-        return m;
+        return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
+                MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
     }
 
-    private JsonObject seat(final GameLobby lobby, final int index) {
+    private Seat seat(final GameLobby lobby, final int index) {
         final LobbySlot slot = lobby.getSlot(index);
         final Deck deck = deckAt(index);
-        final JsonObject j = new JsonObject();
-        j.addProperty("name", slot.getName());
-        j.addProperty("type", slot.getType().name());
-        j.addProperty("mine", index == local.webSeat());
-        // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs.
-        j.addProperty("mayEdit",
-                index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI));
-        j.addProperty("ready", slot.isReady());
-        j.addProperty("avatar", slot.getAvatarIndex());
-        j.addProperty("sleeve", slot.getSleeveIndex());
-        j.addProperty("deck", key(index));
-        j.addProperty("deckName", deck == null ? null : deck.getName());
-        j.addProperty("deckSize", deck == null ? 0 : deck.getMain().countAll());
-        j.addProperty("colors", deck == null ? "" : DeckCatalog.colors(deck));
-        j.addProperty("problem", deck == null ? null : DeckCatalog.problem(deck, format()));
-        // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
-        j.addProperty("sleeveArt", deck == null ? "" : deck.getSleeveArtKey());
-        j.addProperty("sleeveOffset", deck == null ? 0 : deck.getSleeveArtOffset());
-        return j;
+        return new Seat(slot.getName(), slot.getType().name(), index == local.webSeat(),
+                // Your own seat wherever you are, and the computer's seats if you run the game. Another player's is theirs.
+                index == local.webSeat() || (local.isHost() && slot.getType() == LobbySlotType.AI),
+                slot.isReady(), slot.getAvatarIndex(), slot.getSleeveIndex(), key(index),
+                deck == null ? null : deck.getName(),
+                deck == null ? 0 : deck.getMain().countAll(),
+                deck == null ? "" : DeckCatalog.colors(deck),
+                deck == null ? null : DeckCatalog.problem(deck, format()),
+                // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
+                deck == null ? "" : deck.getSleeveArtKey(),
+                deck == null ? 0 : deck.getSleeveArtOffset());
     }
 
     private String key(final int index) {

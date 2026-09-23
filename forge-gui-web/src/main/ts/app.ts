@@ -73,9 +73,9 @@ function apply(msg: ServerMessage): void {
       model.decks = msg.decks;
       onDecks(msg.decks, msg.cardFormats);
       break;
-    case 'lobby': model.lobby = msg; break;
+    case 'lobby': model.lobby = msg.table ?? null; break;
     case 'addresses': model.addresses = msg.list; break;
-    case 'chat': addChat(msg.from, msg.text); break;
+    case 'chat': addChat(msg.from ?? '', msg.text); break;
     case 'deckDetails': onDeckDetails(msg.deck); return;
     case 'cardSearch': onCardNames(msg.names); return;
     case 'printings': onPrintings(msg.printings); return;

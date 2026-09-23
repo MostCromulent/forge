@@ -1,7 +1,5 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import forge.game.GameLog;
 import forge.game.GameLogEntry;
 import forge.game.GameLogEntryType;
@@ -11,6 +9,8 @@ import forge.gamemodes.net.DeltaPacket;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.web.ToBrowser.LogEntry;
+import forge.web.ToBrowser.LogMessage;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +20,7 @@ import java.util.function.Predicate;
 /** The game log as the browser sees it: the entries this seat may read, sent as they arrive and replayed on connect. */
 final class WebGameLog {
     private final Predicate<CardView> mayView;
-    private final List<JsonObject> entries = new ArrayList<>();
+    private final List<LogEntry> entries = new ArrayList<>();
     private GameLog logged;
     private int loggedCount;
 
@@ -29,7 +29,7 @@ final class WebGameLog {
     }
 
     /** The entries added since the last call, or every entry when the match has moved to a new game. */
-    JsonObject added(final GameLog log) {
+    LogMessage added(final GameLog log) {
         final List<GameLogEntry> all = log.getAllEntries();
         final boolean newGame = log != logged;
         if (newGame) {
@@ -37,10 +37,10 @@ final class WebGameLog {
             loggedCount = 0;
         }
         final Set<GameLogEntryType> shown = shownTypes();
-        final List<JsonObject> fresh = new ArrayList<>();
+        final List<LogEntry> fresh = new ArrayList<>();
         for (final GameLogEntry entry : all.subList(loggedCount, all.size())) {
             if (shown.contains(entry.type())) {
-                fresh.add(toJson(entry));
+                fresh.add(entry(entry));
             }
         }
         loggedCount = all.size();
@@ -54,22 +54,19 @@ final class WebGameLog {
     }
 
     /** Everything this seat has seen so far, for a browser that has just connected. */
-    JsonObject all() {
+    LogMessage all() {
         synchronized (entries) {
             return message(entries, true);
         }
     }
 
-    private JsonObject toJson(final GameLogEntry entry) {
-        final JsonObject e = new JsonObject();
-        e.addProperty("type", entry.type().name());
-        e.addProperty("message", entry.message());
+    private LogEntry entry(final GameLogEntry entry) {
         final CardView card = entry.sourceCard();
         if (card != null && card.getCurrentState() != null && mayView.test(card)) {
-            e.addProperty("card", DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()));
-            e.addProperty("imageKey", card.getCurrentState().getImageKey());
+            return new LogEntry(entry.type(), entry.message(),
+                    DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), card.getCurrentState().getImageKey());
         }
-        return e;
+        return new LogEntry(entry.type(), entry.message(), null, null);
     }
 
     private static Set<GameLogEntryType> shownTypes() {
@@ -78,12 +75,7 @@ final class WebGameLog {
         return verbosity == GameLogVerbosity.CUSTOM ? prefs.getCustomLogTypes() : verbosity.getIncludedTypes();
     }
 
-    private static JsonObject message(final List<JsonObject> list, final boolean full) {
-        final JsonObject m = JsonCodec.message("log");
-        m.addProperty("full", full);
-        final JsonArray a = new JsonArray();
-        list.forEach(a::add);
-        m.add("entries", a);
-        return m;
+    private static LogMessage message(final List<LogEntry> list, final boolean full) {
+        return new LogMessage(full, List.copyOf(list));
     }
 }

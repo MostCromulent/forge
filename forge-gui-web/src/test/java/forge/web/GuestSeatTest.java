@@ -43,12 +43,14 @@ public class GuestSeatTest {
         }
 
         JsonObject awaitLobbyWithSeat() throws InterruptedException {
-            return awaitLobby(l -> l.get("open").getAsBoolean() && l.get("mySeat").getAsInt() >= 0);
+            return awaitLobby(l -> l.get("mySeat").getAsInt() >= 0);
         }
 
-        /** The lobby is pushed on every change, so a test waits for the one it is after rather than the latest. */
+        /** The lobby is pushed on every change, so a test waits for the one it is after rather than the latest.
+         *  Answers the open table; a lobby message without one says no game is open. */
         JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
-            return awaitMatching("lobby", wanted);
+            final JsonObject m = awaitMatching("lobby", l -> l.has("table") && wanted.test(l.getAsJsonObject("table")));
+            return m == null ? null : m.getAsJsonObject("table");
         }
 
         /** Drops what has been said so far, so a later wait cannot be satisfied by an earlier message. */
@@ -139,7 +141,7 @@ public class GuestSeatTest {
         browser.forget();
         sessions.onMessage(browser, JsonCodec.message("lobby"));
         // Whichever seat the computer holds, because another browser may be sitting in one of them
-        final JsonObject opened = browser.awaitLobby(l -> l.get("open").getAsBoolean() && seatOfType(l, "AI") >= 0);
+        final JsonObject opened = browser.awaitLobby(l -> seatOfType(l, "AI") >= 0);
         Assert.assertNotNull(opened, "no game opened with a seat held by a computer");
         final int seat = seatOfType(opened, "AI");
 

@@ -1,10 +1,10 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.web.ToBrowser.HostChoice;
 import org.tinylog.Logger;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -22,7 +22,7 @@ final class HostRequests {
     /** Long enough for someone to read the list and decide, short enough that a closed browser gives up. */
     private static final long ANSWER_TIMEOUT_MINUTES = 5;
 
-    private final Map<Integer, CompletableFuture<JsonElement>> open = new ConcurrentHashMap<>();
+    private final Map<Integer, CompletableFuture<List<Integer>>> open = new ConcurrentHashMap<>();
     private final AtomicInteger nextId = new AtomicInteger();
     private volatile Consumer<JsonObject> toBrowser = message -> { };
 
@@ -32,30 +32,24 @@ final class HostRequests {
 
     /** Sends the open questions again, so a browser that reloaded can still answer them. */
     void replay(final Consumer<JsonObject> sink) {
-        for (final Map.Entry<Integer, CompletableFuture<JsonElement>> e : open.entrySet()) {
-            final JsonObject again = pending.get(e.getKey());
+        for (final Map.Entry<Integer, CompletableFuture<List<Integer>>> e : open.entrySet()) {
+            final HostChoice again = pending.get(e.getKey());
             if (again != null) {
-                sink.accept(again);
+                sink.accept(Wire.encode(again));
             }
         }
     }
 
-    private final Map<Integer, JsonObject> pending = new ConcurrentHashMap<>();
+    private final Map<Integer, HostChoice> pending = new ConcurrentHashMap<>();
 
-    /** Asks the browser to pick from a list and waits. Returns null when nobody answers. */
-    JsonElement ask(final String kind, final String message, final JsonArray options, final int min, final int max) {
+    /** Asks the browser to pick from a list and waits. Returns the indices chosen, or null when nobody answers. */
+    List<Integer> ask(final String kind, final String message, final List<String> options, final int min, final int max) {
         final int id = nextId.incrementAndGet();
-        final JsonObject request = JsonCodec.message("hostChoice");
-        request.addProperty("id", id);
-        request.addProperty("kind", kind);
-        request.addProperty("message", message);
-        request.addProperty("min", min);
-        request.addProperty("max", max);
-        request.add("options", options);
-        final CompletableFuture<JsonElement> answer = new CompletableFuture<>();
+        final HostChoice request = new HostChoice(id, kind, message, min, max, options);
+        final CompletableFuture<List<Integer>> answer = new CompletableFuture<>();
         open.put(id, answer);
         pending.put(id, request);
-        toBrowser.accept(request);
+        toBrowser.accept(Wire.encode(request));
         try {
             return answer.get(ANSWER_TIMEOUT_MINUTES, TimeUnit.MINUTES);
         } catch (final InterruptedException e) {
@@ -71,8 +65,8 @@ final class HostRequests {
     }
 
     /** The browser answered one of them. */
-    void answer(final int id, final JsonElement value) {
-        final CompletableFuture<JsonElement> waiting = open.get(id);
+    void answer(final int id, final List<Integer> value) {
+        final CompletableFuture<List<Integer>> waiting = open.get(id);
         if (waiting != null) {
             waiting.complete(value);
         }
@@ -80,7 +74,7 @@ final class HostRequests {
 
     /** Nothing is going to answer: release anything still waiting so no thread is stuck. */
     void abandon() {
-        for (final CompletableFuture<JsonElement> waiting : open.values()) {
+        for (final CompletableFuture<List<Integer>> waiting : open.values()) {
             waiting.complete(null);
         }
         open.clear();

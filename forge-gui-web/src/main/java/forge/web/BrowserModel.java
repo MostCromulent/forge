@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.DeltaPacket;
+import forge.web.ToBrowser.StateMessage;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Java copy of the browser's object table; model.js implements the same apply-and-prune rules. */
+/** Java copy of the browser's object table; model.ts implements the same apply-and-prune rules. */
 public final class BrowserModel {
     private final Map<Integer, JsonObject> objects = new LinkedHashMap<>();
     private int root = -1;
@@ -30,7 +31,10 @@ public final class BrowserModel {
 
     public synchronized void apply(final Map<Integer, JsonObject> newObjects, final Map<Integer, JsonObject> deltas) {
         for (final Map.Entry<Integer, JsonObject> e : newObjects.entrySet()) {
-            objects.put(e.getKey(), e.getValue().deepCopy());
+            // A property still at its default is left out of an object, so a null in a new one means the same
+            final JsonObject copy = e.getValue().deepCopy();
+            copy.entrySet().removeIf(field -> field.getValue().isJsonNull());
+            objects.put(e.getKey(), copy);
         }
         for (final Map.Entry<Integer, JsonObject> e : deltas.entrySet()) {
             final JsonObject target = objects.get(e.getKey());
@@ -90,15 +94,8 @@ public final class BrowserModel {
     }
 
     public synchronized JsonObject stateMessage(final boolean full, final long seq, final Map<Integer, JsonObject> newObjects, final Map<Integer, JsonObject> deltas) {
-        final JsonObject m = JsonCodec.message("state");
-        m.addProperty("full", full);
-        m.addProperty("seq", seq);
-        m.addProperty("root", root);
-        m.add("newObjects", byKey(newObjects));
-        m.add("deltas", byKey(deltas));
-        m.add("visible", visible.deepCopy());
-        m.add("localPlayers", localPlayers.deepCopy());
-        return m;
+        return Wire.encode(new StateMessage(full, seq, root, byKey(newObjects), byKey(deltas), ints(visible),
+                ints(localPlayers)));
     }
 
     public synchronized JsonObject fullState() {
@@ -111,10 +108,16 @@ public final class BrowserModel {
         return copy;
     }
 
-    private static JsonObject byKey(final Map<Integer, JsonObject> objects) {
-        final JsonObject o = new JsonObject();
-        objects.forEach((k, v) -> o.add(String.valueOf(k), v.deepCopy()));
+    private static Map<String, JsonObject> byKey(final Map<Integer, JsonObject> objects) {
+        final Map<String, JsonObject> o = new LinkedHashMap<>();
+        objects.forEach((k, v) -> o.put(String.valueOf(k), v.deepCopy()));
         return o;
+    }
+
+    private static List<Integer> ints(final JsonArray keys) {
+        final List<Integer> out = new ArrayList<>();
+        keys.forEach(k -> out.add(k.getAsInt()));
+        return out;
     }
 
     // Packets carry no removal signal, so anything the game no longer reaches is dropped here

@@ -54,11 +54,7 @@ final class WebDownloads {
         }
 
         void say(final String text) {
-            final JsonObject notice = JsonCodec.message("notice");
-            notice.addProperty("title", title);
-            notice.addProperty("message", text);
-            notice.addProperty("error", false);
-            toBrowser.accept(notice);
+            toBrowser.accept(Wire.encode(new ToBrowser.Notice(title, text, false)));
         }
 
         @Override public void setDescription(final String s) {

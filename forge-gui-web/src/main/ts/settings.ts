@@ -95,7 +95,7 @@ export const SETTINGS: SettingDef[] = [
 
 const byKey = new Map(SETTINGS.map(s => [s.key, s]));
 let local: Record<string, SettingValue> = {};
-let server: ServerSettings = {};
+let server: Partial<ServerSettings> = {};
 let send: Send = () => {};
 let redraw: () => void = () => {};
 
@@ -122,7 +122,7 @@ export const playmatList = (): Playmat[] => playmats;
 export function setting(key: string): SettingValue {
   const def = byKey.get(key);
   if (!def) throw new Error(`No setting ${key}`);
-  const value = def.server ? server[key] : local[key];
+  const value = def.server ? (server as Record<string, SettingValue | undefined>)[key] : local[key];
   return value === undefined ? def.def : value;
 }
 
@@ -153,7 +153,7 @@ export function set(key: string, value: SettingValue): void {
   const def = byKey.get(key);
   if (!def) throw new Error(`No setting ${key}`);
   if (def.server) {
-    server[key] = value;
+    (server as Record<string, SettingValue>)[key] = value;
     send({ t: 'setSetting', key, value: String(value) });
   } else {
     local[key] = value;

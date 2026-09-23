@@ -1,10 +1,12 @@
 package forge.web;
 
-import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
+import forge.web.ToBrowser.Address;
 import org.tinylog.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -202,8 +204,8 @@ final class WebSessions implements WebServer.Endpoint {
     }
 
     /** Every link that would reach this machine, most likely first. */
-    JsonArray inviteUrls() {
-        final JsonArray list = new JsonArray();
+    List<Address> inviteUrls() {
+        final List<Address> list = new ArrayList<>();
         final WebServer s = server;
         if (s == null) {
             return list;
@@ -218,10 +220,7 @@ final class WebSessions implements WebServer.Endpoint {
         return list;
     }
 
-    private static JsonObject invite(final String label, final String url) {
-        final JsonObject j = new JsonObject();
-        j.addProperty("label", label);
-        j.addProperty("url", url);
-        return j;
+    private static Address invite(final String label, final String url) {
+        return new Address(label, url);
     }
 }

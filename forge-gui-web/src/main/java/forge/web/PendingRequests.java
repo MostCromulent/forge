@@ -25,16 +25,16 @@ public final class PendingRequests {
         this.send = send;
     }
 
-    public JsonElement await(final String kind, final JsonObject payload, final JsonElement defaultAnswer, final Predicate<JsonElement> valid) {
+    /** Sends one of the requests in {@link ToBrowser} and waits for its answer, or for its default when the
+     *  game gives up waiting. */
+    public JsonElement await(final Record payload, final Predicate<JsonElement> valid) {
         final int id;
         final Pending pending;
         synchronized (this) {
             id = nextId++;
-            final JsonObject request = payload.deepCopy();
-            request.addProperty("t", "request");
+            final JsonObject request = Wire.encodeRequest(payload);
             request.addProperty("id", id);
-            request.addProperty("kind", kind);
-            request.add("default", defaultAnswer);
+            final JsonElement defaultAnswer = ToBrowser.defaultOf(request);
             pending = new Pending(request, defaultAnswer, valid, new CompletableFuture<>());
             open.put(id, pending);
         }
@@ -43,9 +43,9 @@ public final class PendingRequests {
             return pending.answer().get();
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
-            return defaultAnswer;
+            return pending.defaultAnswer();
         } catch (final ExecutionException e) {
-            return defaultAnswer;
+            return pending.defaultAnswer();
         } finally {
             synchronized (this) {
                 open.remove(id);

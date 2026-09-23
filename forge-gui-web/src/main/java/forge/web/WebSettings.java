@@ -1,8 +1,6 @@
 package forge.web;
 
 import com.google.common.primitives.Ints;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
 import forge.gamemodes.match.YieldController;
@@ -11,8 +9,11 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.web.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /** What the options dialog reads and writes: Forge preferences the desktop client shares, and the phase stops. */
@@ -29,19 +30,24 @@ final class WebSettings {
             "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
             "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
 
-    static JsonObject values() {
+    static ServerSettings values() {
         final ForgePreferences prefs = FModel.getPreferences();
-        final JsonObject s = new JsonObject();
-        BOOLEAN_PREFS.forEach((key, pref) -> s.addProperty(key, prefs.getPrefBoolean(pref)));
-        s.addProperty("autoPassNoActions", prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS));
-        s.addProperty("autoYieldMode", ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability");
-        s.addProperty("logDetail", GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)).name());
-        s.addProperty("arrows", prefs.getPref(FPref.UI_TARGETING_OVERLAY));
-        s.addProperty("highlightColor", "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR));
-        // A volume of zero is the off switch, so the two preferences are reported as one number
-        s.addProperty("soundVolume", prefs.getPrefBoolean(FPref.UI_ENABLE_SOUNDS) ? prefs.getPrefInt(FPref.UI_VOL_SOUNDS) : 0);
-        s.addProperty("musicVolume", prefs.getPrefBoolean(FPref.UI_ENABLE_MUSIC) ? prefs.getPrefInt(FPref.UI_VOL_MUSIC) : 0);
-        return s;
+        return new ServerSettings(
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptAttackers")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptOpponentSpell")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptTargeting")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptTriggers")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("interruptMassRemoval")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("highlightPlayable")),
+                prefs.getPrefBoolean(BOOLEAN_PREFS.get("autoTapPreview")),
+                prefs.getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
+                ForgeConstants.AUTO_DECISION_PER_CARD.equals(prefs.getPref(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
+                GameLogVerbosity.fromString(prefs.getPref(FPref.DEV_LOG_ENTRY_TYPE)),
+                prefs.getPref(FPref.UI_TARGETING_OVERLAY),
+                "#" + prefs.getPref(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
+                // A volume of zero is the off switch, so the two preferences are reported as one number
+                prefs.getPrefBoolean(FPref.UI_ENABLE_SOUNDS) ? prefs.getPrefInt(FPref.UI_VOL_SOUNDS) : 0,
+                prefs.getPrefBoolean(FPref.UI_ENABLE_MUSIC) ? prefs.getPrefInt(FPref.UI_VOL_MUSIC) : 0);
     }
 
     /** A value off the socket reaches the file the desktop client shares, so an illegal one is dropped. */
@@ -85,12 +91,12 @@ final class WebSettings {
     }
 
     /** The phases one row of the stop grid has a stop on; untap takes no stop, as on desktop. */
-    static JsonArray stops(final FPref[] keys) {
-        final JsonArray out = new JsonArray();
+    static List<PhaseType> stops(final FPref[] keys) {
+        final List<PhaseType> out = new ArrayList<>();
         final PhaseType[] phases = PhaseType.values();
         for (int i = 1; i < phases.length; i++) {
             if (FModel.getPreferences().getPrefBoolean(keys[i - 1])) {
-                out.add(phases[i].name());
+                out.add(phases[i]);
             }
         }
         return out;

@@ -211,7 +211,7 @@ function matching(): DeckSummary[] {
     name: byName,
     colors: (a, b) => (a.colors ?? '').localeCompare(b.colors ?? '') || byName(a, b),
     formats: (a, b) => (a.formats ?? '').localeCompare(b.formats ?? '') || byName(a, b),
-    size: (a, b) => b.main - a.main || byName(a, b),
+    size: (a, b) => (b.main ?? 0) - (a.main ?? 0) || byName(a, b),
     legal: (a, b) => Number(!!a.problem) - Number(!!b.problem) || byName(a, b),
   };
   return list.sort(by[sort] ?? byName);

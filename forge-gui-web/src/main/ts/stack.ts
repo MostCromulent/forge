@@ -4,7 +4,7 @@ import { game, deref, derefAll, stateOf, type Model } from './model';
 import { hoverCard } from './detail';
 import { hoverStackItem, stackTargets } from './overlay';
 import { byId, q } from './dom';
-import type { Send, StackItemView, StackMenu } from './protocol';
+import type { Send, StackItemView, StackMenu, YieldAction } from './protocol';
 
 // The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
 // cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
@@ -166,7 +166,7 @@ export function onStackMenu(msg: StackMenu): void {
   menu.id = 'stack-menu';
   menu.style.left = `${at.x}px`;
   menu.style.top = `${at.y}px`;
-  const item = (label: string, action: string, checked?: boolean) => {
+  const item = (label: string, action: YieldAction, checked?: boolean) => {
     const b = document.createElement('button');
     b.textContent = (checked === undefined ? '' : checked ? '✓ ' : '    ') + label;
     b.onclick = () => {
