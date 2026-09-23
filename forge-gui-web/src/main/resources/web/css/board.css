@@ -102,9 +102,15 @@
 .emblem.noimg img { display: none; }
 .emblem.noimg .initials { display: block; }
 .emblem.selectable { outline: 2px dashed var(--select); outline-offset: 2px; }
-.mana { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
-.mana-button { padding: 1px 7px; font-size: 12px; font-weight: 700; border-radius: 10px; }
-.mana-button:disabled { opacity: .8; cursor: default; }
+/* Floating mana: a labelled pool whose border breathes, as it lasts only until the step ends */
+.mana { display: grid; justify-items: center; gap: 4px; padding: 5px 8px 6px; border: 1px solid var(--accent-2); border-radius: 10px; background: color-mix(in srgb, var(--accent-2) 10%, var(--surface)); animation: floating 2.4s ease-in-out infinite; }
+.mana-label { font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
+.mana-chips { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.mana-chip { display: flex; align-items: center; gap: 3px; padding: 2px 7px 2px 3px; border-radius: 12px; background: var(--surface-2); border-color: var(--line); font-size: 13px; font-weight: 700; }
+.mana-chip .sym { width: 18px; height: 18px; margin: 0; filter: drop-shadow(0 1px 1px #000a); }
+.mana-chip:hover:not(:disabled) { border-color: var(--accent-2); }
+.mana-chip:disabled { opacity: 1; cursor: default; }
+@keyframes floating { 50% { box-shadow: 0 0 12px color-mix(in srgb, var(--accent-2) 55%, transparent); } }
 .player-counter.commander-damage { border-style: dashed; }
 /* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
 #phase-strip { display: flex; justify-content: center; position: relative; }

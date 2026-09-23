@@ -1,5 +1,5 @@
 import { reconcile } from './render';
-import { cardImageSrc, hideOnError, noImageOnError, setImage } from './images';
+import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
 import { game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';
 import { renderHand } from './hand';
 import { renderZones, togglePile } from './zones';
@@ -54,7 +54,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
         <div class="player-counters"></div>
         <div class="emblems"></div>
         <div class="zone-tiles"></div>
-        <div class="mana"></div>
+        <div class="mana" hidden><span class="mana-label">Floating mana</span><div class="mana-chips"></div></div>
       </div>
       <div class="battlefield"><div class="row lands"></div><div class="row permanents"></div></div>`;
     const avatarEl = q(root, '.avatar');
@@ -100,21 +100,33 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
 }
 
-// Clicking your own mana pays with that colour, as on desktop
+// Mana in the pool is spent or lost when the step ends, so it is shown apart from everything that stays, under its
+// own label. Clicking your own pays with that colour, as on desktop.
 function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, actions: Actions): void {
   const pool = MANA.filter(([bit]) => player.Mana?.[bit]);
-  reconcile<[number, string], HTMLButtonElement>(root, pool, ([bit]) => bit,
-    ([bit]) => {
+  root.hidden = pool.length === 0;
+  reconcile<[number, string], HTMLButtonElement>(q(root, '.mana-chips'), pool, ([bit]) => bit,
+    ([bit, sym]) => {
       const el = document.createElement('button');
-      el.className = 'mana-button';
+      el.className = 'mana-chip';
+      el.innerHTML = '<img class="sym" alt="" draggable="false"><span class="amount"></span>';
+      const img = q<HTMLImageElement>(el, 'img');
+      img.src = symbolUrl(sym);
+      img.alt = sym;
       el.onclick = () => actions.useMana(bit);
       return el;
     },
     (el, [bit, sym]) => {
-      el.textContent = `${sym} ${player.Mana?.[bit]}`;
+      const amount = player.Mana?.[bit] ?? 0;
+      q(el, '.amount').textContent = String(amount);
       el.disabled = !own;
+      const name = MANA_NAMES[sym];
+      el.title = own ? `${amount} ${name} mana floating. Click to pay with it; it empties when the step ends.`
+        : `${amount} ${name} mana floating`;
     });
 }
+
+const MANA_NAMES: Record<string, string> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green', C: 'colourless' };
 
 // Your own hand is laid out along the bottom, so only opponents get a Hand tile
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): void {
