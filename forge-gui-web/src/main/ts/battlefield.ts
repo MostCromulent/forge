@@ -99,14 +99,24 @@ function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] 
   return slots;
 }
 
-// Everything a player can see or act on must match, so a pile never hides a difference
-function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
+// Everything a player can see or act on must match, so a pile never hides a difference. Nothing else may keep
+// cards apart: a property the game has never set and one it has set back (a land untapped this turn, a creature
+// that attacked last turn) look the same, so they read the same here. Cards pile by name and art, as desktop piles
+// them by name; the art is added because a pile shows only its top card's. As on desktop, a copy never piles with
+// what it copies.
+export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
   // A land played this turn is no different from the lands played before it, so it belongs in their pile
-  return JSON.stringify([s.Name, s.ImageKey, s.Power, s.Toughness, s.Loyalty, card.Tapped, card.Counters, card.Damage,
-    card.Attacking, card.Blocking, isSick(model, card), card.PhasedOut, card.Token, card.EntityAttachedTo, card.IsRingBearer,
-    ...marks.map(m => m.has(card.$key))]);
+  return JSON.stringify([s.Name, s.ImageKey, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
+    counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
+    !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, ...marks.map(m => m.has(card.$key))]);
+}
+
+/** Counters as they show: none at all whether the game sent nothing, nothing left, or zeroes; in a fixed order. */
+function counters(all: Record<string, number> | null | undefined): string {
+  return Object.entries(all ?? {}).filter(([, n]) => n > 0).sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, n]) => `${name}:${n}`).join(',');
 }
 
 // Only a creature is held back by summoning sickness; the engine flags other cards too
