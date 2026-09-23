@@ -29,28 +29,34 @@ export function setSymbolText(el: HTMLElement, text: string | null | undefined, 
 }
 
 export function appendSymbolText(el: HTMLElement, text: string, className?: string): void {
-  for (const part of String(text).split(/(\{[^}]{1,6}\})/)) {
-    if (!part) {
-      continue;
-    }
-    const symbol = part.length > 2 && part.startsWith('{') && part.endsWith('}') ? part.slice(1, -1) : null;
-    if (symbol) {
+  for (const part of symbolParts(text)) {
+    if (part.symbol) {
       const img = document.createElement('img');
       img.className = 'sym';
-      img.alt = part;
-      // A hybrid or Phyrexian shard is named without its slash, as the skin's icon sheet keys them
-      img.src = `mana?s=${encodeURIComponent(symbol.replace(/\//g, ''))}`;
+      img.alt = part.text;
+      img.src = symbolUrl(part.symbol);
       el.append(img);
     } else {
       const span = document.createElement('span');
       if (className) {
         span.className = className;
       }
-      span.textContent = part;
+      span.textContent = part.text;
       el.append(span);
     }
   }
 }
+
+/** Text cut into its plain runs and its {symbols}; symbol is the symbol's name for a symbol, null for text. */
+export function symbolParts(text: string): { text: string; symbol: string | null }[] {
+  return String(text).split(/(\{[^}]{1,6}\})/).filter(part => part).map(part => ({
+    text: part,
+    symbol: part.length > 2 && part.startsWith('{') && part.endsWith('}') ? part.slice(1, -1) : null,
+  }));
+}
+
+// A hybrid or Phyrexian shard is named without its slash, as the skin's icon sheet keys them
+export const symbolUrl = (symbol: string): string => `mana?s=${encodeURIComponent(symbol.replace(/\//g, ''))}`;
 
 export function hideOnError(img: HTMLImageElement): void {
   img.addEventListener('error', () => { img.hidden = true; });

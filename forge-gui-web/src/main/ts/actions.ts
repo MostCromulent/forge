@@ -1,7 +1,11 @@
-// Everything a player can do at the table. Renderers call these and never see the protocol; the controller is the
-// one place that turns them into messages, so a different renderer (a canvas board) drives the game the same way.
+// Everything a player can do, at the table and around it. Renderers and screens call these and never see the
+// protocol; the controller is the one place that turns them into messages, so a different renderer (a canvas board)
+// drives the game the same way.
 
-import type { PhaseType, Send, YieldAction } from './protocol';
+import type { PhaseType, Send, SetSeat, YieldAction } from './protocol';
+
+/** What a seat's owner can change about it. */
+export type SeatChange = Omit<SetSeat, 't' | 'index'>;
 
 export interface Actions {
   /** A click on a card. menu is the right button, which asks for everything the card can do; x and y place that list. */
@@ -31,6 +35,33 @@ export interface Actions {
   stackYield(itemKey: number, action: YieldAction): void;
   say(text: string): void;
   setSetting(key: string, value: string): void;
+
+  // The start page
+  /** Opens a table against the computer, or one others can join by link. */
+  openLobby(invite: boolean): void;
+  claimHost(): void;
+  quit(): void;
+
+  // Match setup
+  leaveLobby(): void;
+  setFormat(format: string): void;
+  addSeat(): void;
+  removeSeat(index: number): void;
+  /** Turns a seat between a computer and one someone can join. */
+  openSeat(index: number): void;
+  aiSeat(index: number): void;
+  setSeat(index: number, change: SeatChange): void;
+  /** Sleeves a seat's deck in a card's art, cropped at offset; an empty key goes back to the numbered sleeve. */
+  setSleeveArt(index: number, key: string, offset: number): void;
+  startMatch(spectate: boolean): void;
+  /** Asks for a deck's card list and statistics, which arrive later in the model. */
+  askDeckDetails(key: string): void;
+  fetchNetDecks(): void;
+  /** Card names and their printings, for picking a card's art; both arrive later in the model. */
+  searchCards(query: string): void;
+  askPrintings(name: string): void;
+  /** Answers a question the host asked outside a match. An empty choice is a cancel. */
+  answerHostChoice(id: number, value: number[]): void;
 }
 
 export function createActions(send: Send): Actions {
@@ -56,5 +87,22 @@ export function createActions(send: Send): Actions {
     stackYield: (key, action) => send({ t: 'stackYield', key, action }),
     say: text => send({ t: 'chat', text }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
+    openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
+    claimHost: () => send({ t: 'claimHost' }),
+    quit: () => send({ t: 'quit' }),
+    leaveLobby: () => send({ t: 'leaveLobby' }),
+    setFormat: format => send({ t: 'setFormat', format }),
+    addSeat: () => send({ t: 'addSeat' }),
+    removeSeat: index => send({ t: 'removeSeat', index }),
+    openSeat: index => send({ t: 'openSeat', index }),
+    aiSeat: index => send({ t: 'aiSeat', index }),
+    setSeat: (index, change) => send({ t: 'setSeat', index, ...change }),
+    setSleeveArt: (index, key, offset) => send({ t: 'sleeveArt', index, key, offset }),
+    startMatch: spectate => send({ t: 'start', spectate }),
+    askDeckDetails: key => send({ t: 'deckDetails', key }),
+    fetchNetDecks: () => send({ t: 'netDecks' }),
+    searchCards: query => send({ t: 'cardSearch', query }),
+    askPrintings: name => send({ t: 'printings', name }),
+    answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }

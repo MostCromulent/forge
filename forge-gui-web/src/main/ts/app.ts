@@ -6,28 +6,26 @@ import { connect } from './net';
 import { createModel, applyState } from './model';
 import { createActions, type Actions } from './actions';
 import { initUi, resetMatchUi } from './ui';
-import { renderMenu } from './menu';
-import { renderLobby } from './lobby';
-import { onDeckDetails, onDecks, deckFinderOpen, closeDeckFinder } from './deckfinder';
-import { initSleeves, onCardNames, onPrintings } from './sleeves';
-import { initHostChoice, onHostChoice } from './hostchoice';
+import { hostedBefore } from './menu';
+import { renderScreens } from './screens';
 import { renderMatch } from './board';
-import { renderPrompt, flash, showNotice } from './prompt';
-import { renderDialogs } from './dialogs';
+import { renderPrompt, flash } from './prompt';
 import { appendLog, initLog } from './log';
 import { initSide, renderSide } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { initSettings, onServerSettings, setPlaymats } from './settings';
-import { refreshOptions } from './options';
 import { applyAudioSettings, playSound, stopMusic } from './audio';
 import { initPace, pace, resetPace } from './pace';
 import { byId } from './dom';
-import type { ServerMessage } from './protocol';
+import type { Notice, ServerMessage } from './protocol';
 
 const model = createModel();
 let scheduled = false;
+// Asked once each, so a slow answer is not asked for again on every message that arrives meanwhile
+let claimed = false;
+let askedAddresses = false;
 initPace(apply);
 const send = connect(pace, online => { byId('banner').hidden = online; });
 
@@ -45,15 +43,24 @@ const actions: Actions = {
     model.stackMenu = null;
     wire.askStackMenu(key);
   },
+  claimHost: () => {
+    claimed = true;
+    wire.claimHost();
+  },
+  // The engine thread waits on the answer, so the question goes as soon as it is answered
+  answerHostChoice: (id, value) => {
+    model.hostChoice = null;
+    wire.answerHostChoice(id, value);
+    schedule();
+  },
 };
 
 initUi(schedule);
-initHostChoice(send);
 initDetail(actions);
 initStack(actions);
 initOverlay(schedule);
 initLog();
-initSide(actions);
+initSide();
 initSettings(actions.setSetting, () => {
   applyAudioSettings();
   schedule();
@@ -76,11 +83,12 @@ function apply(msg: ServerMessage): void {
       model.spectating = !!msg.spectating;
       model.playerName = msg.playerName ?? '';
       if (msg.avatars) model.looks = { avatars: msg.avatars, sleeves: msg.sleeves, avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
-      initSleeves(msg.sleeveCount, msg.sleeveArt);
+      model.savedSleeveArt = msg.sleeveArt ?? [];
       setPlaymats(msg.playmats);
       model.error = null;
       // A new lobby has an address and a conversation of its own
       model.addresses = null;
+      askedAddresses = false;
       model.chat = [];
       model.networked = !!msg.networked;
       // The server replays open requests after every hello
@@ -93,15 +101,24 @@ function apply(msg: ServerMessage): void {
       break;
     case 'decks':
       model.decks = msg.decks;
-      onDecks(msg.decks, msg.cardFormats);
+      model.cardFormats = msg.cardFormats ?? [];
       break;
-    case 'lobby': model.lobby = msg.table ?? null; break;
+    case 'lobby':
+      model.lobby = msg.table ?? null;
+      // Finding the external address is a web request on the host, so it is asked for once per lobby
+      if (!model.lobby?.shareable) {
+        askedAddresses = false;
+      } else if (!model.addresses && !askedAddresses) {
+        askedAddresses = true;
+        send({ t: 'addresses' });
+      }
+      break;
     case 'addresses': model.addresses = msg.list; break;
     case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text }]; break;
-    case 'deckDetails': onDeckDetails(msg.deck); return;
-    case 'cardSearch': onCardNames(msg.names); return;
-    case 'printings': onPrintings(msg.printings); return;
-    case 'hostChoice': onHostChoice(msg); return;
+    case 'deckDetails': model.deckDetails = msg.deck; break;
+    case 'cardSearch': model.cardNames = msg.names ?? []; break;
+    case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;
+    case 'hostChoice': model.hostChoice = msg; break;
     case 'error': model.error = msg.message; break;
     case 'state':
       applyState(model, msg);
@@ -131,16 +148,30 @@ function apply(msg: ServerMessage): void {
     case 'controls':
       model.controls = msg;
       onServerSettings(msg.settings);
-      refreshOptions();
       break;
     case 'log': appendLog(msg); return;
     case 'detail': model.cardDetails.set(msg.key, msg); break;
     case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
     case 'stackMenu': model.stackMenu = msg; break;
-    case 'notice': showNotice(msg); return;
+    case 'notice': notify(msg); break;
     case 'flash': flash(); return;
     default: break;
   }
+  schedule();
+}
+
+let noticeId = 0;
+const NOTICE_MS = 6000;
+
+// An error stays until the player dismisses it; anything else goes by itself
+function notify(notice: Notice): void {
+  const id = ++noticeId;
+  model.notices = [...model.notices, { id, notice }];
+  if (!notice.error) setTimeout(() => dismissNotice(id), NOTICE_MS);
+}
+
+function dismissNotice(id: number): void {
+  model.notices = model.notices.filter(n => n.id !== id);
   schedule();
 }
 
@@ -157,16 +188,25 @@ function render(): void {
   byId('menu').hidden = model.inMatch || model.inLobby;
   byId('lobby').hidden = model.inMatch || !model.inLobby;
   byId('match').hidden = !model.inMatch;
+  askForWhatIsMissing();
+  renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {
-    if (deckFinderOpen() && !model.inLobby) closeDeckFinder();
-    if (model.inLobby) renderLobby(model, send);
-    else renderMenu(model, send);
     return;
   }
   renderSide(model);
   renderMatch(model, actions, events);
   renderPrompt(model, actions);
-  renderDialogs(model, actions);
   renderDetail(model);
   drawOverlay(model);
+}
+
+// What a screen needs and the server has not sent. A browser that has hosted this server before takes the free host
+// seat back without being asked, and match setup has nothing to draw until the table arrives.
+function askForWhatIsMissing(): void {
+  if (!model.host && model.canClaimHost && !claimed && hostedBefore()) {
+    actions.claimHost();
+  }
+  if (model.inLobby && !model.inMatch && !model.lobby) {
+    wire.openLobby(false);
+  }
 }

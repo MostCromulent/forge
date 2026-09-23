@@ -61,4 +61,8 @@ Tests that play whole games are skipped unless `-Drun.stress.tests=true` is give
   game objects through.
 - `src/main/ts/model.ts` is the browser's copy of the game's object table; `forge.web.BrowserModel` applies
   the same rules on the Java side for the tests.
-- `src/main/ts/app.ts` receives every message and schedules one render per frame.
+- `src/main/ts/app.ts` is the controller: it receives every message, is the only place that sends one, and
+  draws at most one frame per animation frame. Everything else acts through `actions.ts`.
+- The board (`board.ts` and what it calls) is drawn by hand, because it is placed by measuring and animated card
+  by card. Everything around it (the start page, match setup, the options, the game's questions, the chat) is
+  Preact components in the `.tsx` files, which `screens.tsx` draws from the model on every frame.

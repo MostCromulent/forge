@@ -18,6 +18,8 @@ export interface UiState {
   stackMenuAt: { key: number; x: number; y: number } | null;
   /** The grid of phase stops is open. */
   stopsOpen: boolean;
+  /** The options dialog is open. */
+  optionsOpen: boolean;
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
@@ -34,6 +36,7 @@ export const ui: UiState = {
   hoveredStackItem: null,
   stackMenuAt: null,
   stopsOpen: false,
+  optionsOpen: false,
   hover: null,
   faceIndex: 0,
   sidePanels: { log: true, chat: false, ...storedSidePanels() },
@@ -58,6 +61,7 @@ export function resetMatchUi(): void {
   ui.hoveredStackItem = null;
   ui.stackMenuAt = null;
   ui.stopsOpen = false;
+  ui.optionsOpen = false;
   ui.hover = null;
   ui.faceIndex = 0;
 }

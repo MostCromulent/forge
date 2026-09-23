@@ -1,15 +1,13 @@
 // The column beside the board. It holds the game log and, in a networked game, the chat. Each collapses
 // on its own; when both are shut the column folds to two tabs against the edge and the board takes the room.
 
-import { wireChatInput, paintChat } from './chat';
 import { byId, q } from './dom';
 import { changeUi, rememberSidePanels, ui } from './ui';
-import type { Actions } from './actions';
 import type { Model } from './model';
 
 const PANELS = ['log', 'chat'] as const;
 
-export function initSide(actions: Actions): void {
+export function initSide(): void {
   const side = byId('side');
   for (const panel of PANELS) {
     q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => changeUi(u => {
@@ -17,18 +15,15 @@ export function initSide(actions: Actions): void {
       rememberSidePanels();
     });
   }
-  wireChatInput(byId<HTMLInputElement>('match-chat-in'), actions.say);
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
 let drawn = '';
 
-// A panel that is not there cannot be open, so chat stays shut in a game nobody else is in
+// A panel that is not there cannot be open, so chat stays shut in a game nobody else is in. The chat itself is
+// one of the screens (screens.tsx); this only opens and shuts the column's panels.
 export function renderSide(model: Model): void {
   const hasChat = model.networked;
-  if (hasChat) {
-    paintChat(byId('match-chat-log'), model);
-  }
   const shown = { log: ui.sidePanels.log, chat: ui.sidePanels.chat && hasChat };
   const state = `${hasChat}/${shown.log}/${shown.chat}`;
   if (state === drawn) {

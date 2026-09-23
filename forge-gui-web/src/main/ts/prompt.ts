@@ -2,11 +2,10 @@ import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images';
 import { game, type Model } from './model';
 import { hoverable } from './detail';
 import { stepName } from './phasebar';
-import { openOptions, closeOptions } from './options';
 import { byId, q } from './dom';
-import { ui } from './ui';
+import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
-import type { Notice, PromptButton, Ref } from './protocol';
+import type { PromptButton, Ref } from './protocol';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
@@ -47,16 +46,16 @@ export function renderPrompt(model: Model, actions: Actions): void {
     q(root, '.end-turn').onclick = () => actions.endTurn();
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
-    q(root, '.cog').onclick = () => openOptions(() => actions.concede());
+    q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
     document.addEventListener('keydown', e => {
       // A key something open over the board has already answered (a menu closing on Escape) is not the prompt's
       if (e.defaultPrevented || e.target instanceof HTMLInputElement || document.querySelector('#dialog-layer .dialog') || e.ctrlKey || e.altKey || e.metaKey) return;
       const ok = q<HTMLButtonElement>(root, '.ok');
       const cancel = q<HTMLButtonElement>(root, '.cancel');
-      if (document.getElementById('options') || ui.stopsOpen) {
+      if (ui.optionsOpen || ui.stopsOpen) {
         // Escape belongs to whatever is open over the board; the prompt keeps its answer
-        if (e.key === 'Escape' && document.getElementById('options')) {
-          closeOptions();
+        if (e.key === 'Escape' && ui.optionsOpen) {
+          changeUi(u => { u.optionsOpen = false; });
         }
         return;
       } else if ((e.key === ' ' || e.key === 'Enter') && !ok.disabled) {
@@ -124,17 +123,4 @@ export function flash(): void {
   root.classList.remove('flash');
   void root.offsetWidth;
   root.classList.add('flash');
-}
-
-export function showNotice(n: Notice): void {
-  const el = document.createElement('div');
-  el.className = n.error ? 'notice error' : 'notice';
-  const title = document.createElement('b');
-  title.textContent = n.title ?? '';
-  const body = document.createElement('div');
-  body.textContent = n.message ?? '';
-  el.append(title, body);
-  el.onclick = () => el.remove();
-  byId('notices').append(el);
-  if (!n.error) setTimeout(() => el.remove(), 6000);
 }

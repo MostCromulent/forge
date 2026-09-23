@@ -24,38 +24,3 @@ export function cssUrl(url: string): string {
 }
 
 export const ROBOT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="8" width="14" height="11" rx="3"/><rect x="11" y="3" width="2" height="5"/><circle cx="12" cy="3" r="1.6"/><circle cx="9.5" cy="13" r="1.6" class="eye"/><circle cx="14.5" cy="13" r="1.6" class="eye"/><rect x="2" y="11" width="2.5" height="5" rx="1"/><rect x="19.5" y="11" width="2.5" height="5" rx="1"/></svg>';
-
-// A grid of every avatar or sleeve; resolves with the chosen index, or null when dismissed
-export function pickLook(title: string, count: number, urlOf: (index: number) => string, current: number, tall: boolean): Promise<number | null> {
-  return new Promise(resolve => {
-    const backdrop = document.createElement('div');
-    backdrop.className = 'backdrop';
-    const dialog = document.createElement('div');
-    dialog.className = 'dialog look-picker';
-    const heading = document.createElement('h3');
-    heading.textContent = title;
-    const grid = document.createElement('div');
-    grid.className = tall ? 'look-grid tall' : 'look-grid';
-    const close = (value: number | null) => {
-      backdrop.remove();
-      resolve(value);
-    };
-    for (let i = 0; i < count; i++) {
-      const b = document.createElement('button');
-      b.className = i === current ? 'look chosen' : 'look';
-      const img = document.createElement('img');
-      img.alt = '';
-      img.src = urlOf(i);
-      b.append(img);
-      b.onclick = () => close(i);
-      grid.append(b);
-    }
-    const cancel = document.createElement('button');
-    cancel.textContent = 'Cancel';
-    cancel.onclick = () => close(null);
-    backdrop.onclick = e => { if (e.target === backdrop) close(null); };
-    dialog.append(heading, grid, cancel);
-    backdrop.append(dialog);
-    document.body.append(backdrop);
-  });
-}

@@ -39,6 +39,8 @@
 #match.side-folded .side-toggle { writing-mode: vertical-rl; padding: 10px 4px; border-radius: 6px 0 0 6px; }
 #match-chat-log { background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 64px; font-size: 12px; scrollbar-width: thin; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
 #match-chat-in { width: 100%; font-size: 12px; }
+/* The chat is drawn into a holder of its own; its log and input are the panel's rows */
+#match-chat { display: contents; }
 .chat-line b { color: var(--accent-2); font-weight: 600; }
 /* The stack panel floats over the right of the board, so the rows give it room rather than sliding under it */
 #match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }

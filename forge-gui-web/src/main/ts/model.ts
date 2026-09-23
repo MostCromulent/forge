@@ -1,6 +1,7 @@
 import type {
-  Address, CardStateView, CardView, Controls, DeckSummary, Detail, GameEvent, GameView, LobbyTable, PlayerDetail, StackMenu, Playable, PlayerView, PlayerZone,
-  Prompt, Ref, Refs, Request, ShownZone, StateMessage, TrackedObject, ZoneType,
+  Address, CardStateView, CardView, Controls, DeckDetails, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
+  Notice, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
+  StackMenu, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
 export interface Looks {
@@ -45,6 +46,19 @@ export interface Model {
   chat: { from: string; text: string }[];
   /** Someone else is at the table, so there is someone to talk to. */
   networked: boolean;
+  /** The formats a deck's cards can be checked against, for narrowing the deck list. */
+  cardFormats: string[];
+  /** The deck last asked about, with its card list and statistics. */
+  deckDetails: DeckDetails | null;
+  /** Card names matching the last search, and the printings of the last name asked about, for picking sleeve art. */
+  cardNames: string[];
+  printings: { name: string; list: Printing[] } | null;
+  /** Card art this installation has already sleeved a deck in. */
+  savedSleeveArt: SavedSleeveArt[];
+  /** A question the host is waiting on outside a match. */
+  hostChoice: HostChoice | null;
+  /** Messages from the server, each until it is dismissed or times out. */
+  notices: { id: number; notice: Notice }[];
 }
 
 export function createModel(): Model {
@@ -55,6 +69,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], networked: false,
+    cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, notices: [],
   };
 }
 
