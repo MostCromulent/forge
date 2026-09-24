@@ -44,6 +44,8 @@ export interface Actions {
   /** Opens a table against the computer, or one others can join by link. */
   openLobby(invite: boolean): void;
   claimHost(): void;
+  /** Tries again for a seat after a join found none free. */
+  join(): void;
   quit(): void;
 
   // Match setup
@@ -95,6 +97,7 @@ export function createActions(send: Send): Actions {
     setName: (name, avatar) => send({ t: 'setName', name, avatar }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: () => send({ t: 'claimHost' }),
+    join: () => send({ t: 'join' }),
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     setFormat: format => send({ t: 'setFormat', format }),

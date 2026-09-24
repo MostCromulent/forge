@@ -192,13 +192,42 @@ export function rememberAvatar(index: number): void {
   }
 }
 
-/** A browser with no seat, waiting for somebody to open a table. */
+/**
+ * A browser with no seat. Three things can be true here and they used to read as one sentence: a seat is being
+ * taken, the last attempt at one failed, or nobody has opened a table at all. The trail says how far the browser
+ * got, which is the difference between nothing happening yet and something unfinished.
+ */
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
+  const failed = !model.joining && !!model.error;
+  const state = model.joining ? 'joining' : failed ? 'failed' : 'idle';
   return (
     <div class="menu-page">
       <Wordmark />
-      <p class="menu-note">{model.canClaimHost ? 'Nobody has opened a table yet.' : 'Waiting for a table to open.'}</p>
-      {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Open one yourself</button>}
+      <section class={`wait-card ${state}`}>
+        <ol class="trail">
+          <Step name="Connected" done />
+          <Step name="Named" done={!!model.playerName} />
+          <Step name="Seated" state={state} />
+        </ol>
+        <div class="wait-head">
+          <span class="wait-mark" aria-hidden="true" />
+          <b>{model.joining ? 'Taking your seat' : failed ? 'Could not take a seat' : 'No table open yet'}</b>
+        </div>
+        <p class="wait-body">
+          {model.joining ? 'A table is making room for you.'
+            : failed ? model.error
+              : 'You are seated as soon as one opens.'}
+        </p>
+        <div class="wait-buttons">
+          {failed && <button onClick={() => actions.join()}>Try again</button>}
+          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Open a table</button>}
+        </div>
+      </section>
     </div>
   );
+}
+
+function Step({ name, done = false, state }: { name: string; done?: boolean; state?: string }) {
+  const mark = state === undefined ? (done ? 'done' : 'todo') : state === 'joining' ? 'now' : state === 'failed' ? 'failed' : 'todo';
+  return <li class={`step ${mark}`}><span class="dot" aria-hidden="true" />{name}</li>;
 }

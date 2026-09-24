@@ -26,6 +26,8 @@ export interface Model {
   spectating: boolean;
   inMatch: boolean;
   inLobby: boolean;
+  /** A seat is being taken: the server is between the menu and the table. */
+  joining: boolean;
   playerName: string;
   decks: DeckSummary[];
   error: string | null;
@@ -67,7 +69,7 @@ export function createModel(): Model {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
     prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
     looks: null, spectating: false,
-    inMatch: false, inLobby: false, playerName: '', decks: [], error: null,
+    inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], networked: false,
     cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],

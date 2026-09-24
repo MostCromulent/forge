@@ -20,7 +20,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit,
         ok, cancel, endTurn, autoPass, undo, concede }
 
     @Command

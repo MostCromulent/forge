@@ -212,6 +212,8 @@ public final class WebSession {
                 final SetName chosen = Wire.decode(msg, SetName.class);
                 rename(channel, chosen.name(), chosen.avatar());
             }
+            // A join that found no seat leaves the browser on the waiting page, which offers to try again
+            case "join" -> joinHostGame();
             case "claimHost" -> {
                 if (!sessions.claimHost(this)) {
                     channel.send(error("Someone else is already hosting."));
@@ -402,7 +404,8 @@ public final class WebSession {
                 move(joining, new Menu());
                 final BrowserChannel b = browser;
                 if (b != null) {
-                    b.send(error("Could not take a seat: " + e.getMessage()));
+                    // The waiting card supplies "Could not take a seat", so this is the reason alone
+                    b.send(error(e.getMessage()));
                 }
                 return;
             }
@@ -526,7 +529,8 @@ public final class WebSession {
 
     private Hello hello() {
         final Stage now = stage;
-        return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Playing p && p.spectating(), isHost,
+        return new Hello(now instanceof Playing, now instanceof Setup, now instanceof Opening,
+                now instanceof Playing p && p.spectating(), isHost,
                 // Nobody hosts by arriving, so a browser is offered the seat whenever it is free
                 !isHost && sessions.hostSeatFree(this),
                 // A game nobody was invited to has nobody to talk to, so the browser leaves the chat out altogether

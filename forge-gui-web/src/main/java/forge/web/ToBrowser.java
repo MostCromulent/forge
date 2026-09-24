@@ -41,8 +41,8 @@ final class ToBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     @Message("hello")
-    record Hello(boolean inMatch, boolean inLobby, boolean spectating, boolean host, boolean canClaimHost,
-            boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
+    record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
+            boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt) {
     }
 

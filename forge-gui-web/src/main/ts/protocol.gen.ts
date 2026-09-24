@@ -7,6 +7,7 @@ export interface Hello {
   t: 'hello';
   inMatch: boolean;
   inLobby: boolean;
+  joining: boolean;
   spectating: boolean;
   host: boolean;
   canClaimHost: boolean;
@@ -313,7 +314,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {

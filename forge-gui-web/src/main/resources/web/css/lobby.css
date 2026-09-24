@@ -54,6 +54,44 @@
 .start-buttons { display: flex; gap: 8px; }
 .start-buttons button { flex: 1; padding: 11px; font-size: 15px; }
 
+/* --- waiting for a seat ----------------------------------------------- */
+
+/* One card, three sets of words. The trail is what separates "nothing has happened yet" from "something is
+   happening and has not finished", which were the same screen before. */
+.wait-card {
+  display: grid; gap: 15px; width: min(100%, 380px); padding: 22px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
+}
+.wait-card.failed { border-color: #a35a3a; }
+.trail { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.step { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+/* Every step past the first pulls the line that leads to it */
+.step:not(:first-child) { flex: 1; }
+.step:not(:first-child)::before { content: ''; flex: 1; height: 1px; background: var(--line); }
+.step .dot { width: 9px; height: 9px; flex: none; border-radius: 50%; box-sizing: border-box; }
+.step.done .dot { background: #6fd2c8; }
+.step.todo .dot { border: 2px dashed var(--line-bright); }
+.step.now .dot { border: 2px solid var(--accent-2); }
+.step.now { color: var(--accent-2); }
+.step.failed .dot { background: #ff9a72; }
+.step.failed { color: #ff9a72; }
+
+.wait-head { display: flex; align-items: center; gap: 12px; }
+.wait-head b { font-size: 17px; }
+.wait-mark { position: relative; width: 22px; height: 22px; flex: none; border-radius: 50%; box-sizing: border-box; }
+.wait-card.joining .wait-mark { border: 2.6px solid var(--accent-2); border-right-color: transparent; animation: wait-spin 1.1s linear infinite; }
+.wait-card.idle .wait-mark { border: 2px dashed var(--line-bright); }
+.wait-card.failed .wait-mark { border: 2.2px solid #ff9a72; }
+.wait-card.failed .wait-mark::after {
+  content: '!'; position: absolute; inset: 0; display: grid; place-items: center;
+  color: #ff9a72; font-size: 13px; font-weight: 700;
+}
+@keyframes wait-spin { to { transform: rotate(1turn); } }
+@media (prefers-reduced-motion: reduce) { .wait-card.joining .wait-mark { animation: none; } }
+.wait-body { margin: 0; color: var(--muted); line-height: 1.55; }
+.wait-buttons { display: flex; gap: 8px; }
+.wait-buttons:empty { display: none; }
+
 /* --- the menu --------------------------------------------------------- */
 
 .menu-head {

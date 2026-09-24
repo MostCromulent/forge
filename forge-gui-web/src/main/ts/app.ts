@@ -127,6 +127,7 @@ function apply(msg: ServerMessage): void {
       model.inLobby = msg.inLobby;
       // A picker belongs to the table it was opened over
       if (!model.inLobby) ui.picker = null;
+      model.joining = msg.joining;
       model.spectating = msg.spectating;
       model.playerName = msg.playerName ?? '';
       model.nameSent = false;
