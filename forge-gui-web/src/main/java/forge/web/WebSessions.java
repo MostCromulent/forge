@@ -322,12 +322,15 @@ final class WebSessions implements WebServer.Endpoint {
         if (s == null) {
             return list;
         }
-        final String external = FServerManager.getExternalAddress();
-        if (external != null) {
-            list.add(new Address("Over the internet", s.inviteUrl(external)));
-        }
         for (final Map.Entry<String, String> e : FServerManager.getAllLocalAddresses().entrySet()) {
             list.add(new Address(e.getKey(), s.inviteUrl(e.getValue())));
+        }
+        // Nothing opens this port. Forge asks a router to open one only for its own game server, and the web UI
+        // listens on a different port that nothing ever asks about, so the link reaches the router and stops
+        // there until somebody forwards it by hand. Last, because it is the one least likely to work.
+        final String external = FServerManager.getExternalAddress();
+        if (external != null) {
+            list.add(new Address("Over the internet (forward port " + s.port() + " first)", s.inviteUrl(external)));
         }
         return list;
     }

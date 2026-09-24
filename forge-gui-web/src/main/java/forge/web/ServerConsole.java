@@ -183,8 +183,10 @@ final class ServerConsole implements IProgressBar {
         for (final Map.Entry<String, String> local : FServerManager.getAllLocalAddresses().entrySet()) {
             found.put(local.getKey(), service.inviteUrl(local.getValue()));
         }
+        // Nothing opens this port, so the link reaches the router and stops there until somebody forwards it
         final String external = FServerManager.getExternalAddress();
-        found.put("Over the internet", external == null ? null : service.inviteUrl(external));
+        found.put("Over the internet (forward port " + service.port() + " first)",
+                external == null ? null : service.inviteUrl(external));
         SwingUtilities.invokeLater(() -> showLinks(found));
     }
 

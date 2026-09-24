@@ -81,4 +81,9 @@ final class WebService {
     synchronized String inviteUrl(final String address) {
         return server == null ? null : server.inviteUrl(address);
     }
+
+    /** The port the browser connects on, or 0 while stopped. */
+    synchronized int port() {
+        return server == null ? 0 : server.port();
+    }
 }
