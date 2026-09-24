@@ -5,9 +5,11 @@
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
 /* The cost to cast sits over the card's top-right corner as bare symbols, sized from the card */
-#hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.09); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 2px; filter: drop-shadow(0 1px 2px #000c); }
+#hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.07); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 1px; filter: drop-shadow(0 1px 2px #000c); transform-origin: 100% 100%; transition: transform .12s ease; }
 #hand .card .cost-badge:empty { display: none; }
-#hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.2); width: calc(var(--hand-w) * 0.2); margin: 0; }
+#hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.15); width: calc(var(--hand-w) * 0.15); margin: 0; }
+/* The hovered card grows 1.8 times; its cost grows by only a fifth, so the symbols stay the size of a label */
+#hand .card:hover .cost-badge { transform: scale(.67); }
 #hand .card { flex: none; transform: translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .12s ease; }
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }
 
