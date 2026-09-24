@@ -114,6 +114,8 @@ function shiftBoard(travelled: Set<string>): void {
     const dx = centre(was.rect).x - centre(now).x;
     const dy = centre(was.rect).y - centre(now).y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
+      // Measured mid-slide the card is still near where it came from, which the next frame would slide it from again
+      resting.set(key, now);
       el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
         { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', composite: 'add' });
     }
