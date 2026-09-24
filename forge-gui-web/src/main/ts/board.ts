@@ -20,6 +20,12 @@ const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, '
 export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
+  for (const e of events) {
+    if (e.kind === 'gameStarted') {
+      firstPlayer = e.first.ref;
+      revealFirst(model, firstPlayer);
+    }
+  }
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
@@ -82,6 +88,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
+  // Who went first stays marked until their first turn is over, for anyone who missed the reveal
+  avatar.classList.toggle('first', firstPlayer === player.$key && (game(model)?.Turn ?? 0) <= 1);
   renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
@@ -187,6 +195,51 @@ let announced: string | null = null;
 /** A new table: its first turn is announced afresh, even when the same player starts it as last game. */
 export function resetTurnBanner(): void {
   announced = null;
+  firstPlayer = null;
+}
+
+/** The player the game said takes the first turn, from the moment it is settled until the next game. */
+let firstPlayer: number | null = null;
+
+/**
+ * Who goes first, said over the board as the opening hands are dealt: every player's face, then the one who
+ * starts lit in brass and the rest stepping back. The prompt says it too, but a sentence above a hand is easy to
+ * read past.
+ */
+function revealFirst(model: Model, first: number): void {
+  const everyone = players(model);
+  const starter = everyone.find(p => p.$key === first);
+  if (!starter) return;
+  document.getElementById('first-reveal')?.remove();
+  const reveal = document.createElement('div');
+  reveal.id = 'first-reveal';
+  reveal.setAttribute('role', 'status');
+  const faces = document.createElement('div');
+  faces.className = 'reveal-faces';
+  for (const p of everyone) {
+    const face = document.createElement('div');
+    face.className = p.$key === first ? 'reveal-face first' : 'reveal-face';
+    const url = playerAvatarUrl(p);
+    const picture = document.createElement(url ? 'img' : 'span');
+    if (picture instanceof HTMLImageElement) {
+      picture.alt = '';
+      picture.src = url;
+    } else {
+      picture.textContent = (p.Name ?? '?').slice(0, 1).toUpperCase();
+    }
+    const name = document.createElement('span');
+    name.className = 'reveal-name';
+    name.textContent = p.Name ?? '';
+    face.append(picture, name);
+    faces.append(face);
+  }
+  const said = document.createElement('p');
+  said.textContent = isLocal(model, starter) ? 'You go first' : `${starter.Name} goes first`;
+  reveal.append(faces, said);
+  byId('match').append(reveal);
+  reveal.addEventListener('animationend', e => {
+    if (e.animationName === 'first-reveal') reveal.remove();
+  });
 }
 
 function announceTurn(model: Model, g: GameView): void {
@@ -203,9 +256,8 @@ function announceTurn(model: Model, g: GameView): void {
   }
   const mine = isLocal(model, active);
   const banner = document.createElement('div');
-  banner.className = `turn-banner${mine ? ' mine' : ''}${opening ? ' opening' : ''}`;
-  banner.textContent = opening ? (mine ? 'You go first' : `${active.Name} goes first`)
-    : mine ? 'Your turn' : `${active.Name}'s turn`;
+  banner.className = `turn-banner${mine ? ' mine' : ''}`;
+  banner.textContent = mine ? 'Your turn' : `${active.Name}'s turn`;
   // The banner takes the pill's place for as long as it shows, rather than covering it. The pill animates
   // its own width, so anything sized to cover it is measuring a number that is about to change.
   const strip = byId('phase-strip');

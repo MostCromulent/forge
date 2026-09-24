@@ -7,6 +7,7 @@ import forge.game.event.GameEventAttackersDeclared;
 import forge.game.event.GameEventBlockersDeclared;
 import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardDamaged;
+import forge.game.event.GameEventGameStarted;
 import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventShuffle;
 import forge.game.event.GameEventSpellAbilityCast;
@@ -17,6 +18,7 @@ import forge.web.ToBrowser.Attack;
 import forge.web.ToBrowser.AttackersDeclared;
 import forge.web.ToBrowser.CardDamaged;
 import forge.web.ToBrowser.CardMoved;
+import forge.web.ToBrowser.GameStarted;
 import forge.web.ToBrowser.Place;
 import forge.web.ToBrowser.PlayerDamaged;
 import forge.web.ToBrowser.Ref;
@@ -61,6 +63,9 @@ final class BrowserEvents {
         }
         if (event instanceof GameEventShuffle e && e.player() != null) {
             return new Shuffled(Ref.player(e.player().getId()));
+        }
+        if (event instanceof GameEventGameStarted e && e.firstTurn() != null) {
+            return new GameStarted(Ref.player(e.firstTurn().getId()));
         }
         return null;
     }

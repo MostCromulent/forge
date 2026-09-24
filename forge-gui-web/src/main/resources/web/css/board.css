@@ -447,8 +447,28 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
   box-shadow: 0 2px 0 #6b3f18, 0 10px 24px #000a;
   color: #241209;
 }
-/* Who goes first is said once a game, so it stays up a little longer */
-.turn-banner.opening { animation-duration: 3.2s; }
+/* Who goes first, over the board as the hands are dealt. Every face shows, then the starter is lit in brass and
+   the rest step back. It never takes a click, so the mulligan prompt under it can be answered straight away. */
+#first-reveal { position: fixed; inset: 0 268px 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
+  background: radial-gradient(closest-side, #070910d9, #07091000); animation: first-reveal 3s ease forwards; }
+#first-reveal .reveal-faces { display: flex; gap: 36px; }
+#first-reveal .reveal-face { display: grid; justify-items: center; gap: 8px; }
+#first-reveal .reveal-face > :first-child { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; box-sizing: border-box; border: 2px solid var(--line-bright);
+  background: var(--surface-2); display: grid; place-items: center; font-size: 32px; font-weight: 700; }
+#first-reveal .reveal-name { font-size: 13px; font-weight: 600; }
+#first-reveal .reveal-face.first > :first-child { animation: first-lit .45s cubic-bezier(.2,.8,.3,1.2) .7s forwards; }
+#first-reveal .reveal-face:not(.first) { animation: first-dim .45s ease .7s forwards; }
+#first-reveal p { margin: 0; padding: 9px 30px; border-radius: 4px; background: var(--brass); color: var(--on-brass); font-size: 15px; font-weight: 800;
+  letter-spacing: .16em; text-transform: uppercase; box-shadow: 0 10px 24px #000a; opacity: 0; animation: first-say .4s cubic-bezier(.2,.8,.3,1) .85s forwards; }
+@keyframes first-reveal { from { opacity: 0; } 8% { opacity: 1; } 86% { opacity: 1; } to { opacity: 0; } }
+@keyframes first-lit { to { transform: scale(1.14); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); } }
+@keyframes first-dim { to { opacity: .4; transform: scale(.9); } }
+@keyframes first-say { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+/* Still said, only without the movement */
+@media (prefers-reduced-motion: reduce) { #first-reveal .reveal-face > :first-child, #first-reveal .reveal-face, #first-reveal p { animation-duration: 1ms; animation-delay: 0s; } }
+/* The starter keeps a mark on their face until their first turn is over */
+.avatar.first::after { content: '1st'; position: absolute; right: -10px; top: -6px; padding: 2px 6px; border-radius: 9px; background: var(--brass); color: var(--on-brass);
+  font-size: 10px; font-weight: 800; letter-spacing: .04em; border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff); box-shadow: 0 1px 3px #000a; }
 @keyframes turn-sweep { from { opacity: 0; transform: translate(-50%, -50%) translateY(-14px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, -50%) translateY(2px) scale(1.02); } 20% { transform: translate(-50%, -50%) translateY(0) scale(1); } 84% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) translateY(0) scale(1.05); } }
 /* A hit on your own life: the board lurches and the edges wash warm for a moment */
 #match.hit { animation: hit-shake .32s ease-out; }

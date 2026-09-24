@@ -185,8 +185,13 @@ final class ToBrowser {
     record Shuffled(Ref player) {
     }
 
+    /** A game began. Who takes the first turn is settled before anyone looks at a hand, so it is said here. */
+    @Event("gameStarted")
+    record GameStarted(Ref first) {
+    }
+
     static final List<Class<? extends Record>> EVENTS = List.of(CardMoved.class, CardDamaged.class,
-            PlayerDamaged.class, AttackersDeclared.class, Shuffled.class);
+            PlayerDamaged.class, AttackersDeclared.class, Shuffled.class, GameStarted.class);
 
     @Message("prompt")
     record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,

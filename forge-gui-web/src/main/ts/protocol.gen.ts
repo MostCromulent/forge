@@ -503,12 +503,18 @@ export interface Shuffled {
   player: Ref;
 }
 
+export interface GameStarted {
+  kind: 'gameStarted';
+  first: Ref;
+}
+
 export type GameEvent =
   | CardMoved
   | CardDamaged
   | PlayerDamaged
   | AttackersDeclared
-  | Shuffled;
+  | Shuffled
+  | GameStarted;
 
 export interface SavedSleeveArt {
   key: string;
