@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 final class SkinSprites {
     private static List<BufferedImage> avatars;
     private static BufferedImage manaIcons;
+    private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
@@ -65,11 +66,44 @@ final class SkinSprites {
         });
     }
 
+    /** PNG bytes of one keyword's icon, named by its FSkinProp, or null for a keyword the skin has no picture for. */
+    static byte[] abilityPng(final String name) {
+        final FSkinProp prop;
+        try {
+            prop = FSkinProp.valueOf(name);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+        if (!name.startsWith("IMG_ABILITY_")) {
+            return null;
+        }
+        return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
+    }
+
     private static synchronized BufferedImage manaSheet() {
         if (manaIcons == null) {
             manaIcons = read(skinFile(ForgeConstants.SPRITE_MANAICONS_FILE));
         }
         return manaIcons;
+    }
+
+    /** The ring-bearer's badge is on the mana sheet; every other ability icon is on its own. */
+    private static synchronized BufferedImage sheetFor(final FSkinProp prop) {
+        if (prop == FSkinProp.IMG_ABILITY_RINGBEARER) {
+            return manaSheet();
+        }
+        if (abilityIcons == null) {
+            abilityIcons = read(skinFile(ForgeConstants.SPRITE_ABILITY_FILE));
+        }
+        return abilityIcons;
+    }
+
+    private static byte[] cell(final BufferedImage sheet, final FSkinProp prop, final String name) {
+        final int[] at = prop.getCoords();
+        if (sheet == null || at.length < 4 || at[0] + at[2] > sheet.getWidth() || at[1] + at[3] > sheet.getHeight()) {
+            return null;
+        }
+        return encode(sheet.getSubimage(at[0], at[1], at[2], at[3]), name);
     }
 
     private static List<BufferedImage> avatars() {

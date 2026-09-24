@@ -1,9 +1,10 @@
 import { stateOf, type Model } from './model';
 import { hoverable } from './detail';
-import { cardImageSrc, noImageOnError, setImage, setSymbolText } from './images';
+import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
+import { reconcile } from './render';
 import { q } from './dom';
-import type { CardView, Ref } from './protocol';
+import type { CardView, KeywordText, Ref } from './protocol';
 
 /** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
@@ -11,7 +12,7 @@ export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="kws"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span>';
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
@@ -74,10 +75,31 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
+  showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push('Ring-bearer');
   for (const [name, n] of Object.entries(card.Counters ?? {})) badges.push(`${n} ${name}`);
   q(el, '.badges').textContent = badges.join(' · ');
+}
+
+/**
+ * The keywords that decide a block, as the pictures desktop uses for them. Only ones the skin has an icon for
+ * appear: the host names the icon (FSkinProp.iconFromKeyword) so neither client keeps its own table. The rest of
+ * a card's keywords are in its rules text, which the detail panel shows on hover.
+ *
+ * Reminder text goes in the title so a player who does not know the picture can still find out what it means.
+ */
+function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined): void {
+  const shown = (keywords ?? []).filter(k => k.icon);
+  reconcile(root, shown, k => k.icon ?? k.title, () => {
+    const img = document.createElement('img');
+    img.alt = '';
+    hideOnError(img);
+    return img;
+  }, (img, k) => {
+    setImage(img as HTMLImageElement, abilityUrl(k.icon ?? ''));
+    img.title = k.reminder ? `${k.title} — ${k.reminder}` : k.title;
+  });
 }
 
 // New damage jolts the card and throws the number off it, so combat is legible without the log

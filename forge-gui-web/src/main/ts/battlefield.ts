@@ -71,7 +71,10 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
   // its air; 32px is the two rows' room above their cards
   const byWidth = width / (columns * (h * 0.9 + 2 * air));
   const byHeight = (height - 32) / (LINES_PER_ROW * 2 * h);
-  root.style.setProperty('--fit', String(Math.max(MIN_FIT, Math.min(1, byWidth, byHeight))));
+  const fit = Math.max(MIN_FIT, Math.min(1, byWidth, byHeight));
+  root.style.setProperty('--fit', String(fit));
+  // Below this the keyword icons are too small to tell apart, so the board drops them and keeps the art
+  field.classList.toggle('cramped', fit < 0.72);
 }
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is

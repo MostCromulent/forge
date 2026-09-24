@@ -15,6 +15,7 @@ import forge.game.card.CounterType;
 import forge.game.keyword.KeywordCollectionView;
 import forge.game.keyword.KeywordView;
 import forge.gamemodes.net.DeltaPacket;
+import forge.localinstance.skin.FSkinProp;
 import forge.item.IPaperCard;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes.TrackableType;
@@ -176,6 +177,11 @@ public final class JsonCodec {
                 final JsonObject o = new JsonObject();
                 o.addProperty("title", kv.title());
                 o.addProperty("reminder", kv.reminderText());
+                // The icon is picked here rather than in the browser so both clients read the same table
+                final FSkinProp icon = FSkinProp.iconFromKeyword(kv);
+                if (icon != null) {
+                    o.addProperty("icon", icon.name());
+                }
                 a.add(o);
             }
             return a;

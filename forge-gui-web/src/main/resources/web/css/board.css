@@ -317,6 +317,13 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 .card .pt .hurt { color: #ff7a59; }
 .card .badges { position: absolute; left: 4px; top: 4px; font-size: 10px; background: #000c; border-radius: 4px; padding: 0 3px; }
 .card .badges:empty, .card .pt:empty { display: none; }
+/* The keywords that decide a block, in the skin's own pictures. Anchored to the bottom-left corner so the first
+   one is always in the same place, growing right and wrapping upward — the power box owns the other corner. */
+.card .kws { position: absolute; left: 3px; bottom: 3px; z-index: 2; display: flex; flex-wrap: wrap-reverse; gap: 1px; width: calc(60% - 3px); pointer-events: none; }
+.card .kws:empty { display: none; }
+.card .kws img { display: block; width: calc(var(--card-w) * var(--fit, 1) * 0.19); height: auto; filter: drop-shadow(0 1px 2px #000c); }
+/* Past a certain shrink they are mush rather than information, and the detail panel still has them on hover */
+.battlefield.cramped .card .kws { display: none; }
 .card.tapped { transform: rotate(90deg) scale(.9); }
 /* Mana and tap symbols sit on the text line at its size */
 .sym { height: 1em; width: 1em; vertical-align: -0.12em; margin: 0 1px; }

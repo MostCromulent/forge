@@ -733,6 +733,7 @@ export interface CommanderValue {
 export interface KeywordText {
   title: string;
   reminder: string;
+  icon?: string;
 }
 
 /** Every property any game object can carry. A property still at its default is left out. */

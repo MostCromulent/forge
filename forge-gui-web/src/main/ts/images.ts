@@ -58,6 +58,9 @@ export function symbolParts(text: string): { text: string; symbol: string | null
 // A hybrid or Phyrexian shard is named without its slash, as the skin's icon sheet keys them
 export const symbolUrl = (symbol: string): string => `mana?s=${encodeURIComponent(symbol.replace(/\//g, ''))}`;
 
+/** A keyword's icon, cut from the skin's ability sheet. The host names the icon; see FSkinProp.iconFromKeyword. */
+export const abilityUrl = (icon: string): string => `ability?k=${encodeURIComponent(icon)}`;
+
 export function hideOnError(img: HTMLImageElement): void {
   img.addEventListener('error', () => { img.hidden = true; });
 }

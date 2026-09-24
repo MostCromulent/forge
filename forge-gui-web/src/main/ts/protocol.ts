@@ -17,7 +17,7 @@ export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' |
   | 'PhasedOut' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'>;
 
 export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'Loyalty'
-  | 'Defense'>;
+  | 'Defense' | 'Keywords'>;
 
 export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'AvatarIndex' | 'AvatarCardImageKey'
   | 'SleeveIndex' | 'Counters' | 'CommanderDamage' | 'Mana' | PlayerZone>;
