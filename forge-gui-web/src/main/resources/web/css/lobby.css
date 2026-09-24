@@ -448,6 +448,13 @@
 }
 .dock.folded { display: flex; align-items: center; gap: 10px; padding: 9px 14px 11px 9px; cursor: pointer; }
 .dock.open { display: flex; flex-direction: column; max-height: min(60vh, 420px); }
+/* Opening slides the panel up from where the folded bar sat, and closing slides it back down */
+.dock.open:not(.in-match) { animation: dock-rise .24s cubic-bezier(.2,.8,.3,1); }
+.dock.open.closing { animation: dock-sink .18s ease-in forwards; }
+@keyframes dock-rise { from { transform: translateY(calc(100% - 44px)); } }
+@keyframes dock-sink { to { transform: translateY(calc(100% - 44px)); } }
+/* Still run, only instantly, because closing waits for the animation to end */
+@media (prefers-reduced-motion: reduce) { .dock.open:not(.in-match), .dock.open.closing { animation-duration: 1ms; } }
 /* In the side column it is a panel among panels, so it keeps that column's shape instead of its own */
 .dock.in-match { position: static; width: auto; border: none; border-radius: 0; box-shadow: none; max-height: none; flex: 1; min-height: 0; }
 

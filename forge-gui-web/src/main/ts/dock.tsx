@@ -24,6 +24,7 @@ function Crown() {
 
 export function Dock({ model, actions }: { model: Model; actions: Actions }) {
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [listed, setListed] = useState(false);
   const [text, setText] = useState('');
   const log = useRef<HTMLDivElement>(null);
@@ -53,7 +54,14 @@ export function Dock({ model, actions }: { model: Model; actions: Actions }) {
     );
   }
   return (
-    <section class={inMatch ? 'dock open in-match' : 'dock open'} aria-label="Who is here">
+    <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label="Who is here"
+      onAnimationEnd={e => {
+        // The panel folds once it has slid down, so the bar takes its place without a jump
+        if (e.animationName === 'dock-sink') {
+          setClosing(false);
+          setOpen(false);
+        }
+      }}>
       {inMatch ? (
         <button class="dock-head" aria-expanded={listed} onClick={() => setListed(!listed)}>
           <span class="faces" aria-hidden="true">
@@ -65,7 +73,7 @@ export function Dock({ model, actions }: { model: Model; actions: Actions }) {
           <Chevron up={!listed} />
         </button>
       ) : (
-        <button class="dock-head" aria-expanded onClick={() => setOpen(false)}>
+        <button class="dock-head" aria-expanded onClick={() => setClosing(true)}>
           <span class="live" aria-hidden="true" />
           <b>On this server</b>
           <span class="dock-count">{people.length}</span>
