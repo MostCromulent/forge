@@ -11,14 +11,18 @@
   --text: #e6edf3;
   --muted: #8b96a5;
   --faint: #6b7686;
-  /* Brass: antique gold for "your moment", as Arena and Forge desktop use it, dark enough to carry white labels.
-     It fills and outlines; it glows only as a tight halo, so edges stay crisp. Kept well saturated and a little
-     warm: a gold this dark reads as olive once the colour is let out of it. */
+  /* Brass: gold for "your moment", as Arena and Forge desktop use it. The bright gold (--accent-2) fills and
+     outlines; the dark one (--accent) is only the ink laid on brass, never a fill of its own, because a gold that
+     dark reads as dull brown. It glows only as a tight halo, so edges stay crisp. */
   --accent: #8d680b;
   --accent-2: #f2c344;
   /* Tinted forms of the accent, so it can sit behind something instead of only filling or outlining it */
   --accent-soft: #f2c3441f;
   --accent-glow: #f2c34430;
+  /* A filled control in the accent is a piece of brass, cast like the turn banner, with dark type on it */
+  --brass: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 52%,
+           color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
+  --on-brass: color-mix(in srgb, var(--accent) 32%, #000);
   /* A card back with no sleeve: a quiet stripe in the accent's family */
   --back-a: #2d2513;
   --back-b: #251e0f;
@@ -77,11 +81,10 @@ input:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
 /* The button that does the thing is a piece of brass, the same bevel the turn banner is cast from, and built
    from the same token so warming the gold warms both. Dark type on it, because the fill is bright. */
 button.primary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 52%,
-              color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
+  background: var(--brass);
   border-color: color-mix(in srgb, var(--accent-2) 52%, #fff);
   box-shadow: 0 1px 0 color-mix(in srgb, var(--accent-2) 42%, #000);
-  color: color-mix(in srgb, var(--accent) 32%, #000);
+  color: var(--on-brass);
   font-weight: 650;
 }
 button.primary:hover:not(:disabled) { background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 52%, #fff) 0%, color-mix(in srgb, var(--accent-2) 88%, #fff) 52%, var(--accent-2) 100%); }

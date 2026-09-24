@@ -46,7 +46,7 @@
 .host-box {
   display: flex; gap: 11px; align-items: flex-start; padding: 13px; border-radius: 9px; cursor: pointer;
   /* Mixed rather than laid over as alpha: a translucent gold on a blue-grey ground turns olive */
-  background: color-mix(in srgb, var(--accent-2) 6%, var(--surface)); border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent-2) 6%, var(--surface)); border: 1px solid var(--accent-2);
 }
 .host-box input { width: 17px; height: 17px; margin: 2px 0 0; flex: none; accent-color: var(--accent-2); }
 .host-text { display: grid; gap: 4px; }
@@ -150,7 +150,7 @@
 
 .formats { display: flex; flex-wrap: wrap; gap: 6px; }
 .format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
-.format[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--text); font-weight: 600; }
+.format[aria-pressed="true"] { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 600; }
 
 .seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
 /* Three or four seats read as a grid rather than a row that wraps unevenly */
@@ -168,7 +168,7 @@
 }
 
 /* Your own seat is washed with the accent rather than merely outlined in it */
-.plate.mine { border-color: var(--accent); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }
+.plate.mine { border-color: var(--accent-2); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }
 .plate-body { display: flex; flex-direction: column; justify-content: center; gap: 8px; min-width: 0; flex: 1; }
 
 /* The sleeve is the seat's subject: a card back at true card aspect, and the only sleeve control */
@@ -243,7 +243,7 @@
 .find { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; color: var(--text); font: inherit; }
 .facets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .facet { border-radius: 999px; padding: 4px 12px; color: var(--muted); font-size: 13px; }
-.facet[aria-pressed="true"] { border-color: var(--accent); color: var(--text); }
+.facet[aria-pressed="true"] { border-color: var(--accent-2); color: var(--text); }
 .facet .dk-count { margin-left: 6px; color: var(--muted); font-size: 11px; }
 /* The net categories sit under the facet that opened them */
 .facets.net { margin-left: 14px; padding-left: 12px; border-left: 2px solid var(--line); }
@@ -252,7 +252,7 @@
 
 .dk-hit { display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }
 .dk-hit:hover { background: var(--surface-2); }
-.dk-hit[aria-pressed="true"] { background: var(--surface-2); border-left-color: var(--accent); }
+.dk-hit[aria-pressed="true"] { background: var(--surface-2); border-left-color: var(--accent-2); }
 .dk-hit-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 /* Legality differs by word and weight as well as colour */
@@ -281,7 +281,7 @@
 .art-grid, .sleeve-grid { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
 .art-tile, .sleeve-tile { padding: 0; aspect-ratio: 5 / 7; overflow: hidden; border-radius: 6px; }
 .art-tile img, .sleeve-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.art-tile[aria-pressed="true"], .sleeve-tile[aria-pressed="true"] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.art-tile[aria-pressed="true"], .sleeve-tile[aria-pressed="true"] { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .art-tile.add { display: grid; place-items: center; font-size: 24px; color: var(--muted); border-style: dashed; }
 
 .sleeves.picking .saved, .sleeves.picking .numbered { display: none; }
@@ -296,7 +296,7 @@
 .prints { overflow: auto; display: grid; gap: 8px; grid-template-columns: repeat(3, 1fr); align-content: start; max-height: 380px; }
 .print { padding: 4px; display: grid; gap: 4px; justify-items: center; font-size: 11px; color: var(--muted); }
 .print img { width: 100%; border-radius: 4px; display: block; }
-.print[aria-pressed="true"] { border-color: var(--accent); }
+.print[aria-pressed="true"] { border-color: var(--accent-2); }
 
 .preview { display: grid; gap: 8px; justify-items: center; align-content: start; }
 .preview-title { margin: 0; color: var(--muted); font-size: 12px; }
@@ -321,7 +321,7 @@
 
 .colours { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .colour { display: flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 4px; }
-.colour[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.colour[aria-pressed="true"] { border-color: var(--accent-2); background: var(--accent-soft); }
 
 /* A pip carries its letter, so colour identity never rests on hue alone */
 .pip {
@@ -353,7 +353,7 @@
 .curve h4, .types h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .bars { display: flex; align-items: flex-end; gap: 4px; }
 .bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 22px; gap: 3px; }
-.bar i { width: 100%; background: var(--accent); border-radius: 2px 2px 0 0; display: block; }
+.bar i { width: 100%; background: var(--accent-2); border-radius: 2px 2px 0 0; display: block; }
 .bar em { font-style: normal; font-size: 10px; color: var(--muted); }
 .types { display: grid; align-content: start; gap: 1px; }
 .types .type { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
