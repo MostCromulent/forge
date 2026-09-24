@@ -4,7 +4,7 @@
 // because it is placed by measuring and animated card by card.
 
 import { render } from 'preact';
-import { Menu, NamePrompt } from './menu';
+import { Menu, NamePrompt, rememberedName } from './menu';
 import { Lobby } from './lobby';
 import { Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
@@ -20,7 +20,7 @@ import type { Model } from './model';
 export function renderScreens(model: Model, actions: Actions, dismissNotice: (id: number) => void): void {
   // A screen that is not showing is not drawn, so what it held (a picker, a half-typed search) goes with it
   const page = screenOf(model);
-  render(page === 'name' ? <NamePrompt model={model} actions={actions} />
+  render(page === 'name' ? <NamePrompt model={model} actions={actions} initial={rememberedName() ?? ''} />
     : page === 'menu' ? <Menu model={model} actions={actions} /> : null, byId('menu'));
   render(page === 'lobby' ? <Lobby model={model} actions={actions} /> : null, byId('lobby'));
   // The dock has two homes: the bottom edge before a match, the side column under the log during one

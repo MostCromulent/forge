@@ -137,7 +137,8 @@ function apply(msg: ServerMessage): void {
       model.nameSent = false;
       if (model.playerName) {
         rememberName(model.playerName);
-      } else {
+      } else if (!model.canClaimHost) {
+        // While the host seat is free the prompt is shown instead, since it is where the seat is offered
         offerRememberedName();
       }
       model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
