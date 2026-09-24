@@ -1,11 +1,12 @@
-// The column beside the board. It holds the game log and, in a networked game, the chat. Each collapses
-// on its own; when both are shut the column folds to two tabs against the edge and the board takes the room.
+// The column beside the board. It holds the game log and, in a networked game, the chat dock under it. The log
+// collapses; the dock has its own header and stays. With the log shut and no dock, the column folds to a tab
+// against the edge and the board takes the room.
 
 import { byId, q } from './dom';
 import { changeUi, rememberSidePanels, ui } from './ui';
 import type { Model } from './model';
 
-const PANELS = ['log', 'chat'] as const;
+const PANELS = ['log'] as const;
 
 /**
  * Whether it is day or night, in the corner of the table. Cards with daybound and nightbound transform on it
@@ -42,11 +43,11 @@ export function initSide(): void {
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
 let drawn = '';
 
-// A panel that is not there cannot be open, so chat stays shut in a game nobody else is in. The chat itself is
-// one of the screens (screens.tsx); this only opens and shuts the column's panels.
+// Chat is there only in a game others can join. The dock itself is one of the screens (screens.tsx); this only
+// opens and shuts the column's panels.
 export function renderSide(model: Model): void {
   const hasChat = model.networked;
-  const shown = { log: ui.sidePanels.log, chat: ui.sidePanels.chat && hasChat };
+  const shown = { log: ui.sidePanels.log, chat: hasChat };
   const state = `${hasChat}/${shown.log}/${shown.chat}`;
   if (state === drawn) {
     return;
@@ -54,10 +55,9 @@ export function renderSide(model: Model): void {
   drawn = state;
   const side = byId('side');
   q(side, '#chat-panel').hidden = !hasChat;
-  for (const panel of PANELS) {
-    side.dataset[panel] = shown[panel] ? 'open' : 'shut';
-    q(side, `.side-toggle[data-panel="${panel}"]`).setAttribute('aria-expanded', String(shown[panel]));
-  }
+  side.dataset.log = shown.log ? 'open' : 'shut';
+  side.dataset.chat = shown.chat ? 'open' : 'shut';
+  q(side, '.side-toggle[data-panel="log"]').setAttribute('aria-expanded', String(shown.log));
   byId('match').classList.toggle('side-folded', !shown.log && !shown.chat);
   // The board changes width; anything placed by measuring it must be placed again
   window.dispatchEvent(new Event('resize'));

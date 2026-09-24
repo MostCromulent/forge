@@ -44,7 +44,7 @@ export interface UiState {
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
   /** The side column's panels. Kept in the browser across sessions. */
-  sidePanels: { log: boolean; chat: boolean };
+  sidePanels: { log: boolean };
 }
 
 const SIDE_KEY = 'forge.sidePanels';
@@ -65,7 +65,7 @@ export const ui: UiState = {
   spectate: false,
   hover: null,
   faceIndex: 0,
-  sidePanels: { log: true, chat: false, ...storedSidePanels() },
+  sidePanels: { log: true, ...storedSidePanels() },
 };
 
 let redraw: () => void = () => {};

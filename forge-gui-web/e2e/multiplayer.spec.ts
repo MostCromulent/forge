@@ -47,9 +47,7 @@ test('a guest joins by link under a name of its own and follows the host into th
   await startMatch(page, guest);
   await expect(page.locator('#me')).toContainText('Alice');
   await expect(guest.locator('#me')).toContainText('Bea');
-  for (const p of [page, guest]) {
-    await p.click('.side-toggle[data-panel=chat]');
-  }
+  // In a match others can join, the dock sits open under the log without being asked for
   await say(page, '#match-chat .dock-say input', 'good luck');
   await expect(guest.locator('#match-chat .dock-log')).toContainText('good luck');
 });
