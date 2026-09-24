@@ -76,7 +76,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
   showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined, visible ? card.ShieldCount : undefined);
-  q(el, '.mech').replaceChildren(...(visible ? mechanic(card) : []));
+  q(el, '.mech').replaceChildren(...(visible ? mechanic(card, type) : []));
   showBlocking(el, card);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push('Ring-bearer');
@@ -126,7 +126,7 @@ function shieldBadge(): HTMLElement {
  * Room, a contraption's sprocket, an attraction's lit numbers, an Omen's intensity. They never co-occur, so one
  * chip serves them all, and it sits above the keyword icons rather than on the top edge, which is the card's name.
  */
-function mechanic(card: CardView): Node[] {
+function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
     const pips = document.createElement('span');
     pips.className = 'pips';
@@ -137,7 +137,7 @@ function mechanic(card: CardView): Node[] {
     }
     return [pips, label(text)];
   };
-  if (card.ClassLevel) return track(card.ClassLevel, 3, `Level ${card.ClassLevel}`);
+  if (card.ClassLevel && /\bClass\b/.test(type)) return track(card.ClassLevel, 3, `Level ${card.ClassLevel}`);
   if (card.RingLevel) return track(card.RingLevel, 4, `Ring ${'I'.repeat(card.RingLevel).replace('IIII', 'IV')}`);
   if (card.CurrentRoom) return [label(card.CurrentRoom)];
   if (card.Sprocket) return track(card.Sprocket, 3, `Sprocket ${card.Sprocket}`);
