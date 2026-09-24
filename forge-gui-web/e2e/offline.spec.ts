@@ -8,7 +8,7 @@ test.afterEach(async () => { await server.stop(); });
 
 test('a new player names themselves, hosts a game against the computer, and plays it', async ({ page }) => {
   await page.goto(server.url);
-  await expect(page.getByText('What should the other players call you?')).toBeVisible();
+  await expect(page.getByText('What should we call you?')).toBeVisible();
   await enterName(page, 'Alice');
 
   await hostTable(page, false);

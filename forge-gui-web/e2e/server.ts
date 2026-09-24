@@ -1,7 +1,7 @@
 // A Forge web server for one test: the built jar, serving the page from the source folder, on a port of its own,
 // with a home folder of its own so the tests never touch the preferences of whoever runs them.
 
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -31,7 +31,8 @@ export async function startServer(onPort?: number): Promise<Server> {
     `-Dforge.web.pageDir=${join(module, 'src/main/resources/web')}`,
     `-Duser.home=${home}`,
     '-jar', join(module, 'target/forge-gui-web.jar'),
-  ], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'] });
+  // On Windows Forge keeps its preferences under APPDATA rather than the home folder
+  ], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, APPDATA: home, LOCALAPPDATA: home } });
   let log = '';
   const url = await new Promise<string>((resolveUrl, reject) => {
     const timer = setTimeout(() => reject(new Error(`Forge did not start in time:\n${log.slice(-4000)}`)), 180_000);
@@ -52,9 +53,13 @@ export async function startServer(onPort?: number): Promise<Server> {
     port,
     async stop() {
       const exited = new Promise(done => java.once('exit', done));
-      java.kill();
-      await exited;
-      rmSync(home, { recursive: true, force: true });
+      // On Windows `java` can be a launcher that starts the real JVM as a child, which must go too or it keeps the port
+      if (process.platform === 'win32') {
+        execFileSync('taskkill', ['/pid', String(java.pid), '/T', '/F'], { stdio: 'ignore' });
+      } else {
+        java.kill();
+      }
+      await exited;      rmSync(home, { recursive: true, force: true });
     },
   };
 }

@@ -33,8 +33,12 @@ async function startMatch(page: Page, guest: Page): Promise<void> {
 
 test('a guest joins by link under a name of its own and follows the host into the match', async ({ page, browser }) => {
   const guest = await hostAndGuest(page, browser);
-  await say(guest, '#lobby-chat-in', 'hello from Bea');
-  await expect(page.locator('#lobby-chat-log')).toContainText('hello from Bea');
+  // Outside a match the chat is folded into a bar at the bottom edge until opened
+  for (const p of [page, guest]) {
+    await p.click('#dock .dock.folded');
+  }
+  await say(guest, '#dock .dock-say input', 'hello from Bea');
+  await expect(page.locator('#dock .dock-log')).toContainText('hello from Bea');
 
   // A reload in match setup lands back at the same seat
   await guest.reload({ waitUntil: 'domcontentloaded' });
@@ -46,8 +50,8 @@ test('a guest joins by link under a name of its own and follows the host into th
   for (const p of [page, guest]) {
     await p.click('.side-toggle[data-panel=chat]');
   }
-  await say(page, '#match-chat-in', 'good luck');
-  await expect(guest.locator('#match-chat-log')).toContainText('good luck');
+  await say(page, '#match-chat .dock-say input', 'good luck');
+  await expect(guest.locator('#match-chat .dock-log')).toContainText('good luck');
 });
 
 // The server keeps a guest's settings only as long as it runs, so the guest's browser gives them back to a new one
@@ -66,8 +70,10 @@ test('a guest\'s phase stops outlive a server restart', async ({ page, browser }
   const port = server.port;
   await server.stop();
   server = await startServer(port);
-  // Both browsers are known by the names they remember, and the host's takes its seat back without being asked
+  // The guest is known by the name it remembers; the host's seat is free again, so the host is asked, name filled in
   await page.goto(server.url);
+  await expect(page.locator('#player-name')).toHaveValue('Alice');
+  await page.keyboard.press('Enter');
   await page.click('[data-mode=multiplayer]');
   await expect(page.locator('#seats .plate').first()).toBeVisible();
   guest = await context.newPage();

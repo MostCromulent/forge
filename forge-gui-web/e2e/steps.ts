@@ -2,15 +2,17 @@
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** Answers the name prompt every browser the server does not know is shown first. */
+/**
+ * Answers the name prompt every browser the server does not know is shown first. While the host seat is free the
+ * prompt offers it, already ticked, so the first browser to answer is the host.
+ */
 export async function enterName(page: Page, name: string): Promise<void> {
   await page.fill('#player-name', name);
   await page.keyboard.press('Enter');
 }
 
-/** Takes the free host seat and opens a table: against the computer, or one others can join by link. */
+/** Opens a table from the host's menu: against the computer, or one others can join by link. */
 export async function hostTable(page: Page, invite: boolean): Promise<void> {
-  await page.click('#be-host');
   await page.click(invite ? '[data-mode=multiplayer]' : '[data-mode=play]');
   await expect(page.locator('#seats .plate').first()).toBeVisible();
 }
