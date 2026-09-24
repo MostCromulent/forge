@@ -29,10 +29,17 @@
 #hand .card.elsewhere .from {
   display: block; position: absolute; left: 4px; bottom: 4px; z-index: 3;
   padding: 1px 7px; border-radius: 9px;
-  background: #1b1630f2; border: 1px solid #9a7fd0;
-  color: #d7c8f5; font-size: calc(var(--hand-w, 88px) * 0.095); font-weight: 650;
+  background: var(--zone-fill, #3c3c50); border: 1px solid color-mix(in srgb, var(--zone-fill, #3c3c50) 58%, #fff);
+  color: var(--zone-ink, #eef1f7); font-size: calc(var(--hand-w, 88px) * 0.095); font-weight: 650;
   white-space: nowrap;
 }
+/* The colours the desktop client banners these cards with (CardPanel.ZONE_COLORS), so a card reads the same in
+   both. The text colour is not desktop's: its banners are large, and at this size a pale fill needs dark type. */
+#hand .card[data-from="Graveyard"] { --zone-fill: #501464; --zone-ink: #f2e9f7; }
+#hand .card[data-from="Exile"] { --zone-fill: #b4b9c8; --zone-ink: #14171f; }
+#hand .card[data-from="Command"] { --zone-fill: #be9b1e; --zone-ink: #1d1704; }
+#hand .card[data-from="Library"] { --zone-fill: #826e4b; --zone-ink: #f7f2ea; }
+#hand .card[data-from="Sideboard"] { --zone-fill: #3c3c50; --zone-ink: #eef1f7; }
 #hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;

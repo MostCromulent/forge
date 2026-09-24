@@ -21,20 +21,20 @@ function handOrder(model: Model, cards: CardView[]): CardView[] {
     || String(stateOf(model, a).Name ?? '').localeCompare(stateOf(model, b).Name ?? ''));
 }
 
-/** Where a card the engine says is playable from elsewhere is actually sitting. */
-const SOURCES: ZoneType[] = ['Graveyard', 'Exile', 'Library', 'Command'];
-
 /**
  * Cards you may play from somewhere that is not your hand: flashback, escape, adventure, foretell, a land out of
  * the graveyard. The engine gathers them into its Flashback pseudo-zone and the view keeps it current, so they
  * only have to be laid out. They come before the hand and are ordered by the same rule, and they stay there
  * whether or not you can afford them — the playable outline is what says which are castable right now.
+ *
+ * Each one still reports the zone it is really in, which is what the desktop client labels them by.
  */
-function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number, string> {
-  const found = new Map<number, string>();
+function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number, ZoneType> {
+  const found = new Map<number, ZoneType>();
   for (const card of zone(model, player, 'Flashback')) {
-    const source = SOURCES.find(z => zone(model, player, z).some(c => c.$key === card.$key));
-    found.set(card.$key, source ?? 'Elsewhere');
+    if (card.Zone) {
+      found.set(card.$key, card.Zone);
+    }
   }
   return found;
 }
@@ -47,6 +47,12 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
     el.classList.toggle('elsewhere', source !== undefined);
+    // The badge is coloured per zone in CSS, matching the banner desktop puts on these cards
+    if (source) {
+      el.dataset.from = source;
+    } else {
+      delete el.dataset.from;
+    }
     q(el, '.from').textContent = source ?? '';
   });
   // A shallow arc: at most 2 degrees per card from the middle, 10 at the ends
