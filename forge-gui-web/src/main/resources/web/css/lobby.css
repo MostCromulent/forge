@@ -236,24 +236,38 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .finder-head .dk-close, .sleeves-head .dk-close { margin-left: auto; }
 .finder-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
 
-/* Results are narrow so the panel can carry the whole decklist */
-.finder-body { display: grid; grid-template-columns: 660px minmax(0, 1fr); min-height: 0; }
+/* The filters down the left, the list beside them, and the panel carrying the whole decklist */
+.finder-body { display: grid; grid-template-columns: 230px 560px minmax(0, 1fr); min-height: 0; }
+.rail { display: flex; flex-direction: column; gap: 18px; padding: 16px 12px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, var(--bg)); overflow-y: auto; scrollbar-width: thin; min-height: 0; }
+.rail section { display: flex; flex-direction: column; gap: 2px; }
+.rail h4 { margin: 0 0 6px; padding: 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rail .source { display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: none; text-align: left; }
+.rail .source:hover { background: var(--surface-2); }
+.rail .source[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); box-shadow: inset 2px 0 0 var(--accent-2); }
+.rail .dk-count { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+/* The net categories sit under the source that opened them */
+.net-cats { display: flex; flex-direction: column; gap: 2px; margin-left: 12px; padding-left: 6px; border-left: 2px solid var(--line); }
+.net-cats .source { height: 28px; font-size: 13px; }
+.rail .get-net { align-self: flex-start; margin: 4px 10px 0; padding: 0; border: 0; background: none; color: var(--accent-2); font-size: 12.5px; font-weight: 600; }
+.rail select { margin: 0 10px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font: inherit; }
+.rail-note { margin: 6px 10px 0; color: var(--muted); font-size: 12px; }
+.rail .clear { align-self: flex-start; margin: 0 10px; padding: 0; border: 0; background: none; color: var(--muted); font-size: 12.5px; font-weight: 600; }
+.rail .clear:hover { color: var(--text); }
 /* Every control sizes to itself; only the list takes what is left */
-.results { display: grid; grid-template-rows: repeat(6, auto) 1fr; gap: 10px; padding: 14px; border-right: 1px solid var(--line); min-height: 0; }
+.results { display: grid; grid-template-rows: auto auto 1fr; gap: 10px; padding: 14px; border-right: 1px solid var(--line); min-height: 0; }
 .find { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; color: var(--text); font: inherit; }
-.facets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.facet { border-radius: 999px; padding: 4px 12px; color: var(--muted); font-size: 13px; }
-.facet[aria-pressed="true"] { border-color: var(--accent-2); color: var(--text); }
-.facet .dk-count { margin-left: 6px; color: var(--muted); font-size: 11px; }
-/* The net categories sit under the facet that opened them */
-.facets.net { margin-left: 14px; padding-left: 12px; border-left: 2px solid var(--line); }
-.facets.net .facet { padding: 3px 10px; font-size: 12px; }
+.random { display: flex; align-items: center; gap: 7px; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); font-weight: 600; white-space: nowrap; }
+.random svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.random svg circle { fill: currentColor; stroke: none; }
 .dk-hits { overflow: auto; display: grid; align-content: start; gap: 2px; }
 
-.dk-hit { display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }
+.dk-hit { min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }
 .dk-hit:hover { background: var(--surface-2); }
 .dk-hit[aria-pressed="true"] { background: var(--surface-2); border-left-color: var(--accent-2); }
-.dk-hit-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dk-hit-title { flex: 1; min-width: 0; display: grid; gap: 3px; justify-items: start; }
+.dk-hit-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dk-hit-title .pip { width: 14px; height: 14px; font-size: 8.5px; }
+.dk-hit-title .pips:empty { display: none; }
 .tag { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 /* Legality differs by word and weight as well as colour */
 .legal { font-size: 11px; font-weight: 600; }
@@ -306,7 +320,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .preview .dk-hint { margin: 0; color: var(--muted); font-size: 11px; font-style: italic; }
 
 @media (max-width: 1200px) {
-  .finder-body { grid-template-columns: 560px minmax(0, 1fr); }
+  .finder-body { grid-template-columns: 210px 460px minmax(0, 1fr); }
   .dk-cards { grid-template-columns: 1fr; }
   .art-picker { grid-template-columns: 200px 1fr; }
   .preview { grid-column: 1 / -1; }
@@ -315,13 +329,14 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 /* --- finder: filters, statistics and the card peek ---------------------- */
 
 .find-row { display: flex; gap: 10px; align-items: center; }
-.find-row .find { flex: 1; }
-.sort { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; white-space: nowrap; }
-.sort select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+.find-row .find { flex: 1; min-width: 0; }
+.find-row select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font: inherit; }
 
-.colours { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.colour { display: flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px 3px 4px; }
-.colour[aria-pressed="true"] { border-color: var(--accent-2); background: var(--accent-soft); }
+/* One strip of pips: none ticked shows every deck, and ticking some dims the rest */
+.colours { display: flex; gap: 2px; margin: 0 10px; padding: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; align-self: flex-start; }
+.colour { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 6px; background: none; }
+.colour[aria-pressed="true"] { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--accent-2); }
+.colours:has([aria-pressed="true"]) .colour[aria-pressed="false"] .pip { opacity: .38; }
 
 /* A pip carries its letter, so colour identity never rests on hue alone */
 .pip {
@@ -382,13 +397,19 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .saved.no-deck .art-tile { opacity: .4; pointer-events: none; }
 .no-deck-why { margin: 6px 0 0; color: var(--select); font-size: 12px; }
 
-.legal-only { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.legal-only { display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--text); font-size: 13px; cursor: pointer; }
+/* A switch: the checkbox drawn as a track and knob */
+.legal-only input { appearance: none; flex: none; position: relative; width: 32px; height: 18px; margin: 0; border-radius: 9px; background: var(--line); cursor: pointer; transition: background .15s; }
+.legal-only input::after { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
+.legal-only input:checked { background: var(--accent-2); }
+.legal-only input:checked::after { transform: translateX(14px); background: var(--on-brass); }
+.legal-only input:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
 /* The formats a deck's cards are legal in, as the desktop chooser words it */
 .deck-formats {
   color: var(--muted);
   font-size: 11px;
-  width: 150px;
+  width: 120px;
   flex: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -397,9 +418,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 }
 
 .dk-hit .note { flex: 1; color: var(--muted); font-size: 12px; }
-.dk-hit.generated .dk-hit-name { flex: none; }
+.dk-hit.generated .dk-hit-title { flex: none; max-width: 50%; }
 
-.get-net { justify-self: start; color: var(--muted); font-size: 12px; padding: 3px 10px; }
 
 /* A question the host is blocked on, so it sits above everything else */
 .host-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .75); display: grid; place-items: center; z-index: 80; }

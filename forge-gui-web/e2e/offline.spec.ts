@@ -93,13 +93,13 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
   await expect(bot).toHaveText('Rival');
   await page.keyboard.press('Enter');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();
-  // As the hands are dealt, the board says who goes first
+  // The board says who goes first, or, to a player who won the toss, that they did before they choose
   const opening = page.locator('#first-reveal p');
   for (let i = 0; i < 20 && !(await opening.count()); i++) {
     if (await page.locator('#prompt .ok').isEnabled()) await page.keyboard.press(' ');
     await page.waitForTimeout(300);
   }
-  await expect(opening).toHaveText(/^(You go first|Rival goes first)$/i);
+  await expect(opening).toHaveText(/^(You go first|Rival goes first|You won the coin toss)$/i);
   await page.screenshot({ path: test.info().outputPath('opening.png'), timeout: 10_000 }).catch(() => {});
   await page.locator('#prompt .auto-pass').click();
   await expect(page.locator('#prompt .auto-pass')).toHaveClass(/\bon\b/);

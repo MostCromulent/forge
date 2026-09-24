@@ -95,6 +95,14 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   }
   const inNet = filter.source === NET || isNet(filter.source);
   const details = model.deckDetails?.key === chosen ? model.deckDetails : null;
+  const narrowed = filter.source !== 'all' || filter.colours.size > 0 || filter.cardFormat !== 'any' || filter.legalOnly || !!typed;
+  // A deck from those the filters let through, and a different one each press while there is another to give
+  const random = () => {
+    const pool = list.length > 1 ? list.filter(d => d.key !== chosen) : list;
+    if (!pool.length) return;
+    setChosen(pool[Math.floor(Math.random() * pool.length)].key);
+    requestAnimationFrame(() => document.querySelector('.dk-hit[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' }));
+  };
   return (
     <div class="finder-back">
       <div class="finder">
@@ -103,65 +111,80 @@ export function DeckFinder({ model, actions, index, seat, close }: {
           <button class="dk-close" title="Close" onClick={close}>&times;</button>
         </header>
         <div class="finder-body">
-          <div class="results">
-            <div class="find-row">
-              <input ref={find} class="find" type="search" placeholder="Search every deck by name" autocomplete="off"
-                value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-              <label class="sort">Format
-                <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
-                  <option value="any">Any</option>
-                  {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}
-                </select>
-              </label>
-              <label class="sort">Sort
-                <select class="sort-by" value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
-                  {SORTS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-                </select>
-              </label>
-            </div>
-            <div class="facets">
+          <nav class="rail" aria-label="Filters">
+            <section>
+              <h4>Source</h4>
               {[...sources].map(([id, count]) => (
-                <button key={id} class="facet" aria-pressed={id === NET ? inNet : id === filter.source}
+                <button key={id} class="source" aria-pressed={id === NET ? inNet : id === filter.source}
                   onClick={() => change({ source: id })}>
-                  {id === 'all' ? 'All sources' : id === NET ? 'Net decks' : id}<span class="dk-count">{count}</span>
+                  <span>{sourceName(id)}</span><span class="dk-count">{count}</span>
                 </button>
               ))}
-            </div>
-            {/* The categories only appear once net decks are the ones being looked through */}
-            {inNet && categories.size > 1 && (
-              <div class="facets net">
-                <button class="facet" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
-                  Every category
-                </button>
-                {[...categories].map(([id, count]) => (
-                  <button key={id} class="facet" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
-                    {netName(id)}<span class="dk-count">{count}</span>
+              {/* The categories only appear once net decks are the ones being looked through */}
+              {inNet && categories.size > 1 && (
+                <div class="net-cats">
+                  <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
+                    <span>Every category</span>
+                  </button>
+                  {[...categories].map(([id, count]) => (
+                    <button key={id} class="source" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
+                      <span>{netName(id)}</span><span class="dk-count">{count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
+              <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>+ Download net decks</button>
+            </section>
+            <section>
+              <h4>Colours</h4>
+              <div class="colours" role="group" aria-label="Colours">
+                {COLOURS.map(([letter, name]) => (
+                  <button key={letter} class="colour" aria-label={name} aria-pressed={filter.colours.has(letter)}
+                    title={`${name}: ${decks.filter(d => (d.colors ?? '').includes(letter)).length} decks`} onClick={() => {
+                      const colours = new Set(filter.colours);
+                      if (!colours.delete(letter)) colours.add(letter);
+                      change({ colours });
+                    }}>
+                    <i class={`pip pip-${letter}`}>{letter}</i>
                   </button>
                 ))}
               </div>
-            )}
-            {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
-            <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>Get net decks…</button>
-            <div class="colours">
-              {COLOURS.map(([letter, name]) => (
-                <button key={letter} class="colour" title={name} aria-pressed={filter.colours.has(letter)} onClick={() => {
-                  const colours = new Set(filter.colours);
-                  if (!colours.delete(letter)) colours.add(letter);
-                  change({ colours });
-                }}>
-                  <i class={`pip pip-${letter}`}>{letter}</i>
-                  <span class="dk-count">{decks.filter(d => (d.colors ?? '').includes(letter)).length}</span>
-                </button>
-              ))}
-            </div>
+              <p class="rail-note">Decks with any ticked colour</p>
+            </section>
+            <section>
+              <h4>Legal in</h4>
+              <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
+                <option value="any">Any format</option>
+                {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </section>
             <label class="legal-only">
-              <input type="checkbox" checked={filter.legalOnly} onChange={e => change({ legalOnly: e.currentTarget.checked })} /> Playable decks only
+              <input type="checkbox" role="switch" checked={filter.legalOnly} onChange={e => change({ legalOnly: e.currentTarget.checked })} />
+              Only playable decks
             </label>
+            <button class="clear" hidden={!narrowed} onClick={() => {
+              setTyped('');
+              setFilter(f => ({ ...f, query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: false }));
+            }}>Clear filters</button>
+          </nav>
+          <div class="results">
+            <div class="find-row">
+              <input ref={find} class="find" type="search" placeholder="Search deck names" autocomplete="off"
+                value={typed} onInput={e => setTyped(e.currentTarget.value)} />
+              <select class="sort-by" aria-label="Sort" value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
+                {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
+              </select>
+              <button class="random" disabled={!list.length} title="Pick a deck from those shown" onClick={random}>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
+                Random
+              </button>
+            </div>
             <p class="shown">{list.length === decks.length ? `${decks.length} decks` : `${list.length} of ${decks.length} decks`}</p>
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
-                  use={() => use(d.key)} />)
+                  use={() => use(d.key)} source={filter.source === 'all'} />)
                 : <p class="none">No deck matches. Clear a filter, or search a different name.</p>}
             </div>
           </div>
@@ -181,28 +204,44 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   );
 }
 
-function Hit({ deck: d, chosen, choose, use }: { deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void }) {
+const SOURCE_NAMES: Record<string, string> = {
+  all: 'All decks', [NET]: 'Net decks', yours: 'Your decks', precons: 'Preconstructed', quest: 'Quest opponents', generated: 'Generated',
+};
+const sourceName = (id: string) => SOURCE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+
+// The source is only worth a column while every source is listed; with one picked, the rail already says it
+function Hit({ deck: d, chosen, choose, use, source }: {
+  deck: DeckSummary; chosen: boolean; choose: () => void; use: () => void; source: boolean;
+}) {
   // A generator has nothing to measure until it has built something, so it says what it is instead
   if (d.generated) {
     return (
       <button class="dk-hit generated" aria-pressed={chosen} onClick={choose} onDblClick={use}>
-        <span class="dk-hit-name">{d.name}</span>
-        <span class="pips"><Pips colors={d.colors} /></span>
+        <Title deck={d} />
         <span class="note">{d.note ?? ''}</span>
-        <span class="tag">{d.source}</span>
+        {source && <span class="tag">{d.source}</span>}
       </button>
     );
   }
   // An illegal deck is marked rather than hidden, so nobody hunts the editor for a deck that is here
   return (
     <button class="dk-hit" aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
-      <span class="dk-hit-name">{d.name}</span>
-      <span class="pips"><Pips colors={d.colors} /></span>
+      <Title deck={d} />
       <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
       <span class="deck-formats">{d.formats ?? ''}</span>
-      <span class="tag">{d.source}</span>
+      {source && <span class="tag">{d.source}</span>}
       <span class={`legal ${d.problem ? 'no' : 'yes'}`}>{d.problem ? 'Illegal' : 'Legal'}</span>
     </button>
+  );
+}
+
+/** The deck's name with its colours under it. */
+function Title({ deck }: { deck: DeckSummary }) {
+  return (
+    <span class="dk-hit-title">
+      <span class="dk-hit-name">{deck.name}</span>
+      <span class="pips"><Pips colors={deck.colors} /></span>
+    </span>
   );
 }
 
