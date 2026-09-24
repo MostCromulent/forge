@@ -141,16 +141,18 @@
 html[data-motion="off"] .zone-tile .ambient { display: none; }
 @media (prefers-reduced-motion: reduce) { html:not([data-motion="on"]) .zone-tile .ambient { display: none; } }
 /* An opponent's hand: up to three backs fanned from one point, in their sleeve, with the count beside them */
-.hand-fan { display: flex; align-items: center; gap: 8px; padding: 2px 8px 2px 4px; background: none; border-color: transparent; border-radius: 8px; }
+.player { position: relative; }
+/* Beside the avatar, level with it, so the column below holds only what varies */
+.hand-fan { position: absolute; top: 18px; left: calc(50% + 42px); display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 2px; background: none; border-color: transparent; border-radius: 8px; }
 .hand-fan:hover { background: var(--surface-2); }
-.hand-fan .backs { position: relative; width: 58px; height: 48px; }
-.hand-fan .backs i { position: absolute; left: 15px; bottom: 0; width: 28px; height: 40px; border-radius: 3px; transform-origin: 50% 100%; background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 3px, var(--back-b) 3px 6px); border: 1px solid var(--back-edge); box-shadow: 0 1px 4px #000a; }
+.hand-fan .backs { position: relative; width: 40px; height: 34px; }
+.hand-fan .backs i { position: absolute; left: 10px; bottom: 0; width: 20px; height: 28px; border-radius: 3px; transform-origin: 50% 100%; background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 3px, var(--back-b) 3px 6px); border: 1px solid var(--back-edge); box-shadow: 0 1px 4px #000a; }
 .hand-fan .backs i:nth-child(1) { transform: rotate(-16deg); }
 .hand-fan .backs i:nth-child(3) { transform: rotate(16deg); }
 .hand-fan[data-count="0"] .backs i, .hand-fan[data-count="1"] .backs i:not(:nth-child(2)), .hand-fan[data-count="2"] .backs i:nth-child(3) { display: none; }
 .hand-fan[data-count="2"] .backs i:nth-child(1) { transform: rotate(-8deg); }
 .hand-fan[data-count="2"] .backs i:nth-child(2) { transform: rotate(8deg); }
-.hand-fan .hand-count { font-size: 17px; font-weight: 700; }
+.hand-fan .hand-count { font-size: 14px; font-weight: 700; }
 .player-counters { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 .player-counter { font-size: 12px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 8px; }
 .player-counters:empty, .emblems:empty { display: none; }
@@ -311,6 +313,12 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 #zoom { position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
+#zoom.settling { visibility: hidden; }
+/* The image alone, with under it only the lines the art cannot show: where the card is playable from, and the keys */
+#zoom.image-only { flex-direction: column; align-items: center; gap: 6px; }
+#zoom.image-only .detail { width: auto; padding: 0; background: none; border: 0; box-shadow: none; text-shadow: 0 1px 3px #000; }
+#zoom.image-only .detail > :not(.from, .hint) { display: none; }
+#zoom.image-only .detail .hint { padding: 2px 8px; border-radius: 8px; background: #0b0f16d9; }
 #zoom img { width: 300px; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
@@ -429,7 +437,7 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
 /* The cards under the top one show as the stack seen edge-on, beside the card rather than behind it */
-.card.pile::before, .card.pile::after { content: ''; position: absolute; display: none; width: calc(4px * var(--fit, 1)); border-radius: 3px 0 0 3px; background: linear-gradient(180deg, var(--line-bright), var(--surface-2)); box-shadow: inset -1px 0 0 #0009; }
+.card.pile::before, .card.pile::after { content: ''; position: absolute; display: none; width: calc(4px * var(--fit, 1)); border-radius: 3px 0 0 3px; background: linear-gradient(180deg, #2b2e34, #111317); box-shadow: inset -1px 0 0 #000c, inset 1px 0 0 #ffffff1a; }
 .card.pile::after { left: calc(-5px * var(--fit, 1)); top: calc(3px * var(--fit, 1)); bottom: calc(3px * var(--fit, 1)); }
 .card.pile::before { left: calc(-10px * var(--fit, 1)); top: calc(6px * var(--fit, 1)); bottom: calc(6px * var(--fit, 1)); }
 .card.pile[data-depth]::after { display: block; }

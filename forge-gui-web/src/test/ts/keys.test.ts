@@ -10,7 +10,7 @@ function freshUi(): UiState {
   return {
     openPiles: new Set(), openZones: new Set(), zonesMinimised: false, zoneSearch: '', zoneSort: 'order',
     stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
-    stopsOpen: false, optionsOpen: false, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0,
+    stopsOpen: false, optionsOpen: false, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
     sidePanels: { log: true },
   };
 }
@@ -83,6 +83,7 @@ describe('keys in a match', () => {
     model.requests.set(1, { t: 'request', id: 1, kind: 'text', message: '', numeric: false } as Request);
     expect(keyCommand(press(' '), model, ui)).toBeNull();
     expect(keyCommand(press('f'), model, ui)).toBe('nextFace');
+    expect(keyCommand(press('t'), model, ui)).toBe('cardText');
   });
 
   it('lets a field keep what is typed into it, except the Escape that closes what it sits in', () => {

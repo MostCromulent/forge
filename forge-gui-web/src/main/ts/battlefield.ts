@@ -49,30 +49,36 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
 
 /** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */
 const MIN_FIT = 0.5;
+/** An empty board's cards start this large and shrink as it fills, as Arena's do. */
+const MAX_FIT = 1.4;
 /** Each row may wrap onto a second line before the cards start shrinking. */
 const LINES_PER_ROW = 2;
 
 /**
- * Shrinks the cards so a wide board stays whole rather than scrolling its oldest permanents out of sight.
- * Measured against the seat, whose size the page grid fixes, so the answer cannot feed back into itself
- * the way measuring the cards themselves would.
+ * Sizes the cards to the board: as large as they can be while every row fits the seat, which keeps a wide board
+ * whole rather than scrolling its oldest permanents out of sight. Measured against the seat, whose size the page
+ * grid fixes, so the answer cannot feed back into itself the way measuring the cards themselves would.
  */
 function fitCards(root: HTMLElement, support: number, creatures: number): void {
   const field = q(root, '.battlefield');
   const style = getComputedStyle(root);
   const h = parseFloat(style.getPropertyValue('--card-h')) || 123;
   const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
-  const columns = Math.ceil(Math.max(support, creatures, 1) / LINES_PER_ROW);
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
   const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
   const height = root.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
   // A slot with its room either side is as wide as a tapped card, which lies on its side at 90% (board.css), plus
-  // its air; 32px is the two rows' room above their cards
-  const byWidth = width / (columns * (h * 0.9 + 2 * air));
-  const byHeight = (height - 32) / (LINES_PER_ROW * 2 * h);
-  const fit = Math.max(MIN_FIT, Math.min(1, byWidth, byHeight));
-  root.style.setProperty('--fit', String(fit));
+  // its air. An empty row still keeps 60% of a card's height (.row's min-height)
+  const lines = (count: number, fit: number) =>
+    count === 0 ? 0.6 : Math.ceil(count / Math.max(1, Math.floor(width / ((h * 0.9 + 2 * air) * fit))));
+  // 32px is the two rows' room above their cards
+  const fits = (fit: number) => lines(support, fit) <= LINES_PER_ROW && lines(creatures, fit) <= LINES_PER_ROW
+    && (lines(support, fit) + lines(creatures, fit)) * h * fit + 32 <= height;
+  let fit = MAX_FIT;
+  while (fit > MIN_FIT && !fits(fit)) fit -= 0.02;
+  fit = Math.max(MIN_FIT, fit);
+  root.style.setProperty('--fit', fit.toFixed(2));
   // Below this the keyword icons are too small to tell apart, so the board drops them and keeps the art
   field.classList.toggle('cramped', fit < 0.72);
 }

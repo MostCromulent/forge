@@ -27,6 +27,7 @@ export function nextFace(model: Model): void {
 // hand that is really somewhere else, data-from (the zone it is in)
 export function hoverCard(el: HTMLElement | null): void {
   if (!el || !el.dataset.zoom) {
+    byId('zoom').classList.remove('settling');
     changeUi(u => { u.hover = null; u.faceIndex = 0; });
     return;
   }
@@ -36,11 +37,18 @@ export function hoverCard(el: HTMLElement | null): void {
   const from = el.dataset.from;
   changeUi(u => { u.hover = { card, src, from, at: el }; u.faceIndex = 0; });
   if (card !== null) actions?.inspectCard(card);
-  // A card in hand grows as it rises, so its preview is put beside it again once it has
-  setTimeout(() => {
-    const hover = ui.hover;
-    if (hover && 'card' in hover && hover.at === el) placeZoom(byId('zoom'), el);
-  }, 160);
+  // A card in hand grows as it rises, and a preview placed beside it midway would jump, so it waits unseen
+  const zoom = byId('zoom');
+  const rising = (el.closest<HTMLElement>('.card') ?? el).getAnimations().filter(a => a instanceof CSSTransition);
+  zoom.classList.toggle('settling', rising.length > 0);
+  if (rising.length) {
+    Promise.allSettled(rising.map(a => a.finished)).then(() => {
+      const hover = ui.hover;
+      if (!hover || !('card' in hover) || hover.at !== el) return;
+      zoom.classList.remove('settling');
+      placeZoom(zoom, el);
+    });
+  }
 }
 
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
@@ -104,8 +112,12 @@ function drawDetail(model: Model): void {
   const face = d?.faces[ui.faceIndex] ?? d?.faces[0];
   ensureZoom(zoom);
   const img = q<HTMLImageElement>(zoom, 'img');
-  img.hidden = false;
-  setImage(img, face?.imageKey ? imageUrl(face.imageKey) : hover.src);
+  const src = face?.imageKey ? imageUrl(face.imageKey) : hover.src;
+  // A card the viewer may not see has no image, so its text is all there is to show
+  const text = ui.cardText || !src;
+  zoom.classList.toggle('image-only', !text);
+  img.hidden = text;
+  if (!text) setImage(img, src);
   q(zoom, '.detail').hidden = !face;
   setSource(q(zoom, '.from'), hover.from);
   if (!d || !face) return;
@@ -114,7 +126,8 @@ function drawDetail(model: Model): void {
   q(zoom, '.type').textContent = face.type ?? '';
   setRulesText(q(zoom, '.text'), face.text ?? '');
   q(zoom, '.pt').textContent = face.pt ?? '';
-  q(zoom, '.hint').textContent = d.faces.length > 1 ? `F: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
+  const faces = d.faces.length > 1 ? `F: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
+  q(zoom, '.hint').textContent = [faces, src ? `T: ${text ? 'card image' : 'rules text'}` : ''].filter(Boolean).join(' · ');
 }
 
 // "your graveyard" rather than "your exile": the zones a card is played out of do not all take a possessive
@@ -163,6 +176,7 @@ function ensureZoom(zoom: HTMLElement): void {
 
 function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   ensureZoom(zoom);
+  zoom.classList.remove('image-only');
   q(zoom, 'img').hidden = true;
   q(zoom, '.detail').hidden = !d;
   setSource(q(zoom, '.from'), undefined);

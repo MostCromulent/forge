@@ -111,6 +111,7 @@ function runKey(command: KeyCommand): void {
     case 'endTurn': actions.endTurn(); break;
     case 'undo': actions.undo(); break;
     case 'nextFace': nextFace(model); break;
+    case 'cardText': changeUi(u => { u.cardText = !u.cardText; }); break;
     case 'startMatch': actions.startMatch(ui.spectate); break;
     case 'closeCardMenu': {
       const menu = cardMenu(model);

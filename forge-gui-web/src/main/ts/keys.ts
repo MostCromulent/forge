@@ -7,7 +7,7 @@ import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
-  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch'
+  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
   | 'closeCardMenu' | `pickCardMenu${Digit}`;
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
@@ -52,9 +52,12 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   if (press.typing) {
     return null;
   }
-  // Turning the card under the pointer answers nothing, so it works over a question as well
+  // Turning the card under the pointer, or reading it, answers nothing, so it works over a question as well
   if (key === 'f') {
     return 'nextFace';
+  }
+  if (key === 't') {
+    return 'cardText';
   }
   // A pass on its way: its button takes the keys the prompt's would
   if (passing) {

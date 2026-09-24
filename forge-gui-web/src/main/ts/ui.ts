@@ -43,6 +43,8 @@ export interface UiState {
   hover: Hover | null;
   /** Which face of the hovered card the zoom panel shows. */
   faceIndex: number;
+  /** The zoom panel shows the hovered card's rules text instead of its image. T swaps them. */
+  cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
   sidePanels: { log: boolean };
 }
@@ -65,6 +67,7 @@ export const ui: UiState = {
   spectate: false,
   hover: null,
   faceIndex: 0,
+  cardText: false,
   sidePanels: { log: true, ...storedSidePanels() },
 };
 
