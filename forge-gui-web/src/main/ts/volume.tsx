@@ -10,8 +10,8 @@ export const isSilent = (): boolean => VOLUMES.every(def => Number(setting(def.k
 
 export function Volume({ close }: { close: () => void }) {
   const button = document.querySelector('#prompt .volume')?.getBoundingClientRect();
-  // Opens upwards from the button, as the console it sits in is at the bottom of the screen
-  const at = button ? { left: `${button.left}px`, bottom: `${window.innerHeight - button.top + 6}px` } : {};
+  // Opens upwards from the button and leftwards from its edge, as the console sits in the bottom-right corner
+  const at = button ? { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` } : {};
   return (
     <div id="volume" class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="volume-panel" role="dialog" aria-label="Volume" style={at}>

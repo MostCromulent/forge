@@ -11,7 +11,7 @@
               color-mix(in srgb, var(--bg-deep) 68%, transparent) 100%);
 }
 /* The player column holds three zone tiles abreast, and the console in the corner below it is as wide */
-#match { --side-gap: 280px; --seat-w: calc(var(--tile-w) * 3 + 24px); --console-w: max(var(--seat-w), 340px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr 260px; grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
+#match { --side-w: 340px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
 #opponent { grid-area: opp; }
 /* Your half of the table is lit a little, so whose side is whose reads without a label */
 #me { grid-area: me; background: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 2.5%, transparent) 0%, transparent 30%); }

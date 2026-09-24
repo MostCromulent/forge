@@ -1,6 +1,7 @@
 /* The hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
-/* The console sits in the corner, so the hand centres in what is left of the row */
-#hand { padding-left: calc(var(--console-w) + 24px); display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
+#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
+/* With the log folded away the hand has the whole width, less the corner the console keeps */
+#match.side-folded #hand { padding-right: calc(var(--side-w) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
