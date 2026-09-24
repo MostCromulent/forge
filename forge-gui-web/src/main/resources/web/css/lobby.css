@@ -62,7 +62,7 @@
 /* One size whichever state it is in, so the page does not jump as a join succeeds or fails */
 .wait-card {
   display: flex; flex-direction: column; gap: 15px; width: min(100%, 380px); min-height: 212px; padding: 22px;
-  background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
+  margin-top: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
 }
 .wait-card.failed { border-color: #a35a3a; }
 .trail { display: flex; align-items: center; gap: 7px; margin: 0; padding: 0; list-style: none; }
