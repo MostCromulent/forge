@@ -51,3 +51,22 @@
 
 /* A card drawn by the board's own code sits in a holder of its own, which takes no part in the layout */
 .card-host { display: contents; }
+
+/* Putting cards back on the library: a shelf for each end, with the rest of the library drawn between them so
+   "top" and "bottom" are two places rather than two lists that happen to be stacked. Sized to what is in it. */
+.manipulate { display: grid; gap: 8px; }
+.manipulate .shelf { border-radius: 9px; border: 1px dashed var(--line-bright); background: var(--bg-deep); padding: 7px 9px; }
+.manipulate .shelf.top { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 7%, var(--bg-deep)); }
+.manipulate .shelf-label { display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.manipulate .shelf.top .shelf-label b { color: var(--accent-2); }
+.manipulate .shelf-label span { margin-left: auto; letter-spacing: 0; text-transform: none; font-size: 10.5px; }
+.manipulate .shelf-cards { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; min-height: calc(var(--card-h) * .6); }
+.manipulate .shelf-card { position: relative; cursor: grab; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.manipulate .shelf-card:active { cursor: grabbing; }
+.manipulate .seq { position: absolute; right: -5px; top: -5px; z-index: 3; width: 17px; height: 17px; border-radius: 50%; background: var(--accent); border: 1px solid color-mix(in srgb, var(--accent-2) 40%, transparent); color: #fff8e6; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.manipulate .shelf.bottom .seq { background: var(--surface-3); border-color: var(--line-bright); color: var(--text); }
+.manipulate .send { font-size: 10px; padding: 2px 7px; border-radius: 5px; }
+.manipulate .shelf-empty { margin: auto; color: var(--faint); font-size: 11px; font-style: italic; }
+/* The library itself, so the two shelves read as its two ends */
+.manipulate .between { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--faint); font-size: 10.5px; }
+.manipulate .between::before, .manipulate .between::after { content: ''; flex: 1; height: 1px; background: var(--line); }

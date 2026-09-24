@@ -235,38 +235,65 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
 
 // Scry and friends: the host passes the whole library with only the top cards movable.
 // Movable cards placed after the untouched middle go to the bottom (PlayerControllerHuman.arrangeForMove).
+type Shelf = 'top' | 'bottom';
+
+/**
+ * Where the cards you are looking at go back to: a shelf for the top of the library and one for the bottom, with
+ * the rest of the library drawn between them so the two ends mean something. Drag a card to the other shelf or
+ * past its neighbours; the button does the same for touch and the keyboard.
+ */
 function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Model; answer: Answer }) {
   const all = req.options.map((_, i) => i);
   const rest = all.filter(i => !req.movable.includes(i));
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
-  const raise = (pile: 'top' | 'bottom', pos: number) => setPiles(p => {
-    const list = [...p[pile]];
-    if (pos > 0) [list[pos - 1], list[pos]] = [list[pos], list[pos - 1]];
-    return { ...p, [pile]: list };
+  const held = useRef<number | null>(null);
+  const bothEnds = req.toBottom || req.toTop;
+
+  const place = (shelf: Shelf, at: number) => {
+    const card = held.current;
+    held.current = null;
+    if (card === null) return;
+    setPiles(p => {
+      const next = { top: p.top.filter(i => i !== card), bottom: p.bottom.filter(i => i !== card) };
+      next[shelf].splice(Math.min(at, next[shelf].length), 0, card);
+      return next;
+    });
+  };
+  const send = (from: Shelf, pos: number) => setPiles(p => {
+    const card = p[from][pos];
+    const to: Shelf = from === 'top' ? 'bottom' : 'top';
+    const next = { top: [...p.top], bottom: [...p.bottom] };
+    next[from] = next[from].filter((_, k) => k !== pos);
+    next[to] = [...next[to], card];
+    return next;
   });
-  const toBottom = (pos: number) => setPiles(p => ({ top: p.top.filter((_, k) => k !== pos), bottom: [...p.bottom, p.top[pos]] }));
-  const toTop = (pos: number) => setPiles(p => ({ bottom: p.bottom.filter((_, k) => k !== pos), top: [...p.top, p.bottom[pos]] }));
-  const pile = (name: 'top' | 'bottom') => (
-    <div class="options ordered">
-      {piles[name].map((i, pos) => (
-        <div key={i} class="ordered-item">
-          <OptionView model={model} opt={req.options[i]} />
-          <Button onClick={() => raise(name, pos)}>↑</Button>
-          {name === 'top' && req.toBottom && <Button onClick={() => toBottom(pos)}>To bottom</Button>}
-          {name === 'bottom' && req.toTop && <Button onClick={() => toTop(pos)}>To top</Button>}
-        </div>
-      ))}
+
+  const shelf = (name: Shelf, label: string, note: string) => (
+    <div class={`shelf ${name}`} onDragOver={e => e.preventDefault()} onDrop={() => place(name, piles[name].length)}>
+      <p class="shelf-label"><b>{label}</b><span>{note}</span></p>
+      <div class="shelf-cards">
+        {piles[name].map((i, pos) => (
+          <div key={i} class="shelf-card" draggable onDragStart={() => { held.current = i; }}
+            onDragOver={e => e.preventDefault()} onDrop={e => { e.stopPropagation(); place(name, pos); }}>
+            <span class="seq">{pos + 1}</span>
+            <OptionView model={model} opt={req.options[i]} />
+            {bothEnds && <button class="send" onClick={() => send(name, pos)}
+              title={name === 'top' ? 'Put on the bottom' : 'Put on top'}>
+              {name === 'top' ? 'To bottom' : 'To top'}</button>}
+          </div>
+        ))}
+        {piles[name].length === 0 && <p class="shelf-empty">nothing here</p>}
+      </div>
     </div>
   );
+
   return (
-    <>
-      <p class="hint">Top of library, first is on top</p>
-      {pile('top')}
-      <p class="hint">{`${rest.length} other cards`}</p>
-      <p class="hint">Bottom of library, last is at the bottom</p>
-      {pile('bottom')}
+    <div class="manipulate">
+      {shelf('top', 'Top of library', 'drawn first →')}
+      <p class="between">{`${rest.length} other cards`}</p>
+      {bothEnds && shelf('bottom', 'Bottom of library', 'last is furthest down')}
       <ButtonRow><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>Confirm</Button></ButtonRow>
-    </>
+    </div>
   );
 }
 
