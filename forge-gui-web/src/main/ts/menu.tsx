@@ -216,11 +216,12 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
         <p class="wait-body">
           {model.joining ? 'A table is making room for you.'
             : failed ? model.error
-              : 'You are seated as soon as one opens.'}
+              : model.canClaimHost ? 'Nobody is hosting. Host the table yourself, or wait here to be seated when someone else opens one.'
+                : 'You are seated as soon as one opens.'}
         </p>
         <div class="wait-buttons">
           {failed && <button onClick={() => actions.join()}>Try again</button>}
-          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Open a table</button>}
+          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Host the table</button>}
         </div>
       </section>
     </div>
