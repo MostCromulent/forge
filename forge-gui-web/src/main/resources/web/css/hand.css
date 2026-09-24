@@ -12,38 +12,29 @@
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }
 
 /* A card you may play from somewhere other than your hand — flashback, escape, an adventure in exile. It sits
-   here all game, so it rests as a still ring and the zone's name along its foot; pointing at it wakes the motes.
-   Anything moving the whole game is something a player learns to stop seeing. */
-.card .from, .card .haze { display: none; }
-#hand .card.elsewhere { box-shadow: 0 0 0 2px #9a7fd0, 0 0 14px #b9a8e04d; }
+   here all game, so it rests as a still glow in the colour of the zone it is really in; pointing at it wakes the
+   motes and names the zone. Anything moving the whole game is something a player learns to stop seeing. */
+.card .haze { display: none; }
+#hand .card.elsewhere {
+  --zone-ring: color-mix(in srgb, var(--zone-glow) 72%, transparent);
+  --zone-halo: color-mix(in srgb, var(--zone-glow) 40%, transparent);
+  --zone-ring-w: 2px;
+  box-shadow: 0 0 0 var(--zone-ring-w) var(--zone-ring), 0 0 16px var(--zone-halo);
+}
 /* The castable outline starts at the same edge as the ring and paints over it, so when a card is both, the ring
    grows by the outline's width and the two end up nested rather than one hiding the other */
-#hand .card.elsewhere.playable:not(.selectable) { box-shadow: 0 0 0 4px #9a7fd0, 0 0 14px #b9a8e04d; }
-#hand .card.elsewhere.auto-tap:not(.selectable) { box-shadow: 0 0 0 5px #9a7fd0, 0 0 14px #b9a8e04d; }
+#hand .card.elsewhere.playable:not(.selectable) { --zone-ring-w: 4px; }
+#hand .card.elsewhere.auto-tap:not(.selectable) { --zone-ring-w: 5px; }
 /* Hovering a hand card already lifts and enlarges it, and its shadow would drop the ring without this */
-#hand .card.elsewhere:hover { box-shadow: 0 0 0 2px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
-#hand .card.elsewhere.playable:not(.selectable):hover { box-shadow: 0 0 0 4px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
-#hand .card.elsewhere.auto-tap:not(.selectable):hover { box-shadow: 0 0 0 5px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
-/* A badge rather than a band across the art. Bottom left: the mana cost holds the top right, and a fanned hand
-   covers each card's right edge, never its left. */
-#hand .card.elsewhere .from {
-  display: block; position: absolute; left: 4px; bottom: 4px; z-index: 3;
-  padding: 1px 7px; border-radius: 9px;
-  background: var(--zone-fill, #3c3c50); border: 1px solid color-mix(in srgb, var(--zone-fill, #3c3c50) 58%, #fff);
-  color: var(--zone-ink, #eef1f7); font-size: calc(var(--hand-w, 88px) * 0.095); font-weight: 650;
-  white-space: nowrap;
+#hand .card.elsewhere:hover {
+  --zone-ring: var(--zone-glow);
+  --zone-halo: color-mix(in srgb, var(--zone-glow) 62%, transparent);
+  box-shadow: 0 0 0 var(--zone-ring-w) var(--zone-ring), 0 0 24px var(--zone-halo), 0 10px 30px #000c;
 }
-/* The colours the desktop client banners these cards with (CardPanel.ZONE_COLORS), so a card reads the same in
-   both. The text colour is not desktop's: its banners are large, and at this size a pale fill needs dark type. */
-#hand .card[data-from="Graveyard"] { --zone-fill: #501464; --zone-ink: #f2e9f7; }
-#hand .card[data-from="Exile"] { --zone-fill: #b4b9c8; --zone-ink: #14171f; }
-#hand .card[data-from="Command"] { --zone-fill: #be9b1e; --zone-ink: #1d1704; }
-#hand .card[data-from="Library"] { --zone-fill: #826e4b; --zone-ink: #f7f2ea; }
-#hand .card[data-from="Sideboard"] { --zone-fill: #3c3c50; --zone-ink: #eef1f7; }
 #hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;
-  background: #b9a8e0; box-shadow: 0 0 7px 1px #b9a8e0; opacity: 0;
+  background: var(--zone-glow); box-shadow: 0 0 7px 1px var(--zone-glow); opacity: 0;
   animation: elsewhere-rise 2.4s linear infinite;
 }
 #hand .card.elsewhere:hover .haze::before { left: 24%; }

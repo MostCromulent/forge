@@ -4,7 +4,7 @@
 
 /** The card or player the pointer is over, whose details the zoom panel shows. A card's src is its image, empty
  *  when the viewer may not see it. */
-export type Hover = { card: number | null; src: string } | { player: number };
+export type Hover = { card: number | null; src: string; from?: string } | { player: number };
 
 /** A picker open over match setup, for one seat. */
 export interface Picker {

@@ -2,7 +2,7 @@ import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from './model';
 import { setting } from './settings';
-import { byId, q } from './dom';
+import { byId } from './dom';
 import type { CardView, PlayerView, ZoneType } from './protocol';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
@@ -47,13 +47,12 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
     el.classList.toggle('elsewhere', source !== undefined);
-    // The badge is coloured per zone in CSS, matching the banner desktop puts on these cards
+    // The zone picks the glow's colour in CSS, and names itself in the detail panel when the card is hovered
     if (source) {
       el.dataset.from = source;
     } else {
       delete el.dataset.from;
     }
-    q(el, '.from').textContent = source ?? '';
   });
   // A shallow arc: at most 2 degrees per card from the middle, 10 at the ends
   const mid = (cards.length - 1) / 2;

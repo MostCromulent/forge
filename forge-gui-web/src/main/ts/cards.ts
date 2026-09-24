@@ -11,7 +11,7 @@ export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="from"></span><span class="haze" aria-hidden="true"></span>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="haze" aria-hidden="true"></span>';
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop

@@ -23,7 +23,8 @@ export function nextFace(model: Model): void {
   }
 }
 
-// el carries data-key (the card) and data-zoom (its image, empty when the viewer may not see it)
+// el carries data-key (the card), data-zoom (its image, empty when the viewer may not see it) and, for a card in
+// hand that is really somewhere else, data-from (the zone it is in)
 export function hoverCard(el: HTMLElement | null): void {
   if (!el || !el.dataset.zoom) {
     changeUi(u => { u.hover = null; u.faceIndex = 0; });
@@ -32,7 +33,8 @@ export function hoverCard(el: HTMLElement | null): void {
   const key = Number(el.dataset.key);
   const card = Number.isInteger(key) ? key : null;
   const src = el.dataset.zoom;
-  changeUi(u => { u.hover = { card, src }; u.faceIndex = 0; });
+  const from = el.dataset.from;
+  changeUi(u => { u.hover = { card, src, from }; u.faceIndex = 0; });
   if (card !== null) actions?.inspectCard(card);
 }
 
@@ -63,6 +65,7 @@ export function renderDetail(model: Model): void {
   img.hidden = false;
   setImage(img, face?.imageKey ? imageUrl(face.imageKey) : hover.src);
   q(zoom, '.detail').hidden = !face;
+  setSource(q(zoom, '.from'), hover.from);
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   setSymbolText(q(zoom, '.cost'), face.cost);
@@ -70,6 +73,25 @@ export function renderDetail(model: Model): void {
   setRulesText(q(zoom, '.text'), face.text ?? '');
   q(zoom, '.pt').textContent = face.pt ?? '';
   q(zoom, '.hint').textContent = d.faces.length > 1 ? `F: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
+}
+
+// "your graveyard" rather than "your exile": the zones a card is played out of do not all take a possessive
+const ZONE_PHRASE: Record<string, string> = {
+  Graveyard: 'your graveyard',
+  Exile: 'exile',
+  Command: 'your command zone',
+  Library: 'your library',
+  Sideboard: 'your sideboard',
+};
+
+/** The line that says a card in hand is not really in hand. The glow around it is in this same zone's colour. */
+function setSource(el: HTMLElement, zone: string | undefined): void {
+  el.textContent = zone ? `Playable from ${ZONE_PHRASE[zone] ?? zone.toLowerCase()}` : '';
+  if (zone) {
+    el.dataset.from = zone;
+  } else {
+    delete el.dataset.from;
+  }
 }
 
 // CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other
@@ -93,7 +115,7 @@ function setRulesText(el: HTMLElement, html: string): void {
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
+  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
   hideOnError(q<HTMLImageElement>(zoom, 'img'));
 }
 
@@ -101,6 +123,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   ensureZoom(zoom);
   q(zoom, 'img').hidden = true;
   q(zoom, '.detail').hidden = !d;
+  setSource(q(zoom, '.from'), undefined);
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cost').textContent = '';

@@ -28,6 +28,14 @@
   --select: #b4f05a;
   --attack: #ffffff;
   --danger: #f59e0b;
+  /* Where a card you may play is really sitting. Taken from the zone banners the desktop client paints on these
+     cards and lifted until they read as light rather than paint, so the same card means the same thing in both.
+     All five stay clear of the castable cyan and the prompt's lime, and differ in brightness as much as in hue. */
+  --zone-graveyard: #a98fe0;
+  --zone-exile: #cfd6ea;
+  --zone-command: #f0c05a;
+  --zone-library: #c9a06a;
+  --zone-other: #8f9bc4;
   --scrim: #070910b8;
   --scrim-deep: #05070ce0;
   /* Magic's five colours, kept low in chroma because they sit beside card art. The letter inside each pip
@@ -50,6 +58,13 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
+/* Anything that names a zone it came from lights in that zone's colour. The bare attribute has to come first:
+   it is the fallback for a zone with no colour of its own, and all of these match with the same weight. */
+[data-from] { --zone-glow: var(--zone-other); }
+[data-from="Graveyard"] { --zone-glow: var(--zone-graveyard); }
+[data-from="Exile"] { --zone-glow: var(--zone-exile); }
+[data-from="Command"] { --zone-glow: var(--zone-command); }
+[data-from="Library"] { --zone-glow: var(--zone-library); }
 /* The ground is painted on the root, not on the body. The board's backdrop layers sit at a negative
    z-index, which puts them above the page canvas but behind any background the body paints itself. */
 html { background: var(--bg); }

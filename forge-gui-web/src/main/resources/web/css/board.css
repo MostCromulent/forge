@@ -283,7 +283,9 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 #zoom .detail .text { white-space: pre-line; }
 #zoom .detail .text .muted { color: var(--muted); }
 #zoom .detail .pt { font-weight: 700; text-align: right; }
-#zoom .detail .pt:empty, #zoom .detail .hint:empty { display: none; }
+/* Lit in the same colour as the glow around the card, so the panel answers what the glow only hints at */
+#zoom .detail .from { color: var(--zone-glow); font-size: 12px; font-weight: 600; }
+#zoom .detail .pt:empty, #zoom .detail .hint:empty, #zoom .detail .from:empty { display: none; }
 #zoom .detail .hint { color: var(--muted); font-size: 11px; }
 #game-over { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 60; }
 #game-over .panel { background: var(--surface); padding: 24px 32px; border-radius: 12px; text-align: center; }
