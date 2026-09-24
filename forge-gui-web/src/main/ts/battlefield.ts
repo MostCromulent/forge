@@ -15,18 +15,22 @@ interface Slot {
 }
 
 /**
- * Which of the four groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
+ * Which of the five groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
  * row nearest the player's own edge; creatures and the tokens they make share the row nearest the middle.
  * A token that is not a creature — a Treasure, a Clue — belongs with the other artifacts rather than beside the
- * creatures. A planeswalker sits among the creatures because that is where an attack can be aimed at it.
+ * creatures.
+ *
+ * Planeswalkers and battles go to the far end of the creature row, which is where Arena puts them: an attack can
+ * be aimed at either, so they belong in the row a player attacks into, but neither blocks and neither is part of
+ * the fight, so they keep out of the way of the creatures that are. A battle sits with whoever protects it.
  */
-type Group = 'lands' | 'support' | 'creatures' | 'tokens';
+type Group = 'lands' | 'support' | 'creatures' | 'tokens' | 'far';
 
 function groupOf(model: Model, slot: Slot): Group {
   const type = stateOf(model, slot.top).Type ?? '';
   if (/Land/.test(type)) return 'lands';
   if (/Creature/.test(type)) return slot.top.Token ? 'tokens' : 'creatures';
-  if (/Planeswalker/.test(type)) return 'creatures';
+  if (/Planeswalker|Battle/.test(type)) return 'far';
   return 'support';
 }
 
@@ -34,12 +38,13 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   const slots = slotsFor(model, cards, onField);
   const of = (group: Group) => slots.filter(s => groupOf(model, s) === group);
   const groups: Record<Group, Slot[]> = {
-    lands: of('lands'), support: of('support'), creatures: of('creatures'), tokens: of('tokens'),
+    lands: of('lands'), support: of('support'), creatures: of('creatures'), tokens: of('tokens'), far: of('far'),
   };
   for (const [name, list] of Object.entries(groups)) {
     reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select));
   }
-  fitCards(root, groups.lands.length + groups.support.length, groups.creatures.length + groups.tokens.length);
+  fitCards(root, groups.lands.length + groups.support.length,
+    groups.creatures.length + groups.tokens.length + groups.far.length);
 }
 
 /** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */

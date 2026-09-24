@@ -52,6 +52,18 @@
 .row > .group:last-child { justify-content: flex-end; }
 .row:has(> .group:empty) > .group { justify-content: center; }
 .row > .group:empty { display: none; }
+/* Planeswalkers and battles hold the far end of the row an attack is aimed into. The group has no width of its
+   own until something goes in it, so an ordinary board looks exactly as it did. */
+.row > .group.far { flex: 0 0 auto; margin-left: auto; }
+/* A battle is printed on its side and every other client draws it that way, so the slot turns with the art.
+   The room a slot reserves either side already fits a card lying down, so nothing else has to move. */
+.card.battle { width: calc(var(--card-h) * var(--fit, 1)); height: calc(var(--card-w) * var(--fit, 1)); }
+.card.battle > img {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; rotate: 90deg;
+  width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1));
+}
+/* Defence counters, not toughness — a different number needs a different colour */
+.card.battle .pt .pt-t { color: #cfe8b8; }
 /* Creatures and the tokens they make belong to the same fight, so they stay together in the middle and a wider
    gap is all that tells them apart */
 .row.together { justify-content: center; gap: 52px; }

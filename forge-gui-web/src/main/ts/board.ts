@@ -59,7 +59,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       </div>
       <div class="battlefield">
         <div class="row"><div class="group lands"></div><div class="group support"></div></div>
-        <div class="row together"><div class="group creatures"></div><div class="group tokens"></div></div>
+        <div class="row together"><div class="group creatures"></div><div class="group tokens"></div><div class="group far"></div></div>
       </div>`;
     const avatarEl = q(root, '.avatar');
     avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));

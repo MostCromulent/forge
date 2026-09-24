@@ -56,9 +56,12 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const creature = /Creature/.test(type);
   const damage = card.Damage ?? 0;
   const power = creature ? `${state.Power ?? 0}/` : '';
+  // A battle lies on its side, as it is printed and as every other client draws it
+  el.classList.toggle('battle', /Battle/.test(type));
   // Damage comes off the toughness the way a player counts it, rather than being listed beside the card
   const toughness = creature ? `${(state.Toughness ?? 0) - damage}`
-    : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}` : '';
+    : /Planeswalker/.test(type) ? `${state.Loyalty ?? ''}`
+    : /Battle/.test(type) ? `${state.Defense ?? ''}` : '';
   // A pump, a counter or a loyalty change is a number the player must notice
   if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
     pt.classList.remove('changed');
