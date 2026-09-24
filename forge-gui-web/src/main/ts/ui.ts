@@ -12,11 +12,19 @@ export interface Picker {
   seat: number;
 }
 
+/** How an open zone is ordered: as the zone holds them, by name, or by card type. */
+export type ZoneSort = 'order' | 'name' | 'type';
+
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
   openPiles: Set<string>;
   /** Zone panels the player has opened by clicking a tile, as `${playerKey}/${zone}`. */
   openZones: Set<string>;
+  /** The open zones are folded to a bar so the board can be read; they are still open. */
+  zonesMinimised: boolean;
+  /** Narrows the open zone to cards whose name contains this, lower case. */
+  zoneSearch: string;
+  zoneSort: ZoneSort;
   stackCollapsed: boolean;
   /** The stack item under the pointer, whose targets get arrows. */
   hoveredStackItem: number | null;
@@ -44,6 +52,9 @@ const SIDE_KEY = 'forge.sidePanels';
 export const ui: UiState = {
   openPiles: new Set(),
   openZones: new Set(),
+  zonesMinimised: false,
+  zoneSearch: '',
+  zoneSort: 'order',
   stackCollapsed: false,
   hoveredStackItem: null,
   stackMenuAt: null,
@@ -73,6 +84,9 @@ export function changeUi(change: (state: UiState) => void): void {
 export function resetMatchUi(): void {
   ui.openPiles.clear();
   ui.openZones.clear();
+  ui.zonesMinimised = false;
+  ui.zoneSearch = '';
+  ui.zoneSort = 'order';
   ui.hoveredStackItem = null;
   ui.stackMenuAt = null;
   ui.stopsOpen = false;

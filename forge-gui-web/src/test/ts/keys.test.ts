@@ -8,7 +8,8 @@ const press = (key: string, typing = false): KeyPress => ({ key, typing, modifie
 
 function freshUi(): UiState {
   return {
-    openPiles: new Set(), openZones: new Set(), stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
+    openPiles: new Set(), openZones: new Set(), zonesMinimised: false, zoneSearch: '', zoneSort: 'order',
+    stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
     stopsOpen: false, optionsOpen: false, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0,
     sidePanels: { log: true, chat: false },
   };
