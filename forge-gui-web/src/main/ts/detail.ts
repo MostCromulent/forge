@@ -34,8 +34,13 @@ export function hoverCard(el: HTMLElement | null): void {
   const card = Number.isInteger(key) ? key : null;
   const src = el.dataset.zoom;
   const from = el.dataset.from;
-  changeUi(u => { u.hover = { card, src, from }; u.faceIndex = 0; });
+  changeUi(u => { u.hover = { card, src, from, at: el }; u.faceIndex = 0; });
   if (card !== null) actions?.inspectCard(card);
+  // A card in hand grows as it rises, so its preview is put beside it again once it has
+  setTimeout(() => {
+    const hover = ui.hover;
+    if (hover && 'card' in hover && hover.at === el) placeZoom(byId('zoom'), el);
+  }, 160);
 }
 
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
@@ -50,6 +55,43 @@ export function hoverPlayer(key: number | null): void {
 }
 
 export function renderDetail(model: Model): void {
+  drawDetail(model);
+  const hover = ui.hover;
+  const zoom = byId('zoom');
+  if (hover && 'card' in hover && hover.at) {
+    placeZoom(zoom, hover.at);
+  } else {
+    zoom.classList.remove('placed');
+    zoom.style.left = zoom.style.top = '';
+  }
+}
+
+/** The gap kept between a card and its preview, and between the preview and the edges it must stay inside. */
+const ZOOM_GAP = 16;
+
+/**
+ * Puts the preview beside the card it shows, never over it: to its right where there is room, else to its left, else
+ * on whichever side has more room. It stays inside the board, clear of the side column.
+ */
+function placeZoom(zoom: HTMLElement, at: HTMLElement): void {
+  if (zoom.hidden || !at.isConnected) return;
+  const card = at.getBoundingClientRect();
+  const side = document.getElementById('side')?.getBoundingClientRect();
+  const left = 8;
+  const right = side && side.width < window.innerWidth / 2 && side.left > card.right ? side.left - 8 : window.innerWidth - 8;
+  const w = zoom.offsetWidth, h = zoom.offsetHeight;
+  const after = card.right + ZOOM_GAP, before = card.left - ZOOM_GAP - w;
+  let x: number;
+  if (after + w <= right) x = after;
+  else if (before >= left) x = before;
+  else x = right - card.right > card.left - left ? right - w : left;
+  const y = Math.min(Math.max(8, card.top + card.height / 2 - h / 2), window.innerHeight - h - 8);
+  zoom.classList.add('placed');
+  zoom.style.left = `${Math.round(x)}px`;
+  zoom.style.top = `${Math.round(y)}px`;
+}
+
+function drawDetail(model: Model): void {
   const zoom = byId('zoom');
   const hover = ui.hover;
   zoom.hidden = !hover;
