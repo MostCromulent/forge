@@ -24,13 +24,14 @@
 #hand .card.elsewhere:hover { box-shadow: 0 0 0 2px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
 #hand .card.elsewhere.playable:not(.selectable):hover { box-shadow: 0 0 0 4px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
 #hand .card.elsewhere.auto-tap:not(.selectable):hover { box-shadow: 0 0 0 5px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
-/* The left edge is the part a fanned hand never covers, so the name starts there */
+/* A badge rather than a band across the art. Bottom left: the mana cost holds the top right, and a fanned hand
+   covers each card's right edge, never its left. */
 #hand .card.elsewhere .from {
-  display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  padding: 1px 4px; border-radius: 0 0 var(--radius) var(--radius);
-  background: #1b1630e6; border-top: 1px solid #9a7fd0;
-  color: #d7c8f5; font-size: calc(var(--hand-w, 88px) * 0.1); font-weight: 650;
-  white-space: nowrap; overflow: hidden;
+  display: block; position: absolute; left: 4px; bottom: 4px; z-index: 3;
+  padding: 1px 7px; border-radius: 9px;
+  background: #1b1630f2; border: 1px solid #9a7fd0;
+  color: #d7c8f5; font-size: calc(var(--hand-w, 88px) * 0.095); font-weight: 650;
+  white-space: nowrap;
 }
 #hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
