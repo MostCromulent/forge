@@ -16,7 +16,7 @@ interface ArrowKind {
 }
 
 const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target' | 'mustBlock', ArrowKind> = {
-  attack: { color: '#ff7a59', band: 20, core: 3.8, dash: [], head: 'spear' },
+  attack: { color: '#ff7a59', band: 16, core: 3.8, dash: [], head: 'spear' },
   block: { color: '#5cc8ff', band: 13, core: 3, dash: [13, 8], head: 'chevron' },
   plannedBlock: { color: '#8fb7cc', band: 10, core: 2.6, dash: [2, 9], head: 'chevron' },
   target: { color: '#ffcc33', band: 9, core: 2.2, dash: [3, 8], head: 'reticle' },
@@ -154,17 +154,19 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   // A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line
   const bow = 0.34;
   const bend = { x: (a.x + end.x) / 2 + (end.y - a.y) * bow, y: (a.y + end.y) / 2 - (end.x - a.x) * bow };
+  // A spear's head is solid, so the band and line stop at its waist rather than run on under it to the tip
+  const [bodyBend, bodyEnd] = kind.head === 'spear' ? trim(a, bend, end, SPEAR_WAIST) : [bend, end];
   const path = () => {
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
-    ctx.quadraticCurveTo(bend.x, bend.y, end.x, end.y);
+    ctx.quadraticCurveTo(bodyBend.x, bodyBend.y, bodyEnd.x, bodyEnd.y);
   };
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.setLineDash([]);
   // The band is the shape; the core is the line the eye follows. It narrows at the source and darkens towards
   // the target, so which end is which reads without following the curve.
-  taper(ctx, a, bend, end, t => (kind.band / 2) * (0.18 + 0.82 * Math.pow(t, 0.75)));
+  taper(ctx, a, bodyBend, bodyEnd, t => (kind.band / 2) * (0.18 + 0.82 * Math.pow(t, 0.75)));
   ctx.strokeStyle = 'rgba(0,0,0,.55)';
   ctx.lineWidth = 3;
   ctx.stroke();
@@ -180,6 +182,20 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   ctx.stroke();
   ctx.setLineDash([]);
   head(ctx, end, Math.atan2(end.y - bend.y, end.x - bend.x), kind);
+}
+
+/** How far back from its tip a spear head narrows to its waist. */
+const SPEAR_WAIST = 13;
+
+/** The same quadratic curve cut short where it comes within `back` pixels of its end, as a control point and an end. */
+function trim(a: Point, bend: Point, b: Point, back: number): [Point, Point] {
+  const at = (t: number): Point => {
+    const u = 1 - t;
+    return { x: u * u * a.x + 2 * u * t * bend.x + t * t * b.x, y: u * u * a.y + 2 * u * t * bend.y + t * t * b.y };
+  };
+  let t = 1;
+  while (t > 0.5 && Math.hypot(at(t).x - b.x, at(t).y - b.y) < back) t -= 0.005;
+  return [{ x: a.x + (bend.x - a.x) * t, y: a.y + (bend.y - a.y) * t }, at(t)];
 }
 
 // The outline of a quadratic curve given a half-width at each point along it

@@ -38,9 +38,7 @@
 #hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -8px; border-radius: 14px; }
 #hand .card.elsewhere:hover .rim { opacity: 1; }
 #hand .card.elsewhere:hover .halo { border-color: color-mix(in srgb, var(--zone-glow) 62%, transparent); }
-@media (prefers-reduced-motion: reduce) {
-  #hand .card.elsewhere .halo { filter: blur(6px); }
-}
+html[data-motion="reduced"] #hand .card.elsewhere .halo { filter: blur(6px); }
 #hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
   content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;
@@ -54,6 +52,4 @@
   20% { opacity: 1; }
   100% { opacity: 0; transform: translateY(-38px); }
 }
-@media (prefers-reduced-motion: reduce) {
-  #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after { animation: none; opacity: .75; }
-}
+html[data-motion="reduced"] #hand .card.elsewhere:hover .haze::before, html[data-motion="reduced"] #hand .card.elsewhere:hover .haze::after { animation: none; opacity: .75; }

@@ -89,7 +89,7 @@
   color: #ff9a72; font-size: 13px; font-weight: 700;
 }
 @keyframes wait-spin { to { transform: rotate(1turn); } }
-@media (prefers-reduced-motion: reduce) { .wait-card.joining .wait-mark { animation: none; } }
+html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .wait-body { margin: 0; color: var(--muted); line-height: 1.55; }
 .wait-buttons { margin-top: auto; display: flex; gap: 8px; }
 .wait-buttons:empty { display: none; }
@@ -458,7 +458,7 @@
 @keyframes dock-rise { from { transform: translateY(calc(100% - 44px)); } }
 @keyframes dock-sink { to { transform: translateY(calc(100% - 44px)); } }
 /* Still run, only instantly, because closing waits for the animation to end */
-@media (prefers-reduced-motion: reduce) { .dock.open:not(.in-match), .dock.open.closing { animation-duration: 1ms; } }
+html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced"] .dock.open.closing { animation-duration: 1ms; }
 /* In the side column it is a panel among panels, so it keeps that column's shape instead of its own */
 .dock.in-match { position: static; width: auto; border: none; border-radius: 0; box-shadow: none; max-height: none; flex: 1; min-height: 0; }
 

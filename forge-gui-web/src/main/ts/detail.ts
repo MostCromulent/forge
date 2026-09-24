@@ -12,7 +12,16 @@ let actions: Actions | null = null;
 
 export function initDetail(actionsFor: Actions): void {
   actions = actionsFor;
+  // A card taken off the page under the pointer never reports the pointer leaving it, so its preview would stay
+  document.addEventListener('pointerover', () => {
+    if (hoverGone()) hoverCard(null);
+  });
 }
+
+const hoverGone = () => {
+  const hover = ui.hover;
+  return !!hover && 'card' in hover && !!hover.at && !hover.at.isConnected;
+};
 
 /** The F key turns the hovered card to its next face. Needs the model, which knows how many faces it has. */
 export function nextFace(model: Model): void {
@@ -63,6 +72,10 @@ export function hoverPlayer(key: number | null): void {
 }
 
 export function renderDetail(model: Model): void {
+  if (hoverGone()) {
+    ui.hover = null;
+    byId('zoom').classList.remove('settling');
+  }
   drawDetail(model);
   const hover = ui.hover;
   const zoom = byId('zoom');

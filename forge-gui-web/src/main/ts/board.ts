@@ -451,10 +451,12 @@ function boardCentre(): { x: number; y: number } {
 function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   const show = model.gameOver && titleReady;
-  byId('match').classList.toggle('ending', show || finalRunning);
+  // Looking over the final board lifts the ending off it, and the result comes back from a button
+  byId('match').classList.toggle('ending', (show || finalRunning) && !root.classList.contains('viewing'));
   if (!show) {
     if (!root.hidden) {
       root.hidden = true;
+      root.classList.remove('viewing');
       root.replaceChildren();
     }
     return;
@@ -473,7 +475,13 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     : won && everyone.length === 2 && losers.length === 1 ? `${losers[0].Name} has lost`
     : won ? 'Last one standing'
     : `${winner.Name} wins`;
-  root.innerHTML = '<div class="panel"><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p><div class="actions"></div></div>';
+  root.innerHTML = '<div class="panel"><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p><div class="actions"></div></div>'
+    + '<button class="to-result">Show result</button>';
+  const view = (board: boolean) => {
+    root.classList.toggle('viewing', board);
+    byId('match').classList.toggle('ending', !board);
+  };
+  q(root, '.to-result').onclick = () => view(false);
   const panel = q(root, '.panel');
   panel.classList.add(outcome);
   const face = q(root, '.face');
@@ -490,6 +498,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     buttons.append(b);
   };
   if (!matchOver) add('Next game', true, () => actions.nextGame());
+  add('View battlefield', false, () => view(true));
   add(matchOver ? 'Back to start' : 'Quit match', matchOver, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();

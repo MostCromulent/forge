@@ -72,9 +72,10 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
   // its air. An empty row still keeps 60% of a card's height (.row's min-height)
   const lines = (count: number, fit: number) =>
     count === 0 ? 0.6 : Math.ceil(count / Math.max(1, Math.floor(width / ((h * 0.9 + 2 * air) * fit))));
-  // 32px is the two rows' room above their cards
+  // 32px is the two rows' room above their cards, and 24px the gap between them with some to spare: a board filled
+  // to the pixel scrolls on the next rounding and cuts off its top row
   const fits = (fit: number) => lines(support, fit) <= LINES_PER_ROW && lines(creatures, fit) <= LINES_PER_ROW
-    && (lines(support, fit) + lines(creatures, fit)) * h * fit + 32 <= height;
+    && (lines(support, fit) + lines(creatures, fit)) * h * fit + 32 + 24 <= height;
   let fit = MAX_FIT;
   while (fit > MIN_FIT && !fits(fit)) fit -= 0.02;
   fit = Math.max(MIN_FIT, fit);

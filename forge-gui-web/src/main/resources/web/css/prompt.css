@@ -72,7 +72,7 @@
 /* A pass on its way: the pass button fills over the countdown, and the game goes on when it is full */
 #prompt .ok { position: relative; overflow: hidden; }
 #prompt .ok > * { position: relative; z-index: 1; }
-#prompt .ok.filling::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #ffffff1f, #ffffff47); transform-origin: left; animation: pass-fill var(--fill-ms, 1s) linear forwards; }
+#prompt .ok.filling::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0000001f, #00000059); transform-origin: left; animation: pass-fill var(--fill-ms, 1s) linear forwards; }
 @keyframes pass-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 #prompt.auto-passing .step { color: var(--muted); }
 /* Players a prompt lets you pick who have no seat on the board to click */

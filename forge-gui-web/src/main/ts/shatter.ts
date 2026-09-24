@@ -36,7 +36,7 @@ function loadThree() {
 
 /** Whether a portrait may break here at all; without it, the seat just empties and the title shows at once. */
 export function canShatter(): boolean {
-  if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return false;
+  if (document.documentElement.dataset.motion === 'reduced') return false;
   try {
     return !!document.createElement('canvas').getContext('webgl2');
   } catch {

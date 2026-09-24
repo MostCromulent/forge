@@ -60,7 +60,7 @@ export const SETTINGS: SettingDef[] = [
   {
     section: 'Priority', key: 'autoPassDelay', label: 'Auto-pass countdown',
     hint: 'How long the pass button fills before priority passes by itself, so you can stop it. Zero passes at once.',
-    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
+    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1500,
   },
   {
     section: 'Game log', key: 'logDetail', label: 'Detail', type: 'choice', server: true,
@@ -84,9 +84,9 @@ export const SETTINGS: SettingDef[] = [
     options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
   },
   {
-    section: 'Motion', key: 'zoneMotion', label: 'Drifting motes in the graveyard and exile', type: 'choice',
-    hint: 'Following the system turns them off when the computer is set to reduce motion.',
-    options: [['system', 'Follow the system'], ['on', 'Always'], ['off', 'Never']], def: 'system',
+    section: 'Motion', key: 'motion', label: 'Animations', type: 'choice',
+    hint: 'Reduced stills the shattering portraits, the drifting motes and other flourishes. Following the system reduces them when the computer is set to reduce motion.',
+    options: [['full', 'All animations'], ['system', 'Follow the system'], ['reduced', 'Reduced']], def: 'full',
   },
   {
     section: 'Sound', key: 'soundVolume', label: 'Effects', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
@@ -210,7 +210,9 @@ function apply(): void {
   const hand = Number(setting('handSize')) / 100;
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
-  root.dataset.motion = String(setting('zoneMotion'));
+  const motion = setting('motion');
+  const reduced = motion === 'reduced' || (motion === 'system' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
+  root.dataset.motion = reduced ? 'reduced' : 'full';
   customStyle().textContent = String(setting('customCss') ?? '');
 }
 
