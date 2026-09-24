@@ -12,7 +12,7 @@ import { renderScreens, screenOf } from './screens';
 import { renderMatch, resetTurnBanner } from './board';
 import { renderPrompt, flash } from './prompt';
 import { appendLog, initLog } from './log';
-import { initSide, renderSide } from './side';
+import { initSide, renderSide, renderSky } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
@@ -283,6 +283,7 @@ function render(): void {
     return;
   }
   renderSide(model);
+  renderSky(model);
   renderMatch(model, actions, events);
   renderPrompt(model, actions);
   renderDetail(model);

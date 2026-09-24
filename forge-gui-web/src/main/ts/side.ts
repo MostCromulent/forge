@@ -7,6 +7,28 @@ import type { Model } from './model';
 
 const PANELS = ['log', 'chat'] as const;
 
+/**
+ * Whether it is day or night, in the corner of the table. Cards with daybound and nightbound transform on it
+ * without asking, so it has to be readable without being looked for: the table itself cools at night, and the
+ * corner says which it is for anyone checking.
+ *
+ * The host has sent this in the Controls message all along; nothing had ever read it.
+ */
+export function renderSky(model: Model): void {
+  const sky = byId('sky');
+  const time = model.controls?.dayTime;
+  sky.hidden = !time;
+  byId('match').classList.toggle('night', time === 'Night');
+  if (!time) {
+    return;
+  }
+  if (!sky.firstChild) {
+    sky.innerHTML = '<i class="orb" aria-hidden="true"></i><span class="when"></span>';
+  }
+  sky.dataset.time = time;
+  q(sky, '.when').textContent = time;
+}
+
 export function initSide(): void {
   const side = byId('side');
   for (const panel of PANELS) {

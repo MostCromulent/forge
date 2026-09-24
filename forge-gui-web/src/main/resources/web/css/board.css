@@ -163,6 +163,19 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
 .emblem .tax:empty { display: none; }
 
+/* Day and night, in the corner of the table. Both the word and the shape carry it, and the table cools at night,
+   so a flip registers without anyone watching the corner for it. */
+#sky { grid-area: opp; justify-self: end; align-self: start; z-index: 24; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 4px 11px 4px 6px; border-radius: 18px; background: color-mix(in srgb, var(--bg-deep) 80%, transparent); border: 1px solid var(--line); }
+#sky .orb { width: 19px; height: 19px; border-radius: 50%; display: block; flex: none; }
+#sky[data-time="Day"] .orb { background: radial-gradient(circle at 50% 50%, #ffeec0, #e8b54a 62%, #c8922e); box-shadow: 0 0 10px #e8b54a70; }
+#sky[data-time="Night"] .orb { background: #141c2e; box-shadow: inset -6px -3px 0 -1px #cfd9ed, 0 0 10px #8fa3cd55; }
+#sky .when { font-size: 11.5px; font-weight: 700; }
+#sky[data-time="Day"] .when { color: #f0c86a; }
+#sky[data-time="Night"] .when { color: #b8c6e2; }
+/* The ground itself cools, slowly enough to read as the sky changing rather than the page redrawing */
+#match::after { transition: filter .8s ease; }
+#match.night::after { filter: brightness(.78) saturate(.8) hue-rotate(-10deg); }
+
 /* Floating mana: a labelled pool whose border breathes, as it lasts only until the step ends */
 .mana { display: grid; justify-items: center; gap: 4px; padding: 5px 8px 6px; border: 1px solid var(--accent-2); border-radius: 10px; background: color-mix(in srgb, var(--accent-2) 10%, var(--surface)); animation: floating 2.4s ease-in-out infinite; }
 .mana-label { font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
