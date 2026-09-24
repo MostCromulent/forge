@@ -2,7 +2,7 @@ import { game, derefAll, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
 import { ui } from './ui';
-import type { Ref, Refs, StackItemView, TrackedObject } from './protocol';
+import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
 // of the hovered stack item. Each is a band that widens towards its target, with a bright core down the middle.
@@ -15,11 +15,13 @@ interface ArrowKind {
   head: 'spear' | 'chevron' | 'reticle';
 }
 
-const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target', ArrowKind> = {
+const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target' | 'mustBlock', ArrowKind> = {
   attack: { color: '#ff7a59', band: 20, core: 3.8, dash: [], head: 'spear' },
   block: { color: '#5cc8ff', band: 13, core: 3, dash: [13, 8], head: 'chevron' },
   plannedBlock: { color: '#8fb7cc', band: 10, core: 2.6, dash: [2, 9], head: 'chevron' },
   target: { color: '#ffcc33', band: 9, core: 2.2, dash: [3, 8], head: 'reticle' },
+  // An obligation rather than a choice, so it is drawn thin and tight-dashed, unlike the block a player makes
+  mustBlock: { color: '#f2c344', band: 8, core: 2, dash: [4, 5], head: 'chevron' },
 };
 
 interface Point {
@@ -72,6 +74,15 @@ function paint(model: Model): void {
         ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock, 0, 1);
       }
     });
+  }
+  // A creature that has to block something is tied to what it has to block, while blockers are being declared.
+  // Without this an illegal block is simply refused and nothing on screen says why.
+  if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
+    for (const obj of model.objects.values()) {
+      const forced = present((obj as CardView).MustBlockCards);
+      forced.forEach((attacker, i) =>
+        ribbon(ctx, elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock, i, forced.length));
+    }
   }
   const item = ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
   if (item) {

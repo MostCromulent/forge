@@ -12,7 +12,7 @@ export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="kws"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span>';
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
@@ -75,7 +75,9 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
-  showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined);
+  showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined, visible ? card.ShieldCount : undefined);
+  q(el, '.mech').replaceChildren(...(visible ? mechanic(card) : []));
+  showBlocking(el, card);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push('Ring-bearer');
   for (const [name, n] of Object.entries(card.Counters ?? {})) badges.push(`${n} ${name}`);
@@ -89,7 +91,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
  *
  * Reminder text goes in the title so a player who does not know the picture can still find out what it means.
  */
-function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined): void {
+function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined): void {
   const shown = (keywords ?? []).filter(k => k.icon);
   reconcile(root, shown, k => k.icon ?? k.title, () => {
     const img = document.createElement('img');
@@ -100,6 +102,81 @@ function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined): v
     setImage(img as HTMLImageElement, abilityUrl(k.icon ?? ''));
     img.title = k.reminder ? `${k.title} — ${k.reminder}` : k.title;
   });
+  // A shield counter is a counter by the rules and a keyword by the way it is used: you look for it when working
+  // out whether removal resolves or a block kills, which is when you are reading this strip anyway
+  const had = root.querySelector('.shield');
+  if (!shields) {
+    had?.remove();
+    return;
+  }
+  const shield = had ?? root.appendChild(shieldBadge());
+  q(shield as HTMLElement, '.n').textContent = String(shields);
+  (shield as HTMLElement).title = `${shields} shield counter${shields === 1 ? '' : 's'}`;
+}
+
+function shieldBadge(): HTMLElement {
+  const el = document.createElement('span');
+  el.className = 'shield';
+  el.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 13.4 3.4v4.4c0 3.1-2.2 5.6-5.4 6.6-3.2-1-5.4-3.5-5.4-6.6V3.4Z"/></svg><i class="n"></i>';
+  return el;
+}
+
+/**
+ * Where a permanent has got to in whatever track its set gave it: a Class's level, the Ring's tier, an unlocked
+ * Room, a contraption's sprocket, an attraction's lit numbers, an Omen's intensity. They never co-occur, so one
+ * chip serves them all, and it sits above the keyword icons rather than on the top edge, which is the card's name.
+ */
+function mechanic(card: CardView): Node[] {
+  const track = (now: number, of: number, text: string) => {
+    const pips = document.createElement('span');
+    pips.className = 'pips';
+    for (let i = 0; i < of; i++) {
+      const pip = document.createElement('i');
+      pip.className = i < now ? 'on' : '';
+      pips.append(pip);
+    }
+    return [pips, label(text)];
+  };
+  if (card.ClassLevel) return track(card.ClassLevel, 3, `Level ${card.ClassLevel}`);
+  if (card.RingLevel) return track(card.RingLevel, 4, `Ring ${'I'.repeat(card.RingLevel).replace('IIII', 'IV')}`);
+  if (card.CurrentRoom) return [label(card.CurrentRoom)];
+  if (card.Sprocket) return track(card.Sprocket, 3, `Sprocket ${card.Sprocket}`);
+  if (card.AttractionLights?.length) {
+    const lit = new Set(card.AttractionLights);
+    const pips = document.createElement('span');
+    pips.className = 'pips';
+    for (let i = 1; i <= 6; i++) {
+      const pip = document.createElement('i');
+      pip.className = lit.has(i) ? 'lit' : '';
+      pips.append(pip);
+    }
+    return [pips, label(card.AttractionLights.join(' '))];
+  }
+  // Intensity has no ceiling, so there is no track to draw — the number says it on its own
+  if (card.Intensity) return [label(`Intensity ${card.Intensity}`)];
+  return [];
+}
+
+function label(text: string): HTMLElement {
+  const el = document.createElement('i');
+  el.className = 'mech-text';
+  el.textContent = text;
+  return el;
+}
+
+/**
+ * Why a block is or is not allowed. A creature that must block something is lit and tied to it by the overlay;
+ * one that may block more than one carries how many. Both only while blockers are being declared, because that
+ * is the only step either fact can change anything.
+ */
+function showBlocking(el: HTMLElement, card: CardView): void {
+  const must = (card.MustBlockCards ?? []).filter(r => r).length > 0;
+  const extra = card.BlockAny ? '∞' : card.BlockAdditional ? String(card.BlockAdditional + 1) : '';
+  el.classList.toggle('must-block', must);
+  const blocks = q(el, '.blocks');
+  blocks.textContent = extra;
+  blocks.title = card.BlockAny ? 'May block any number of creatures'
+    : card.BlockAdditional ? `May block ${card.BlockAdditional + 1} creatures` : '';
 }
 
 // New damage jolts the card and throws the number off it, so combat is legible without the log
