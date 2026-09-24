@@ -12,6 +12,7 @@ import forge.util.ImageUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,6 +30,7 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.QueryStringDecoder;
 import io.netty.handler.codec.http.cookie.Cookie;
@@ -82,6 +84,9 @@ public final class WebServer implements AutoCloseable {
     /** Which link a request came in on, kept on a socket's channel from the request that opened it. */
     private enum Access { NONE, GUEST, HOST }
     private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
+    private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
+    /** A card picture for a given printing never changes, so a browser that has one never has to ask again. */
+    private static final String IMAGE_CACHE = "public, max-age=31536000, immutable";
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
@@ -252,7 +257,8 @@ public final class WebServer implements AutoCloseable {
     }
 
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), file.getName().endsWith(".png") ? "image/png" : "image/jpeg");
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()),
+                file.getName().endsWith(".png") ? "image/png" : "image/jpeg", null, IMAGE_CACHE);
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -309,7 +315,7 @@ public final class WebServer implements AutoCloseable {
     }
 
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
-        respond(ctx, status, body, type, null);
+        respond(ctx, status, body, type, null, "no-cache");
     }
 
     private void notFound(final ChannelHandlerContext ctx) {
@@ -328,12 +334,23 @@ public final class WebServer implements AutoCloseable {
     /** Answers a request; a cookie, when given, is the token the page was loaded with. */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken) {
+        respond(ctx, status, body, type, cookieToken, "no-cache");
+    }
+
+    /**
+     * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
+     * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
+     * connection is held open when the browser asked for that, and what may be kept says for how long.
+     */
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+            final String cookieToken, final String cacheControl) {
+        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
         resp.headers()
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
                 .setInt(HttpHeaderNames.CONTENT_LENGTH, body.length)
-                .set(HttpHeaderNames.CACHE_CONTROL, "no-cache")
-                .set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
+                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         if (cookieToken != null) {
             final DefaultCookie cookie = new DefaultCookie(COOKIE, cookieToken);
             cookie.setPath("/");
@@ -341,7 +358,10 @@ public final class WebServer implements AutoCloseable {
             cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
             resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
         }
-        ctx.writeAndFlush(resp).addListener(ChannelFutureListener.CLOSE);
+        final ChannelFuture sent = ctx.writeAndFlush(resp);
+        if (!keepAlive) {
+            sent.addListener(ChannelFutureListener.CLOSE);
+        }
     }
 
     // -Dforge.web.pageDir=<the web resource folder> serves the page from disk, so an edit needs only a reload
@@ -406,6 +426,7 @@ public final class WebServer implements AutoCloseable {
                     return;
                 }
                 ctx.channel().attr(ACCESS).set(access);
+                ctx.channel().attr(KEEP_ALIVE).set(HttpUtil.isKeepAlive(req));
             }
             ctx.fireChannelRead(msg);
         }

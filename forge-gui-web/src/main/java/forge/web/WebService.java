@@ -1,5 +1,7 @@
 package forge.web;
 
+import org.tinylog.Logger;
+
 /**
  * The web server as something that can be stopped and started again while the process lives on. The console
  * drives it; without a console it is started once and never stopped.
@@ -48,8 +50,7 @@ final class WebService {
         fresh.quitWhenEmpty(quitWhenEmpty);
         sessions = fresh;
         server = bound;
-        // Printed rather than logged: the console shows what the process prints, and the tests read this line
-        System.out.println("Forge web UI: " + bound.url());
+        Logger.info("Forge web UI: {}", bound.url());
     }
 
     /** Closes the port and drops every seat. Does nothing if it is already stopped. */
@@ -61,7 +62,7 @@ final class WebService {
         server.close();
         sessions = null;
         server = null;
-        System.out.println("The web server has stopped.");
+        Logger.info("The web server has stopped.");
     }
 
     synchronized void quitWhenEmpty(final boolean value) {

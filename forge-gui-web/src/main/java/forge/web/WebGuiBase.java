@@ -222,8 +222,13 @@ public final class WebGuiBase implements IGuiBase {
     }
 
     @Override public HostedMatch hostMatch() { return new HostedMatch(); }
-    // Each browser's session builds its own WebGuiGame; nothing asks GuiBase for one
-    @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("WebGuiGame is created by WebSession"); }
+    /**
+     * Unreachable rather than unimplemented. Its callers are the ones that start a match from the desktop menus —
+     * {@code HostedMatch.startMatch} and the gauntlet screens — and the web client reaches none of them: every match
+     * it plays is opened by {@link LocalGame} over netplay, and each browser's seat is given the {@link WebGuiGame}
+     * its own {@link WebSession} built. Throwing says so, rather than handing back a GUI no browser is attached to.
+     */
+    @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("A web seat's GUI is built by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
 
     @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return null; }
