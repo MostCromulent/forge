@@ -85,6 +85,12 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
   const seats = page.locator('#seats .plate');
   await chooseDeck(page, seats.nth(0));
   await chooseDeck(page, seats.nth(1));
+  // The computer comes with a name of its own, and the host can give it another
+  const bot = seats.nth(1).locator('.who-name');
+  await expect(bot).not.toHaveText(/^(Computer|Forge AI)?$/);
+  await bot.fill('Rival');
+  await bot.press('Enter');
+  await expect(bot).toHaveText('Rival');
   await page.keyboard.press('Enter');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();
   // As the hands are dealt, the board says who goes first
@@ -93,7 +99,7 @@ test('a pass on its way fills the pass button, and stopping it gives priority ba
     if (await page.locator('#prompt .ok').isEnabled()) await page.keyboard.press(' ');
     await page.waitForTimeout(300);
   }
-  await expect(opening).toHaveText(/^(You go first|Forge AI goes first)$/i);
+  await expect(opening).toHaveText(/^(You go first|Rival goes first)$/i);
   await page.screenshot({ path: test.info().outputPath('opening.png'), timeout: 10_000 }).catch(() => {});
   await page.locator('#prompt .auto-pass').click();
   await expect(page.locator('#prompt .auto-pass')).toHaveClass(/\bon\b/);

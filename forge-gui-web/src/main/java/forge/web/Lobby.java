@@ -9,6 +9,7 @@ import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.NameGenerator;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
@@ -27,7 +28,6 @@ import java.util.List;
  */
 final class Lobby {
     static final int MAX_SEATS = 4;
-    static final String AI_NAME = "Forge AI";
     /** The formats the vertical slice covers. Commander is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander);
 
@@ -237,10 +237,25 @@ final class Lobby {
         if (lobby != null && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
             final LobbySlot slot = lobby.getSlot(index);
             slot.setType(LobbySlotType.AI);
-            slot.setName(index > 1 ? AI_NAME + " " + index : AI_NAME);
+            slot.setName(computerName(lobby));
             slot.setIsReady(true);
             local.pushLobby();
         }
+    }
+
+    /** A name for the computer as desktop gives one: random, and not one already at the table. */
+    static String computerName(final GameLobby lobby) {
+        return NameGenerator.getRandomName("Any", "Any", seatNames(lobby, -1));
+    }
+
+    private static List<String> seatNames(final GameLobby lobby, final int except) {
+        final List<String> out = new ArrayList<>();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            if (i != except && lobby.getSlot(i).getName() != null) {
+                out.add(lobby.getSlot(i).getName());
+            }
+        }
+        return out;
     }
 
     void removeSeat(final int index) {
@@ -274,7 +289,9 @@ final class Lobby {
         }
         if (index == local.webSeat()) {
             local.updateOwnSeat(UpdateLobbyPlayerEvent.nameUpdate(name.trim()));
-        } else if (host() != null) {
+        } else if (host() != null && index < host().getNumberOfSlots()
+                && host().getSlot(index).getType() == LobbySlotType.AI
+                && seatNames(host(), index).stream().noneMatch(name.trim()::equalsIgnoreCase)) {
             host().getSlot(index).setName(name.trim());
             local.pushLobby();
         }

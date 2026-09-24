@@ -150,17 +150,18 @@ function Plate({ seat, index, lobby, actions, choose }: {
 }
 
 // A seat nobody holds has no name of its own, and its kind beside it would only say the same thing twice.
-// Your own name is edited in place and saved when you leave it.
+// Your own name, and the computer's at a table you host, is edited in place and saved when you leave it.
 function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void }) {
   // Typing edits the page, not what Preact drew, so each edit ends by drawing the field afresh: it then shows
   // the name as the server has it, the new one if the server takes it and this one if not
   const [edits, setEdits] = useState(0);
   const name = seat.name || KIND[seat.type] || seat.type;
-  if (!seat.mine) {
+  if (!seat.mine && !(seat.mayEdit && seat.type === 'AI')) {
     return <span class="who-name" hidden={!seat.name}>{name}</span>;
   }
   return (
     <span key={edits} class="who-name" contentEditable="plaintext-only" spellcheck={false}
+      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
       onBlur={e => {
         const typed = (e.currentTarget.textContent ?? '').trim();
         setEdits(n => n + 1);

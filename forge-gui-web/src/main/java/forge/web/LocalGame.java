@@ -96,7 +96,7 @@ public final class LocalGame {
             if (i != webSeat) {
                 final LobbySlot slot = hosted.getSlot(i);
                 slot.setType(LobbySlotType.AI);
-                slot.setName(Lobby.AI_NAME);
+                slot.setName(Lobby.computerName(hosted));
                 slot.setIsReady(true);
             }
         }
