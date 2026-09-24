@@ -2,12 +2,15 @@
 // down and the first that wants a key takes it, so a key answers exactly one thing: Escape closing a menu can never
 // also pass priority, which is what happened when each part of the page listened for keys on its own.
 
-import { oldestRequest, stackPick, type Model } from './model';
+import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
-  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch';
+  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'startMatch'
+  | 'closeCardMenu' | `pickCardMenu${Digit}`;
+
+type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
 export interface KeyPress {
   key: string;
@@ -57,6 +60,12 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   if (passing) {
     if (key === ' ' || key === 'Enter') return 'passNow';
     return escape ? 'stopAutoPass' : null;
+  }
+  // A card's menu of abilities: Escape closes it, and its items are numbered as desktop's are
+  const menu = cardMenu(model);
+  if (menu) {
+    if (escape) return 'closeCardMenu';
+    return /^[1-9]$/.test(key) && Number(key) <= menu.options.length ? `pickCardMenu${key as Digit}` : null;
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   if ((oldestRequest(model) && !stackPick(model)) || model.spectating) {

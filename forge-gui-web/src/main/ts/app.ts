@@ -3,7 +3,7 @@
 // arrangement. Nothing it draws with sends anything itself.
 
 import { connect } from './net';
-import { createModel, applyState, isLocal, players } from './model';
+import { createModel, applyState, cardMenu, isLocal, players } from './model';
 import { createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
@@ -112,6 +112,15 @@ function runKey(command: KeyCommand): void {
     case 'undo': actions.undo(); break;
     case 'nextFace': nextFace(model); break;
     case 'startMatch': actions.startMatch(ui.spectate); break;
+    case 'closeCardMenu': {
+      const menu = cardMenu(model);
+      if (menu) actions.answer(menu.id, []);
+      break;
+    }
+    default: {
+      const menu = cardMenu(model);
+      if (menu && command.startsWith('pickCardMenu')) actions.answer(menu.id, [Number(command.slice(-1)) - 1]);
+    }
   }
 }
 

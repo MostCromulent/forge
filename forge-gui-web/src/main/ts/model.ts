@@ -145,6 +145,14 @@ export function oldestRequest(model: Model): Request | undefined {
   return [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
 }
 
+/** The question the game is asking, when it is which of one clicked card's abilities to use: a short list of words,
+ *  answered from a menu at the pointer rather than a dialog. */
+export function cardMenu(model: Model): ChoicesRequest | null {
+  const oldest = oldestRequest(model);
+  return oldest?.kind === 'choices' && oldest.max === 1 && (oldest.atX != null || oldest.atY != null)
+    && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
+}
+
 /** The question the game is asking, when it is which spell on the stack to choose: that is answered by clicking
  *  the spell where it already is, rather than from a list. */
 export function stackPick(model: Model): ChoicesRequest | null {

@@ -8,7 +8,7 @@ import { imageUrl } from './images';
 import { hoverCard } from './detail';
 import { SymbolText } from './symbols';
 import type { Actions } from './actions';
-import { oldestRequest, stackPick, type Model } from './model';
+import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
   SideboardRequest, TextRequest, TrackedObject,
@@ -22,8 +22,42 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   if (!req || stackPick(model) === req) {
     return null;
   }
+  if (cardMenu(model) === req) {
+    return <CardMenu key={req.id} req={req as ChoicesRequest} answer={value => actions.answer(req.id, value)} />;
+  }
   // Keyed by the question, so nothing picked for one is still picked for the next
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
+}
+
+/**
+ * What one clicked card can do, as a menu at the pointer the way desktop opens it. Picking an item answers at once;
+ * a click anywhere else, or Escape, closes it having chosen nothing. Items are numbered for the keys 1 to 9.
+ */
+function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
+  const menu = useRef<HTMLDivElement>(null);
+  const [at, setAt] = useState({ x: req.atX ?? 0, y: req.atY ?? 0 });
+  // Opens down and right from the pointer, turning back where that would leave the window
+  useLayoutEffect(() => {
+    const el = menu.current;
+    if (!el) return;
+    const x = Math.min(req.atX ?? 0, window.innerWidth - el.offsetWidth - 8);
+    const y = Math.min(req.atY ?? 0, window.innerHeight - el.offsetHeight - 8);
+    setAt({ x: Math.max(8, x), y: Math.max(8, y) });
+  }, [req]);
+  return (
+    <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) answer([]); }}
+      onContextMenu={e => { e.preventDefault(); answer([]); }}>
+      <div ref={menu} class="card-menu" role="menu" aria-label={req.message ?? 'Abilities'} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+        {req.message && <p class="card-menu-title">{req.message}</p>}
+        {req.options.map((o, i) => (
+          <button key={i} type="button" role="menuitem" class="card-menu-item" onClick={() => answer([i])}>
+            {i < 9 ? <kbd>{i + 1}</kbd> : <span class="card-menu-gap" />}
+            <span><SymbolText text={o.label} /></span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function RequestDialog({ req, model, answer }: { req: Request; model: Model; answer: Answer }) {

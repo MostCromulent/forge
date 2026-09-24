@@ -50,6 +50,17 @@ describe('keys in a match', () => {
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeOptions');
   });
 
+  it('gives a card\'s ability menu Escape and its numbers, and the prompt nothing', () => {
+    model.requests.set(7, {
+      t: 'request', id: 7, kind: 'choices', message: 'Abzan Charm', min: 0, max: 1, selected: [], atX: 400, atY: 300,
+      options: [{ label: 'Cast Abzan Charm' }, { label: 'Cycling' }], default: [],
+    } as unknown as Request);
+    expect(keyCommand(press('Escape'), model, ui)).toBe('closeCardMenu');
+    expect(keyCommand(press('2'), model, ui)).toBe('pickCardMenu2');
+    expect(keyCommand(press('3'), model, ui)).toBeNull();
+    expect(keyCommand(press(' '), model, ui)).toBeNull();
+  });
+
   it('closes the volume control on Escape, without passing priority', () => {
     ui.volumeOpen = true;
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeVolume');

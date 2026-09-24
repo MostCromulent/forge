@@ -90,6 +90,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
@@ -105,6 +106,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PendingRequests requests = new PendingRequests(this::send);
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
     private final AtomicInteger skippedProperties = new AtomicInteger();
+    // Netplay drops a click's trigger event on its way to the host, so the ability menu reads the click from here
+    private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
     private final PromptState prompt = new PromptState(this::send);
     /** Something the player would want to see has happened since they last held priority or watched a pass. */
     private volatile boolean unseen;
@@ -831,8 +834,16 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    /** An ability as a menu item: its first line, as desktop's menu shows it. */
+    private static String firstLine(final SpellAbilityView ability) {
+        final String text = String.valueOf(ability);
+        final int end = text.indexOf('\n');
+        return end < 0 ? text : text.substring(0, end);
+    }
+
     @Override
-    public SpellAbilityView getAbilityToPlay(final CardView hostCard, final List<SpellAbilityView> abilities, final ITriggerEvent triggerEvent) {
+    public SpellAbilityView getAbilityToPlay(final CardView hostCard, final List<SpellAbilityView> abilities, final ITriggerEvent event) {
+        final ITriggerEvent triggerEvent = event != null ? event : lastClick.getAndSet(null);
         if (abilities.isEmpty()) {
             return null;
         }
@@ -840,14 +851,20 @@ public class WebGuiGame extends NetworkGuiGame {
         if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
             return abilities.get(0);
         }
-        // A left-click plays what the card leads with; the list is what the right button is for
-        if (triggerEvent != null && triggerEvent.getButton() != 3) {
-            return abilities.stream().filter(SpellAbilityView::canPlay).findFirst().orElse(null);
+        // A click, with either button, offers what the card can do now in a menu where it was clicked, as desktop
+        // does; one thing it can do is simply done
+        final List<SpellAbilityView> offered = triggerEvent == null ? abilities
+                : abilities.stream().filter(SpellAbilityView::canPlay).toList();
+        if (offered.isEmpty()) {
+            return null;
+        }
+        if (triggerEvent != null && offered.size() == 1 && !offered.get(0).promptIfOnlyPossibleAbility()) {
+            return offered.get(0);
         }
         // No answer means no ability chosen, which is how a cancelled click reads
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, hostCard == null ? "" : hostCard.getName(), 0, 1,
-                abilities, null, null, null, triggerEvent instanceof BrowserClick click ? click : null, List.of());
-        final List<SpellAbilityView> picked = Answers.pick(abilities, ask(request, Answers.indexList(abilities.size(), 0, 1)));
+                offered, null, WebGuiGame::firstLine, null, triggerEvent instanceof BrowserClick click ? click : null, List.of());
+        final List<SpellAbilityView> picked = Answers.pick(offered, ask(request, Answers.indexList(offered.size(), 0, 1)));
         return picked.isEmpty() ? null : picked.get(0);
     }
 
@@ -994,7 +1011,9 @@ public class WebGuiGame extends NetworkGuiGame {
                     final CardView card = lookup(click.key(), TrackableTypes.CardViewType);
                     if (card != null) {
                         // A right-click asks for the list of what the card can do; a left-click takes the first
-                        controller.selectCard(card, null, new BrowserClick(click.menu(), click.x(), click.y()));
+                        final BrowserClick at = new BrowserClick(click.menu(), click.x(), click.y());
+                        lastClick.set(at);
+                        controller.selectCard(card, null, at);
                     }
                 }
                 case "selectPlayer" -> {
