@@ -45,7 +45,8 @@
 .face:hover { border-color: var(--accent-2); }
 .host-box {
   display: flex; gap: 11px; align-items: flex-start; padding: 13px; border-radius: 9px; cursor: pointer;
-  background: var(--accent-soft); border: 1px solid var(--accent);
+  /* Mixed rather than laid over as alpha: a translucent gold on a blue-grey ground turns olive */
+  background: color-mix(in srgb, var(--accent-2) 6%, var(--surface)); border: 1px solid var(--accent);
 }
 .host-box input { width: 17px; height: 17px; margin: 2px 0 0; flex: none; accent-color: var(--accent-2); }
 .host-text { display: grid; gap: 4px; }
