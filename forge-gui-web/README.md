@@ -1,7 +1,8 @@
 # Forge Web GUI
 
 Plays Forge in a browser. The Java side (`src/main/java`) runs the engine and serves the page; the browser side
-(`src/main/ts`) is TypeScript, bundled into `src/main/resources/web/js/app.js`.
+(`src/main/ts`) is TypeScript, bundled into `src/main/resources/web/js/app.js`. Code the page needs only now and
+then (three.js, for a portrait breaking when a player loses) is split into `js/chunks/` and fetched when first used.
 
 ## Building
 

@@ -9,7 +9,7 @@ import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
-import { renderMatch, resetTurnBanner } from './board';
+import { renderMatch, resetTable } from './board';
 import { renderPrompt, flash } from './prompt';
 import { appendLog, initLog } from './log';
 import { initSide, renderSide, renderSky } from './side';
@@ -203,7 +203,7 @@ function apply(msg: ServerMessage): void {
         model.playerDetails.clear();
         model.stackMenu = null;
         resetMatchUi();
-        resetTurnBanner();
+        resetTable();
       }
       break;
     case 'prompt': model.prompt = msg; break;

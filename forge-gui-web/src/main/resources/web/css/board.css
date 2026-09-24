@@ -84,6 +84,9 @@
 .ai-badge svg { width: 100%; height: 100%; fill: var(--text); }
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
+/* A player who has lost keeps an empty socket where their portrait was */
+.avatar.lost { background: #0e121a; border-color: #2a3240; box-shadow: inset 0 6px 14px #000c; }
+.avatar.lost .portrait, .avatar.lost .initial { visibility: hidden; }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--select), 0 0 6px color-mix(in srgb, var(--select) 35%, transparent); }
 /* A player the prompt lets you choose: dashed ring, so it differs from a chosen one by shape as well as glow */
 .avatar.selectable:not(.highlighted) { outline: 3px dashed var(--select); outline-offset: 3px; }
@@ -317,9 +320,39 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 #zoom .detail .from { color: var(--zone-glow); font-size: 12px; font-weight: 600; }
 #zoom .detail .pt:empty, #zoom .detail .hint:empty, #zoom .detail .from:empty { display: none; }
 #zoom .detail .hint { color: var(--muted); font-size: 11px; }
-#game-over { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; z-index: 60; }
-#game-over .panel { background: var(--surface); padding: 24px 32px; border-radius: 12px; text-align: center; }
-#game-over .actions { display: flex; gap: 8px; justify-content: center; }
+/* The end of a game: the board recedes behind the breaking portrait, and the result is said over it */
+#match > :not(#game-over) { transition: filter .9s cubic-bezier(.3,.6,.3,1); }
+#match.ending > :not(#game-over) { filter: grayscale(.75) brightness(.42) blur(3px); }
+/* A card preview left open by the pointer would sit over the breaking portrait */
+#match.ending #zoom { display: none; }
+#match.ending::before { content: ''; position: fixed; inset: 0; z-index: 50; pointer-events: none; animation: ending-in .9s ease both;
+  background: radial-gradient(circle at var(--end-x, 50%) var(--end-y, 50%), rgba(4,6,10,.08), rgba(4,6,10,.62) 55%, rgba(2,3,6,.9)); }
+@keyframes ending-in { from { opacity: 0; } }
+.shatter-layer { position: fixed; inset: 0; z-index: 55; pointer-events: none; overflow: hidden; }
+.shatter-layer canvas { position: absolute; left: 0; top: 0; }
+/* The light of the burst is added to what is behind it rather than laid over it, so it brightens instead of fogging */
+.shatter-glow { position: absolute; left: 0; top: 0; mix-blend-mode: plus-lighter; opacity: 0; will-change: transform, opacity; }
+.shatter-glow.core { width: 260px; height: 260px; border-radius: 50%; background: radial-gradient(circle, rgba(255,251,242,1) 0%, rgba(255,238,214,.8) 11%, rgba(255,214,176,.22) 34%, rgba(255,214,176,0) 60%); }
+.shatter-glow.bloom { width: 900px; height: 900px; border-radius: 50%; background: radial-gradient(circle, rgba(168,198,255,.32) 0%, rgba(140,172,255,.12) 30%, rgba(140,172,255,0) 64%); }
+.shatter-glow.ring { width: 200px; height: 200px; box-sizing: border-box; border-radius: 50%; border: 1px solid rgba(222,234,255,.3); box-shadow: 0 0 14px rgba(168,198,255,.2), inset 0 0 14px rgba(168,198,255,.14); filter: blur(1.5px); }
+.shatter-glow.streak { width: 700px; height: 3px; border-radius: 50%; filter: blur(1.5px); background: linear-gradient(90deg, rgba(200,220,255,0), rgba(214,228,255,.55) 45%, rgba(255,250,240,.9) 50%, rgba(214,228,255,.55) 55%, rgba(200,220,255,0)); }
+#game-over { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none; }
+#game-over .panel { display: flex; flex-direction: column; align-items: center; gap: 14px; pointer-events: auto; --metal: linear-gradient(180deg, #fff4d2 0%, #f5d27a 40%, #e8b73c 62%, #a3781a 100%); --rule: rgba(242,195,68,.65); }
+#game-over .panel.lose, #game-over .panel.draw, #game-over .panel.watched { --metal: linear-gradient(180deg, #f2f5f9 0%, #c7d0db 45%, #8f9aa9 72%, #5e6979 100%); --rule: rgba(170,185,205,.55); }
+#game-over .panel > * { animation: ending-rise .9s cubic-bezier(.2,.8,.2,1) both; }
+#game-over .panel > :nth-child(2) { animation-delay: .12s; }
+#game-over .panel > :nth-child(3) { animation-delay: .3s; }
+#game-over .panel > :nth-child(4) { animation-delay: .45s; }
+#game-over .panel > :nth-child(5) { animation-delay: .7s; }
+#game-over .face { width: 88px; height: 88px; border-radius: 50%; background: var(--surface-2) center / cover; border: 2px solid rgba(242,195,68,.85); box-shadow: 0 0 0 4px #0a0d13, 0 14px 34px #000; }
+#game-over .word { margin: 0 -.2em 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 60px; font-weight: 700; line-height: 1; letter-spacing: .2em; text-transform: uppercase;
+  background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#game-over .rule { width: 240px; height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); }
+#game-over .sub { margin: 0; font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #aeb8c6; }
+#game-over .actions { display: flex; gap: 10px; margin-top: 8px; }
+#game-over .actions button { padding: 9px 22px; }
+@keyframes ending-rise { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) { #match.ending > :not(#game-over) { transition: none; } #game-over .panel > * { animation-duration: 1ms; } }
 .card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; flex: none; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
 .card > img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }

@@ -4,17 +4,19 @@
   "description": "The browser half of Forge's web GUI. Maven runs the build; see README.md.",
   "type": "module",
   "scripts": {
-    "build": "tsc && esbuild src/main/ts/app.ts --bundle --format=esm --target=es2022 --sourcemap --log-level=warning --outfile=src/main/resources/web/js/app.js",
-    "watch": "esbuild src/main/ts/app.ts --bundle --format=esm --target=es2022 --sourcemap --outfile=src/main/resources/web/js/app.js --watch",
+    "build": "tsc && esbuild src/main/ts/app.ts --bundle --splitting --format=esm --target=es2022 --sourcemap --log-level=warning --outdir=src/main/resources/web/js --chunk-names=chunks/[name]-[hash]",
+    "watch": "esbuild src/main/ts/app.ts --bundle --splitting --format=esm --target=es2022 --sourcemap --outdir=src/main/resources/web/js --chunk-names=chunks/[name]-[hash] --watch",
     "typecheck": "tsc",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@types/three": "0.169.0",
     "esbuild": "0.28.2",
     "typescript": "6.0.3",
     "vitest": "5.0.1"
   },
   "dependencies": {
-    "preact": "10.29.8"
+    "preact": "10.29.8",
+    "three": "0.169.0"
   }
 }

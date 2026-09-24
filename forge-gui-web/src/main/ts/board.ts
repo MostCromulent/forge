@@ -9,6 +9,7 @@ import { renderStack } from './stack';
 import { renderPhaseBar } from './phasebar';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
+import { canShatter, shatter } from './shatter';
 import { byId, q } from './dom';
 import type { CardClick } from './cards';
 import type { Actions } from './actions';
@@ -26,6 +27,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
       revealFirst(model, firstPlayer);
     }
   }
+  noticeLosses(model, actions);
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
@@ -90,6 +92,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   // Who went first stays marked until their first turn is over, for anyone who missed the reveal
   avatar.classList.toggle('first', firstPlayer === player.$key && (game(model)?.Turn ?? 0) <= 1);
+  // A player who has lost leaves an empty socket: their portrait broke, or breaks now, out of it
+  avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
@@ -192,10 +196,20 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): v
 // part way through a game (a reload) says nothing until the turn changes.
 let announced: string | null = null;
 
-/** A new table: its first turn is announced afresh, even when the same player starts it as last game. */
-export function resetTurnBanner(): void {
+/**
+ * A new table: its first turn is announced afresh, even when the same player starts it as last game, and its
+ * losses and its ending start over.
+ */
+export function resetTable(): void {
   announced = null;
   firstPlayer = null;
+  broken = null;
+  titleReady = true;
+  finalRunning = false;
+  byId('match').classList.remove('ending');
+  const over = byId('game-over');
+  over.hidden = true;
+  over.replaceChildren();
 }
 
 /** The player the game said takes the first turn, from the moment it is settled until the next game. */
@@ -347,13 +361,112 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
     });
 }
 
+/** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */
+let broken: Set<number> | null = null;
+/** False while a portrait breaking at the end of the game has not reached the moment its title follows. */
+let titleReady = true;
+let finalRunning = false;
+
+/**
+ * A player who has just lost has their portrait broken. When that ends the game it breaks in the middle of the
+ * board and the title follows it; in a game of three or more that carries on, it breaks where they sit. A table
+ * first seen part way through (a reload) takes the losses it already had as broken.
+ */
+function noticeLosses(model: Model, actions: Actions): void {
+  const lost = players(model).filter(p => p.HasLost);
+  if (!broken) {
+    broken = new Set(lost.map(p => p.$key));
+    return;
+  }
+  const fresh = lost.filter(p => !broken!.has(p.$key));
+  if (!fresh.length) return;
+  fresh.forEach(p => broken!.add(p.$key));
+  // The loss and the end of the game can arrive a message apart, so the title waits and the ending is decided a
+  // moment later
+  titleReady = false;
+  window.setTimeout(() => breakPortraits(model, fresh, actions), 120);
+}
+
+function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): void {
+  const g = game(model);
+  const final = !!g?.GameOver;
+  const release = () => {
+    titleReady = true;
+    const now = game(model);
+    if (now) renderGameOver(model, now, actions);
+  };
+  const seated = losers
+    .map(p => ({ p, avatar: document.querySelector<HTMLElement>(`.seat[data-player="${p.$key}"] .avatar`) }))
+    .filter(s => s.avatar && s.avatar.offsetWidth);
+  if (!canShatter() || !seated.length) {
+    release();
+    return;
+  }
+  const centre = boardCentre();
+  seated.forEach(({ p, avatar }, i) => {
+    const centreStage = final && i === 0;
+    const run = shatter({
+      from: avatar!.getBoundingClientRect(), image: playerAvatarUrl(p), final: centreStage, centre,
+      onTitle: centreStage ? release : undefined,
+    });
+    if (centreStage) {
+      finalRunning = true;
+      const match = byId('match');
+      match.style.setProperty('--end-x', centre.x + 'px');
+      match.style.setProperty('--end-y', centre.y + 'px');
+      match.classList.add('ending');
+      // Without WebGL nothing has shown yet, so the title is simply not held back
+      run.catch(release);
+    } else {
+      run.catch(() => {});
+    }
+  });
+  if (!final) release();
+}
+
+/** The middle of the two seats' boards, where a portrait breaks at the end of the game. */
+function boardCentre(): { x: number; y: number } {
+  const a = byId('opponent').getBoundingClientRect(), b = byId('me').getBoundingClientRect();
+  return { x: (Math.min(a.left, b.left) + Math.max(a.right, b.right)) / 2, y: (a.top + b.bottom) / 2 };
+}
+
+/**
+ * The end of a game: the board recedes, and once the losing portrait has broken the result is said over it.
+ * Drawn once per ending, so what fades in does so once.
+ */
 function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
-  root.hidden = !model.gameOver;
-  if (!model.gameOver) return;
+  const show = model.gameOver && titleReady;
+  byId('match').classList.toggle('ending', show || finalRunning);
+  if (!show) {
+    if (!root.hidden) {
+      root.hidden = true;
+      root.replaceChildren();
+    }
+    return;
+  }
+  if (!root.hidden) return;
+  root.hidden = false;
   const matchOver = !!g.MatchOver;
-  root.innerHTML = '<div class="panel"><h2></h2><div class="actions"></div></div>';
-  q(root, 'h2').textContent = g.WinningPlayerName ? `${g.WinningPlayerName} wins` : 'Game over';
+  const everyone = players(model);
+  const winner = everyone.find(p => p.Name === g.WinningPlayerName);
+  const losers = everyone.filter(p => p.HasLost);
+  const seated = everyone.some(p => isLocal(model, p));
+  const won = !!winner && isLocal(model, winner);
+  const outcome = !winner ? 'draw' : !seated ? 'watched' : won ? 'win' : 'lose';
+  const word = { draw: 'Draw', watched: 'Game over', win: 'Victory', lose: 'Defeat' }[outcome];
+  const sub = !winner ? 'Nobody wins'
+    : won && everyone.length === 2 && losers.length === 1 ? `${losers[0].Name} has lost`
+    : won ? 'Last one standing'
+    : `${winner.Name} wins`;
+  root.innerHTML = '<div class="panel"><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p><div class="actions"></div></div>';
+  const panel = q(root, '.panel');
+  panel.classList.add(outcome);
+  const face = q(root, '.face');
+  if (winner) face.style.backgroundImage = cssUrl(playerAvatarUrl(winner));
+  face.hidden = !winner;
+  q(root, '.word').textContent = word;
+  q(root, '.sub').textContent = sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
