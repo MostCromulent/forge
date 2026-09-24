@@ -276,6 +276,10 @@ public interface IGuiGame {
      * working out which players an ability may target is not free, and a GUI that does not mark them never asks.
      */
     default void setSelectablePlayers(Supplier<Iterable<PlayerView>> players) { }
+    /** The same, as a network client receives it: the host has already worked the players out. */
+    default void setSelectablePlayers(Iterable<PlayerView> players) {
+        setSelectablePlayers(() -> players);
+    }
     void clearSelectables();
     boolean isSelecting();
 
