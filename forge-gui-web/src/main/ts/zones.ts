@@ -3,7 +3,8 @@ import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from './model';
 import { byId, q } from './dom';
 import { changeUi, ui, type ZoneSort } from './ui';
-import type { CardView, ZoneType } from './protocol';
+import type { Actions } from './actions';
+import type { CardView, PromptButton, ZoneType } from './protocol';
 
 // Looking through a zone: a dialog over a dimmed board, because the board has nothing to say while you are
 // reading a library of thirty. It folds to a bar instead of closing, so the board can be read without losing
@@ -26,7 +27,7 @@ export function togglePile(playerKey: number, zoneName: ZoneType): void {
   });
 }
 
-export function renderZones(model: Model, select: CardClick): void {
+export function renderZones(model: Model, actions: Actions, select: CardClick): void {
   const panels = new Map<string, Panel>();
   for (const z of model.zones) panels.set(`${z.player.ref}/${z.zone}`, { player: z.player.ref, zone: z.zone, forced: true });
   for (const k of ui.openZones) {
@@ -52,7 +53,7 @@ export function renderZones(model: Model, select: CardClick): void {
   }
   root.replaceChildren(shelf(root));
   reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
-    (el, [, p]) => updatePanel(el, model, p, select));
+    (el, [, p]) => updatePanel(el, model, actions, p, select));
 }
 
 /** The one element the dialogs sit in, kept across renders so a reconcile of the panels is not undone. */
@@ -74,13 +75,15 @@ function createPanel(): HTMLElement {
     + '<label class="zone-sort">Sort<select></select></label>'
     + '<button class="zone-fold">Show board</button></header>'
     + '<div class="cards"></div>'
-    + '<footer><span class="zone-hint"></span><button class="zone-done primary">Done</button></footer>';
+    + '<footer><span class="zone-hint"></span><button class="zone-done primary">Done</button>'
+    + '<button class="zone-answer cancel"><span class="label"></span><kbd>Esc</kbd></button>'
+    + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button></footer>';
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
   sort.innerHTML = SORTS.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
   return el;
 }
 
-function updatePanel(el: HTMLElement, model: Model, p: Panel, select: CardClick): void {
+function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, select: CardClick): void {
   const player = model.objects.get(p.player);
   const cards = shown(model, zone(model, player, p.zone));
   q(el, '.zone-who').textContent = `${player?.Name ?? ''} · ${p.zone}`;
@@ -98,8 +101,18 @@ function updatePanel(el: HTMLElement, model: Model, p: Panel, select: CardClick)
   const done = q(el, '.zone-done');
   done.hidden = p.forced;
   done.onclick = () => togglePile(p.player, p.zone);
-  q(el, '.zone-hint').textContent = p.forced ? 'The game is waiting on your choice.' : 'Click a card to pick it up.';
+  // The dialog covers the prompt, so one the game put up carries the prompt's question and its buttons
+  const prompt = p.forced ? model.prompt : null;
+  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : 'Click a card to pick it up.';
+  answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
+  answer(q(el, '.zone-answer.cancel'), prompt?.cancel, () => actions.cancel());
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
+}
+
+function answer(el: HTMLElement, button: PromptButton | undefined, run: () => void): void {
+  el.hidden = !button?.enabled;
+  q(el, '.label').textContent = button?.label ?? '';
+  el.onclick = run;
 }
 
 /** The zone as the dialog lists it: narrowed by the search, then in the order asked for. */

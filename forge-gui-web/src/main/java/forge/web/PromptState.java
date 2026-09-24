@@ -21,6 +21,8 @@ import java.util.function.Consumer;
 final class PromptState {
     private final Consumer<Prompt> send;
     private String message = "";
+    /** "toss" or "lastGame" while the player is asked who starts, having won the toss or lost the last game. */
+    private String starterChoice;
     private boolean priority;
     private Ref card;
     private PromptButton ok = new PromptButton("", false);
@@ -50,6 +52,8 @@ final class PromptState {
         final String trimmed = withoutTurnState(text);
         message = trimmed;
         priority = !trimmed.equals(text);
+        starterChoice = opensWith(trimmed, "lblYouHaveWonTheCoinToss") ? "toss"
+                : opensWith(trimmed, "lblYouLostTheLastGame") ? "lastGame" : null;
         card = cardRef(about);
         changed();
     }
@@ -105,7 +109,14 @@ final class PromptState {
 
     private Prompt current() {
         return new Prompt(message, priority, card, ok, cancel, focusOk, paying, selectable, selectableMin,
-                selectablePlayers, List.copyOf(highlighted));
+                selectablePlayers, List.copyOf(highlighted), starterChoice);
+    }
+
+    /** Whether the message opens with the line the key makes, whatever player's name fills it. */
+    private static boolean opensWith(final String message, final String key) {
+        final String[] around = Localizer.getInstance().getMessage(key, "\u0000").split("\u0000", -1);
+        final String first = message.split("\n", 2)[0];
+        return around.length == 2 && first.startsWith(around[0]) && first.endsWith(around[1]);
     }
 
     static Ref cardRef(final CardView card) {

@@ -37,8 +37,8 @@ function restingRect(el: HTMLElement): DOMRect {
   return el.getBoundingClientRect();
 }
 
-const FLIGHT_MS = 240;
-const DEAL_MS = 320;
+const FLIGHT_MS = 340;
+const DEAL_MS = 400;
 const STAGGER_MS = 55;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;

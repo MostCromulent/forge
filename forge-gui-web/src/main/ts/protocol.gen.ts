@@ -110,6 +110,7 @@ export interface Prompt {
   selectableMin: number;
   selectablePlayers: Ref[];
   highlighted: number[];
+  starterChoice?: string;
 }
 
 export interface Playable {

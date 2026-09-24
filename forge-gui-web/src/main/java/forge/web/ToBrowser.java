@@ -196,7 +196,7 @@ final class ToBrowser {
     @Message("prompt")
     record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,
             boolean focusOk, boolean paying, List<Ref> selectable, int selectableMin, List<Ref> selectablePlayers,
-            List<Integer> highlighted) {
+            List<Integer> highlighted, @Nullable String starterChoice) {
     }
 
     record PromptButton(String label, boolean enabled) {

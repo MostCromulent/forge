@@ -24,8 +24,15 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   for (const e of events) {
     if (e.kind === 'gameStarted') {
       firstPlayer = e.first.ref;
-      revealFirst(model, firstPlayer);
+      // Who chose who starts already knows who does
+      if (!choseStarter) revealFirst(model, firstPlayer);
     }
+  }
+  const choice = model.prompt?.starterChoice;
+  if (choice && !choseStarter) {
+    choseStarter = true;
+    const mine = me(model);
+    if (choice === 'toss' && mine) revealFirst(model, mine.$key, 'You won the coin toss');
   }
   noticeLosses(model, actions);
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
@@ -38,7 +45,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   renderPhaseBar(model, g, actions);
   renderStack(model);
   renderHand(model, me(model), select);
-  renderZones(model, select);
+  renderZones(model, actions, select);
   renderGameOver(model, g, actions);
   animateCardMoves(model, events);
 }
@@ -203,6 +210,7 @@ let announced: string | null = null;
 export function resetTable(): void {
   announced = null;
   firstPlayer = null;
+  choseStarter = false;
   broken = null;
   titleReady = true;
   finalRunning = false;
@@ -214,13 +222,15 @@ export function resetTable(): void {
 
 /** The player the game said takes the first turn, from the moment it is settled until the next game. */
 let firstPlayer: number | null = null;
+/** This viewer was asked who starts, having won the toss or lost the last game. */
+let choseStarter = false;
 
 /**
  * Who goes first, said over the board as the opening hands are dealt: every player's face, then the one who
  * starts lit in brass and the rest stepping back. The prompt says it too, but a sentence above a hand is easy to
  * read past.
  */
-function revealFirst(model: Model, first: number): void {
+function revealFirst(model: Model, first: number, said?: string): void {
   const everyone = players(model);
   const starter = everyone.find(p => p.$key === first);
   if (!starter) return;
@@ -247,9 +257,9 @@ function revealFirst(model: Model, first: number): void {
     face.append(picture, name);
     faces.append(face);
   }
-  const said = document.createElement('p');
-  said.textContent = isLocal(model, starter) ? 'You go first' : `${starter.Name} goes first`;
-  reveal.append(faces, said);
+  const line = document.createElement('p');
+  line.textContent = said ?? (isLocal(model, starter) ? 'You go first' : `${starter.Name} goes first`);
+  reveal.append(faces, line);
   byId('match').append(reveal);
   reveal.addEventListener('animationend', e => {
     if (e.animationName === 'first-reveal') reveal.remove();
