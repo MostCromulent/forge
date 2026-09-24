@@ -102,7 +102,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       el.title = b.title;
       el.classList.toggle('commander-damage', !!b.title);
     });
-  renderEmblems(q(root, '.emblems'), model, zone(model, player, 'Command'), select);
+  renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
 }
 
@@ -256,13 +256,24 @@ function takeHit(amount: number): void {
   flash.addEventListener('animationend', () => flash.remove());
 }
 
+/**
+ * What a commander costs beyond its printed cost: two generic for each time it has already been cast from here.
+ * The word goes on the badge because a bare "+6" on a card reads as a counter or a pump long before it reads as
+ * a tax, and this is a number a player meets only a few times in a game.
+ */
+function commanderTax(player: PlayerView | undefined, card: CardView): number {
+  const cast = (player?.CommanderCast ?? []).find(c => c.card.ref === card.$key);
+  return (cast?.value ?? 0) * 2;
+}
+
 // The command zone: the monarch, the initiative, emblems and commanders, shown as round tokens beside the player
-function renderEmblems(root: HTMLElement, model: Model, cards: CardView[], select: CardClick): void {
+function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
+    select: CardClick): void {
   reconcile(root, cards, c => c.$key,
     () => {
       const el = document.createElement('div');
       el.className = 'emblem';
-      el.innerHTML = '<img alt="" draggable="false"><span class="initials"></span>';
+      el.innerHTML = '<img alt="" draggable="false"><span class="initials"></span><span class="tax"></span>';
       noImageOnError(el, q<HTMLImageElement>(el, 'img'));
       el.onclick = () => select(el, false);
       hoverable(el);
@@ -274,9 +285,11 @@ function renderEmblems(root: HTMLElement, model: Model, cards: CardView[], selec
       setImage(q<HTMLImageElement>(el, 'img'), src);
       el.classList.toggle('noimg', !src);
       el.dataset.zoom = src;
-      el.title = state.Name ?? '';
       const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
       q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const tax = commanderTax(player, card);
+      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : '';
+      el.title = tax > 0 ? `${state.Name ?? ''} — costs ${tax} more to cast from here` : state.Name ?? '';
       el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
     });
 }

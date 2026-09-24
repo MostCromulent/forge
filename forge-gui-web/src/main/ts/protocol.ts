@@ -20,7 +20,7 @@ export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Po
   | 'Defense' | 'Keywords'>;
 
 export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'AvatarIndex' | 'AvatarCardImageKey'
-  | 'SleeveIndex' | 'Counters' | 'CommanderDamage' | 'Mana' | PlayerZone>;
+  | 'SleeveIndex' | 'Counters' | 'CommanderDamage' | 'CommanderCast' | 'Mana' | PlayerZone>;
 
 export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack' | 'CombatView' | 'MatchOver'
   | 'WinningPlayerName'>;
