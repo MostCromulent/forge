@@ -11,25 +11,29 @@
 #hand .card { flex: none; transform: translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .12s ease; }
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }
 
-/* A card you may play from somewhere other than your hand — flashback, escape, an adventure in exile. It sits
-   here all game, so it rests as a still glow in the colour of the zone it is really in; pointing at it wakes the
-   motes and names the zone. Anything moving the whole game is something a player learns to stop seeing. */
-.card .haze { display: none; }
-#hand .card.elsewhere {
-  --zone-ring: color-mix(in srgb, var(--zone-glow) 72%, transparent);
-  --zone-halo: color-mix(in srgb, var(--zone-glow) 40%, transparent);
-  --zone-ring-w: 2px;
-  box-shadow: 0 0 0 var(--zone-ring-w) var(--zone-ring), 0 0 16px var(--zone-halo);
+/* A card you may play from somewhere other than your hand — flashback, escape, an adventure in exile. The band
+   against the card is solid and still and only the light outside it moves, because these sit here all game.
+   Both layers are rings, not filled boxes, so neither can tint a card that is face down or has no art yet. */
+.card .haze, .card .halo, .card .rim { display: none; }
+#hand .card.elsewhere .rim, #hand .card.elsewhere .halo {
+  display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
 }
-/* The castable outline starts at the same edge as the ring and paints over it, so when a card is both, the ring
-   grows by the outline's width and the two end up nested rather than one hiding the other */
-#hand .card.elsewhere.playable:not(.selectable) { --zone-ring-w: 4px; }
-#hand .card.elsewhere.auto-tap:not(.selectable) { --zone-ring-w: 5px; }
-/* Hovering a hand card already lifts and enlarges it, and its shadow would drop the ring without this */
-#hand .card.elsewhere:hover {
-  --zone-ring: var(--zone-glow);
-  --zone-halo: color-mix(in srgb, var(--zone-glow) 62%, transparent);
-  box-shadow: 0 0 0 var(--zone-ring-w) var(--zone-ring), 0 0 24px var(--zone-halo), 0 10px 30px #000c;
+#hand .card.elsewhere .rim { inset: -5px; border: 5px solid var(--zone-glow); border-radius: 11px; opacity: .92; }
+#hand .card.elsewhere .halo {
+  inset: -10px; border: 14px solid color-mix(in srgb, var(--zone-glow) 42%, transparent); border-radius: 22px;
+  filter: url(#zone-warp-a) blur(4px);
+}
+/* Three copies of the filter at different points in the loop, so neighbours in the hand are never in step */
+#hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#zone-warp-b) blur(4px); }
+#hand .card.elsewhere:nth-child(3n) .halo { filter: url(#zone-warp-c) blur(4px); }
+/* The castable outline starts at the card's edge and paints over whatever is under it, so the rim moves out far
+   enough that the two nest rather than one hiding the other */
+#hand .card.elsewhere.playable:not(.selectable) .rim { inset: -7px; border-radius: 13px; }
+#hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -8px; border-radius: 14px; }
+#hand .card.elsewhere:hover .rim { opacity: 1; }
+#hand .card.elsewhere:hover .halo { border-color: color-mix(in srgb, var(--zone-glow) 62%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  #hand .card.elsewhere .halo { filter: blur(6px); }
 }
 #hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
 #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
