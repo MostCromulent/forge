@@ -264,7 +264,9 @@ public class KeyboardShortcuts {
             public void actionPerformed(final ActionEvent e) {
                 if (!Singletons.getControl().getCurrentScreen().isMatchScreen()) { return; }
                 if (matchUI == null) { return; }
-                YieldController.toggleAutoPassOrStopAll(matchUI.getGameController());
+                YieldController.toggleAutoPassOrStopAll(matchUI.getGameController(), matchUI.getCurrentPlayer());
+                // A network client clears its mirror without going through applyYieldUpdate, which refreshes the phase labels.
+                matchUI.refreshYieldUi(matchUI.getCurrentPlayer());
                 matchUI.getCDock().update();
             }
         };

@@ -288,9 +288,6 @@ public interface IGuiGame {
     void awaitNextInput();
     void cancelAwaitNextInput();
 
-    /** Signal to start a client-side elapsed timer for waiting display. */
-    void showWaitingTimer(PlayerView forPlayer, String waitingForPlayerName);
-
     boolean isUiSetToSkipPhase(PlayerView playerTurn, PhaseType phase);
 
     void updateAutoPassPrompt();

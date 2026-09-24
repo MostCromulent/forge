@@ -537,9 +537,20 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
         return false;
     }
 
+    // The client composes the waiting and yield prompts itself; these only send, since they run while the game thread is live.
     @Override
-    public void showWaitingTimer(final PlayerView forPlayer, final String waitingForPlayerName) {
-        send(ProtocolMethod.showWaitingTimer, forPlayer, waitingForPlayerName);
+    public void awaitNextInput() {
+        send(ProtocolMethod.awaitNextInput);
+    }
+
+    @Override
+    public void cancelAwaitNextInput() {
+        // The client cancels when the next input's prompt arrives.
+    }
+
+    @Override
+    public void updateAutoPassPrompt() {
+        send(ProtocolMethod.updateAutoPassPrompt);
     }
 
     @Override

@@ -260,7 +260,7 @@ public class MatchController extends NetworkGuiGame {
 
     @Override
     public void showPromptMessage(final PlayerView player, final String message, final CardView card) {
-        cancelWaitingTimer();
+        cancelAwaitNextInput();
         view.getPrompt(player).setMessage(message, card);
     }
 

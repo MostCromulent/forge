@@ -3824,6 +3824,7 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
 
     public void autoPassUntilEndOfTurn() {
         yieldController.setAutoPassUntilEndOfTurn(true);
+        if (isRemoteClient()) getGui().applyYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(getLocalPlayerView(), true));
         getGui().updateAutoPassPrompt();
     }
 
@@ -3832,8 +3833,10 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (!mayAutoPass()) {
             return;
         }
+        final boolean wasEndOfTurnYield = yieldController.autoPassUntilEndOfTurn();
         yieldController.setAutoPassUntilEndOfTurn(false);
         PlayerView playerView = getLocalPlayerView();
+        if (wasEndOfTurnYield && isRemoteClient()) getGui().applyYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(playerView, false));
         getGui().showPromptMessage(playerView, "");
         getGui().updateButtons(playerView, false, false, false);
         getGui().awaitNextInput();

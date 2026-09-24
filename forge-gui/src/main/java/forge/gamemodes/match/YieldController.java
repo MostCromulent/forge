@@ -20,10 +20,12 @@ import forge.player.PersistentAutoDecisionStore;
 import forge.player.PlayerControllerHuman;
 import forge.util.collect.FCollectionView;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -164,12 +166,17 @@ public class YieldController {
     }
 
     public boolean shouldAutoYield() {
+        // The client mirror has no game view to expire yields against; the host sends each expiry.
+        if (owner == null) return isYieldActive();
         if (autoPassUntilEOT) return true;
-        GameView gv = owner != null && owner.getGui() != null ? owner.getGui().getGameView() : null;
+        GameView gv = owner.getGui() != null ? owner.getGui().getGameView() : null;
         if (autoPassUntilStackEmpty) {
             if (gv != null && gv.peekStack() != null) return true;
             autoPassUntilStackEmpty = false;
             stackYieldRespectsInterrupts = false;
+            PlayerView local = owner.getLocalPlayerView();
+            // Remote only: on a local GUI the update routes back into tryAutoPassNow from inside mayAutoPass.
+            if (owner.isRemoteClient() && local != null) owner.getGui().applyYieldUpdate(new YieldUpdate.StackYield(local, false, false));
         }
         if (autoPassUntilMarker != null && gv != null) {
             PlayerView turnPlayer = gv.getPlayerTurn();
@@ -427,6 +434,28 @@ public class YieldController {
         if (anyCleared && gui != null) gui.updateAutoPassPrompt();
     }
 
+    /** A network client's mirror has no owner, so it sends the clears for the host to apply. */
+    public static void stopActiveYield(IGameController ctrl, PlayerView local) {
+        YieldController yc = ctrl.getYieldController();
+        if (yc.owner != null) {
+            yc.clearActiveYieldAndDispatch();
+            return;
+        }
+        if (local == null) return;
+        if (yc.autoPassUntilMarker != null) ctrl.sendYieldUpdate(new YieldUpdate.ClearMarker(local));
+        if (yc.autoPassUntilStackEmpty) ctrl.sendYieldUpdate(new YieldUpdate.StackYield(local, false, false));
+        if (yc.autoPassUntilEOT) ctrl.sendYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(local, false));
+    }
+
+    /** Updates that rebuild a remote client's mirror of the active yield, e.g. after reconnect. */
+    public synchronized List<YieldUpdate> activeYieldUpdates(PlayerView local) {
+        List<YieldUpdate> updates = new ArrayList<>();
+        if (autoPassUntilEOT) updates.add(new YieldUpdate.SetAutoPassUntilEndOfTurn(local, true));
+        if (autoPassUntilStackEmpty) updates.add(new YieldUpdate.StackYield(local, true, stackYieldRespectsInterrupts));
+        if (autoPassUntilMarker != null) updates.add(new YieldUpdate.SetMarker(autoPassUntilMarker.getPhaseOwner(), autoPassUntilMarker.getPhase(), false));
+        return updates;
+    }
+
     /** Toggle APINA: flip pref, persist, push to controller. Returns new value. */
     public static boolean toggleAutoPassNoActions(IGameController ctrl) {
         if (ctrl == null) return false;
@@ -443,12 +472,12 @@ public class YieldController {
      * yield state or APINA on), clears everything. Otherwise turns APINA on. So one
      * key acts as both "stop any yielding" and "start auto-passing" depending on state.
      */
-    public static void toggleAutoPassOrStopAll(IGameController ctrl) {
+    public static void toggleAutoPassOrStopAll(IGameController ctrl, PlayerView local) {
         if (ctrl == null) return;
         YieldController yc = ctrl.getYieldController();
         boolean apinaOn = FModel.getPreferences().getPrefBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS);
         if (yc.isYieldActive() || apinaOn) {
-            yc.clearActiveYieldAndDispatch();
+            stopActiveYield(ctrl, local);
             if (apinaOn) toggleAutoPassNoActions(ctrl);
         } else {
             toggleAutoPassNoActions(ctrl);

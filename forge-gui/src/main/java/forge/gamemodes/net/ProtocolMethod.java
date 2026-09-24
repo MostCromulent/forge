@@ -75,7 +75,8 @@ public enum ProtocolMethod implements IHasForgeLog {
     restoreOldZones     (Mode.SERVER, Void.TYPE, PlayerView.class, PlayerZoneUpdates.class),
     setRememberedActions(Mode.SERVER, Void.TYPE),
     nextRememberedAction(Mode.SERVER, Void.TYPE),
-    showWaitingTimer    (Mode.SERVER, Void.TYPE, PlayerView.class, String.class),
+    awaitNextInput      (Mode.SERVER, Void.TYPE),
+    updateAutoPassPrompt(Mode.SERVER, Void.TYPE),
     applyDelta          (Mode.SERVER, Void.TYPE, DeltaPacket.class),
     /** Server→client push of authoritative yield-state changes. */
     applyYieldUpdate    (Mode.SERVER, Void.TYPE, YieldUpdate.class),
