@@ -18,7 +18,7 @@ function Wordmark() {
   return (
     <div class="wordmark-block">
       <span class="wordmark">Forge</span>
-      <span class="colours" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+      <span class="stripes" aria-hidden="true"><i /><i /><i /><i /><i /></span>
     </div>
   );
 }

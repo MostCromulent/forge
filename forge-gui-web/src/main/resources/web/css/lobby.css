@@ -10,13 +10,13 @@
 .wordmark-block { display: grid; justify-items: center; gap: 7px; }
 .menu-page .wordmark { font-size: 44px; line-height: 1; letter-spacing: .06em; font-family: Georgia, "Times New Roman", serif; }
 /* The one place Magic's five colours are pure decoration: no card art nearby and nothing encoded by hue */
-.colours { display: flex; gap: 4px; }
-.colours i { width: 34px; height: 3px; border-radius: 2px; }
-.colours i:nth-child(1) { background: var(--mtg-w); }
-.colours i:nth-child(2) { background: var(--mtg-u); }
-.colours i:nth-child(3) { background: var(--mtg-b); }
-.colours i:nth-child(4) { background: var(--mtg-r); }
-.colours i:nth-child(5) { background: var(--mtg-g); }
+.stripes { display: flex; gap: 4px; }
+.stripes i { width: 34px; height: 3px; border-radius: 2px; }
+.stripes i:nth-child(1) { background: var(--mtg-w); }
+.stripes i:nth-child(2) { background: var(--mtg-u); }
+.stripes i:nth-child(3) { background: var(--mtg-b); }
+.stripes i:nth-child(4) { background: var(--mtg-r); }
+.stripes i:nth-child(5) { background: var(--mtg-g); }
 
 /* --- the start page --------------------------------------------------- */
 
@@ -102,7 +102,7 @@
 }
 .menu-head .wordmark-block { justify-items: start; gap: 5px; }
 .menu-head .wordmark { font-size: 27px; }
-.menu-head .colours i { width: 18px; }
+.menu-head .stripes i { width: 18px; }
 .menu-who { display: flex; align-items: center; gap: 10px; color: var(--muted); }
 .menu-face { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 .menu-name { color: var(--text); font-weight: 600; font-size: 13.5px; }
