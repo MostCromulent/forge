@@ -23,7 +23,10 @@ export function connect(onMessage: (msg: ServerMessage) => void, onStatus: (onli
   let retry = 250;
   const id = clientId();
   const open = () => {
-    socket = new WebSocket(`ws://${location.host}/ws?client=${encodeURIComponent(id)}`);
+    // A page served over https may only open a secure socket, so the scheme follows the page's rather than
+    // being fixed: reached through a tunnel or any proxy that terminates TLS, ws:// is blocked as mixed content
+    const scheme = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    socket = new WebSocket(`${scheme}//${location.host}/ws?client=${encodeURIComponent(id)}`);
     socket.onopen = () => { retry = 250; onStatus(true); };
     socket.onmessage = e => onMessage(JSON.parse(e.data as string) as ServerMessage);
     socket.onclose = () => {
