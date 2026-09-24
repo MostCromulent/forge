@@ -3,9 +3,14 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
 import forge.web.ToBrowser.Address;
+import forge.web.ToBrowser.ChatLine;
+import forge.web.ToBrowser.Person;
+import forge.web.ToBrowser.Presence;
 import org.tinylog.Logger;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -103,6 +108,7 @@ final class WebSessions implements WebServer.Endpoint {
         session.becomeHost();
         Logger.info("A browser has taken the host's seat.");
         announceSeat();
+        announcePresence();
         return true;
     }
 
@@ -178,6 +184,7 @@ final class WebSessions implements WebServer.Endpoint {
         final WebSession session = byChannel.remove(channel);
         if (session != null) {
             session.disconnected(channel);
+            announcePresence();
         }
         letGo();
         // A seat held by a browser that never comes back would leave nobody able to set the table
@@ -229,6 +236,58 @@ final class WebSessions implements WebServer.Endpoint {
         }
         final WebSession h = host;
         return h != null && h.computerNames().stream().anyMatch(name::equalsIgnoreCase);
+    }
+
+    /** Enough of the conversation for a browser that arrives late to see what was being said. */
+    private static final int CHAT_KEPT = 60;
+
+    private final Deque<ChatLine> said = new ArrayDeque<>();
+
+    /**
+     * A line one browser typed, given to every browser here. It belongs to the server rather than to a table,
+     * so it survives a table opening, starting and closing, and people waiting for one can still talk.
+     */
+    synchronized void say(final WebSession from, final String text) {
+        final String who = from.playerName();
+        if (who == null) {
+            return;
+        }
+        final ChatLine line = new ChatLine(who, text);
+        said.addLast(line);
+        while (said.size() > CHAT_KEPT) {
+            said.removeFirst();
+        }
+        for (final WebSession session : byId.values()) {
+            session.tell(line);
+        }
+    }
+
+    /** A browser that has just arrived is given who is here and what has been said. */
+    synchronized void greet(final WebSession session) {
+        session.tell(presence());
+        for (final ChatLine line : said) {
+            session.tell(line);
+        }
+    }
+
+    /** Who is on this server, in the order they took a session. Anyone still unnamed is nobody yet. */
+    private Presence presence() {
+        final List<Person> people = new ArrayList<>();
+        for (final WebSession session : byId.values()) {
+            final String who = session.playerName();
+            if (who != null && session.attached()) {
+                people.add(new Person(who, session.avatarIndex(), session.doing(), session.hosting()));
+            }
+        }
+        return new Presence(people);
+    }
+
+    /** Tells every browser who is here, whenever that changes. */
+    void announcePresence() {
+        final Presence now = presence();
+        for (final WebSession session : byId.values()) {
+            session.tell(now);
+        }
     }
 
     /** Tells every browser without a seat that the host's seat has changed hands, or come free. */

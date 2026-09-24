@@ -58,8 +58,9 @@
 
 /* One card, three sets of words. The trail is what separates "nothing has happened yet" from "something is
    happening and has not finished", which were the same screen before. */
+/* One size whichever state it is in, so the page does not jump as a join succeeds or fails */
 .wait-card {
-  display: grid; gap: 15px; width: min(100%, 380px); padding: 22px;
+  display: flex; flex-direction: column; gap: 15px; width: min(100%, 380px); min-height: 212px; padding: 22px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 13px;
 }
 .wait-card.failed { border-color: #a35a3a; }
@@ -89,7 +90,7 @@
 @keyframes wait-spin { to { transform: rotate(1turn); } }
 @media (prefers-reduced-motion: reduce) { .wait-card.joining .wait-mark { animation: none; } }
 .wait-body { margin: 0; color: var(--muted); line-height: 1.55; }
-.wait-buttons { display: flex; gap: 8px; }
+.wait-buttons { margin-top: auto; display: flex; gap: 8px; }
 .wait-buttons:empty { display: none; }
 
 /* --- the menu --------------------------------------------------------- */
@@ -417,7 +418,7 @@
 
 
 .lobby-net { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); width: min(100%, 960px); }
-.share, .chat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.share { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
 .share h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
 .share-list { display: grid; gap: 6px; }
 
@@ -435,7 +436,49 @@
 /* An invite link is long, so it takes the width and the Copy button sits beside the label */
 .share-url { grid-column: 1 / -1; font-family: ui-monospace, monospace; font-size: 11px; overflow-wrap: anywhere; }
 .share-copy { color: var(--accent-2); font-size: 12px; }
-.chat { display: grid; grid-template-rows: 1fr auto; gap: 8px; }
-.chat-log { min-height: 92px; max-height: 160px; overflow: auto; display: grid; align-content: end; gap: 3px; }
-.chat-log .chat-line b { color: var(--accent-2); font-weight: 600; }
-.chat input { width: 100%; padding: 7px 9px; border-radius: 7px; }
+
+/* --- the dock: who is here, and what they are saying -------------------- */
+
+/* Outside a match it rises out of the bottom edge, so it reads as attached rather than floating over the page */
+#dock .dock { position: fixed; right: 24px; bottom: 0; z-index: 30; width: 318px; }
+.dock {
+  background: var(--surface); border: 1px solid var(--line-bright); border-bottom: none;
+  border-radius: 13px 13px 0 0; box-shadow: 0 -10px 40px #0000007a; overflow: hidden;
+}
+.dock.folded { display: flex; align-items: center; gap: 10px; padding: 9px 14px 11px 9px; cursor: pointer; }
+.dock.open { display: flex; flex-direction: column; max-height: min(60vh, 420px); }
+/* In the side column it is a panel among panels, so it keeps that column's shape instead of its own */
+.dock.in-match { position: static; width: auto; border: none; border-radius: 0; box-shadow: none; max-height: none; flex: 1; min-height: 0; }
+
+.faces { display: flex; }
+.faces img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface); }
+.faces img + img { margin-left: -8px; }
+.dock-count { flex: 1; text-align: left; font-size: 12.5px; font-weight: 600; color: var(--text); }
+.dock-sum { flex: 1; text-align: left; font-size: 11.5px; color: var(--muted); }
+
+.dock-head {
+  display: flex; align-items: center; gap: 9px; padding: 10px 14px; cursor: pointer;
+  background: none; border: none; border-bottom: 1px solid var(--line); border-radius: 0; text-align: left;
+}
+.dock-head b { flex: 1; font-size: 12.5px; font-weight: 650; }
+.dock-head .dock-count { flex: none; color: var(--muted); font-weight: 400; font-size: 11.5px; }
+.live { width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--mtg-g); }
+.chev { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+
+.roster { margin: 0; padding: 6px 8px; list-style: none; display: grid; gap: 1px; border-bottom: 1px solid var(--line); }
+.roster li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
+.roster li.watching .who { color: var(--muted); }
+.face-small { width: 21px; height: 21px; flex: none; border-radius: 50%; object-fit: cover; }
+.roster .who { font-size: 12px; }
+.roster .spacer { flex: 1; }
+.roster .doing { font-size: 11px; color: var(--muted); }
+/* The crown says who holds the host's seat; the label on it says so to a screen reader */
+.crown { width: 13px; height: 13px; flex: none; fill: none; stroke: var(--accent-2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+
+.dock-log { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 11px 14px; display: flex; flex-direction: column; gap: 8px; }
+.said { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--text); }
+.said span { flex: 1; }
+/* Netplay announcing somebody coming or going: nobody said it, so nobody's face is on it */
+.said.note { color: var(--muted); font-style: italic; }
+.dock-say { padding: 0 14px 14px; }
+.dock-say input { width: 100%; font-size: 12px; padding: 8px 11px; }

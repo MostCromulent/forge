@@ -11,7 +11,7 @@ import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { Volume } from './volume';
 import { Notices } from './notices';
-import { ChatInput, ChatLog } from './chat';
+import { Dock } from './dock';
 import { byId } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
@@ -23,10 +23,9 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
   render(page === 'name' ? <NamePrompt model={model} actions={actions} />
     : page === 'menu' ? <Menu model={model} actions={actions} /> : null, byId('menu'));
   render(page === 'lobby' ? <Lobby model={model} actions={actions} /> : null, byId('lobby'));
-  render(page === 'match' && model.networked ? <>
-    <ChatLog model={model} id="match-chat-log" />
-    <ChatInput id="match-chat-in" say={actions.say} />
-  </> : null, byId('match-chat'));
+  // The dock has two homes: the bottom edge before a match, the side column under the log during one
+  render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
+  render(page !== 'match' ? <Dock model={model} actions={actions} /> : null, byId('dock'));
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
     {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}

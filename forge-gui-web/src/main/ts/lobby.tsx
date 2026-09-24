@@ -12,7 +12,6 @@ import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { DeckFinder } from './deckfinder';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
-import { ChatInput, ChatLog } from './chat';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -56,17 +55,13 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
         <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />
-        {/* A game only this machine can reach has nothing to share and nobody to talk to */}
-        <div class="lobby-net" hidden={!lobby.shareable && lobby.host}>
-          <section class="share" hidden={!lobby.shareable}>
+        {/* The conversation moved to the dock, which follows you in; only the links belong to the table */}
+        <div class="lobby-net" hidden={!lobby.shareable}>
+          <section class="share">
             <h3>Others join at</h3>
             <div class="share-list">
               {lobby.shareable && <Addresses list={model.addresses ?? []} />}
             </div>
-          </section>
-          <section class="chat">
-            <ChatLog model={model} class="chat-log" id="lobby-chat-log" />
-            <ChatInput id="lobby-chat-in" say={actions.say} />
           </section>
         </div>
       </div>

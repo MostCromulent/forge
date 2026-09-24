@@ -20,6 +20,11 @@ export interface Hello {
   sleeveArt: SavedSleeveArt[];
 }
 
+export interface Presence {
+  t: 'presence';
+  people: Person[];
+}
+
 export interface ErrorMessage {
   t: 'error';
   message: string;
@@ -280,6 +285,7 @@ export type Request =
 
 export type ServerMessage =
   | Hello
+  | Presence
   | ErrorMessage
   | Notice
   | Decks
@@ -507,6 +513,13 @@ export type GameEvent =
 export interface SavedSleeveArt {
   key: string;
   offset: number;
+}
+
+export interface Person {
+  name: string;
+  avatar: number;
+  doing: string;
+  host: boolean;
 }
 
 export interface DeckSummary {

@@ -33,7 +33,11 @@ let restored = false;
 // (autopass.ts), so every message is shown as it arrives
 const send = connect(apply, online => {
   byId('banner').hidden = online;
-  if (!online) restored = false;
+  // The server replays the conversation for every connection, so the browser starts each one empty
+  if (!online) {
+    restored = false;
+    model.chat = [];
+  }
 });
 
 const wire = createActions(send);
@@ -142,7 +146,6 @@ function apply(msg: ServerMessage): void {
       // A new lobby has an address and a conversation of its own
       model.addresses = null;
       askedAddresses = false;
-      model.chat = [];
       model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
@@ -173,6 +176,8 @@ function apply(msg: ServerMessage): void {
     }
     case 'addresses': model.addresses = msg.list; break;
     case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text }]; break;
+    // The server sends the whole list whenever it changes, so there is nothing to merge
+    case 'presence': model.presence = msg.people; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;
     case 'cardSearch': model.cardNames = msg.names ?? []; break;
     case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;

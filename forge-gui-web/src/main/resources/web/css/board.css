@@ -22,7 +22,7 @@
 #log-panel { flex: 1; }
 #chat-panel { flex: 0 1 40%; }
 #side[data-log="shut"] #log-panel, #side[data-chat="shut"] #chat-panel { flex: none; }
-#side[data-log="shut"] #log, #side[data-chat="shut"] #match-chat-log, #side[data-chat="shut"] #match-chat-in { display: none; }
+#side[data-log="shut"] #log, #side[data-chat="shut"] #match-chat { display: none; }
 .side-toggle { align-self: flex-end; font-size: 12px; padding: 2px 10px; }
 .side-toggle[aria-expanded="true"] { color: var(--muted); }
 /* Folded, the panels are tabs at the right edge and the board takes their column */
@@ -30,11 +30,8 @@
 /* The tabs sit where the buttons were, so a control does not move when its panel closes */
 #match.side-folded #side { position: fixed; right: 0; top: 8px; z-index: 26; }
 #match.side-folded .side-toggle { writing-mode: vertical-rl; padding: 10px 4px; border-radius: 6px 0 0 6px; }
-#match-chat-log { background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 64px; font-size: 12px; scrollbar-width: thin; display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; }
-#match-chat-in { width: 100%; font-size: 12px; }
 /* The chat is drawn into a holder of its own; its log and input are the panel's rows */
-#match-chat { display: contents; }
-.chat-line b { color: var(--accent-2); font-weight: 600; }
+#match-chat { display: flex; flex: 1; min-height: 0; }
 /* The stack panel floats over the right of the board, so the rows give it room rather than sliding under it */
 #match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }
 #hand { grid-area: hand; }
@@ -382,4 +379,4 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 #stack .stack-item.targetable:hover { outline-color: var(--text); }
 
 /* A one-pixel highlight along the top edge is what makes a dark panel read as a solid thing, not a hole */
-#log, #match-chat-log, .zone-panel { box-shadow: inset 0 1px 0 #ffffff12; }
+#log, .zone-panel { box-shadow: inset 0 1px 0 #ffffff12; }

@@ -49,6 +49,15 @@ final class ToBrowser {
     record SavedSleeveArt(String key, int offset) {
     }
 
+    /** Everyone on this server who has named themselves, for the panel that says who is here. */
+    @Message("presence")
+    record Presence(List<Person> people) {
+    }
+
+    /** What a person is doing: waiting, joining, at a table, playing or watching one. */
+    record Person(String name, int avatar, String doing, boolean host) {
+    }
+
     @Message("error")
     record ErrorMessage(String message) {
     }
@@ -318,7 +327,7 @@ final class ToBrowser {
     }
 
     /** Every message record, which is what the TypeScript is generated from. */
-    static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, ErrorMessage.class, Notice.class,
+    static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,

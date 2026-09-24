@@ -1,6 +1,6 @@
 import type {
   Address, CardStateView, ChoicesRequest, CardView, Controls, DeckDetails, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
-  Notice, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
+  Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
   StackMenu, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
 
@@ -44,7 +44,10 @@ export interface Model {
   /** What a right-click on a stack item may do, as the server last answered it. */
   stackMenu: StackMenu | null;
   /** The conversation with the other players, in the lobby and beside the board. */
+  /** A line with no sender is netplay announcing somebody coming or going. */
   chat: { from: string; text: string }[];
+  /** Everyone on this server who has named themselves. */
+  presence: Person[];
   /** Someone else is at the table, so there is someone to talk to. */
   networked: boolean;
   /** The formats a deck's cards can be checked against, for narrowing the deck list. */
@@ -71,7 +74,7 @@ export function createModel(): Model {
     looks: null, spectating: false,
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
-    cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], networked: false,
+    cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
   };
 }

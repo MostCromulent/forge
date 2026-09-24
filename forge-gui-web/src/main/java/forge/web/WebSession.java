@@ -129,6 +129,8 @@ public final class WebSession {
         if (b != null) {
             b.send(hello());
         }
+        // Every stage is something the panel that says who is here reports: waiting, joining, at a table, playing
+        sessions.announcePresence();
         return true;
     }
 
@@ -166,6 +168,37 @@ public final class WebSession {
         return browser != null;
     }
 
+    /** Whether this session holds the host's seat. */
+    boolean hosting() {
+        return isHost;
+    }
+
+    /** The face chosen on the start page; the first avatar until one is. */
+    int avatarIndex() {
+        final Integer face = avatar;
+        return face == null ? 0 : face;
+    }
+
+    /** What this session is doing, in the words the panel that says who is here uses. */
+    String doing() {
+        final Stage now = stage;
+        if (now instanceof Playing p) {
+            return p.spectating() ? "watching" : "playing";
+        }
+        if (now instanceof Setup) {
+            return "table";
+        }
+        return now instanceof Opening ? "joining" : "waiting";
+    }
+
+    /** Sends one message to this session's browser, if it has one. */
+    void tell(final Record message) {
+        final BrowserChannel b = browser;
+        if (b != null) {
+            b.send(message);
+        }
+    }
+
     /** The loopback port guests take a seat on. */
     int gamePort() {
         return local.isHost() ? local.port() : -1;
@@ -180,6 +213,7 @@ public final class WebSession {
             p.gui().detach(previous);
         }
         channel.send(hello());
+        sessions.greet(this);
         if (isHost) {
             ui.hostRequests().replay(channel::send);
         }
@@ -241,7 +275,7 @@ public final class WebSession {
             case "chat" -> {
                 final String text = Wire.decode(msg, Say.class).text();
                 if (text != null && !text.isBlank()) {
-                    local.sendChat(text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
+                    sessions.say(this, text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
                 }
             }
             case "deckDetails" -> {
@@ -452,9 +486,10 @@ public final class WebSession {
     }
 
     private void chatted(final String from, final String text) {
-        final BrowserChannel b = browser;
-        if (b != null) {
-            b.send(new ChatLine(from, text));
+        // A player's line reaches every browser through the server's own chat, so only netplay's announcements
+        // of who came and went are worth passing on from the game
+        if (from == null) {
+            tell(new ChatLine(null, text));
         }
     }
 
@@ -475,6 +510,7 @@ public final class WebSession {
         }
         applyChosenAvatar();
         channel.send(hello());
+        sessions.announcePresence();
         joinHostGame();
     }
 
