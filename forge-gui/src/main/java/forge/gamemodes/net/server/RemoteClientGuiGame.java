@@ -318,7 +318,10 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public void showCombat() {
-        syncAndSend(ProtocolMethod.showCombat);
+        // Flush the forwarded GameEventCombatUpdate; the input doesn't change between attacker clicks.
+        if (!paused) {
+            updateGameView();
+        }
     }
 
     @Override
@@ -357,17 +360,15 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
 
     @Override
     public void enableOverlay() {
-        send(ProtocolMethod.enableOverlay);
     }
 
     @Override
     public void disableOverlay() {
-        send(ProtocolMethod.disableOverlay);
     }
 
     @Override
     public void finishGame() {
-        syncAndSend(ProtocolMethod.finishGame);
+        // The client finishes the game from the forwarded game-finished event.
     }
 
     @Override
