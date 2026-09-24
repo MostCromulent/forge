@@ -36,6 +36,7 @@ import forge.util.ITriggerEvent;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -505,8 +506,8 @@ public class RemoteClientGuiGame extends NetworkGuiGame implements IHasForgeLog 
     }
 
     @Override
-    public void setSelectablePlayers(final Iterable<PlayerView> players) {
-        send(ProtocolMethod.setSelectablePlayers, players);
+    public void setSelectablePlayers(final Supplier<Iterable<PlayerView>> players) {
+        send(ProtocolMethod.setSelectablePlayers, players.get());
     }
 
     @Override

@@ -67,15 +67,18 @@ public final class InputSelectTargets extends InputSyncronizedBase {
         final int initialMin = numTargets != null ? numTargets : sa.getMinTargets();
         final int initialMax = numTargets != null ? numTargets : sa.getMaxTargets();
         controller.getGui().setSelectables(CardView.getCollection(choices), initialMin, initialMax);
-        final List<PlayerView> players = new ArrayList<>();
-        if (!mustTargetFiltered) {
-            for (final Player p : sa.getHostCard().getGame().getPlayers()) {
-                if (!p.hasLost() && sa.canTarget(p) && (filter == null || filter.test(p))) {
-                    players.add(p.getView());
+        // Worked out only if the GUI marks selectable players: canTarget is a real check, once per player
+        controller.getGui().setSelectablePlayers(() -> {
+            final List<PlayerView> players = new ArrayList<>();
+            if (!mustTargetFiltered) {
+                for (final Player p : sa.getHostCard().getGame().getPlayers()) {
+                    if (!p.hasLost() && sa.canTarget(p) && (filter == null || filter.test(p))) {
+                        players.add(p.getView());
+                    }
                 }
             }
-        }
-        controller.getGui().setSelectablePlayers(players);
+            return players;
+        });
         final PlayerZoneUpdates zonesToUpdate = new PlayerZoneUpdates();
         for (final Card c : choices) {
             zonesToUpdate.add(new PlayerZoneUpdate(c.getZone().getPlayer().getView(), c.getZone().getZoneType()));

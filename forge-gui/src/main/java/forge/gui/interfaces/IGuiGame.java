@@ -35,6 +35,7 @@ import forge.util.collect.FCollectionView;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.Map;
 
 public interface IGuiGame {
@@ -270,8 +271,11 @@ public interface IGuiGame {
      * select-min hotkeys). Callers without a known range pass {@code (0, 0)}.
      */
     void setSelectables(Iterable<CardView> cards, int min, int max);
-    /** Players the current input accepts; cleared with {@link #clearSelectables()}. */
-    default void setSelectablePlayers(Iterable<PlayerView> players) { }
+    /**
+     * Players the current input accepts; cleared with {@link #clearSelectables()}. Given as a supplier because
+     * working out which players an ability may target is not free, and a GUI that does not mark them never asks.
+     */
+    default void setSelectablePlayers(Supplier<Iterable<PlayerView>> players) { }
     void clearSelectables();
     boolean isSelecting();
 
@@ -292,18 +296,12 @@ public interface IGuiGame {
 
     /**
      * Priority is about to be passed for the player without asking. Called for every such pass, with the pause the
-     * game would take first so it does not jump ahead too fast, which may be none. The pause is taken here, so a GUI
-     * can decide when to show the pass coming. Returns false if the player stopped it, in which case they are asked
-     * for priority as usual.
+     * game would take first so it does not jump ahead too fast, which may be none. Taking that pause belongs to the
+     * GUI, because the GUI is what can show the pass coming and let the player stop it; {@code AbstractGuiGame}
+     * simply waits, which is what the game used to do itself. Returns false if the player stopped it, in which case
+     * they are asked for priority as usual.
      */
     default boolean confirmAutoPass(final int delayMs) {
-        if (delayMs > 0) {
-            try {
-                Thread.sleep(delayMs);
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }
         return true;
     }
 

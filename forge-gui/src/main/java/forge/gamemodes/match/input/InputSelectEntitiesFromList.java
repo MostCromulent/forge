@@ -59,7 +59,7 @@ public class InputSelectEntitiesFromList<T extends GameEntity> extends InputSele
             }
         }
         getController().getGui().setSelectables(vCards, this.min, this.max);
-        getController().getGui().setSelectablePlayers(vPlayers);
+        getController().getGui().setSelectablePlayers(() -> vPlayers);
         final PlayerZoneUpdates zonesToUpdate = new PlayerZoneUpdates();
         for (final GameEntity ge : validChoices) {
             final Zone cz = ge instanceof Card c ? c.getLastKnownZone() : null;

@@ -698,6 +698,19 @@ public abstract class AbstractGuiGame implements IGuiGame, IMayViewCards {
         cancelWaitingTimer();
     }
 
+    /** Waits out the pause, which is what the game did before the GUI was given the chance to show it. */
+    @Override
+    public boolean confirmAutoPass(final int delayMs) {
+        if (delayMs > 0) {
+            try {
+                Thread.sleep(delayMs);
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        return true;
+    }
+
     @Override
     public final void updateAutoPassPrompt() {
         String message = currentYieldMessage();
