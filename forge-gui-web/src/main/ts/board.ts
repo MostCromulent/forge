@@ -211,12 +211,13 @@ function announceTurn(model: Model, g: GameView): void {
   const strip = byId('phase-strip');
   strip.append(banner);
   strip.classList.add('announcing');
+  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
+  const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
+  setTimeout(() => strip.classList.remove('announcing'), sweep * 0.84);
   // The light that travels across the plate is an animation on the banner's own ::after, and its end reaches
   // the banner too, so the sweep has to be named or the banner leaves less than half way through
   banner.addEventListener('animationend', e => {
-    if (e.animationName !== 'turn-sweep') return;
-    banner.remove();
-    strip.classList.remove('announcing');
+    if (e.animationName === 'turn-sweep') banner.remove();
   });
 }
 
