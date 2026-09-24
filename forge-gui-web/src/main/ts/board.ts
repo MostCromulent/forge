@@ -59,7 +59,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       </div>
       <div class="battlefield">
         <div class="row"><div class="group lands"></div><div class="group support"></div></div>
-        <div class="row"><div class="group creatures"></div><div class="group tokens"></div></div>
+        <div class="row together"><div class="group creatures"></div><div class="group tokens"></div></div>
       </div>`;
     const avatarEl = q(root, '.avatar');
     avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
@@ -211,7 +211,10 @@ function announceTurn(model: Model, g: GameView): void {
   const strip = byId('phase-strip');
   strip.append(banner);
   strip.classList.add('announcing');
-  banner.addEventListener('animationend', () => {
+  // The light that travels across the plate is an animation on the banner's own ::after, and its end reaches
+  // the banner too, so the sweep has to be named or the banner leaves less than half way through
+  banner.addEventListener('animationend', e => {
+    if (e.animationName !== 'turn-sweep') return;
     banner.remove();
     strip.classList.remove('announcing');
   });

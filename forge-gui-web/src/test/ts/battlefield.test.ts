@@ -29,13 +29,19 @@ describe('which cards pile', () => {
     put(model, 1, {}, {});
     put(model, 2, { Tapped: true }, {});
     put(model, 3, { Counters: { 'P1P1': 1 } }, {});
-    put(model, 4, {}, { ImageKey: 'c:Swamp|KTK|2' });
-    put(model, 5, { Cloned: true }, {});
+    put(model, 4, { Cloned: true }, {});
     const first = sig(model, 1);
-    expect(sig(model, 5)).not.toBe(first);
     expect(sig(model, 2)).not.toBe(first);
     expect(sig(model, 3)).not.toBe(first);
     expect(sig(model, 4)).not.toBe(first);
+  });
+
+  // Two printings of one land are the same card to play, and the pile shows the top card's art
+  it('piles two printings of the same card together', () => {
+    const model = createModel();
+    put(model, 1, {}, {});
+    put(model, 2, {}, { ImageKey: 'c:Swamp|KTK|2' });
+    expect(sig(model, 2)).toBe(sig(model, 1));
   });
 
   it('reads counters in any order as the same counters', () => {

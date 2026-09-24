@@ -84,6 +84,11 @@ export const SETTINGS: SettingDef[] = [
     options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
   },
   {
+    section: 'Motion', key: 'zoneMotion', label: 'Drifting motes in the graveyard and exile', type: 'choice',
+    hint: 'Following the system turns them off when the computer is set to reduce motion.',
+    options: [['system', 'Follow the system'], ['on', 'Always'], ['off', 'Never']], def: 'system',
+  },
+  {
     section: 'Sound', key: 'soundVolume', label: 'Effects', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   {
@@ -205,6 +210,7 @@ function apply(): void {
   const hand = Number(setting('handSize')) / 100;
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
+  root.dataset.motion = String(setting('zoneMotion'));
   customStyle().textContent = String(setting('customCss') ?? '');
 }
 

@@ -24,10 +24,11 @@ export function initAutoPass(reply: (id: number, go: boolean) => void, redraw: (
 
 export const countdown = (): Countdown | null => current;
 
-/** Starts filling the button; never quicker than the pause the game itself would have taken. */
+/** Starts filling the button. Every pass fills for the same length, whatever pause the server suggests, so the
+ *  game keeps one pace rather than a different one per kind of pass. */
 export function startCountdown(req: AutoPassRequest): void {
   clearTimeout(timer);
-  const ms = Math.max(req.delay, Number(setting('autoPassDelay')));
+  const ms = Number(setting('autoPassDelay'));
   current = { id: req.id, ms, since: Date.now() };
   timer = setTimeout(() => finishCountdown(true), ms);
   changed();

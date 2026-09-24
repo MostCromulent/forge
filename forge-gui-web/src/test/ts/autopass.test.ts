@@ -25,9 +25,12 @@ describe('a pass on its way', () => {
     expect(countdown()).toBeNull();
   });
 
-  it('is never quicker than the pause the game itself would take', () => {
+  it('fills for the same length whatever pause the server suggests', () => {
     startCountdown(request(1, 5000));
-    expect(countdown()!.ms).toBe(5000);
+    const long = countdown()!.ms;
+    dropCountdown();
+    startCountdown(request(2, 50));
+    expect(countdown()!.ms).toBe(long);
   });
 
   it('can be stopped, which answers once and only once', () => {

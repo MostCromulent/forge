@@ -20,6 +20,23 @@ const waiting = new Map<string, Snapshot & { since: number }>();
 const fromHint = new Map<string, DOMRect>();
 const intoHint = new Map<string, DOMRect>();
 
+/**
+ * Where a card will stand once the flight it is part way through is over. A flight is a transform, and a
+ * transform moves what the element measures, so a frame drawn while one runs would read the card as displaced
+ * and slide it again — which is what any redraw during a flight, a hover among them, used to do.
+ */
+const resting = new Map<string, DOMRect>();
+
+function restingRect(el: HTMLElement): DOMRect {
+  const key = el.dataset.key as string;
+  const held = resting.get(key);
+  if (held && el.getAnimations().length) {
+    return held;
+  }
+  resting.delete(key);
+  return el.getBoundingClientRect();
+}
+
 const FLIGHT_MS = 240;
 const DEAL_MS = 320;
 const STAGGER_MS = 55;
@@ -93,7 +110,7 @@ function shiftBoard(travelled: Set<string>): void {
     if (!was || travelled.has(key) || fromHint.has(key)) {
       continue;
     }
-    const now = el.getBoundingClientRect();
+    const now = restingRect(el);
     const dx = centre(was.rect).x - centre(now).x;
     const dy = centre(was.rect).y - centre(now).y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
@@ -253,7 +270,7 @@ function note(): void {
   lastSeen.clear();
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
-    lastSeen.set(el.dataset.key as string, { rect: el.getBoundingClientRect(), ghost: el.cloneNode(true) as HTMLElement });
+    lastSeen.set(el.dataset.key as string, { rect: restingRect(el), ghost: el.cloneNode(true) as HTMLElement });
     ownPlace.add(el.dataset.key as string);
   }
   for (const el of stackItems()) {
@@ -328,9 +345,12 @@ function pop(el: HTMLElement): void {
 }
 
 function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): void {
-  const to = el.getBoundingClientRect();
+  const to = restingRect(el);
   if (!to.width || !from.width) {
     return;
+  }
+  if (el.dataset.key) {
+    resting.set(el.dataset.key, to);
   }
   el.animate([
     {

@@ -127,14 +127,14 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
 
 // Everything a player can see or act on must match, so a pile never hides a difference. Nothing else may keep
 // cards apart: a property the game has never set and one it has set back (a land untapped this turn, a creature
-// that attacked last turn) look the same, so they read the same here. Cards pile by name and art, as desktop piles
-// them by name; the art is added because a pile shows only its top card's. As on desktop, a copy never piles with
-// what it copies.
+// that attacked last turn) look the same, so they read the same here. Cards pile by name, as they do on desktop.
+// Two printings of one land are the same card to play, so the art they were opened in does not split them; the
+// pile shows the top card's. As on desktop, a copy never piles with what it copies.
 export function signature(model: Model, card: CardView, marks: Set<number>[]): string | null {
   if (!model.visible.has(card.$key)) return null;
   const s = stateOf(model, card);
   // A land played this turn is no different from the lands played before it, so it belongs in their pile
-  return JSON.stringify([s.Name, s.ImageKey, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
+  return JSON.stringify([s.Name, s.Power ?? null, s.Toughness ?? null, s.Loyalty && s.Loyalty !== '0' ? s.Loyalty : null, !!card.Tapped,
     counters(card.Counters), card.Damage ?? 0, !!card.Attacking, !!card.Blocking, isSick(model, card), !!card.PhasedOut,
     !!card.Token, !!card.Cloned, card.EntityAttachedTo?.ref ?? null, !!card.IsRingBearer, ...marks.map(m => m.has(card.$key))]);
 }
