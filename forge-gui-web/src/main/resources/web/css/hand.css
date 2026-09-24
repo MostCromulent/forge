@@ -10,3 +10,41 @@
 #hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.2); width: calc(var(--hand-w) * 0.2); margin: 0; }
 #hand .card { flex: none; transform: translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); transform-origin: 50% 100%; transition: transform .12s ease; }
 #hand .card:hover { transform: translateY(-28%) scale(1.8); z-index: 10; box-shadow: 0 10px 30px #000c; }
+
+/* A card you may play from somewhere other than your hand — flashback, escape, an adventure in exile. It sits
+   here all game, so it rests as a still ring and the zone's name along its foot; pointing at it wakes the motes.
+   Anything moving the whole game is something a player learns to stop seeing. */
+.card .from, .card .haze { display: none; }
+#hand .card.elsewhere { box-shadow: 0 0 0 2px #9a7fd0, 0 0 14px #b9a8e04d; }
+/* The castable outline starts at the same edge as the ring and paints over it, so when a card is both, the ring
+   grows by the outline's width and the two end up nested rather than one hiding the other */
+#hand .card.elsewhere.playable:not(.selectable) { box-shadow: 0 0 0 4px #9a7fd0, 0 0 14px #b9a8e04d; }
+#hand .card.elsewhere.auto-tap:not(.selectable) { box-shadow: 0 0 0 5px #9a7fd0, 0 0 14px #b9a8e04d; }
+/* Hovering a hand card already lifts and enlarges it, and its shadow would drop the ring without this */
+#hand .card.elsewhere:hover { box-shadow: 0 0 0 2px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
+#hand .card.elsewhere.playable:not(.selectable):hover { box-shadow: 0 0 0 4px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
+#hand .card.elsewhere.auto-tap:not(.selectable):hover { box-shadow: 0 0 0 5px #b9a8e0, 0 0 22px #b9a8e08a, 0 10px 30px #000c; }
+/* The left edge is the part a fanned hand never covers, so the name starts there */
+#hand .card.elsewhere .from {
+  display: block; position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  padding: 1px 4px; border-radius: 0 0 var(--radius) var(--radius);
+  background: #1b1630e6; border-top: 1px solid #9a7fd0;
+  color: #d7c8f5; font-size: calc(var(--hand-w, 88px) * 0.1); font-weight: 650;
+  white-space: nowrap; overflow: hidden;
+}
+#hand .card.elsewhere:hover .haze { display: block; position: absolute; inset: 0; z-index: 2; overflow: hidden; border-radius: var(--radius); pointer-events: none; }
+#hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after {
+  content: ''; position: absolute; bottom: 26%; width: 4px; height: 4px; border-radius: 50%;
+  background: #b9a8e0; box-shadow: 0 0 7px 1px #b9a8e0; opacity: 0;
+  animation: elsewhere-rise 2.4s linear infinite;
+}
+#hand .card.elsewhere:hover .haze::before { left: 24%; }
+#hand .card.elsewhere:hover .haze::after { left: 64%; animation-delay: -1.2s; }
+@keyframes elsewhere-rise {
+  0% { opacity: 0; transform: translateY(14px); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-38px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #hand .card.elsewhere:hover .haze::before, #hand .card.elsewhere:hover .haze::after { animation: none; opacity: .75; }
+}

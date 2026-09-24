@@ -2,8 +2,8 @@ import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from './model';
 import { setting } from './settings';
-import { byId } from './dom';
-import type { CardView, PlayerView } from './protocol';
+import { byId, q } from './dom';
+import type { CardView, PlayerView, ZoneType } from './protocol';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
 function manaValue(cost: string | undefined): number {
@@ -21,10 +21,34 @@ function handOrder(model: Model, cards: CardView[]): CardView[] {
     || String(stateOf(model, a).Name ?? '').localeCompare(stateOf(model, b).Name ?? ''));
 }
 
+/** Where a card the engine says is playable from elsewhere is actually sitting. */
+const SOURCES: ZoneType[] = ['Graveyard', 'Exile', 'Library', 'Command'];
+
+/**
+ * Cards you may play from somewhere that is not your hand: flashback, escape, adventure, foretell, a land out of
+ * the graveyard. The engine gathers them into its Flashback pseudo-zone and the view keeps it current, so they
+ * only have to be laid out. They come before the hand and are ordered by the same rule, and they stay there
+ * whether or not you can afford them — the playable outline is what says which are castable right now.
+ */
+function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number, string> {
+  const found = new Map<number, string>();
+  for (const card of zone(model, player, 'Flashback')) {
+    const source = SOURCES.find(z => zone(model, player, z).some(c => c.$key === card.$key));
+    found.set(card.$key, source ?? 'Elsewhere');
+  }
+  return found;
+}
+
 export function renderHand(model: Model, player: PlayerView | undefined, select: CardClick): void {
   const root = byId('hand');
-  const cards = handOrder(model, zone(model, player, 'Hand'));
-  reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => updateCard(el, model, c));
+  const elsewhere = fromElsewhere(model, player);
+  const cards = [...handOrder(model, zone(model, player, 'Flashback')), ...handOrder(model, zone(model, player, 'Hand'))];
+  reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => {
+    updateCard(el, model, c);
+    const source = elsewhere.get(c.$key);
+    el.classList.toggle('elsewhere', source !== undefined);
+    q(el, '.from').textContent = source ?? '';
+  });
   // A shallow arc: at most 2 degrees per card from the middle, 10 at the ends
   const mid = (cards.length - 1) / 2;
   const perCard = mid > 0 ? Math.min(2, 10 / mid) : 0;
