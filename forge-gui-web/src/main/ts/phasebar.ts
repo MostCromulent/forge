@@ -85,8 +85,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   }
   const active = deref(model, g.PlayerTurn);
   const myTurn = !!active && isLocal(model, active);
-  const opponent = opponents(model);
-  const opponentLabel = opponent.length === 1 ? opponent[0].Name ?? '' : 'Opponents';
+  const theirs = whoseTurns(model);
   const step = stepIndex(g.Phase);
   // Untap (index -1) belongs to the beginning phase
   const phase = step < 0 ? 0 : phaseOf(step);
@@ -101,7 +100,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   q(pill, '.owner .turn').textContent = `T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}`;
   drawTrack(pill, model, step, phase, myTurn, actions);
   drawWaiting(pill, model);
-  drawUntil(pill, model, myTurn, opponentLabel);
+  drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
   q(pill, '.caret').innerHTML = glyph(myTurn ? 'up' : 'down', 12);
   pill.classList.toggle('open', open);
   pill.classList.toggle('priority', !!me(model)?.HasPriority);
@@ -111,7 +110,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   // Opens away from the player who is acting, so their half of the board stays visible
   panel.classList.toggle('above', myTurn);
   if (open) {
-    panel.innerHTML = stopsGrid(model, step, myTurn, opponentLabel);
+    panel.innerHTML = stopsGrid(model, step, myTurn, theirs);
     wireGrid(panel, actions);
   }
 }
@@ -175,16 +174,26 @@ function drawPips(root: HTMLElement, phase: Phase, step: number, stops: Set<stri
     });
 }
 
+/** Whose turns the opponents' row covers: one opponent by name, several together, in the grid and in a sentence. */
+function whoseTurns(model: Model): { turns: string; one: string } {
+  const opponent = opponents(model);
+  if (opponent.length === 1) {
+    const name = opponent[0].Name ?? '';
+    return { turns: `${name}'s turns`, one: `${name}'s` };
+  }
+  return { turns: "Opponents' turns", one: "an opponent's" };
+}
+
 // Only one yield runs at a time, so the chip names whichever it is and where it stops
-function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, opponentLabel: string): void {
+function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: { one: string }, activeName: string): void {
   const controls = model.controls;
   const marker = controls?.marker;
   let text = '';
   if (marker) {
-    const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${opponentLabel}'s `;
+    const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${theirs.one} `;
     text = `until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}`;
   } else if (controls?.untilEndOfTurn) {
-    text = myTurn ? 'until end of your turn' : `until end of ${opponentLabel}'s turn`;
+    text = myTurn ? 'until end of your turn' : `until end of ${activeName}'s turn`;
   } else if (controls?.untilStackEmpty) {
     text = 'until the stack clears';
   }
@@ -224,12 +233,12 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   }
 }
 
-function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: string): string {
+function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: { turns: string }): string {
   const marker = model.controls?.marker;
   // Your own turns always head the grid, whoever's turn it is now
   const rows = [
     { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
-    { mine: false, label: `${escapeHtml(opponentLabel)}'s turns`, stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
+    { mine: false, label: escapeHtml(theirs.turns), stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
   ];
   const gap = (i: number) => (i > 0 && phaseOf(i) !== phaseOf(i - 1)) ? '<td class="gap"></td>' : '';
   // Steps sit under their phase, which a bracketed heading spans
@@ -240,7 +249,7 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, opponentLabel: s
   const body = rows.map(r => `<tr class="${r.now ? 'active' : ''}">` + `<td class="who">${r.label}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
-    const title = `${s[2]} · ${r.mine ? 'your turns' : `${opponentLabel}'s turns`}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
+    const title = `${s[2]} · ${r.mine ? 'your turns' : theirs.turns}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + '</tr>').join('');

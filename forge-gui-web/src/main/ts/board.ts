@@ -269,6 +269,10 @@ function announceTurn(model: Model, g: GameView): void {
     return;
   }
   const mine = isLocal(model, active);
+  // With several opponents most turns are someone else's, and the phase pill already names whose it is
+  if (!mine && players(model).length > 2) {
+    return;
+  }
   const banner = document.createElement('div');
   banner.className = `turn-banner${mine ? ' mine' : ''}`;
   banner.textContent = mine ? 'Your turn' : `${active.Name}'s turn`;

@@ -1,5 +1,6 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images';
-import { game, type Model } from './model';
+import { deref, game, type Model } from './model';
+import { playerAvatarUrl } from './looks';
 import { hoverable } from './detail';
 import { stepName } from './phasebar';
 import { byId, q } from './dom';
@@ -7,7 +8,7 @@ import { changeUi, ui } from './ui';
 import { isSilent } from './volume';
 import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
-import type { PromptButton, Ref } from './protocol';
+import type { PlayerView, PromptButton, Ref } from './protocol';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
@@ -42,6 +43,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
         <img class="prompt-card" alt="" hidden>
         <p class="message"></p>
       </div>
+      <div class="choose-players" hidden></div>
       <div class="buttons">
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
@@ -65,6 +67,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
   }
   volume.classList.toggle('open', ui.volumeOpen);
   if (model.spectating) {
+    renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);
     q(root, '.message').textContent = 'Two AI players. You are spectating.';
     return;
@@ -87,6 +90,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
     cancel.onclick = () => finishCountdown(false);
     fill(ok, passing.id, passing.ms);
     root.classList.add('waiting');
+    renderPlayerChoices(root, model, [], actions);
     return;
   }
   fill(ok, null, 0);
@@ -102,10 +106,40 @@ export function renderPrompt(model: Model, actions: Actions): void {
   q(root, '.step').textContent = heading ? lines[0] : p.priority ? 'Priority' : stepName(game(model)?.Phase);
   setSymbolText(q(root, '.message'), (heading ? lines.slice(1) : lines).join(' ').trim());
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
+  renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
   root.classList.toggle('waiting', !!p.ok?.enabled || !!p.cancel?.enabled);
+}
+
+/**
+ * The players a prompt lets you pick who have no seat on the board to click, offered as buttons in the prompt. The
+ * board draws one opponent, so in a game of three or more the others are reached from here.
+ */
+function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly Ref[], actions: Actions): void {
+  const box = q(root, '.choose-players');
+  const offBoard = choices.filter(r => !document.querySelector(`.seat[data-player="${r.ref}"]`));
+  const key = offBoard.map(r => r.ref).join(',');
+  if (box.dataset.key === key) {
+    return;
+  }
+  box.dataset.key = key;
+  box.hidden = !offBoard.length;
+  box.replaceChildren(...offBoard.map(r => {
+    const player = deref(model, r) as PlayerView | undefined;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'choose-player';
+    const face = document.createElement('img');
+    face.alt = '';
+    face.src = player ? playerAvatarUrl(player) : '';
+    const name = document.createElement('span');
+    name.textContent = player?.Name ?? '';
+    button.append(face, name);
+    button.onclick = () => actions.selectPlayer(r.ref);
+    return button;
+  }));
 }
 
 // The pass button fills over the countdown, from empty, once for each pass on its way

@@ -357,7 +357,9 @@ html[data-motion="off"] .zone-tile .ambient { display: none; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
 .card > img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
 .card .cost-badge { display: none; }
-.card .frame { position: absolute; inset: 0; display: grid; gap: 2px; padding: 6px; font-size: 10px; align-content: start; border: 1px solid var(--line); border-radius: var(--radius); }
+/* The text face under a card's picture, for while it loads or when there is none; kept inside the card, since a long
+   type line on a small card otherwise hangs out below it */
+.card .frame { position: absolute; inset: 0; display: grid; gap: 2px; padding: 6px; font-size: 10px; align-content: start; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); }
 .card.noimg img { display: none; }
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }

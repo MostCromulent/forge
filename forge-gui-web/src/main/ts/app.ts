@@ -3,7 +3,7 @@
 // arrangement. Nothing it draws with sends anything itself.
 
 import { connect } from './net';
-import { createModel, applyState } from './model';
+import { createModel, applyState, isLocal, players } from './model';
 import { createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
@@ -11,7 +11,7 @@ import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
 import { renderMatch, resetTable } from './board';
 import { renderPrompt, flash } from './prompt';
-import { appendLog, initLog } from './log';
+import { appendLog, initLog, logTints } from './log';
 import { initSide, renderSide, renderSky } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
@@ -230,7 +230,9 @@ function apply(msg: ServerMessage): void {
       onServerSettings(msg.settings);
       stopMemory.onControls(msg, !model.host);
       break;
-    case 'log': appendLog(msg); return;
+    case 'log':
+      appendLog(msg, logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) }))));
+      return;
     case 'detail': model.cardDetails.set(msg.key, msg); break;
     case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
     case 'stackMenu': model.stackMenu = msg; break;
