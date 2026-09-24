@@ -123,7 +123,12 @@
   box-shadow: 0 14px 32px #00000052;
 }
 /* Half the height of a full card, so a second row of modes fits without the page changing shape */
-.mode-art { height: 96px; border-bottom: 1px solid var(--line-bright); background: radial-gradient(95% 130% at 50% 0%, var(--back-a) 0%, var(--bg) 76%); }
+.mode-art { height: 96px; display: grid; place-items: center; border-bottom: 1px solid var(--line-bright); background: radial-gradient(95% 130% at 50% 0%, var(--back-a) 0%, var(--bg) 76%); }
+.mode-art svg { width: 46px; height: 46px; fill: none; stroke: var(--mode-tint); stroke-width: 2.1; stroke-linecap: round; stroke-linejoin: round; }
+/* Each mode keeps one tint for its icon and its status line */
+.mode { --mode-tint: var(--accent-2); }
+.mode[data-mode="multiplayer"] { --mode-tint: #6fd2c8; }
+.mode:disabled { --mode-tint: var(--muted); }
 .mode[data-mode="multiplayer"] .mode-art { background: radial-gradient(95% 130% at 50% 0%, #172a2c 0%, var(--bg) 76%); }
 .mode:disabled .mode-art { background: var(--bg); border-bottom-style: dashed; }
 .mode-text { display: grid; gap: 5px; padding: 15px 18px 16px; }
@@ -132,8 +137,7 @@
 .mode-name { font-size: 17px; font-weight: 700; }
 .mode-blurb { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
 /* What this mode holds for you right now, which is the part worth reading twice */
-.mode-status { color: var(--accent-2); font-size: 11.5px; margin-top: 3px; }
-.mode:disabled .mode-status { color: var(--muted); }
+.mode-status { color: var(--mode-tint); font-size: 11.5px; margin-top: 3px; }
 
 /* --- lobby ------------------------------------------------------------ */
 

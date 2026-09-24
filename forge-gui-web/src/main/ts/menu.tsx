@@ -4,6 +4,7 @@
 //
 // Past that, a browser holding the seat gets the menu; every other one is told to wait for a table.
 
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { avatarUrl } from './looks';
@@ -60,10 +61,17 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
+// A robot for the computer, two people for friends, a fanned deck for the editor
+const MODE_ICONS: Record<string, ComponentChildren> = {
+  play: <><rect x="11" y="15" width="26" height="22" rx="4" /><path d="M24 15V9M19 25h2M27 25h2M19 31h10" /><circle cx="24" cy="7" r="2.4" /><path d="M6 22v8M42 22v8" /></>,
+  multiplayer: <><circle cx="18" cy="17" r="6" /><path d="M8 38c0-5.5 4.5-10 10-10s10 4.5 10 10" /><circle cx="34" cy="20" r="4.6" /><path d="M28.5 34c1-4 4-6.6 8-6.6 3.2 0 5.5 1.6 5.5 1.6" /></>,
+  editor: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
+};
+
 function Mode({ id, name, blurb, status, onClick }: { id: string; name: string; blurb: string; status: string; onClick?: () => void }) {
   return (
     <button class="mode" data-mode={id} disabled={!onClick} onClick={onClick}>
-      <span class="mode-art" aria-hidden="true" />
+      <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{MODE_ICONS[id]}</svg></span>
       <span class="mode-text">
         <span class="mode-name">{name}</span>
         <span class="mode-blurb">{blurb}</span>
