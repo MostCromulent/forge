@@ -39,8 +39,8 @@ export interface Actions {
   setSetting(key: string, value: string): void;
 
   // The start page
-  /** The name this browser plays under. The server refuses one another player already has. */
-  setName(name: string): void;
+  /** The name and face this browser plays under. The server refuses a name another player already has. */
+  setName(name: string, avatar: number): void;
   /** Opens a table against the computer, or one others can join by link. */
   openLobby(invite: boolean): void;
   claimHost(): void;
@@ -92,7 +92,7 @@ export function createActions(send: Send): Actions {
     stackYield: (key, action) => send({ t: 'stackYield', key, action }),
     say: text => send({ t: 'chat', text }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
-    setName: name => send({ t: 'setName', name }),
+    setName: (name, avatar) => send({ t: 'setName', name, avatar }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),
     claimHost: () => send({ t: 'claimHost' }),
     quit: () => send({ t: 'quit' }),

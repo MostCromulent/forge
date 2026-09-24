@@ -74,6 +74,8 @@ public final class WebSession {
     private volatile PlayerSettings settings = PlayerSettings.fresh();
     /** The name this browser chose to play under; null until it has chosen one. */
     private volatile String name;
+    /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
+    private volatile Integer avatar;
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -206,7 +208,10 @@ public final class WebSession {
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
             case "decks" -> channel.send(lobby.decks());
-            case "setName" -> rename(channel, Wire.decode(msg, SetName.class).name());
+            case "setName" -> {
+                final SetName chosen = Wire.decode(msg, SetName.class);
+                rename(channel, chosen.name(), chosen.avatar());
+            }
             case "claimHost" -> {
                 if (!sessions.claimHost(this)) {
                     channel.send(error("Someone else is already hosting."));
@@ -368,6 +373,7 @@ public final class WebSession {
             gui.close();
             return;
         }
+        applyChosenAvatar();
         channel.send(lobby.decks());
         channel.send(lobby.state());
         sessions.hostGameOpened();
@@ -406,6 +412,7 @@ public final class WebSession {
                 local.close();
                 return;
             }
+            applyChosenAvatar();
             final BrowserChannel b = browser;
             if (b != null) {
                 b.send(lobby.decks());
@@ -453,15 +460,28 @@ public final class WebSession {
      * cannot share a netplay game, which tells its clients apart by name. A guest waiting for a name takes its
      * seat as soon as it has one.
      */
-    private void rename(final BrowserChannel channel, final String wanted) {
+    private void rename(final BrowserChannel channel, final String wanted, final Integer face) {
         final String problem = nameProblem(wanted);
         if (problem != null) {
             channel.send(error(problem));
             return;
         }
         name = wanted.trim();
+        if (face != null) {
+            avatar = face;
+        }
+        applyChosenAvatar();
         channel.send(hello());
         joinHostGame();
+    }
+
+    /** Puts the face chosen on the start page on this session's seat, once it has one. */
+    private void applyChosenAvatar() {
+        final Integer face = avatar;
+        final int seat = local.webSeat();
+        if (face != null && seat >= 0 && stage instanceof Setup) {
+            lobby.setAvatar(seat, face);
+        }
     }
 
     /** Why a name cannot be this player's, or null if it can. */

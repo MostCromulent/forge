@@ -27,9 +27,9 @@ final class FromBrowser {
     record Bare(Plain t) {
     }
 
-    /** The name this browser plays under, chosen before anything else. */
+    /** The name and face this browser plays under, both chosen before anything else. */
     @Command("setName")
-    record SetName(String name) {
+    record SetName(String name, @Nullable Integer avatar) {
     }
 
     @Command("chat")

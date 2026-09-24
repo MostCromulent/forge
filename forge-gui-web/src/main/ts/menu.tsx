@@ -1,15 +1,27 @@
-// The first screen: what you can do, and where each one stands. A mode says what it holds for you
-// ("14 decks", "no decks yet") rather than repeating its own name, so the page is worth reading once.
+// The first screen: the name and face you play under, and whether you are the one opening the game. Those used
+// to be two pages, but the host seat is only ever offered to a browser holding the host's link while nobody
+// holds the seat, so the offer costs one checkbox and everyone else never sees it.
 //
-// Only the browser holding the host's seat sees this. Nobody holds it by arriving: the seat is offered to
-// whoever asks first, and every other browser goes straight to a seat in the host's game.
+// Past that, a browser holding the seat gets the menu; every other one is told to wait for a table.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { LookPicker } from './lookpicker';
+import { avatarUrl } from './looks';
 import type { Actions } from './actions';
 import type { Model } from './model';
 
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
+
+/** Magic's five colours, the one place they are pure decoration: no card art nearby and nothing encoded by hue. */
+function Wordmark() {
+  return (
+    <div class="wordmark-block">
+      <span class="wordmark">Forge</span>
+      <span class="colours" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+    </div>
+  );
+}
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const [renaming, setRenaming] = useState(false);
@@ -18,7 +30,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   if (renaming) {
     return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => setRenaming(false)} />;
   }
-  // A browser without the host's seat has no menu: it is offered the seat, or told to wait for one
+  // A browser without the host's seat has no menu: it waits for somebody to open a table
   if (!model.host) {
     return <Waiting model={model} actions={actions} />;
   }
@@ -27,20 +39,23 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   // and greyed so nothing looks broken
   return (
     <div class="menu-page">
-      <h1 class="wordmark">Forge</h1>
+      <header class="menu-head">
+        <Wordmark />
+        <div class="menu-who">
+          <img class="menu-face" alt="" src={avatarUrl(rememberedAvatar())} />
+          <span class="menu-name">{model.playerName}</span>
+          <button class="link" onClick={() => setRenaming(true)}>Change name</button>
+          <button onClick={() => actions.quit()}>Quit Forge</button>
+        </div>
+      </header>
       <div class="modes">
-        <Mode id="play" name="Offline" blurb="A match against the computer"
+        <Mode id="play" name="Play the computer" blurb="One match against Forge's AI. Nothing to set up."
           status={decks ? `${decks} decks ready` : 'no decks yet — a precon will do'} onClick={() => actions.openLobby(false)} />
-        <Mode id="multiplayer" name="Multiplayer" blurb="Send a friend a link to your game"
-          status="opens a seat and gives you a link" onClick={() => actions.openLobby(true)} />
-        <Mode id="editor" name="Deck editor" blurb="Build and change decks" status="not built yet" />
+        <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
+          status="Gives you a link to share" onClick={() => actions.openLobby(true)} />
+        <Mode id="editor" name="Decks" blurb="Build and change decks in the browser." status="Not built yet" />
       </div>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
-      <div class="menu-foot">
-        <span>{model.playerName ? `Playing as ${model.playerName}` : ''}</span>
-        <button class="link" onClick={() => setRenaming(true)}>Change name</button>
-        <button onClick={() => actions.quit()}>Quit</button>
-      </div>
     </div>
   );
 }
@@ -48,50 +63,98 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
 function Mode({ id, name, blurb, status, onClick }: { id: string; name: string; blurb: string; status: string; onClick?: () => void }) {
   return (
     <button class="mode" data-mode={id} disabled={!onClick} onClick={onClick}>
-      <span class="mode-name">{name}</span>
-      <span class="mode-blurb">{blurb}</span>
-      <span class="mode-status">{status}</span>
+      <span class="mode-art" aria-hidden="true" />
+      <span class="mode-text">
+        <span class="mode-name">{name}</span>
+        <span class="mode-blurb">{blurb}</span>
+        <span class="mode-status">{status}</span>
+      </span>
     </button>
   );
 }
 
 /**
- * The name to play under, asked for before anything else. Every browser shares the server's one set of
- * preferences, so nobody can be named from them but the host; and two players of one name cannot share a game.
+ * The name and face to play under, asked for before anything else, along with the host seat while it is free.
+ * Every browser shares the server's one set of preferences, so nobody can be named from them but the host;
+ * and two players of one name cannot share a game.
  */
 export function NamePrompt({ model, actions, initial = '', cancel }: {
   model: Model; actions: Actions; initial?: string; cancel?: () => void;
 }) {
   const [value, setValue] = useState(initial);
+  const [avatar, setAvatar] = useState(rememberedAvatar);
+  const [picking, setPicking] = useState(false);
+  const [takeHost, setTakeHost] = useState(true);
   const input = useRef<HTMLInputElement>(null);
   useEffect(() => {
     input.current?.focus();
   }, []);
   // A name this browser used before is being offered already, so asking again would only flash past
   if (model.nameSent) {
-    return <div class="menu-page"><h1 class="wordmark">Forge</h1></div>;
+    return <div class="menu-page start"><Wordmark /></div>;
   }
+  // Changing your name later is not the moment to be offered a seat you may already hold
+  const offerHost = !cancel && model.canClaimHost;
   return (
-    <div class="menu-page">
-      <h1 class="wordmark">Forge</h1>
-      <form class="name-form" onSubmit={e => {
+    <div class="menu-page start">
+      <Wordmark />
+      <form class="start-card" onSubmit={e => {
         e.preventDefault();
-        if (value.trim()) actions.setName(value.trim());
+        const name = value.trim();
+        if (!name) {
+          return;
+        }
+        rememberAvatar(avatar);
+        // The seat is taken first, so the name reaches a session that already knows it is the host and does
+        // not set off a join as a guest
+        if (offerHost && takeHost) {
+          actions.claimHost();
+        }
+        actions.setName(name, avatar);
       }}>
-        <label for="player-name">What should the other players call you?</label>
-        <input id="player-name" ref={input} value={value} maxLength={MAX_NAME_LENGTH} autocomplete="nickname"
-          onInput={e => setValue(e.currentTarget.value)} />
-        <div class="name-buttons">
+        <div class="start-field">
+          <label for="player-name">What should we call you?</label>
+          <div class="name-row">
+            <button type="button" class="face" title="Select avatar" aria-label="Select avatar" onClick={() => setPicking(true)}>
+              <img alt="" src={avatarUrl(avatar)} />
+              <span class="face-edit" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4.5 19.5h5L20 9a2.6 2.6 0 0 0-3.7-3.7L5.8 15.8z" /></svg>
+              </span>
+            </button>
+            <input id="player-name" ref={input} value={value} maxLength={MAX_NAME_LENGTH} autocomplete="nickname"
+              onInput={e => setValue(e.currentTarget.value)} />
+          </div>
+        </div>
+        {offerHost && (
+          <label class="host-box">
+            <input type="checkbox" checked={takeHost} onChange={e => setTakeHost(e.currentTarget.checked)} />
+            <span class="host-text">
+              <b>Host the game</b>
+              <span>You choose the format and start the match. Everyone else joins the table you open.</span>
+            </span>
+          </label>
+        )}
+        <div class="start-buttons">
           {cancel && <button type="button" onClick={cancel}>Cancel</button>}
           <button type="submit" class="primary" disabled={!value.trim()}>{cancel ? 'Change' : 'Continue'}</button>
         </div>
       </form>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
+      {picking && (
+        <LookPicker title="Choose your avatar" count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl} current={avatar}
+          close={chosen => {
+            setPicking(false);
+            if (chosen !== null) {
+              setAvatar(chosen);
+            }
+          }} />
+      )}
     </div>
   );
 }
 
 const NAME_KEY = 'forge.playerName';
+const AVATAR_KEY = 'forge.avatar';
 
 /** The name this browser last played under, offered for it when it arrives on a server that does not know it. */
 export function rememberedName(): string | null {
@@ -111,53 +174,31 @@ export function rememberName(name: string | null): void {
   }
 }
 
-/** Remembered so the browser that runs this server does not have to say so on every launch. */
-const HOSTED_KEY = 'forge.hostedBefore';
-
-export function hostedBefore(): boolean {
+/** The face this browser last played under. The first avatar is as good a default as any. */
+export function rememberedAvatar(): number {
   try {
-    return localStorage.getItem(HOSTED_KEY) === '1';
+    const saved = Number(localStorage.getItem(AVATAR_KEY));
+    return Number.isInteger(saved) && saved >= 0 ? saved : 0;
   } catch {
-    return false;
+    return 0;
   }
 }
 
-/**
- * A browser with no seat. Nobody hosts by arriving, so while the host's seat is free this offers it. A browser
- * that has hosted this server before is given it back by the controller without being asked again.
- */
-function Waiting({ model, actions }: { model: Model; actions: Actions }) {
-  if (!model.canClaimHost) {
-    return (
-      <div class="menu-page">
-        <h1 class="wordmark">Forge</h1>
-        <p class="menu-note">Waiting for the host to open a game.</p>
-      </div>
-    );
+export function rememberAvatar(index: number): void {
+  try {
+    localStorage.setItem(AVATAR_KEY, String(index));
+  } catch {
+    // Storage can be unavailable; the face is then chosen again next time
   }
-  const host = () => {
-    try {
-      localStorage.setItem(HOSTED_KEY, '1');
-    } catch {
-      // Storage can be unavailable; the choice then has to be made again next launch
-    }
-    actions.claimHost();
-  };
+}
+
+/** A browser with no seat, waiting for somebody to open a table. */
+function Waiting({ model, actions }: { model: Model; actions: Actions }) {
   return (
     <div class="menu-page">
-      <h1 class="wordmark">Forge</h1>
-      <p class="menu-note">Nobody is running a game on this server yet.</p>
-      <div class="connect">
-        <section class="connect-card">
-          <h2>Host the game</h2>
-          <p>You set the table, pick the format and start the match. Everyone else joins you.</p>
-          <button id="be-host" class="primary" onClick={host}>Host</button>
-        </section>
-        <section class="connect-card">
-          <h2>Wait for a host</h2>
-          <p>Someone else takes the seat. You are given one of your own as soon as they open a game.</p>
-        </section>
-      </div>
+      <Wordmark />
+      <p class="menu-note">{model.canClaimHost ? 'Nobody has opened a table yet.' : 'Waiting for a table to open.'}</p>
+      {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Open one yourself</button>}
     </div>
   );
 }

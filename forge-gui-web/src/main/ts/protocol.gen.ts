@@ -319,6 +319,7 @@ export interface Bare {
 export interface SetName {
   t: 'setName';
   name: string;
+  avatar?: number;
 }
 
 export interface Say {

@@ -7,7 +7,7 @@ import { createModel, applyState } from './model';
 import { createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
-import { hostedBefore, rememberName, rememberedName } from './menu';
+import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
 import { renderMatch, resetTurnBanner } from './board';
 import { renderPrompt, flash } from './prompt';
@@ -25,8 +25,7 @@ import type { Notice, ServerMessage } from './protocol';
 
 const model = createModel();
 let scheduled = false;
-// Asked once each, so a slow answer is not asked for again on every message that arrives meanwhile
-let claimed = false;
+// Asked once, so a slow answer is not asked for again on every message that arrives meanwhile
 let askedAddresses = false;
 // A guest's settings live in its session on the server, so each connection is given back what the browser remembers
 let restored = false;
@@ -56,10 +55,6 @@ const actions: Actions = {
   startMatch: spectate => {
     startMusic();
     wire.startMatch(spectate);
-  },
-  claimHost: () => {
-    claimed = true;
-    wire.claimHost();
   },
   // The engine thread waits on the answer, so the question goes as soon as it is answered
   answerHostChoice: (id, value) => {
@@ -244,7 +239,7 @@ function offerRememberedName(): void {
   const name = rememberedName();
   if (name) {
     model.nameSent = true;
-    send({ t: 'setName', name });
+    send({ t: 'setName', name, avatar: rememberedAvatar() });
   }
 }
 
@@ -277,7 +272,6 @@ function render(): void {
   byId('menu').hidden = page !== 'menu' && page !== 'name';
   byId('lobby').hidden = page !== 'lobby';
   byId('match').hidden = page !== 'match';
-  reclaimHostSeat();
   renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {
     return;
@@ -287,11 +281,4 @@ function render(): void {
   renderPrompt(model, actions);
   renderDetail(model);
   drawOverlay(model);
-}
-
-// A browser that has hosted this server before takes the free host seat back without being asked
-function reclaimHostSeat(): void {
-  if (!model.host && model.canClaimHost && !claimed && hostedBefore()) {
-    actions.claimHost();
-  }
 }
