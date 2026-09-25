@@ -4,6 +4,7 @@
 // browser need not know what that was.
 
 import type { Controls, PhaseType } from './protocol';
+import { storeJson, storedJson } from './storage';
 
 export interface RememberedStops {
   mine: PhaseType[];
@@ -42,19 +43,7 @@ export function createStopMemory(store: StopStore): StopMemory {
 /** The browser's storage, which can be unavailable; the stops then last as long as the session. */
 export function localStopStore(key: string): StopStore {
   return {
-    load() {
-      try {
-        return JSON.parse(localStorage.getItem(key) ?? 'null');
-      } catch {
-        return null;
-      }
-    },
-    save(stops) {
-      try {
-        localStorage.setItem(key, JSON.stringify(stops));
-      } catch {
-        // Nowhere to keep them; the server has them until it stops
-      }
-    },
+    load: () => storedJson(key, null),
+    save: stops => storeJson(key, stops),
   };
 }

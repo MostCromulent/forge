@@ -9,6 +9,7 @@ import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
 import type { Model } from './model';
 import type { CatalogueRow, EditorState } from './protocol';
+import { store, stored } from './storage';
 
 const SEARCH_DEBOUNCE_MS = 200;
 const COLOURS: [string, string][] = [['W', 'White'], ['U', 'Blue'], ['B', 'Black'], ['R', 'Red'], ['G', 'Green'], ['C', 'Colourless']];
@@ -118,8 +119,8 @@ export function Catalogue({ model, actions, state, handlers }: {
               {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
             </select>}
         <span class="seg" role="group" aria-label="View">
-          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); storeView('cards'); }}>Cards</button>
-          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); storeView('table'); }}>Table</button>
+          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>Cards</button>
+          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>Table</button>
         </span>
       </div>
       <div class="filter-band">
@@ -260,17 +261,5 @@ function shownLine(total: number | undefined, text: string, commandersOnly: bool
 }
 
 function storedView(): 'cards' | 'table' {
-  try {
-    return localStorage.getItem(VIEW_KEY) === 'table' ? 'table' : 'cards';
-  } catch {
-    return 'cards';
-  }
-}
-
-function storeView(view: 'cards' | 'table'): void {
-  try {
-    localStorage.setItem(VIEW_KEY, view);
-  } catch {
-    // Storage can be unavailable; the view then resets to cards next time
-  }
+  return stored(VIEW_KEY) === 'table' ? 'table' : 'cards';
 }

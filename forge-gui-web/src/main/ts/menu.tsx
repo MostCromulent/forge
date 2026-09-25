@@ -11,6 +11,7 @@ import { changeUi } from './ui';
 import { avatarUrl } from './looks';
 import type { Actions } from './actions';
 import type { Model } from './model';
+import { store, stored } from './storage';
 
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
@@ -171,38 +172,21 @@ const AVATAR_KEY = 'forge.avatar';
 
 /** The name this browser last played under, offered for it when it arrives on a server that does not know it. */
 export function rememberedName(): string | null {
-  try {
-    return localStorage.getItem(NAME_KEY);
-  } catch {
-    return null;
-  }
+  return stored(NAME_KEY);
 }
 
 export function rememberName(name: string | null): void {
-  try {
-    if (name) localStorage.setItem(NAME_KEY, name);
-    else localStorage.removeItem(NAME_KEY);
-  } catch {
-    // Storage can be unavailable; the name is then asked for again next time
-  }
+  store(NAME_KEY, name || null);
 }
 
 /** The face this browser last played under. The first avatar is as good a default as any. */
 export function rememberedAvatar(): number {
-  try {
-    const saved = Number(localStorage.getItem(AVATAR_KEY));
-    return Number.isInteger(saved) && saved >= 0 ? saved : 0;
-  } catch {
-    return 0;
-  }
+  const saved = Number(stored(AVATAR_KEY));
+  return Number.isInteger(saved) && saved >= 0 ? saved : 0;
 }
 
 export function rememberAvatar(index: number): void {
-  try {
-    localStorage.setItem(AVATAR_KEY, String(index));
-  } catch {
-    // Storage can be unavailable; the face is then chosen again next time
-  }
+  store(AVATAR_KEY, String(index));
 }
 
 /**

@@ -3,6 +3,7 @@
 
 import type { KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
+import { storeJson, storedJson } from './storage';
 
 const LOCAL_KEY = 'forge.settings';
 /** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
@@ -105,11 +106,7 @@ export function setGuest(value: boolean): void {
 export function initSettings(save: (key: string, value: string) => void, schedule: () => void): void {
   saveOnServer = save;
   redraw = schedule;
-  try {
-    local = JSON.parse(localStorage.getItem(LOCAL_KEY) ?? '{}');
-  } catch {
-    local = {};
-  }
+  local = storedJson(LOCAL_KEY, {});
   apply();
 }
 
@@ -139,11 +136,7 @@ export function restoreGuestSettings(): void {
 }
 
 function guestSettings(): Record<string, SettingValue> {
-  try {
-    return JSON.parse(localStorage.getItem(GUEST_KEY) ?? '{}') ?? {};
-  } catch {
-    return {};
-  }
+  return storedJson(GUEST_KEY, {});
 }
 
 export function set(key: string, value: SettingValue): void {
@@ -153,19 +146,11 @@ export function set(key: string, value: SettingValue): void {
     (server as Record<string, SettingValue>)[key] = value;
     saveOnServer(key, String(value));
     if (guest) {
-      try {
-        localStorage.setItem(GUEST_KEY, JSON.stringify({ ...guestSettings(), [key]: value }));
-      } catch {
-        // A browser with storage blocked keeps the setting for this session only
-      }
+      storeJson(GUEST_KEY, { ...guestSettings(), [key]: value });
     }
   } else {
     local[key] = value;
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
-    } catch {
-      // A browser with storage blocked keeps the setting for this session only
-    }
+    storeJson(LOCAL_KEY, local);
   }
   apply();
   redraw();
@@ -188,11 +173,7 @@ export function setKeys(keys: KeyBindings): void {
   for (const d of KEY_SETTINGS) {
     local[d.key] = keys[d.action];
   }
-  try {
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
-  } catch {
-    // A browser with storage blocked keeps the setting for this session only
-  }
+  storeJson(LOCAL_KEY, local);
   redraw();
 }
 

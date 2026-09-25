@@ -9,6 +9,7 @@ import { showNotice } from './notices';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
 import type { DeckSection, EditorCard, EditorState } from './protocol';
+import { store, stored } from './storage';
 
 const GROUP_KEY = 'forge.groupBy';
 const HAND = 7;
@@ -43,7 +44,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
           <select aria-label="Group by" value={by} onChange={e => {
             const next = e.currentTarget.value as GroupBy;
             setBy(next);
-            storeGroup(next);
+            store(GROUP_KEY, next);
           }}>
             <option value="type">Group: Type</option>
             <option value="mv">Group: Mana value</option>
@@ -191,18 +192,6 @@ function showProblems(): void {
 }
 
 function storedGroup(): GroupBy {
-  try {
-    const saved = localStorage.getItem(GROUP_KEY);
-    return saved === 'mv' || saved === 'colour' ? saved : 'type';
-  } catch {
-    return 'type';
-  }
-}
-
-function storeGroup(by: GroupBy): void {
-  try {
-    localStorage.setItem(GROUP_KEY, by);
-  } catch {
-    // Storage can be unavailable; the grouping then resets to type next time
-  }
+  const saved = stored(GROUP_KEY);
+  return saved === 'mv' || saved === 'colour' ? saved : 'type';
 }

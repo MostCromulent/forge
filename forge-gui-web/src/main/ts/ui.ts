@@ -3,6 +3,7 @@
 // clears it at once.
 
 import type { Aside } from './protocol';
+import { storeJson, storedJson } from './storage';
 
 /** The card or player the pointer is over, whose details the zoom panel shows. A card's src is its image, empty
  *  when the viewer may not see it, and at is the element it was hovered in, so its preview can be put beside it. */
@@ -117,18 +118,9 @@ export function resetMatchUi(): void {
 }
 
 export function rememberSidePanels(): void {
-  try {
-    localStorage.setItem(SIDE_KEY, JSON.stringify(ui.sidePanels));
-  } catch {
-    // Storage can be unavailable; the choice then lasts until reload
-  }
+  storeJson(SIDE_KEY, ui.sidePanels);
 }
 
 function storedSidePanels(): Partial<UiState['sidePanels']> {
-  try {
-    return JSON.parse(localStorage.getItem(SIDE_KEY) ?? 'null') ?? {};
-  } catch {
-    // Storage can be unavailable or hold something else; the defaults then last until reload
-    return {};
-  }
+  return storedJson(SIDE_KEY, {});
 }
