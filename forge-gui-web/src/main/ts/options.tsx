@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
 import { KeyControl } from './keysdialog';
-import { SETTINGS, set, setting, type SettingDef } from './settings';
+import { SETTINGS, isGuest, set, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 
 // Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
@@ -28,7 +28,7 @@ export function Options({ close }: { close: () => void }) {
   useEffect(() => {
     search.current?.focus();
   }, []);
-  const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu), query);
+  const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu && !(def.hostOnly && isGuest())), query);
   return (
     <OptionsDialog title="Options" close={close}
       head={<input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"

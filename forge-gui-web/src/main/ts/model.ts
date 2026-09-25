@@ -1,6 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
+import type { DevState } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -72,6 +73,8 @@ export interface Model {
   drawOffer: DrawOffer | null;
   /** The auto-yields and trigger answers the player has set, as last asked for. */
   autoDecisions: AutoDecisions | null;
+  /** Where dev mode's switches stand for the host's seat, once asked. */
+  devState: DevState | null;
   /** The deck open in the editor; the editor page shows while there is one. */
   editor: EditorState | null;
   /** The catalogue's rows so far: the pages asked for since the query last changed. */
@@ -98,7 +101,7 @@ export function createModel(): Model {
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
-    drawOffer: null, autoDecisions: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
+    drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, limitedOptions: null, limitedPools: null,
   };
 }

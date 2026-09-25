@@ -20,7 +20,7 @@ import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGue
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
-import { byId } from './dom';
+import { byId, saveText } from './dom';
 import { initNotices } from './notices';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './devicedecks';
 import type { Notice, ServerMessage } from './protocol';
@@ -317,6 +317,8 @@ function apply(msg: ServerMessage): void {
     case 'playerDetail': model.playerDetails.set(msg.key, msg); break;
     case 'stackMenu': model.stackMenu = msg; break;
     case 'notice': notify(msg); break;
+    case 'devState': model.devState = msg; break;
+    case 'devDump': saveText(msg.text, 'game-state.txt', 'text/plain'); return;
     case 'flash': flash(); return;
     default: break;
   }

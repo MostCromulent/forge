@@ -63,6 +63,11 @@ final class PlayerSettings {
         return value != null ? value : pref.getDefault();
     }
 
+    /** Whether these are the host's, which are Forge's own preferences. */
+    boolean shared() {
+        return own == null;
+    }
+
     boolean getBoolean(final FPref pref) {
         return Boolean.parseBoolean(get(pref));
     }

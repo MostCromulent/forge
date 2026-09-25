@@ -5,6 +5,7 @@ import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
@@ -41,6 +42,7 @@ final class WebSettings {
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
                 player.get(FPref.UI_TARGETING_OVERLAY),
+                player.getBoolean(FPref.DEV_MODE_ENABLED),
                 "#" + player.get(FPref.UI_ACTIONABLE_HIGHLIGHT_COLOR),
                 // A volume of zero is the off switch, so the two preferences are reported as one number
                 player.getBoolean(FPref.UI_ENABLE_SOUNDS) ? player.getInt(FPref.UI_VOL_SOUNDS) : 0,
@@ -58,6 +60,13 @@ final class WebSettings {
             // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
             // game opened, so a change mid-game has to reach it as well. Before then the seed carries it.
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
+        } else if ("devMode".equals(key)) {
+            final boolean on = Boolean.parseBoolean(value);
+            player.set(FPref.DEV_MODE_ENABLED, on);
+            // Desktop keeps the switch in a static as well, which the draft code and debug output read
+            if (player.shared()) {
+                ForgePreferences.DEV_MODE = on;
+            }
         } else if ("autoYieldMode".equals(key)) {
             setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);

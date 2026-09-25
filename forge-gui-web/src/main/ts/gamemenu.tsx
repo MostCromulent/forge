@@ -3,15 +3,17 @@
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CloseIcon, OptionsDialog, Row } from './options';
-import { SETTINGS, type SettingDef } from './settings';
+import { SETTINGS, setting, type SettingDef } from './settings';
+import { DevItems } from './devmenu';
 import type { Actions } from './actions';
 import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 
 export function GameMenu({ model, actions, close, open }: {
-  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'keys') => void;
+  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'keys' | 'devSetup') => void;
 }) {
   const [armed, setArmed] = useState(false);
+  const [dev, setDev] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   // Above the button that opened it, right edges aligned, since the prompt sits in the bottom-right corner
   useLayoutEffect(() => {
@@ -24,7 +26,8 @@ export function GameMenu({ model, actions, close, open }: {
   const offer = model.drawOffer;
   return (
     <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div ref={menu} class="card-menu game-menu" role="menu" aria-label="Game">
+      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? 'Dev mode' : 'Game'}>
+        {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
           {offer?.mine ? 'Draw offered, waiting for an answer' : 'Offer a draw'}
@@ -35,6 +38,10 @@ export function GameMenu({ model, actions, close, open }: {
           open('decisions');
         }}>Auto-yields and triggers…</button>
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('keys')}>Keys…</button>
+        {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
+        {setting('devMode') && model.host && !model.spectating && (
+          <button type="button" role="menuitem" class="card-menu-item" onClick={() => setDev(true)}>Dev mode ›</button>
+        )}
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
           disabled={model.spectating} onClick={() => {
             if (!armed) {
@@ -46,6 +53,7 @@ export function GameMenu({ model, actions, close, open }: {
           }}>
           {armed ? 'Click again to concede' : 'Concede'}
         </button>
+        </>}
       </div>
     </div>
   );

@@ -20,6 +20,8 @@ interface SettingBase {
   server?: boolean;
   /** Set from the volume control beside the options button rather than in the options dialog. */
   volume?: boolean;
+  /** Only the host has it: a guest's browser leaves it out of the options. */
+  hostOnly?: boolean;
   /** Set in a dialog opened from the game menu rather than in the options dialog. */
   menu?: 'stops' | 'decisions' | 'keys';
 }
@@ -86,6 +88,10 @@ export const SETTINGS: SettingDef[] = [
   { section: 'Keys', key: 'keyNextFace', label: 'Turn the card under the pointer over', action: 'nextFace', type: 'key', menu: 'keys', def: 'f' },
   { section: 'Keys', key: 'keyCardText', label: 'Show the text of the card under the pointer', action: 'cardText', type: 'key', menu: 'keys', def: 't' },
   {
+    section: 'Developer', key: 'devMode', label: 'Dev mode', type: 'toggle', server: true, hostOnly: true, def: false,
+    hint: 'Forge\'s cheats for testing: add cards, set life, set up a game state. In the ⋯ menu during a game.',
+  },
+  {
     section: 'Theme', key: 'customCss', label: 'Custom CSS',
     hint: 'Applied to every screen as you type, and kept in this browser.', type: 'css', def: '',
   },
@@ -102,6 +108,10 @@ let guest = false;
 
 export function setGuest(value: boolean): void {
   guest = value;
+}
+
+export function isGuest(): boolean {
+  return guest;
 }
 
 export function initSettings(save: (key: string, value: string) => void, schedule: () => void): void {

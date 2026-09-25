@@ -82,5 +82,14 @@
 .card-menu-item:disabled:hover { background: none; }
 /* The game menu opens upward from the prompt's ⋯ button; conceding asks twice, and says so the second time */
 .game-menu { min-width: 240px; }
+/* Dev mode's cheats are many more than the menu's own items. The groups flow as newspaper columns, which balance their
+   heights rather than leaving each row as tall as its tallest group, and the menu scrolls if they still do not fit */
+.game-menu { max-height: calc(100vh - 140px); overflow-y: auto; }
+.game-menu.dev { width: min(720px, calc(100vw - 16px)); max-width: none; }
+.dev-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px 10px; }
+.dev-groups { columns: 3 200px; column-gap: 10px; }
+.dev-group { display: grid; gap: 1px; break-inside: avoid; }
+.dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+#options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
 .game-menu .concede { margin-top: 4px; border-top: 1px solid var(--line); border-radius: 0 0 6px 6px; color: var(--danger); }
 .game-menu .concede.armed { background: color-mix(in srgb, var(--danger) 22%, transparent); color: var(--text); font-weight: 700; }
