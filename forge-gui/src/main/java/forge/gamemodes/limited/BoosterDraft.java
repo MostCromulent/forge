@@ -107,16 +107,81 @@ public class BoosterDraft implements IBoosterDraft {
         return draft;
     }
 
+    public static BoosterDraft full() {
+        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Full);
+        draft.setupFull();
+        return draft;
+    }
+
+    /** combo is one set code per pack, joined with "/", or the block's only set's code. */
+    public static BoosterDraft block(final CardBlock block, final String combo, final LimitedPoolType type) {
+        final BoosterDraft draft = new BoosterDraft(type);
+        draft.setupBlock(block, combo);
+        return draft;
+    }
+
+    public static BoosterDraft cube(final CustomLimited cube) {
+        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Custom);
+        draft.setupCube(cube);
+        return draft;
+    }
+
+    /** Throws IllegalArgumentException when no set fits the theme. */
+    public static BoosterDraft chaos(final ThemedChaosDraft theme) {
+        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Chaos);
+        if (!draft.setupChaos(theme)) {
+            throw new IllegalArgumentException("No set fits the theme " + theme.getLabel() + ".");
+        }
+        return draft;
+    }
+
+    /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
+    public static BoosterDraft cubeCobra(final String cubeId) {
+        final CustomLimited imported;
+        try {
+            imported = new CubeImporter(cubeId).importCube();
+        } catch (Exception e) {
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage(), e);
+        }
+        if (imported == null) {
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
+        }
+        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Import);
+        draft.setupCube(imported);
+        return draft;
+    }
+
+    /** A block offered for drafting: it has draft packs, and it is not Conspiracy, whose draft-time prompts only a local GUI can answer. */
+    public static boolean isDraftableBlock(final CardBlock block) {
+        return block.getCntBoostersDraft() > 0 && !block.getName().contains("Conspiracy");
+    }
+
+    /** The sets a block offers for its draft packs, in the order desktop lists them. */
+    public static List<String> blockSets(final CardBlock block) {
+        final List<CardEdition> cardSets = block.getSets();
+        final Stack<String> sets = new Stack<>();
+        for (int k = cardSets.size() - 1; k >= 0; k--) {
+            sets.add(cardSets.get(k).getCode());
+        }
+
+        for (final String setCode : block.getMetaSetNames()) {
+            if (block.getMetaSet(setCode).isDraftable()) {
+                sets.push(setCode); // to the beginning
+            }
+        }
+        return sets;
+    }
+
+    /** Desktop's preset combinations for a block, or an empty list when it asks for one set per pack instead. */
+    public static List<String> blockCombos(final CardBlock block) {
+        final List<String> sets = blockSets(block);
+        return block.getCntBoostersDraft() == 3 && sets.size() > 1 && sets.size() < 4 ? getSetCombos(sets) : new ArrayList<>();
+    }
+
     protected boolean generateProduct() {
         switch (this.draftFormat) {
             case Full: // Draft from all cards in Forge
-                final IUnOpenedProduct s = new UnOpenedProduct(SealedTemplate.genericDraftBooster);
-
-                for (int i = 0; i < 3; i++) {
-                    this.product.add(s);
-                }
-                IBoosterDraft.LAND_SET_CODE[0] = CardEdition.Predicates.getRandomSetWithAllBasicLands(FModel.getMagicDb().getEditions());
-                IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
+                setupFull();
                 break;
 
             case Block: // Draft from cards by block or set
@@ -133,7 +198,7 @@ public class BoosterDraft implements IBoosterDraft {
                 // smuggle CNS cards in — fix those when the underlying issues are resolved.
                 for (final CardBlock b : storage) {
                     if (b.getCntBoostersDraft() > 0) {
-                        if (forNetwork && b.getName().contains("Conspiracy")) continue;
+                        if (forNetwork && !isDraftableBlock(b)) continue;
                         blocks.add(b);
                     }
                 }
@@ -142,69 +207,27 @@ public class BoosterDraft implements IBoosterDraft {
                 if (block == null) {
                     return false;
                 }
-                this.productName = block.getName();
 
-                final List<CardEdition> cardSets = block.getSets();
-                final Stack<String> sets = new Stack<>();
-                for (int k = cardSets.size() - 1; k >= 0; k--) {
-                    sets.add(cardSets.get(k).getCode());
-                }
-
-                for (final String setCode : block.getMetaSetNames()) {
-                    if (block.getMetaSet(setCode).isDraftable()) {
-                        sets.push(setCode); // to the beginning
-                    }
-                }
-
+                final List<String> sets = blockSets(block);
                 if (sets.isEmpty()) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblBlockNotContainSetCombinations", block.toString()));
                     return false;
                 }
 
-                final int nPacks = block.getCntBoostersDraft();
-
-                this.shouldShowDraftLog = block.getName().contains("Conspiracy");
-
+                final String combo;
                 if (sets.size() > 1) {
-                    Object p;
-                    if (nPacks == 3 && sets.size() < 4) {
-                        p = SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), getSetCombos(sets));
-                    } else {
-                        p = choosePackByPack(sets, nPacks);
-                    }
-
+                    final List<String> presets = blockCombos(block);
+                    final Object p = presets.isEmpty()
+                            ? choosePackByPack(sets, block.getCntBoostersDraft())
+                            : SGuiChoose.oneOrNone(Localizer.getInstance().getMessage("lblChooseSetCombination"), presets);
                     if (p == null) {
                         return false;
                     }
-
-                    this.productName = block.getName() + " (" + p + ")";
-                    final String[] pp = p.toString().split("/");
-                    for (int i = 0; i < nPacks; i++) {
-                        this.product.add(block.getBooster(pp[i]));
-                    }
+                    combo = p.toString();
                 } else {
-                    // Only one set is chosen. If that set lets you draft 2 cards to start adjust draft settings now
-                    String setCode = sets.get(0);
-                    this.productName = block.getName() + " (" + setCode + ")";
-                    CardEdition edition = FModel.getMagicDb().getEditions().get(setCode);
-                    // If this is metaset, edtion will be null
-                    if (edition != null) {
-                        if (podSize != edition.getDraftOptions().getRecommendedPodSize()) {
-                            // Auto choosing recommended pod size. In the future we may want to allow user to choose
-                            setPodSize(edition.getDraftOptions().getRecommendedPodSize());
-                        }
-                        doublePickDuringDraft = edition.getDraftOptions().getDoublePick();
-                    }
-
-                    final IUnOpenedProduct product1 = block.getBooster(setCode);
-                    // lets associate the booster here so we can reference it later
-                    for (int i = 0; i < nPacks; i++) {
-                        this.product.add(product1);
-                    }
+                    combo = sets.get(0);
                 }
-
-                IBoosterDraft.LAND_SET_CODE[0] = block.getLandSet();
-                IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
+                setupBlock(block, combo);
                 break;
 
             case Custom:
@@ -220,19 +243,11 @@ public class BoosterDraft implements IBoosterDraft {
                         return false;
                     }
 
-                    this.productName = customDraft.getName();
-                    this.setupCustomDraft(customDraft);
+                    setupCube(customDraft);
                 }
                 break;
 
             case Chaos:
-                /**
-                 * A chaos draft consists of boosters from many different sets.
-                 * Default settings are boosters from all sets with a booster size of 15 cards.
-                 * Alternatively, the sets can be restricted to a format like Modern or to a theme.
-                 * Examples for themes: sets that take place on a certain plane, core sets, masters sets,
-                 * or sets that share a mechanic.
-                 */
                 // Get chaos draft themes
                 final List<ThemedChaosDraft> themes = new ArrayList<>();
                 final IStorage<ThemedChaosDraft> themeStorage = FModel.getThemedChaosDrafts();
@@ -246,23 +261,8 @@ public class BoosterDraft implements IBoosterDraft {
                 if (theme == null) {
                     return false; // abort if no theme is selected
                 }
-                this.productName = theme.getLabel();
-                // Filter all sets by theme restrictions
-                final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
-                final CardEdition.Collection allEditions = StaticData.instance().getEditions();
-                final Iterable<CardEdition> chaosDraftEditions = IterableUtil.filter(
-                        allEditions.getOrderedEditions(),
-                        themeFilter);
-                // Add chaos "boosters" as special suppliers
-                final IUnOpenedProduct ChaosDraftSupplier;
-                try {
-                    ChaosDraftSupplier = new ChaosBoosterSupplier(chaosDraftEditions);
-                } catch(IllegalArgumentException e) {
-                    System.out.println(e.getMessage());
+                if (!setupChaos(theme)) {
                     return false;
-                }
-                for (int i = 0; i < 3; i++) {
-                    this.product.add(ChaosDraftSupplier);
                 }
                 break;
 
@@ -290,8 +290,7 @@ public class BoosterDraft implements IBoosterDraft {
                         SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + inputCubeId);
                         return false;
                     }
-                    this.productName = importedDraft.getName();
-                    this.setupCustomDraft(importedDraft);
+                    setupCube(importedDraft);
                 } catch (Exception e) {
                     SOptionPane.showErrorDialog(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage());
                     return false;
@@ -302,6 +301,87 @@ public class BoosterDraft implements IBoosterDraft {
                 throw new NoSuchElementException("Draft for mode " + this.draftFormat + " has not been set up!");
         }
 
+        return true;
+    }
+
+    private void setupFull() {
+        final IUnOpenedProduct s = new UnOpenedProduct(SealedTemplate.genericDraftBooster);
+
+        for (int i = 0; i < 3; i++) {
+            this.product.add(s);
+        }
+        IBoosterDraft.LAND_SET_CODE[0] = CardEdition.Predicates.getRandomSetWithAllBasicLands(FModel.getMagicDb().getEditions());
+        IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
+    }
+
+    private void setupBlock(final CardBlock block, final String combo) {
+        final List<String> sets = blockSets(block);
+        final int nPacks = block.getCntBoostersDraft();
+
+        this.shouldShowDraftLog = block.getName().contains("Conspiracy");
+
+        if (sets.size() > 1) {
+            this.productName = block.getName() + " (" + combo + ")";
+            final String[] pp = combo.split("/");
+            for (int i = 0; i < nPacks; i++) {
+                this.product.add(block.getBooster(pp[i]));
+            }
+        } else {
+            // Only one set is chosen. If that set lets you draft 2 cards to start adjust draft settings now
+            String setCode = sets.get(0);
+            this.productName = block.getName() + " (" + setCode + ")";
+            CardEdition edition = FModel.getMagicDb().getEditions().get(setCode);
+            // If this is metaset, edtion will be null
+            if (edition != null) {
+                if (podSize != edition.getDraftOptions().getRecommendedPodSize()) {
+                    // Auto choosing recommended pod size. In the future we may want to allow user to choose
+                    setPodSize(edition.getDraftOptions().getRecommendedPodSize());
+                }
+                doublePickDuringDraft = edition.getDraftOptions().getDoublePick();
+            }
+
+            final IUnOpenedProduct product1 = block.getBooster(setCode);
+            // lets associate the booster here so we can reference it later
+            for (int i = 0; i < nPacks; i++) {
+                this.product.add(product1);
+            }
+        }
+
+        IBoosterDraft.LAND_SET_CODE[0] = block.getLandSet();
+        IBoosterDraft.CUSTOM_RANKINGS_FILE[0] = null;
+    }
+
+    private void setupCube(final CustomLimited cube) {
+        this.productName = cube.getName();
+        this.setupCustomDraft(cube);
+    }
+
+    /**
+     * A chaos draft consists of boosters from many different sets.
+     * Default settings are boosters from all sets with a booster size of 15 cards.
+     * Alternatively, the sets can be restricted to a format like Modern or to a theme.
+     * Examples for themes: sets that take place on a certain plane, core sets, masters sets,
+     * or sets that share a mechanic.
+     */
+    private boolean setupChaos(final ThemedChaosDraft theme) {
+        this.productName = theme.getLabel();
+        // Filter all sets by theme restrictions
+        final Predicate<CardEdition> themeFilter = theme.getEditionFilter();
+        final CardEdition.Collection allEditions = StaticData.instance().getEditions();
+        final Iterable<CardEdition> chaosDraftEditions = IterableUtil.filter(
+                allEditions.getOrderedEditions(),
+                themeFilter);
+        // Add chaos "boosters" as special suppliers
+        final IUnOpenedProduct ChaosDraftSupplier;
+        try {
+            ChaosDraftSupplier = new ChaosBoosterSupplier(chaosDraftEditions);
+        } catch(IllegalArgumentException e) {
+            System.out.println(e.getMessage());
+            return false;
+        }
+        for (int i = 0; i < 3; i++) {
+            this.product.add(ChaosDraftSupplier);
+        }
         return true;
     }
 
@@ -512,7 +592,7 @@ public class BoosterDraft implements IBoosterDraft {
     /**
      * Looks for draft files, reads them, returns a list.
      */
-    private static List<CustomLimited> loadCustomDrafts() {
+    public static List<CustomLimited> loadCustomDrafts() {
         if (customs.isEmpty()) {
             String[] dList;
             ConcurrentLinkedQueue<CustomLimited> queue = new ConcurrentLinkedQueue<>();
