@@ -52,17 +52,19 @@ const STEPS: [PhaseType, string, string, string][] = [
 // A segment covers more than the step its glyph is named for, so it is named for what it spans
 interface Phase {
   glyph: string;
+  /** Under the icon when the phase is not the current one; desktop's step codes, and CB for combat as a whole. */
+  code: string;
   name: string;
   /** The phase as the stop grid heads its group of steps. */
   group: string;
   steps: number[];
 }
 const PHASES: Phase[] = [
-  { glyph: 'upkeep', name: 'Upkeep and draw', group: 'Beginning', steps: [0, 1] },
-  { glyph: 'main1', name: 'Main 1', group: 'Main 1', steps: [2] },
-  { glyph: 'boc', name: 'Combat', group: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
-  { glyph: 'main2', name: 'Main 2', group: 'Main 2', steps: [9] },
-  { glyph: 'end', name: 'End of turn', group: 'Ending', steps: [10, 11] },
+  { glyph: 'upkeep', code: 'UP', name: 'Upkeep and draw', group: 'Beginning', steps: [0, 1] },
+  { glyph: 'main1', code: 'M1', name: 'Main 1', group: 'Main 1', steps: [2] },
+  { glyph: 'boc', code: 'CB', name: 'Combat', group: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
+  { glyph: 'main2', code: 'M2', name: 'Main 2', group: 'Main 2', steps: [9] },
+  { glyph: 'end', code: 'ET', name: 'End of turn', group: 'Ending', steps: [10, 11] },
 ];
 /** Under its phase's heading a step needs less of a name: a lone step none, and combat's own steps no "combat". */
 const GRID_NAMES: Partial<Record<PhaseType, string>> = {
@@ -102,6 +104,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   drawWaiting(pill, model);
   drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
   q(pill, '.caret').innerHTML = glyph(myTurn ? 'up' : 'down', 12);
+  pill.dataset.opens = myTurn ? 'up' : 'down';
   pill.classList.toggle('open', open);
   pill.classList.toggle('priority', !!me(model)?.HasPriority);
 
@@ -119,7 +122,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 function build(root: HTMLElement): void {
   root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
   const pill = q(root, '.pill');
-  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="label"></span><span class="pips"></span><i></i></span>`).join('');
+  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="code">${p.code}</span><span class="label"></span><span class="pips"></span><i></i></span>`).join('');
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track">${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
@@ -141,6 +144,7 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     const current = n === phase;
     el.classList.toggle('current', current);
     el.classList.toggle('stop', !current && p.steps.some(i => stops.has(STEPS[i][0])));
+    el.classList.toggle('marked', !current && !!marker && marker.mine === myTurn && p.steps.some(i => STEPS[i][0] === marker.phase));
     // Desktop passes priority until a phase by right-clicking it, so the pill offers the same gesture and
     // not only the grid behind it. The marker lands on the first step the segment covers.
     el.title = `${p.name}. Right-click: pass priority until here.`;
