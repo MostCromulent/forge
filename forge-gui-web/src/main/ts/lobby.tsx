@@ -21,10 +21,10 @@ import type { Address, DeckSummary, Format, LobbyTable, Seat } from './protocol'
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
   const lobby = model.lobby;
+  const [guide, setGuide] = useState(false);
   if (!lobby) {
     return null;
   }
-  const [guide, setGuide] = useState(false);
   // A seat can go while its picker is open, when the host removes it
   const seat = picker ? lobby.seats[picker.seat] : undefined;
   const close = () => changeUi(u => { u.picker = null; });
@@ -133,15 +133,25 @@ function groupsOf(formats: Format[]): [string, Format[]][] {
  * The Constructed formats behind the chip's caret. Choosing one also switches to Constructed, since a card pool
  * belongs to Constructed alone.
  */
+/** The caret menu's placeholder: no Constructed format, while another format is chosen. */
+const NO_POOL_CHOSEN = '-';
+
+/** The caret menu's value. Under another format it shows no entry, so choosing any one of them, "Any cards" included, is a change. */
+export function poolMenuValue(lobby: LobbyTable): string {
+  return lobby.format === 'Constructed' ? lobby.cardPool ?? '' : NO_POOL_CHOSEN;
+}
+
+
 function ConstructedMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
     <select class="format-pool" aria-label="Constructed format" disabled={!lobby.host}
-      value={lobby.format === 'Constructed' ? lobby.cardPool ?? '' : ''}
+      value={poolMenuValue(lobby)}
       onChange={e => {
         const pool = e.currentTarget.value || null;
         if (lobby.format !== 'Constructed') actions.setFormat('Constructed');
         actions.setCardPool(pool);
       }}>
+      <option value={NO_POOL_CHOSEN} disabled hidden>Choose a Constructed format</option>
       <option value="">Any cards</option>
       {lobby.cardPools.map(g => (
         <optgroup key={g.name} label={g.name}>
@@ -168,11 +178,27 @@ function FormatChip({ format, label, pressed, host, choose, children }: {
   const pressedLong = useRef(false);
   const later = (ms: number, then: () => void) => { clearTimeout(timer.current); timer.current = window.setTimeout(then, ms); };
   const shut = () => { clearTimeout(timer.current); setOpen(false); };
+  const chip = useRef<HTMLSpanElement>(null);
   useEffect(() => () => clearTimeout(timer.current), []);
+  // An open card goes on Escape or a press anywhere else, however it was opened
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => { if (!chip.current?.contains(e.target as Node)) shut(); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') shut(); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
+  // Resting opens the card for a mouse only: a touch screen fires the same events for every tap
   return (
-    <span class={`format-chip${children ? ' split' : ''}`} onMouseEnter={() => later(CARD_REST_MS, () => setOpen(true))} onMouseLeave={shut}>
+    <span ref={chip} class={`format-chip${children ? ' split' : ''}`}
+      onPointerEnter={e => { if (e.pointerType === 'mouse') later(CARD_REST_MS, () => setOpen(true)); }}
+      onPointerLeave={e => { if (e.pointerType === 'mouse') shut(); }}>
       <button class="format" aria-pressed={pressed} disabled={!host} aria-describedby={open ? `card-${format.id}` : undefined}
-        onFocus={() => setOpen(true)} onBlur={shut} onKeyDown={e => { if (e.key === 'Escape') shut(); }}
+        onFocus={e => { if (e.currentTarget.matches(':focus-visible')) setOpen(true); }} onBlur={shut}
         onPointerDown={e => {
           if (e.pointerType !== 'touch') return;
           pressedLong.current = false;
