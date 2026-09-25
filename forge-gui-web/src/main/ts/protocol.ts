@@ -16,16 +16,17 @@ type View<K extends keyof TrackedProps> = Pick<TrackedProps, K> & { $key: number
 export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' | 'Sickness' | 'Attacking' | 'Blocking'
   | 'PhasedOut' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'
   | 'ShieldCount' | 'MustBlockCards' | 'BlockAdditional' | 'BlockAny'
-  | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'>;
+  | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'
+  | 'IsCommander'>;
 
 export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'Loyalty'
-  | 'Defense' | 'Keywords' | 'Colors'>;
+  | 'Defense' | 'Keywords' | 'Colors' | 'RulesText'>;
 
 export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'AvatarIndex' | 'AvatarCardImageKey'
   | 'SleeveIndex' | 'Counters' | 'CommanderDamage' | 'CommanderCast' | 'Mana' | 'HasLost' | PlayerZone>;
 
 export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack' | 'CombatView' | 'GameOver' | 'MatchOver'
-  | 'WinningPlayerName'>;
+  | 'WinningPlayerName' | 'PlanarPlayer'>;
 
 export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' | 'Description' | 'SubInstance'
   | 'TargetCards' | 'TargetPlayers'>;

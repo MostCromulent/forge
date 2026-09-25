@@ -15,7 +15,8 @@ import { setting } from './settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from './actions';
-import type { CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
+import type { CardStateView, CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
+import { avatarModifiers, commandKind, type CommandKind } from './command';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
@@ -448,11 +449,16 @@ function commanderTax(player: PlayerView | undefined, card: CardView): number {
 // The command zone: the monarch, the initiative, emblems and commanders, shown as round tokens beside the player
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
-  reconcile(root, cards, c => c.$key,
-    () => {
+  // Planes, schemes and the planar die have places of their own; the rest stay beside the portrait
+  const shown = cards.filter(c => ['avatar', 'commander', 'signature', 'effect'].includes(commandKind(c, stateOf(model, c))));
+  reconcile(root, shown, c => c.$key,
+    card => {
+      // A card the player reads or activates is drawn as a card; a reminder like the monarch stays a round token
+      const tile = commandKind(card, stateOf(model, card)) !== 'effect';
       const el = document.createElement('div');
-      el.className = 'emblem';
-      el.innerHTML = '<img alt="" draggable="false"><span class="initials"></span><span class="tax"></span>';
+      el.className = tile ? 'cmd-tile' : 'emblem';
+      el.innerHTML = tile ? '<img alt="" draggable="false"><span class="band"></span>'
+        : '<img alt="" draggable="false"><span class="initials"></span><span class="tax"></span>';
       noImageOnError(el, q<HTMLImageElement>(el, 'img'));
       el.onclick = () => select(el, false);
       hoverable(el);
@@ -464,13 +470,28 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       setImage(q<HTMLImageElement>(el, 'img'), src);
       el.classList.toggle('noimg', !src);
       el.dataset.zoom = src;
-      const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
-      q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
       const tax = commanderTax(player, card);
-      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : '';
       el.title = tax > 0 ? `${state.Name ?? ''} — costs ${tax} more to cast from here` : state.Name ?? '';
       el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
+      if (el.classList.contains('cmd-tile')) {
+        q(el, '.band').textContent = tileBand(commandKind(card, state), state, tax);
+        return;
+      }
+      const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
+      q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : '';
     });
+}
+
+/** The one number a command tile carries: an avatar's modifiers, a commander's tax, or what a signature spell is. */
+function tileBand(kind: CommandKind, state: Partial<CardStateView>, tax: number): string {
+  if (kind === 'avatar') {
+    const mods = avatarModifiers(state.RulesText);
+    const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
+    return mods ? `hand ${signed(mods[0])} · life ${signed(mods[1])}` : '';
+  }
+  if (kind === 'signature') return 'Signature';
+  return tax > 0 ? `Tax +${tax}` : '';
 }
 
 /** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */

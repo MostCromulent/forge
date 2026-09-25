@@ -243,6 +243,13 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
    pump long before it reads as a tax. Inside the circle, since the token clips whatever leaves it. */
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
 .emblem .tax:empty { display: none; }
+/* A commander, signature spell or avatar is a card the player reads or activates, so it is drawn as a small card */
+.cmd-tile { width: 52px; height: 72px; border-radius: 5px; overflow: hidden; position: relative; cursor: pointer; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
+.cmd-tile img { width: 100%; height: 100%; object-fit: cover; }
+.cmd-tile.noimg img { display: none; }
+.cmd-tile.selectable { outline: 2px dashed var(--select); outline-offset: 2px; }
+.cmd-tile .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 1px 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--text); background: linear-gradient(180deg, transparent, #000000e0 38%); white-space: nowrap; }
+.cmd-tile .band:empty { display: none; }
 
 /* Day and night, in the corner of the table. Both the word and the shape carry it, and the table cools at night,
    so a flip registers without anyone watching the corner for it. */
