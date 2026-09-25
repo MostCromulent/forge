@@ -1,17 +1,16 @@
-// The cog dialog: one scrolling list of settings with a search box, and the concede button under it
+// The cog dialog: one scrolling list of settings with a search box
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { SETTINGS, set, setting, type SettingDef } from './settings';
 
-export function Options({ close, concede }: { close: () => void; concede: () => void }) {
+export function Options({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
-  const [armed, setArmed] = useState(false);
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     search.current?.focus();
   }, []);
   const q = query.trim().toLowerCase();
-  const shown = SETTINGS.filter(def => !def.volume).filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
+  const shown = SETTINGS.filter(def => !def.volume && !def.stops).filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
   return (
     <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="options-dialog" role="dialog" aria-label="Options">
@@ -31,25 +30,14 @@ export function Options({ close, concede }: { close: () => void; concede: () => 
           {!shown.length && <p class="hint">No setting matches that.</p>}
         </div>
         <footer>
-          <span class="hint">Changes apply at once.</span>
-          <button class={armed ? 'concede armed' : 'concede'} onClick={() => {
-            if (!armed) {
-              setArmed(true);
-              return;
-            }
-            concede();
-            close();
-          }}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" /></svg>
-            {armed ? 'Confirm concede' : 'Concede game'}
-          </button>
+          <span class="hint">Changes apply at once. Conceding and auto-pass stops are in the ⋯ menu beside this button.</span>
         </footer>
       </div>
     </div>
   );
 }
 
-function Row({ def }: { def: SettingDef }) {
+export function Row({ def }: { def: SettingDef }) {
   return (
     <div class={def.type === 'css' ? 'setting wide' : 'setting'}>
       <div>

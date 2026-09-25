@@ -34,6 +34,8 @@ export interface UiState {
   stopsOpen: boolean;
   /** The options dialog is open. */
   optionsOpen: boolean;
+  /** The game menu behind the prompt's ⋯ button, or the auto-pass stops dialog opened from it. */
+  gameMenu: 'menu' | 'stops' | null;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** Match setup's picker for a seat's deck, sleeve or avatar. */
@@ -62,6 +64,7 @@ export const ui: UiState = {
   stackMenuAt: null,
   stopsOpen: false,
   optionsOpen: false,
+  gameMenu: null,
   volumeOpen: false,
   picker: null,
   spectate: false,
@@ -94,6 +97,7 @@ export function resetMatchUi(): void {
   ui.stackMenuAt = null;
   ui.stopsOpen = false;
   ui.optionsOpen = false;
+  ui.gameMenu = null;
   ui.volumeOpen = false;
   ui.picker = null;
   ui.hover = null;

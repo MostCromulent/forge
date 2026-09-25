@@ -10,7 +10,7 @@ function freshUi(): UiState {
   return {
     openPiles: new Set(), openZones: new Set(), zonesMinimised: false, zoneSearch: '', zoneSort: 'order',
     stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
-    stopsOpen: false, optionsOpen: false, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
+    stopsOpen: false, optionsOpen: false, gameMenu: null, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
     sidePanels: { log: true },
   };
 }

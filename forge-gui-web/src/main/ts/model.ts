@@ -1,5 +1,5 @@
 import type {
-  Address, CardStateView, ChoicesRequest, CardView, Controls, DeckDetails, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
+  Address, CardStateView, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
   Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
   StackMenu, StateMessage, TrackedObject, ZoneType,
 } from './protocol';
@@ -65,6 +65,8 @@ export interface Model {
   nameSent: boolean;
   /** Messages from the server, each until it is dismissed or times out. */
   notices: { id: number; notice: Notice }[];
+  /** A draw offer while it is open. */
+  drawOffer: DrawOffer | null;
 }
 
 export function createModel(): Model {
@@ -76,6 +78,7 @@ export function createModel(): Model {
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
+    drawOffer: null,
   };
 }
 

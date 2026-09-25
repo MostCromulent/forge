@@ -1,5 +1,4 @@
 import { imageUrl, setSymbolText } from './images';
-import { setting } from './settings';
 import { hoverable } from './detail';
 import { byId } from './dom';
 import type { LogMessage } from './protocol';
@@ -70,7 +69,7 @@ export function appendLog(msg: LogMessage, tints: readonly { name: string; colou
     const el = document.createElement('div');
     el.className = `log-entry ${entry.type.toLowerCase()}`;
     // Entries about a card show it, as the desktop log does
-    if (entry.imageKey && setting('logImages')) {
+    if (entry.imageKey) {
       const thumb = document.createElement('img');
       thumb.className = 'thumb';
       thumb.alt = '';

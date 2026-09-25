@@ -176,6 +176,14 @@ export interface GameOver {
   t: 'gameOver';
 }
 
+export interface DrawOffer {
+  t: 'drawOffer';
+  offerer?: Ref;
+  open: boolean;
+  mine: boolean;
+  waitingOnMe: boolean;
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -309,6 +317,7 @@ export type ServerMessage =
   | Sound
   | Flash
   | GameOver
+  | DrawOffer
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -445,6 +454,11 @@ export interface NextGame {
   decision: NextGameDecision;
 }
 
+export interface DrawOfferCommand {
+  t: 'drawOffer';
+  action: Action;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -467,7 +481,8 @@ export type ClientMessage =
   | SetStops
   | UseMana
   | SetSetting
-  | NextGame;
+  | NextGame
+  | DrawOfferCommand;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -607,7 +622,6 @@ export interface ServerSettings {
   interruptTargeting: boolean;
   interruptTriggers: boolean;
   interruptMassRemoval: boolean;
-  highlightPlayable: boolean;
   autoTapPreview: boolean;
   autoPassNoActions: boolean;
   autoYieldMode: string;
@@ -658,6 +672,8 @@ export interface SideboardEntry {
 export type YieldAction = 'autoYield' | 'alwaysYes' | 'alwaysNo' | 'yieldToStack' | 'yieldToEntireStack';
 
 export type NextGameDecision = 'NEW' | 'CONTINUE' | 'QUIT';
+
+export type Action = 'OFFER' | 'ACCEPT' | 'DECLINE';
 
 export interface Place {
   zone: ZoneType;

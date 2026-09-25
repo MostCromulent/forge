@@ -27,7 +27,6 @@ final class WebSettings {
             "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
             "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
             "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
-            "highlightPlayable", FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
             "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
 
     static ServerSettings values(final PlayerSettings player) {
@@ -37,7 +36,6 @@ final class WebSettings {
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_TARGETING),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_TRIGGERS),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL),
-                player.getBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS),
                 player.getBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW),
                 player.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
@@ -106,11 +104,13 @@ final class WebSettings {
      *
      * <p>Auto-pass always stops where the interrupts say. Forge leaves that off unless asked, which makes the
      * interrupts stop only a yield such as End Turn; here they are offered as what stops auto-passing, so they do.
-     * It is given to the game only, never saved, so the desktop client keeps its own choice.</p>
+     * It is given to the game only, never saved, so the desktop client keeps its own choice. Playable cards are
+     * always highlighted the same way, because this client has no other sign of what can be played.</p>
      */
     static void applyAll(final PlayerSettings player, final IGameController controller) {
         for (final FPref pref : PlayerSettings.PER_PLAYER_ON_HOST) {
-            applyTo(controller, pref, pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS ? "true" : player.get(pref));
+            final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS;
+            applyTo(controller, pref, always ? "true" : player.get(pref));
         }
         applyTo(controller, FPref.UI_AUTO_DECISION_MODE, player.get(FPref.UI_AUTO_DECISION_MODE));
     }

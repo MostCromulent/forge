@@ -66,6 +66,11 @@ final class ToBrowser {
     record Notice(@Nullable String title, @Nullable String message, boolean error) {
     }
 
+    /** A draw offer while it is open: who made it, and whether this player still has to answer. Closed, it is absent. */
+    @Message("drawOffer")
+    record DrawOffer(@Nullable Ref offerer, boolean open, boolean mine, boolean waitingOnMe) {
+    }
+
     @Message("decks")
     record Decks(List<DeckSummary> decks, List<String> cardFormats) {
     }
@@ -224,7 +229,7 @@ final class ToBrowser {
 
     /** The Forge preferences the options dialog shares with the desktop client. */
     record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
-            boolean interruptTriggers, boolean interruptMassRemoval, boolean highlightPlayable, boolean autoTapPreview,
+            boolean interruptTriggers, boolean interruptMassRemoval, boolean autoTapPreview,
             boolean autoPassNoActions, String autoYieldMode, GameLogVerbosity logDetail, String arrows,
             String highlightColor, int soundVolume, int musicVolume) {
     }
@@ -336,7 +341,7 @@ final class ToBrowser {
             Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
-            Flash.class, GameOver.class);
+            Flash.class, GameOver.class, DrawOffer.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

@@ -43,12 +43,12 @@ export async function answerDialogs(page: Page): Promise<void> {
   }
 }
 
-/** Concedes from the options dialog, which asks twice. */
+/** Concedes from the game menu, which asks twice. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);
-  await page.click('#prompt .cog');
-  await page.locator('#options .concede').click();
-  await page.locator('#options .concede').click();
+  await page.click('#prompt .more');
+  await page.locator('.game-menu .concede').click();
+  await page.locator('.game-menu .concede').click();
   await expect(page.locator('#game-over')).toBeVisible();
 }
 

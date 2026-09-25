@@ -34,12 +34,12 @@ public class WebSettingsTest {
     @Test
     public void aSettingSentBeforeTheGameStartsIsKept() {
         final ForgePreferences prefs = FModel.getPreferences();
-        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
+        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW);
         try {
-            WebSettings.set(PlayerSettings.saved(), null, "highlightPlayable", String.valueOf(!was));
-            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
+            WebSettings.set(PlayerSettings.saved(), null, "autoTapPreview", String.valueOf(!was));
+            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW), !was);
         } finally {
-            prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
+            prefs.setPref(FPref.UI_SHOW_AUTOTAP_PREVIEW, was);
             prefs.save();
         }
     }
@@ -47,17 +47,17 @@ public class WebSettingsTest {
     @Test
     public void aSettingSentToAGuiWithNoGameYetIsKept() {
         final ForgePreferences prefs = FModel.getPreferences();
-        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
+        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW);
         try {
             final WebGuiGame gui = new WebGuiGame();
             final com.google.gson.JsonObject msg = JsonCodec.message("setSetting");
-            msg.addProperty("key", "highlightPlayable");
+            msg.addProperty("key", "autoTapPreview");
             msg.addProperty("value", String.valueOf(!was));
             gui.onBrowserMessage(msg);
-            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
+            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW), !was);
             gui.close();
         } finally {
-            prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
+            prefs.setPref(FPref.UI_SHOW_AUTOTAP_PREVIEW, was);
             prefs.save();
         }
     }
@@ -67,14 +67,14 @@ public class WebSettingsTest {
     @Test
     public void aSharedSettingChangedMidGameReachesTheHost() {
         final ForgePreferences prefs = FModel.getPreferences();
-        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS);
+        final boolean was = prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW);
         final List<String> told = new ArrayList<>();
         try {
-            WebSettings.set(PlayerSettings.saved(), recording(told), "highlightPlayable", String.valueOf(!was));
-            Assert.assertEquals(told, List.of(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS + "=" + !was));
-            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS), !was);
+            WebSettings.set(PlayerSettings.saved(), recording(told), "autoTapPreview", String.valueOf(!was));
+            Assert.assertEquals(told, List.of(FPref.UI_SHOW_AUTOTAP_PREVIEW + "=" + !was));
+            Assert.assertEquals(prefs.getPrefBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW), !was);
         } finally {
-            prefs.setPref(FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS, was);
+            prefs.setPref(FPref.UI_SHOW_AUTOTAP_PREVIEW, was);
             prefs.save();
         }
     }

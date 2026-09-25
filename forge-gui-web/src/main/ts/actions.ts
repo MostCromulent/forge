@@ -19,6 +19,7 @@ export interface Actions {
   toggleAutoPass(): void;
   undo(): void;
   concede(): void;
+  drawOffer(action: 'OFFER' | 'ACCEPT' | 'DECLINE'): void;
   nextGame(): void;
   quitMatch(): void;
   /** Leaves a finished match for the start page. */
@@ -81,6 +82,7 @@ export function createActions(send: Send): Actions {
     toggleAutoPass: () => send({ t: 'autoPass' }),
     undo: () => send({ t: 'undo' }),
     concede: () => send({ t: 'concede' }),
+    drawOffer: action => send({ t: 'drawOffer', action }),
     nextGame: () => send({ t: 'nextGame', decision: 'CONTINUE' }),
     quitMatch: () => send({ t: 'nextGame', decision: 'QUIT' }),
     leave: () => send({ t: 'leave' }),

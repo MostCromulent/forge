@@ -99,6 +99,7 @@ document.addEventListener('keydown', e => {
 function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
+    case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
     case 'closeVolume': changeUi(u => { u.volumeOpen = false; }); break;
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
@@ -207,6 +208,7 @@ function apply(msg: ServerMessage): void {
       if (msg.full) {
         model.gameOver = false;
         model.prompt = null;
+        model.drawOffer = null;
         model.zones = [];
         model.playable = null;
         model.cardDetails.clear();
@@ -226,8 +228,10 @@ function apply(msg: ServerMessage): void {
         model.requests.set(msg.id, msg);
       }
       break;
+    case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
     case 'gameOver':
       model.gameOver = true;
+      model.drawOffer = null;
       dropCountdown();
       stopMusic();
       break;

@@ -22,6 +22,7 @@ import forge.game.spellability.SpellAbilityView;
 import forge.item.PaperCard;
 import forge.game.spellability.StackItemView;
 import forge.game.zone.ZoneType;
+import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
 import forge.gamemodes.match.YieldController;
 import forge.gamemodes.match.YieldMarker;
@@ -43,6 +44,7 @@ import forge.trackable.Tracker;
 import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
 import forge.util.Localizer;
+import forge.web.FromBrowser.DrawOfferCommand;
 import forge.web.FromBrowser.KeyCommand;
 import forge.web.FromBrowser.NextGame;
 import forge.web.FromBrowser.PhaseCommand;
@@ -834,6 +836,30 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    @Override
+    public void updateDrawOffer(final DrawOfferMessage.Status update) {
+        if (update == null) {
+            return;
+        }
+        final PlayerView offerer = update.offerer();
+        final boolean open = update.result() == null;
+        final boolean mine = offerer != null && isLocalPlayer(offerer);
+        final boolean waitingOnMe = open && update.entries().stream()
+                .anyMatch(e -> isLocalPlayer(e.player()) && e.vote() == forge.game.DrawOffer.Vote.PENDING);
+        send(new ToBrowser.DrawOffer(offerer == null ? null : Ref.player(offerer.getId()), open, mine, waitingOnMe));
+        if (open) {
+            return;
+        }
+        if (update.result() == DrawOfferMessage.Result.ACCEPTED) {
+            send(new Notice("Draw agreed", "Every player accepted the draw.", false));
+            return;
+        }
+        final List<String> declined = update.entries().stream()
+                .filter(e -> e.vote() == forge.game.DrawOffer.Vote.DECLINED && e.player() != null)
+                .map(e -> isLocalPlayer(e.player()) ? "You" : e.player().getName()).toList();
+        send(new Notice("Draw declined", declined.isEmpty() ? "The game goes on." : String.join(", ", declined) + " declined.", false));
+    }
+
     /** An ability as a menu item: its first line, as desktop's menu shows it. */
     private static String firstLine(final SpellAbilityView ability) {
         final String text = String.valueOf(ability);
@@ -1025,6 +1051,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "ok" -> controller.selectButtonOk();
                 case "cancel" -> controller.selectButtonCancel();
                 case "concede" -> controller.concede();
+                case "drawOffer" -> controller.drawOfferAction(Wire.decode(msg, DrawOfferCommand.class).action());
                 case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
                 case "undo" -> controller.undoLastAction();
                 case "autoPass" -> {

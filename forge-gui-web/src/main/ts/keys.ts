@@ -6,7 +6,7 @@ import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
 
 export type KeyCommand =
-  | 'closeOptions' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
+  | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
   | 'closeCardMenu' | `pickCardMenu${Digit}`;
 
@@ -39,6 +39,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   }
   if (ui.optionsOpen) {
     return escape ? 'closeOptions' : null;
+  }
+  if (ui.gameMenu) {
+    return escape ? 'closeGameMenu' : null;
   }
   if (ui.volumeOpen) {
     return escape ? 'closeVolume' : null;

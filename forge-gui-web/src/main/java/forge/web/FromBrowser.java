@@ -2,6 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonElement;
 import forge.game.phase.PhaseType;
+import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
 import forge.web.Wire.Command;
 import forge.web.Wire.Nullable;
@@ -130,10 +131,15 @@ final class FromBrowser {
     record NextGame(NextGameDecision decision) {
     }
 
+    /** Offers a draw, or answers another player's offer. */
+    @Command("drawOffer")
+    record DrawOfferCommand(DrawOfferMessage.Action action) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
-            NextGame.class);
+            NextGame.class, DrawOfferCommand.class);
 }
