@@ -208,6 +208,9 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .kind { color: var(--muted); font-size: 12px; }
 .drop { margin-left: auto; padding: 2px 8px; color: var(--muted); }
 
+.random-deck { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }
+.random-deck svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+.random-deck svg circle { fill: currentColor; stroke: none; }
 .deck-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .deck-row .deck-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deck-row.unset .deck-name { color: var(--muted); }
@@ -223,8 +226,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .match-line { margin: 0; color: var(--muted); }
 
 /* A blocked start says what is wrong in place, rather than hiding it in a tooltip */
-.not-yet { background: var(--surface); border: 1px solid var(--select); border-radius: 8px; padding: 10px 16px; max-width: 560px; }
-.not-yet b { color: var(--select); }
+.not-yet { background: var(--surface); border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 8px; padding: 10px 16px; max-width: 560px; }
+.not-yet b { color: var(--danger); }
 .not-yet ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 
 /* --- deck finder ------------------------------------------------------ */

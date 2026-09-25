@@ -56,10 +56,11 @@
 #options svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #options .rows { overflow-y: auto; scrollbar-width: thin; padding: 6px 14px 12px; }
 #options h4 { margin: 14px 0 4px; color: var(--muted); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
-#options .setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 8px 0; border-top: 1px solid var(--line); }
+#options .setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 8px 0; border-top: 1px solid var(--line); }
+#options .setting > div:first-child { flex: 1 1 240px; }
 #options .hint { color: var(--muted); font-size: 11.5px; }
 #options .choice { display: flex; gap: 4px; }
-#options .choice button { padding: 4px 10px; font-size: 12px; }
+#options .choice button { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 #options .choice button.on { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); }
 #options .switch { width: 40px; height: 22px; padding: 0; border-radius: 11px; background: var(--surface-2); position: relative; flex: none; }
 #options .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s, background .12s; }

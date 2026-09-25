@@ -16,7 +16,7 @@ type View<K extends keyof TrackedProps> = Pick<TrackedProps, K> & { $key: number
 export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' | 'Sickness' | 'Attacking' | 'Blocking'
   | 'PhasedOut' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'
   | 'ShieldCount' | 'MustBlockCards' | 'BlockAdditional' | 'BlockAny'
-  | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity'>;
+  | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'>;
 
 export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'Loyalty'
   | 'Defense' | 'Keywords' | 'Colors'>;

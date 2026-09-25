@@ -59,6 +59,7 @@
 .seat.compact .avatar .initial { font-size: 18px; }
 .seat.compact .avatar .life { font-size: 11px; bottom: -7px; padding: 0 6px; }
 .seat.compact .avatar .ai-badge { width: 20px; height: 20px; left: -5px; top: -5px; }
+.seat.compact .avatar.first::after { right: -22px; top: -9px; font-size: 10px; padding: 1px 5px; }
 .seat.compact .name { color: var(--tint); font-weight: 700; font-size: 13px; }
 .seat.compact .hand-fan { position: static; }
 .seat.compact .zone-tiles { margin-left: auto; gap: 4px; }

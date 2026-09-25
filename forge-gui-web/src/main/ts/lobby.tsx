@@ -48,7 +48,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       <div class="lobby-main">
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
-            choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} />)}
+            choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
         <div class="seat-add">
           <button hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
@@ -97,8 +97,14 @@ function Addresses({ list }: { list: Address[] }) {
 // The seat kinds a netplay lobby can hold; offline shows only the first two
 const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
 
-function Plate({ seat, index, lobby, actions, choose }: {
-  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; choose: (kind: Picker['kind']) => void;
+/** A computer seat given any finished deck that is legal here, so a table fills without a trip to the chooser each. */
+function randomDeck(model: Model, actions: Actions, index: number): void {
+  const pool = (model.decks ?? []).filter(d => !d.generated && !d.problem);
+  if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
+}
+
+function Plate({ seat, index, lobby, actions, choose, random }: {
+  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; choose: (kind: Picker['kind']) => void; random: () => void;
 }) {
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
   const mine = seat.mine;
@@ -132,6 +138,10 @@ function Plate({ seat, index, lobby, actions, choose }: {
           <button class="kind" disabled={!swappable} title={swappable ? 'Swap between a computer and an open seat' : ''}
             onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
             {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
+          </button>
+          <button class="random-deck" title="Give this seat a random deck" aria-label="Random deck"
+            hidden={seat.type !== 'AI' || !lobby.host} onClick={random}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
           </button>
           <button class="drop" title="Remove this seat" hidden={mine || !lobby.host || lobby.seats.length <= 2}
             onClick={() => actions.removeSeat(index)}>&times;</button>

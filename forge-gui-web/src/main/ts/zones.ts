@@ -76,8 +76,7 @@ function createPanel(): HTMLElement {
     + '<button class="zone-fold">Show board</button></header>'
     + '<div class="cards"></div>'
     + '<footer><span class="zone-hint"></span><button class="zone-done primary">Done</button>'
-    + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button>'
-    + '<button class="zone-answer cancel"><span class="label"></span><kbd>Esc</kbd></button></footer>';
+    + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button></footer>';
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
   sort.innerHTML = SORTS.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
   return el;
@@ -101,11 +100,11 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const done = q(el, '.zone-done');
   done.hidden = p.forced;
   done.onclick = () => togglePile(p.player, p.zone);
-  // The dialog covers the prompt, so one the game put up carries the prompt's question and its buttons
+  // The dialog covers the prompt, so one the game put up carries the prompt's question and its OK. Not its other
+  // button: that is the prompt's way out of priority, such as End turn, which means nothing about the cards shown.
   const prompt = p.forced ? model.prompt : null;
   q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : 'Click a card to pick it up.';
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
-  answer(q(el, '.zone-answer.cancel'), prompt?.cancel, () => actions.cancel());
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
 }
 

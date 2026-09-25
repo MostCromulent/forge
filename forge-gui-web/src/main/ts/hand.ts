@@ -1,8 +1,9 @@
 import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
-import { stateOf, zone, type Model } from './model';
+import { deref, isLocal, players, stateOf, zone, type Model } from './model';
+import { logTints } from './log';
 import { setting } from './settings';
-import { byId } from './dom';
+import { byId, q } from './dom';
 import type { CardView, PlayerView, ZoneType } from './protocol';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
@@ -42,6 +43,7 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
 export function renderHand(model: Model, player: PlayerView | undefined, select: CardClick): void {
   const root = byId('hand');
   const elsewhere = fromElsewhere(model, player);
+  const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
   const cards = [...handOrder(model, zone(model, player, 'Flashback')), ...handOrder(model, zone(model, player, 'Hand'))];
   reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => {
     updateCard(el, model, c);
@@ -53,6 +55,14 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     } else {
       delete el.dataset.from;
     }
+    // Another player's card you may play says whose it is, so it is not taken for one of your own
+    const owner = deref(model, c.Owner);
+    const foreign = !!owner && !!player && owner.$key !== player.$key;
+    el.classList.toggle('foreign', foreign);
+    q(el, '.owned-by').textContent = foreign ? `${owner?.Name ?? ''}'s` : '';
+    if (foreign) el.style.setProperty('--owner-tint', tints.find(t => t.name === owner?.Name)?.colour ?? 'var(--muted)');
+    // A card another player may look at has been revealed to them
+    el.classList.toggle('revealed', (c.PlayerMayLook ?? []).some(r => !!r && !model.localPlayers.includes(r.ref)));
   });
   // A shallow arc: at most 2 degrees per card from the middle, 10 at the ends
   const mid = (cards.length - 1) / 2;

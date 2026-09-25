@@ -89,6 +89,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -271,9 +272,14 @@ public class WebGuiGame extends NetworkGuiGame {
         if (tracker == null) {
             return visible;
         }
+        // A card you may play from somewhere else is one you may see, even another player's or one lying face down
+        final Set<Integer> playable = new HashSet<>();
+        for (final PlayerView p : getLocalPlayers()) {
+            p.getCards(ZoneType.Flashback).forEach(c -> playable.add(c.getId()));
+        }
         for (final int key : model.keysOfType(DeltaPacket.TYPE_CARD_VIEW)) {
             final CardView card = tracker.getObj(TrackableTypes.CardViewType, DeltaPacket.getIdFromDeltaKey(key));
-            if (card != null && mayView(card)) {
+            if (card != null && (mayView(card) || playable.contains(card.getId()))) {
                 visible.add(key);
             }
         }
