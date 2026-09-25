@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
+import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import forge.sound.MusicPlaylist;
@@ -123,8 +124,12 @@ public final class WebServer implements AutoCloseable {
                                 new HttpServerCodec(),
                                 new HttpObjectAggregator(1 << 20),
                                 new AccessGate(),
+                                // State and deck lists are JSON that repeats its field names, so they compress well,
+                                // which matters to a guest over the internet. Every browser asks for it by itself.
+                                new WebSocketServerCompressionHandler(),
                                 new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
-                                        .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22).build()),
+                                        .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
+                                        .allowExtensions(true).build()),
                                 new StaticFiles(),
                                 new BrowserSocket(endpoint));
                     }
