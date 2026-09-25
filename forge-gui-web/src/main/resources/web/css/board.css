@@ -155,7 +155,7 @@
 .zone-tiles { display: grid; grid-template-columns: repeat(3, var(--tile-w)); gap: 6px; }
 .zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.zone-tile.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
+.zone-tile.back, .card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
 .zone-tile.empty { background: none; border: 2px dotted var(--line); }
 /* The label rides a dark strip, so it stays readable over a sleeve or a card's art */
 .zone-tile .zone-name { position: absolute; left: 2px; right: 2px; top: 2px; z-index: 2; padding: 1px 2px; border-radius: 4px; background: #000000c4; color: var(--text); font-size: 10.5px; letter-spacing: .03em; text-align: center; }
@@ -510,7 +510,6 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
   font-size: calc(var(--u) * 8.5); line-height: 1.2; color: #d9dee5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }
-.card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
 .card .pt i { font-style: normal; }
@@ -674,8 +673,8 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
   background: #0e1219e6; border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 12px 30px #000b; }
 #plane-dock .planes { display: flex; gap: 6px; }
 #plane-dock .plane { width: 150px; aspect-ratio: 88 / 63; border-radius: 6px; overflow: hidden; position: relative; cursor: zoom-in; background: var(--surface-2); }
-/* A plane card is printed sideways, so it is turned to lie landscape */
-#plane-dock .plane img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
+/* Plane and scheme cards are printed sideways, so they are turned to lie landscape */
+#plane-dock .plane img, .scheme img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
 #plane-dock .plane-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 6px 3px; font-size: 11px; font-weight: 700; background: linear-gradient(180deg, transparent, #000000d0 45%); }
 #plane-dock .plane-side { display: grid; align-content: space-between; gap: 6px; width: 150px; }
 #plane-dock .plane-from { margin: 0; color: var(--muted); font-size: 11.5px; }
@@ -689,8 +688,6 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 .schemes-ongoing:empty { display: none; }
 .schemes-ongoing { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
 .scheme { width: 72px; aspect-ratio: 88 / 63; border-radius: 5px; overflow: hidden; position: relative; cursor: zoom-in; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
-/* A scheme is printed sideways, so it is turned to lie landscape, as a plane is */
-.scheme img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
 .scheme .scheme-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px 2px; font-size: 8.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: linear-gradient(180deg, transparent, #000000d0 45%); }
 .scheme-reveal { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 12px; background: var(--scrim); pointer-events: none; }
 .scheme-reveal .scheme.big { width: min(420px, 80vw); }

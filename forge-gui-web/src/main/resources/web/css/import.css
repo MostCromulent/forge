@@ -7,10 +7,8 @@
   width: min(1240px, 94vw); height: min(760px, 92vh); display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
   background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
 }
-.imp-head { display: flex; align-items: center; gap: 14px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
-.imp-head h2 { margin: 0; font-size: 17px; }
+.imp-head { gap: 14px; }
 .imp-head .muted { color: var(--muted); font-size: 12.5px; }
-.imp-head .dk-close { margin-left: auto; }
 .imp-sub { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 9px 18px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 80%, var(--bg)); }
 .imp-sub .legality { margin-left: auto; }
 .namefield { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }

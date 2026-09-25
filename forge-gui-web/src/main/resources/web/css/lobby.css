@@ -290,11 +290,11 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 
 /* --- deck finder ------------------------------------------------------ */
 
-.finder-back, .sleeves-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .7); display: grid; place-items: center; z-index: 60; }
+.finder-back, .sleeves-back { position: fixed; inset: 0; background: var(--scrim); display: grid; place-items: center; z-index: 60; }
 .finder, .sleeves { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; width: min(1500px, 94vw); height: min(880px, 92vh); display: grid; grid-template-rows: auto 1fr auto; }
-.finder-head, .sleeves-head { display: flex; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
-.finder-head h2, .sleeves-head h2 { margin: 0; font-size: 17px; }
-.finder-head .dk-close, .sleeves-head .dk-close { margin-left: auto; }
+.finder-head, .sleeves-head, .imp-head { display: flex; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+.finder-head h2, .sleeves-head h2, .imp-head h2 { margin: 0; font-size: 17px; }
+.finder-head .dk-close, .sleeves-head .dk-close, .imp-head .dk-close { margin-left: auto; }
 .finder-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); }
 
 /* The filters down the left, the list beside them, and the panel carrying the whole decklist */
