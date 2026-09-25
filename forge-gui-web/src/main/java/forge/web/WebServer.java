@@ -85,8 +85,8 @@ public final class WebServer implements AutoCloseable {
     private enum Access { NONE, GUEST, HOST }
     private static final AttributeKey<Access> ACCESS = AttributeKey.valueOf("forge.access");
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
-    /** A card picture for a given printing never changes, so a browser that has one never has to ask again. */
-    private static final String IMAGE_CACHE = "public, max-age=31536000, immutable";
+    /** For what never changes at its address, a card picture of one printing or a hashed script chunk: kept for good. */
+    private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
@@ -258,7 +258,7 @@ public final class WebServer implements AutoCloseable {
 
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
         respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()),
-                file.getName().endsWith(".png") ? "image/png" : "image/jpeg", null, IMAGE_CACHE);
+                file.getName().endsWith(".png") ? "image/png" : "image/jpeg", null, KEEP_FOREVER);
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -488,7 +488,9 @@ public final class WebServer implements AutoCloseable {
             }
             // The page keeps the link's token as a cookie, so its later requests come in on the same link
             final String token = queryToken(q);
-            respond(ctx, HttpResponseStatus.OK, body, type, accessOf(token) == Access.NONE ? null : token);
+            // A chunk's name carries a hash of its contents, so a changed chunk is a new file and an old one never goes stale
+            respond(ctx, HttpResponseStatus.OK, body, type, accessOf(token) == Access.NONE ? null : token,
+                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache");
         }
     }
 
