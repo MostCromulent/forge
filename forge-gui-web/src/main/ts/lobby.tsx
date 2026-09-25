@@ -73,7 +73,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)}
         toggle={id => actions.setVariant(id, !lobby.variantsOn.includes(id))} close={() => setGuide(false)} />}
       <div class="lobby-main">
-        {lim && <EventPanel model={model} lobby={lobby} actions={actions} />}
+        {/* A new kind of event is set up afresh, so its dialog opens again */}
+        {lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}

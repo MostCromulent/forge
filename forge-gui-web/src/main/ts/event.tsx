@@ -33,27 +33,34 @@ export function LimitedSwitch({ lobby, actions }: { lobby: LobbyTable; actions: 
   );
 }
 
-/** The event beside the seats: its setup form for the host until it is set up, then what it is and how to begin it. */
+/**
+ * The event above the seats: what it is and how to begin it. The host sets it up in a dialog over the table, which
+ * opens by itself on a table with no event yet, so the seats never move while the form is filled in.
+ */
 export function EventPanel({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited!;
-  const [editing, setEditing] = useState(false);
+  const [setting, setSetting] = useState(!lim.product);
   const draft = lim.kind === 'draft';
   const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? 'you' : s.name ?? 'a player'));
-  if (lobby.host && !lim.started && (!lim.product || editing)) {
-    return (
-      <section class="event-panel">
-        {lim.pastEvents.length > 0 && !editing && <PastEvents lim={lim} actions={actions} />}
-        {!model.limitedOptions ? <p class="muted">Reading what can be opened…</p>
-          : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={() => setEditing(false)} />
-          : <SealedForm model={model} actions={actions} done={() => setEditing(false)} />}
-        {editing && <button class="link" onClick={() => setEditing(false)}>Keep the event as it was</button>}
-      </section>
-    );
-  }
+  const close = () => setSetting(false);
   return (
     <section class="event-panel summary">
+      {lobby.host && !lim.started && setting && (
+        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+          <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
+            <button class="dk-close" title="Close" onClick={close}>&times;</button>
+            {lim.pastEvents.length > 0 && !lim.product && <PastEvents lim={lim} actions={actions} />}
+            {!model.limitedOptions ? <p class="muted">Reading what can be opened…</p>
+              : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={close} />
+              : <SealedForm model={model} actions={actions} done={close} />}
+          </div>
+        </div>
+      )}
       <h3>{draft ? 'Booster draft' : 'Sealed'}</h3>
-      <p class="event-product">{lim.product ?? 'The host is setting the event up.'}</p>
+      <p class="event-product">{lim.product ?? (lobby.host ? 'Not set up yet.' : 'The host is setting the event up.')}</p>
+      {lobby.host && !lim.started && !lim.product && (
+        <div class="event-actions"><button class="primary" onClick={() => setSetting(true)}>Set up the {draft ? 'draft' : 'event'}</button></div>
+      )}
       {draft && lim.product && (
         <p class="muted">{lim.podSize} seats · {pickName(lim.pickRule)} · {lim.timer ? `${lim.timer} s to pick` : 'no pick timer'}</p>
       )}
@@ -64,7 +71,7 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
       )}
       {lobby.host && !lim.started && lim.product && (
         <div class="event-actions">
-          <button onClick={() => setEditing(true)}>Edit event</button>
+          <button onClick={() => setSetting(true)}>Edit event</button>
           <button class="primary" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
         </div>
       )}

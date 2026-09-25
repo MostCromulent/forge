@@ -610,6 +610,9 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .limited-switch { align-items: center; gap: 6px; }
 .event-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
 .event-panel.summary h3 { margin: 0 0 4px; }
+.event-setup { position: relative; width: min(760px, 100%); padding: 0; }
+.event-setup .dk-close { position: absolute; right: 12px; top: 12px; z-index: 1; }
+.event-setup .past-events { padding: 16px 20px 0; }
 .event-product { margin: 0 0 4px; font-weight: 600; }
 .event-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 .past-events { display: grid; gap: 6px; margin-bottom: 14px; }
@@ -629,3 +632,4 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .plate.benched { opacity: .6; }
 .event-kind { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); }
 .event-kind[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); background: var(--accent-soft); opacity: 1; }
+.event-setup .wiz { border: none; background: transparent; }
