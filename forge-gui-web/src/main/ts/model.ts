@@ -1,8 +1,4 @@
-import type {
-  Address, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable,
-  Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone,
-  StackMenu, StateMessage, TrackedObject, ZoneType,
-} from './protocol';
+import type { Address, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
 export interface Looks {
@@ -54,6 +50,8 @@ export interface Model {
   cardFormats: string[];
   /** The card pool the lobby holds decks to, which the deck finder pins. */
   deckCardPool: string | null;
+  /** What the seat being edited may choose for a planar deck, scheme deck or avatar. */
+  extraChoices: ExtraChoices | null;
   /** The deck last asked about, with its card list and statistics. */
   deckDetails: DeckDetails | null;
   /** Card names matching the last search, and the printings of the last name asked about, for picking sleeve art. */
@@ -81,7 +79,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
-    cardFormats: [], deckCardPool: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
+    cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null,
   };
 }

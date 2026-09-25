@@ -49,6 +49,13 @@ export interface DeckDetailsMessage {
   deck: DeckDetails;
 }
 
+export interface ExtraChoices {
+  t: 'extraChoices';
+  section: string;
+  index: number;
+  choices: ExtraChoice[];
+}
+
 export interface LobbyMessage {
   t: 'lobby';
   table?: LobbyTable;
@@ -313,6 +320,7 @@ export type ServerMessage =
   | Notice
   | Decks
   | DeckDetailsMessage
+  | ExtraChoices
   | LobbyMessage
   | Addresses
   | ChatLine
@@ -387,6 +395,30 @@ export interface SetFormat {
 export interface SetCardPool {
   t: 'setCardPool';
   cardPool?: string;
+}
+
+export interface SetVariant {
+  t: 'setVariant';
+  variant: string;
+  on: boolean;
+}
+
+export interface SetArchenemy {
+  t: 'setArchenemy';
+  index: number;
+}
+
+export interface SetSeatExtra {
+  t: 'setSeatExtra';
+  index: number;
+  section: string;
+  choice: string;
+}
+
+export interface AskExtraChoices {
+  t: 'extraChoices';
+  index: number;
+  section: string;
 }
 
 export interface AskDeckDetails {
@@ -496,6 +528,10 @@ export type ClientMessage =
   | SetSeat
   | SetFormat
   | SetCardPool
+  | SetVariant
+  | SetArchenemy
+  | SetSeatExtra
+  | AskExtraChoices
   | AskDeckDetails
   | HostChoiceAnswer
   | SearchCards
@@ -602,6 +638,17 @@ export interface DeckDetails {
   sleeveOffset: number;
 }
 
+export interface ExtraChoice {
+  key: string;
+  label: string;
+  count?: number;
+  problem?: string;
+  image?: string;
+  hand?: number;
+  life?: number;
+  forComputer?: boolean;
+}
+
 export interface LobbyTable {
   host: boolean;
   mySeat: number;
@@ -610,6 +657,8 @@ export interface LobbyTable {
   formats: Format[];
   cardPool?: string;
   cardPools: CardPoolGroup[];
+  casualVariants: Format[];
+  variantsOn: string[];
   maxSeats: number;
   seats: Seat[];
   problems: string[];
@@ -773,6 +822,10 @@ export interface Seat {
   problem?: string;
   sleeveArt?: string;
   sleeveOffset: number;
+  role?: string;
+  planes?: SeatExtra;
+  schemes?: SeatExtra;
+  vanguard?: SeatExtra;
 }
 
 export type ZoneType = 'Hand' | 'Library' | 'Graveyard' | 'Battlefield' | 'Exile' | 'Flashback' | 'Command' | 'Stack' | 'Sideboard' | 'Ante' | 'Merged' | 'SchemeDeck' | 'PlanarDeck' | 'AttractionDeck' | 'Junkyard' | 'ContraptionDeck' | 'Subgame' | 'ExtraHand' | 'None';
@@ -784,6 +837,13 @@ export type GameLogEntryType = 'GAME_OUTCOME' | 'MATCH_RESULTS' | 'TURN' | 'MULL
 export interface TypeCount {
   name: string;
   count: number;
+}
+
+export interface SeatExtra {
+  label: string;
+  count: number;
+  detail?: string;
+  problem?: string;
 }
 
 // ---- Game objects: TrackableProperty values as JsonCodec encodes them ----

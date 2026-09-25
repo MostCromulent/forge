@@ -20,7 +20,7 @@ describe("a computer seat's random deck", () => {
 describe('the sentence under the lobby header', () => {
   const table = (more: Partial<LobbyTable> = {}): LobbyTable => ({
     host: true, mySeat: 0, shareable: false, format: 'Constructed', maxSeats: 4, seats: [], problems: [], canStart: false,
-    cardPools: [],
+    cardPools: [], casualVariants: [], variantsOn: [],
     formats: [{ id: 'Constructed', name: 'Constructed', group: 'Constructed', desc: 'Each player brings a deck of 60 or more cards.', facts: [], play: '' }],
     ...more,
   });

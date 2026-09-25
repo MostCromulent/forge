@@ -144,11 +144,27 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 #lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
 /* Seats, Add a seat and Play sit together as one block rather than being pushed to opposite edges */
 .lobby-main { display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
-.lobby-head { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.lobby-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
 .spectate { color: var(--muted); display: flex; align-items: center; gap: 6px; }
 
 .formats { display: flex; flex-wrap: wrap; gap: 6px; }
+/* The casual variants sit on a row of their own under the formats, since they stack on any of them */
+.formats.variants { order: 3; flex-basis: 100%; align-items: center; padding-left: 74px; }
+.formats .row-label { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
+.formats .row-note { color: var(--muted); font-size: 12px; }
+/* The archenemy and the heroes: a brass tag for the one, a plain one for the rest */
+.role { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+.role.archenemy { background: var(--brass); color: var(--on-brass); }
+.role.hero { border: 1px solid var(--line-bright); color: var(--muted); }
+.make-archenemy { font-size: 11.5px; padding: 2px 8px; background: none; color: var(--muted); }
+/* A seat's planar deck, scheme deck or avatar: one plain row each, opening its picker */
+.seat-extra { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; font-size: 13px; }
+.seat-extra .extra-kind { width: 62px; flex: none; color: var(--faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; }
+.seat-extra .extra-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seat-extra .extra-count, .seat-extra .extra-detail { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.seat-extra.warn { border-color: var(--danger); }
+.seat-extra .extra-problem { color: var(--danger); font-size: 11.5px; white-space: nowrap; }
 .format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
 .format[aria-pressed="true"] { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 600; }
 /* A format explains itself in a card under its chip, and all of them side by side in the guide */

@@ -54,6 +54,10 @@ export interface Actions {
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
+  setVariant(variant: string, on: boolean): void;
+  setArchenemy(index: number): void;
+  setSeatExtra(index: number, section: string, choice: string): void;
+  askExtraChoices(index: number, section: string): void;
   addSeat(): void;
   removeSeat(index: number): void;
   /** Turns a seat between a computer and one someone can join. */
@@ -106,6 +110,10 @@ export function createActions(send: Send): Actions {
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     setFormat: format => send({ t: 'setFormat', format }),
+    setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
+    setArchenemy: index => send({ t: 'setArchenemy', index }),
+    setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
+    askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     addSeat: () => send({ t: 'addSeat' }),
     removeSeat: index => send({ t: 'removeSeat', index }),

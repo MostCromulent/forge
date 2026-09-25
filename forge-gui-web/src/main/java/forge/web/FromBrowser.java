@@ -57,6 +57,24 @@ final class FromBrowser {
     record SetFormat(String format) {
     }
 
+    /** A casual variant switched on or off. The engine decides what else that switches off. */
+    @Command("setVariant")
+    record SetVariant(String variant, boolean on) {
+    }
+
+    @Command("setArchenemy")
+    record SetArchenemy(int index) {
+    }
+
+    /** A seat's planar deck, scheme deck or avatar: the section's name and a choice key from its list. */
+    @Command("setSeatExtra")
+    record SetSeatExtra(int index, String section, String choice) {
+    }
+
+    @Command("extraChoices")
+    record AskExtraChoices(int index, String section) {
+    }
+
     /** A card pool for Constructed, or none to lift it. */
     @Command("setCardPool")
     record SetCardPool(@Nullable String cardPool) {
@@ -151,7 +169,7 @@ final class FromBrowser {
 
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
-            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, AskDeckDetails.class, HostChoiceAnswer.class,
+            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class);

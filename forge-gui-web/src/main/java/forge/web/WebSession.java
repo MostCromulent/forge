@@ -8,7 +8,11 @@ import forge.web.FromBrowser.Ready;
 import forge.web.FromBrowser.Say;
 import forge.web.FromBrowser.SearchCards;
 import forge.web.FromBrowser.SeatCommand;
+import forge.web.FromBrowser.AskExtraChoices;
+import forge.web.FromBrowser.SetArchenemy;
 import forge.web.FromBrowser.SetFormat;
+import forge.web.FromBrowser.SetSeatExtra;
+import forge.web.FromBrowser.SetVariant;
 import forge.web.FromBrowser.SetCardPool;
 import forge.web.FromBrowser.SetName;
 import forge.web.FromBrowser.SetSeat;
@@ -268,7 +272,8 @@ public final class WebSession {
                 }
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
-            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "addSeat", "setSeat", "sleeveArt" -> {
+            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
+                    "addSeat", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -277,6 +282,13 @@ public final class WebSession {
                 final String text = Wire.decode(msg, Say.class).text();
                 if (text != null && !text.isBlank()) {
                     sessions.say(this, text.length() > MOST_CHAT_CHARS ? text.substring(0, MOST_CHAT_CHARS) : text);
+                }
+            }
+            case "extraChoices" -> {
+                final AskExtraChoices ask = Wire.decode(msg, AskExtraChoices.class);
+                final ToBrowser.ExtraChoices choices = lobby.extraChoices(ask.index(), ask.section());
+                if (choices != null) {
+                    channel.send(choices);
                 }
             }
             case "deckDetails" -> {
@@ -367,6 +379,18 @@ public final class WebSession {
                 if (lobby.restrictionsChanged()) {
                     channel.send(lobby.decks());
                 }
+            }
+            case "setVariant" -> {
+                final SetVariant variant = Wire.decode(msg, SetVariant.class);
+                lobby.setVariant(variant.variant(), variant.on());
+                if (lobby.restrictionsChanged()) {
+                    channel.send(lobby.decks());
+                }
+            }
+            case "setArchenemy" -> lobby.setArchenemy(Wire.decode(msg, SetArchenemy.class).index());
+            case "setSeatExtra" -> {
+                final SetSeatExtra extra = Wire.decode(msg, SetSeatExtra.class);
+                lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());
             }
             case "addSeat" -> lobby.addSeat();
             case "setSeat" -> applySeat(channel, Wire.decode(msg, SetSeat.class));

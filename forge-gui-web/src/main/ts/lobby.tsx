@@ -16,7 +16,7 @@ import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { Address, DeckSummary, Format, LobbyTable, Seat } from './protocol';
+import type { Address, DeckSummary, Format, LobbyTable, Seat, SeatExtra } from './protocol';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -47,6 +47,14 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           ))}
           <button class="guide-link" onClick={() => setGuide(true)}>What are these?</button>
         </div>
+        <div class="formats variants">
+          <span class="row-label">Casual variants</span>
+          {lobby.casualVariants.map(v => (
+            <FormatChip key={v.id} format={v} label={v.name} pressed={lobby.variantsOn.includes(v.id)}
+              host={lobby.host && !variantBlocked(lobby, v.id)} choose={() => actions.setVariant(v.id, !lobby.variantsOn.includes(v.id))} />
+          ))}
+          {lobby.casualVariants.some(v => variantBlocked(lobby, v.id)) && <span class="row-note">{variantBlocked(lobby, 'Vanguard')}</span>}
+        </div>
         <div class="head-right">
           <label class="spectate" hidden={!lobby.host}>
             <input type="checkbox" checked={ui.spectate}
@@ -57,7 +65,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </header>
       <p class="match-sentence"><b>{sentence.title}.</b> {sentence.text}</p>
-      {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)} close={() => setGuide(false)} />}
+      {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)}
+        toggle={id => actions.setVariant(id, !lobby.variantsOn.includes(id))} close={() => setGuide(false)} />}
       <div class="lobby-main">
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
@@ -119,7 +128,15 @@ function constructedName(lobby: LobbyTable): string {
 export function matchSentence(lobby: LobbyTable): { title: string; text: string } {
   const format = lobby.formats.find(f => f.id === lobby.format);
   const name = lobby.format === 'Constructed' ? constructedName(lobby) : format?.name ?? lobby.format;
-  return { title: name, text: format?.desc ?? '' };
+  const on = (lobby.casualVariants ?? []).filter(v => (lobby.variantsOn ?? []).includes(v.id)).map(v => v.name);
+  const variants = on.length ? ` with ${on.length > 1 ? `${on.slice(0, -1).join(', ')} and ${on[on.length - 1]}` : on[0]}` : '';
+  return { title: name + variants, text: format?.desc ?? '' };
+}
+
+/** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
+function variantBlocked(lobby: LobbyTable, id: string): string | null {
+  const group = lobby.formats.find(f => f.id === lobby.format)?.group;
+  return id === 'Vanguard' && group === 'Other' ? 'Vanguard is off: this format brings its own avatar.' : null;
 }
 
 /** Formats under their group, in the order the server lists them. */
@@ -225,7 +242,9 @@ function FormatCard({ id, format }: { id?: string; format: Format }) {
 }
 
 /** Every format side by side, each with its own Choose, so a player can read and pick in one place. */
-function Guide({ lobby, choose, close }: { lobby: LobbyTable; choose: (id: string) => void; close: () => void }) {
+function Guide({ lobby, choose, toggle, close }: {
+  lobby: LobbyTable; choose: (id: string) => void; toggle: (id: string) => void; close: () => void;
+}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     window.addEventListener('keydown', onKey);
@@ -253,6 +272,22 @@ function Guide({ lobby, choose, close }: { lobby: LobbyTable; choose: (id: strin
           </div>
           )),
         ])}
+        <h3 class="guide-group">Casual variants</h3>
+        {lobby.casualVariants.map(v => {
+          const on = lobby.variantsOn.includes(v.id);
+          return (
+            <div key={`v:${v.id}`} class={`guide-item${on ? ' on' : ''}`}>
+              <div class="guide-name">{on && <small>On</small>}{v.name}</div>
+              <div>
+                <p class="desc">{v.desc}</p>
+                <div class="facts">{v.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
+                <p class="format-play"><b>In a match:</b> {v.play}</p>
+              </div>
+              {lobby.host && !variantBlocked(lobby, v.id)
+                && <button class="guide-choose" onClick={() => toggle(v.id)}>{on ? 'Turn off' : 'Turn on'}</button>}
+            </div>
+          );
+        })}
       </aside>
     </div>
   );
@@ -312,6 +347,10 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
             hidden={seat.type !== 'AI' || !lobby.host || dealt} onClick={random}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
           </button>
+          {seat.role && <span class={`role ${seat.role}`}>{seat.role === 'archenemy' ? 'Archenemy' : 'Hero'}</span>}
+          {lobby.host && seat.role === 'hero' && (
+            <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>Make archenemy</button>
+          )}
           <button class="drop" title="Remove this seat" hidden={mine || !lobby.host || lobby.seats.length <= 2}
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
@@ -324,8 +363,24 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
           <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
         </button>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
+        {seat.planes && <ExtraRow name="Planes" extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
+        {seat.schemes && <ExtraRow name="Schemes" extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
+        {seat.vanguard && <ExtraRow name="Avatar" extra={seat.vanguard} mayEdit={seat.mayEdit} open={() => choose('vanguard')} />}
       </div>
     </div>
+  );
+}
+
+/** A planar deck, scheme deck or avatar on a seat: a plain row that opens its picker, with its fault when it has one. */
+function ExtraRow({ name, extra, mayEdit, open }: { name: string; extra: SeatExtra; mayEdit: boolean; open: () => void }) {
+  return (
+    <button class={`seat-extra${extra.problem ? ' warn' : ''}`} disabled={!mayEdit} onClick={open}>
+      <span class="extra-kind">{name}</span>
+      <span class="extra-label">{extra.label}</span>
+      {extra.detail ? <span class="extra-detail">{extra.detail}</span>
+        : extra.count > 0 && name !== 'Avatar' && <span class="extra-count">{extra.count}</span>}
+      {extra.problem && <span class="extra-problem">{extra.problem}</span>}
+    </button>
   );
 }
 

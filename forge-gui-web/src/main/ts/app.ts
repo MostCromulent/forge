@@ -174,6 +174,9 @@ function apply(msg: ServerMessage): void {
         send({ t: 'decks' });
       }
       break;
+    case 'extraChoices':
+      model.extraChoices = msg;
+      break;
     case 'decks':
       model.decks = msg.decks;
       model.cardFormats = msg.cardFormats ?? [];

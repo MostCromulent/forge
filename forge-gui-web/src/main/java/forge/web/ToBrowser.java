@@ -125,7 +125,7 @@ final class ToBrowser {
     }
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
-            @Nullable String cardPool, List<CardPoolGroup> cardPools,
+            @Nullable String cardPool, List<CardPoolGroup> cardPools, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, List<Seat> seats, List<String> problems, boolean canStart) {
     }
 
@@ -140,7 +140,21 @@ final class ToBrowser {
     /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. */
     record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
-            @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset) {
+            @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
+            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard) {
+    }
+
+    /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */
+    record SeatExtra(String label, int count, @Nullable String detail, @Nullable String problem) {
+    }
+
+    /** What a seat may choose for one extra section. An avatar carries its image and its two modifiers. */
+    @Message("extraChoices")
+    record ExtraChoices(String section, int index, List<ExtraChoice> choices) {
+    }
+
+    record ExtraChoice(String key, String label, @Nullable Integer count, @Nullable String problem,
+            @Nullable String image, @Nullable Integer hand, @Nullable Integer life, @Nullable Boolean forComputer) {
     }
 
     @Message("addresses")
@@ -360,7 +374,7 @@ final class ToBrowser {
 
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
-            Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
+            Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class);

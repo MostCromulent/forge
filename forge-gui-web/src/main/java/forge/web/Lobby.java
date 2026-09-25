@@ -1,7 +1,9 @@
 package forge.web;
 
+import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
+import forge.deck.DeckSection;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.match.GameLobby;
@@ -22,9 +24,14 @@ import forge.web.ToBrowser.CardPoolGroup;
 import forge.web.ToBrowser.LobbyMessage;
 import forge.web.ToBrowser.LobbyTable;
 import forge.web.ToBrowser.Seat;
+import forge.web.ToBrowser.SeatExtra;
+import forge.web.DeckCatalog.Extra;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -38,7 +45,15 @@ final class Lobby {
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
             GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto);
 
+    /** The casual variants, which stack on top of any format the engine allows them with. */
+    private static final List<GameType> VARIANTS = List.of(GameType.Vanguard, GameType.Planechase,
+            GameType.Archenemy, GameType.ArchenemyRumble);
+
     private final DeckCatalog catalog = new DeckCatalog();
+    /** Each seat's planar deck, scheme deck and avatar, for the seats this browser deals for. */
+    private final Map<Integer, Map<DeckSection, Extra>> extras = new HashMap<>();
+    /** The deck each of those seats was last sent, main deck and extras together: the deck of record. */
+    private final Map<Integer, Deck> composed = new HashMap<>();
     private final LocalGame local;
     /** Which deck each seat was given, by catalogue key: the lobby slot holds the deck, this holds the choice. */
     private final List<String> deckKeys = new ArrayList<>();
@@ -165,6 +180,7 @@ final class Lobby {
     Decks decks() {
         final Decks out;
         final boolean newPool;
+        final boolean newRules;
         synchronized (DeckCatalog.DECKS) {
             final GameType format = format();
             final GameFormat cardPool = cardPool();
@@ -174,14 +190,19 @@ final class Lobby {
                 deckKeys.clear();
             }
             newPool = format == seenFormat && !Objects.equals(poolName, seenCardPool);
+            newRules = format != seenFormat || !rules().equals(seenRules);
             seenFormat = format;
             seenCardPool = poolName;
+            seenRules = rules();
             out = new Decks(catalog.refresh(format, cardPool), DeckCatalog.cardFormats(), poolName);
         }
         if (newPool) {
             dealGeneratorsAgain();
         }
         readyWithoutADeck();
+        if (newRules) {
+            composeMine();
+        }
         return out;
     }
 
@@ -213,6 +234,208 @@ final class Lobby {
                 setDeck(i, key);
             }
         }
+    }
+
+    /** The casual variants on, and which seat is the archenemy: what decides a seat's extra sections. */
+    private String rules() {
+        final GameLobby lobby = view();
+        if (lobby == null) {
+            return "";
+        }
+        final StringBuilder sb = new StringBuilder(variantsOn(lobby).toString());
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            sb.append(lobby.getSlot(i).isArchenemy() ? i : "");
+        }
+        return sb.toString();
+    }
+
+    private static List<String> variantsOn(final GameLobby lobby) {
+        final List<String> out = new ArrayList<>();
+        for (final GameType v : VARIANTS) {
+            if (lobby.hasVariant(v)) {
+                out.add(v.name());
+            }
+        }
+        return out;
+    }
+
+    /** Seats whose deck this browser sends: its own, and the computer's when it runs the game. */
+    private boolean dealsFor(final GameLobby lobby, final int index) {
+        return index == local.webSeat() || (host() != null && index < lobby.getNumberOfSlots()
+                && lobby.getSlot(index).getType() == LobbySlotType.AI);
+    }
+
+    private static boolean forComputer(final GameLobby lobby, final int index) {
+        return lobby.getSlot(index).getType() == LobbySlotType.AI;
+    }
+
+    /** The extra sections a seat brings under the variants that are on. */
+    private static List<DeckSection> sectionsFor(final GameLobby lobby, final int index) {
+        final List<DeckSection> out = new ArrayList<>();
+        if (lobby.hasVariant(GameType.Planechase)) {
+            out.add(DeckSection.Planes);
+        }
+        if (lobby.hasVariant(GameType.ArchenemyRumble)
+                || (lobby.hasVariant(GameType.Archenemy) && lobby.getSlot(index).isArchenemy())) {
+            out.add(DeckSection.Schemes);
+        }
+        if (lobby.hasVariant(GameType.Vanguard)) {
+            out.add(DeckSection.Avatar);
+        }
+        return out;
+    }
+
+    private Map<DeckSection, Extra> extrasAt(final int index) {
+        return extras.computeIfAbsent(index, i -> new EnumMap<>(DeckSection.class));
+    }
+
+    /** Gives each seat this browser deals for a default for every section it lacks, then sends each seat's deck. */
+    private void composeMine() {
+        final GameLobby lobby = view();
+        for (int i = 0; lobby != null && i < lobby.getNumberOfSlots(); i++) {
+            if (!dealsFor(lobby, i)) {
+                continue;
+            }
+            for (final DeckSection section : sectionsFor(lobby, i)) {
+                if (!extrasAt(i).containsKey(section)) {
+                    final Extra fallback = DeckCatalog.resolveExtra(section,
+                            section == DeckSection.Avatar ? DeckCatalog.RANDOM : DeckCatalog.GENERATE, forComputer(lobby, i));
+                    if (fallback != null) {
+                        extrasAt(i).put(section, fallback);
+                    }
+                }
+            }
+            compose(i);
+        }
+    }
+
+    /**
+     * Builds a seat's deck from its main deck and the extras its variants call for, and sends it. A full deck update
+     * replaces every section, so the extras travel with the main deck in the same update. Without a main deck
+     * nothing is sent, unless the format deals the deck itself.
+     */
+    private void compose(final int index) {
+        final GameLobby lobby = view();
+        if (lobby == null || index >= lobby.getNumberOfSlots() || !dealsFor(lobby, index)) {
+            return;
+        }
+        final Deck main = catalog.deck(key(index));
+        final boolean dealt = format().isAutoGenerated();
+        Deck deck = null;
+        if (main != null || dealt) {
+            deck = main == null ? new Deck("Dealt at the start") : new Deck(main);
+            for (final DeckSection section : sectionsFor(lobby, index)) {
+                final Extra extra = extrasAt(index).get(section);
+                final CardPool cards = extra == null ? null : extra.cards() != null ? extra.cards()
+                        : main == null ? null : main.get(section);
+                if (cards != null) {
+                    deck.putSection(section, cards);
+                }
+            }
+        }
+        if (deck == null) {
+            composed.remove(index);
+        } else {
+            composed.put(index, deck);
+        }
+        final String planes = labelOf(index, DeckSection.Planes);
+        final String schemes = labelOf(index, DeckSection.Schemes);
+        final String avatar = labelOf(index, DeckSection.Avatar);
+        if (index == local.webSeat()) {
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
+            // A seat with a deck has said all it needs to, so readiness follows the deck rather than a button
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(deck != null));
+            local.updateOwnSeat(UpdateLobbyPlayerEvent.setDeckSchemePlaneVanguard(
+                    deck == null ? null : deck.getName(), schemes, planes, avatar));
+        } else {
+            final LobbySlot slot = lobby.getSlot(index);
+            slot.setDeck(deck);
+            slot.setPlanarDeckName(planes);
+            slot.setSchemeDeckName(schemes);
+            slot.setAvatarVanguard(avatar);
+            local.pushLobby();
+        }
+    }
+
+    private String labelOf(final int index, final DeckSection section) {
+        final Extra extra = extrasAt(index).get(section);
+        return extra == null ? null : extra.label();
+    }
+
+    /** A seat's planar deck, scheme deck or avatar, chosen by a key from {@link #extraChoices}. */
+    void setSeatExtra(final int index, final String sectionName, final String choice) {
+        final GameLobby lobby = view();
+        final DeckSection section = extraSection(sectionName);
+        if (lobby == null || section == null || !dealsFor(lobby, index)) {
+            return;
+        }
+        final Extra extra = DeckCatalog.resolveExtra(section, choice, forComputer(lobby, index));
+        if (extra != null) {
+            extrasAt(index).put(section, extra);
+            compose(index);
+        }
+    }
+
+    ToBrowser.ExtraChoices extraChoices(final int index, final String sectionName) {
+        final GameLobby lobby = view();
+        final DeckSection section = extraSection(sectionName);
+        if (lobby == null || section == null || index < 0 || index >= lobby.getNumberOfSlots()) {
+            return null;
+        }
+        return new ToBrowser.ExtraChoices(section.name(), index,
+                DeckCatalog.extraChoices(section, forComputer(lobby, index), catalog.deck(key(index))));
+    }
+
+    private static DeckSection extraSection(final String name) {
+        for (final DeckSection s : List.of(DeckSection.Planes, DeckSection.Schemes, DeckSection.Avatar)) {
+            if (s.name().equals(name)) {
+                return s;
+            }
+        }
+        return null;
+    }
+
+    /** A casual variant belongs to the game, so only the host switches one; the engine drops what it excludes. */
+    void setVariant(final String id, final boolean on) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return;
+        }
+        for (final GameType v : VARIANTS) {
+            if (v.name().equals(id)) {
+                if (on) {
+                    lobby.applyVariant(v);
+                } else {
+                    lobby.removeVariant(v);
+                }
+                local.pushLobby();
+                return;
+            }
+        }
+    }
+
+    /** Moves the archenemy's role. The engine's lobby keeps one archenemy and sets the teams from it. */
+    void setArchenemy(final int index) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || !lobby.hasVariant(GameType.Archenemy) || index < 0 || index >= lobby.getNumberOfSlots()) {
+            return;
+        }
+        lobby.applyToSlot(index, UpdateLobbyPlayerEvent.create(null, null, -1, -1, -1, true,
+                lobby.getSlot(index).isDevMode(), null, null));
+        local.pushLobby();
+    }
+
+    /** A casual variant with what the lobby says about it, in the same shape as a format. */
+    static Format explainedVariant(final GameType type) {
+        final Localizer text = Localizer.getInstance();
+        final List<String> facts = switch (type) {
+            case Planechase -> List.of(text.getMessage("lblWebFactPlanes"));
+            case Vanguard -> List.of(text.getMessage("lblWebFactOneAvatar"), text.getMessage("lblWebFactAvatarChanges"));
+            case Archenemy -> List.of(text.getMessage("lblWebFactSchemesArchenemy"), text.getMessage("lblWebFactArchenemyLife"));
+            default -> List.of(text.getMessage("lblWebFactSchemesEveryone"), text.getMessage("lblWebFactEveryoneLife"));
+        };
+        return new Format(type.name(), type.toString(), "Casual variants", type.getDescription(), facts,
+                text.getMessage("lblWebPlay" + type.name()));
     }
 
     /** The deck behind a catalogue key, for tests in this package. */
@@ -250,6 +473,7 @@ final class Lobby {
             // Only the machine running the game can start it; everyone else waits on the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(), cardPools(),
+                    VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
         }
     }
@@ -267,7 +491,40 @@ final class Lobby {
                 deck == null ? null : DeckCatalog.problem(deck, format(), cardPool()),
                 // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
                 deck == null ? "" : deck.getSleeveArtKey(),
-                deck == null ? 0 : deck.getSleeveArtOffset());
+                deck == null ? 0 : deck.getSleeveArtOffset(),
+                lobby.hasVariant(GameType.ArchenemyRumble) ? "archenemy"
+                        : lobby.hasVariant(GameType.Archenemy) ? (slot.isArchenemy() ? "archenemy" : "hero") : null,
+                sectionsFor(lobby, index).contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
+                sectionsFor(lobby, index).contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
+                sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null);
+    }
+
+    /**
+     * What a seat brings for one section. Another browser's seat is described by the names it published, since its
+     * choices live in its own browser; a random avatar is named "Random" there, so the draw stays a surprise.
+     */
+    private SeatExtra seatExtra(final GameLobby lobby, final int index, final Deck deck, final DeckSection section) {
+        final LobbySlot slot = lobby.getSlot(index);
+        final String published = switch (section) {
+            case Planes -> slot.getPlanarDeckName();
+            case Schemes -> slot.getSchemeDeckName();
+            default -> slot.getAvatarVanguard();
+        };
+        final String label = dealsFor(lobby, index) && labelOf(index, section) != null ? labelOf(index, section) : published;
+        final CardPool cards = deck == null ? null : deck.get(section);
+        final int count = cards == null ? 0 : cards.countAll();
+        String detail = null;
+        if (section == DeckSection.Avatar && count > 0 && !"Random".equals(label)) {
+            final var rules = cards.iterator().next().getKey().getRules();
+            detail = "hand " + signed(rules.getHand()) + " · life " + signed(rules.getLife());
+        }
+        final String problem = section == DeckSection.Avatar ? (count == 0 ? "No avatar." : null)
+                : DeckCatalog.sectionProblem(section, cards);
+        return new SeatExtra(label == null ? "None" : label, count, detail, problem);
+    }
+
+    private static String signed(final int n) {
+        return n < 0 ? "−" + (-n) : "+" + n;
     }
 
     private String key(final int index) {
@@ -279,6 +536,10 @@ final class Lobby {
      * with their seat, because their catalog is not this one.
      */
     private Deck deckAt(final int index) {
+        final Deck made = composed.get(index);
+        if (made != null) {
+            return made;
+        }
         final Deck chosen = catalog.deck(key(index));
         if (chosen != null) {
             return chosen;
@@ -314,6 +575,20 @@ final class Lobby {
                         out.add(deck.getName() + ": " + problem);
                     }
                 }
+                // As startGame: a missing avatar always stops the match, the other sections only with legality on
+                if (lobby.hasVariant(GameType.Vanguard)
+                        && (deck == null || deck.get(DeckSection.Avatar) == null || deck.get(DeckSection.Avatar).isEmpty())) {
+                    out.add(who + " no avatar.");
+                }
+                if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
+                    for (final DeckSection section : sectionsFor(lobby, i)) {
+                        final String fault = section == DeckSection.Avatar ? null
+                                : DeckCatalog.sectionProblem(section, deck == null ? null : deck.get(section));
+                        if (fault != null) {
+                            out.add(slot.getName() + (section == DeckSection.Planes ? "'s planar deck " : "'s scheme deck ") + fault);
+                        }
+                    }
+                }
                 if (!slot.isReady()) {
                     out.add(slot.getName() + " is not ready.");
                 }
@@ -325,19 +600,24 @@ final class Lobby {
     /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */
     void forget() {
         deckKeys.clear();
+        extras.clear();
+        composed.clear();
         seenFormat = null;
         seenCardPool = null;
+        seenRules = null;
     }
 
     /** The format and card pool this browser's deck list was last built for, recorded by {@link #decks()}. */
     private GameType seenFormat;
     private String seenCardPool;
+    private String seenRules;
 
     /** True when the format or card pool differs from the one the last deck list was built for. */
     boolean restrictionsChanged() {
         synchronized (DeckCatalog.DECKS) {
             final GameFormat cardPool = cardPool();
-            return format() != seenFormat || !Objects.equals(cardPool == null ? null : cardPool.getName(), seenCardPool);
+            return format() != seenFormat || !Objects.equals(cardPool == null ? null : cardPool.getName(), seenCardPool)
+                    || !rules().equals(seenRules);
         }
     }
 
@@ -366,6 +646,7 @@ final class Lobby {
             }
             // A deck legal in one format is rarely legal in another, and its key is not in the new pool
             deckKeys.clear();
+            composed.clear();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 lobby.getSlot(i).setDeck(null);
             }
@@ -390,6 +671,13 @@ final class Lobby {
             slot.setType(LobbySlotType.OPEN);
             slot.setName(null);
             slot.setIsReady(false);
+            slot.setDeck(null);
+            // Whoever sits here brings their own choices, so this browser's for the seat are dropped
+            if (index < deckKeys.size()) {
+                deckKeys.set(index, null);
+            }
+            extras.remove(index);
+            composed.remove(index);
             local.pushLobby();
         }
     }
@@ -427,7 +715,21 @@ final class Lobby {
             if (index < deckKeys.size()) {
                 deckKeys.remove(index);
             }
+            shiftDown(extras, index);
+            shiftDown(composed, index);
         }
+    }
+
+    /** Drops a removed seat's entry and moves the seats after it up one, as the lobby's slots move. */
+    private static <T> void shiftDown(final Map<Integer, T> bySeat, final int removed) {
+        final Map<Integer, T> moved = new HashMap<>();
+        bySeat.forEach((i, v) -> {
+            if (i != removed) {
+                moved.put(i > removed ? i - 1 : i, v);
+            }
+        });
+        bySeat.clear();
+        bySeat.putAll(moved);
     }
 
     /** The names the computer plays under at this table, which a person may not also take. */
@@ -464,15 +766,7 @@ final class Lobby {
             deckKeys.add(null);
         }
         deckKeys.set(index, key);
-        final Deck deck = catalog.deck(key);
-        if (index == local.webSeat()) {
-            local.updateOwnSeat(UpdateLobbyPlayerEvent.deckUpdate(deck));
-            // A seat with a deck has said all it needs to, so readiness follows the deck rather than a button
-            local.updateOwnSeat(UpdateLobbyPlayerEvent.isReadyUpdate(deck != null));
-        } else if (host() != null) {
-            host().getSlot(index).setDeck(deck);
-            local.pushLobby();
-        }
+        compose(index);
     }
 
     void setAvatar(final int index, final int value) {
@@ -506,6 +800,8 @@ final class Lobby {
     /** Writes a card-art sleeve onto the seat's deck, where every client reads it from. */
     void setSleeveArt(final int index, final String imageKey, final int offset) {
         catalog.saveSleeveArt(key(index), imageKey, offset);
+        // The slot holds a copy of the deck, so the new sleeve reaches it only with the deck sent again
+        compose(index);
     }
 
     /** Saves the avatars and sleeves the seats chose, which the desktop lobby shares. */

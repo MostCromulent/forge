@@ -10,7 +10,7 @@ export type Hover = { card: number | null; src: string; from?: string; at?: HTML
 
 /** A picker open over match setup, for one seat. */
 export interface Picker {
-  kind: 'deck' | 'sleeve' | 'avatar';
+  kind: 'deck' | 'sleeve' | 'avatar' | 'planes' | 'schemes' | 'vanguard';
   seat: number;
 }
 

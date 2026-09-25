@@ -304,6 +304,65 @@ public class GuestSeatTest {
                 && "Pauper".equals(d.get("cardPool").getAsString())), "the guest was never sent a Pauper deck list");
     }
 
+    /** The guest's own seat in a lobby table. */
+    private static JsonObject mySeat(final JsonObject table) {
+        final int mine = table.get("mySeat").getAsInt();
+        return mine < 0 ? null : table.getAsJsonArray("seats").get(mine).getAsJsonObject();
+    }
+
+    private static int extraCount(final JsonObject seat, final String extra) {
+        return seat != null && seat.has(extra) ? seat.getAsJsonObject(extra).get("count").getAsInt() : -1;
+    }
+
+    /**
+     * Fails if the host composes a guest's seat, which would overwrite the guest's own planes, or if the guest never
+     * learns that a variant came on and so brings no planes or avatar at all.
+     */
+    @Test(timeOut = 120_000)
+    public void aGuestsPlanesSurviveTheHost() throws Exception {
+        final Recorder hostBrowser = connect("host");
+        sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
+        Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
+        hostBrowser.forget();
+        sessions.onMessage(hostBrowser, named("Host"));
+        sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
+        Assert.assertNotNull(hostBrowser.awaitLobbyWithSeat(), "the host never got a seat");
+        final Recorder guestBrowser = connect("planes-guest");
+        Assert.assertNotNull(guestBrowser.await("hello"));
+        sessions.onMessage(guestBrowser, named("Planes Guest"));
+        Assert.assertNotNull(guestBrowser.awaitLobbyWithSeat(), "the guest never sat down");
+        // The guest needs a main deck before anything is sent for its seat
+        final JsonObject decks = guestBrowser.await("decks");
+        final JsonObject choose = JsonCodec.message("setSeat");
+        final JsonObject seated = guestBrowser.awaitLobbyWithSeat();
+        choose.addProperty("index", seated.get("mySeat").getAsInt());
+        choose.addProperty("deck", legalDeck(decks));
+        sessions.onMessage(guestBrowser, choose);
+
+        final JsonObject planechase = JsonCodec.message("setVariant");
+        planechase.addProperty("variant", "Planechase");
+        planechase.addProperty("on", true);
+        sessions.onMessage(hostBrowser, planechase);
+        final JsonObject withPlanes = guestBrowser.awaitLobby(t -> extraCount(mySeat(t), "planes") >= 10);
+        Assert.assertNotNull(withPlanes, "the guest never brought planes");
+        final int planes = extraCount(mySeat(withPlanes), "planes");
+
+        final JsonObject vanguard = JsonCodec.message("setVariant");
+        vanguard.addProperty("variant", "Vanguard");
+        vanguard.addProperty("on", true);
+        sessions.onMessage(hostBrowser, vanguard);
+        final JsonObject both = hostBrowser.awaitLobby(t -> {
+            for (final var s : t.getAsJsonArray("seats")) {
+                final JsonObject seat = s.getAsJsonObject();
+                if ("Planes Guest".equals(seat.has("name") ? seat.get("name").getAsString() : "")) {
+                    return extraCount(seat, "vanguard") == 1 && extraCount(seat, "planes") == planes;
+                }
+            }
+            return false;
+        });
+        Assert.assertNotNull(both, "the host's table never showed the guest's planes kept and an avatar added");
+    }
+
     /** Fails if a guest who sits down after the host chose Momir Basic can never be ready, having no deck to choose. */
     @Test(timeOut = 120_000)
     public void aGuestJoiningAMomirTableIsReady() throws Exception {

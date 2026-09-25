@@ -15,12 +15,14 @@ import forge.gamemodes.quest.QuestController;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.MyRandom;
 import forge.util.SleeveArt;
 import forge.web.ToBrowser.DeckCard;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckGroup;
 import forge.web.ToBrowser.DeckStats;
 import forge.web.ToBrowser.DeckSummary;
+import forge.web.ToBrowser.ExtraChoice;
 import forge.web.ToBrowser.Printing;
 import forge.web.ToBrowser.SavedSleeveArt;
 import forge.web.ToBrowser.TypeCount;
@@ -430,6 +432,114 @@ final class DeckCatalog {
             return "Battles";
         }
         return type.isEnchantment() ? "Enchantments" : "Artifacts";
+    }
+
+    /** A seat's choice for one extra section: what it is called, and its cards, or null to follow the main deck's own. */
+    record Extra(String label, CardPool cards) {
+    }
+
+    static final String OWN = "own";
+    static final String GENERATE = "generate";
+    static final String RANDOM = "random";
+    private static final String SAVED = "deck:";
+    private static final String AVATAR = "avatar:";
+
+    /** What a seat may choose for a planar deck, a scheme deck or an avatar, most common first. */
+    static List<ExtraChoice> extraChoices(final DeckSection section, final boolean forComputer, final Deck main) {
+        final List<ExtraChoice> out = new ArrayList<>();
+        final CardPool own = main == null ? null : main.get(section);
+        if (own != null && !own.isEmpty()) {
+            out.add(new ExtraChoice(OWN, section == DeckSection.Avatar ? "The deck's default" : "The deck's own",
+                    own.countAll(), sectionProblem(section, own), null, null, null, null));
+        }
+        if (section == DeckSection.Avatar) {
+            out.add(new ExtraChoice(RANDOM, "Random", null, null, null, null, null, null));
+            for (final PaperCard avatar : avatars(forComputer)) {
+                out.add(new ExtraChoice(AVATAR + avatar.getName(), avatar.getName(), null, null, avatar.getImageKey(false),
+                        avatar.getRules().getHand(), avatar.getRules().getLife(),
+                        !avatar.getRules().getAiHints().getRemAIDecks()));
+            }
+            return out;
+        }
+        out.add(new ExtraChoice(GENERATE, "Generated", null, null, null, null, null, null));
+        out.add(new ExtraChoice(RANDOM, "Random saved deck", null, null, null, null, null, null));
+        for (final DeckProxy proxy : savedDecks(section)) {
+            final CardPool cards = proxy.getDeck().get(section);
+            out.add(new ExtraChoice(SAVED + proxy.getPath() + "/" + proxy.getName(), proxy.getName(),
+                    cards == null ? 0 : cards.countAll(), sectionProblem(section, cards), null, null, null, null));
+        }
+        return out;
+    }
+
+    /** The cards a choice stands for. Generated and random choices are drawn now, so the seat shows what it got. */
+    static Extra resolveExtra(final DeckSection section, final String choice, final boolean forComputer) {
+        if (OWN.equals(choice)) {
+            return new Extra(section == DeckSection.Avatar ? "The deck's default" : "The deck's own", null);
+        }
+        if (section == DeckSection.Avatar) {
+            final List<PaperCard> pool = avatars(forComputer);
+            PaperCard avatar = null;
+            if (RANDOM.equals(choice)) {
+                // A random avatar skips the ones marked unfit for a random pick, as desktop's does
+                final List<PaperCard> fit = pool.stream().filter(c -> !c.getRules().getAiHints().getRemRandomDecks()).toList();
+                avatar = fit.isEmpty() ? null : fit.get(MyRandom.getRandom().nextInt(fit.size()));
+            } else if (choice != null && choice.startsWith(AVATAR)) {
+                final String name = choice.substring(AVATAR.length());
+                avatar = pool.stream().filter(c -> c.getName().equals(name)).findFirst().orElse(null);
+            }
+            if (avatar == null) {
+                return null;
+            }
+            final CardPool one = new CardPool();
+            one.add(avatar);
+            return new Extra(RANDOM.equals(choice) ? "Random" : avatar.getName(), one);
+        }
+        if (RANDOM.equals(choice)) {
+            final List<DeckProxy> saved = savedDecks(section);
+            if (!saved.isEmpty()) {
+                final DeckProxy pick = saved.get(MyRandom.getRandom().nextInt(saved.size()));
+                return new Extra("Random saved deck", pick.getDeck().get(section));
+            }
+        } else if (choice != null && choice.startsWith(SAVED)) {
+            final String key = choice.substring(SAVED.length());
+            for (final DeckProxy proxy : savedDecks(section)) {
+                if ((proxy.getPath() + "/" + proxy.getName()).equals(key)) {
+                    return new Extra(proxy.getName(), proxy.getDeck().get(section));
+                }
+            }
+            return null;
+        }
+        return new Extra("Generated", section == DeckSection.Planes ? DeckgenUtil.generatePlanarPool()
+                : DeckgenUtil.generateSchemePool());
+    }
+
+    /** Why a planar or scheme deck cannot be played, or null. An avatar section has no size rule. */
+    static String sectionProblem(final DeckSection section, final CardPool cards) {
+        return switch (section) {
+            case Planes -> forge.deck.DeckFormat.getPlaneSectionConformanceProblem(cards);
+            case Schemes -> forge.deck.DeckFormat.getSchemeSectionConformanceProblem(cards);
+            default -> null;
+        };
+    }
+
+    private static List<DeckProxy> savedDecks(final DeckSection section) {
+        final List<DeckProxy> out = new ArrayList<>();
+        synchronized (DECKS) {
+            (section == DeckSection.Planes ? DeckProxy.getAllPlanarDecks() : DeckProxy.getAllSchemeDecks()).forEach(out::add);
+        }
+        return out;
+    }
+
+    /** Every Vanguard card, or only those the computer can play well for a computer seat. */
+    private static List<PaperCard> avatars(final boolean forComputer) {
+        final List<PaperCard> out = new ArrayList<>();
+        for (final PaperCard card : FModel.getMagicDb().getVariantCards().getAllCards()) {
+            if (card.getRules().getType().isVanguard() && !(forComputer && card.getRules().getAiHints().getRemAIDecks())) {
+                out.add(card);
+            }
+        }
+        out.sort(Comparator.comparing(PaperCard::getName));
+        return out;
     }
 
     /** The card-art sleeves already saved, shared with the desktop client. */
