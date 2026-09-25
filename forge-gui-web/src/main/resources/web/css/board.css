@@ -347,6 +347,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
 /* A panel of its own, so the stack never reads as loose cards over the board */
 #stack { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; width: calc(var(--stack-w) + 20px); display: grid; gap: 8px; padding: 8px 10px 10px; background: color-mix(in srgb, var(--surface) 93%, transparent); backdrop-filter: blur(4px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px #0009; }
+/* With several opponents the top seats have a row of details, and the panel starts below it rather than over their piles */
+#match.many #stack { top: 80px; }
 #stack .head { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
 #stack .head .count { min-width: 18px; text-align: center; border-radius: 9px; background: var(--surface-2); color: var(--text); letter-spacing: 0; font-weight: 700; }
 #stack .head .collapse { margin-left: auto; font-size: 11px; padding: 2px 8px; letter-spacing: 0; text-transform: none; }
