@@ -22,6 +22,7 @@ import forge.web.ToBrowser.Seat;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Match setup, read from the lobby the engine keeps. The browser always shows its own client's view of it, so
@@ -228,6 +229,28 @@ final class Lobby {
     /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */
     void forget() {
         deckKeys.clear();
+        seenFormat = null;
+        seenLegality = null;
+    }
+
+    /** The format and Legality this browser's deck list was last built for. */
+    private GameType seenFormat;
+    private String seenLegality;
+
+    /** True once per change of format or Legality. A new format also drops this browser's deck keys. */
+    boolean restrictionsChanged() {
+        final GameType format = format();
+        final GameFormat legality = legality();
+        final String legalityName = legality == null ? null : legality.getName();
+        if (format == seenFormat && Objects.equals(legalityName, seenLegality)) {
+            return false;
+        }
+        if (seenFormat != null && format != seenFormat) {
+            deckKeys.clear();
+        }
+        seenFormat = format;
+        seenLegality = legalityName;
+        return true;
     }
 
     /** The format belongs to the game, so only the host sets it. */

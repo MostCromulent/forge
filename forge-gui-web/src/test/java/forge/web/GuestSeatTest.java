@@ -273,6 +273,37 @@ public class GuestSeatTest {
                 "the seat never went back to a computer");
     }
 
+    /**
+     * Fails if a guest keeps judging decks by the old rules after the host picks a Legality: its table must show
+     * the Legality, and it must receive a deck list built for it without asking.
+     */
+    @Test(timeOut = 120_000)
+    public void aGuestFollowsTheHostsLegality() throws Exception {
+        final Recorder hostBrowser = connect("host");
+        sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
+        Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
+        hostBrowser.forget();
+        sessions.onMessage(hostBrowser, named("Host"));
+        sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
+        Assert.assertNotNull(hostBrowser.awaitLobbyWithSeat(), "the host never got a seat");
+
+        // A session of its own, since a name given here would otherwise follow the "guest" id into other tests
+        final Recorder guestBrowser = connect("legality-guest");
+        Assert.assertNotNull(guestBrowser.await("hello"));
+        sessions.onMessage(guestBrowser, named("Legality Guest"));
+        Assert.assertNotNull(guestBrowser.awaitLobbyWithSeat(), "the guest never sat down");
+        guestBrowser.forget();
+
+        final JsonObject choose = JsonCodec.message("setLegality");
+        choose.addProperty("legality", "Pauper");
+        sessions.onMessage(hostBrowser, choose);
+
+        Assert.assertNotNull(guestBrowser.awaitLobby(t -> t.has("legality") && "Pauper".equals(t.get("legality").getAsString())),
+                "the guest's table never showed the Legality");
+        Assert.assertNotNull(guestBrowser.awaitMatching("decks", d -> d.has("legality")
+                && "Pauper".equals(d.get("legality").getAsString())), "the guest was never sent a Pauper deck list");
+    }
+
     /** The first deck in a list that is built and legal, rather than generated when the game starts. */
     private static String legalDeck(final JsonObject decks) {
         Assert.assertNotNull(decks, "no deck list arrived");
