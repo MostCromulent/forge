@@ -1,3 +1,6 @@
+// The game log panel: each entry as it arrives, with player names tinted, kept scrolled to the newest unless the
+// player has scrolled back.
+
 import { imageUrl, setSymbolText } from './images';
 import { hoverable } from './detail';
 import { byId } from './dom';

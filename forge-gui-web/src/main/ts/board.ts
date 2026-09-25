@@ -1,3 +1,6 @@
+// The match screen as a whole: lays out every player's area, the hand, the stack and the side panels, and redraws
+// them from the model each frame. The pieces are drawn by their own modules; this decides where each one goes.
+
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
 import { game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';

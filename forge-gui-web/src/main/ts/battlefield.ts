@@ -1,3 +1,5 @@
+// One player's permanents: sorts them into rows, stacks identical ones, and sizes the cards so the board fits.
+
 import { reconcile } from './render';
 import { createCard, updateCard, setPileCount, type CardClick } from './cards';
 import { stateOf, type Model } from './model';

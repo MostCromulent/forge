@@ -27,7 +27,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/** Delta-packet property maps to JSON. Every reference becomes {"ref": deltaKey} so the browser can resolve and prune generically. */
+/**
+ * Turns the game's state into JSON for the browser. Netplay sends the state as packets of changed properties, keyed by
+ * each object's number; this writes those properties as JSON, one object at a time.
+ *
+ * <p>A property that points at another object (a card's controller, a player's hand) becomes {@code {"ref": key}}. The
+ * browser follows those to find objects, and drops any object nothing points at any more, without knowing what any
+ * property means.
+ */
 public final class JsonCodec {
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
 

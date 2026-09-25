@@ -1,3 +1,5 @@
+// The player's hand along the bottom of the board, fanned and sorted as the options say.
+
 import { commandKind } from './command';
 import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';

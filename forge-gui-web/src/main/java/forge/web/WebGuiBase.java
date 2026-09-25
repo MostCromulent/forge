@@ -32,7 +32,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-/** Platform services for the web UI. The single "WebUI" thread stands in for Swing's EDT on the host side. */
+/**
+ * What Forge asks of the program it runs in, answered for the web: where Forge's files are, how to open a link, how to
+ * download images, which thread the interface runs on, and so on. The desktop and mobile clients each have one.
+ *
+ * <p>Forge expects its interface work to happen on one thread, as Swing's event thread does on desktop. Here a single
+ * thread named "WebUI" plays that part, and code that Forge would run "on the interface" runs there.
+ */
 public final class WebGuiBase implements IGuiBase {
     private volatile Thread uiThread;
     private final ExecutorService ui = Executors.newSingleThreadExecutor(r -> {

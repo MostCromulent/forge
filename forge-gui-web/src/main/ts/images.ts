@@ -1,3 +1,5 @@
+// Where card, mana symbol and ability icon images come from, and how text with {symbols} in it is drawn.
+
 import { stateOf, type Model } from './model';
 import type { CardView } from './protocol';
 

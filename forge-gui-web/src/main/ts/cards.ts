@@ -1,3 +1,6 @@
+// One card on the page: its image, counters, damage, tapped and selectable states. Every zone that shows a card
+// builds it here, so a card looks the same wherever it is.
+
 import { stateOf, type Model } from './model';
 import { hoverable } from './detail';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText } from './images';

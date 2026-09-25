@@ -98,7 +98,19 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
-/** Client-side GUI of a netplay game whose view is a browser. Every call from the host runs on one serial dispatch thread. */
+/**
+ * One player's view of a match, drawn in their browser. Forge's desktop client draws a match through an
+ * {@link forge.gui.interfaces.IGuiGame}; this is that interface for the web, turning each call into messages for the
+ * browser instead of Swing.
+ *
+ * <p>Every seat plays as a netplay client, so the game's state arrives here as netplay's delta packets. They are kept in
+ * a {@link BrowserModel}, the same table the browser holds, and passed on as JSON. The prompt, the questions the game
+ * asks, the zones on show, the log and the sounds are sent alongside. When a browser connects or reloads it is sent the
+ * whole table and every open question again, so it picks up where it was.
+ *
+ * <p>Calls from the game run on one dispatch thread, in the order they were made. Replies from the browser arrive on
+ * the socket's thread; a question the game is waiting on is answered through {@link PendingRequests}.
+ */
 public class WebGuiGame extends NetworkGuiGame {
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(r -> {

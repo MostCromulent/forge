@@ -1,3 +1,5 @@
+// Where avatar and sleeve pictures come from, for players and for the lobby's pickers.
+
 import { imageUrl } from './images';
 import type { PlayerView } from './protocol';
 

@@ -148,8 +148,8 @@ part of the Maven tests. Build the jar first, then:
 
 - `ToBrowser.java` and `FromBrowser.java` define the protocol, and `Wire.java` writes and reads it.
   `protocol.gen.ts` is generated from them, and `protocol.ts` adds the views the client reads game objects through.
-- `model.ts` is the browser's copy of the game's object table. `BrowserModel` applies the same rules on the Java
-  side, for the tests.
+- `model.ts` is the browser's copy of the game's object table. `BrowserModel` is the server's copy, kept by the
+  same rules, which a browser is sent in full when it connects or reloads.
 - `app.ts` is the controller. It receives every message, is the only place that sends one, and draws at most once
   per animation frame. Everything else acts through `actions.ts`.
 - `WebSession` is one browser. Where it is (the start page, a seat, match setup, a match) is one `Stage`. Every move

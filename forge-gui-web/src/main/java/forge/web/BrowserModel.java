@@ -16,7 +16,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Java copy of the browser's object table; model.ts implements the same apply-and-prune rules. */
+/**
+ * The game's objects as the browser holds them: every card, player and zone it has been sent, by key. There is
+ * one for each player's view of a match, and it is what that player's browser is sent in full when it connects or reloads.
+ *
+ * <p>src/main/ts/model.ts applies changes to its own copy by the same rules, and the tests hold the two to the same
+ * recorded game, so what the server believes the browser has cannot drift from what it does have.
+ */
 public final class BrowserModel {
     private final Map<Integer, JsonObject> objects = new LinkedHashMap<>();
     private int root = -1;
