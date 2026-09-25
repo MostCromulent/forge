@@ -442,6 +442,11 @@ final class DeckSession {
         } else {
             device.put(id, new OnDevice(parse(text), format));
         }
+        // A pool the browser has not yet said it keeps is resent as it now stands, so a deck built from it is not undone
+        final EventPool p = pendingPool;
+        if (p != null && p.id().equals(id)) {
+            pendingPool = text == null ? null : new EventPool(id, parse(text), format);
+        }
         final BrowserChannel b = channelFor.get();
         if (b != null) {
             b.send(new DeviceDeck(id, text, format.name()));

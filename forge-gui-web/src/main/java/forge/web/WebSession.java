@@ -717,8 +717,19 @@ public final class WebSession {
     private void newOnlineDraft(final WebGuiGame gui) {
         seatReportedGone = false;
         toldDrafting = false;
+        // An event from an earlier table's draft can still be on its way, and it is not this table's
+        final OnlineDraft[] self = new OnlineDraft[1];
         final OnlineDraft draft = new OnlineDraft(gui.dispatchExecutor(), this::eventView, this::podSeat, this::seatHeld,
-                local::sendToHost, this::showDraft, this::poolArrived);
+                local::sendToHost, state -> {
+                    if (onlineDraft == self[0]) {
+                        showDraft(state);
+                    }
+                }, (eventId, pool) -> {
+                    if (onlineDraft == self[0]) {
+                        poolArrived(eventId, pool);
+                    }
+                });
+        self[0] = draft;
         onlineDraft = draft;
         local.setDraftHandler(draft);
     }
@@ -736,7 +747,7 @@ public final class WebSession {
     /** This seat's place in the draft pod, or -1 before the pod is seated. */
     private int podSeat() {
         final ServerGameLobby table = sessions.hostLobby();
-        return table == null ? -1 : table.findSeatForLobbySlot(local.webSeat());
+        return table == null || local.webSeat() < 0 ? -1 : table.findSeatForLobbySlot(local.webSeat());
     }
 
     /** Whether a pod seat's player has gone. Every seat's session lives in the host's process, where the draft runs. */

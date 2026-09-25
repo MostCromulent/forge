@@ -865,6 +865,10 @@ final class Lobby {
             }
             lobby.clearCurrentEvent();
             lobby.selectEventForMatch(null, false);
+            // Sitting out is an event's matter; a Constructed table neither shows nor clears it
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                lobby.getSlot(i).setBenched(false);
+            }
             lobby.setLimitedMode(false);
             return null;
         }
@@ -951,7 +955,7 @@ final class Lobby {
     /** Sits a seat out of the next match, or brings it back. The host's to do, and not while the pod drafts. */
     void benchSeat(final int index, final boolean benched) {
         final ServerGameLobby lobby = host();
-        if (lobby != null && !drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {
+        if (lobby != null && limited(lobby) && !drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {
             lobby.getSlot(index).setBenched(benched);
             local.pushLobby();
         }

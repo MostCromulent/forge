@@ -548,4 +548,72 @@ public class OnlineEventTest {
         sessions.onMessage(host, JsonCodec.message("decks"));
         Assert.assertNotNull(keyOf(host, "Web test later"), "the event's deck was not in the finder after the match");
     }
+
+    // Fails if a guest that built its deck from the pool is sent the pool as dealt when it comes back, which its browser
+    // would keep in place of the build
+    @Test(timeOut = 300_000)
+    public void aBuiltPoolIsNotReplacedByTheDealtOne() throws Exception {
+        final Recorder[] both = startedEvent("sealed", eventSetup(LimitedPoolType.Full.name(), null, 6));
+        final Recorder guest = both[1];
+        final JsonObject dealt = guest.awaitMatching("deviceDeck", d -> d.get("id").getAsString().startsWith("event-"));
+        Assert.assertNotNull(dealt, "the guest was never sent its pool");
+        final String id = dealt.get("id").getAsString();
+        events.add(id.substring("event-".length()));
+        final String text = dealt.get("text").getAsString();
+        final String line = text.substring(text.indexOf("[Sideboard]")).split("\\r?\\n")[1];
+        final String card = line.substring(line.indexOf(' ') + 1).split("\\|")[0];
+
+        final JsonObject move = JsonCodec.message("editorEdit");
+        move.addProperty("op", "move");
+        move.addProperty("name", card);
+        move.addProperty("from", "Sideboard");
+        move.addProperty("to", "Main");
+        move.addProperty("count", 1);
+        sessions.onMessage(guest, move);
+        final JsonObject built = guest.awaitMatching("deviceDeck", d -> d.get("id").getAsString().equals(id) && !d.get("text").equals(dealt.get("text")));
+        Assert.assertNotNull(built, "the edit never reached the guest's browser");
+        sessions.onMessage(guest, JsonCodec.message("editorClose"));
+        Assert.assertNotNull(guest.awaitMatching("editor", m -> !m.has("state")), "the pool's editor never closed");
+
+        sessions.disconnected(guest);
+        final Recorder again = connect("guest");
+        Assert.assertNotNull(again.awaitMatching("hello", h -> true), "the guest was never greeted");
+        Thread.sleep(1_000);
+        Assert.assertTrue(again.got.stream().noneMatch(m -> "deviceDeck".equals(m.get("t").getAsString())
+                && m.get("id").getAsString().equals(id) && m.get("text").equals(dealt.get("text"))),
+                "the guest was sent the pool as dealt, over its build");
+        // A page load confirms what the browser keeps, which ends the resending before the next test's guest arrives
+        final JsonObject kept = new JsonObject();
+        kept.addProperty("id", id);
+        kept.add("text", built.get("text"));
+        kept.add("format", built.get("format"));
+        sessions.onMessage(again, deviceDecks(kept));
+    }
+
+    // Fails if a seat benched for an event's match stays benched at the Constructed table that follows, where nothing shows or clears it
+    @Test(timeOut = 180_000)
+    public void theBenchEndsWithTheEvent() throws Exception {
+        final String id = storedEventDeck("Web test bench");
+        final Recorder host = hostAt("lobby", "sealed");
+        sessions.onMessage(host, hostAgain(id));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("activeEventId")), "the past event was never hosted again");
+        sessions.onMessage(host, bench(1, true));
+        Assert.assertNotNull(host.awaitLobby(l -> benched(l, 1)),
+                "the seat was never benched: " + host.got.stream().filter(m -> "error".equals(m.get("t").getAsString())).toList()
+                + " " + host.latestTable());
+        sessions.onMessage(host, setLimited(null));
+        final JsonObject constructed = host.awaitLobby(l -> !l.has("limited"));
+        Assert.assertNotNull(constructed, "the table never went back to Constructed");
+        Assert.assertFalse(benched(constructed, 1),
+                "the seat stayed benched at a Constructed table");
+        sessions.onMessage(host, bench(1, true));
+        Thread.sleep(500);
+        Assert.assertFalse(benched(host.latestTable(), 1),
+                "a Constructed table benched a seat");
+    }
+
+    private static boolean benched(final JsonObject table, final int seat) {
+        final JsonObject s = table.getAsJsonArray("seats").get(seat).getAsJsonObject();
+        return s.has("benched") && s.get("benched").getAsBoolean();
+    }
 }
