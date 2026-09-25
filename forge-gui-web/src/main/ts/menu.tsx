@@ -28,6 +28,7 @@ function Wordmark() {
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const [renaming, setRenaming] = useState(false);
+  const [choosing, setChoosing] = useState<'play' | 'friends' | null>(null);
   // A new name arriving means the change went through
   useEffect(() => setRenaming(false), [model.playerName]);
   if (renaming) {
@@ -51,11 +52,14 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
           <button onClick={() => actions.quit()}>Quit Forge</button>
         </div>
       </header>
-      <div class="modes">
-        <Mode id="play" name="Play the computer" blurb="One match against Forge's AI. Nothing to set up."
-          status={decks ? `${decks} decks ready` : 'no decks yet — a precon will do'} onClick={() => actions.openLobby(false)} />
+      {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
+      <div class="modes" hidden={!!choosing}>
+        <Mode id="play" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
+          status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
+            model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
+          onClick={() => setChoosing('play')} />
         <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
-          status="Gives you a link to share" onClick={() => actions.openLobby(true)} />
+          status="Gives you a link to share" onClick={() => setChoosing('friends')} />
         <Mode id="editor" name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
           onClick={() => {
             changeUi(u => { u.browse = { format: 'Constructed' }; });
@@ -63,6 +67,29 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
           }} />
       </div>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
+    </div>
+  );
+}
+
+/** The kind of play, chosen before entering, the same way whoever the opponents are. Greyed ones are still to come. */
+function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model: Model; actions: Actions; back: () => void }) {
+  const computer = who === 'play';
+  return (
+    <div class="chooser">
+      <div class="chooser-head">
+        <h2>{computer ? 'Play the computer' : 'Play with friends'}</h2>
+        <button class="link" onClick={back}>Back</button>
+      </div>
+      <div class="chooser-kinds">
+        <button class="kind" data-kind="constructed" onClick={() => actions.openLobby(!computer)}>
+          <b>Constructed</b><span>Bring a deck you have built.</span>
+        </button>
+        <button class="kind" data-kind="draft" disabled><b>Draft</b><span>Coming soon.</span></button>
+        <button class="kind" data-kind="sealed" disabled={!computer} onClick={() => actions.limitedOpen('sealed')}>
+          <b>Sealed</b>
+          <span>{computer ? (model.sealedPools ? `Open packs, or play one of your ${model.sealedPools} pools.` : 'Open packs and build a deck from them.') : 'Coming soon.'}</span>
+        </button>
+      </div>
     </div>
   );
 }

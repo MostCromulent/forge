@@ -73,6 +73,7 @@ test('a guest\'s phase stops outlive a server restart', async ({ page, browser }
   await expect(page.locator('#player-name')).toHaveValue('Alice');
   await page.keyboard.press('Enter');
   await page.click('[data-mode=multiplayer]');
+  await page.click('.chooser [data-kind=constructed]');
   await expect(page.locator('#seats .plate').first()).toBeVisible();
   guest = await context.newPage();
   await guest.goto(await inviteLink(page, server.url));

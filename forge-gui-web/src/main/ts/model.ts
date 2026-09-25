@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices } from './protocol';
+import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
 export interface Looks {
@@ -78,8 +78,15 @@ export interface Model {
   catalogue: CataloguePage | null;
   /** What reading the importer's list last found. */
   importResult: ImportResult | null;
-  /** An import's name belongs to a deck already, and the importer asks what to do. */
+  /** An import's or a pool's name belongs to one already, and the page asks what to do. */
   nameTaken: string | null;
+  /** On the Limited pages; eventPool names the pool whose opponents screen shows. */
+  inEvent: boolean;
+  eventPool: string | null;
+  /** How many sealed pools are saved, for the menu. */
+  sealedPools: number;
+  limitedOptions: LimitedOptions | null;
+  limitedPools: LimitedPools | null;
 }
 
 export function createModel(): Model {
@@ -92,6 +99,7 @@ export function createModel(): Model {
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
+    inEvent: false, eventPool: null, sealedPools: 0, limitedOptions: null, limitedPools: null,
   };
 }
 

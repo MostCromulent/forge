@@ -3,7 +3,8 @@
 // drives the game the same way.
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, Send, SetSeat, YieldAction,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, Send, SetSeat,
+  YieldAction,
 } from './protocol';
 
 /** What a seat's owner can change about it. */
@@ -51,6 +52,18 @@ export interface Actions {
   /** Tries again for a seat after a join found none free. */
   join(): void;
   quit(): void;
+
+  // Limited
+  /** Opens the Limited pages for a kind of event. */
+  limitedOpen(kind: 'sealed'): void;
+  limitedLeave(): void;
+  sealedCreate(c: Omit<SealedCreate, 't'>): void;
+  /** A pool's opponents screen, and back from it. */
+  poolOpen(name: string): void;
+  poolClose(): void;
+  poolEdit(name: string): void;
+  poolDelete(name: string): void;
+  poolPlay(name: string, opponent: number, games: number): void;
 
   // Match setup
   leaveLobby(): void;
@@ -129,6 +142,14 @@ export function createActions(send: Send): Actions {
     join: () => send({ t: 'join' }),
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
+    limitedOpen: kind => send({ t: 'limitedOpen', kind }),
+    limitedLeave: () => send({ t: 'limitedLeave' }),
+    sealedCreate: c => send({ t: 'sealedCreate', ...c }),
+    poolOpen: name => send({ t: 'poolOpen', name }),
+    poolClose: () => send({ t: 'poolClose' }),
+    poolEdit: name => send({ t: 'poolEdit', name }),
+    poolDelete: name => send({ t: 'poolDelete', name }),
+    poolPlay: (name, opponent, games) => send({ t: 'poolPlay', name, opponent, games }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),

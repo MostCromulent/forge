@@ -7,6 +7,7 @@ import { render } from 'preact';
 import { Menu, NamePrompt, rememberedName } from './menu';
 import { Lobby } from './lobby';
 import { Editor } from './editor';
+import { Limited } from './limited';
 import { Importer } from './importer';
 import { DeckFinder } from './deckfinder';
 import { RevealWindow, Requests } from './dialogs';
@@ -29,6 +30,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
     : page === 'menu' ? <Menu model={model} actions={actions} /> : null, byId('menu'));
   render(page === 'lobby' ? <Lobby model={model} actions={actions} /> : null, byId('lobby'));
   render(page === 'editor' ? <Editor model={model} actions={actions} /> : null, byId('editor'));
+  render(page === 'limited' ? <Limited model={model} actions={actions} /> : null, byId('limited'));
   // The dock has two homes: the bottom edge before a match, the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions} /> : null, byId('dock'));
@@ -61,10 +63,11 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
 }
 
 /** Which page is showing. A browser without a name is asked for one before it goes anywhere. */
-export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'match' {
+export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'limited' | 'match' {
   if (model.inMatch) return 'match';
   if (!model.playerName) return 'name';
   // The editor sits over the menu or the table without leaving either, so closing it returns to where it was opened
   if (model.editor) return 'editor';
+  if (model.inEvent) return 'limited';
   return model.inLobby ? 'lobby' : 'menu';
 }

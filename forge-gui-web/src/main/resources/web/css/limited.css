@@ -1,0 +1,80 @@
+/* The Limited pages: the kind-of-play chooser on the start page, the saved pools, the setup form and the opponents. */
+
+.chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
+.chooser-head { display: flex; align-items: baseline; gap: 16px; }
+.chooser-head h2 { margin: 0; font-size: 20px; }
+.chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.chooser .kind { display: grid; gap: 4px; align-content: start; text-align: left; padding: 16px; min-height: 110px; border-radius: 10px; }
+.chooser .kind b { font-size: 16px; }
+.chooser .kind span { color: var(--muted); font-size: 12.5px; }
+.chooser .kind:disabled { opacity: .45; }
+@media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
+
+.limited-page { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
+.limited-head { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.limited-head .limited-title { font-size: 16px; font-weight: 650; }
+.limited-head .head-right { margin-left: auto; display: flex; gap: 10px; }
+.limited-error { margin: 10px 20px 0; color: var(--select); }
+.limited-page .muted { color: var(--muted); font-size: 12.5px; }
+
+.pools { display: grid; grid-template-columns: 320px minmax(0, 1fr); align-items: start; }
+.pools-new { padding: 20px; display: grid; gap: 12px; border-right: 1px solid var(--line); }
+.pools-new .big { padding: 9px 12px; font-size: 14px; }
+.pools-list { padding: 16px 20px; display: grid; gap: 6px; }
+.pools-list h4 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
+.pool-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 12px; align-items: center; padding: 7px 10px; border-radius: 6px; }
+.pool-row:nth-child(odd) { background: var(--surface); }
+.pool-name b { font-weight: 600; display: block; }
+.pool-name span, .pool-state { color: var(--muted); font-size: 12px; }
+.pool-state.ok { color: var(--text); }
+.pool-acts { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
+.pools-wait { padding: 20px; }
+@media (max-width: 800px) { .pools { grid-template-columns: 1fr; } .pools-new { border-right: 0; border-bottom: 1px solid var(--line); } }
+
+.setup { padding: 20px; display: grid; gap: 8px; max-width: 760px; }
+.setup-cancel { justify-self: start; }
+.wiz { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px 20px; display: grid; gap: 6px; }
+.wiz-title { margin: 0 0 8px; font-size: 17px; }
+.stp { display: grid; grid-template-columns: 26px 128px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.stp .num, .stp-open .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 750; border: 1px solid var(--line-bright); color: var(--muted); }
+.stp.done .num { background: var(--brass); color: var(--on-brass); border: 0; }
+.stp .lab { color: var(--muted); font-weight: 600; font-size: 12.5px; }
+.stp .val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stp.todo { opacity: .4; border-bottom-style: dashed; }
+.stp.todo .val { color: var(--faint); }
+.stp-open { border: 1px solid var(--accent-2); border-radius: 10px; background: var(--surface); padding: 14px 16px 16px; margin: 6px 0; display: grid; gap: 12px; }
+.stp-open .q { display: flex; align-items: center; gap: 10px; }
+.stp-open .q .num { border-color: var(--accent-2); color: var(--accent-2); }
+.stp-open .q b { font-size: 15px; }
+.stp-open .hint { color: var(--faint); font-size: 12px; margin: 0; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.tile-choice { display: grid; gap: 3px; align-content: start; text-align: left; padding: 10px 12px; border-radius: 8px; }
+.tile-choice span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.tile-choice:hover { border-color: var(--accent-2); }
+.pick { display: grid; gap: 8px; }
+.pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px; max-height: 260px; overflow-y: auto; }
+.pick-list button { text-align: left; }
+.rows { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.rows input[type=text] { flex: 1; min-width: 220px; }
+.stepper { display: inline-flex; align-items: center; gap: 6px; }
+.stepper .n { min-width: 24px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.wfoot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.wfoot .sentence { flex: 1; color: var(--muted); font-size: 13px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.wfoot .sentence b { color: var(--text); font-weight: 600; }
+
+.opponents { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+.opps { padding: 16px 20px; display: grid; gap: 12px; }
+.opps h3 { margin: 0; display: flex; gap: 12px; align-items: baseline; }
+.opponents .radio { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.opponents .radio.on { border-color: var(--accent-2); }
+.opponents .radio.off { opacity: .45; }
+.opponents .radio > i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-bright); margin-top: 2px; }
+.opponents .radio.on > i { border-color: var(--accent-2); box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 8px var(--accent-2); }
+.opponents .radio b { display: block; }
+.opponents .radio span { color: var(--muted); font-size: 12px; }
+.opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 8px; }
+.opp { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12.5px; }
+.opp.on { border-color: var(--accent-2); background: var(--accent-soft); }
+.opp-colours { display: inline-flex; gap: 2px; }
+.opp-side { border-left: 1px solid var(--line); background: var(--surface); padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
+@media (max-width: 800px) { .opponents { grid-template-columns: 1fr; } .opp-side { border-left: 0; } }

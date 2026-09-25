@@ -14,6 +14,7 @@ export async function enterName(page: Page, name: string): Promise<void> {
 /** Opens a table from the host's menu: against the computer, or one others can join by link. */
 export async function hostTable(page: Page, invite: boolean): Promise<void> {
   await page.click(invite ? '[data-mode=multiplayer]' : '[data-mode=play]');
+  await page.click('.chooser [data-kind=constructed]');
   await expect(page.locator('#seats .plate').first()).toBeVisible();
 }
 
