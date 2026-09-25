@@ -200,3 +200,6 @@ html[data-motion="reduced"] .press-ring { animation: none; }
 .print-row .ed span { color: var(--muted); font-size: 12px; }
 .print-row.cur { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent-2); }
 .print-row.off { opacity: .45; }
+span.deck-name { border-bottom: 0 !important; }
+.editor-head .check-fixed { color: var(--muted); font-size: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
+.land-row .land-set { font-size: 12px; padding: 2px 22px 2px 8px; max-width: 220px; }

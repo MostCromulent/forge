@@ -88,19 +88,28 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       }}>
       <header class="lobby-head editor-head">
         <span class="wordmark">Forge</span>
-        {renaming
+        {state.limited
+          ? <span class="deck-name">{state.name}</span>
+          : renaming
           ? <RenameField name={state.name} done={name => {
               setRenaming(false);
               if (name && name !== state.name) actions.renameDeck(name);
             }} />
           : <button class="deck-name" title="Rename" onClick={() => setRenaming(true)}>{state.name}</button>}
-        <CheckControl model={model} state={state} actions={actions} />
+        {state.limited
+          ? <span class="check-fixed">Limited · 40 cards</span>
+          : <CheckControl model={model} state={state} actions={actions} />}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title="Undo (Ctrl+Z)">&#8630; Undo</button>
           <div class="menu-anchor">
             <button aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}>Deck &#8964;</button>
-            {menu === 'menu' && (
+            {menu === 'menu' && state.limited && (
+              <div class="deck-menu" role="menu">
+                <button role="menuitem" onClick={() => { setMenu(null); setDialog('text'); }}>Copy as text</button>
+              </div>
+            )}
+            {menu === 'menu' && !state.limited && (
               <div class="deck-menu" role="menu">
                 <button role="menuitem" onClick={() => setMenu('new')}>New deck…</button>
                 <button role="menuitem" onClick={() => { setMenu(null); openAnother(); }}>Open another…</button>

@@ -42,6 +42,23 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   const anywhere = (['Main', 'Sideboard', 'Commander'] as DeckSection[]).find(z => cardIn(state, z, at.name));
+  // A pool's cards only move between the pool and the deck: there is no sideboard of its own, commander or printing to choose
+  if (state.limited) {
+    return (
+      <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
+        <span class="menu-cap">{at.name}</span>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>Add one to the deck</button>
+        {zone !== null && <>
+          <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>Return one to the pool</button>
+          {inDeck && inDeck.count > 1 && (
+            <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: inDeck.count }))}>
+              Return all {inDeck.count}
+            </button>
+          )}
+        </>}
+      </div>
+    );
+  }
   return (
     <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
       <span class="menu-cap">{at.name}</span>

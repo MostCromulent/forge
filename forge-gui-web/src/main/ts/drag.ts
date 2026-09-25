@@ -48,6 +48,10 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   if (carried.from !== 'catalogue') {
     return { zone, accepts: true, verb: `move ${n} to ${zone}` };
   }
+  if (state.limited) {
+    const left = state.sideboard.find(c => c.name === carried.name)?.count ?? 0;
+    return n > left ? { zone, accepts: false, verb: '⊘ none left in the pool' } : { zone, accepts: true, verb: `add ${n} to ${zone}` };
+  }
   const have = countsInDeck(state).get(carried.name) ?? 0;
   const limit = copyLimit(state, carried.name);
   if (have + n > limit) {

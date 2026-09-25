@@ -248,7 +248,7 @@ final class ToBrowser {
 
     /** One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String heading, int inDeck, @Nullable String problem, @Nullable Integer left) {
+            String heading, int inDeck, @Nullable String problem) {
     }
 
     @Message("cardSearch")

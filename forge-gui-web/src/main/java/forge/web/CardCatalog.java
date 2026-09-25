@@ -38,19 +38,16 @@ final class CardCatalog {
     }
 
     private final List<Row> rows;
-    /** How many of each card a pool has left to add, or null for the catalogue of every card. */
-    private final ToIntFunction<String> left;
 
-    private CardCatalog(final List<Row> rows, final ToIntFunction<String> left) {
+    private CardCatalog(final List<Row> rows) {
         this.rows = rows;
-        this.left = left;
     }
 
-    /** A sealed or draft pool as a catalogue: these cards only, whatever their section, each with how many are left. */
-    static CardCatalog of(final Iterable<PaperCard> cards, final ToIntFunction<String> left) {
+    /** A sealed or draft pool as a catalogue: these cards only, whatever their section. */
+    static CardCatalog of(final Iterable<PaperCard> cards) {
         final List<Row> rows = new ArrayList<>();
         cards.forEach(card -> rows.add(row(card)));
-        return new CardCatalog(rows, left);
+        return new CardCatalog(rows);
     }
 
     // The holder idiom builds the catalogue on first use, once, whichever thread asks first
@@ -75,7 +72,7 @@ final class CardCatalog {
             }
             rows.add(row(card));
         }
-        return new CardCatalog(rows, null);
+        return new CardCatalog(rows);
     }
 
     private static Row row(final PaperCard card) {
@@ -123,8 +120,7 @@ final class CardCatalog {
         final int from = Math.min(Math.max(0, q.offset()), ordered.size());
         final List<CatalogueRow> page = new ArrayList<>();
         for (final Row row : ordered.subList(from, Math.min(from + PAGE, ordered.size()))) {
-            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName()),
-                    left == null ? null : left.applyAsInt(row.card().getName())));
+            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName())));
         }
         return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty());
     }
@@ -198,10 +194,10 @@ final class CardCatalog {
         };
     }
 
-    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck, final Integer left) {
+    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck) {
         final CardRules rules = row.card().getRules();
         return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
-                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem, left);
+                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem);
     }
 
     private static String pt(final CardRules rules) {

@@ -36,10 +36,10 @@ const SEARCH_TIPS: [string, string][] = [
 const BASICS = new Set(['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes']);
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
 
-/** How many copies of each card the deck holds, by name, across every section. */
+/** How many copies of each card the deck holds, by name, across every section. A limited deck's sideboard is its pool, not the deck. */
 export function countsInDeck(state: EditorState): Map<string, number> {
   const counts = new Map<string, number>();
-  for (const c of [...state.commanders, ...state.main.flatMap(g => g.cards), ...state.sideboard]) {
+  for (const c of [...state.commanders, ...state.main.flatMap(g => g.cards), ...(state.limited ? [] : state.sideboard)]) {
     counts.set(c.name, (counts.get(c.name) ?? 0) + c.count);
   }
   return counts;
@@ -49,6 +49,12 @@ export function countsInDeck(state: EditorState): Map<string, number> {
 export function copyLimit(state: EditorState, name: string): number {
   if (BASICS.has(name)) return Infinity;
   return !state.unrestricted && COMMANDER_FORMATS.has(state.format) ? 1 : 4;
+}
+
+/** How many more of a card the deck can take: what the pool has left in limited mode, otherwise the copy limit's room. */
+export function roomFor(state: EditorState, row: CatalogueRow, inDeck: number): number {
+  if (state.limited) return state.sideboard.find(c => c.name === row.name)?.count ?? 0;
+  return copyLimit(state, row.name) - inDeck;
 }
 
 export function Catalogue({ model, actions, state, handlers }: {
@@ -78,7 +84,7 @@ export function Catalogue({ model, actions, state, handlers }: {
   const page = model.catalogue;
   const rows = page?.rows ?? [];
   const counts = countsInDeck(state);
-  const canAdd = (row: CatalogueRow) => !row.problem && (counts.get(row.name) ?? 0) < copyLimit(state, row.name);
+  const canAdd = (row: CatalogueRow) => !row.problem && roomFor(state, row, counts.get(row.name) ?? 0) > 0;
   const top = text.trim() ? rows.find(canAdd) : undefined;
   const searched = page?.ranked ? text.trim() : '';
   const add = (name: string, to: 'Main' | 'Sideboard' = 'Main') => actions.edit({ op: 'add', name, to, count: 1 });
@@ -137,10 +143,12 @@ export function Catalogue({ model, actions, state, handlers }: {
         <select aria-label="Mana value" value={mv} onChange={e => setMv(e.currentTarget.value)}>
           {MANA.map(v => <option key={v} value={v}>{v === 'any' ? 'Any mana value' : `Mana value ${v}`}</option>)}
         </select>
-        <label class="legal-only">
-          <input type="checkbox" role="switch" checked={showAll} onChange={e => setShowAll(e.currentTarget.checked)} />
-          Show cards this deck can't use
-        </label>
+        {!state.limited && (
+          <label class="legal-only">
+            <input type="checkbox" role="switch" checked={showAll} onChange={e => setShowAll(e.currentTarget.checked)} />
+            Show cards this deck can't use
+          </label>
+        )}
         <button class="clear" hidden={!narrowed} onClick={() => {
           setTyped('');
           setColours(new Set());
@@ -155,7 +163,8 @@ export function Catalogue({ model, actions, state, handlers }: {
           showThem={() => setShowAll(true)} />}
         {view === 'cards'
           ? rows.map(row => <Tile key={row.name} row={row} count={counts.get(row.name) ?? 0} top={row === top}
-              limit={copyLimit(state, row.name)} commanderWanted={state.commanderWanted} add={add} remove={remove}
+              limit={copyLimit(state, row.name)} room={roomFor(state, row, counts.get(row.name) ?? 0)} limited={state.limited}
+              commanderWanted={state.commanderWanted} add={add} remove={remove}
               makeCommander={makeCommander} handlers={handlers} />)
           : <Table rows={rows} counts={counts} state={state} add={add} remove={remove} handlers={handlers} />}
       </div>
@@ -163,12 +172,12 @@ export function Catalogue({ model, actions, state, handlers }: {
   );
 }
 
-function Tile({ row, count, top, limit, commanderWanted, add, remove, makeCommander, handlers }: {
-  row: CatalogueRow; count: number; top: boolean; limit: number; commanderWanted: boolean;
+function Tile({ row, count, top, limit, room, limited, commanderWanted, add, remove, makeCommander, handlers }: {
+  row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean;
   add: (name: string, to?: 'Main' | 'Sideboard') => void; remove: (name: string) => void; makeCommander: (name: string) => void;
   handlers: CardHandlers;
 }) {
-  const full = count >= limit;
+  const full = room <= 0;
   return (
     <div class={`slot${count ? ' indeck' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
       {top && <span class="enter">{commanderWanted ? 'Press Enter to choose' : 'Press Enter to add'}</span>}
@@ -186,9 +195,11 @@ function Tile({ row, count, top, limit, commanderWanted, add, remove, makeComman
             <button class="step" disabled={!count} aria-label={`Remove one ${row.name}`} onClick={() => remove(row.name)}>&minus;</button>
             <span class={count ? 'n' : 'n zero'}>{count}</span>
             <button class="step" disabled={full || !!row.problem} aria-label={`Add one ${row.name}`} onClick={() => add(row.name)}>+</button>
-            {full && limit < Infinity
-              ? <span class="why">{limit === 1 ? '1 of 1, singleton' : `${count} of ${limit}`}</span>
-              : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>Side</button>}
+            {limited
+              ? <span class="why">{room ? `${room} left` : 'none left'}</span>
+              : full && limit < Infinity
+                ? <span class="why">{limit === 1 ? '1 of 1, singleton' : `${count} of ${limit}`}</span>
+                : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>Side</button>}
           </div>
         )}
     </div>
@@ -211,7 +222,7 @@ function Table({ rows, counts, state, add, remove, handlers }: {
               <td class="under">
                 <button class="step" disabled={!count} onClick={() => remove(row.name)}>&minus;</button>
                 <span class={count ? 'n' : 'n zero'}>{count}</span>
-                <button class="step" disabled={!!row.problem || count >= copyLimit(state, row.name)} onClick={() => add(row.name)}>+</button>
+                <button class="step" disabled={!!row.problem || roomFor(state, row, count) <= 0} onClick={() => add(row.name)}>+</button>
               </td>
               <td>{row.name}{row.problem && <span class="flag"> ! {row.problem}</span>}</td>
               <td><SymbolText text={row.cost} /></td>

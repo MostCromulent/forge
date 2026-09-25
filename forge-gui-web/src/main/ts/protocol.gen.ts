@@ -907,7 +907,6 @@ export interface CatalogueRow {
   heading: string;
   inDeck: number;
   problem?: string;
-  left?: number;
 }
 
 export interface EditorState {

@@ -25,7 +25,9 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
       <div class="deck-head">
         <div>
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
-          <p class="sizes">{state.stats.main} cards · {state.stats.sideboard} sideboard · {state.stats.lands} lands</p>
+          <p class="sizes">{state.limited
+            ? `${state.stats.main} cards · ${state.stats.lands} lands · ${state.stats.sideboard} left in the pool`
+            : `${state.stats.main} cards · ${state.stats.sideboard} sideboard · ${state.stats.lands} lands`}</p>
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>Show them</button></p>
             : <p class="verdict yes">Legal for {state.check}.</p>}
@@ -70,15 +72,23 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count + 1 }] })}>+</button>
           </span>
         ))}
+        {state.limited && <>
+          <select class="land-set" aria-label="Basic lands from" value={state.landSet ?? ''}
+            onChange={e => actions.edit({ op: 'landSet', name: e.currentTarget.value, count: 0 })}>
+            {state.landSets.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
+          </select>
+          <button class="small" title="Basic lands for the rest of the deck, as Forge suggests them"
+            onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>Suggest</button>
+        </>}
       </div>
-      <div class="zone side-zone" data-zone="Sideboard">
+      {!state.limited && <div class="zone side-zone" data-zone="Sideboard">
         <h4><span class="zn">Sideboard</span><span class="count">{state.stats.sideboard}</span></h4>
         <div class="zone-body cols">
           {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
             <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
           ))}
         </div>
-      </div>
+      </div>}
       {hand && <SampleHand hand={hand} again={() => setHand(drawHand(state, HAND))}
         more={() => setHand(drawHand(state, hand.length + 1))} close={() => setHand(null)} />}
     </section>

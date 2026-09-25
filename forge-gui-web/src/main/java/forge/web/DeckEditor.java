@@ -131,7 +131,7 @@ final class DeckEditor {
                 byName.putIfAbsent(e.getKey().getName(), e.getKey());
             }
         }
-        return CardCatalog.of(byName.values(), side == null ? name -> 0 : side::countByName);
+        return CardCatalog.of(byName.values());
     }
 
     Deck deck() {
