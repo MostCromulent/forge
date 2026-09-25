@@ -22,7 +22,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart,
         ok, cancel, endTurn, autoPass, undo, concede }
 
     @Command
@@ -230,6 +230,18 @@ final class FromBrowser {
     record SetSetting(String key, String value) {
     }
 
+    /** Forge's developer cheats, by their names in IDevModeCheats; state only asks where the two switches stand. */
+    enum DevAction { state, unlimitedLands, viewAll, generateMana, tutorForCard, addCardToHand, addCardToBattlefield,
+        addTokenToBattlefield, addCardToLibrary, addCardToGraveyard, addCardToExile, repeatLastAddition, castASpell,
+        exileCardsFromHand, exileCardsFromBattlefield, removeCardsFromGame, addCountersToPermanent,
+        removeCountersFromPermanent, tapPermanents, untapPermanents, setPlayerLife, winGame, rollbackPhase,
+        riggedPlanarRoll, planeswalkTo, setupGameState, dumpGameState }
+
+    /** A cheat for the host's own seat. text is the game state to set up, for setupGameState. */
+    @Command("dev")
+    record Dev(DevAction action, @Nullable String text) {
+    }
+
     @Command("nextGame")
     record NextGame(NextGameDecision decision) {
     }
@@ -294,14 +306,14 @@ final class FromBrowser {
 
     /** Plays a pool's deck against one of its opponents, 0-based, for games in the match. */
     @Command("poolPlay")
-    record PoolPlay(String name, int opponent, int games) {
+    record PoolPlay(String name, @Nullable String mode, int opponent, int count, int games) {
     }
 
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
-            KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
+            KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class, Dev.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,

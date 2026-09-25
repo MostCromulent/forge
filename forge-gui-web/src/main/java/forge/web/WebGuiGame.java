@@ -135,11 +135,17 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
+    /** Run once, when this seat's game ends. */
+    private volatile Runnable onGameOver;
     /** What the game did since the last state message, in order. Filled and drained on the dispatch thread: a packet's
      *  events are handled inside its applyDelta, so they leave with the state change they explain. */
     private final List<Record> events = new ArrayList<>();
 
     /** A GUI for the host's own seat, whose settings are Forge's preferences. */
+    void onGameOver(final Runnable listener) {
+        onGameOver = listener;
+    }
+
     public WebGuiGame() {
         this(PlayerSettings.saved());
     }
@@ -273,6 +279,10 @@ public class WebGuiGame extends NetworkGuiGame {
             // Replaces finishGame from FControlGameEventHandler, which does not run here
             gameOver = true;
             send(new GameOver());
+            final Runnable listener = onGameOver;
+            if (listener != null) {
+                listener.run();
+            }
         }
     }
 

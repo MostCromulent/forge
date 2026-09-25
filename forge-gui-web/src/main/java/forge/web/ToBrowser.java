@@ -337,6 +337,16 @@ final class ToBrowser {
     record ShownZone(Ref player, ZoneType zone) {
     }
 
+    /** Where dev mode's two switches stand for the host's seat. */
+    @Message("devState")
+    record DevState(boolean unlimitedLands, boolean viewAll) {
+    }
+
+    /** The game written out as a game state, for the browser to save as a file. */
+    @Message("devDump")
+    record DevDump(String text) {
+    }
+
     @Message("controls")
     record Controls(List<PhaseType> myStops, List<PhaseType> otherStops, boolean autoPass, @Nullable String dayTime,
             @Nullable TurnMarker marker, boolean untilEndOfTurn, boolean untilStackEmpty, ServerSettings settings) {
@@ -349,7 +359,7 @@ final class ToBrowser {
     /** The Forge preferences the options dialog shares with the desktop client. */
     record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
             boolean interruptTriggers, boolean interruptMassRemoval, boolean autoTapPreview,
-            String autoYieldMode, GameLogVerbosity logDetail, String arrows,
+            String autoYieldMode, GameLogVerbosity logDetail, String arrows, boolean devMode,
             String highlightColor, int soundVolume, int musicVolume) {
     }
 
@@ -504,14 +514,22 @@ final class ToBrowser {
             String rarity, @Nullable Integer rank, int pack, int pick) {
     }
 
+    /**
+     * A gauntlet game's result and where the gauntlet stands, as desktop's limited result shows them. nextRound says the
+     * match was won with rounds still to play.
+     */
+    @Message("limitedResult")
+    record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean wonMatch, boolean nextRound) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
-            Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
+            Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class, CataloguePage.class, EditorMessage.class,
             ImportResult.class, NameTaken.class, DeviceDeck.class, LimitedOptions.class, LimitedPools.class,
-            DraftState.class);
+            DraftState.class, LimitedResult.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

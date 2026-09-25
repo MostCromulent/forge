@@ -34,6 +34,7 @@ import forge.web.ToBrowser.CardSearch;
 import forge.web.ToBrowser.ChatLine;
 import forge.web.ToBrowser.ErrorMessage;
 import forge.web.ToBrowser.Hello;
+import forge.web.ToBrowser.LimitedResult;
 import forge.web.ToBrowser.NameTaken;
 import forge.web.ToBrowser.Notice;
 import forge.web.ToBrowser.Printings;
@@ -41,12 +42,17 @@ import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
+import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.limited.GauntletMini;
+import forge.gamemodes.match.HostedMatch;
 import forge.util.storage.IStorage;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -118,6 +124,11 @@ public final class WebSession {
     private final AtomicBoolean openingPacks = new AtomicBoolean();
     /** The offline draft being played, while there is one. */
     private volatile OfflineDraft offlineDraft;
+    /** A match seats at most four players, so several opponents at once are at most three. */
+    private static final int MOST_OPPONENTS = 3;
+    /** Whether this session is playing a limited gauntlet, and the result of its last game. */
+    private volatile boolean gauntletRunning;
+    private volatile LimitedResult lastResult;
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -265,6 +276,10 @@ public final class WebSession {
         decks.reconnected(channel);
         if (now instanceof Playing p) {
             p.gui().attach(channel);
+            final LimitedResult result = lastResult;
+            if (result != null) {
+                channel.send(result);
+            }
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
             channel.send(lobby.decks());
@@ -414,10 +429,31 @@ public final class WebSession {
             }
             case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
             case "draftDiscard" -> endDraft();
+            // The gauntlet starts its rounds itself, which, like any match, happens on the host UI thread
+            case "gauntletNext" -> ui.invokeInEdtLater(() -> {
+                final LimitedResult result = lastResult;
+                if (gauntletRunning && result != null && result.nextRound()) {
+                    lastResult = null;
+                    FModel.getGauntletMini().nextRound();
+                }
+            });
+            case "gauntletRestart" -> ui.invokeInEdtLater(() -> {
+                if (gauntletRunning) {
+                    lastResult = null;
+                    FModel.getGauntletMini().restartRound();
+                }
+            });
             // A match is started on the host UI thread, as a table's is
             case "poolPlay" -> {
                 final PoolPlay play = Wire.decode(msg, PoolPlay.class);
                 ui.invokeInEdtLater(() -> playPool(channel, play));
+            }
+            // A cheat asks its questions as the game does and waits for the answers, so it runs on a thread of its own
+            case "dev" -> {
+                if (isHost && stage instanceof Playing) {
+                    final FromBrowser.Dev dev = Wire.decode(msg, FromBrowser.Dev.class);
+                    ui.runBackgroundTask("Dev mode", () -> DevMode.run(local, dev, channel));
+                }
             }
             // Quitting stops the process every browser is served from, so it is the host's to do
             case "quit" -> {
@@ -866,7 +902,10 @@ public final class WebSession {
         });
     }
 
-    /** Plays a pool's deck against one of its opponents, as desktop's sealed screen does. Leaving the match returns to the pool. */
+    /**
+     * Plays a pool's deck as desktop's limited screens offer: against one of its opponents, several at once (a draft only),
+     * or every one in turn as a gauntlet. Leaving the match returns to the pool.
+     */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Stage from = stage;
         final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;
@@ -874,10 +913,7 @@ public final class WebSession {
             return;
         }
         final Event event = (Event) from;
-        if (play.opponent() < 0 || play.opponent() >= group.getAiDecks().size()) {
-            channel.send(error("There is no such opponent."));
-            return;
-        }
+        final List<Deck> ai = group.getAiDecks();
         final Deck human = group.getHumanDeck();
         if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
             final String illegal = DeckFormat.Limited.getDeckConformanceProblem(human);
@@ -893,27 +929,112 @@ public final class WebSession {
         // Saved before the match so HostedMatch never reaches the first-run name prompt
         lobby.saveLooks();
         final Event back = new Event(event.kind(), play.name());
+        switch (play.mode() == null ? "one" : play.mode()) {
+            case "gauntlet" -> {
+                final GauntletMini gauntlet = FModel.getGauntletMini();
+                if (event.type() == GameType.Draft) {
+                    gauntlet.resetGauntletDraft();
+                }
+                gauntletRunning = true;
+                lastResult = null;
+                gauntlet.setRoundStarter((type, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
+                        opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
+                gauntlet.launch(ai.size(), human, event.type());
+            }
+            case "several" -> {
+                final int count = Math.min(Math.min(play.count(), MOST_OPPONENTS), ai.size());
+                if (event.type() != GameType.Draft || count < 2) {
+                    channel.send(error("Several opponents at once needs a draft with at least two opponents."));
+                    return;
+                }
+                // Chosen at random, as desktop's draft screen chooses them
+                final List<Integer> indices = new ArrayList<>();
+                for (int i = 0; i < ai.size(); i++) {
+                    indices.add(i);
+                }
+                Collections.shuffle(indices);
+                final List<LocalGame.Seat> seats = new ArrayList<>(List.of(mySeat(human)));
+                for (int k = 0; k < count; k++) {
+                    seats.add(opponentSeat(indices.get(k) + 1, k + 1, ai.get(indices.get(k))));
+                }
+                playLimited(back, event.type(), seats);
+            }
+            default -> {
+                if (play.opponent() < 0 || play.opponent() >= ai.size()) {
+                    channel.send(error("There is no such opponent."));
+                    return;
+                }
+                playLimited(back, event.type(), List.of(mySeat(human), opponentSeat(play.opponent() + 1, 1, ai.get(play.opponent()))));
+            }
+        }
+    }
+
+    private LocalGame.Seat mySeat(final Deck deck) {
+        return new LocalGame.Seat(playerName(), false, avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), deck);
+    }
+
+    /** An opponent named by its deck's place in the pool, as desktop numbers them, with the looks of seat. */
+    private static LocalGame.Seat opponentSeat(final int number, final int seat, final Deck deck) {
+        return new LocalGame.Seat("Opponent " + number, true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
+                LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
+    }
+
+    /** Starts a pool's match, from the Limited pages or from the match before it in a gauntlet. Null when it could not start. */
+    private HostedMatch playLimited(final Event back, final GameType type, final List<LocalGame.Seat> seats) {
+        final Stage from = stage;
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
         if (!move(from, playing)) {
             playing.gui().close();
-            return;
+            return null;
         }
         final BrowserChannel b = browser;
         if (b != null) {
             playing.gui().attach(b);
         }
+        if (gauntletRunning) {
+            playing.gui().onGameOver(() -> recordGauntletGame(playing));
+        }
         try {
-            local.startLimitedMatch(List.of(
-                    new LocalGame.Seat(playerName(), false, avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), human),
-                    new LocalGame.Seat("Opponent " + (play.opponent() + 1), true, LocalGame.storedIndex(FPref.UI_AVATARS, 1),
-                            LocalGame.storedIndex(FPref.UI_SLEEVES, 1), group.getAiDecks().get(play.opponent()))),
-                    event.type(), playing.gui());
+            local.startLimitedMatch(seats, type, playing.gui());
+            return local.hostedMatch();
         } catch (final RuntimeException ex) {
             Logger.error(ex, "Could not start the match");
             local.endMatch();
             move(playing, back);
-            channel.send(error("Could not start the match: " + ex.getMessage()));
+            tell(error("Could not start the match: " + ex.getMessage()));
+            return null;
         }
+    }
+
+    /** A gauntlet game ended: the win or loss is recorded after every game, as desktop's limited result does. */
+    private void recordGauntletGame(final Playing playing) {
+        final GameView game = playing.gui().getGameView();
+        if (!gauntletRunning || game == null) {
+            return;
+        }
+        final GauntletMini gauntlet = FModel.getGauntletMini();
+        final boolean won = playerName().equals(game.getWinningPlayerName());
+        if (won) {
+            gauntlet.addWin();
+        } else {
+            gauntlet.addLoss();
+        }
+        // The winner of a match's last game is the match's winner
+        final boolean wonMatch = game.isMatchOver() && won;
+        lastResult = new LimitedResult(gauntlet.getCurrentRound(), gauntlet.getRounds(), gauntlet.getWins(), gauntlet.getLosses(),
+                game.isMatchOver(), wonMatch, wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
+        tell(lastResult);
+    }
+
+    /** Leaving a gauntlet ends it, as desktop's Quit does. */
+    private void stopGauntlet() {
+        if (!gauntletRunning) {
+            return;
+        }
+        gauntletRunning = false;
+        lastResult = null;
+        FModel.getGauntletMini().resetCurrentRound();
+        FModel.getGauntletMini().setRoundStarter(null);
     }
 
     private static boolean invited(final Stage stage) {
@@ -977,6 +1098,7 @@ public final class WebSession {
         }
         final BrowserChannel b = browser;
         if (playing.back() != null) {
+            stopGauntlet();
             local.endMatch();
             if (move(from, playing.back()) && b != null) {
                 sendLimited(b);

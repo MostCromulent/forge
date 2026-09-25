@@ -3,7 +3,7 @@
 // drives the game the same way.
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, Send, SetSeat,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, Send, SetSeat,
   YieldAction,
 } from './protocol';
 
@@ -24,6 +24,8 @@ export interface Actions {
   concede(): void;
   drawOffer(action: 'OFFER' | 'ACCEPT' | 'DECLINE'): void;
   autoDecisions(action: AutoDecisionAction, key?: string, on?: boolean): void;
+  /** One of Forge's developer cheats, for the host's own seat. text is a game state to set up. */
+  dev(action: DevAction, text?: string): void;
   nextGame(): void;
   quitMatch(): void;
   /** Leaves a finished match for the start page. */
@@ -123,6 +125,7 @@ export function createActions(send: Send): Actions {
     concede: () => send({ t: 'concede' }),
     drawOffer: action => send({ t: 'drawOffer', action }),
     autoDecisions: (action, key, on = false) => send({ t: 'autoDecisions', action, key, on }),
+    dev: (action, text) => send({ t: 'dev', action, text }),
     nextGame: () => send({ t: 'nextGame', decision: 'CONTINUE' }),
     quitMatch: () => send({ t: 'nextGame', decision: 'QUIT' }),
     leave: () => send({ t: 'leave' }),
@@ -149,7 +152,7 @@ export function createActions(send: Send): Actions {
     poolClose: () => send({ t: 'poolClose' }),
     poolEdit: name => send({ t: 'poolEdit', name }),
     poolDelete: name => send({ t: 'poolDelete', name }),
-    poolPlay: (name, opponent, games) => send({ t: 'poolPlay', name, opponent, games }),
+    poolPlay: (name, opponent, games) => send({ t: 'poolPlay', name, mode: 'one', opponent, count: 0, games }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),

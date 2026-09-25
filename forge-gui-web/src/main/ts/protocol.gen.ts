@@ -150,6 +150,17 @@ export interface Controls {
   settings: ServerSettings;
 }
 
+export interface DevState {
+  t: 'devState';
+  unlimitedLands: boolean;
+  viewAll: boolean;
+}
+
+export interface DevDump {
+  t: 'devDump';
+  text: string;
+}
+
 export interface LogMessage {
   t: 'log';
   full: boolean;
@@ -282,6 +293,17 @@ export interface DraftState {
   done: boolean;
 }
 
+export interface LimitedResult {
+  t: 'limitedResult';
+  round: number;
+  rounds: number;
+  wins: number;
+  losses: number;
+  matchOver: boolean;
+  wonMatch: boolean;
+  nextRound: boolean;
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -408,6 +430,8 @@ export type ServerMessage =
   | Playable
   | Zones
   | Controls
+  | DevState
+  | DevDump
   | LogMessage
   | Detail
   | PlayerDetail
@@ -426,6 +450,7 @@ export type ServerMessage =
   | LimitedOptions
   | LimitedPools
   | DraftState
+  | LimitedResult
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -438,7 +463,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {
@@ -587,6 +612,12 @@ export interface SetSetting {
   value: string;
 }
 
+export interface Dev {
+  t: 'dev';
+  action: DevAction;
+  text?: string;
+}
+
 export interface NextGame {
   t: 'nextGame';
   decision: NextGameDecision;
@@ -730,7 +761,9 @@ export interface PoolDelete {
 export interface PoolPlay {
   t: 'poolPlay';
   name: string;
+  mode?: string;
   opponent: number;
+  count: number;
   games: number;
 }
 
@@ -784,6 +817,7 @@ export type ClientMessage =
   | SetStops
   | UseMana
   | SetSetting
+  | Dev
   | NextGame
   | DrawOfferCommand
   | AutoDecisionCommand
@@ -972,6 +1006,7 @@ export interface ServerSettings {
   autoYieldMode: string;
   logDetail: GameLogVerbosity;
   arrows: string;
+  devMode: boolean;
   highlightColor: string;
   soundVolume: number;
   musicVolume: number;
@@ -1134,6 +1169,8 @@ export interface SideboardEntry {
 }
 
 export type YieldAction = 'autoYield' | 'alwaysYes' | 'alwaysNo' | 'yieldToStack' | 'yieldToEntireStack';
+
+export type DevAction = 'state' | 'unlimitedLands' | 'viewAll' | 'generateMana' | 'tutorForCard' | 'addCardToHand' | 'addCardToBattlefield' | 'addTokenToBattlefield' | 'addCardToLibrary' | 'addCardToGraveyard' | 'addCardToExile' | 'repeatLastAddition' | 'castASpell' | 'exileCardsFromHand' | 'exileCardsFromBattlefield' | 'removeCardsFromGame' | 'addCountersToPermanent' | 'removeCountersFromPermanent' | 'tapPermanents' | 'untapPermanents' | 'setPlayerLife' | 'winGame' | 'rollbackPhase' | 'riggedPlanarRoll' | 'planeswalkTo' | 'setupGameState' | 'dumpGameState';
 
 export type NextGameDecision = 'NEW' | 'CONTINUE' | 'QUIT';
 
