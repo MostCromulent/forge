@@ -6,6 +6,7 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
+import forge.gamemodes.limited.DraftProducts;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.item.PaperCard;
 import forge.item.SealedTemplate;
@@ -76,6 +77,36 @@ public class SealedProductsTest {
         final SealedCardPoolGenerator gen = SealedCardPoolGenerator.prerelease(newest);
         assertEquals(gen.getProductName(), newest.getName());
         assertFalse(gen.getCardPool(false).isEmpty());
+    }
+
+    /** Fails if the web offers a block, or a combo, that desktop's sealed dialog does not. */
+    @Test
+    public void sealedListsMatchDesktop() {
+        final DraftProducts.SealedLists lists = DraftProducts.sealed();
+        int offered = 0;
+        for (final CardBlock b : FModel.getBlocks()) {
+            try {
+                if (!SealedCardPoolGenerator.blockCombos(b).isEmpty()) {
+                    offered++;
+                }
+            } catch (final RuntimeException e) {
+                // desktop fails on such a block, so the web leaves it out
+            }
+        }
+        assertEquals(lists.blocks().size(), offered);
+        final DraftProducts.Block innistrad = lists.blocks().stream().filter(b -> b.name().equals("Innistrad")).findFirst().orElseThrow();
+        assertEquals(innistrad.combos(), SealedCardPoolGenerator.blockCombos(block("Innistrad")));
+        assertEquals(innistrad.packs(), block("Innistrad").getCntBoostersSealed());
+    }
+
+    /** Fails if the prerelease list is not newest first, as desktop's dialog is. */
+    @Test
+    public void prereleasesAreNewestFirst() {
+        final List<DraftProducts.Edition> prereleases = DraftProducts.sealed().prereleases();
+        assertTrue(prereleases.size() > 1);
+        final CardEdition first = StaticData.instance().getEditions().get(prereleases.get(0).code());
+        final CardEdition second = StaticData.instance().getEditions().get(prereleases.get(1).code());
+        assertTrue(first.getDate().after(second.getDate()), first.getCode() + " is not newer than " + second.getCode());
     }
 
     /** Fails if GauntletMini's lookup of the group by the human deck's name would miss. */
