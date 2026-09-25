@@ -21,6 +21,8 @@ public final class LobbySlot implements Serializable {
     private int team;
     private boolean isArchenemy;
     private boolean isReady;
+    /** Stays at the table but sits the next match out; only a web host sets it. */
+    private boolean benched;
     private boolean isDevMode;
     private Deck deck;
     private ImmutableSet<AIOption> aiOptions;
@@ -136,6 +138,12 @@ public final class LobbySlot implements Serializable {
 
     public boolean isReady() {
         return type == LobbySlotType.AI || isReady;
+    }
+    public boolean isBenched() {
+        return benched;
+    }
+    public void setBenched(final boolean benched) {
+        this.benched = benched;
     }
     public void setIsReady(final boolean isReady) {
         this.isReady = isReady;

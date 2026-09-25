@@ -388,7 +388,7 @@ public abstract class GameLobby implements IHasGameType {
     public Runnable startGame() {
         final List<LobbySlot> activeSlots = Lists.newArrayListWithCapacity(getNumberOfSlots());
         for (final LobbySlot slot : data.slots) {
-            if (slot.getType() != LobbySlotType.OPEN) {
+            if (slot.getType() != LobbySlotType.OPEN && !slot.isBenched()) {
                 activeSlots.add(slot);
             }
         }

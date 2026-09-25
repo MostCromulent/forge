@@ -114,6 +114,11 @@ public final class BoosterDraftHost implements IHasForgeLog {
     }
 
     /** True once the draft has ended, whether it completed or was shut down early. */
+    /** Whether the seat's player has gone, so its packs are being held for it or picked for it. */
+    public synchronized boolean isSeatHeld(int seatIndex) {
+        return seatIndex >= 0 && seatIndex < seatState.length && seatState[seatIndex] != SeatConnectionState.LIVE;
+    }
+
     public boolean isFinished() {
         return finished;
     }
