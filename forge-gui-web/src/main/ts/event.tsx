@@ -10,9 +10,13 @@ import type { LimitedTable, LobbyTable } from './protocol';
 
 const KINDS: [string, 'sealed' | 'draft' | null][] = [['Constructed', null], ['Draft', 'draft'], ['Sealed', 'sealed']];
 
-/** Constructed · Draft · Sealed. A new kind of event waits until the one begun is over; Constructed waits out a draft. */
+/**
+ * Constructed · Draft · Sealed, at a table others can join; a table against the computer drafts from the start page.
+ * A new kind of event waits until the one begun is over; Constructed waits out a draft.
+ */
 export function LimitedSwitch({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
+  if (!lobby.shareable && !lim) return null;
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
   return (
     <div class="formats limited-switch">
@@ -21,10 +25,8 @@ export function LimitedSwitch({ lobby, actions }: { lobby: LobbyTable; actions: 
         const pressed = (lim?.kind ?? null) === kind;
         const locked = kind === null ? drafting : !!lim?.started;
         return (
-          <span key={name} class="format-chip">
-            <button class="format" aria-pressed={pressed} disabled={!lobby.host || pressed || locked}
-              onClick={() => actions.setLimited(kind)}>{name}</button>
-          </span>
+          <button key={name} class="event-kind" aria-pressed={pressed} disabled={!lobby.host || pressed || locked}
+            onClick={() => actions.setLimited(kind)}>{name}</button>
         );
       })}
     </div>
