@@ -151,6 +151,33 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .formats { display: flex; flex-wrap: wrap; gap: 6px; }
 .format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
 .format[aria-pressed="true"] { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 600; }
+/* A format explains itself in a card under its chip, and all of them side by side in the guide */
+.format-chip { position: relative; display: inline-flex; }
+.format-card { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 340px; display: grid; gap: 8px; padding: 12px 14px;
+  background: var(--surface); border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 16px 40px #000d; text-align: left; cursor: default; }
+.format-card h5 { margin: 0; font-size: 14px; }
+.format-card .desc, .guide .desc { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--text); }
+.facts { display: flex; flex-wrap: wrap; gap: 5px; }
+.fact { font-size: 11.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+.format-play { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
+.format-card .format-play { border-top: 1px solid var(--line); padding-top: 8px; }
+.format-play b { color: var(--text); font-weight: 600; }
+.guide-link { background: none; border: 0; padding: 4px 6px; color: var(--accent-2); font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
+.match-sentence { margin: 0; padding: 8px 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
+.match-sentence b { color: var(--text); font-weight: 600; }
+/* The guide slides over the lobby from the right, so the seats stay in view behind it */
+.guide-back { position: fixed; inset: 0; z-index: 40; background: var(--scrim); display: flex; justify-content: flex-end; }
+.guide { width: min(640px, 100%); height: 100%; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line-bright); padding: 0 18px 18px; }
+.guide header { position: sticky; top: 0; background: var(--surface); display: flex; align-items: baseline; gap: 12px; padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
+.guide header h2 { margin: 0; font-size: 16px; }
+.guide header p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.guide-close { margin-left: auto; }
+.guide-item { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: start; padding: 10px; border-radius: 8px; }
+.guide-item > div:nth-child(2) { display: grid; gap: 6px; }
+.guide-item.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent-2); }
+.guide-name { font-weight: 650; font-size: 13.5px; }
+.guide-name small { display: block; color: var(--accent-2); font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+
 /* The card pool sits after the format it belongs to, a pill like the chips so it reads as part of the same choice */
 .legality { display: flex; align-items: center; gap: 8px; padding-left: 14px; border-left: 1px solid var(--line); color: var(--muted); font-size: 12px; }
 .legality select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; }

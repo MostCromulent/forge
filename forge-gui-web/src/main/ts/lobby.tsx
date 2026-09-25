@@ -6,7 +6,7 @@
 // A seat's type is the one a netplay lobby slot carries. The browser reaches the game through a client even
 // when it hosts it, so your own seat arrives as REMOTE and is recognised by its "mine" flag, not its type.
 
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
@@ -15,7 +15,7 @@ import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { Address, DeckSummary, LobbyTable, Seat } from './protocol';
+import type { Address, DeckSummary, Format, LobbyTable, Seat } from './protocol';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -23,18 +23,21 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   if (!lobby) {
     return null;
   }
+  const [guide, setGuide] = useState(false);
   // A seat can go while its picker is open, when the host removes it
   const seat = picker ? lobby.seats[picker.seat] : undefined;
   const close = () => changeUi(u => { u.picker = null; });
+  const sentence = matchSentence(lobby);
   return (
     <>
       <header class="lobby-head">
         <span class="wordmark">Forge</span>
         <div class="formats">
           {lobby.formats.map(f => (
-            <button key={f.id} class="format" aria-pressed={f.id === lobby.format}
-              disabled={!lobby.host} onClick={() => actions.setFormat(f.id)}>{f.name}</button>
+            <FormatChip key={f.id} format={f} pressed={f.id === lobby.format} host={lobby.host}
+              choose={() => actions.setFormat(f.id)} />
           ))}
+          <button class="guide-link" onClick={() => setGuide(true)}>What are these?</button>
         </div>
         {lobby.format === 'Constructed' && (
           <label class={`legality${lobby.legality ? ' set' : ''}`}>
@@ -59,6 +62,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
         </div>
       </header>
+      <p class="match-sentence"><b>{sentence.title}.</b> {sentence.text}</p>
+      {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)} close={() => setGuide(false)} />}
       <div class="lobby-main">
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
@@ -110,6 +115,89 @@ function Addresses({ list }: { list: Address[] }) {
 
 // The seat kinds a netplay lobby can hold; offline shows only the first two
 const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
+
+/** The line under the header: the format with its Legality, then what the format is, in the engine's words. */
+export function matchSentence(lobby: LobbyTable): { title: string; text: string } {
+  const format = lobby.formats.find(f => f.id === lobby.format);
+  const name = format?.name ?? lobby.format;
+  return { title: lobby.legality ? `${name}, ${lobby.legality} legality` : name, text: format?.desc ?? '' };
+}
+
+/** How long a pointer rests on a format, or a finger presses one, before its card opens. */
+const CARD_REST_MS = 400;
+const CARD_PRESS_MS = 500;
+
+/**
+ * A format chip that explains itself. The card opens on a resting pointer, on keyboard focus, or on a long press,
+ * so it is never behind a hover alone; a long press opens the card instead of choosing the format.
+ */
+function FormatChip({ format, pressed, host, choose }: {
+  format: Format; pressed: boolean; host: boolean; choose: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const timer = useRef<number>(0);
+  const pressedLong = useRef(false);
+  const later = (ms: number, then: () => void) => { clearTimeout(timer.current); timer.current = window.setTimeout(then, ms); };
+  const shut = () => { clearTimeout(timer.current); setOpen(false); };
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (
+    <span class="format-chip" onMouseEnter={() => later(CARD_REST_MS, () => setOpen(true))} onMouseLeave={shut}>
+      <button class="format" aria-pressed={pressed} disabled={!host} aria-describedby={open ? `card-${format.id}` : undefined}
+        onFocus={() => setOpen(true)} onBlur={shut} onKeyDown={e => { if (e.key === 'Escape') shut(); }}
+        onPointerDown={e => {
+          if (e.pointerType !== 'touch') return;
+          pressedLong.current = false;
+          later(CARD_PRESS_MS, () => { pressedLong.current = true; setOpen(true); });
+        }}
+        onPointerUp={() => { if (!pressedLong.current) clearTimeout(timer.current); }}
+        onClick={() => { if (pressedLong.current) { pressedLong.current = false; return; } choose(); }}>{format.name}</button>
+      {/* A disabled button takes no focus or pointer, so a guest reads the card by resting on the chip's wrapper */}
+      {open && <FormatCard id={`card-${format.id}`} format={format} />}
+    </span>
+  );
+}
+
+function FormatCard({ id, format }: { id?: string; format: Format }) {
+  return (
+    <div class="format-card" id={id} role="tooltip">
+      <h5>{format.name}</h5>
+      <p class="desc">{format.desc}</p>
+      <div class="facts">{format.facts.map(f => <span key={f} class="fact">{f}</span>)}</div>
+      <p class="format-play"><b>In a match:</b> {format.play}</p>
+    </div>
+  );
+}
+
+/** Every format side by side, each with its own Choose, so a player can read and pick in one place. */
+function Guide({ lobby, choose, close }: { lobby: LobbyTable; choose: (id: string) => void; close: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+  return (
+    <div class="guide-back" onClick={e => { if (e.target === e.currentTarget) close(); }}>
+      <aside class="guide" aria-label="Formats">
+        <header>
+          <h2>Formats</h2>
+          <p>Each is a different way to build a deck and play.</p>
+          <button class="guide-close" title="Close" onClick={close}>&times;</button>
+        </header>
+        {lobby.formats.map(f => (
+          <div key={f.id} class={`guide-item${f.id === lobby.format ? ' on' : ''}`}>
+            <div class="guide-name">{f.id === lobby.format && <small>Chosen</small>}{f.name}</div>
+            <div>
+              <p class="desc">{f.desc}</p>
+              <div class="facts">{f.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
+              <p class="format-play"><b>In a match:</b> {f.play}</p>
+            </div>
+            {lobby.host && f.id !== lobby.format && <button class="guide-choose" onClick={() => choose(f.id)}>Choose</button>}
+          </div>
+        ))}
+      </aside>
+    </div>
+  );
+}
 
 /** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */
 export function randomPool(decks: readonly DeckSummary[]): DeckSummary[] {
@@ -209,8 +297,7 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
       </div>
     );
   }
-  const format = lobby.formats.find(f => f.id === lobby.format)?.name ?? lobby.format;
-  const rules = lobby.legality ? `${format}, ${lobby.legality} legality` : format;
+  const rules = matchSentence(lobby).title;
   return (
     <div class="play-row">
       <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start}>Play</button>

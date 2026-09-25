@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { randomPool } from '../../main/ts/lobby';
-import type { DeckSummary } from '../../main/ts/protocol';
+import { matchSentence, randomPool } from '../../main/ts/lobby';
+import type { DeckSummary, LobbyTable } from '../../main/ts/protocol';
 
 const deck = (name: string, more: Partial<DeckSummary> = {}): DeckSummary =>
   ({ key: name, name, source: 'precons', colors: '', ...more });
@@ -14,5 +14,21 @@ describe("a computer seat's random deck", () => {
       deck('Random two colours', { generated: true, source: 'generated' }),
     ]);
     expect(pool.map(d => d.name).sort()).toEqual(['Bears', 'Random two colours']);
+  });
+});
+
+describe('the sentence under the lobby header', () => {
+  const table = (more: Partial<LobbyTable> = {}): LobbyTable => ({
+    host: true, mySeat: 0, shareable: false, format: 'Constructed', maxSeats: 4, seats: [], problems: [], canStart: false,
+    legalities: [],
+    formats: [{ id: 'Constructed', name: 'Constructed', desc: 'Each player brings a deck of 60 or more cards.', facts: [], play: '' }],
+    ...more,
+  });
+
+  // Fails if the sentence names the format but drops the Legality the table is held to
+  it("names the format and its Legality, then says what the format is", () => {
+    expect(matchSentence(table({ legality: 'Pauper' })))
+      .toEqual({ title: 'Constructed, Pauper legality', text: 'Each player brings a deck of 60 or more cards.' });
+    expect(matchSentence(table()).title).toBe('Constructed');
   });
 });
