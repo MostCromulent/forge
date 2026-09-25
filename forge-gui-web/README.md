@@ -51,8 +51,10 @@ Add these before `-jar`, for example `java -Dforge.web.port=36800 -jar ...`.
 1. On the start page, choose **Play with friends**. This opens a table with up to four seats.
 2. Send a guest one of the links listed under **Others join at**. The server window lists the same links.
    - A link with a local address (such as `192.168.…`) works for people on the same home network.
-   - The **Over the internet** link works only after you forward the port (36743 unless you changed it) to this
-     computer in your router's settings. Forge does not do this for you.
+   - The **Over the internet** link works only once the router forwards the port (36743 unless you changed it) to
+     this computer. Tick **Ask the router to forward the port** in the server window and Forge asks the router
+     each time the server starts. The server window says whether the router agreed. If it did not, turn on UPnP
+     in the router's settings, or forward the port by hand there.
 3. The guest opens the link in any browser, enters a name, and takes a seat.
 
 Each time Forge starts, it makes new links. Links from an earlier run stop working.

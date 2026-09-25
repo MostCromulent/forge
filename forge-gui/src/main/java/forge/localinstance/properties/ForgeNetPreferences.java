@@ -27,6 +27,8 @@ public class ForgeNetPreferences extends AbstractPreferences<ForgeNetPreferences
     public enum FNetPref implements AbstractPreferences.IPref {
         NET_PORT("36743"),
         UPnP("ASK"),
+        /** Whether the web server asks the router to forward its port. */
+        WEB_PORT_FORWARD("false"),
         NET_BANDWIDTH_LOGGING("false"),
         NET_LOG_CLEANUP_ENABLED("true"),
         NET_AFK_TIMEOUT("5"),

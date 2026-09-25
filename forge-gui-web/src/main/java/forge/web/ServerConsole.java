@@ -69,6 +69,8 @@ final class ServerConsole implements IProgressBar {
     private final JPanel links = new JPanel();
     private final JProgressBar progress = new JProgressBar();
     private final JCheckBox quitWhenEmpty = new JCheckBox("Quit when the last player leaves", true);
+    private final JCheckBox forwardPort = new JCheckBox("Ask the router to forward the port, so players on the internet can join");
+    private final JLabel forwardState = new JLabel();
     private JFrame frame;
     private JTextArea text;
     private JButton browse;
@@ -111,7 +113,10 @@ final class ServerConsole implements IProgressBar {
         SwingUtilities.invokeLater(() -> {
             startStop.setEnabled(true);
             quitWhenEmpty.setEnabled(true);
+            forwardPort.setSelected(driven.forwardPort());
+            forwardPort.setEnabled(true);
         });
+        driven.onForwarding(this::forwarding);
         running();
     }
 
@@ -126,9 +131,27 @@ final class ServerConsole implements IProgressBar {
             progress.setValue(progress.getMaximum());
             progress.setString("Ready");
         });
+        lookUpAddresses();
+    }
+
+    private void lookUpAddresses() {
         final Thread addresses = new Thread(this::findAddresses, "ForgeAddresses");
         addresses.setDaemon(true);
         addresses.start();
+    }
+
+    /** Shows where asking the router stands, and relists the links, since the internet one depends on it. */
+    private void forwarding(final WebService.Forwarding now) {
+        SwingUtilities.invokeLater(() -> forwardState.setText(switch (now) {
+            case OFF -> "";
+            case ASKING -> "Asking the router…";
+            case FORWARDED -> "The router is forwarding port " + service.port() + ".";
+            case REFUSED -> "The router did not forward the port. Turn on UPnP in its settings, or forward port "
+                    + service.port() + " by hand.";
+        }));
+        if (now == WebService.Forwarding.FORWARDED || now == WebService.Forwarding.REFUSED) {
+            lookUpAddresses();
+        }
     }
 
     /** The port is closed: there is nothing to link to until it is started again. */
@@ -183,9 +206,8 @@ final class ServerConsole implements IProgressBar {
         for (final Map.Entry<String, String> local : FServerManager.getAllLocalAddresses().entrySet()) {
             found.put(local.getKey(), service.inviteUrl(local.getValue()));
         }
-        // Nothing opens this port, so the link reaches the router and stops there until somebody forwards it
         final String external = FServerManager.getExternalAddress();
-        found.put("Over the internet (forward port " + service.port() + " first)",
+        found.put(WebSessions.internetCaption(service.port(), service.forwarding() == WebService.Forwarding.FORWARDED),
                 external == null ? null : service.inviteUrl(external));
         SwingUtilities.invokeLater(() -> showLinks(found));
     }
@@ -253,6 +275,17 @@ final class ServerConsole implements IProgressBar {
         quitWhenEmpty.setAlignmentX(0f);
         quitWhenEmpty.setEnabled(false);
         quitWhenEmpty.addActionListener(e -> service.quitWhenEmpty(quitWhenEmpty.isSelected()));
+        forwardPort.setAlignmentX(0f);
+        forwardPort.setEnabled(false);
+        // Closing a forwarding waits on the router, which the event thread must not do
+        forwardPort.addActionListener(e -> {
+            final boolean on = forwardPort.isSelected();
+            final Thread worker = new Thread(() -> service.forwardPort(on), "ForgePortForward");
+            worker.setDaemon(true);
+            worker.start();
+        });
+        forwardState.setAlignmentX(0f);
+        forwardState.setBorder(BorderFactory.createEmptyBorder(2, 24, 0, 0));
 
         final JPanel head = new JPanel();
         head.setLayout(new BoxLayout(head, BoxLayout.PAGE_AXIS));
@@ -264,6 +297,8 @@ final class ServerConsole implements IProgressBar {
         head.add(progress);
         head.add(Box.createVerticalStrut(10));
         head.add(quitWhenEmpty);
+        head.add(forwardPort);
+        head.add(forwardState);
 
         text = new JTextArea();
         text.setEditable(false);

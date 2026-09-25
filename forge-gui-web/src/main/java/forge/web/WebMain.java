@@ -30,6 +30,8 @@ public final class WebMain {
         // Two tokens: one for the host's own link, one for every link handed to another player
         final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null,
                 newToken(), newToken());
+        // Ctrl+C, or the machine shutting down, skips the finally below, and a forwarded port would stay open on the router
+        Runtime.getRuntime().addShutdownHook(new Thread(service::stop, "ForgeWebShutdown"));
         try {
             if (console != null) {
                 console.starting("Starting the server");

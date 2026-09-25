@@ -47,13 +47,6 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
-import org.jupnp.UpnpService;
-import org.jupnp.UpnpServiceImpl;
-import org.jupnp.model.meta.Device;
-import org.jupnp.registry.Registry;
-import org.jupnp.support.igd.PortMappingListener;
-import org.jupnp.support.model.PortMapping;
-import org.jupnp.util.SpecificationViolationReporter;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -152,7 +145,7 @@ public final class FServerManager implements IHasForgeLog {
     private volatile boolean loopbackOnly;
     private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
     private EventLoopGroup workerGroup = new NioEventLoopGroup();
-    private UpnpService upnpService = null;
+    private PortForward portForward;
     private ServerGameLobby localLobby;
     private ILobbyListener lobbyListener;
     private IDraftEventHandler draftHandler;
@@ -341,14 +334,9 @@ public final class FServerManager implements IHasForgeLog {
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-        if (upnpService != null) {
-            try {
-                upnpService.shutdown();
-            } catch (Exception | AssertionError e) {
-                // The JDK wraps a failed multicast leave in AssertionError, which jupnp doesn't catch
-                netLog.debug("UPnP shutdown incomplete: {}", e.toString());
-            }
-            upnpService = null;
+        if (portForward != null) {
+            portForward.close();
+            portForward = null;
         }
         if (removeShutdownHook) {
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
@@ -776,46 +764,11 @@ public final class FServerManager implements IHasForgeLog {
     }
 
     private void mapNatPort() {
-        try {
-            final String localAddress = getLocalAddress();
-            final PortMapping portMapping = new PortMapping(port, localAddress, PortMapping.Protocol.TCP, "Forge");
-            // Shutdown existing UPnP service if already running
-            if (upnpService != null) {
-                upnpService.shutdown();
-            }
-
-            // Gateways routinely break the UPnP spec in ways jupnp tolerates; don't log each one
-            SpecificationViolationReporter.disableReporting();
-
-            // Create a new UPnP service instance
-            upnpService = new UpnpServiceImpl(GuiBase.getInterface().getUpnpPlatformService());
-            upnpService.startup();
-
-            final ForgePortMappingListener listener = new ForgePortMappingListener(portMapping);
-            upnpService.getRegistry().addListener(listener);
-            // Trigger device discovery
-            upnpService.getControlPoint().search();
-
-            // If no IGD responds within 5 seconds, report failure
-            new Timer("upnp-timeout", true).schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    if (!listener.isCompleted()) {
-                        listener.setCompleted();
-                        netLog.warn("UPnP: no gateway confirmed a mapping for port {} within 5 seconds", port);
-                        onUPnPResult(false);
-                    }
-                }
-            }, 5000);
-        } catch (LinkageError | Exception e) {
-            // UPnP port mapping is optional (it makes the host reachable from the
-            // internet; LAN/direct hosting works without it). jupnp is unavailable
-            // on iOS/MobiVM (provided scope, no platform UPnP service), so the
-            // PortMapping/UpnpService classes fail to load - NoClassDefFoundError
-            // is a LinkageError and degrades gracefully instead of killing hosting,
-            // while fatal Errors (OutOfMemoryError etc.) still propagate.
-            netLog.error(e, "UPnP mapping unavailable");
-        }
+        portForward = new PortForward(port);
+        portForward.open(accepted -> {
+            UPnPMapped = accepted;
+            onUPnPResult(accepted);
+        });
     }
 
     private void onUPnPResult(boolean success) {
@@ -825,41 +778,6 @@ public final class FServerManager implements IHasForgeLog {
         if (lobbyListener != null) {
             broadcast(success ? new MessageEvent(msg) : MessageEvent.warning(msg));
         }
-    }
-
-    /**
-     * Extends jupnp's PortMappingListener to report mapping success or failure.
-     * The superclass runs port mapping actions synchronously inside deviceAdded(),
-     * so by the time super.deviceAdded() returns, the result is known.
-     */
-    private class ForgePortMappingListener extends PortMappingListener {
-        private volatile boolean completed = false;
-
-        ForgePortMappingListener(PortMapping portMapping) {
-            super(portMapping);
-        }
-
-        @Override
-        public synchronized void deviceAdded(Registry registry, Device device) {
-            super.deviceAdded(registry, device);
-            if (!completed && !activePortMappings.isEmpty()) {
-                completed = true;
-                UPnPMapped = true;
-                onUPnPResult(true);
-            }
-        }
-
-        @Override
-        protected void handleFailureMessage(String message) {
-            super.handleFailureMessage(message);
-            if (!completed) {
-                completed = true;
-                onUPnPResult(false);
-            }
-        }
-
-        boolean isCompleted() { return completed; }
-        void setCompleted() { completed = true; }
     }
 
     // --- Reconnection helper methods ---

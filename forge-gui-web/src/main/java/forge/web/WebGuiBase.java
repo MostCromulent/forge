@@ -14,6 +14,7 @@ import forge.util.BuildInfo;
 import forge.util.FSerializableFunction;
 import forge.util.ImageFetcher;
 import forge.web.ToBrowser.Notice;
+import org.jupnp.DefaultUpnpServiceConfiguration;
 import org.jupnp.UpnpServiceConfiguration;
 import org.tinylog.Logger;
 
@@ -261,5 +262,5 @@ public final class WebGuiBase implements IGuiBase {
     @Override public void startAltSoundSystem(final String filename, final boolean isSynchronized) { }
     @Override public void showSpellShop() { }
     @Override public void showBazaar() { }
-    @Override public UpnpServiceConfiguration getUpnpPlatformService() { return null; }
+    @Override public UpnpServiceConfiguration getUpnpPlatformService() { return new DefaultUpnpServiceConfiguration(); }
 }

@@ -61,6 +61,13 @@ final class WebSessions implements WebServer.Endpoint {
         idle = timer.schedule(onQuit, idleMillis, TimeUnit.MILLISECONDS);
     }
 
+    /** Whether the router has agreed to forward the port, which decides how the internet link is described. */
+    private volatile boolean portForwarded;
+
+    void portForwarded(final boolean value) {
+        portForwarded = value;
+    }
+
     /** The server is built around this endpoint, so it can only be handed over once it exists. */
     void setServer(final WebServer server) {
         this.server = server;
@@ -315,6 +322,10 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
+    static String internetCaption(final int port, final boolean forwarded) {
+        return forwarded ? "Over the internet" : "Over the internet (forward port " + port + " first)";
+    }
+
     /** Every link that would reach this machine, most likely first. */
     List<Address> inviteUrls() {
         final List<Address> list = new ArrayList<>();
@@ -325,12 +336,11 @@ final class WebSessions implements WebServer.Endpoint {
         for (final Map.Entry<String, String> e : FServerManager.getAllLocalAddresses().entrySet()) {
             list.add(new Address(e.getKey(), s.inviteUrl(e.getValue())));
         }
-        // Nothing opens this port. Forge asks a router to open one only when its own game server starts, which the
-        // web UI never does, so the link reaches the router and stops there until somebody forwards the port by
-        // hand. Last, because it is the one least likely to work.
+        // Unless the router agreed to forward the port, the link reaches the router and stops there until somebody
+        // forwards it by hand. Last, because it is the one least likely to work.
         final String external = FServerManager.getExternalAddress();
         if (external != null) {
-            list.add(new Address("Over the internet (forward port " + s.port() + " first)", s.inviteUrl(external)));
+            list.add(new Address(internetCaption(s.port(), portForwarded), s.inviteUrl(external)));
         }
         return list;
     }

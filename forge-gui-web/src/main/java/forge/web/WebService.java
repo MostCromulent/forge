@@ -1,6 +1,11 @@
 package forge.web;
 
+import forge.gamemodes.net.server.PortForward;
+import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
+import forge.model.FModel;
 import org.tinylog.Logger;
+
+import java.util.function.Consumer;
 
 /**
  * The web server as something that can be stopped and started again while the process lives on. The console
@@ -19,8 +24,14 @@ final class WebService {
     private final String hostToken;
     private final String guestToken;
     private WebServer server;
-    private WebSessions sessions;
+    private volatile WebSessions sessions;
     private boolean quitWhenEmpty = true;
+    private volatile PortForward forward;
+    private volatile Forwarding forwarding = Forwarding.OFF;
+    private volatile Consumer<Forwarding> onForwarding = f -> { };
+
+    /** Where asking the router to forward the port stands. */
+    enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
 
     WebService(final WebGuiBase ui, final long idleMillis, final Runnable onQuit, final boolean consoleShown,
             final String hostToken, final String guestToken) {
@@ -51,6 +62,9 @@ final class WebService {
         sessions = fresh;
         server = bound;
         Logger.info("Forge web UI: {}", bound.url());
+        if (forwardPort()) {
+            openForward();
+        }
     }
 
     /** Closes the port and drops every seat. Does nothing if it is already stopped. */
@@ -58,6 +72,7 @@ final class WebService {
         if (server == null) {
             return;
         }
+        closeForward();
         sessions.shutdown();
         server.close();
         sessions = null;
@@ -70,6 +85,68 @@ final class WebService {
         if (sessions != null) {
             sessions.quitWhenEmpty(value);
         }
+    }
+
+    /** Whether the router is asked to forward the port whenever the server starts. Kept between runs. */
+    boolean forwardPort() {
+        return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_PORT_FORWARD));
+    }
+
+    synchronized void forwardPort(final boolean value) {
+        FModel.getNetPreferences().setPref(FNetPref.WEB_PORT_FORWARD, String.valueOf(value));
+        FModel.getNetPreferences().save();
+        if (!value) {
+            closeForward();
+        } else if (server != null) {
+            openForward();
+        }
+    }
+
+    /** Told of every change in where forwarding stands, on whatever thread the router's answer arrives. */
+    synchronized void onForwarding(final Consumer<Forwarding> listener) {
+        onForwarding = listener;
+        listener.accept(forwarding);
+    }
+
+    Forwarding forwarding() {
+        return forwarding;
+    }
+
+    private void openForward() {
+        if (forward != null) {
+            forward.close();
+        }
+        final PortForward asking = new PortForward(server.port());
+        forward = asking;
+        setForwarding(Forwarding.ASKING);
+        // The answer arrives on a UPnP thread, which stop() may be waiting on while it holds this object's lock, so the
+        // answer takes no lock. One for a forwarding already closed or replaced says nothing about the current one.
+        asking.open(accepted -> {
+            if (forward == asking) {
+                if (accepted) {
+                    Logger.info("The router is forwarding port {}.", asking.port());
+                } else {
+                    Logger.warn("The router did not forward port {}. Players on the internet cannot join until it is forwarded.", asking.port());
+                }
+                setForwarding(accepted ? Forwarding.FORWARDED : Forwarding.REFUSED);
+            }
+        });
+    }
+
+    private void closeForward() {
+        if (forward != null) {
+            forward.close();
+            forward = null;
+        }
+        setForwarding(Forwarding.OFF);
+    }
+
+    private void setForwarding(final Forwarding value) {
+        forwarding = value;
+        if (sessions != null) {
+            sessions.portForwarded(value == Forwarding.FORWARDED);
+        }
+        onForwarding.accept(value);
     }
 
     /** The host's own link, or null while stopped. */
