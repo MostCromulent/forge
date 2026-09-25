@@ -229,6 +229,7 @@ function apply(msg: ServerMessage): void {
       }
       break;
     case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
+    case 'autoDecisions': model.autoDecisions = msg; break;
     case 'gameOver':
       model.gameOver = true;
       model.drawOffer = null;

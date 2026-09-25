@@ -136,10 +136,18 @@ final class FromBrowser {
     record DrawOfferCommand(DrawOfferMessage.Action action) {
     }
 
+    enum AutoDecisionAction { list, remove, clear, disableYields, disableTriggers }
+
+    /** The auto-yields and trigger answers the player has set: listed, one forgotten, all forgotten, or either
+     *  kind switched off (on) or back on. */
+    @Command("autoDecisions")
+    record AutoDecisionCommand(AutoDecisionAction action, @Nullable String key, boolean on) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
-            NextGame.class, DrawOfferCommand.class);
+            NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class);
 }

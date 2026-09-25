@@ -34,8 +34,8 @@ export interface UiState {
   stopsOpen: boolean;
   /** The options dialog is open. */
   optionsOpen: boolean;
-  /** The game menu behind the prompt's ⋯ button, or the auto-pass stops dialog opened from it. */
-  gameMenu: 'menu' | 'stops' | null;
+  /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
+  gameMenu: 'menu' | 'stops' | 'decisions' | null;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** Match setup's picker for a seat's deck, sleeve or avatar. */

@@ -2,7 +2,7 @@
 // protocol; the controller is the one place that turns them into messages, so a different renderer (a canvas board)
 // drives the game the same way.
 
-import type { PhaseType, Send, SetSeat, YieldAction } from './protocol';
+import type { AutoDecisionAction, PhaseType, Send, SetSeat, YieldAction } from './protocol';
 
 /** What a seat's owner can change about it. */
 export type SeatChange = Omit<SetSeat, 't' | 'index'>;
@@ -20,6 +20,7 @@ export interface Actions {
   undo(): void;
   concede(): void;
   drawOffer(action: 'OFFER' | 'ACCEPT' | 'DECLINE'): void;
+  autoDecisions(action: AutoDecisionAction, key?: string, on?: boolean): void;
   nextGame(): void;
   quitMatch(): void;
   /** Leaves a finished match for the start page. */
@@ -83,6 +84,7 @@ export function createActions(send: Send): Actions {
     undo: () => send({ t: 'undo' }),
     concede: () => send({ t: 'concede' }),
     drawOffer: action => send({ t: 'drawOffer', action }),
+    autoDecisions: (action, key, on = false) => send({ t: 'autoDecisions', action, key, on }),
     nextGame: () => send({ t: 'nextGame', decision: 'CONTINUE' }),
     quitMatch: () => send({ t: 'nextGame', decision: 'QUIT' }),
     leave: () => send({ t: 'leave' }),

@@ -66,6 +66,17 @@ final class ToBrowser {
     record Notice(@Nullable String title, @Nullable String message, boolean error) {
     }
 
+    /** The auto-yields and trigger answers the player has set, and whether either kind is switched off. */
+    @Message("autoDecisions")
+    record AutoDecisions(List<AutoDecision> entries, boolean yieldsOff, boolean triggersOff) {
+    }
+
+    /** One remembered decision: always yield to it, or always accept or decline the trigger. */
+    record AutoDecision(String key, AutoDecisionKind kind) {
+    }
+
+    enum AutoDecisionKind { yield, accept, decline }
+
     /** A draw offer while it is open: who made it, and whether this player still has to answer. Closed, it is absent. */
     @Message("drawOffer")
     record DrawOffer(@Nullable Ref offerer, boolean open, boolean mine, boolean waitingOnMe) {
@@ -341,7 +352,7 @@ final class ToBrowser {
             Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
-            Flash.class, GameOver.class, DrawOffer.class);
+            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

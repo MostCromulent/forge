@@ -44,6 +44,7 @@ import forge.trackable.Tracker;
 import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
 import forge.util.Localizer;
+import forge.web.FromBrowser.AutoDecisionCommand;
 import forge.web.FromBrowser.DrawOfferCommand;
 import forge.web.FromBrowser.KeyCommand;
 import forge.web.FromBrowser.NextGame;
@@ -836,6 +837,46 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
+    /** Lists, forgets or switches off remembered decisions through the controller, as desktop's dialog does. */
+    private void autoDecisions(final IGameController controller, final AutoDecisionCommand command) {
+        final YieldController yields = controller.getYieldController();
+        if (yields == null) {
+            return;
+        }
+        final boolean abilityScope = yields.isAbilityScope();
+        switch (command.action()) {
+            case remove -> forget(controller, yields, command.key(), abilityScope);
+            case clear -> {
+                final List<String> keys = new ArrayList<>(Lists.newArrayList(yields.getAutoYields()));
+                yields.getAutoTriggers().forEach(e -> keys.add(e.getKey()));
+                keys.forEach(key -> forget(controller, yields, key, abilityScope));
+            }
+            case disableYields -> controller.setDisableAutoYields(command.on());
+            case disableTriggers -> controller.setDisableAutoTriggers(command.on());
+            case list -> { }
+        }
+        final List<ToBrowser.AutoDecision> entries = new ArrayList<>();
+        yields.getAutoYields().forEach(key -> entries.add(new ToBrowser.AutoDecision(key, ToBrowser.AutoDecisionKind.yield)));
+        yields.getAutoTriggers().forEach(e -> entries.add(new ToBrowser.AutoDecision(e.getKey(),
+                e.getValue() == TriggerDecision.ACCEPT ? ToBrowser.AutoDecisionKind.accept : ToBrowser.AutoDecisionKind.decline)));
+        entries.sort(java.util.Comparator.comparing(ToBrowser.AutoDecision::key, String.CASE_INSENSITIVE_ORDER));
+        send(new ToBrowser.AutoDecisions(entries, yields.getDisableAutoYields(), yields.getDisableAutoTriggers()));
+    }
+
+    private static void forget(final IGameController controller, final YieldController yields, final String key,
+            final boolean abilityScope) {
+        if (key == null) {
+            return;
+        }
+        if (Lists.newArrayList(yields.getAutoYields()).contains(key)) {
+            controller.setShouldAutoYield(key, false, abilityScope);
+        }
+        final boolean decided = Lists.newArrayList(yields.getAutoTriggers()).stream().anyMatch(e -> key.equals(e.getKey()));
+        if (decided) {
+            controller.setTriggerDecision(key, TriggerDecision.ASK, abilityScope);
+        }
+    }
+
     @Override
     public void updateDrawOffer(final DrawOfferMessage.Status update) {
         if (update == null) {
@@ -1052,6 +1093,7 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "cancel" -> controller.selectButtonCancel();
                 case "concede" -> controller.concede();
                 case "drawOffer" -> controller.drawOfferAction(Wire.decode(msg, DrawOfferCommand.class).action());
+                case "autoDecisions" -> autoDecisions(controller, Wire.decode(msg, AutoDecisionCommand.class));
                 case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
                 case "undo" -> controller.undoLastAction();
                 case "autoPass" -> {

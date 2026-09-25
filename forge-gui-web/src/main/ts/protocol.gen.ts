@@ -184,6 +184,13 @@ export interface DrawOffer {
   waitingOnMe: boolean;
 }
 
+export interface AutoDecisions {
+  t: 'autoDecisions';
+  entries: AutoDecision[];
+  yieldsOff: boolean;
+  triggersOff: boolean;
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -318,6 +325,7 @@ export type ServerMessage =
   | Flash
   | GameOver
   | DrawOffer
+  | AutoDecisions
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -459,6 +467,13 @@ export interface DrawOfferCommand {
   action: Action;
 }
 
+export interface AutoDecisionCommand {
+  t: 'autoDecisions';
+  action: AutoDecisionAction;
+  key?: string;
+  on: boolean;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -482,7 +497,8 @@ export type ClientMessage =
   | UseMana
   | SetSetting
   | NextGame
-  | DrawOfferCommand;
+  | DrawOfferCommand
+  | AutoDecisionCommand;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -650,6 +666,11 @@ export interface CardFace {
 
 export type TriggerDecision = 'ASK' | 'ACCEPT' | 'DECLINE';
 
+export interface AutoDecision {
+  key: string;
+  kind: 'yield' | 'accept' | 'decline';
+}
+
 export interface RequestOption {
   label: string;
   card?: Ref;
@@ -674,6 +695,8 @@ export type YieldAction = 'autoYield' | 'alwaysYes' | 'alwaysNo' | 'yieldToStack
 export type NextGameDecision = 'NEW' | 'CONTINUE' | 'QUIT';
 
 export type Action = 'OFFER' | 'ACCEPT' | 'DECLINE';
+
+export type AutoDecisionAction = 'list' | 'remove' | 'clear' | 'disableYields' | 'disableTriggers';
 
 export interface Place {
   zone: ZoneType;

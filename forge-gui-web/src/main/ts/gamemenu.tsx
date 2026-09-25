@@ -1,14 +1,15 @@
 // The game menu behind the prompt's ⋯ button: what a player does to the game as a whole rather than on the board,
-// and the auto-pass stops, which are set often enough mid-game to sit one click from the prompt
+// and how priority passes by itself, which is changed often enough mid-game to sit one click from the prompt
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Row } from './options';
 import { SETTINGS } from './settings';
 import type { Actions } from './actions';
+import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 
-export function GameMenu({ model, actions, close, openStops }: {
-  model: Model; actions: Actions; close: () => void; openStops: () => void;
+export function GameMenu({ model, actions, close, open }: {
+  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions') => void;
 }) {
   const [armed, setArmed] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -28,7 +29,11 @@ export function GameMenu({ model, actions, close, openStops }: {
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
           {offer?.mine ? 'Draw offered, waiting for an answer' : 'Offer a draw'}
         </button>
-        <button type="button" role="menuitem" class="card-menu-item" onClick={openStops}>Auto-pass stops…</button>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>Auto-pass stops…</button>
+        <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
+          actions.autoDecisions('list');
+          open('decisions');
+        }}>Auto-yields and triggers…</button>
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
           disabled={model.spectating} onClick={() => {
             if (!armed) {
@@ -62,6 +67,67 @@ export function AutoPassStops({ close }: { close: () => void }) {
         </div>
         <footer>
           <span class="hint">Auto-passing gives you priority back at these moments. Changes apply at once.</span>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
+const KIND_LABEL: Record<AutoDecision['kind'], string> = { yield: 'Always yield', accept: 'Always accept', decline: 'Always decline' };
+
+/** The auto-yields and trigger answers set during play, each of which can be forgotten, as desktop's dialog lists them. */
+export function AutoDecisionsDialog({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
+  const [armed, setArmed] = useState(false);
+  const all = model.autoDecisions;
+  const entries = all?.entries ?? [];
+  return (
+    <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+      <div class="options-dialog decisions-dialog" role="dialog" aria-label="Auto-yields and triggers">
+        <header>
+          <b>Auto-yields and triggers</b>
+          <span class="spacer" />
+          <button class="close" title="Close (Esc)" onClick={close}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+          </button>
+        </header>
+        <div class="rows">
+          {!all ? <p class="hint">Reading them…</p>
+            : !entries.length ? <p class="hint">None set. Right-click an item on the stack to always yield to it, or answer a trigger with Always.</p>
+              : entries.map(e => (
+                <div key={`${e.kind} ${e.key}`} class="decision">
+                  <span class={`decision-kind ${e.kind}`}>{KIND_LABEL[e.kind]}</span>
+                  <span class="decision-key" title={e.key}>{e.key}</span>
+                  <button class="decision-forget" title="Forget this" aria-label={`Forget ${e.key}`}
+                    onClick={() => actions.autoDecisions('remove', e.key)}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
+                  </button>
+                </div>
+              ))}
+          {all && (
+            <>
+              <div class="setting">
+                <div>Pause every auto-yield</div>
+                <button class={all.yieldsOff ? 'switch on' : 'switch'} role="switch" aria-checked={all.yieldsOff}
+                  onClick={() => actions.autoDecisions('disableYields', undefined, !all.yieldsOff)} />
+              </div>
+              <div class="setting">
+                <div>Pause every trigger answer</div>
+                <button class={all.triggersOff ? 'switch on' : 'switch'} role="switch" aria-checked={all.triggersOff}
+                  onClick={() => actions.autoDecisions('disableTriggers', undefined, !all.triggersOff)} />
+              </div>
+            </>
+          )}
+        </div>
+        <footer>
+          <span class="hint">Paused ones are kept, and work again once switched back.</span>
+          <button class={armed ? 'clear-all armed' : 'clear-all'} disabled={!entries.length} onClick={() => {
+            if (!armed) {
+              setArmed(true);
+              return;
+            }
+            setArmed(false);
+            actions.autoDecisions('clear');
+          }}>{armed ? 'Click again to forget all' : 'Forget all'}</button>
         </footer>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { Lobby } from './lobby';
 import { Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
-import { AutoPassStops, DrawOfferQuestion, GameMenu } from './gamemenu';
+import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './gamemenu';
 import { Volume } from './volume';
 import { Notices } from './notices';
 import { Dock } from './dock';
@@ -33,7 +33,10 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
     {page === 'match' && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
     {page === 'match' && ui.gameMenu === 'menu' && (
       <GameMenu model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })}
-        openStops={() => changeUi(u => { u.gameMenu = 'stops'; })} />
+        open={dialog => changeUi(u => { u.gameMenu = dialog; })} />
+    )}
+    {page === 'match' && ui.gameMenu === 'decisions' && (
+      <AutoDecisionsDialog model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />
     )}
     {page === 'match' && ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}

@@ -41,6 +41,16 @@
 #options header .search { flex: 1; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; padding: 5px 9px; }
 #options header .spacer { flex: 1; }
 #options .stops-dialog { width: min(440px, 92vw); }
+#options .decisions-dialog { width: min(620px, 92vw); }
+#options .decision { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
+#options .decision-kind { flex: none; width: 104px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+#options .decision-kind.accept { color: var(--select); }
+#options .decision-kind.yield { color: var(--accent-2); }
+#options .decision-key { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+#options .decision-forget { flex: none; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; background: none; border: 0; color: var(--muted); }
+#options .decision-forget:hover { color: var(--text); background: var(--surface-2); }
+#options .decision-forget svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+#options .clear-all.armed { border-color: var(--danger); color: var(--danger); }
 #options header .close { background: none; border: none; color: var(--muted); display: grid; place-items: center; padding: 4px; }
 #options svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #options .rows { overflow-y: auto; scrollbar-width: thin; padding: 6px 14px 12px; }
