@@ -41,7 +41,7 @@ export const FINDER_DEFAULTS: DeckFilter = {
   query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, sort: 'name',
 };
 
-/** The decks the filter lets through, in its order. A generator has built nothing yet, so cardPool cannot rule it out. */
+/** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
     && (!f.colours.size || [...f.colours].some(c => (d.colors ?? '').includes(c)))
