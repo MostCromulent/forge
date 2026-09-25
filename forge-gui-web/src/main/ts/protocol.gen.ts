@@ -290,7 +290,9 @@ export interface DraftState {
   seats: DraftSeat[];
   cards: DraftCard[];
   picks: DraftCard[];
-  passed: boolean;
+  moved: number[];
+  clockSeconds: number;
+  clockLeftMillis: number;
   done: boolean;
 }
 

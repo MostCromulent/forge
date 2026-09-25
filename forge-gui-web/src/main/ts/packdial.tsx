@@ -1,6 +1,6 @@
 // The pack dial: the draft's seats on a ring, you at the bottom, each pack a token on the track inside it. A seat's
 // waiting packs queue on the side they arrive from, so a slow seat shows a line of packs behind it. When every pack
-// moves on one seat, the tokens slide along the track to their next seat before settling.
+// passes a pack on, that pack's token slides along the track to its next seat before settling.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { dialTokens, nextFrom, seatAngle } from './dial';
@@ -21,13 +21,16 @@ export function Dial({ state }: { state: DraftState }) {
   const depths = state.seats.map(s => s.packs);
   const next = nextFrom(depths, direction);
   const gap = (2 * Math.PI) / n;
-  // How far the tokens have slid towards their next seat, from 0 to 1; only a pass animates
+  // How far the passed packs have slid towards their next seat, from 0 to 1; only a pass animates
   const [slide, setSlide] = useState(0);
   const shown = useRef<DraftState | null>(null);
   useEffect(() => {
     const before = shown.current;
     shown.current = state;
-    if (!state.passed || !before || reducedMotion()) return;
+    if (state.moved.length === 0 || !before || reducedMotion()) {
+      setSlide(0);
+      return;
+    }
     let frame = 0;
     const start = performance.now();
     const step = (now: number) => {
@@ -38,9 +41,11 @@ export function Dial({ state }: { state: DraftState }) {
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [state]);
-  // While sliding, each token starts a gap back, at the seat that passed it, and eases into its place
+  // While sliding, a passed pack, the newest at the seat after the one that passed it, starts a gap back and eases into its place
   const back = slide > 0 ? direction * gap * (1 - ease(slide)) : 0;
-  const layout = dialTokens(depths, direction).map(t => ({ ...t, angle: t.angle + back }));
+  const arrived = new Set(state.moved.map(s => (((s + direction) % n) + n) % n));
+  const layout = dialTokens(depths, direction).map(t =>
+    arrived.has(t.seat) && t.slot === depths[t.seat] - 1 ? { ...t, angle: t.angle + back } : t);
   const feeder = next === null ? null : seatAngle(next, n);
   return (
     <div class="dial" style={{ width: `${SIZE}px`, height: `${SIZE}px` }} role="img"

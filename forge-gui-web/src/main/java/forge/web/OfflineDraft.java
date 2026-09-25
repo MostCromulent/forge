@@ -1,12 +1,10 @@
 package forge.web;
 
-import forge.card.CardRules;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.gamemodes.limited.BoosterDraft;
-import forge.gamemodes.limited.DraftRankCache;
 import forge.gamemodes.limited.LimitedPlayer;
 import forge.gamemodes.limited.LimitedPlayerAI;
 import forge.item.PaperCard;
@@ -16,6 +14,7 @@ import forge.web.ToBrowser.DraftState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,9 +43,7 @@ final class OfflineDraft {
     private int packSize;
     /** Picks made from the current round's packs, which numbers the pick; pack sizes can differ within a round. */
     private int roundPicks;
-    /** Counts the states sent, so a pick names exactly the state it was made on. */
-    private int step;
-    private volatile DraftState latest;
+    private final DraftView view = new DraftView();
 
     /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; fail hears why it could not. */
     OfflineDraft(final Supplier<BoosterDraft> make, final String playerName, final Consumer<DraftState> publish,
@@ -68,7 +65,7 @@ final class OfflineDraft {
 
     /** The state last sent, for a browser that arrives again; null before the first pack. */
     DraftState latest() {
-        return latest;
+        return view.latest();
     }
 
     /** Picks the card at index of the pack shown in state step. A click on a state that has moved on since is ignored. */
@@ -83,7 +80,7 @@ final class OfflineDraft {
     }
 
     private void pickOn(final int stepShown, final int index) {
-        final DraftState now = latest;
+        final DraftState now = view.latest();
         if (now == null || now.done() || now.step() != stepShown || index < 0 || index >= pack.size()) {
             return;
         }
@@ -95,7 +92,7 @@ final class OfflineDraft {
         }
         final PaperCard card = me.hasArchdemonCurse() ? me.pickFromArchdemonCurse(me.nextChoice()) : pack.get(index);
         final boolean passed = draft.setChoice(card, DeckSection.Sideboard);
-        picks.add(card(card, round, now.pick()));
+        picks.add(DraftView.card(card, round, now.pick()));
         roundPicks++;
         advance(passed);
     }
@@ -151,18 +148,11 @@ final class OfflineDraft {
             seats.add(new DraftSeat(name, p instanceof LimitedPlayerAI, p.getPackQueueSize(), false));
         }
         final int pick = roundPicks + 1;
-        final List<DraftCard> cards = pack.stream().map(c -> card(c, round, pick)).toList();
+        final List<DraftCard> cards = pack.stream().map(c -> DraftView.card(c, round, pick)).toList();
+        // Offline every pack moves in lock step, so a pass moves every seat's pack
+        final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
         // Packs go to the next seat in odd rounds and the previous seat in even ones, as BoosterDraft.passPacks alternates
-        latest = new DraftState(++step, product, round, draft.getNumRounds(), pick, packSize, round % 2 == 1 ? 1 : -1, seats, cards,
-                List.copyOf(picks), passed, done);
-        publish.accept(latest);
-    }
-
-    private static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber) {
-        final CardRules rules = card.getRules();
-        final Double ranking = DraftRankCache.getRanking(card.getName(), card.getEdition());
-        return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
-                rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(), CardCatalog.pt(rules),
-                card.getRarity().toString(), ranking == null ? null : (int) Math.round(ranking), packNumber, pickNumber);
+        publish.accept(view.state(true, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
+                round % 2 == 1 ? 1 : -1, seats, cards, List.copyOf(picks), moved, 0, 0, done)));
     }
 }
