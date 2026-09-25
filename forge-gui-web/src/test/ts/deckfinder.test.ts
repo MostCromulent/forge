@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FINDER_DEFAULTS, matchingDecks, type DeckFilter } from '../../main/ts/deckfinder';
+import { FINDER_DEFAULTS, matchingDecks, sourceCounts, type DeckFilter } from '../../main/ts/deckfinder';
 import type { DeckSummary } from '../../main/ts/protocol';
 
 const deck = (name: string, more: Partial<DeckSummary> = {}): DeckSummary =>
@@ -55,5 +55,18 @@ describe('opening the finder', () => {
     const shown = matchingDecks([deck('Legal'), deck('Illegal', { problem: 'Not legal in Pauper: 1 card. Atog.' })],
       { ...FINDER_DEFAULTS, colours: new Set() });
     expect(names(shown)).toEqual(['Legal']);
+  });
+});
+
+describe("the finder's sources", () => {
+  // Fails if decks on this device or loaded from links are folded into another source, where nobody would look for them
+  it("counts a guest's own decks and linked decks as sources of their own", () => {
+    const counts = sourceCounts([deck('Mine', { source: 'device' }), deck('Link', { source: 'linked' }),
+      deck('Precon', { source: 'precons', readOnly: true }), deck('Net', { source: 'net Modern' })]);
+    expect(counts.get('all')).toBe(4);
+    expect(counts.get('device')).toBe(1);
+    expect(counts.get('linked')).toBe(1);
+    expect(counts.get('precons')).toBe(1);
+    expect(counts.get('net')).toBe(1);
   });
 });

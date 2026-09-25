@@ -10,6 +10,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /** The card pool a host chooses for Constructed, checked against every seat. No match is played. */
 public class LobbyCardPoolTest {
@@ -32,7 +33,7 @@ public class LobbyCardPoolTest {
         final WebGuiGame gui = new WebGuiGame();
         try {
             onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
-            final Lobby lobby = new Lobby(local);
+            final Lobby lobby = new Lobby(local, () -> false, Map.of());
             final int computer = local.webSeat() == 0 ? 1 : 0;
             onUi(() -> {
                 local.hostedLobby().getSlot(computer).setDeck(computerDeck);
@@ -81,7 +82,7 @@ public class LobbyCardPoolTest {
             Assert.assertEquals(decks.cardPool(), "Pauper");
             Assert.assertTrue(decks.decks().stream().noneMatch(d -> d.key().startsWith("gen:theme:")),
                     "a theme deck was offered under a card pool");
-            final Deck coloured = lobby.deckForTest("gen:color:Red");
+            final Deck coloured = lobby.deck("gen:color:Red");
             Assert.assertNotNull(coloured, "the red generator built nothing");
             Assert.assertNull(DeckCatalog.poolProblem(FModel.getFormats().getFormat("Pauper"), coloured),
                     "the red generator used cards outside Pauper");
@@ -153,7 +154,7 @@ public class LobbyCardPoolTest {
                     leaked.set(true);
                 }
             }, (from, text) -> { }));
-            final Lobby lobby = new Lobby(local);
+            final Lobby lobby = new Lobby(local, () -> false, Map.of());
             onUi(() -> lobby.setCardPool("Pauper"));
             onUi(() -> lobby.setFormat(GameType.Commander.name()));
             Assert.assertFalse(leaked.get(), "an update showed Commander with the Pauper pool");

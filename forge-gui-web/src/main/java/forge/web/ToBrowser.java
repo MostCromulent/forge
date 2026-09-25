@@ -95,7 +95,8 @@ final class ToBrowser {
     record DeckSummary(String key, String name, String source, String colors, @Nullable Boolean generated,
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
             @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
-            @Nullable Integer sleeveOffset) {
+            @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
+            @Nullable Long synced) {
     }
 
     @Message("deckDetails")
@@ -169,6 +170,82 @@ final class ToBrowser {
     record ChatLine(@Nullable String from, String text) {
     }
 
+    /**
+     * A page of the deck editor's catalogue. hiddenBySwitch counts the cards the deck can't use that matched, sent only
+     * when nothing else did. ranked says the rows are in best-match order for a name, rather than in the sort asked for.
+     */
+    @Message("catalogue")
+    record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked) {
+    }
+
+    /** The deck open in the editor, or none when the editor is closed. */
+    @Message("editor")
+    record EditorMessage(@Nullable EditorState state) {
+    }
+
+    /**
+     * Everything the editor shows about its deck. check is the "Check legality against" label; format, cardPool and
+     * unrestricted are its parts, for the control. target is storage (the host's decks) or device (a guest's browser).
+     * copyOf names a deck that can't be changed in place, until the first change copies it.
+     */
+    record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
+            String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
+            List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
+            @Nullable String verdict, int problemCount, boolean canUndo, @Nullable String landed, boolean onSeat) {
+    }
+
+    record EditorGroup(String heading, List<EditorCard> cards) {
+    }
+
+    /** One name in a section, however many printings it is split over. mv and colors let the browser group it differently. */
+    record EditorCard(String name, int count, String image, String cost, int mv, String colors, int printings,
+            List<EditorPrinting> split, @Nullable String problem) {
+    }
+
+    /** How many copies of a card in one section are of one printing, named by its image key. */
+    record EditorPrinting(String key, int count) {
+    }
+
+    /** A basic land in the row under the main deck. allowed is false outside the commander's colours. */
+    record EditorLand(String name, String letter, int count, boolean allowed) {
+    }
+
+    /** What reading a pasted, fetched or dropped list found: a mark per line, the problems with their fixes, and the deck it makes. */
+    @Message("importResult")
+    record ImportResult(int request, List<ImportLine> lines, List<ImportProblem> problems, ImportSummary summary,
+            @Nullable String name, @Nullable Fetched fetched) {
+    }
+
+    /** kind is read, problem, ignored, or heading (a section heading or the deck's name). */
+    record ImportLine(String kind) {
+    }
+
+    /** line counts from 0, and is -1 for a problem no one line has, such as a missing commander. */
+    record ImportProblem(int line, String title, String detail, List<ImportFix> fixes) {
+    }
+
+    /** kind is use (text is the name to use), leaveOut, commander (text is the card) or other. */
+    record ImportFix(String kind, String label, @Nullable String text) {
+    }
+
+    record ImportSummary(int cards, int sideboard, int notImported, @Nullable String commander, boolean commanderChosen,
+            String colors, @Nullable String verdict, List<EditorGroup> main, List<EditorCard> sideboardCards) {
+    }
+
+    /** A list fetched from a site: which site, the link, the text the list was read from, and the format the site gave it. */
+    record Fetched(String site, String url, String text, String format) {
+    }
+
+    /** An import's name is already a deck's, and the browser asks whether to replace it or keep both. */
+    @Message("nameTaken")
+    record NameTaken(String name) {
+    }
+
+    /** One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. */
+    record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
+            String heading, int inDeck, @Nullable String problem) {
+    }
+
     @Message("cardSearch")
     record CardSearch(List<String> names) {
     }
@@ -177,7 +254,13 @@ final class ToBrowser {
     record Printings(String name, List<Printing> printings) {
     }
 
-    record Printing(String name, String edition, String key) {
+    /** One printing of a card: its set's code and name, the year it came out, and why it can't be used, when it can't. */
+    record Printing(String name, String edition, String key, String setName, int year, @Nullable String problem) {
+    }
+
+    /** A guest's deck changed: the deck as .dck text to keep in its browser, or no text when it was deleted. */
+    @Message("deviceDeck")
+    record DeviceDeck(String id, @Nullable String text, String format) {
     }
 
     /** A question the host asks outside a match; the browser answers with the indices chosen. */
@@ -377,7 +460,8 @@ final class ToBrowser {
             Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
-            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class);
+            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class, CataloguePage.class, EditorMessage.class,
+            ImportResult.class, NameTaken.class, DeviceDeck.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

@@ -205,6 +205,43 @@ export interface Aside {
   cards: RequestOption[];
 }
 
+export interface CataloguePage {
+  t: 'catalogue';
+  request: number;
+  rows: CatalogueRow[];
+  total: number;
+  offset: number;
+  hiddenBySwitch: number;
+  ranked: boolean;
+}
+
+export interface EditorMessage {
+  t: 'editor';
+  state?: EditorState;
+}
+
+export interface ImportResult {
+  t: 'importResult';
+  request: number;
+  lines: ImportLine[];
+  problems: ImportProblem[];
+  summary: ImportSummary;
+  name?: string;
+  fetched?: Fetched;
+}
+
+export interface NameTaken {
+  t: 'nameTaken';
+  name: string;
+}
+
+export interface DeviceDeck {
+  t: 'deviceDeck';
+  id: string;
+  text?: string;
+  format: string;
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -342,6 +379,11 @@ export type ServerMessage =
   | DrawOffer
   | AutoDecisions
   | Aside
+  | CataloguePage
+  | EditorMessage
+  | ImportResult
+  | NameTaken
+  | DeviceDeck
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -440,6 +482,7 @@ export interface SearchCards {
 export interface AskPrintings {
   t: 'printings';
   name: string;
+  cardPool?: string;
 }
 
 export interface SleeveArt {
@@ -519,6 +562,96 @@ export interface AutoDecisionCommand {
   on: boolean;
 }
 
+export interface BrowseFormat {
+  t: 'browseFormat';
+  format: string;
+}
+
+export interface EditorOpen {
+  t: 'editorOpen';
+  key?: string;
+  newFormat?: string;
+  seat?: number;
+  copy: boolean;
+}
+
+export interface EditorBare {
+  t: 'editorClose' | 'editorUndo';
+}
+
+export interface EditorEdit {
+  t: 'editorEdit';
+  op: EditOp;
+  name?: string;
+  from?: DeckSection;
+  to?: DeckSection;
+  count: number;
+  printings?: CountedName[];
+  lands?: CountedName[];
+}
+
+export interface EditorRename {
+  t: 'editorRename';
+  name: string;
+}
+
+export interface EditorCheck {
+  t: 'editorCheck';
+  format: string;
+  cardPool?: string;
+  unrestricted: boolean;
+}
+
+export interface EditorDeck {
+  t: 'editorDeck';
+  op: DeckOp;
+}
+
+export interface CatalogueQuery {
+  t: 'catalogue';
+  request: number;
+  text: string;
+  colours: string;
+  type: string;
+  mv: string;
+  sort: string;
+  offset: number;
+  showAll: boolean;
+}
+
+export interface ImportRead {
+  t: 'importRead';
+  request: number;
+  text: string;
+  format: string;
+  cardPool?: string;
+  unrestricted: boolean;
+}
+
+export interface ImportFetch {
+  t: 'importFetch';
+  request: number;
+  url: string;
+}
+
+export interface ImportCommit {
+  t: 'importCommit';
+  text: string;
+  name: string;
+  format: string;
+  cardPool?: string;
+  unrestricted: boolean;
+  action: ImportAction;
+  seat?: number;
+  url?: string;
+  clash?: Clash;
+}
+
+export interface DeviceDecks {
+  t: 'deviceDecks';
+  decks: DeviceDeckText[];
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -548,7 +681,19 @@ export type ClientMessage =
   | SetSetting
   | NextGame
   | DrawOfferCommand
-  | AutoDecisionCommand;
+  | AutoDecisionCommand
+  | BrowseFormat
+  | EditorOpen
+  | EditorBare
+  | EditorEdit
+  | EditorRename
+  | EditorCheck
+  | EditorDeck
+  | CatalogueQuery
+  | ImportRead
+  | ImportFetch
+  | ImportCommit
+  | DeviceDecks;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -624,6 +769,10 @@ export interface DeckSummary {
   formats?: string;
   sleeveArt?: string;
   sleeveOffset?: number;
+  readOnly?: boolean;
+  linked?: string;
+  sourceUrl?: string;
+  synced?: number;
 }
 
 export interface DeckDetails {
@@ -674,6 +823,9 @@ export interface Printing {
   name: string;
   edition: string;
   key: string;
+  setName: string;
+  year: number;
+  problem?: string;
 }
 
 export interface Ref {
@@ -744,6 +896,71 @@ export interface RequestOption {
   player?: Ref;
 }
 
+export interface CatalogueRow {
+  name: string;
+  image: string;
+  cost: string;
+  mv: number;
+  colors: string;
+  type: string;
+  pt?: string;
+  heading: string;
+  inDeck: number;
+  problem?: string;
+}
+
+export interface EditorState {
+  name: string;
+  check: string;
+  format: string;
+  cardPool?: string;
+  unrestricted: boolean;
+  target: string;
+  copyOf?: string;
+  commanders: EditorCard[];
+  commanderWanted: boolean;
+  identity: string;
+  main: EditorGroup[];
+  sideboard: EditorCard[];
+  lands: EditorLand[];
+  stats: DeckStats;
+  verdict?: string;
+  problemCount: number;
+  canUndo: boolean;
+  landed?: string;
+  onSeat: boolean;
+}
+
+export interface ImportLine {
+  kind: string;
+}
+
+export interface ImportProblem {
+  line: number;
+  title: string;
+  detail: string;
+  fixes: ImportFix[];
+}
+
+export interface ImportSummary {
+  cards: number;
+  sideboard: number;
+  notImported: number;
+  commander?: string;
+  commanderChosen: boolean;
+  colors: string;
+  verdict?: string;
+  main: EditorGroup[];
+  sideboardCards: EditorCard[];
+}
+
+export interface Fetched {
+  site: string;
+  url: string;
+  text: string;
+  format: string;
+}
+
 export interface OrderAnswer {
   indices: number[];
   remember: boolean;
@@ -762,6 +979,27 @@ export type NextGameDecision = 'NEW' | 'CONTINUE' | 'QUIT';
 export type Action = 'OFFER' | 'ACCEPT' | 'DECLINE';
 
 export type AutoDecisionAction = 'list' | 'remove' | 'clear' | 'disableYields' | 'disableTriggers';
+
+export type EditOp = 'add' | 'remove' | 'move' | 'commander' | 'printings' | 'lands';
+
+export type DeckSection = 'Main' | 'Sideboard' | 'Commander' | 'Avatar' | 'Planes' | 'Schemes' | 'Conspiracy' | 'Dungeon' | 'Attractions' | 'Contraptions';
+
+export interface CountedName {
+  name: string;
+  count: number;
+}
+
+export type DeckOp = 'duplicate' | 'delete';
+
+export type ImportAction = 'use' | 'edit' | 'save' | 'add' | 'replace';
+
+export type Clash = 'replace' | 'keep';
+
+export interface DeviceDeckText {
+  id: string;
+  text: string;
+  format: string;
+}
 
 export interface Place {
   zone: ZoneType;
@@ -834,6 +1072,36 @@ export type GameLogVerbosity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CUSTOM';
 
 export type GameLogEntryType = 'GAME_OUTCOME' | 'MATCH_RESULTS' | 'TURN' | 'MULLIGAN' | 'ANTE' | 'DRAFT' | 'ZONE_CHANGE' | 'PLAYER_CONTROL' | 'DAMAGE' | 'LIFE' | 'LAND' | 'DISCARD' | 'COMBAT' | 'INFORMATION' | 'STACK_RESOLVE' | 'STACK_ADD' | 'EFFECT_REPLACED' | 'MANA' | 'PHASE';
 
+export interface EditorCard {
+  name: string;
+  count: number;
+  image: string;
+  cost: string;
+  mv: number;
+  colors: string;
+  printings: number;
+  split: EditorPrinting[];
+  problem?: string;
+}
+
+export interface EditorGroup {
+  heading: string;
+  cards: EditorCard[];
+}
+
+export interface EditorLand {
+  name: string;
+  letter: string;
+  count: number;
+  allowed: boolean;
+}
+
+export interface ImportFix {
+  kind: string;
+  label: string;
+  text?: string;
+}
+
 export interface TypeCount {
   name: string;
   count: number;
@@ -844,6 +1112,11 @@ export interface SeatExtra {
   count: number;
   detail?: string;
   problem?: string;
+}
+
+export interface EditorPrinting {
+  key: string;
+  count: number;
 }
 
 // ---- Game objects: TrackableProperty values as JsonCodec encodes them ----

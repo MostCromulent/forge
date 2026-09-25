@@ -10,7 +10,7 @@ function freshUi(): UiState {
   return {
     openPiles: new Set(), openZones: new Set(), zonesMinimised: false, zoneSearch: '', zoneSort: 'order',
     stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
-    stopsOpen: false, optionsOpen: false, gameMenu: null, viewing: null, volumeOpen: false, picker: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
+    stopsOpen: false, optionsOpen: false, gameMenu: null, viewing: null, volumeOpen: false, picker: null, browse: null, importer: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
     sidePanels: { log: true },
   };
 }
@@ -126,5 +126,29 @@ describe('keys in match setup', () => {
     model.hostChoice = { t: 'hostChoice', id: 3, kind: 'choose', min: 0, max: 1, options: ['a'] };
     ui.picker = { kind: 'deck', seat: 0 };
     expect(keyCommand(press('Escape'), model, ui)).toBe('declineHostChoice');
+  });
+});
+
+describe('keys in the deck editor', () => {
+  const editorState = { name: 'Burn' } as unknown as NonNullable<Model['editor']>;
+
+  // Fails if Ctrl+Z in the editor goes to the browser rather than undoing the last change, or undoes while typing
+  it('gives Ctrl+Z to the editor\'s undo, but not while typing', () => {
+    const model = createModel();
+    model.playerName = 'Alice';
+    model.editor = editorState;
+    expect(keyCommand({ key: 'z', typing: false, modified: true }, model, freshUi())).toBe('editorUndo');
+    expect(keyCommand({ key: 'z', typing: true, modified: true }, model, freshUi())).toBeNull();
+  });
+
+  // Fails if Escape leaves the importer open, or closes the browse finder from under it
+  it('closes the importer on Escape before the finder beneath it', () => {
+    const model = createModel();
+    const ui = freshUi();
+    ui.browse = { format: 'Constructed' };
+    ui.importer = { from: 'start' };
+    expect(keyCommand(press('Escape'), model, ui)).toBe('closeImporter');
+    ui.importer = null;
+    expect(keyCommand(press('Escape'), model, ui)).toBe('closeBrowse');
   });
 });

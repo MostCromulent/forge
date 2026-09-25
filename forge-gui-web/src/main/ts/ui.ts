@@ -44,6 +44,10 @@ export interface UiState {
   volumeOpen: boolean;
   /** Match setup's picker for a seat's deck, sleeve or avatar. */
   picker: Picker | null;
+  /** The deck finder opened from the start page, with no seat, and the format it lists. A hello does not close it. */
+  browse: { format: string } | null;
+  /** The importer, and where it was opened from: a seat's finder, the start page, or the editor. */
+  importer: { from: 'seat' | 'start' | 'editor'; seat?: number; text?: string; url?: string; sync?: boolean } | null;
   /** The host has chosen to watch the computer play its seat. */
   spectate: boolean;
   hover: Hover | null;
@@ -72,6 +76,8 @@ export const ui: UiState = {
   viewing: null,
   volumeOpen: false,
   picker: null,
+  browse: null,
+  importer: null,
   spectate: false,
   hover: null,
   faceIndex: 0,

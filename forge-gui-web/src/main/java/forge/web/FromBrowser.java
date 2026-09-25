@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.gson.JsonElement;
+import forge.deck.DeckSection;
 import forge.game.phase.PhaseType;
 import forge.gamemodes.match.DrawOfferMessage;
 import forge.gamemodes.match.NextGameDecision;
@@ -93,7 +94,8 @@ final class FromBrowser {
     }
 
     @Command("printings")
-    record AskPrintings(String name) {
+    /** A card's printings; cardPool, when set, marks those outside it. */
+    record AskPrintings(String name, @Nullable String cardPool) {
     }
 
     @Command("sleeveArt")
@@ -102,6 +104,84 @@ final class FromBrowser {
 
     @Command("start")
     record Start(boolean spectate) {
+    }
+
+    // ---- Decks: the editor and the importer --------------------------------------------------------------------
+
+    /** The format the start page's deck finder lists, while no table is open. */
+    @Command("browseFormat")
+    record BrowseFormat(String format) {
+    }
+
+    /** Opens a deck from the finder by key, or a new deck for a format. seat is the seat whose finder it came from; copy edits a copy. */
+    @Command("editorOpen")
+    record EditorOpen(@Nullable String key, @Nullable String newFormat, @Nullable Integer seat, boolean copy) {
+    }
+
+    enum EditorPlain { editorClose, editorUndo }
+
+    @Command
+    record EditorBare(EditorPlain t) {
+    }
+
+    enum EditOp { add, remove, move, commander, printings, lands }
+
+    /** A name and how many: a card printing's image key in a printings change, a basic land's name in a lands change. */
+    record CountedName(String name, int count) {
+    }
+
+    @Command("editorEdit")
+    record EditorEdit(EditOp op, @Nullable String name, @Nullable DeckSection from, @Nullable DeckSection to, int count,
+            @Nullable List<CountedName> printings, @Nullable List<CountedName> lands) {
+    }
+
+    @Command("editorRename")
+    record EditorRename(String name) {
+    }
+
+    /** "Check legality against": a format, a card pool for Constructed, or no restriction at all. */
+    @Command("editorCheck")
+    record EditorCheck(String format, @Nullable String cardPool, boolean unrestricted) {
+    }
+
+    enum DeckOp { duplicate, delete }
+
+    @Command("editorDeck")
+    record EditorDeck(DeckOp op) {
+    }
+
+    /** A page of the catalogue; request is echoed back so a late answer to an old query is dropped. */
+    @Command("catalogue")
+    record CatalogueQuery(int request, String text, String colours, String type, String mv, String sort, int offset,
+            boolean showAll) {
+    }
+
+    @Command("importRead")
+    record ImportRead(int request, String text, String format, @Nullable String cardPool, boolean unrestricted) {
+    }
+
+    @Command("importFetch")
+    record ImportFetch(int request, String url) {
+    }
+
+    /** use puts the deck on a seat, edit opens it, save keeps it, add and replace change the deck open in the editor. */
+    enum ImportAction { use, edit, save, add, replace }
+
+    /** What to do when the name is taken: replace that deck, or keep both. */
+    enum Clash { replace, keep }
+
+    @Command("importCommit")
+    record ImportCommit(String text, String name, String format, @Nullable String cardPool, boolean unrestricted,
+            ImportAction action, @Nullable Integer seat, @Nullable String url, @Nullable Clash clash) {
+    }
+
+    /** A deck a guest keeps in its browser: the id it is kept under, the deck as .dck text, and its format. */
+    record DeviceDeckText(String id, String text, String format) {
+    }
+
+    /** Every deck a guest keeps in its browser, sent once each time it connects. */
+    @Command("deviceDecks")
+    record DeviceDecks(List<DeviceDeckText> decks) {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
@@ -172,5 +252,7 @@ final class FromBrowser {
             SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
-            NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class);
+            NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
+            EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
+            ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class);
 }

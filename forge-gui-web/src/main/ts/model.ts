@@ -1,4 +1,4 @@
-import type { Address, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices } from './protocol';
+import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
 export interface Looks {
@@ -64,11 +64,19 @@ export interface Model {
   /** A name this browser remembered has been offered to the server, whose answer is not in yet. */
   nameSent: boolean;
   /** Messages from the server, each until it is dismissed or times out. */
-  notices: { id: number; notice: Notice; view?: () => void }[];
+  notices: { id: number; notice: Notice; view?: () => void; label?: string }[];
   /** A draw offer while it is open. */
   drawOffer: DrawOffer | null;
   /** The auto-yields and trigger answers the player has set, as last asked for. */
   autoDecisions: AutoDecisions | null;
+  /** The deck open in the editor; the editor page shows while there is one. */
+  editor: EditorState | null;
+  /** The catalogue's rows so far: the pages asked for since the query last changed. */
+  catalogue: CataloguePage | null;
+  /** What reading the importer's list last found. */
+  importResult: ImportResult | null;
+  /** An import's name belongs to a deck already, and the importer asks what to do. */
+  nameTaken: string | null;
 }
 
 export function createModel(): Model {
@@ -80,7 +88,7 @@ export function createModel(): Model {
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
-    drawOffer: null, autoDecisions: null,
+    drawOffer: null, autoDecisions: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
   };
 }
 

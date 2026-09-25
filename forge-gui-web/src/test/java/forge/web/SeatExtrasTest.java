@@ -12,6 +12,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /** What a seat brings beyond its main deck, and seats that need no deck at all. No match is played. */
 public class SeatExtrasTest {
@@ -35,7 +36,7 @@ public class SeatExtrasTest {
         try {
             onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
             awaitSeat(local);
-            body.run(local, new Lobby(local));
+            body.run(local, new Lobby(local, () -> false, Map.of()));
         } finally {
             gui.close();
             onUi(local::shutdown);
@@ -178,7 +179,7 @@ public class SeatExtrasTest {
                     lobby.decks();
                 }
             }, (from, text) -> { }));
-            ref.set(new Lobby(local));
+            ref.set(new Lobby(local, () -> false, Map.of()));
             awaitSeat(local);
             body.run(local, ref.get());
         } finally {

@@ -6,6 +6,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { Pips } from './symbols';
+import { changeUi, ui } from './ui';
+import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -61,11 +63,26 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): Dec
   return list.sort(by[f.sort] ?? byName);
 }
 
-export function DeckFinder({ model, actions, index, seat, close }: {
-  model: Model; actions: Actions; index: number; seat: Seat; close: () => void;
+/** How many decks each source holds, with every net-deck category counted as the one source. */
+export function sourceCounts(decks: readonly DeckSummary[]): Map<string, number> {
+  const sources = new Map<string, number>([['all', decks.length]]);
+  for (const d of decks) {
+    const group = isNet(d.source) ? NET : d.source;
+    sources.set(group, (sources.get(group) ?? 0) + 1);
+  }
+  return sources;
+}
+
+/**
+ * The deck finder. With a seat it chooses that seat's deck; opened from the start page it has no seat, lists one format's
+ * decks, and its main button opens the editor instead.
+ */
+export function DeckFinder({ model, actions, seat, close }: {
+  model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
   const decks = model.decks ?? [];
-  const [chosen, setChosen] = useState<string | null>(seat.deck ?? null);
+  const [chosen, setChosen] = useState<string | null>(seat?.seat.deck ?? null);
+  const [dropping, setDropping] = useState(false);
   const [typed, setTyped] = useState('');
   const [filter, setFilter] = useState<DeckFilter>({ ...FINDER_DEFAULTS, colours: new Set() });
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
@@ -86,17 +103,28 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   }, [chosen]);
 
   const use = (key = chosen) => {
-    if (key) {
-      actions.setSeat(index, { deck: key });
+    if (key && seat) {
+      actions.setSeat(seat.index, { deck: key });
       close();
     }
   };
+  const summary = decks.find(d => d.key === chosen);
+  const edit = () => {
+    if (!chosen) return;
+    actions.openEditor({ key: chosen, seat: seat?.index, copy: !!summary?.readOnly });
+    close();
+  };
+  const format = model.lobby?.format ?? ui.browse?.format ?? 'Constructed';
+  // From a seat the importer takes the finder's place, since importing puts the deck on the seat; from the start page
+  // the finder stays beneath it, to show the deck once it is saved
+  const importer = (more: { text?: string; url?: string; sync?: boolean } = {}) => {
+    if (seat) close();
+    changeUi(u => { u.importer = { from: seat ? 'seat' : 'start', seat: seat?.index, ...more }; });
+  };
   const list = matchingDecks(decks, filter);
-  const sources = new Map<string, number>([['all', decks.length]]);
+  const sources = sourceCounts(decks);
   const categories = new Map<string, number>();
   for (const d of decks) {
-    const group = isNet(d.source) ? NET : d.source;
-    sources.set(group, (sources.get(group) ?? 0) + 1);
     if (isNet(d.source)) categories.set(d.source, (categories.get(d.source) ?? 0) + 1);
   }
   const inNet = filter.source === NET || isNet(filter.source);
@@ -111,10 +139,39 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   };
   return (
     <div class="finder-back">
-      <div class="finder">
+      <div class={dropping ? 'finder dropping' : 'finder'}
+        onDragOver={e => {
+          if (!e.dataTransfer?.types.includes('Files')) return;
+          e.preventDefault();
+          setDropping(true);
+        }}
+        onDragLeave={e => { if (e.currentTarget === e.target) setDropping(false); }}
+        onDrop={e => {
+          const file = e.dataTransfer?.files[0];
+          setDropping(false);
+          if (!file) return;
+          e.preventDefault();
+          void file.text().then(text => importer({ text }));
+        }}>
         <header class="finder-head">
-          <h2>Choose a deck</h2>
-          <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          <h2>{seat ? 'Choose a deck' : 'Decks'}</h2>
+          {!seat && (
+            <label class="legality set">
+              Format
+              <span class="pill-select"><select value={format} onChange={e => {
+                const next = e.currentTarget.value;
+                changeUi(u => { u.browse = { format: next }; });
+                actions.browseFormat(next);
+              }}>
+                {DECK_FORMATS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select></span>
+            </label>
+          )}
+          <span class="head-tools">
+            <button onClick={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}>+ New deck</button>
+            <button onClick={() => importer()}>Import</button>
+            <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          </span>
         </header>
         <div class="finder-body">
           <nav class="rail" aria-label="Filters">
@@ -200,16 +257,28 @@ export function DeckFinder({ model, actions, index, seat, close }: {
                 : <p class="none">No deck matches. Clear a filter, or search a different name.</p>}
             </div>
           </div>
-          <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e) ?? peek)} onPointerLeave={() => setPeek(null)}>
+          <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e, '.finder') ?? peek)} onPointerLeave={() => setPeek(null)}>
             {!chosen ? <p class="none">Pick a deck on the left and its cards appear here.</p>
               : !details ? <p class="none">Reading the deck…</p>
                 : <Chosen details={details} />}
           </aside>
         </div>
         <footer class="finder-foot">
+          {summary?.linked && summary.sourceUrl && (
+            <span class="linked-line">
+              From {summary.linked}{summary.synced ? `, synced ${ago(summary.synced)}` : ''}
+              <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>Sync now</button>
+            </span>
+          )}
           <button class="cancel" onClick={close}>Cancel</button>
-          <button class="use primary" disabled={!chosen} onClick={() => use()}>Use this deck</button>
+          {seat
+            ? <>
+                <button disabled={!chosen} onClick={edit}>{summary?.readOnly ? 'Edit a copy' : 'Edit'}</button>
+                <button class="use primary" disabled={!chosen} onClick={() => use()}>Use this deck</button>
+              </>
+            : <button class="primary" disabled={!chosen} onClick={edit}>{summary?.readOnly ? 'Edit a copy' : 'Edit'}</button>}
         </footer>
+        {dropping && <div class="drop-over-finder">Drop to import the file</div>}
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
       </div>
     </div>
@@ -217,7 +286,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
 }
 
 const SOURCE_NAMES: Record<string, string> = {
-  all: 'All decks', [NET]: 'Net decks', yours: 'Your decks', precons: 'Preconstructed', quest: 'Quest opponents', generated: 'Generated',
+  all: 'All decks', [NET]: 'Net decks', yours: 'Your decks', device: 'On this device', linked: 'Linked', precons: 'Preconstructed', quest: 'Quest opponents', generated: 'Generated',
 };
 const sourceName = (id: string) => SOURCE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
 
@@ -262,9 +331,9 @@ const CURVE_PX = 42;
 
 // Hovering a card in the list shows it, the way hovering one on the table does: beside the line being pointed at,
 // pushed left of it so the cursor never covers the card
-function peekAt(e: PointerEvent): { image: string; left: number; top: number } | null {
-  const el = e.target instanceof Element ? e.target.closest<HTMLElement>('.dk-line') : null;
-  const frame = el?.closest('.finder')?.getBoundingClientRect();
+export function peekAt(e: PointerEvent, frameSelector: string): { image: string; left: number; top: number } | null {
+  const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-image]') : null;
+  const frame = el?.closest(frameSelector)?.getBoundingClientRect();
   if (!el || !frame) {
     return null;
   }
@@ -318,4 +387,15 @@ function Group({ heading, cards }: { heading: string; cards: DeckCard[] }) {
       {cards.map((c, i) => <div key={i} class="dk-line" data-image={c.image}><span class="n">{c.count}</span>{c.name}</div>)}
     </div>
   );
+}
+
+/** How long ago a time was, in the words a person uses: "just now", "3 days ago". */
+function ago(millis: number): string {
+  const minutes = Math.round((Date.now() - millis) / 60000);
+  if (minutes < 2) return 'just now';
+  if (minutes < 60) return `${minutes} minutes ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  const days = Math.round(hours / 24);
+  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
 }

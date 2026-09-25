@@ -4,15 +4,19 @@ import forge.StaticData;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
+import forge.deck.DeckFormat;
 import forge.deck.DeckProxy;
+import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
 import forge.deck.DeckSection;
+import forge.card.CardEdition;
 import forge.card.ColorSet;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.MyRandom;
@@ -27,9 +31,9 @@ import forge.web.ToBrowser.Printing;
 import forge.web.ToBrowser.SavedSleeveArt;
 import forge.web.ToBrowser.TypeCount;
 
-import org.apache.commons.lang3.StringUtils;
-
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -45,7 +49,10 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class DeckCatalog {
     /** Where a deck came from, which the browser tags each row with. */
-    private static final String MINE = "yours";
+    static final String MINE = "yours";
+    /** A guest's decks, kept in the guest's browser and keyed by the id it keeps them under. */
+    static final String DEVICE = "device";
+    static final String LINKED = "linked";
     private static final String PRECON = "precons";
     private static final String QUEST = "quest";
     /** Sources that make a deck when you pick one, rather than loading a saved deck. */
@@ -111,9 +118,20 @@ final class DeckCatalog {
     /** The card pool the last refresh was for, which generators build from and every verdict checks. */
     private volatile GameFormat pool;
 
-    /** Rebuilds the catalogue for a format and card pool, and returns every deck in it. */
-    List<DeckSummary> refresh(final GameType format, final GameFormat pool) {
+    /** A deck a guest keeps in its browser, and the format it was built for. */
+    record OnDevice(Deck deck, GameType format) {
+    }
+
+    /** Whether the browser this catalogue serves is a guest's, whose own decks are those on its device. */
+    private boolean guest;
+
+    /**
+     * Rebuilds the catalogue for a format and card pool, and returns every deck in it. A guest's list adds the decks its
+     * browser keeps; the host's adds the decks it has loaded from links.
+     */
+    List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device) {
         synchronized (DECKS) {
+            this.guest = guest;
             // A built generator stays built while the pool stands, so the seat that holds it and the list agree
             final Map<String, Entry> built = new HashMap<>();
             if (pool == this.pool) {
@@ -148,6 +166,14 @@ final class DeckCatalog {
             for (final NetDeckCategory category : netCategories) {
                 add(out, format, DeckProxy.getNetDecks(category), NET + " " + category.getName());
             }
+            if (!guest) {
+                add(out, format, linkedDecks(format), LINKED);
+            }
+            device.forEach((id, d) -> {
+                if (DeckStore.family(d.format()) == DeckStore.family(format)) {
+                    addDevice(out, format, id, d.deck());
+                }
+            });
             built.forEach((key, e) -> byKey.computeIfPresent(key, (k, fresh) -> e));
             return out;
         }
@@ -171,6 +197,31 @@ final class DeckCatalog {
         }
     }
 
+    /**
+     * Registers a deck under the key the finder gives it, replacing the cached copy. The editor and the importer save a
+     * new deck object each time, and a seat must be given that one rather than the one loaded when the list was built.
+     */
+    String adopt(final String tag, final String path, final Deck deck) {
+        final String key = DEVICE.equals(tag) ? DEVICE + ":" + path : tag + ":" + path + "/" + deck.getName();
+        synchronized (DECKS) {
+            byKey.put(key, new Entry(null, false, deck));
+        }
+        return key;
+    }
+
+    /** Whether the deck behind a key can't be changed in place. A guest may change only the decks in its own browser. */
+    static boolean readOnly(final String key, final boolean guest) {
+        final String tag = key.substring(0, Math.max(0, key.indexOf(':')));
+        return guest ? !DEVICE.equals(tag) : !MINE.equals(tag);
+    }
+
+    /** The folder path in a key, "" for a deck at the top of its format's folder. */
+    static String pathOf(final String key) {
+        final int colon = key.indexOf(':');
+        final int slash = key.lastIndexOf('/');
+        return colon < 0 || slash <= colon ? "" : key.substring(colon + 1, slash);
+    }
+
     /** Builds the colour generator behind a "gen:color:" key, from the chosen card pool when there is one. */
     private static Deck buildColours(final String key, final GameFormat pool) {
         final List<String> selection = List.of(key.substring(key.lastIndexOf(':') + 1));
@@ -182,7 +233,7 @@ final class DeckCatalog {
     boolean saveSleeveArt(final String key, final String imageKey, final int offset) {
         synchronized (DECKS) {
             final Entry e = key == null ? null : byKey.get(key);
-            final Deck deck = e == null ? null : e.proxy().getDeck();
+            final Deck deck = e == null || e.proxy() == null ? null : e.proxy().getDeck();
             if (deck == null) {
                 return false;
             }
@@ -229,7 +280,7 @@ final class DeckCatalog {
     }
 
     /** What the panel reports about a deck beside its card list. */
-    private static DeckStats stats(final Deck deck) {
+    static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
         final int[] curve = new int[CURVE_BUCKETS];
         final Map<String, Integer> types = new LinkedHashMap<>();
@@ -240,7 +291,7 @@ final class DeckCatalog {
             for (final Map.Entry<PaperCard, Integer> e : main) {
                 final PaperCard card = e.getKey();
                 final int n = e.getValue();
-                types.merge(heading(card), n, Integer::sum);
+                types.merge(CardCatalog.heading(card), n, Integer::sum);
                 if (card.getRules().getType().isLand()) {
                     lands += n;
                     continue;
@@ -304,7 +355,8 @@ final class DeckCatalog {
     // Colours are empty where they are not known until the deck is built, which a colour filter treats as no match
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
-        out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null));
+        out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
+                null, null, null));
     }
 
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
@@ -314,10 +366,65 @@ final class DeckCatalog {
             final Deck deck = proxy.getDeck();
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
+            final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, count(deck.get(DeckSection.Main)),
                     count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), proxy.getFormatsString(),
-                    deck.getSleeveArtKey(), deck.getSleeveArtOffset()));
+                    deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
+                    linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
+                    linked ? linkedFile(deck).lastModified() : null));
         }
+    }
+
+    private void addDevice(final List<DeckSummary> out, final GameType format, final String id, final Deck deck) {
+        final String key = DEVICE + ":" + id;
+        byKey.put(key, new Entry(null, false, deck));
+        out.add(new DeckSummary(key, deck.getName(), DEVICE, colors(deck), null, null, count(deck.get(DeckSection.Main)),
+                count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), null,
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null));
+    }
+
+    /** The decks loaded from links that belong to this format: each keeps its format, or is Commander when it has a commander. */
+    private static List<DeckProxy> linkedDecks(final GameType format) {
+        final List<DeckProxy> out = new ArrayList<>();
+        for (final DeckProxy proxy : DeckUrlLoader.getUrlDecks()) {
+            final Deck deck = proxy.getDeck();
+            final GameType family = deck.getDeckFormat() != null ? familyOf(deck.getDeckFormat())
+                    : deck.has(DeckSection.Commander) ? GameType.Commander : GameType.Constructed;
+            if (family == DeckStore.family(format)) {
+                out.add(proxy);
+            }
+        }
+        return out;
+    }
+
+    static GameType familyOf(final DeckFormat deckFormat) {
+        return switch (deckFormat) {
+            case Commander -> GameType.Commander;
+            case Oathbreaker -> GameType.Oathbreaker;
+            case Brawl -> GameType.Brawl;
+            case TinyLeaders -> GameType.TinyLeaders;
+            default -> GameType.Constructed;
+        };
+    }
+
+    /** The site a linked deck came from, as its makers write its name. */
+    static String site(final String url) {
+        final String host = url == null ? "" : url.toLowerCase();
+        if (host.contains("moxfield.com")) {
+            return "Moxfield";
+        }
+        if (host.contains("archidekt.com")) {
+            return "Archidekt";
+        }
+        if (host.contains("tappedout.net")) {
+            return "TappedOut";
+        }
+        return host.contains("mtggoldfish.com") ? "MTGGoldfish" : "the link";
+    }
+
+    // Loading a link again rewrites its file, so the file's time is when the deck was last synced
+    private static File linkedFile(final Deck deck) {
+        return new File(ForgeConstants.DECK_BASE_DIR + "URL" + ForgeConstants.PATH_SEPARATOR + deck.getBestFileName() + ".dck");
     }
 
     /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with deck legality checks off. */
@@ -392,13 +499,12 @@ final class DeckCatalog {
     /** Main-deck cards under the headings a decklist normally carries. */
     private static List<DeckGroup> groups(final CardPool pool) {
         final Map<String, List<DeckCard>> sections = new LinkedHashMap<>();
-        for (final String heading : List.of("Creatures", "Planeswalkers", "Instants", "Sorceries",
-                "Artifacts", "Enchantments", "Battles", "Lands")) {
+        for (final String heading : CardCatalog.HEADINGS) {
             sections.put(heading, new ArrayList<>());
         }
         if (pool != null) {
             for (final Map.Entry<PaperCard, Integer> e : pool) {
-                sections.get(heading(e.getKey())).add(card(e.getKey(), e.getValue()));
+                sections.get(CardCatalog.heading(e.getKey())).add(card(e.getKey(), e.getValue()));
             }
         }
         final List<DeckGroup> out = new ArrayList<>();
@@ -408,30 +514,6 @@ final class DeckCatalog {
             }
         }
         return out;
-    }
-
-    // A card lands under the first heading its type matches, the order a decklist is normally written in
-    private static String heading(final PaperCard card) {
-        final var type = card.getRules().getType();
-        if (type.isLand()) {
-            return "Lands";
-        }
-        if (type.isCreature()) {
-            return "Creatures";
-        }
-        if (type.isPlaneswalker()) {
-            return "Planeswalkers";
-        }
-        if (type.isInstant()) {
-            return "Instants";
-        }
-        if (type.isSorcery()) {
-            return "Sorceries";
-        }
-        if (type.isBattle()) {
-            return "Battles";
-        }
-        return type.isEnchantment() ? "Enchantments" : "Artifacts";
     }
 
     /** A seat's choice for one extra section: what it is called, and its cards, or null to follow the main deck's own. */
@@ -572,14 +654,14 @@ final class DeckCatalog {
      * browser's lists rank: names starting with the text first, shortest first, then names containing it.
      */
     static List<String> searchCardNames(final String query, final int limit) {
-        final String text = normalizeName(query == null ? "" : query);
+        final String text = CardCatalog.normalize(query == null ? "" : query);
         if (text.isEmpty()) {
             return new ArrayList<>();
         }
         final List<String> startsWith = new ArrayList<>();
         final List<String> contains = new ArrayList<>();
         for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
-            final String name = normalizeName(card.getName());
+            final String name = CardCatalog.normalize(card.getName());
             if (name.startsWith(text)) {
                 startsWith.add(card.getName());
             } else if (name.contains(text)) {
@@ -591,15 +673,18 @@ final class DeckCatalog {
         return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
     }
 
-    private static String normalizeName(final String s) {
-        return StringUtils.stripAccents(s.toLowerCase()).replaceAll("[^a-z0-9 ]", "");
-    }
-
     /** Every printing of one card, so a specific art can be picked for a sleeve. */
-    static List<Printing> printings(final String name) {
+    static List<Printing> printings(final String name, final GameFormat pool) {
         final List<Printing> out = new ArrayList<>();
         for (final PaperCard card : StaticData.instance().getCommonCards().getAllCardsNoAlt(name)) {
-            out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false)));
+            final CardEdition edition = StaticData.instance().getEditions().get(card.getEdition());
+            final Calendar date = Calendar.getInstance();
+            if (edition != null) {
+                date.setTime(edition.getDate());
+            }
+            out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false),
+                    edition == null ? card.getEdition() : edition.getName(), edition == null ? 0 : date.get(Calendar.YEAR),
+                    pool != null && !pool.getFilterPrinted().test(card) ? "not in " + pool.getName() : null));
         }
         return out;
     }

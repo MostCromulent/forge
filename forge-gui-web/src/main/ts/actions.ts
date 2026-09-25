@@ -2,7 +2,9 @@
 // protocol; the controller is the one place that turns them into messages, so a different renderer (a canvas board)
 // drives the game the same way.
 
-import type { AutoDecisionAction, PhaseType, Send, SetSeat, YieldAction } from './protocol';
+import type {
+  AutoDecisionAction, CatalogueQuery, DeckOp, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, Send, SetSeat, YieldAction,
+} from './protocol';
 
 /** What a seat's owner can change about it. */
 export type SeatChange = Omit<SetSeat, 't' | 'index'>;
@@ -72,9 +74,27 @@ export interface Actions {
   fetchNetDecks(): void;
   /** Card names and their printings, for picking a card's art; both arrive later in the model. */
   searchCards(query: string): void;
-  askPrintings(name: string): void;
+  /** A card's printings; cardPool marks those outside it. They arrive later in the model. */
+  askPrintings(name: string, cardPool?: string | null): void;
   /** Answers a question the host asked outside a match. An empty choice is a cancel. */
   answerHostChoice(id: number, value: number[]): void;
+
+  // Decks: the editor and the importer
+  /** The format the start page's deck finder lists. */
+  browseFormat(format: string): void;
+  openEditor(o: { key?: string; newFormat?: string; seat?: number; copy?: boolean }): void;
+  closeEditor(): void;
+  editorUndo(): void;
+  edit(e: Omit<EditorEdit, 't'>): void;
+  renameDeck(name: string): void;
+  setCheck(format: string, cardPool: string | null, unrestricted: boolean): void;
+  deckOp(op: DeckOp): void;
+  /** A page of the catalogue. request numbers the query, so an answer to an older one can be told apart. */
+  queryCatalogue(request: number, q: Omit<CatalogueQuery, 't' | 'request'>): void;
+  readImport(request: number, text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
+  fetchImport(request: number, url: string): void;
+  commitImport(c: Omit<ImportCommit, 't'>): void;
+  deviceDecks(decks: DeviceDeckText[]): void;
 }
 
 export function createActions(send: Send): Actions {
@@ -125,7 +145,21 @@ export function createActions(send: Send): Actions {
     askDeckDetails: key => send({ t: 'deckDetails', key }),
     fetchNetDecks: () => send({ t: 'netDecks' }),
     searchCards: query => send({ t: 'cardSearch', query }),
-    askPrintings: name => send({ t: 'printings', name }),
+    askPrintings: (name, cardPool) => send(cardPool ? { t: 'printings', name, cardPool } : { t: 'printings', name }),
+    browseFormat: format => send({ t: 'browseFormat', format }),
+    openEditor: o => send({ t: 'editorOpen', ...o, copy: !!o.copy }),
+    closeEditor: () => send({ t: 'editorClose' }),
+    editorUndo: () => send({ t: 'editorUndo' }),
+    edit: e => send({ t: 'editorEdit', ...e }),
+    renameDeck: name => send({ t: 'editorRename', name }),
+    setCheck: (format, cardPool, unrestricted) => send(cardPool ? { t: 'editorCheck', format, cardPool, unrestricted } : { t: 'editorCheck', format, unrestricted }),
+    deckOp: op => send({ t: 'editorDeck', op }),
+    queryCatalogue: (request, q) => send({ t: 'catalogue', request, ...q }),
+    readImport: (request, text, format, cardPool, unrestricted) =>
+      send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted }),
+    fetchImport: (request, url) => send({ t: 'importFetch', request, url }),
+    commitImport: c => send({ t: 'importCommit', ...c }),
+    deviceDecks: decks => send({ t: 'deviceDecks', decks }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }

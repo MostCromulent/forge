@@ -32,6 +32,8 @@ import forge.model.FModel;
 import org.tinylog.Logger;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * One browser: its start page, its seat and its match. The host's session also owns shutting the process down.
@@ -65,6 +67,8 @@ public final class WebSession {
     /** Long enough for any name a player types, short enough to fit on a seat plate. */
     static final int MAX_NAME_LENGTH = 24;
     private final Lobby lobby;
+    /** The deck editor and importer, which sit beside the menu or the table rather than being a stage of their own. */
+    private final DeckSession decks;
     private final WebGuiBase ui;
     private final WebSessions sessions;
     /** True for the browser that claimed the host's seat, which is the only one that may set the table. */
@@ -86,7 +90,9 @@ public final class WebSession {
         this.mayHost = mayHost;
         this.ui = ui;
         this.sessions = sessions;
-        this.lobby = new Lobby(local);
+        final Map<String, DeckCatalog.OnDevice> device = new ConcurrentHashMap<>();
+        this.lobby = new Lobby(local, () -> !isHost, device);
+        this.decks = new DeckSession(lobby, ui, () -> isHost, () -> stage instanceof Setup, device);
         this.onQuit = onQuit;
     }
 
@@ -213,6 +219,7 @@ public final class WebSession {
     synchronized void connected(final BrowserChannel channel) {
         final BrowserChannel previous = browser;
         browser = channel;
+        decks.attach(channel);
         final Stage now = stage;
         if (now instanceof Playing p && previous != null) {
             p.gui().detach(previous);
@@ -222,6 +229,7 @@ public final class WebSession {
         if (isHost) {
             ui.hostRequests().replay(channel::send);
         }
+        decks.reconnected(channel);
         if (now instanceof Playing p) {
             p.gui().attach(channel);
         } else if (now instanceof Setup) {
@@ -239,6 +247,7 @@ public final class WebSession {
             return;
         }
         browser = null;
+        decks.attach(null);
         if (stage instanceof Playing p) {
             p.gui().detach(channel);
         }
@@ -320,8 +329,16 @@ public final class WebSession {
             case "cardSearch" -> channel.send(new CardSearch(
                     DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
             case "printings" -> {
-                final String name = Wire.decode(msg, AskPrintings.class).name();
-                channel.send(new Printings(name, DeckCatalog.printings(name)));
+                final AskPrintings ask = Wire.decode(msg, AskPrintings.class);
+                channel.send(new Printings(ask.name(), DeckCatalog.printings(ask.name(),
+                        ask.cardPool() == null ? null : FModel.getFormats().getFormat(ask.cardPool()))));
+            }
+            // A match takes the whole page, so nothing about decks is done during one
+            case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
+                    "editorDeck", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
+                if (!(stage instanceof Playing)) {
+                    decks.onMessage(channel, msg);
+                }
             }
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
             case "start" -> {

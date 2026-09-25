@@ -32,6 +32,7 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,9 +63,16 @@ final class Lobby {
     /** True once the game was opened for others to join, which is when a link is worth showing. */
     private boolean shareable;
 
-    Lobby(final LocalGame local) {
+    Lobby(final LocalGame local, final BooleanSupplier guest, final Map<String, DeckCatalog.OnDevice> device) {
         this.local = local;
+        this.guest = guest;
+        this.device = device;
     }
+
+    /** Whether this browser is a guest's, whose own decks are the ones its browser keeps. */
+    private final BooleanSupplier guest;
+    /** A guest's decks, by the id its browser keeps each under. */
+    private final Map<String, DeckCatalog.OnDevice> device;
 
     void setShareable(final boolean value) {
         shareable = value;
@@ -90,14 +98,38 @@ final class Lobby {
      */
     GameType format() {
         final GameLobby lobby = view();
-        if (lobby != null) {
-            for (final GameType variant : FORMATS) {
-                if (variant != GameType.Constructed && lobby.hasVariant(variant)) {
-                    return variant;
-                }
+        if (lobby == null) {
+            return browseFormat;
+        }
+        for (final GameType variant : FORMATS) {
+            if (variant != GameType.Constructed && lobby.hasVariant(variant)) {
+                return variant;
             }
         }
         return GameType.Constructed;
+    }
+
+    /** The format the start page's deck finder lists. Only read while no table is open, so it never touches a seat's deck. */
+    private volatile GameType browseFormat = GameType.Constructed;
+
+    void setBrowseFormat(final GameType format) {
+        browseFormat = format;
+    }
+
+    /** Counts the tables this browser has sat at, so something begun at one table can tell it is now at another. */
+    private volatile int table;
+
+    int table() {
+        return table;
+    }
+
+    /** Registers a saved deck under its finder key, so a seat is given this deck object. See DeckCatalog.adopt. */
+    String adopt(final String tag, final String path, final Deck deck) {
+        return catalog.adopt(tag, path, deck);
+    }
+
+    Deck deck(final String key) {
+        return catalog.deck(key);
     }
 
     /** A format with what the lobby says about it. The description is the engine's own, already translated. */
@@ -196,7 +228,7 @@ final class Lobby {
             seenFormat = format;
             seenCardPool = poolName;
             seenRules = rules();
-            out = new Decks(catalog.refresh(format, cardPool), DeckCatalog.cardFormats(), poolName);
+            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device), DeckCatalog.cardFormats(), poolName);
         }
         if (newPool) {
             dealGeneratorsAgain();
@@ -453,10 +485,6 @@ final class Lobby {
     }
 
     /** The deck behind a catalogue key, for tests in this package. */
-    Deck deckForTest(final String key) {
-        return catalog.deck(key);
-    }
-
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
     Decks loadNetDecks() {
         catalog.loadNetDecks(format());
@@ -614,6 +642,7 @@ final class Lobby {
 
     /** Drops the deck choices, because a new lobby's slots hold none and the two must not disagree. */
     void forget() {
+        table++;
         deckKeys.clear();
         extras.clear();
         composed.clear();

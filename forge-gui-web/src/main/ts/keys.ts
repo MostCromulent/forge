@@ -8,7 +8,7 @@ import type { UiState } from './ui';
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'closeViewing';
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'closeViewing' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
@@ -22,7 +22,9 @@ export interface KeyPress {
 
 export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing = false): KeyCommand | null {
   if (press.modified) {
-    return null;
+    // The one held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
+    const editing = !!model.editor && !model.inMatch && !ui.importer;
+    return editing && !press.typing && press.key.toLowerCase() === 'z' ? 'editorUndo' : null;
   }
   const key = press.key.length === 1 ? press.key.toLowerCase() : press.key;
   const escape = key === 'Escape';
@@ -31,6 +33,12 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
     return escape ? 'declineHostChoice' : null;
   }
   if (!model.inMatch) {
+    if (ui.importer) {
+      return escape ? 'closeImporter' : null;
+    }
+    if (ui.browse && !model.editor) {
+      return escape ? 'closeBrowse' : null;
+    }
     if (model.inLobby && ui.picker) {
       return escape ? 'closePicker' : null;
     }

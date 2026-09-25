@@ -21,6 +21,8 @@ import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId } from './dom';
+import { initNotices } from './notices';
+import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './devicedecks';
 import type { Notice, ServerMessage } from './protocol';
 
 const model = createModel();
@@ -29,6 +31,11 @@ let scheduled = false;
 let askedAddresses = false;
 // A guest's settings live in its session on the server, so each connection is given back what the browser remembers
 let restored = false;
+// A guest's decks live in its browser, so each connection tells the server which it holds
+let sentDeviceDecks = false;
+// Queries are numbered, so an answer to one the player has since changed is dropped
+let catalogueRequest = 0;
+let importRequest = 0;
 // The game is paced where it runs: it holds for the player on a pass they have something new to see before
 // (autopass.ts), so every message is shown as it arrives
 const send = connect(apply, online => {
@@ -36,6 +43,7 @@ const send = connect(apply, online => {
   // The server replays the conversation for every connection, so the browser starts each one empty
   if (!online) {
     restored = false;
+    sentDeviceDecks = false;
     model.chat = [];
   }
 });
@@ -66,11 +74,22 @@ const actions: Actions = {
     wire.answerHostChoice(id, value);
     schedule();
   },
+  queryCatalogue: (_, q) => wire.queryCatalogue(++catalogueRequest, q),
+  readImport: (_, text, format, cardPool, unrestricted) => wire.readImport(++importRequest, text, format, cardPool, unrestricted),
+  fetchImport: (_, url) => wire.fetchImport(++importRequest, url),
+  commitImport: c => {
+    model.nameTaken = null;
+    wire.commitImport(c);
+  },
 };
 
 const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule);
+initNotices((notice, view, label) => {
+  notify(notice, view, NOTICE_MS, label);
+  schedule();
+});
 initDetail(actions);
 initStack(actions);
 initOverlay(schedule);
@@ -110,6 +129,9 @@ function runKey(command: KeyCommand): void {
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
     case 'closePicker': changeUi(u => { u.picker = null; }); break;
+    case 'closeImporter': changeUi(u => { u.importer = null; }); break;
+    case 'closeBrowse': changeUi(u => { u.browse = null; }); break;
+    case 'editorUndo': actions.editorUndo(); break;
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': actions.ok(); break;
     case 'cancel': actions.cancel(); break;
@@ -173,7 +195,27 @@ function apply(msg: ServerMessage): void {
         model.gameOver = false;
         send({ t: 'decks' });
       }
+      if (!model.host && !sentDeviceDecks) {
+        sentDeviceDecks = true;
+        void listDeviceDecks().then(decks => actions.deviceDecks(decks));
+      }
       break;
+    case 'editor':
+      model.editor = msg.state ?? null;
+      break;
+    // Scrolling asks for the next page of the same query, which is added to what is shown
+    case 'catalogue':
+      if (msg.request !== catalogueRequest) return;
+      model.catalogue = msg.offset > 0 && model.catalogue ? { ...msg, rows: [...model.catalogue.rows, ...msg.rows] } : msg;
+      break;
+    case 'importResult':
+      if (msg.request !== importRequest) return;
+      model.importResult = msg;
+      break;
+    case 'nameTaken': model.nameTaken = msg.name; break;
+    case 'deviceDeck':
+      void (msg.text ? putDeviceDeck({ id: msg.id, text: msg.text, format: msg.format }) : deleteDeviceDeck(msg.id));
+      return;
     case 'extraChoices':
       model.extraChoices = msg;
       break;
@@ -285,9 +327,9 @@ const NOTICE_MS = 6000;
 const ASIDE_MS = 15000;
 
 // An error stays until the player dismisses it; anything else goes by itself
-function notify(notice: Notice, view?: () => void, ms = NOTICE_MS): void {
+function notify(notice: Notice, view?: () => void, ms = NOTICE_MS, label?: string): void {
   const id = ++noticeId;
-  model.notices = [...model.notices, { id, notice, view }];
+  model.notices = [...model.notices, { id, notice, view, label }];
   if (!notice.error) setTimeout(() => dismissNotice(id), ms);
 }
 
@@ -309,6 +351,7 @@ function render(): void {
   const page = screenOf(model);
   byId('menu').hidden = page !== 'menu' && page !== 'name';
   byId('lobby').hidden = page !== 'lobby';
+  byId('editor').hidden = page !== 'editor';
   byId('match').hidden = page !== 'match';
   renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {

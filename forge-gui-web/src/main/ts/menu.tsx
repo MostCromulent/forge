@@ -7,6 +7,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
+import { changeUi } from './ui';
 import { avatarUrl } from './looks';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -54,7 +55,11 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
           status={decks ? `${decks} decks ready` : 'no decks yet — a precon will do'} onClick={() => actions.openLobby(false)} />
         <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
           status="Gives you a link to share" onClick={() => actions.openLobby(true)} />
-        <Mode id="editor" name="Decks" blurb="Build and change decks in the browser." status="Not built yet" />
+        <Mode id="editor" name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
+          onClick={() => {
+            changeUi(u => { u.browse = { format: 'Constructed' }; });
+            actions.browseFormat('Constructed');
+          }} />
       </div>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
     </div>

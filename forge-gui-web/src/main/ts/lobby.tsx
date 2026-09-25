@@ -88,7 +88,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           </section>
         </div>
       </div>
-      {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
+      {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} seat={{ index: picker.seat, seat }} close={close} />}
       {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (
         <ExtraPicker model={model} actions={actions} index={picker.seat} seat={seat} kind={picker.kind} close={close} />
       )}

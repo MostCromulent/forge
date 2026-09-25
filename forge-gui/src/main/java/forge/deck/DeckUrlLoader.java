@@ -6,6 +6,7 @@ import forge.deck.io.DeckStorage;
 import forge.game.GameType;
 import forge.localinstance.properties.ForgeConstants;
 import forge.util.Localizer;
+import forge.util.storage.IStorage;
 import forge.util.storage.StorageImmediatelySerialized;
 
 import java.io.BufferedReader;
@@ -32,15 +33,33 @@ public final class DeckUrlLoader {
     private static final String SUPPORTED_PROVIDERS = "Moxfield, Archidekt, TappedOut, MTGGoldfish";
     private static final Localizer localizer = Localizer.getInstance();
 
+    /** A deck list as a site gave it, not yet read into a deck or saved. The text is ready for DeckRecognizer. */
+    public record FetchedDeck(String name, DeckFormat format, String sourceUrl, String text, String providerName) {
+    }
+
     public static DeckProxy load(final String deckUrl) throws IOException {
+        return store(importDeck(fetch(deckUrl)));
+    }
+
+    /** Fetches a deck list from a supported site without saving anything. */
+    public static FetchedDeck fetch(final String deckUrl) throws IOException {
         final String normalizedUrl = normalizeUrl(deckUrl);
         final DeckUrlProvider provider = getProvider(normalizedUrl);
-        final StorageImmediatelySerialized<Deck> storage = getStorage();
-        final DeckUrlProvider.RemoteDeck remoteDeck = provider.load(normalizedUrl, storage);
-        final Deck deck = importDeck(remoteDeck);
+        final DeckUrlProvider.RemoteDeck remoteDeck = provider.load(normalizedUrl, getStorage());
+        final String text = String.join("\n", getRecognizableImportLines(new DeckRecognizer(), remoteDeck.importText()));
+        return new FetchedDeck(remoteDeck.name(), remoteDeck.format(), remoteDeck.sourceUrl(), text, remoteDeck.providerName());
+    }
 
+    /** Saves a deck among the decks loaded from links, replacing one of the same name. */
+    public static DeckProxy store(final Deck deck) {
+        final StorageImmediatelySerialized<Deck> storage = getStorage();
         storage.add(deck);
         return new DeckProxy(deck, localizer.getMessage("lblUrlDeck"), GameType.Constructed, storage);
+    }
+
+    /** The decks loaded from links, for checking whether a name is taken there. */
+    public static IStorage<Deck> storage() {
+        return getStorage();
     }
 
     public static List<DeckProxy> getUrlDecks() {
@@ -69,10 +88,10 @@ public final class DeckUrlLoader {
         throw new IOException(localizer.getMessage("lblOnlySupportedDeckUrls", SUPPORTED_PROVIDERS));
     }
 
-    private static Deck importDeck(final DeckUrlProvider.RemoteDeck remoteDeck) throws IOException {
+    private static Deck importDeck(final FetchedDeck remoteDeck) throws IOException {
         final DeckRecognizer recognizer = new DeckRecognizer();
         recognizer.forceImportBannedAndRestrictedCards();
-        final List<Token> tokens = recognizer.parseCardList(getRecognizableImportLines(recognizer, remoteDeck.importText()));
+        final List<Token> tokens = recognizer.parseCardList(remoteDeck.text().split("\n"));
         final Deck deck = new Deck(remoteDeck.name());
         for (final Token token : tokens) {
             final TokenType type = token.getType();
@@ -91,7 +110,8 @@ public final class DeckUrlLoader {
         return deck;
     }
 
-    private static String[] getRecognizableImportLines(final DeckRecognizer recognizer, final String importText) {
+    /** The lines of a list, with any card line the recognizer misses only because of its set and number rewritten to the name alone. */
+    public static String[] getRecognizableImportLines(final DeckRecognizer recognizer, final String importText) {
         final String[] lines = importText.split("\n");
         DeckSection section = null;
         for (int i = 0; i < lines.length; i++) {

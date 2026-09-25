@@ -7,6 +7,7 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /** The formats the lobby offers beyond Constructed, and the deck lists each one draws from. No match is played. */
 public class LobbyFormatsTest {
@@ -24,11 +25,11 @@ public class LobbyFormatsTest {
     public void onlyCommanderGetsCommanderPrecons() {
         final DeckCatalog catalog = new DeckCatalog();
         for (final GameType format : List.of(GameType.Oathbreaker, GameType.Brawl, GameType.TinyLeaders)) {
-            final List<String> sources = catalog.refresh(format, null).stream().map(ToBrowser.DeckSummary::source).toList();
+            final List<String> sources = catalog.refresh(format, null, false, Map.of()).stream().map(ToBrowser.DeckSummary::source).toList();
             Assert.assertFalse(sources.contains("precons") || sources.contains("quest") || sources.contains("generated"),
                     format + " offered decks from another format's lists: " + sources.stream().distinct().toList());
         }
-        Assert.assertTrue(catalog.refresh(GameType.Commander, null).stream().anyMatch(d -> "precons".equals(d.source())),
+        Assert.assertTrue(catalog.refresh(GameType.Commander, null, false, Map.of()).stream().anyMatch(d -> "precons".equals(d.source())),
                 "Commander lost its precons");
     }
 
@@ -65,7 +66,7 @@ public class LobbyFormatsTest {
         final WebGuiGame gui = new WebGuiGame();
         try {
             onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
-            final Lobby lobby = new Lobby(local);
+            final Lobby lobby = new Lobby(local, () -> false, Map.of());
             for (final GameType format : List.of(GameType.Oathbreaker, GameType.Brawl, GameType.TinyLeaders,
                     GameType.Commander, GameType.Constructed)) {
                 onUi(() -> lobby.setFormat(format.name()));
