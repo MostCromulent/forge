@@ -25,7 +25,10 @@ import forge.web.ToBrowser.Printing;
 import forge.web.ToBrowser.SavedSleeveArt;
 import forge.web.ToBrowser.TypeCount;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -450,22 +453,32 @@ final class DeckCatalog {
         prefs.save();
     }
 
-    /** Card names matching what has been typed, for the card-art sleeve picker. */
+    /**
+     * Card names matching what has been typed, for the card-art sleeve picker. Ranked as desktop's ListChooser and the
+     * browser's lists rank: names starting with the text first, shortest first, then names containing it.
+     */
     static List<String> searchCardNames(final String query, final int limit) {
-        final List<String> out = new ArrayList<>();
-        final String needle = query == null ? "" : query.trim().toLowerCase();
-        if (needle.isEmpty()) {
-            return out;
+        final String text = normalizeName(query == null ? "" : query);
+        if (text.isEmpty()) {
+            return new ArrayList<>();
         }
+        final List<String> startsWith = new ArrayList<>();
+        final List<String> contains = new ArrayList<>();
         for (final PaperCard card : StaticData.instance().getCommonCards().getUniqueCards()) {
-            if (card.getName().toLowerCase().contains(needle)) {
-                out.add(card.getName());
-                if (out.size() >= limit) {
-                    break;
-                }
+            final String name = normalizeName(card.getName());
+            if (name.startsWith(text)) {
+                startsWith.add(card.getName());
+            } else if (name.contains(text)) {
+                contains.add(card.getName());
             }
         }
-        return out;
+        startsWith.sort(Comparator.comparingInt(String::length));
+        startsWith.addAll(contains);
+        return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
+    }
+
+    private static String normalizeName(final String s) {
+        return StringUtils.stripAccents(s.toLowerCase()).replaceAll("[^a-z0-9 ]", "");
     }
 
     /** Every printing of one card, so a specific art can be picked for a sleeve. */

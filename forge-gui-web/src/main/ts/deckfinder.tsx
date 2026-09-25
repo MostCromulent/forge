@@ -6,6 +6,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { Pips } from './symbols';
+import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckCard, DeckDetails, DeckSummary, Seat } from './protocol';
@@ -23,7 +24,7 @@ export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal';
 const SORTS: [SortKey, string][] = [['name', 'Name'], ['colors', 'Colour'], ['formats', 'Format'], ['size', 'Size'], ['legal', 'Legal first']];
 
 export interface DeckFilter {
-  /** Lower case; a deck's name must contain it. */
+  /** As typed. While there is one, it orders the list instead of the sort. */
   query: string;
   /** A source's name, or 'all'. */
   source: string;
@@ -43,7 +44,6 @@ export const FINDER_DEFAULTS: DeckFilter = {
 /** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
-    && (!f.query || d.name.toLowerCase().includes(f.query))
     && (!f.colours.size || [...f.colours].some(c => (d.colors ?? '').includes(c)))
     && (d.generated || !f.legalOnly || !d.problem)
     && (d.generated || f.cardFormat === 'any' || (d.legalIn ?? []).includes(f.cardFormat)));
@@ -55,6 +55,9 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): Dec
     size: (a, b) => (b.main ?? 0) - (a.main ?? 0) || byName(a, b),
     legal: (a, b) => Number(!!a.problem) - Number(!!b.problem) || byName(a, b),
   };
+  if (normalize(f.query)) {
+    return rankByName(list.map(d => d.name), f.query).map(i => list[i]);
+  }
   return list.sort(by[f.sort] ?? byName);
 }
 
@@ -71,7 +74,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
 
   // A long list costs an image request per row, so typing waits for a pause
   useEffect(() => {
-    const timer = setTimeout(() => change({ query: typed.trim().toLowerCase() }), SEARCH_DEBOUNCE_MS);
+    const timer = setTimeout(() => change({ query: typed }), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [typed]);
   useEffect(() => {
@@ -178,9 +181,12 @@ export function DeckFinder({ model, actions, index, seat, close }: {
             <div class="find-row">
               <input ref={find} class="find" type="search" placeholder="Search deck names" autocomplete="off"
                 value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-              <select class="sort-by" aria-label="Sort" value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
-                {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
-              </select>
+              {/* A search orders the list by how well each name matches, so the sort waits until it is cleared */}
+              {normalize(filter.query)
+                ? <select class="sort-by" aria-label="Sort" disabled><option>Sort: Best match</option></select>
+                : <select class="sort-by" aria-label="Sort" value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
+                    {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
+                  </select>}
               <button class="random" disabled={!list.length} title="Pick a deck from those shown" onClick={random}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
                 Random

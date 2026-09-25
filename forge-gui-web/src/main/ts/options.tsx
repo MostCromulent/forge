@@ -2,6 +2,22 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { SETTINGS, set, setting, type SettingDef } from './settings';
+import { normalize, rankByName } from './search';
+
+// Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
+// Each section stays together and in its usual place, so its heading is drawn once.
+function matching(defs: SettingDef[], typed: string): SettingDef[] {
+  const text = normalize(typed);
+  if (!text) return defs;
+  const ranked = rankByName(defs.map(d => d.label), typed);
+  const found = new Set(ranked);
+  defs.forEach((d, i) => {
+    if (!found.has(i) && normalize(`${d.section} ${d.hint ?? ''}`).includes(text)) ranked.push(i);
+  });
+  const firstOf = new Map<string, number>();
+  defs.forEach((d, i) => { if (!firstOf.has(d.section)) firstOf.set(d.section, i); });
+  return ranked.map(i => defs[i]).sort((a, b) => (firstOf.get(a.section) ?? 0) - (firstOf.get(b.section) ?? 0));
+}
 
 export function Options({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
@@ -9,8 +25,7 @@ export function Options({ close }: { close: () => void }) {
   useEffect(() => {
     search.current?.focus();
   }, []);
-  const q = query.trim().toLowerCase();
-  const shown = SETTINGS.filter(def => !def.volume && !def.menu).filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
+  const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu), query);
   return (
     <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="options-dialog" role="dialog" aria-label="Options">

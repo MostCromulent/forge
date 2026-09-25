@@ -3,6 +3,7 @@ import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from './model';
 import { byId, q } from './dom';
 import { changeUi, ui, type ZoneSort } from './ui';
+import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { CardView, PromptButton, ZoneType } from './protocol';
 
@@ -91,9 +92,11 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   if (find.value !== ui.zoneSearch) {
     find.value = ui.zoneSearch;
   }
-  find.oninput = () => changeUi(u => { u.zoneSearch = find.value.trim().toLowerCase(); });
+  find.oninput = () => changeUi(u => { u.zoneSearch = find.value; });
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
   sort.value = ui.zoneSort;
+  // A search orders the zone by how well each name matches, so the sort waits until it is cleared
+  sort.disabled = !!normalize(ui.zoneSearch);
   sort.onchange = () => changeUi(u => { u.zoneSort = sort.value as ZoneSort; });
   q(el, '.zone-fold').onclick = () => changeUi(u => { u.zonesMinimised = true; });
   // The game put this one up and the game takes it down, so it offers no way out of its own
@@ -114,11 +117,13 @@ function answer(el: HTMLElement, button: PromptButton | undefined, run: () => vo
   el.onclick = run;
 }
 
-/** The zone as the dialog lists it: narrowed by the search, then in the order asked for. */
+/** The zone as the dialog lists it: best match first while searching, otherwise in the order asked for. */
 function shown(model: Model, cards: CardView[]): CardView[] {
-  const find = ui.zoneSearch;
-  const kept = find ? cards.filter(c => (stateOf(model, c).Name ?? '').toLowerCase().includes(find)) : [...cards];
   const name = (c: CardView) => stateOf(model, c).Name ?? '';
+  if (normalize(ui.zoneSearch)) {
+    return rankByName(cards.map(name), ui.zoneSearch).map(i => cards[i]);
+  }
+  const kept = [...cards];
   if (ui.zoneSort === 'name') {
     return kept.sort((a, b) => name(a).localeCompare(name(b)));
   }

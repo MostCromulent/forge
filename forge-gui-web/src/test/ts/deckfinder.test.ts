@@ -41,6 +41,11 @@ describe('narrowing the deck list', () => {
     expect(names(matchingDecks(decks, { ...all, sort: 'size' }))).toEqual(['Elves', 'Boros Blitz', 'Zombies', 'Random deck']);
     expect(names(matchingDecks(decks, { ...all, sort: 'legal' }))).toEqual(['Elves', 'Random deck', 'Zombies', 'Boros Blitz']);
   });
+
+  // Fails if the chosen sort still orders the list while a name is being searched
+  it('orders by best match while a name is searched, whatever the sort', () => {
+    expect(names(matchingDecks(decks, { ...all, sort: 'legal', query: 'E' }))).toEqual(['Elves', 'Zombies', 'Random deck']);
+  });
 });
 
 describe('opening the finder', () => {
