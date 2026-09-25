@@ -88,7 +88,7 @@ final class ToBrowser {
     }
 
     @Message("decks")
-    record Decks(List<DeckSummary> decks, List<String> cardFormats) {
+    record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String legality) {
     }
 
     /** A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts. */

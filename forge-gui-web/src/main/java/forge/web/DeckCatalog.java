@@ -100,9 +100,13 @@ final class DeckCatalog {
         }
     }
 
-    /** Rebuilds the catalogue for a format and returns every deck in it. */
-    List<DeckSummary> refresh(final GameType format) {
+    /** The card pool the last refresh was for, which generators build from and every verdict checks. */
+    private volatile GameFormat pool;
+
+    /** Rebuilds the catalogue for a format and card pool, and returns every deck in it. */
+    List<DeckSummary> refresh(final GameType format, final GameFormat pool) {
         synchronized (DECKS) {
+            this.pool = pool;
             byKey.clear();
             final List<DeckSummary> out = new ArrayList<>();
             final boolean commander = format == GameType.Commander;
@@ -130,7 +134,7 @@ final class DeckCatalog {
             if (e.built() != null) {
                 return e.built();
             }
-            final Deck deck = e.proxy() == null ? buildColours(key) : e.proxy().getDeck();
+            final Deck deck = e.proxy() == null ? buildColours(key, pool) : e.proxy().getDeck();
             if (e.generated()) {
                 byKey.put(key, new Entry(e.proxy(), true, deck));
             }
@@ -138,10 +142,11 @@ final class DeckCatalog {
         }
     }
 
-    /** Builds the colour generator behind a "gen:color:" key, whose suffix names what the engine expects. */
-    private static Deck buildColours(final String key) {
+    /** Builds the colour generator behind a "gen:color:" key, from the chosen card pool when there is one. */
+    private static Deck buildColours(final String key, final GameFormat pool) {
         final List<String> selection = List.of(key.substring(key.lastIndexOf(':') + 1));
-        return DeckgenUtil.colorCheck(selection) ? DeckgenUtil.buildColorDeck(selection, null, false) : null;
+        return DeckgenUtil.colorCheck(selection)
+                ? DeckgenUtil.buildColorDeck(selection, pool == null ? null : pool.getFilterPrinted(), false) : null;
     }
 
     /** Writes a card-art sleeve onto a deck and saves it, the way the desktop lobby does. */
@@ -166,7 +171,7 @@ final class DeckCatalog {
             if (deck == null) {
                 return null;
             }
-            return new DeckDetails(key, deck.getName(), problem(deck, format, null), colors(deck), stats(deck),
+            return new DeckDetails(key, deck.getName(), problem(deck, format, pool), colors(deck), stats(deck),
                     groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset());
         }
@@ -246,12 +251,18 @@ final class DeckCatalog {
             byKey.put(key, new Entry(null, true, null));
             generated(out, key, c.getValue(), "Built when you pick it", COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
         }
-        for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
-            byKey.put("gen:theme:" + theme.getName(), new Entry(theme, true, null));
-            generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck", "");
+        // A theme deck is a fixed list and cannot be held to a card pool
+        if (pool == null) {
+            for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
+                byKey.put("gen:theme:" + theme.getName(), new Entry(theme, true, null));
+                generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck", "");
+            }
         }
         if (FModel.isdeckGenMatrixLoaded()) {
             for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
+                if (pool != null && f != pool) {
+                    continue;
+                }
                 for (final DeckProxy archetype : ArchetypeDeckGenerator.getMatrixDecks(f, false)) {
                     final String key = "gen:archetype:" + f.getName() + ":" + archetype.getName();
                     byKey.put(key, new Entry(archetype, true, null));
@@ -275,7 +286,7 @@ final class DeckCatalog {
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
             out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, count(deck.get(DeckSection.Main)),
-                    count(deck.get(DeckSection.Sideboard)), problem(deck, format, null), legalIn(deck), proxy.getFormatsString(),
+                    count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), proxy.getFormatsString(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset()));
         }
     }

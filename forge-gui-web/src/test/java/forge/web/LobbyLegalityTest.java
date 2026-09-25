@@ -68,6 +68,25 @@ public class LobbyLegalityTest {
         });
     }
 
+    /**
+     * Fails if the finder's list ignores the Legality: a colour generator builds from the whole card pool, or theme
+     * decks, which cannot honour a pool, are still offered.
+     */
+    @Test(timeOut = 120_000)
+    public void theDeckListFollowsTheLegality() throws Exception {
+        atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
+            onUi(() -> lobby.setLegality("Pauper"));
+            final ToBrowser.Decks decks = lobby.decks();
+            Assert.assertEquals(decks.legality(), "Pauper");
+            Assert.assertTrue(decks.decks().stream().noneMatch(d -> d.key().startsWith("gen:theme:")),
+                    "a theme deck was offered under a card pool");
+            final Deck coloured = lobby.deckForTest("gen:color:Red");
+            Assert.assertNotNull(coloured, "the red generator built nothing");
+            Assert.assertNull(DeckCatalog.poolProblem(FModel.getFormats().getFormat("Pauper"), coloured),
+                    "the red generator used cards outside Pauper");
+        });
+    }
+
     /** Fails if a restricted-list problem is worded as a ban, or the card's name is lost. */
     @Test
     public void restrictedCardsAreNamedAsRestricted() {

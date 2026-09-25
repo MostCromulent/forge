@@ -116,7 +116,14 @@ final class Lobby {
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
     Decks decks() {
-        return new Decks(catalog.refresh(format()), DeckCatalog.cardFormats());
+        final GameFormat legality = legality();
+        return new Decks(catalog.refresh(format(), legality), DeckCatalog.cardFormats(),
+                legality == null ? null : legality.getName());
+    }
+
+    /** The deck behind a catalogue key, for tests in this package. */
+    Deck deckForTest(final String key) {
+        return catalog.deck(key);
     }
 
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
