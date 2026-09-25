@@ -125,7 +125,12 @@ final class ToBrowser {
     }
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
+            @Nullable String legality, List<LegalityGroup> legalities,
             int maxSeats, List<Seat> seats, List<String> problems, boolean canStart) {
+    }
+
+    /** Card pools the Legality control offers, under the heading Forge files them by. */
+    record LegalityGroup(String name, List<String> formats) {
     }
 
     record Format(String id, String name) {

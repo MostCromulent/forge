@@ -166,7 +166,7 @@ final class DeckCatalog {
             if (deck == null) {
                 return null;
             }
-            return new DeckDetails(key, deck.getName(), problem(deck, format), colors(deck), stats(deck),
+            return new DeckDetails(key, deck.getName(), problem(deck, format, null), colors(deck), stats(deck),
                     groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset());
         }
@@ -275,20 +275,57 @@ final class DeckCatalog {
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
             out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, count(deck.get(DeckSection.Main)),
-                    count(deck.get(DeckSection.Sideboard)), problem(deck, format), legalIn(deck), proxy.getFormatsString(),
+                    count(deck.get(DeckSection.Sideboard)), problem(deck, format, null), legalIn(deck), proxy.getFormatsString(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset()));
         }
     }
 
-    /** Why this deck cannot be played in this format, or null when it can. */
-    static String problem(final Deck deck, final GameType format) {
+    /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with legality off. */
+    static String problem(final Deck deck, final GameType format, final GameFormat pool) {
         if (deck == null) {
             return "No deck chosen.";
         }
-        if (!FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
-            return null;
+        final String outOfPool = pool == null ? null : poolProblem(pool, deck);
+        if (outOfPool != null || !FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
+            return outOfPool;
         }
         return format.getDeckFormat().getDeckConformanceProblem(deck);
+    }
+
+    /** Most cards a problem sentence names before counting the rest. */
+    private static final int NAMED_CARDS = 3;
+
+    /** The pool's verdict on a deck as one sentence. GameFormat answers with a header line and a card per line. */
+    static String poolProblem(final GameFormat pool, final Deck deck) {
+        final String raw = pool.getDeckConformanceProblem(deck);
+        if (raw == null) {
+            return null;
+        }
+        final String[] lines = raw.split("\n");
+        final List<String> names = new ArrayList<>();
+        for (int i = 1; i < lines.length; i++) {
+            if (!lines[i].isBlank()) {
+                names.add(lines[i].trim());
+            }
+        }
+        final String listed = listOf(names);
+        return lines[0].contains("restricted")
+                ? pool.getName() + " allows one copy of " + listed + "."
+                : "Not legal in " + pool.getName() + ": " + names.size() + (names.size() == 1 ? " card. " : " cards. ")
+                        + listed + ".";
+    }
+
+    /** "A", "A and B", "A, B and C", or "A, B, C and 4 more". */
+    private static String listOf(final List<String> names) {
+        final List<String> shown = names.subList(0, Math.min(NAMED_CARDS, names.size()));
+        final int more = names.size() - shown.size();
+        if (more > 0) {
+            return String.join(", ", shown) + " and " + more + " more";
+        }
+        if (shown.size() == 1) {
+            return shown.get(0);
+        }
+        return String.join(", ", shown.subList(0, shown.size() - 1)) + " and " + shown.get(shown.size() - 1);
     }
 
     private static int count(final CardPool pool) {

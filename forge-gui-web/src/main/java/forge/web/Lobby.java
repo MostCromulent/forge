@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.deck.Deck;
+import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.LobbySlot;
@@ -14,6 +15,7 @@ import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
 import forge.web.ToBrowser.Format;
+import forge.web.ToBrowser.LegalityGroup;
 import forge.web.ToBrowser.LobbyMessage;
 import forge.web.ToBrowser.LobbyTable;
 import forge.web.ToBrowser.Seat;
@@ -76,6 +78,42 @@ final class Lobby {
         return GameType.Constructed;
     }
 
+    /** The card pool every deck must come from, or null. Only Constructed has one. */
+    GameFormat legality() {
+        final GameLobby lobby = view();
+        final String name = lobby == null ? null : lobby.getCardPool();
+        return name == null ? null : FModel.getFormats().getFormat(name);
+    }
+
+    /** The Legality belongs to the game, so only the host sets it, and only for Constructed. */
+    void setLegality(final String name) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || format() != GameType.Constructed) {
+            return;
+        }
+        final boolean known = name != null && FModel.getFormats().getFormat(name) != null;
+        lobby.setCardPool(known ? name : null);
+    }
+
+    /** The pools on offer, grouped as Forge's format files group them. */
+    private static List<LegalityGroup> legalities() {
+        final var formats = FModel.getFormats();
+        final List<LegalityGroup> out = new ArrayList<>();
+        out.add(new LegalityGroup("Sanctioned", names(formats.getSanctionedList())));
+        out.add(new LegalityGroup("Casual", names(formats.getCasualList())));
+        out.add(new LegalityGroup("Archived", names(formats.getArchivedList())));
+        out.add(new LegalityGroup("Block", names(formats.getBlockList())));
+        return out;
+    }
+
+    private static List<String> names(final Iterable<GameFormat> formats) {
+        final List<String> out = new ArrayList<>();
+        for (final GameFormat f : formats) {
+            out.add(f.getName());
+        }
+        return out;
+    }
+
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
     Decks decks() {
         return new Decks(catalog.refresh(format()), DeckCatalog.cardFormats());
@@ -107,8 +145,10 @@ final class Lobby {
                 seats.add(seat(lobby, i));
             }
             final List<String> problems = problems();
+            final GameFormat legality = legality();
             // Only the machine running the game can start it; everyone else waits on the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
+                    legality == null ? null : legality.getName(), legalities(),
                     MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
         }
     }
@@ -123,7 +163,7 @@ final class Lobby {
                 deck == null ? null : deck.getName(),
                 deck == null ? 0 : deck.getMain().countAll(),
                 deck == null ? "" : DeckCatalog.colors(deck),
-                deck == null ? null : DeckCatalog.problem(deck, format()),
+                deck == null ? null : DeckCatalog.problem(deck, format(), legality()),
                 // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
                 deck == null ? "" : deck.getSleeveArtKey(),
                 deck == null ? 0 : deck.getSleeveArtOffset());
@@ -166,7 +206,7 @@ final class Lobby {
                     out.add(who + " no deck.");
                     continue;
                 }
-                final String problem = DeckCatalog.problem(deck, format());
+                final String problem = DeckCatalog.problem(deck, format(), legality());
                 if (problem != null) {
                     out.add(deck.getName() + ": " + problem);
                 }
@@ -201,6 +241,8 @@ final class Lobby {
             }
             if (wanted != GameType.Constructed) {
                 lobby.applyVariant(wanted);
+                // A card pool belongs to Constructed; the other formats bring their own
+                lobby.setCardPool(null);
             }
             // A deck legal in one format is rarely legal in another, and its key is not in the new pool
             deckKeys.clear();
