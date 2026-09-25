@@ -9,6 +9,8 @@ import { hoverCard } from './detail';
 import { rankByName } from './search';
 import { SymbolText } from './symbols';
 import type { Actions } from './actions';
+import { keyName } from './keys';
+import { boundKeys } from './settings';
 import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
@@ -120,7 +122,7 @@ export function RevealWindow({ model, title, cards, close }: { model: Model; tit
       <section class="zone-panel reveal-panel" role="dialog" aria-label={title}>
         <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{`${count} ${count === 1 ? 'card' : 'cards'}`}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
-        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">OK</span><kbd>Space</kbd></button></footer>
+        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">OK</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
       </section>
     </div>
   );

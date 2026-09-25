@@ -9,7 +9,7 @@ import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 
 export function GameMenu({ model, actions, close, open }: {
-  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions') => void;
+  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'keys') => void;
 }) {
   const [armed, setArmed] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -34,6 +34,7 @@ export function GameMenu({ model, actions, close, open }: {
           actions.autoDecisions('list');
           open('decisions');
         }}>Auto-yields and triggers…</button>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('keys')}>Keys…</button>
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
           disabled={model.spectating} onClick={() => {
             if (!armed) {

@@ -37,7 +37,7 @@ export interface UiState {
   /** The options dialog is open. */
   optionsOpen: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
-  gameMenu: 'menu' | 'stops' | 'decisions' | null;
+  gameMenu: 'menu' | 'stops' | 'decisions' | 'keys' | null;
   /** Cards set aside by a notice that the player opened to look at. */
   viewing: Aside | null;
   /** The volume control beside the options button is open. */

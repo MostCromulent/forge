@@ -13,6 +13,7 @@ import { RevealWindow, Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './gamemenu';
+import { KeysDialog } from './keysdialog';
 import { Volume } from './volume';
 import { Notices } from './notices';
 import { Dock } from './dock';
@@ -43,6 +44,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
       <AutoDecisionsDialog model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />
     )}
     {page === 'match' && ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
+    {page === 'match' && ui.gameMenu === 'keys' && <KeysDialog close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
     {page === 'match' && ui.viewing && (
       <RevealWindow model={model} title={ui.viewing.title} cards={ui.viewing.cards} close={() => changeUi(u => { u.viewing = null; })} />

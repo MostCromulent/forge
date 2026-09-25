@@ -16,7 +16,7 @@ import { initSide, renderSide, renderSky } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
-import { initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
+import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
 import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
@@ -107,7 +107,7 @@ document.addEventListener('keydown', e => {
     key: e.key,
     typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
     modified: e.ctrlKey || e.altKey || e.metaKey,
-  }, model, ui, !!countdown());
+  }, model, ui, !!countdown(), boundKeys());
   if (!command) {
     return;
   }

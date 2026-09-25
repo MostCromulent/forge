@@ -8,6 +8,8 @@ import { changeUi, ui } from './ui';
 import { isSilent } from './volume';
 import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
+import { keyName } from './keys';
+import { boundKeys } from './settings';
 import type { PlayerView, PromptButton, Ref } from './protocol';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
@@ -34,9 +36,9 @@ export function renderPrompt(model: Model, actions: Actions): void {
       <div class="tools">
         <p class="step"></p>
         <span class="spacer"></span>
-        <button class="end-turn" title="Pass priority until the end of this turn (E)">${icon('endTurn')}</button>
+        <button class="end-turn">${icon('endTurn')}</button>
         <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
-        <button class="undo" title="Undo your last undoable action, such as tapping a land for mana (Z)">${icon('undo')}</button>
+        <button class="undo">${icon('undo')}</button>
         <button class="volume" title="Volume">${icon('volume')}</button>
         <button class="more" title="Game: offer a draw, auto-pass stops, concede">${icon('more')}</button>
         <button class="cog" title="Options">${icon('cog')}</button>
@@ -61,6 +63,11 @@ export function renderPrompt(model: Model, actions: Actions): void {
     hoverable(card);
     built = true;
   }
+  // The player can choose these keys in the options, so the labels follow whatever they chose
+  const keys = boundKeys();
+  q(root, '.end-turn').title = `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
+  q(root, '.undo').title = `Undo your last undoable action, such as tapping a land for mana (${keyName(keys.undo)})`;
+  q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
   root.classList.toggle('spectating', !!model.spectating);
   const volume = q(root, '.volume');
   const silent = String(isSilent());

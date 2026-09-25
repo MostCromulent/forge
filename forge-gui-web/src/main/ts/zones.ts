@@ -5,6 +5,8 @@ import { byId, q } from './dom';
 import { changeUi, ui, type ZoneSort } from './ui';
 import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
+import { keyName } from './keys';
+import { boundKeys } from './settings';
 import type { CardView, PromptButton, ZoneType } from './protocol';
 
 // Looking through a zone: a dialog over a dimmed board, because the board has nothing to say while you are
@@ -108,6 +110,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const prompt = p.forced ? model.prompt : null;
   q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : 'Click a card to pick it up.';
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
+  q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
 }
 

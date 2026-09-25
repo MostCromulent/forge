@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { keyCommand, type KeyPress } from '../../main/ts/keys';
+import { DEFAULT_KEYS, keyCommand, rebind, type KeyPress } from '../../main/ts/keys';
 import { createModel, type Model } from '../../main/ts/model';
 import type { UiState } from '../../main/ts/ui';
 import type { LobbyTable, Prompt, Request } from '../../main/ts/protocol';
@@ -150,5 +150,30 @@ describe('keys in the deck editor', () => {
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeImporter');
     ui.importer = null;
     expect(keyCommand(press('Escape'), model, ui)).toBe('closeBrowse');
+  });
+});
+
+describe('rebound keys', () => {
+  // Fails if keyCommand keeps reading the default letters instead of the player's bindings
+  it('answers the key the player chose, and not the default', () => {
+    const model = createModel();
+    model.inMatch = true;
+    model.prompt = prompt(true, true);
+    const keys = { ...DEFAULT_KEYS, endTurn: 'x', ok: 'k' };
+    expect(keyCommand(press('x'), model, freshUi(), false, keys)).toBe('endTurn');
+    expect(keyCommand(press('e'), model, freshUi(), false, keys)).toBeNull();
+    expect(keyCommand(press('k'), model, freshUi(), false, keys)).toBe('ok');
+    expect(keyCommand(press('Enter'), model, freshUi(), false, keys)).toBe('ok');
+  });
+
+  // Fails if choosing a key another action holds leaves both actions on one key
+  it('swaps keys when the chosen one is taken', () => {
+    expect(rebind(DEFAULT_KEYS, 'endTurn', 'z')).toEqual({ ...DEFAULT_KEYS, endTurn: 'z', undo: 'e' });
+  });
+
+  // Fails if a key the page keeps for itself can be taken, so Escape or a menu number stops working
+  it('refuses the keys the page keeps', () => {
+    expect(rebind(DEFAULT_KEYS, 'undo', 'Escape')).toBe(DEFAULT_KEYS);
+    expect(rebind(DEFAULT_KEYS, 'undo', '3')).toBe(DEFAULT_KEYS);
   });
 });

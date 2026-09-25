@@ -1,6 +1,7 @@
 // The cog dialog: one scrolling list of settings with a search box
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { KeyControl } from './keysdialog';
 import { SETTINGS, set, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 
@@ -45,7 +46,7 @@ export function Options({ close }: { close: () => void }) {
           {!shown.length && <p class="hint">No setting matches that.</p>}
         </div>
         <footer>
-          <span class="hint">Changes apply at once. Conceding and auto-pass stops are in the ⋯ menu beside this button.</span>
+          <span class="hint">Changes apply at once. Conceding, auto-pass stops and keys are in the ⋯ menu beside this button.</span>
         </footer>
       </div>
     </div>
@@ -78,6 +79,8 @@ function Control({ def }: { def: SettingDef }) {
       );
     case 'css':
       return <CssEditor def={def} value={String(value ?? '')} />;
+    case 'key':
+      return <KeyControl action={def.action} value={String(value)} />;
     case 'slider':
       return (
         <div class="slider">

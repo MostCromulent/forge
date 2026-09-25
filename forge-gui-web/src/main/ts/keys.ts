@@ -12,6 +12,36 @@ export type KeyCommand =
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
+/** The keys a player can choose, each stored as keyCommand reads it: a letter in lower case, or ' ' for Space. */
+export interface KeyBindings {
+  ok: string;
+  endTurn: string;
+  undo: string;
+  nextFace: string;
+  cardText: string;
+}
+
+export const DEFAULT_KEYS: KeyBindings = { ok: ' ', endTurn: 'e', undo: 'z', nextFace: 'f', cardText: 't' };
+
+// Escape closes and cancels everywhere, Enter confirms and starts a match, and the numbers pick from a card's menu
+const KEPT = new Set(['Escape', 'Enter', 'Tab', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+
+/** Gives an action a new key. An action that had the key takes the old one, so no key answers two actions. */
+export function rebind(keys: KeyBindings, action: keyof KeyBindings, key: string): KeyBindings {
+  const chosen = key.length === 1 ? key.toLowerCase() : key;
+  if (KEPT.has(chosen)) return keys;
+  const next = { ...keys, [action]: chosen };
+  for (const other of Object.keys(keys) as (keyof KeyBindings)[]) {
+    if (other !== action && keys[other] === chosen) next[other] = keys[action];
+  }
+  return next;
+}
+
+/** A key as a player reads it. */
+export function keyName(key: string): string {
+  return key === ' ' ? 'Space' : key.length === 1 ? key.toUpperCase() : key;
+}
+
 export interface KeyPress {
   key: string;
   /** Typed into a field: only Escape, to close what the field sits in, is the page's. */
@@ -20,7 +50,7 @@ export interface KeyPress {
   modified: boolean;
 }
 
-export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing = false): KeyCommand | null {
+export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing = false, keys = DEFAULT_KEYS): KeyCommand | null {
   if (press.modified) {
     // The one held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
     const editing = !!model.editor && !model.inMatch && !ui.importer;
@@ -28,6 +58,7 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   }
   const key = press.key.length === 1 ? press.key.toLowerCase() : press.key;
   const escape = key === 'Escape';
+  const ok = key === keys.ok || key === 'Enter';
   // A question the host is waiting on sits over every page, and Escape declines it
   if (model.hostChoice) {
     return escape ? 'declineHostChoice' : null;
@@ -64,15 +95,15 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
     return null;
   }
   // Turning the card under the pointer, or reading it, answers nothing, so it works over a question as well
-  if (key === 'f') {
+  if (key === keys.nextFace) {
     return 'nextFace';
   }
-  if (key === 't') {
+  if (key === keys.cardText) {
     return 'cardText';
   }
   // A pass on its way: its button takes the keys the prompt's would
   if (passing) {
-    if (key === ' ' || key === 'Enter') return 'passNow';
+    if (ok) return 'passNow';
     return escape ? 'stopAutoPass' : null;
   }
   // A card's menu of abilities: Escape closes it, and its items are numbered as desktop's are
@@ -83,10 +114,10 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   }
   // Cards put up only to be seen go away on the prompt's keys, as the zone windows' OK does
   if (ui.viewing) {
-    return escape || key === ' ' || key === 'Enter' ? 'closeViewing' : null;
+    return escape || ok ? 'closeViewing' : null;
   }
   const request = oldestRequest(model);
-  if (request?.kind === 'reveal' && (escape || key === ' ' || key === 'Enter')) {
+  if (request?.kind === 'reveal' && (escape || ok)) {
     return 'closeReveal';
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
@@ -94,9 +125,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
     return null;
   }
   const prompt = model.prompt;
-  if ((key === ' ' || key === 'Enter') && prompt?.ok?.enabled) return 'ok';
+  if (ok && prompt?.ok?.enabled) return 'ok';
   if (escape && prompt?.cancel?.enabled) return 'cancel';
-  if (key === 'e') return 'endTurn';
-  if (key === 'z') return 'undo';
+  if (key === keys.endTurn) return 'endTurn';
+  if (key === keys.undo) return 'undo';
   return null;
 }

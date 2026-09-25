@@ -1,6 +1,7 @@
 // Every setting the player can change: in the options dialog, or in the volume control for those marked with it.
 // Settings marked server:true are Forge preferences shared with the desktop client; the rest live in this browser.
 
+import type { KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
 
 const LOCAL_KEY = 'forge.settings';
@@ -19,7 +20,7 @@ interface SettingBase {
   /** Set from the volume control beside the options button rather than in the options dialog. */
   volume?: boolean;
   /** Set in a dialog opened from the game menu rather than in the options dialog. */
-  menu?: 'stops' | 'decisions';
+  menu?: 'stops' | 'decisions' | 'keys';
 }
 
 export type SettingDef = SettingBase & (
@@ -27,6 +28,7 @@ export type SettingDef = SettingBase & (
   | { type: 'choice'; options: [string, string][]; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
+  | { type: 'key'; action: keyof KeyBindings; def: string }
 );
 
 export const SETTINGS: SettingDef[] = [
@@ -76,6 +78,11 @@ export const SETTINGS: SettingDef[] = [
   {
     section: 'Sound', key: 'musicVolume', label: 'Music', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
+  { section: 'Keys', key: 'keyOk', label: 'OK', action: 'ok', type: 'key', menu: 'keys', def: ' ' },
+  { section: 'Keys', key: 'keyEndTurn', label: 'End turn', action: 'endTurn', type: 'key', menu: 'keys', def: 'e' },
+  { section: 'Keys', key: 'keyUndo', label: 'Undo', action: 'undo', type: 'key', menu: 'keys', def: 'z' },
+  { section: 'Keys', key: 'keyNextFace', label: 'Turn the card under the pointer over', action: 'nextFace', type: 'key', menu: 'keys', def: 'f' },
+  { section: 'Keys', key: 'keyCardText', label: 'Show the text of the card under the pointer', action: 'cardText', type: 'key', menu: 'keys', def: 't' },
   {
     section: 'Theme', key: 'customCss', label: 'Custom CSS',
     hint: 'Applied to every screen as you type, and kept in this browser.', type: 'css', def: '',
@@ -161,6 +168,31 @@ export function set(key: string, value: SettingValue): void {
     }
   }
   apply();
+  redraw();
+}
+
+const KEY_SETTINGS = SETTINGS.filter((d): d is SettingDef & { type: 'key' } => d.type === 'key');
+
+/** The keys this player has chosen. */
+export function boundKeys(): KeyBindings {
+  return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, String(setting(d.key))])) as unknown as KeyBindings;
+}
+
+/** The keys a player starts with. */
+export function defaultKeys(): KeyBindings {
+  return Object.fromEntries(KEY_SETTINGS.map(d => [d.action, d.def])) as unknown as KeyBindings;
+}
+
+/** Saves every key binding at once, so a swap between two actions lands as one change. */
+export function setKeys(keys: KeyBindings): void {
+  for (const d of KEY_SETTINGS) {
+    local[d.key] = keys[d.action];
+  }
+  try {
+    localStorage.setItem(LOCAL_KEY, JSON.stringify(local));
+  } catch {
+    // A browser with storage blocked keeps the setting for this session only
+  }
   redraw();
 }
 
