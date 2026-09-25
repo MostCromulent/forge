@@ -466,7 +466,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'eventStart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {
@@ -792,6 +792,39 @@ export interface DraftSave {
   replace: boolean;
 }
 
+export interface SetLimited {
+  t: 'setLimited';
+  kind?: string;
+}
+
+export interface EventSetup {
+  t: 'eventSetup';
+  product: string;
+  block?: string;
+  combo?: string;
+  edition?: string;
+  template?: string;
+  cube?: string;
+  theme?: string;
+  cubeId?: string;
+  packs: number;
+  podSize: number;
+  pickRule?: string;
+  timer: number;
+  grace: number;
+}
+
+export interface BenchSeat {
+  t: 'benchSeat';
+  index: number;
+  benched: boolean;
+}
+
+export interface EventDecksOnly {
+  t: 'eventDecksOnly';
+  on: boolean;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -843,7 +876,11 @@ export type ClientMessage =
   | PoolPlay
   | DraftStart
   | DraftPick
-  | DraftSave;
+  | DraftSave
+  | SetLimited
+  | EventSetup
+  | BenchSeat
+  | EventDecksOnly;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -961,6 +998,7 @@ export interface LobbyTable {
   seats: Seat[];
   problems: string[];
   canStart: boolean;
+  limited?: LimitedTable;
 }
 
 export interface Address {
@@ -1270,6 +1308,19 @@ export interface Seat {
   planes?: SeatExtra;
   schemes?: SeatExtra;
   vanguard?: SeatExtra;
+  benched: boolean;
+}
+
+export interface LimitedTable {
+  kind: string;
+  product?: string;
+  podSize: number;
+  pickRule?: string;
+  timer: number;
+  phase?: string;
+  activeEventId?: string;
+  eventDecksOnly: boolean;
+  started: boolean;
 }
 
 export type ZoneType = 'Hand' | 'Library' | 'Graveyard' | 'Battlefield' | 'Exile' | 'Flashback' | 'Command' | 'Stack' | 'Sideboard' | 'Ante' | 'Merged' | 'SchemeDeck' | 'PlanarDeck' | 'AttractionDeck' | 'Junkyard' | 'ContraptionDeck' | 'Subgame' | 'ExtraHand' | 'None';

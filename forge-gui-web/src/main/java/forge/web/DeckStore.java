@@ -31,10 +31,14 @@ final class DeckStore {
         };
     }
 
-    /** The format whose folder a deck lives in: each commander format has its own, and everything else is Constructed's. */
+    /**
+     * The format whose decks a deck is listed with: each commander format has its own, limited decks are Draft's, and
+     * everything else is Constructed's. Limited decks are stored as their pools are, not in a folder of their own.
+     */
     static GameType family(final GameType format) {
         return switch (format) {
             case Commander, Oathbreaker, Brawl, TinyLeaders -> format;
+            case Draft, Sealed -> GameType.Draft;
             default -> GameType.Constructed;
         };
     }
@@ -46,6 +50,7 @@ final class DeckStore {
             case Oathbreaker -> GameType.Oathbreaker;
             case Brawl -> GameType.Brawl;
             case TinyLeaders -> GameType.TinyLeaders;
+            case Limited -> GameType.Draft;
             default -> GameType.Constructed;
         };
     }

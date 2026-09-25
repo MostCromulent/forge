@@ -1,14 +1,23 @@
 package forge.web;
 
+import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckSection;
 import forge.game.GameFormat;
 import forge.game.GameType;
+import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.match.GameLobby;
+import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
+import forge.gamemodes.net.EventFormat;
+import forge.gamemodes.net.EventPhase;
+import forge.gamemodes.net.NetworkEvent;
+import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -16,12 +25,16 @@ import forge.model.FModel;
 import forge.util.Localizer;
 import forge.util.NameGenerator;
 import org.apache.commons.lang3.Range;
+import forge.web.FromBrowser.DraftStart;
+import forge.web.FromBrowser.EventSetup;
+import forge.web.FromBrowser.SealedCreate;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
 import forge.web.ToBrowser.Format;
 import forge.web.ToBrowser.CardPoolGroup;
 import forge.web.ToBrowser.LobbyMessage;
+import forge.web.ToBrowser.LimitedTable;
 import forge.web.ToBrowser.LobbyTable;
 import forge.web.ToBrowser.Seat;
 import forge.web.ToBrowser.SeatExtra;
@@ -43,7 +56,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * own seat travels as an update from a client, and the rest of the table is the host's to set.
  */
 final class Lobby {
-    static final int MAX_SEATS = 4;
+    /** A match seats at most four; a draft pod seats up to eight, of whom any four play each match. */
+    private static final int MAX_SEATS = 4;
+    private static final int MAX_POD = 8;
     /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
             GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto);
@@ -100,6 +115,10 @@ final class Lobby {
         final GameLobby lobby = view();
         if (lobby == null) {
             return browseFormat;
+        }
+        // A Limited table plays event decks, which are checked as startGame checks them
+        if (limited(lobby)) {
+            return GameType.Draft;
         }
         for (final GameType variant : FORMATS) {
             if (variant != GameType.Constructed && lobby.hasVariant(variant)) {
@@ -515,7 +534,7 @@ final class Lobby {
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(), cardPools(),
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
-                    MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
+                    maxSeats(), seats, problems, local.isHost() && problems.isEmpty(), limitedTable(lobby)));
         }
     }
 
@@ -537,7 +556,8 @@ final class Lobby {
                         : lobby.hasVariant(GameType.Archenemy) ? (slot.isArchenemy() ? "archenemy" : "hero") : null,
                 sectionsFor(lobby, index).contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
                 sectionsFor(lobby, index).contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
-                sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null);
+                sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
+                slot.isBenched());
     }
 
     /**
@@ -699,9 +719,173 @@ final class Lobby {
         }
     }
 
+    /** The most seats the table takes: a pod's worth at a Limited table, fewer once a configured draft caps its pod. */
+    int maxSeats() {
+        final GameLobby lobby = view();
+        if (lobby == null) {
+            return MAX_SEATS;
+        }
+        return limited(lobby) ? Math.min(MAX_POD, lobby.getSlotLimit()) : MAX_SEATS;
+    }
+
+    private static boolean limited(final GameLobby lobby) {
+        final GameLobbyData data = lobby.getData();
+        return data != null && data.isLimitedMode();
+    }
+
+    /** Seats stay as they are while their players draft, since each player's seat is where their packs go. */
+    private static boolean drafting(final GameLobby lobby) {
+        final NetworkEventView event = lobby.getData() == null ? null : lobby.getData().getEventView();
+        return event != null && event.getPhase() == EventPhase.DRAFTING;
+    }
+
+    /** Whether the table's event has begun: its packs are out, or a past event's decks were chosen for the match. */
+    boolean eventStarted() {
+        final GameLobby lobby = view();
+        final GameLobbyData data = lobby == null ? null : lobby.getData();
+        if (data == null) {
+            return false;
+        }
+        final NetworkEventView event = data.getEventView();
+        return data.getActiveEventId() != null || (event != null && event.getPhase() != EventPhase.LOBBY_GATHER);
+    }
+
+    /** Whether this browser's finder lists only the event's decks. */
+    private volatile boolean eventDecksOnly;
+
+    void setEventDecksOnly(final boolean on) {
+        eventDecksOnly = on;
+        final ServerGameLobby lobby = host();
+        if (lobby != null && lobby.getData().getActiveEventId() != null) {
+            lobby.selectEventForMatch(lobby.getData().getActiveEventId(), on);
+        }
+    }
+
+    /** The Limited part of the table, read from the lobby data so a guest reads the same; null at a Constructed table. */
+    private LimitedTable limitedTable(final GameLobby lobby) {
+        if (!limited(lobby)) {
+            return null;
+        }
+        final GameLobbyData data = lobby.getData();
+        final NetworkEventView event = data.getEventView();
+        final boolean draft = data.getLimitedType() != GameType.Sealed;
+        return new LimitedTable(draft ? "draft" : "sealed", event == null ? null : event.getProductDescription(),
+                event == null ? 0 : event.getPodSize(),
+                event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
+                event == null ? 0 : event.getPickTimerSeconds(), event == null ? null : event.getPhase().name(),
+                data.getActiveEventId(), eventDecksOnly, eventStarted());
+    }
+
+    /**
+     * Switches the table between Constructed and a draft or sealed event, as desktop's Limited switch does. kind is
+     * "draft", "sealed", or null for Constructed. Answers why not, or null once switched.
+     */
+    String setLimited(final String kind) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null) {
+            return null;
+        }
+        if (eventStarted()) {
+            return "The event has started, so the table stays as it is.";
+        }
+        if (kind == null) {
+            if (lobby.getNumberOfSlots() > MAX_SEATS) {
+                return "A Constructed match seats " + MAX_SEATS + " at most, so remove seats first.";
+            }
+            lobby.clearCurrentEvent();
+            lobby.selectEventForMatch(null, false);
+            lobby.setLimitedMode(false);
+            return null;
+        }
+        final boolean sealed = "sealed".equals(kind);
+        // An event is played without a format or casual variant, as desktop's Limited mode hides them
+        setFormat(GameType.Constructed.name());
+        for (final GameType v : VARIANTS) {
+            lobby.removeVariant(v);
+        }
+        lobby.setLimitedType(sealed ? GameType.Sealed : GameType.Draft);
+        lobby.createEvent(sealed ? EventFormat.SEALED : EventFormat.BOOSTER_DRAFT);
+        lobby.setLimitedMode(true);
+        return null;
+    }
+
+    /**
+     * Builds the product the setup form describes and makes it the table's event, replacing any before it, as desktop's
+     * New Event does. Building can wait on a web site, so this runs off the socket thread. Answers why not, or null.
+     */
+    String setUpEvent(final EventSetup s) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || !limited(lobby)) {
+            return "Choose Draft or Sealed first.";
+        }
+        if (eventStarted()) {
+            return "The event has started, so it can no longer be changed.";
+        }
+        try {
+            if (lobby.getData().getLimitedType() == GameType.Sealed) {
+                final SealedCardPoolGenerator gen = OfflineEvents.generator(new SealedCreate(s.product(), s.block(), s.combo(),
+                        s.edition(), s.template(), s.cubeId(), s.packs(), "", false));
+                lobby.createEvent(EventFormat.SEALED);
+                return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), gen, 0, 0) ? null : "The sealed pool could not be set up.";
+            }
+            final BoosterDraft draft = OfflineEvents.draft(new DraftStart(s.product(), s.block(), s.combo(), s.cube(), s.theme(),
+                    s.cubeId())).get();
+            if (draft == null) {
+                return "The draft could not be set up.";
+            }
+            // As desktop's pod choice: never fewer than the seats at the table, and never more than a pod
+            final int wanted = s.podSize() > 0 ? s.podSize() : draft.getPodSize();
+            draft.setPodSize(Math.min(MAX_POD, Math.max(Math.max(2, lobby.getNumberOfSlots()), wanted)));
+            if (s.pickRule() != null) {
+                draft.setDoublePick(DraftOptions.DoublePick.valueOf(s.pickRule()));
+            }
+            lobby.createEvent(EventFormat.BOOSTER_DRAFT);
+            return lobby.configureEvent(LimitedPoolType.valueOf(s.product()), draft, Math.max(0, s.timer()), Math.max(0, s.grace()))
+                    ? null : "The draft could not be set up.";
+        } catch (final RuntimeException e) {
+            return e.getMessage() == null ? "The event could not be set up." : e.getMessage();
+        }
+    }
+
+    /** Deals the packs or pools once every seat is ready, as desktop's Start Event does. Answers why not, or null. */
+    String startEvent() {
+        final ServerGameLobby lobby = host();
+        final NetworkEvent event = lobby == null ? null : lobby.getCurrentEvent();
+        if (event == null || (event.getDraft() == null && event.getSealedGenerator() == null)) {
+            return "Set the event up first.";
+        }
+        if (eventStarted()) {
+            return "The event has already started.";
+        }
+        final LobbySlot unready = lobby.findFirstUnreadySlot();
+        if (unready != null) {
+            return unready.getName() + " is not ready.";
+        }
+        if (event.getFormat() == EventFormat.SEALED) {
+            lobby.startSealedEvent();
+            return null;
+        }
+        return lobby.startDraftEvent() == null ? "The draft could not be started." : null;
+    }
+
+    /** Whether the host's setup form is open: a Limited table whose event has not begun. */
+    boolean settingUpEvent() {
+        final GameLobby lobby = view();
+        return lobby != null && limited(lobby) && !eventStarted();
+    }
+
+    /** Sits a seat out of the next match, or brings it back. The host's to do, and not while the pod drafts. */
+    void benchSeat(final int index, final boolean benched) {
+        final ServerGameLobby lobby = host();
+        if (lobby != null && !drafting(lobby) && index >= 0 && index < lobby.getNumberOfSlots()) {
+            lobby.getSlot(index).setBenched(benched);
+            local.pushLobby();
+        }
+    }
+
     void addSeat() {
         final ServerGameLobby lobby = host();
-        if (lobby != null && lobby.getNumberOfSlots() < MAX_SEATS) {
+        if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
             lobby.addSlot();
             aiSeat(lobby.getNumberOfSlots() - 1);
         }
@@ -710,7 +894,7 @@ final class Lobby {
     /** Leaves a seat for someone to join, rather than filling it with an AI. */
     void openSeat(final int index) {
         final ServerGameLobby lobby = host();
-        if (lobby != null && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
+        if (lobby != null && !drafting(lobby) && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
             final LobbySlot slot = lobby.getSlot(index);
             slot.setType(LobbySlotType.OPEN);
             slot.setName(null);
@@ -728,7 +912,7 @@ final class Lobby {
 
     void aiSeat(final int index) {
         final ServerGameLobby lobby = host();
-        if (lobby != null && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
+        if (lobby != null && !drafting(lobby) && index != local.webSeat() && index < lobby.getNumberOfSlots()) {
             final LobbySlot slot = lobby.getSlot(index);
             slot.setType(LobbySlotType.AI);
             slot.setName(computerName(lobby));
@@ -755,7 +939,7 @@ final class Lobby {
 
     void removeSeat(final int index) {
         final ServerGameLobby lobby = host();
-        if (lobby != null && index != local.webSeat() && lobby.getNumberOfSlots() > 2) {
+        if (lobby != null && !drafting(lobby) && index != local.webSeat() && lobby.getNumberOfSlots() > 2) {
             lobby.removeSlot(index);
             if (index < deckKeys.size()) {
                 deckKeys.remove(index);

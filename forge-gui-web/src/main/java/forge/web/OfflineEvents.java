@@ -152,7 +152,7 @@ final class OfflineEvents {
         }
     }
 
-    private static SealedCardPoolGenerator generator(final SealedCreate c) {
+    static SealedCardPoolGenerator generator(final SealedCreate c) {
         final LimitedPoolType type;
         try {
             type = LimitedPoolType.valueOf(c.product());

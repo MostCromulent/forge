@@ -122,7 +122,16 @@ final class ToBrowser {
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
             @Nullable String cardPool, List<CardPoolGroup> cardPools, List<Format> casualVariants, List<String> variantsOn,
-            int maxSeats, List<Seat> seats, List<String> problems, boolean canStart) {
+            int maxSeats, List<Seat> seats, List<String> problems, boolean canStart, @Nullable LimitedTable limited) {
+    }
+
+    /**
+     * A Limited table's event, as the lobby data carries it to every seat. kind is "draft" or "sealed"; product, phase
+     * and the draft's settings are there once the event is set up; phase is an EventPhase name; activeEventId names
+     * the event whose decks the next match is played with; started says the event can no longer be changed.
+     */
+    record LimitedTable(String kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
+            @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started) {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. */
@@ -133,11 +142,11 @@ final class ToBrowser {
     record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. */
+    /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. benched says it sits the next match out. */
     record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
-            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard) {
+            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */

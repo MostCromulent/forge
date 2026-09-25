@@ -22,7 +22,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart,
         ok, cancel, endTurn, autoPass, undo, concede }
 
     @Command
@@ -309,6 +309,32 @@ final class FromBrowser {
     record PoolPlay(String name, @Nullable String mode, int opponent, int count, int games) {
     }
 
+    /** The table's Limited switch, the host's: "draft" or "sealed" for an event, null for Constructed. */
+    @Command("setLimited")
+    record SetLimited(@Nullable String kind) {
+    }
+
+    /**
+     * Sets the table's event up, or sets it up again. product is a LimitedPoolType name and the fields its product needs
+     * are set, as in sealedCreate and draftStart. A draft also takes the pod size, a DoublePick name, and the pick timer
+     * and disconnect grace in seconds.
+     */
+    @Command("eventSetup")
+    record EventSetup(String product, @Nullable String block, @Nullable String combo, @Nullable String edition,
+            @Nullable String template, @Nullable String cube, @Nullable String theme, @Nullable String cubeId, int packs,
+            int podSize, @Nullable String pickRule, int timer, int grace) {
+    }
+
+    /** Keeps a seat at the table while it sits the next match out. */
+    @Command("benchSeat")
+    record BenchSeat(int index, boolean benched) {
+    }
+
+    /** Whether the deck finder lists only the event's decks. */
+    @Command("eventDecksOnly")
+    record EventDecksOnly(boolean on) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
@@ -318,5 +344,6 @@ final class FromBrowser {
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftSave.class);
+            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class,
+            EventDecksOnly.class);
 }

@@ -29,6 +29,10 @@ import forge.web.FromBrowser.PoolEdit;
 import forge.web.FromBrowser.PoolOpen;
 import forge.web.FromBrowser.PoolPlay;
 import forge.web.FromBrowser.SealedCreate;
+import forge.web.FromBrowser.BenchSeat;
+import forge.web.FromBrowser.EventDecksOnly;
+import forge.web.FromBrowser.EventSetup;
+import forge.web.FromBrowser.SetLimited;
 import forge.web.ToBrowser.Addresses;
 import forge.web.ToBrowser.CardSearch;
 import forge.web.ToBrowser.ChatLine;
@@ -284,6 +288,9 @@ public final class WebSession {
             // Match setup is drawn from the table, which only these messages describe
             channel.send(lobby.decks());
             channel.send(lobby.state());
+            if (isHost && lobby.settingUpEvent()) {
+                sendEventOptions(channel);
+            }
         } else if (now instanceof Event) {
             sendLimited(channel);
             final OfflineDraft draft = offlineDraft;
@@ -339,6 +346,11 @@ public final class WebSession {
                     "addSeat", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
+                }
+            }
+            case "setLimited", "eventSetup", "eventStart", "benchSeat", "eventDecksOnly" -> {
+                if (stage instanceof Setup) {
+                    onEvent(channel, msg);
                 }
             }
             case "chat" -> {
@@ -523,6 +535,62 @@ public final class WebSession {
             }
         }
         channel.send(lobby.state());
+    }
+
+    /** A change to the table's draft or sealed event. Everything but the finder's filter is the host's to do. */
+    private void onEvent(final BrowserChannel channel, final JsonObject msg) {
+        final String type = msg.get("t").getAsString();
+        if ("eventDecksOnly".equals(type)) {
+            lobby.setEventDecksOnly(Wire.decode(msg, EventDecksOnly.class).on());
+            channel.send(lobby.state());
+            return;
+        }
+        if (!isHost) {
+            return;
+        }
+        switch (type) {
+            case "setLimited" -> {
+                final String kind = Wire.decode(msg, SetLimited.class).kind();
+                final String problem = lobby.setLimited(kind == null ? null : "sealed".equals(kind) ? "sealed" : "draft");
+                if (problem != null) {
+                    channel.send(error(problem));
+                } else if (kind != null) {
+                    sendEventOptions(channel);
+                }
+                relistDecks(channel);
+            }
+            case "benchSeat" -> {
+                final BenchSeat bench = Wire.decode(msg, BenchSeat.class);
+                lobby.benchSeat(bench.index(), bench.benched());
+            }
+            // Building a product can wait on a web site, and dealing packs opens every pool, so neither runs here
+            case "eventSetup" -> {
+                final EventSetup setup = Wire.decode(msg, EventSetup.class);
+                ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.setUpEvent(setup)));
+            }
+            case "eventStart" -> {
+                if (offlineDraft != null) {
+                    channel.send(error("Finish or discard the offline draft first."));
+                    return;
+                }
+                ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.startEvent()));
+            }
+            default -> {
+                return;
+            }
+        }
+        channel.send(lobby.state());
+    }
+
+    private void reportProblem(final BrowserChannel channel, final String problem) {
+        if (problem != null) {
+            channel.send(error(problem));
+        }
+    }
+
+    /** The event setup form offers what the offline one does. Reading the lists touches files, so not on the socket thread. */
+    private void sendEventOptions(final BrowserChannel channel) {
+        ui.runBackgroundTask("Limited", () -> channel.send(OfflineEvents.options()));
     }
 
     /** Opens match setup: a game of this machine's own, or a seat in the host's. Tells the browser how it went. */
