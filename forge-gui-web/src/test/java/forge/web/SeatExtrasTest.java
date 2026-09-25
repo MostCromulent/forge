@@ -34,11 +34,20 @@ public class SeatExtrasTest {
         final WebGuiGame gui = new WebGuiGame();
         try {
             onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
+            awaitSeat(local);
             body.run(local, new Lobby(local));
         } finally {
             gui.close();
             onUi(local::shutdown);
         }
+    }
+
+    /** Waits for the browser's client to take its seat, which it does over the loopback after the table opens. */
+    static void awaitSeat(final LocalGame local) throws InterruptedException {
+        for (int i = 0; i < 100 && local.webSeat() < 0; i++) {
+            Thread.sleep(100);
+        }
+        Assert.assertTrue(local.webSeat() >= 0, "the browser never took its seat");
     }
 
     /** Waits for the lobby to report no problems, and returns the last list it gave. */
@@ -152,6 +161,100 @@ public class SeatExtrasTest {
                 Assert.assertFalse(card.getRules().getAiHints().getRemAIDecks(), card.getName() + " is not for the computer");
             }
         });
+    }
+
+    /**
+     * A hosted table whose lobby answers its own updates as a browser's session does, rebuilding the deck list when
+     * the rules change. Updates arrive while a change is still being made, which the plain table does not show.
+     */
+    static void atLiveTable(final TableTest body) throws Exception {
+        final LocalGame local = new LocalGame();
+        final WebGuiGame gui = new WebGuiGame();
+        final java.util.concurrent.atomic.AtomicReference<Lobby> ref = new java.util.concurrent.atomic.AtomicReference<>();
+        try {
+            onUi(() -> local.openHost("Host", gui, () -> {
+                final Lobby lobby = ref.get();
+                if (lobby != null && lobby.restrictionsChanged()) {
+                    lobby.decks();
+                }
+            }, (from, text) -> { }));
+            ref.set(new Lobby(local));
+            awaitSeat(local);
+            body.run(local, ref.get());
+        } finally {
+            gui.close();
+            onUi(local::shutdown);
+        }
+    }
+
+    /** Fails if switching to Momir Basic wipes the planes the computer's seat was just dealt. */
+    @Test(timeOut = 60_000)
+    public void momirKeepsTheComputersPlanes() throws Exception {
+        atLiveTable((local, lobby) -> {
+            final int c = computer(local);
+            onUi(lobby::decks);
+            onUi(() -> lobby.setVariant("Planechase", true));
+            onUi(() -> lobby.setFormat(GameType.MomirBasic.name()));
+            onUi(() -> {
+                if (lobby.restrictionsChanged()) {
+                    lobby.decks();
+                }
+            });
+            Assert.assertTrue(count(local.hostedLobby().getSlot(c).getDeck(), DeckSection.Planes) >= 10,
+                    "the computer lost its planes when the format changed");
+        });
+    }
+
+    /** Fails if a computer seat added after a variant came on is dealt its deck without the variant's section. */
+    @Test(timeOut = 60_000)
+    public void anAddedSeatGetsItsAvatar() throws Exception {
+        atTable((local, lobby) -> {
+            onUi(lobby::decks);
+            final String deck = legalDeck(lobby);
+            onUi(() -> lobby.setVariant("Vanguard", true));
+            onUi(lobby::decks);
+            onUi(lobby::addSeat);
+            final int added = local.hostedLobby().getNumberOfSlots() - 1;
+            onUi(() -> lobby.setDeck(added, deck));
+            Assert.assertEquals(count(local.hostedLobby().getSlot(added).getDeck(), DeckSection.Avatar), 1,
+                    "the added computer seat has no avatar");
+        });
+    }
+
+    /** Fails if the teams Archenemy set stay behind once it is off, which makes a later free-for-all a team game. */
+    @Test(timeOut = 60_000)
+    public void teamsGoBackWhenArchenemyEnds() throws Exception {
+        atTable((local, lobby) -> {
+            onUi(lobby::addSeat);
+            onUi(() -> lobby.setVariant("Archenemy", true));
+            onUi(() -> lobby.setArchenemy(computer(local)));
+            onUi(() -> lobby.setVariant("Archenemy", false));
+            final var host = local.hostedLobby();
+            final java.util.Set<Integer> teams = new java.util.HashSet<>();
+            for (int i = 0; i < host.getNumberOfSlots(); i++) {
+                teams.add(host.getSlot(i).getTeam());
+            }
+            Assert.assertEquals(teams.size(), host.getNumberOfSlots(), "seats still share a team: " + teams);
+        });
+    }
+
+    /** Fails if a Momir seat reports its empty dealt deck as too small, which the format never builds. */
+    @Test(timeOut = 60_000)
+    public void aMomirSeatShowsNoDeckFault() throws Exception {
+        final var prefs = FModel.getPreferences();
+        final boolean enforced = prefs.getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
+        prefs.setPref(FPref.ENFORCE_DECK_LEGALITY, true);
+        try {
+            atTable((local, lobby) -> {
+                onUi(() -> lobby.setFormat(GameType.MomirBasic.name()));
+                onUi(lobby::decks);
+                for (final ToBrowser.Seat seat : lobby.state().table().seats()) {
+                    Assert.assertNull(seat.problem(), seat.name() + " shows " + seat.problem());
+                }
+            });
+        } finally {
+            prefs.setPref(FPref.ENFORCE_DECK_LEGALITY, enforced);
+        }
     }
 
     /** Fails if Momir Basic still demands a deck, or a seat's readiness waits on a deck nobody can choose. */
