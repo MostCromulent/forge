@@ -4,14 +4,12 @@ import forge.StaticData;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
-import forge.deck.DeckFormat;
 import forge.deck.DeckProxy;
 import forge.deck.DeckUrlLoader;
 import forge.deck.DeckgenUtil;
 import forge.deck.NetDeckCategory;
 import forge.deck.DeckSection;
 import forge.card.CardEdition;
-import forge.card.ColorSet;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.quest.QuestController;
@@ -19,6 +17,7 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.Lang;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
 import forge.web.ToBrowser.DeckCard;
@@ -259,24 +258,7 @@ final class DeckCatalog {
 
     /** The deck's colour identity as WUBRG letters, or "C" when it has none. */
     static String colors(final Deck deck) {
-        final ColorSet identity = DeckProxy.getColorIdentity(deck);
-        final StringBuilder sb = new StringBuilder();
-        if (identity.hasWhite()) {
-            sb.append('W');
-        }
-        if (identity.hasBlue()) {
-            sb.append('U');
-        }
-        if (identity.hasBlack()) {
-            sb.append('B');
-        }
-        if (identity.hasRed()) {
-            sb.append('R');
-        }
-        if (identity.hasGreen()) {
-            sb.append('G');
-        }
-        return sb.length() == 0 ? "C" : sb.toString();
+        return CardCatalog.letters(DeckProxy.getColorIdentity(deck));
     }
 
     /** What the panel reports about a deck beside its card list. */
@@ -388,23 +370,13 @@ final class DeckCatalog {
         final List<DeckProxy> out = new ArrayList<>();
         for (final DeckProxy proxy : DeckUrlLoader.getUrlDecks()) {
             final Deck deck = proxy.getDeck();
-            final GameType family = deck.getDeckFormat() != null ? familyOf(deck.getDeckFormat())
+            final GameType family = deck.getDeckFormat() != null ? DeckStore.family(deck.getDeckFormat())
                     : deck.has(DeckSection.Commander) ? GameType.Commander : GameType.Constructed;
             if (family == DeckStore.family(format)) {
                 out.add(proxy);
             }
         }
         return out;
-    }
-
-    static GameType familyOf(final DeckFormat deckFormat) {
-        return switch (deckFormat) {
-            case Commander -> GameType.Commander;
-            case Oathbreaker -> GameType.Oathbreaker;
-            case Brawl -> GameType.Brawl;
-            case TinyLeaders -> GameType.TinyLeaders;
-            default -> GameType.Constructed;
-        };
     }
 
     /** The site a linked deck came from, as its makers write its name. */
@@ -471,10 +443,7 @@ final class DeckCatalog {
         if (more > 0) {
             return String.join(", ", shown) + " and " + more + " more";
         }
-        if (shown.size() == 1) {
-            return shown.get(0);
-        }
-        return String.join(", ", shown.subList(0, shown.size() - 1)) + " and " + shown.get(shown.size() - 1);
+        return Lang.joinHomogenous(shown);
     }
 
     private static int count(final CardPool pool) {

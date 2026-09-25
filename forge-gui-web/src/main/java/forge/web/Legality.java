@@ -10,6 +10,7 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import org.apache.commons.lang3.Range;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -65,7 +66,7 @@ final class Legality {
             }
             if (problemCount() == 1) {
                 if (!deckItems.isEmpty()) {
-                    return capitalised(deckItems.get(0)) + ".";
+                    return StringUtils.capitalize(deckItems.get(0)) + ".";
                 }
                 final Map.Entry<String, String> only = flags.entrySet().iterator().next();
                 return describe(only.getKey(), only.getValue()) + ".";
@@ -134,9 +135,8 @@ final class Legality {
         for (final PaperCard c : commanders) {
             colours |= c.getRules().getColorIdentity().getColor();
         }
-        final ColorSet identity = ColorSet.fromMask(colours);
-        return (identity.hasWhite() ? "W" : "") + (identity.hasBlue() ? "U" : "") + (identity.hasBlack() ? "B" : "")
-                + (identity.hasRed() ? "R" : "") + (identity.hasGreen() ? "G" : "");
+        final String letters = CardCatalog.letters(ColorSet.fromMask(colours));
+        return "C".equals(letters) ? "" : letters;
     }
 
     /** The cards whose colours the rest of the deck must share. In Oathbreaker that is the oathbreaker alone, not its spell. */
@@ -230,10 +230,6 @@ final class Legality {
             return flag;
         }
         return Character.isDigit(flag.charAt(0)) ? "over the copy limit" : "restricted";
-    }
-
-    private static String capitalised(final String s) {
-        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     /** "a", "a, and b", "a, b, and c". */

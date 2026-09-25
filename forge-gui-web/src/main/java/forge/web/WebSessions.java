@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
 import forge.web.ToBrowser.Address;
@@ -38,11 +39,8 @@ final class WebSessions implements WebServer.Endpoint {
     private boolean mayGiveUp;
     /** Set from the console's checkbox; without a console there is nothing else to show Forge is running. */
     private boolean quitWhenEmpty = true;
-    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(r -> {
-        final Thread t = new Thread(r, "WebStartIdle");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(
+            new ThreadFactoryBuilder().setNameFormat("WebStartIdle").setDaemon(true).build());
     /**
      * The most browsers kept track of at once. Anyone with an invite link can open one after another, so past this
      * the ones that have gone and hold nothing are forgotten, and if none has, the newcomer is turned away.

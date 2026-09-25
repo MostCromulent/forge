@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -113,11 +114,8 @@ import java.util.function.Predicate;
  */
 public class WebGuiGame extends NetworkGuiGame {
     private final ReentrantLock mirrorLock = new ReentrantLock();
-    private final ExecutorService dispatch = Executors.newSingleThreadExecutor(r -> {
-        final Thread t = new Thread(r, "WebClient");
-        t.setDaemon(true);
-        return t;
-    });
+    private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
+            new ThreadFactoryBuilder().setNameFormat("WebClient").setDaemon(true).build());
     private final BrowserModel model = new BrowserModel();
     private final PendingRequests requests = new PendingRequests(this::send);
     private final DeltaSyncManager snapshotter = new DeltaSyncManager();
@@ -545,16 +543,12 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void message(final String message, final String title) {
-        send(notice(title, message, false));
+        send(new Notice(title, message, false));
     }
 
     @Override
     public void showErrorDialog(final String message, final String title) {
-        send(notice(title, message, true));
-    }
-
-    private static Notice notice(final String title, final String message, final boolean error) {
-        return new Notice(title, message, error);
+        send(new Notice(title, message, true));
     }
 
     private Zones zonesMessage() {

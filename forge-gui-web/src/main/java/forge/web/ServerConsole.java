@@ -135,9 +135,14 @@ final class ServerConsole implements IProgressBar {
     }
 
     private void lookUpAddresses() {
-        final Thread addresses = new Thread(this::findAddresses, "ForgeAddresses");
-        addresses.setDaemon(true);
-        addresses.start();
+        inBackground("ForgeAddresses", this::findAddresses);
+    }
+
+    /** For work that waits on the network or the router, which the event thread must not do. */
+    private static void inBackground(final String name, final Runnable work) {
+        final Thread t = new Thread(work, name);
+        t.setDaemon(true);
+        t.start();
     }
 
     /** Shows where asking the router stands, and relists the links, since the internet one depends on it. */
@@ -173,7 +178,7 @@ final class ServerConsole implements IProgressBar {
         final boolean up = service.running();
         startStop.setEnabled(false);
         starting(up ? "Stopping the server" : "Starting the server");
-        final Thread worker = new Thread(() -> {
+        inBackground("ForgeServerControl", () -> {
             try {
                 if (up) {
                     service.stop();
@@ -191,9 +196,7 @@ final class ServerConsole implements IProgressBar {
                 stopped();
             }
             SwingUtilities.invokeLater(() -> startStop.setEnabled(true));
-        }, "ForgeServerControl");
-        worker.setDaemon(true);
-        worker.start();
+        });
     }
 
     /**
@@ -277,12 +280,9 @@ final class ServerConsole implements IProgressBar {
         quitWhenEmpty.addActionListener(e -> service.quitWhenEmpty(quitWhenEmpty.isSelected()));
         forwardPort.setAlignmentX(0f);
         forwardPort.setEnabled(false);
-        // Closing a forwarding waits on the router, which the event thread must not do
         forwardPort.addActionListener(e -> {
             final boolean on = forwardPort.isSelected();
-            final Thread worker = new Thread(() -> service.forwardPort(on), "ForgePortForward");
-            worker.setDaemon(true);
-            worker.start();
+            inBackground("ForgePortForward", () -> service.forwardPort(on));
         });
         forwardState.setAlignmentX(0f);
         forwardState.setBorder(BorderFactory.createEmptyBorder(2, 24, 0, 0));

@@ -68,13 +68,4 @@ final class HostRequests {
             waiting.complete(value);
         }
     }
-
-    /** Nothing is going to answer: release anything still waiting so no thread is stuck. */
-    void abandon() {
-        for (final CompletableFuture<List<Integer>> waiting : open.values()) {
-            waiting.complete(null);
-        }
-        open.clear();
-        pending.clear();
-    }
 }

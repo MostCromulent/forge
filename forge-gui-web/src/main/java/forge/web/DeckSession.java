@@ -36,6 +36,7 @@ import forge.web.ToBrowser.ImportResult;
 import forge.web.ToBrowser.ImportSummary;
 import forge.web.ToBrowser.NameTaken;
 import forge.web.ToBrowser.Notice;
+import org.apache.commons.lang3.EnumUtils;
 import org.tinylog.Logger;
 
 import java.io.IOException;
@@ -281,7 +282,7 @@ final class DeckSession {
     private ImportResult fetched(final ImportFetch fetch) {
         try {
             final DeckUrlLoader.FetchedDeck f = DeckUrlLoader.fetch(fetch.url());
-            final Check check = Check.of(DeckCatalog.familyOf(f.format()), null);
+            final Check check = Check.of(DeckStore.family(f.format()), null);
             final DeckImport.Read read = DeckImport.read(f.text(), check);
             final ImportResult result = DeckImport.result(fetch.request(), read, check,
                     new Fetched(f.providerName(), f.sourceUrl(), f.text(), check.format().name()));
@@ -390,23 +391,13 @@ final class DeckSession {
             return null;
         }
         if (id != null && c.clash() == FromBrowser.Clash.keep) {
-            deck.setName(freeDeviceName(deck.getName()));
+            final List<String> onDevice = device.values().stream().map(d -> d.deck().getName()).toList();
+            deck.setName(DeckStore.freeName(onDevice, deck.getName(), null));
             id = null;
         }
         final String kept = id == null ? UUID.randomUUID().toString() : id;
         sendDeviceDeck(kept, String.join("\n", DeckSerializer.serializeDeck(deck)), check.format());
         return lobby.adopt(DeckCatalog.DEVICE, kept, deck);
-    }
-
-    private String freeDeviceName(final String wanted) {
-        String candidate = wanted;
-        for (int n = 2; ; n++) {
-            final String tried = candidate;
-            if (device.values().stream().noneMatch(d -> DeckStore.sameFile(d.deck().getName(), tried))) {
-                return candidate;
-            }
-            candidate = wanted + " (" + n + ")";
-        }
     }
 
     /** Keeps a guest's deck in the lobby's list and sends it to the guest's browser, which stores it. */
@@ -465,10 +456,6 @@ final class DeckSession {
     }
 
     private static GameType gameType(final String name) {
-        try {
-            return GameType.valueOf(name);
-        } catch (final IllegalArgumentException | NullPointerException e) {
-            return GameType.Constructed;
-        }
+        return EnumUtils.getEnum(GameType.class, name, GameType.Constructed);
     }
 }

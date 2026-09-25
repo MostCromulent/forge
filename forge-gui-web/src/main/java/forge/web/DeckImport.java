@@ -16,6 +16,7 @@ import forge.web.ToBrowser.ImportLine;
 import forge.web.ToBrowser.ImportProblem;
 import forge.web.ToBrowser.ImportResult;
 import forge.web.ToBrowser.ImportSummary;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -107,7 +108,7 @@ final class DeckImport {
             final Integer at = lineOf.get(card);
             if (at != null) {
                 kinds[at] = PROBLEM;
-                cardProblems.add(new ImportProblem(at, "Line " + (at + 1) + ": " + card, capitalised(flag) + ".",
+                cardProblems.add(new ImportProblem(at, "Line " + (at + 1) + ": " + card, StringUtils.capitalize(flag) + ".",
                         List.of(new ImportFix("leaveOut", "Leave out", null))));
             }
         });
@@ -138,16 +139,12 @@ final class DeckImport {
     }
 
     /** The known card name closest to an unknown one, or null when none is close enough to be the one meant. */
-    static String closestName(final String unknown) {
-        return CardCatalog.get().closestName(unknown);
-    }
-
     private static ImportProblem unknown(final int line, final String text, final boolean unsupported) {
         final String title = "Line " + (line + 1) + ": \"" + text + "\"";
         if (unsupported) {
             return new ImportProblem(line, title, "Forge can't play this card.", List.of(new ImportFix("leaveOut", "Leave out", null)));
         }
-        final String closest = closestName(text.replaceFirst("^\\s*\\d+x?\\s+", "").replaceFirst("\\s*[\\[(].*$", ""));
+        final String closest = CardCatalog.get().closestName(text.replaceFirst("^\\s*\\d+x?\\s+", "").replaceFirst("\\s*[\\[(].*$", ""));
         final List<ImportFix> fixes = new ArrayList<>();
         if (closest != null) {
             fixes.add(new ImportFix("use", "Use " + closest, closest));
@@ -189,9 +186,5 @@ final class DeckImport {
                 ? "The list has no card that can lead it. Choose one in the editor."
                 : "The list has no Commander section. Pick one of its legendary creatures.", fixes));
         return null;
-    }
-
-    private static String capitalised(final String s) {
-        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 }

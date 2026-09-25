@@ -1,9 +1,12 @@
 package forge.web;
 
 import forge.deck.Deck;
+import forge.deck.DeckFormat;
 import forge.game.GameType;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
+
+import java.util.Collection;
 
 /** Where the host keeps each format's decks, and the rules a deck's name has to follow to be saved there. */
 final class DeckStore {
@@ -36,6 +39,17 @@ final class DeckStore {
         };
     }
 
+    /** The same, for the format a deck file records. */
+    static GameType family(final DeckFormat format) {
+        return switch (format) {
+            case Commander -> GameType.Commander;
+            case Oathbreaker -> GameType.Oathbreaker;
+            case Brawl -> GameType.Brawl;
+            case TinyLeaders -> GameType.TinyLeaders;
+            default -> GameType.Constructed;
+        };
+    }
+
     /** Why a name can't be a deck's, or null when it can. */
     static String nameProblem(final String name) {
         if (name == null || name.isBlank()) {
@@ -59,7 +73,11 @@ final class DeckStore {
 
     /** The name of the deck already saved where this name would go, or null. */
     static String taken(final IStorage<Deck> storage, final String name) {
-        for (final String existing : storage.getItemNames()) {
+        return taken(storage.getItemNames(), name);
+    }
+
+    private static String taken(final Collection<String> names, final String name) {
+        for (final String existing : names) {
             if (sameFile(existing, name)) {
                 return existing;
             }
@@ -72,9 +90,14 @@ final class DeckStore {
      * name the caller already saves under, which it may keep; null when it saves nothing yet.
      */
     static String freeName(final IStorage<Deck> storage, final String wanted, final String mine) {
+        return freeName(storage.getItemNames(), wanted, mine);
+    }
+
+    /** As above, among any names: a guest's decks are kept in its browser, not in storage. */
+    static String freeName(final Collection<String> names, final String wanted, final String mine) {
         String candidate = wanted;
         for (int n = 2; ; n++) {
-            final String existing = taken(storage, candidate);
+            final String existing = taken(names, candidate);
             if (existing == null || (mine != null && sameFile(existing, mine))) {
                 return candidate;
             }
