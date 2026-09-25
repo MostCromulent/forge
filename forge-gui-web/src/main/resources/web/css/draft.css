@@ -1,0 +1,30 @@
+/* The pack dial and the drafting screen. */
+
+.dial { position: relative; flex: none; }
+.dial svg { position: absolute; inset: 0; overflow: visible; }
+.dial-track { fill: none; stroke: var(--surface-3); stroke-width: 22; }
+.dial-feed { fill: none; stroke: var(--accent-2); stroke-width: 2.5; stroke-linecap: round; }
+.dial-chevron { fill: none; stroke: var(--faint); stroke-width: 1.6; stroke-linecap: round; }
+.dial-chevron.hot { stroke: var(--accent-2); }
+.dial-pack { position: absolute; left: 0; top: 0; width: 12px; height: 17px; margin: -8.5px 0 0 -6px; border-radius: 2px;
+  background: linear-gradient(160deg, #6b5728, #2c2412); border: 1px solid var(--accent); box-shadow: 0 1px 3px #000c; }
+.dial-pack.hand { border-color: var(--accent-2); }
+.dial-pack.hand.me { box-shadow: 0 0 0 2px var(--accent-2), 0 0 10px var(--accent-glow); }
+.dial-seat { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 1px; }
+.dial-face { width: 30px; height: 30px; border-radius: 50%; background: var(--surface-3); border: 2px solid var(--line-bright);
+  display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: var(--muted); position: relative; }
+.dial-face.ai::after { content: 'AI'; position: absolute; right: -8px; bottom: -4px; font-size: 7.5px; font-weight: 800;
+  background: var(--surface-2); border: 1px solid var(--line-bright); border-radius: 4px; padding: 0 2px; color: var(--muted); }
+.dial-name { font-size: 10px; color: var(--muted); white-space: nowrap; max-width: 76px; overflow: hidden; text-overflow: ellipsis; }
+.dial-seat.you .dial-face { border-color: var(--accent-2); color: var(--accent-2); width: 38px; height: 38px; box-shadow: 0 0 14px var(--accent-glow); }
+.dial-seat.you .dial-name { color: var(--accent-2); font-weight: 700; }
+.dial-seat.next .dial-face { border-color: var(--text); color: var(--text); }
+.dial-seat.next .dial-name { color: var(--text); font-weight: 600; }
+.dial-seat.held .dial-face { border-style: dashed; opacity: .55; }
+.dial-count { position: absolute; top: -8px; right: -10px; min-width: 17px; height: 17px; border-radius: 9px; padding: 0 4px;
+  font-size: 10px; font-weight: 750; display: grid; place-items: center; background: var(--bg); border: 2px solid var(--danger);
+  color: var(--danger); font-variant-numeric: tabular-nums; }
+.dial-centre { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; display: grid; line-height: 1.15; }
+.dial-centre b { font-size: 16px; }
+.dial-centre span { font-size: 11px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .dial-pack { transition: none; } }
