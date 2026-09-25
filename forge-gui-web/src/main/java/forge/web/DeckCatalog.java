@@ -20,9 +20,7 @@ import forge.model.FModel;
 import forge.util.Lang;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
-import forge.web.ToBrowser.DeckCard;
 import forge.web.ToBrowser.DeckDetails;
-import forge.web.ToBrowser.DeckGroup;
 import forge.web.ToBrowser.DeckStats;
 import forge.web.ToBrowser.DeckSummary;
 import forge.web.ToBrowser.ExtraChoice;
@@ -60,6 +58,8 @@ final class DeckCatalog {
     /** A colour generator knows its own colour before it builds anything; the other generators do not. */
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
+    /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
+    private static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), List.of());
     /** Mana values 0 to 5, then everything 6 and above in the last one. */
     private static final int CURVE_BUCKETS = 7;
 
@@ -251,7 +251,8 @@ final class DeckCatalog {
                 return null;
             }
             return new DeckDetails(key, deck.getName(), problem(deck, format, pool), colors(deck), stats(deck),
-                    groups(deck.get(DeckSection.Main)), cards(deck.get(DeckSection.Sideboard)), deck.getSleeveArtKey(),
+                    DeckEditor.groups(deck.getMain(), NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
+                    deck.getSleeveArtKey(),
                     deck.getSleeveArtOffset());
         }
     }
@@ -450,41 +451,6 @@ final class DeckCatalog {
         return pool == null ? 0 : pool.countAll();
     }
 
-    private static List<DeckCard> cards(final CardPool pool) {
-        final List<DeckCard> out = new ArrayList<>();
-        if (pool == null) {
-            return out;
-        }
-        for (final Map.Entry<PaperCard, Integer> e : pool) {
-            out.add(card(e.getKey(), e.getValue()));
-        }
-        return out;
-    }
-
-    private static DeckCard card(final PaperCard card, final int count) {
-        return new DeckCard(card.getName(), count, card.getImageKey(false));
-    }
-
-    /** Main-deck cards under the headings a decklist normally carries. */
-    private static List<DeckGroup> groups(final CardPool pool) {
-        final Map<String, List<DeckCard>> sections = new LinkedHashMap<>();
-        for (final String heading : CardCatalog.HEADINGS) {
-            sections.put(heading, new ArrayList<>());
-        }
-        if (pool != null) {
-            for (final Map.Entry<PaperCard, Integer> e : pool) {
-                sections.get(CardCatalog.heading(e.getKey())).add(card(e.getKey(), e.getValue()));
-            }
-        }
-        final List<DeckGroup> out = new ArrayList<>();
-        for (final Map.Entry<String, List<DeckCard>> e : sections.entrySet()) {
-            if (!e.getValue().isEmpty()) {
-                out.add(new DeckGroup(e.getKey(), e.getValue()));
-            }
-        }
-        return out;
-    }
-
     /** A seat's choice for one extra section: what it is called, and its cards, or null to follow the main deck's own. */
     record Extra(String label, CardPool cards) {
     }
@@ -501,23 +467,22 @@ final class DeckCatalog {
         final CardPool own = main == null ? null : main.get(section);
         if (own != null && !own.isEmpty()) {
             out.add(new ExtraChoice(OWN, section == DeckSection.Avatar ? "The deck's default" : "The deck's own",
-                    own.countAll(), sectionProblem(section, own), null, null, null, null));
+                    own.countAll(), sectionProblem(section, own), null, null, null));
         }
         if (section == DeckSection.Avatar) {
-            out.add(new ExtraChoice(RANDOM, "Random", null, null, null, null, null, null));
+            out.add(new ExtraChoice(RANDOM, "Random", null, null, null, null, null));
             for (final PaperCard avatar : avatars(forComputer)) {
                 out.add(new ExtraChoice(AVATAR + avatar.getName(), avatar.getName(), null, null, avatar.getImageKey(false),
-                        avatar.getRules().getHand(), avatar.getRules().getLife(),
-                        !avatar.getRules().getAiHints().getRemAIDecks()));
+                        avatar.getRules().getHand(), avatar.getRules().getLife()));
             }
             return out;
         }
-        out.add(new ExtraChoice(GENERATE, "Generated", null, null, null, null, null, null));
-        out.add(new ExtraChoice(RANDOM, "Random saved deck", null, null, null, null, null, null));
+        out.add(new ExtraChoice(GENERATE, "Generated", null, null, null, null, null));
+        out.add(new ExtraChoice(RANDOM, "Random saved deck", null, null, null, null, null));
         for (final DeckProxy proxy : savedDecks(section)) {
             final CardPool cards = proxy.getDeck().get(section);
             out.add(new ExtraChoice(SAVED + proxy.getPath() + "/" + proxy.getName(), proxy.getName(),
-                    cards == null ? 0 : cards.countAll(), sectionProblem(section, cards), null, null, null, null));
+                    cards == null ? 0 : cards.countAll(), sectionProblem(section, cards), null, null, null));
         }
         return out;
     }

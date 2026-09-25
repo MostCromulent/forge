@@ -27,7 +27,8 @@ final class WebSettings {
             "interruptTargeting", FPref.YIELD_INTERRUPT_ON_TARGETING,
             "interruptTriggers", FPref.YIELD_INTERRUPT_ON_TRIGGERS,
             "interruptMassRemoval", FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL,
-            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW);
+            "autoTapPreview", FPref.UI_SHOW_AUTOTAP_PREVIEW,
+            "autoPassNoActions", FPref.YIELD_AUTO_PASS_NO_ACTIONS);
 
     static ServerSettings values(final PlayerSettings player) {
         return new ServerSettings(
@@ -37,7 +38,6 @@ final class WebSettings {
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_TRIGGERS),
                 player.getBoolean(FPref.YIELD_INTERRUPT_ON_MASS_REMOVAL),
                 player.getBoolean(FPref.UI_SHOW_AUTOTAP_PREVIEW),
-                player.getBoolean(FPref.YIELD_AUTO_PASS_NO_ACTIONS),
                 ForgeConstants.AUTO_DECISION_PER_CARD.equals(player.get(FPref.UI_AUTO_DECISION_MODE)) ? "card" : "ability",
                 GameLogVerbosity.fromString(player.get(FPref.DEV_LOG_ENTRY_TYPE)),
                 player.get(FPref.UI_TARGETING_OVERLAY),
@@ -58,8 +58,6 @@ final class WebSettings {
             // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
             // game opened, so a change mid-game has to reach it as well. Before then the seed carries it.
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
-        } else if ("autoPassNoActions".equals(key)) {
-            setEverywhere(player, controller, FPref.YIELD_AUTO_PASS_NO_ACTIONS, String.valueOf(Boolean.parseBoolean(value)));
         } else if ("autoYieldMode".equals(key)) {
             setEverywhere(player, controller, FPref.UI_AUTO_DECISION_MODE,
                     "card".equals(value) ? ForgeConstants.AUTO_DECISION_PER_CARD : ForgeConstants.AUTO_DECISION_PER_ABILITY);

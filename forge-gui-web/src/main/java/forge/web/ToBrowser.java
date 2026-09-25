@@ -104,7 +104,7 @@ final class ToBrowser {
     }
 
     record DeckDetails(String key, String name, @Nullable String problem, String colors, DeckStats stats,
-            List<DeckGroup> main, List<DeckCard> sideboard, @Nullable String sleeveArt, int sleeveOffset) {
+            List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset) {
     }
 
     record DeckStats(int main, int sideboard, int lands, float averageMana, List<Integer> curve,
@@ -112,12 +112,6 @@ final class ToBrowser {
     }
 
     record TypeCount(String name, int count) {
-    }
-
-    record DeckGroup(String heading, List<DeckCard> cards) {
-    }
-
-    record DeckCard(String name, int count, String image) {
     }
 
     /** Match setup. No table means no lobby is open. */
@@ -155,7 +149,7 @@ final class ToBrowser {
     }
 
     record ExtraChoice(String key, String label, @Nullable Integer count, @Nullable String problem,
-            @Nullable String image, @Nullable Integer hand, @Nullable Integer life, @Nullable Boolean forComputer) {
+            @Nullable String image, @Nullable Integer hand, @Nullable Integer life) {
     }
 
     @Message("addresses")
@@ -354,7 +348,7 @@ final class ToBrowser {
     /** The Forge preferences the options dialog shares with the desktop client. */
     record ServerSettings(boolean interruptAttackers, boolean interruptOpponentSpell, boolean interruptTargeting,
             boolean interruptTriggers, boolean interruptMassRemoval, boolean autoTapPreview,
-            boolean autoPassNoActions, String autoYieldMode, GameLogVerbosity logDetail, String arrows,
+            String autoYieldMode, GameLogVerbosity logDetail, String arrows,
             String highlightColor, int soundVolume, int musicVolume) {
     }
 
@@ -423,7 +417,7 @@ final class ToBrowser {
     /** Scry and friends: the whole library, with only the top cards movable. */
     @Request("manipulate")
     record ManipulateRequest(@Nullable String title, List<RequestOption> options, List<Integer> movable, boolean toTop,
-            boolean toBottom, boolean toAnywhere, @Name("default") List<Integer> defaultAnswer) {
+            boolean toBottom, @Name("default") List<Integer> defaultAnswer) {
     }
 
     /** A row of buttons; the answer is the index of the one pressed. */

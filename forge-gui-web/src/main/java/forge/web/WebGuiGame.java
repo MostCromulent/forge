@@ -758,7 +758,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final List<CardView> list = Lists.newArrayList(cards);
         // The original order is always a valid answer; arrangeForMove throws on an empty list
         final ManipulateRequest request = new ManipulateRequest(title, options(list, null),
-                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, toAnywhere, Answers.range(0, list.size()));
+                Answers.indicesOf(list, Lists.newArrayList(manipulable)), toTop, toBottom, Answers.range(0, list.size()));
         return Answers.pick(list, ask(request, Answers.indexList(list.size(), list.size(), list.size())));
     }
 

@@ -202,8 +202,8 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                     </div>
                   )}
                   <div class="readlist cols">
-                    <div>{summary.main.map(g => <Group key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
-                    <div>{summary.sideboardCards.length > 0 && <Group heading="Sideboard" cards={summary.sideboardCards} />}</div>
+                    <div>{summary.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
+                    <div>{summary.sideboardCards.length > 0 && <CardGroup heading="Sideboard" cards={summary.sideboardCards} />}</div>
                   </div>
                 </>}
           </div>
@@ -231,7 +231,8 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   );
 }
 
-function Group({ heading, cards }: { heading: string; cards: EditorCard[] }) {
+/** One heading of a deck list and its cards, each flagged when it has a problem. The deck finder lists a deck with it too. */
+export function CardGroup({ heading, cards }: { heading: string; cards: EditorCard[] }) {
   return (
     <div class="group">
       <h4>{heading}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>

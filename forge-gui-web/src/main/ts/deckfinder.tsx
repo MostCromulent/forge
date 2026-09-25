@@ -6,13 +6,14 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { Curve } from './deckhalf';
+import { CardGroup } from './importer';
 import { Pip, Pips } from './symbols';
 import { changeUi, ui } from './ui';
 import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { DeckCard, DeckDetails, DeckSummary, Seat } from './protocol';
+import type { DeckDetails, DeckSummary, Seat } from './protocol';
 
 const SEARCH_DEBOUNCE_MS = 200;
 const PEEK_W = 240;
@@ -360,19 +361,10 @@ function Chosen({ details }: { details: DeckDetails }) {
         </div>
       </div>
       <div class="dk-cards">
-        {details.main.map(g => <Group key={g.heading} heading={g.heading} cards={g.cards} />)}
-        {details.sideboard.length > 0 && <Group heading="Sideboard" cards={details.sideboard} />}
+        {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}
+        {details.sideboard.length > 0 && <CardGroup heading="Sideboard" cards={details.sideboard} />}
       </div>
     </>
-  );
-}
-
-function Group({ heading, cards }: { heading: string; cards: DeckCard[] }) {
-  return (
-    <div class="group">
-      <h4>{heading}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>
-      {cards.map((c, i) => <div key={i} class="dk-line" data-image={c.image}><span class="n">{c.count}</span>{c.name}</div>)}
-    </div>
   );
 }
 

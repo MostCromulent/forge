@@ -424,22 +424,16 @@ public final class WebSession {
             }
             case "setFormat" -> {
                 lobby.setFormat(Wire.decode(msg, SetFormat.class).format());
-                if (lobby.restrictionsChanged()) {
-                    channel.send(lobby.decks());
-                }
+                relistDecks(channel);
             }
             case "setCardPool" -> {
                 lobby.setCardPool(Wire.decode(msg, SetCardPool.class).cardPool());
-                if (lobby.restrictionsChanged()) {
-                    channel.send(lobby.decks());
-                }
+                relistDecks(channel);
             }
             case "setVariant" -> {
                 final SetVariant variant = Wire.decode(msg, SetVariant.class);
                 lobby.setVariant(variant.variant(), variant.on());
-                if (lobby.restrictionsChanged()) {
-                    channel.send(lobby.decks());
-                }
+                relistDecks(channel);
             }
             case "setArchenemy" -> lobby.setArchenemy(Wire.decode(msg, SetArchenemy.class).index());
             case "setSeatExtra" -> {
@@ -564,14 +558,19 @@ public final class WebSession {
         }
     }
 
+    /** A new format, card pool or variant can change which decks a seat may take, so the list goes out again. */
+    private void relistDecks(final BrowserChannel to) {
+        if (lobby.restrictionsChanged()) {
+            to.send(lobby.decks());
+        }
+    }
+
     /** The table changed. The browser sees it only once it is set up; until then it is still being built. */
     private void lobbyChanged() {
         final BrowserChannel b = browser;
         if (b != null && stage instanceof Setup) {
             // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too
-            if (lobby.restrictionsChanged()) {
-                b.send(lobby.decks());
-            }
+            relistDecks(b);
             b.send(lobby.state());
         }
     }

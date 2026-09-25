@@ -299,7 +299,6 @@ export interface ManipulateRequest {
   movable: number[];
   toTop: boolean;
   toBottom: boolean;
-  toAnywhere: boolean;
   default: number[];
 }
 
@@ -845,8 +844,8 @@ export interface DeckDetails {
   problem?: string;
   colors: string;
   stats: DeckStats;
-  main: DeckGroup[];
-  sideboard: DeckCard[];
+  main: EditorGroup[];
+  sideboard: EditorCard[];
   sleeveArt?: string;
   sleeveOffset: number;
 }
@@ -859,7 +858,6 @@ export interface ExtraChoice {
   image?: string;
   hand?: number;
   life?: number;
-  forComputer?: boolean;
 }
 
 export interface LobbyTable {
@@ -920,7 +918,6 @@ export interface ServerSettings {
   interruptTriggers: boolean;
   interruptMassRemoval: boolean;
   autoTapPreview: boolean;
-  autoPassNoActions: boolean;
   autoYieldMode: string;
   logDetail: GameLogVerbosity;
   arrows: string;
@@ -1105,15 +1102,21 @@ export interface DeckStats {
   types: TypeCount[];
 }
 
-export interface DeckGroup {
+export interface EditorGroup {
   heading: string;
-  cards: DeckCard[];
+  cards: EditorCard[];
 }
 
-export interface DeckCard {
+export interface EditorCard {
   name: string;
   count: number;
   image: string;
+  cost: string;
+  mv: number;
+  colors: string;
+  printings: number;
+  split: EditorPrinting[];
+  problem?: string;
 }
 
 export interface Format {
@@ -1157,23 +1160,6 @@ export type GameLogVerbosity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CUSTOM';
 
 export type GameLogEntryType = 'GAME_OUTCOME' | 'MATCH_RESULTS' | 'TURN' | 'MULLIGAN' | 'ANTE' | 'DRAFT' | 'ZONE_CHANGE' | 'PLAYER_CONTROL' | 'DAMAGE' | 'LIFE' | 'LAND' | 'DISCARD' | 'COMBAT' | 'INFORMATION' | 'STACK_RESOLVE' | 'STACK_ADD' | 'EFFECT_REPLACED' | 'MANA' | 'PHASE';
 
-export interface EditorCard {
-  name: string;
-  count: number;
-  image: string;
-  cost: string;
-  mv: number;
-  colors: string;
-  printings: number;
-  split: EditorPrinting[];
-  problem?: string;
-}
-
-export interface EditorGroup {
-  heading: string;
-  cards: EditorCard[];
-}
-
 export interface EditorLand {
   name: string;
   letter: string;
@@ -1202,16 +1188,16 @@ export interface TypeCount {
   count: number;
 }
 
+export interface EditorPrinting {
+  key: string;
+  count: number;
+}
+
 export interface SeatExtra {
   label: string;
   count: number;
   detail?: string;
   problem?: string;
-}
-
-export interface EditorPrinting {
-  key: string;
-  count: number;
 }
 
 // ---- Game objects: TrackableProperty values as JsonCodec encodes them ----
