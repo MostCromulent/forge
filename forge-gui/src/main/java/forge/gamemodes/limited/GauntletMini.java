@@ -39,7 +39,20 @@ import forge.util.Aggregates;
  * @since 1.2.xx
  */
 public class GauntletMini {
+    /** Starts one round's match and returns it. */
+    public interface RoundStarter {
+        HostedMatch start(GameType type, List<RegisteredPlayer> players, RegisteredPlayer human);
+    }
+
+    /** Hosts the round on this machine's own GUI, as desktop and mobile play it. */
+    private static final RoundStarter LOCAL = (type, players, human) -> {
+        final HostedMatch match = GuiBase.getInterface().hostMatch();
+        match.startMatch(type, null, players, human, GuiBase.getInterface().getNewGuiGame());
+        return match;
+    };
+
     private HostedMatch hostedMatch = null;
+    private RoundStarter roundStarter = LOCAL;
     private int rounds;
     private Deck humanDeck;
     private int currentRound;
@@ -55,6 +68,19 @@ public class GauntletMini {
         wins = 0;
         losses = 0;
         gauntletType = GameType.Sealed; // Assignable in launch();
+    }
+
+    /** A frontend that builds its match GUI itself starts each round through this; null restores the local default. */
+    public void setRoundStarter(final RoundStarter starter) {
+        roundStarter = starter == null ? LOCAL : starter;
+    }
+
+    /** Plays the current round again, as desktop's Restart does, keeping the round and the record. */
+    public void restartRound() {
+        if (hostedMatch != null) {
+            hostedMatch.endCurrentGame();
+        }
+        startRound();
     }
 
     /**
@@ -143,8 +169,7 @@ public class GauntletMini {
             pl.assignConspiracies();
         }
 
-        hostedMatch = GuiBase.getInterface().hostMatch();
-        hostedMatch.startMatch(gauntletType, null, starter, human, GuiBase.getInterface().getNewGuiGame());
+        hostedMatch = roundStarter.start(gauntletType, starter, human);
     }
 
     /**
