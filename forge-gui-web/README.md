@@ -9,9 +9,9 @@ The person running the server is the **host**. Everyone who joins by link is a *
 
 You need Java 17 or later and Maven. From the repository root:
 
-    mvn -pl forge-gui-web -am install -DskipTests
+    mvn -Pweb -pl forge-gui-web -am install -DskipTests
 
-Maven downloads its own copy of Node to build the browser code, so nothing else needs installing. The build makes
+`-Pweb` is needed because the web module is left out of Forge's normal build. Maven downloads its own copy of Node to build the browser code, so nothing else needs installing. The build makes
 `forge-gui-web/target/forge-gui-web.jar`, with the libraries it needs in `forge-gui-web/target/lib/`.
 
 ## Starting
@@ -43,7 +43,7 @@ Add these before `-jar`, for example `java -Dforge.web.port=36800 -jar ...`.
 |---|---|
 | `-Dforge.web.port=<number>` | Uses another port. The default is 36743, the same as desktop Forge's network games, so change it if you also host from desktop Forge at the same time. |
 | `-Dforge.web.noBrowser=true` | Does not open the game window. Open it from the server window instead. |
-| `-Dforge.web.noConsole=true` | Does not open the server window. |
+| `-Dforge.web.noConsole=true` | Does not open the server window. The link to open the game is printed in the terminal instead, and Forge quits if no browser connects within 15 seconds. |
 | `-Dforge.assets.dir=<folder>` | Where to find Forge's `res` folder. |
 
 ## Playing with other people
@@ -78,6 +78,12 @@ allowed.
 The host's settings are desktop Forge's settings, so a change made in one shows in the other. A guest's settings
 start from Forge's defaults and are remembered by the guest's browser.
 
+To change the keys, choose ⋯ → **Keys…** during a match.
+
+To change how the game looks, write CSS in Options → **Custom CSS**. It applies as you type and is kept in your
+browser. **Export** saves it as a `.css` file, and **Import** loads one, so a theme can be shared with other
+players.
+
 ---
 
 ## For developers
@@ -107,7 +113,7 @@ Every message between the server and the browser is a Java record in `ToBrowser`
 
 After changing a record, regenerate the TypeScript. The compiler then shows what the client must change:
 
-    mvn -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
+    mvn -Pweb -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
 
 `ProtocolTypesTest` fails whenever the committed file is out of date. That also catches a Forge update that renames
 or retypes a game property.
@@ -117,7 +123,7 @@ TypeScript. The tests run with assertions on, so a null anywhere else fails them
 
 ### Tests
 
-`mvn test` runs the Java tests and the browser client's Vitest tests (`src/test/ts`). `npm test` runs only the
+`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the browser client's Vitest tests (`src/test/ts`). `npm test` runs only the
 Vitest tests. Tests that play whole games are skipped unless you add `-Drun.stress.tests=true`.
 
 `src/test/resources/traces/whole-game.json` is a recorded game: every state message the browser received, and the
@@ -125,11 +131,11 @@ table they build. `SharedTraceTest` checks `BrowserModel` against it and `model.
 it, so the Java and TypeScript copies of the model cannot drift apart. To record a new one after the model or the
 messages change:
 
-    mvn -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
+    mvn -Pweb -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
 
 `e2e/` drives the client in a real browser against a real server. Each test starts its own server on its own port,
 with a throwaway home folder, so it never touches your Forge settings. These tests take a few minutes and are not
-part of `mvn test`. Build the jar first, then:
+part of the Maven tests. Build the jar first, then:
 
     cd forge-gui-web/e2e
     npm ci
