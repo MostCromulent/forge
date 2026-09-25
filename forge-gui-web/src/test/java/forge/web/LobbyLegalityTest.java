@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.deck.Deck;
+import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gui.GuiBase;
 import forge.model.FModel;
@@ -97,6 +98,69 @@ public class LobbyLegalityTest {
                 Assert.assertFalse(g.formats().isEmpty(), g.name() + " is offered with nothing in it");
             }
         });
+    }
+
+    /**
+     * Fails if a generated deck dealt before the Legality keeps playing afterwards: the catalogue rebuilds its key
+     * under the new pool, so the seat would show a legal deck while the slot still holds the old one.
+     */
+    @Test(timeOut = 120_000)
+    public void aGeneratedDeckDealtBeforeTheLegalityIsDealtAgain() throws Exception {
+        atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
+            final int computer = local.webSeat() == 0 ? 1 : 0;
+            lobby.decks();
+            onUi(() -> lobby.setDeck(computer, "gen:color:Red"));
+            final GameFormat pauper = FModel.getFormats().getFormat("Pauper");
+            Assert.assertNotNull(DeckCatalog.poolProblem(pauper, local.hostedLobby().getSlot(computer).getDeck()),
+                    "the red deck was already Pauper-legal, so this test proves nothing");
+            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(lobby::decks);
+            Assert.assertNull(DeckCatalog.poolProblem(pauper, local.hostedLobby().getSlot(computer).getDeck()),
+                    "the computer still plays its pre-Pauper deck");
+        });
+    }
+
+    /** Fails if the deck list just sent is reported as out of date, which rebuilds the catalogue a second time. */
+    @Test(timeOut = 60_000)
+    public void aDeckListJustSentIsCurrent() throws Exception {
+        atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
+            lobby.decks();
+            Assert.assertFalse(lobby.restrictionsChanged(), "a fresh deck list counted as stale");
+        });
+    }
+
+    /** Fails if one card in two printings is counted and named twice. */
+    @Test
+    public void aCardInTwoPrintingsIsNamedOnce() {
+        final var db = FModel.getMagicDb().getCommonCards();
+        final Deck deck = TestDecks.of("Atogs", "Mountain", 56);
+        deck.getMain().add(db.getCard("Atog", "ATQ"), 2);
+        deck.getMain().add(db.getCard("Atog", "MRD"), 2);
+        final String problem = DeckCatalog.poolProblem(FModel.getFormats().getFormat("Pauper"), deck);
+        Assert.assertEquals(problem, "Not legal in Pauper: 1 card. Atog.");
+    }
+
+    /** Fails if a Commander table is ever announced still holding a Constructed card pool. */
+    @Test(timeOut = 60_000)
+    public void noUpdateCarriesAPoolIntoCommander() throws Exception {
+        final LocalGame local = new LocalGame();
+        final WebGuiGame gui = new WebGuiGame();
+        final java.util.concurrent.atomic.AtomicBoolean leaked = new java.util.concurrent.atomic.AtomicBoolean();
+        try {
+            onUi(() -> local.openHost("Host", gui, () -> {
+                final var hosted = local.hostedLobby();
+                if (hosted != null && hosted.hasVariant(GameType.Commander) && hosted.getCardPool() != null) {
+                    leaked.set(true);
+                }
+            }, (from, text) -> { }));
+            final Lobby lobby = new Lobby(local);
+            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(() -> lobby.setFormat(GameType.Commander.name()));
+            Assert.assertFalse(leaked.get(), "an update showed Commander with the Pauper pool");
+        } finally {
+            gui.close();
+            onUi(local::shutdown);
+        }
     }
 
     /** Fails if a restricted-list problem is worded as a ban, or the card's name is lost. */

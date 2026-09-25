@@ -26,8 +26,11 @@ import forge.web.ToBrowser.SavedSleeveArt;
 import forge.web.ToBrowser.TypeCount;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -106,6 +109,15 @@ final class DeckCatalog {
     /** Rebuilds the catalogue for a format and card pool, and returns every deck in it. */
     List<DeckSummary> refresh(final GameType format, final GameFormat pool) {
         synchronized (DECKS) {
+            // A built generator stays built while the pool stands, so the seat that holds it and the list agree
+            final Map<String, Entry> built = new HashMap<>();
+            if (pool == this.pool) {
+                byKey.forEach((key, e) -> {
+                    if (e.built() != null) {
+                        built.put(key, e);
+                    }
+                });
+            }
             this.pool = pool;
             byKey.clear();
             final List<DeckSummary> out = new ArrayList<>();
@@ -120,6 +132,7 @@ final class DeckCatalog {
             for (final NetDeckCategory category : netCategories) {
                 add(out, format, DeckProxy.getNetDecks(category), NET + " " + category.getName());
             }
+            built.forEach((key, e) -> byKey.computeIfPresent(key, (k, fresh) -> e));
             return out;
         }
     }
@@ -313,12 +326,14 @@ final class DeckCatalog {
             return null;
         }
         final String[] lines = raw.split("\n");
-        final List<String> names = new ArrayList<>();
+        // GameFormat lists each printing, so one card in two sets would be named twice
+        final Set<String> unique = new LinkedHashSet<>();
         for (int i = 1; i < lines.length; i++) {
             if (!lines[i].isBlank()) {
-                names.add(lines[i].trim());
+                unique.add(lines[i].trim());
             }
         }
+        final List<String> names = new ArrayList<>(unique);
         final String listed = listOf(names);
         return lines[0].contains("restricted")
                 ? pool.getName() + " allows one copy of " + listed + "."

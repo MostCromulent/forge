@@ -119,9 +119,40 @@ final class Lobby {
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
     Decks decks() {
-        final GameFormat legality = legality();
-        return new Decks(catalog.refresh(format(), legality), DeckCatalog.cardFormats(),
-                legality == null ? null : legality.getName());
+        final Decks out;
+        final boolean newPool;
+        synchronized (DeckCatalog.DECKS) {
+            final GameType format = format();
+            final GameFormat legality = legality();
+            final String legalityName = legality == null ? null : legality.getName();
+            // A deck key names a deck in one format's lists, so it means nothing in another
+            if (seenFormat != null && format != seenFormat) {
+                deckKeys.clear();
+            }
+            newPool = format == seenFormat && !Objects.equals(legalityName, seenLegality);
+            seenFormat = format;
+            seenLegality = legalityName;
+            out = new Decks(catalog.refresh(format, legality), DeckCatalog.cardFormats(), legalityName);
+        }
+        if (newPool) {
+            dealGeneratorsAgain();
+        }
+        return out;
+    }
+
+    /**
+     * A generated deck was built from the card pool of its day, and its slot still holds that deck. With a new pool,
+     * the seats this browser deals for are dealt the same generator again, now built from the new pool.
+     */
+    private void dealGeneratorsAgain() {
+        final GameLobby lobby = view();
+        for (int i = 0; lobby != null && i < deckKeys.size() && i < lobby.getNumberOfSlots(); i++) {
+            final String key = deckKeys.get(i);
+            final boolean mine = i == local.webSeat() || (host() != null && lobby.getSlot(i).getType() == LobbySlotType.AI);
+            if (key != null && key.startsWith("gen:") && mine) {
+                setDeck(i, key);
+            }
+        }
     }
 
     /** The deck behind a catalogue key, for tests in this package. */
@@ -235,24 +266,16 @@ final class Lobby {
         seenLegality = null;
     }
 
-    /** The format and Legality this browser's deck list was last built for. */
+    /** The format and Legality this browser's deck list was last built for, recorded by {@link #decks()}. */
     private GameType seenFormat;
     private String seenLegality;
 
-    /** True once per change of format or Legality. A new format also drops this browser's deck keys. */
+    /** True when the format or Legality differs from the one the last deck list was built for. */
     boolean restrictionsChanged() {
-        final GameType format = format();
-        final GameFormat legality = legality();
-        final String legalityName = legality == null ? null : legality.getName();
-        if (format == seenFormat && Objects.equals(legalityName, seenLegality)) {
-            return false;
+        synchronized (DeckCatalog.DECKS) {
+            final GameFormat legality = legality();
+            return format() != seenFormat || !Objects.equals(legality == null ? null : legality.getName(), seenLegality);
         }
-        if (seenFormat != null && format != seenFormat) {
-            deckKeys.clear();
-        }
-        seenFormat = format;
-        seenLegality = legalityName;
-        return true;
     }
 
     /** The format belongs to the game, so only the host sets it. */
@@ -265,6 +288,10 @@ final class Lobby {
             if (!wanted.name().equals(id) || wanted == format()) {
                 continue;
             }
+            // Cleared first, so no update ever announces another format still holding a Constructed card pool
+            if (wanted != GameType.Constructed) {
+                lobby.setCardPool(null);
+            }
             // Constructed is the absence of a format variant rather than one of its own
             for (final GameType other : FORMATS) {
                 if (other != GameType.Constructed) {
@@ -273,8 +300,6 @@ final class Lobby {
             }
             if (wanted != GameType.Constructed) {
                 lobby.applyVariant(wanted);
-                // A card pool belongs to Constructed; the other formats bring their own
-                lobby.setCardPool(null);
             }
             // A deck legal in one format is rarely legal in another, and its key is not in the new pool
             deckKeys.clear();
