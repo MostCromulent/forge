@@ -131,14 +131,40 @@
   82% { opacity: .3; transform: translate(-2px, calc(var(--tile-w) * 1.05)); }
   100% { opacity: 0; transform: translate(3px, calc(var(--tile-w) * 1.3)); }
 }
-/* Exile is drawn in a squashed frame, so the ring and the motes' circles read as a tilted orbit */
-.zone-tile[data-zone="Exile"] .ambient { transform: scaleY(.62); }
-.zone-tile[data-zone="Exile"] .ambient::before { content: ''; position: absolute; left: 50%; top: 50%; width: 64%; aspect-ratio: 1; margin: -32% 0 0 -32%; border-radius: 50%; border: 1.5px dashed color-mix(in srgb, var(--void) 60%, transparent); box-shadow: 0 0 10px color-mix(in srgb, var(--void) 35%, transparent); animation: spin 40s linear infinite; }
-.zone-tile[data-zone="Exile"] .ambient i { left: 50%; top: 50%; margin: -2px; background: var(--void); box-shadow: 0 0 6px var(--void); animation: orbit 14s linear infinite var(--d), twinkle 4s ease-in-out infinite var(--d); }
-@keyframes spin { to { transform: rotate(1turn); } }
-@keyframes orbit { from { transform: rotate(0) translateX(calc(var(--tile-w) * .34)); } to { transform: rotate(1turn) translateX(calc(var(--tile-w) * .34)); } }
-@keyframes twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+/* Exile is a dark core ringed by a thin band of light, inside a faint disc turning round it, with streaks of light
+   falling in. Screen blending lets each layer add light rather than paint over the others. */
+.zone-tile[data-zone="Exile"] .ambient { mix-blend-mode: screen; }
+.zone-tile[data-zone="Exile"] .ambient::before { content: ''; position: absolute; left: 50%; top: 48%; width: 78%; height: 30%; margin: -15% 0 0 -39%; border-radius: 50%;
+  background: conic-gradient(from 200deg, transparent 0 10%, color-mix(in srgb, var(--void) 30%, transparent) 30%, transparent 55%, color-mix(in srgb, var(--void) 18%, transparent) 80%, transparent 95%);
+  mask: radial-gradient(closest-side, transparent 52%, #000 62%, #000 82%, transparent 100%); filter: blur(1px); animation: exile-turn 30s linear infinite; }
+.zone-tile[data-zone="Exile"] .ambient::after { content: ''; position: absolute; left: 50%; top: 48%; width: 34%; aspect-ratio: 1; margin: -17% 0 0 -17%; border-radius: 50%; background: #020308;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--void) 80%, transparent), 0 0 calc(var(--tile-w) * .05) color-mix(in srgb, var(--void) 45%, transparent), inset 0 0 calc(var(--tile-w) * .04) color-mix(in srgb, var(--void) 30%, transparent);
+  animation: exile-breathe 4.8s ease-in-out infinite; }
+.zone-tile[data-zone="Exile"] .ambient i { left: 50%; top: 48%; width: calc(var(--tile-w) * .11); height: calc(var(--tile-w) * .03); margin: calc(var(--tile-w) * -.015) calc(var(--tile-w) * -.055);
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--void) 95%, #fff) 0 28%, color-mix(in srgb, var(--void) 22%, transparent) 42%, transparent 100%);
+  animation: exile-streak 5.6s cubic-bezier(.5, 0, .9, .6) infinite var(--d); }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(1) { --a: 0deg; }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(2) { --a: 60deg; }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(3) { --a: 120deg; }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(4) { --a: 180deg; }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(5) { --a: 240deg; }
+.zone-tile[data-zone="Exile"] .ambient i:nth-child(6) { --a: 300deg; }
+/* With cards in it the top card is what matters, so the pull goes quiet and only an outline breathes round the pile */
+.zone-tile[data-zone="Exile"]:not(.empty) .ambient { display: none; }
+.zone-tile[data-zone="Exile"]:not(.empty) { animation: exile-aura 3.4s ease-in-out infinite; }
+@keyframes exile-turn { to { transform: rotate(1turn); } }
+@keyframes exile-breathe { 0%, 100% { opacity: .6; } 50% { opacity: .96; } }
+@keyframes exile-streak {
+  0% { opacity: 0; transform: scaleY(.4) rotate(var(--a)) translateX(calc(var(--tile-w) * .4)) rotate(90deg); }
+  30% { opacity: .7; }
+  100% { opacity: 0; transform: scaleY(.4) rotate(calc(var(--a) + 90deg)) translateX(calc(var(--tile-w) * .17)) rotate(90deg) scale(.5); }
+}
+@keyframes exile-aura {
+  0%, 100% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--void) 30%, transparent), 0 0 calc(var(--tile-w) * .06) color-mix(in srgb, var(--void) 10%, transparent); }
+  50% { box-shadow: 0 0 0 1px color-mix(in srgb, var(--void) 55%, transparent), 0 0 calc(var(--tile-w) * .09) color-mix(in srgb, var(--void) 20%, transparent); }
+}
 html[data-motion="reduced"] .zone-tile .ambient { display: none; }
+html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 /* An opponent's hand: up to three backs fanned from one point, in their sleeve, with the count beside them */
 .player { position: relative; }
 /* Beside the avatar, level with it, so the column below holds only what varies */
