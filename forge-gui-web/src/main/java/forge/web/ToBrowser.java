@@ -128,10 +128,16 @@ final class ToBrowser {
     /**
      * A Limited table's event, as the lobby data carries it to every seat. kind is "draft" or "sealed"; product, phase
      * and the draft's settings are there once the event is set up; phase is an EventPhase name; activeEventId names
-     * the event whose decks the next match is played with; started says the event can no longer be changed.
+     * the event whose decks the next match is played with; started says the event can no longer be changed; pastEvents are the host's earlier
+     * events it may play again, newest first.
      */
     record LimitedTable(String kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
-            @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started) {
+            @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started,
+            List<PastEvent> pastEvents) {
+    }
+
+    /** An earlier event whose pools the host keeps, as desktop's past events list names it. */
+    record PastEvent(String id, String label) {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. */

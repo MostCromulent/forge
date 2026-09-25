@@ -4,6 +4,7 @@ import forge.card.DraftOptions;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
+import forge.deck.DeckProxy;
 import forge.deck.DeckSection;
 import forge.game.GameFormat;
 import forge.game.GameType;
@@ -36,6 +37,7 @@ import forge.web.ToBrowser.CardPoolGroup;
 import forge.web.ToBrowser.LobbyMessage;
 import forge.web.ToBrowser.LimitedTable;
 import forge.web.ToBrowser.LobbyTable;
+import forge.web.ToBrowser.PastEvent;
 import forge.web.ToBrowser.Seat;
 import forge.web.ToBrowser.SeatExtra;
 import forge.web.DeckCatalog.Extra;
@@ -247,7 +249,8 @@ final class Lobby {
             seenFormat = format;
             seenCardPool = poolName;
             seenRules = rules();
-            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device), DeckCatalog.cardFormats(), poolName);
+            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device, eventFilter()), DeckCatalog.cardFormats(),
+                    poolName);
         }
         if (newPool) {
             dealGeneratorsAgain();
@@ -289,13 +292,20 @@ final class Lobby {
         }
     }
 
-    /** The casual variants on, and which seat is the archenemy: what decides a seat's extra sections. */
+    /** The event whose decks alone the finder lists, or null for every event's; only a Limited table has one. */
+    private String eventFilter() {
+        final GameLobby lobby = view();
+        final GameLobbyData data = lobby == null ? null : lobby.getData();
+        return data != null && data.isLimitedMode() && data.isActiveConformance() ? data.getActiveEventId() : null;
+    }
+
+    /** The casual variants on, which seat is the archenemy, and the event filter: what decides the decks a seat may take. */
     private String rules() {
         final GameLobby lobby = view();
         if (lobby == null) {
             return "";
         }
-        final StringBuilder sb = new StringBuilder(variantsOn(lobby).toString());
+        final StringBuilder sb = new StringBuilder(variantsOn(lobby).toString()).append(eventFilter());
         for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
             sb.append(lobby.getSlot(i).isArchenemy() ? i : "");
         }
@@ -618,12 +628,18 @@ final class Lobby {
             if (lobby == null) {
                 return out;
             }
+            int playing = 0;
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 final LobbySlot slot = lobby.getSlot(i);
+                // A benched seat sits the match out, so nothing about it stops the match
+                if (slot.isBenched()) {
+                    continue;
+                }
                 if (slot.getType() == LobbySlotType.OPEN) {
                     out.add("A seat is still open.");
                     continue;
                 }
+                playing++;
                 final String who = i == local.webSeat() ? "You have" : slot.getName() + " has";
                 final Deck deck = deckAt(i);
                 // Momir Basic and MoJhoSto deal every seat its deck at the start, as startGame does
@@ -654,6 +670,9 @@ final class Lobby {
                 if (!slot.isReady()) {
                     out.add(slot.getName() + " is not ready.");
                 }
+            }
+            if (playing > MAX_SEATS) {
+                out.add(0, "A match holds at most " + MAX_SEATS + " players: bench " + (playing - MAX_SEATS) + " more.");
             }
             return out;
         }
@@ -749,11 +768,8 @@ final class Lobby {
         return data.getActiveEventId() != null || (event != null && event.getPhase() != EventPhase.LOBBY_GATHER);
     }
 
-    /** Whether this browser's finder lists only the event's decks. */
-    private volatile boolean eventDecksOnly;
-
+    /** Whether every seat's finder lists only the table's event's decks, as desktop's conformance switch sets. */
     void setEventDecksOnly(final boolean on) {
-        eventDecksOnly = on;
         final ServerGameLobby lobby = host();
         if (lobby != null && lobby.getData().getActiveEventId() != null) {
             lobby.selectEventForMatch(lobby.getData().getActiveEventId(), on);
@@ -775,7 +791,60 @@ final class Lobby {
                 event == null ? 0 : event.getPodSize(),
                 event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
                 event == null ? 0 : event.getPickTimerSeconds(), event == null ? null : event.getPhase().name(),
-                data.getActiveEventId(), eventDecksOnly, eventStarted());
+                data.getActiveEventId(), data.isActiveConformance(), eventStarted(),
+                local.isHost() && data.getActiveEventId() == null && !eventStarted() ? pastEvents() : List.of());
+    }
+
+    /** The events whose pools the host keeps, newest first, as desktop's past events list orders them. */
+    private static List<PastEvent> pastEvents() {
+        final Map<String, String> dates = new java.util.LinkedHashMap<>();
+        synchronized (DeckCatalog.DECKS) {
+            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
+                final String id = DeckProxy.getEventTag(d, "eventId");
+                if (id != null) {
+                    dates.putIfAbsent(id, Objects.toString(DeckProxy.getEventTag(d, "eventDate"), ""));
+                }
+            }
+        }
+        // eventDate is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
+        return dates.entrySet().stream().sorted(Map.Entry.<String, String>comparingByValue().reversed())
+                .map(en -> new PastEvent(en.getKey(), NetworkEvent.getEventDisplayLabel(en.getKey()))).toList();
+    }
+
+    /**
+     * Plays an event's decks at this table: a past one the host chose, or the table's own after a match. type is Draft or
+     * Sealed, and decksOnly is the event-decks switch. Answers why not, or null.
+     */
+    String playEvent(final String eventId, final GameType type, final boolean decksOnly) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || eventId == null) {
+            return null;
+        }
+        if (drafting(lobby)) {
+            return "The draft is still on.";
+        }
+        lobby.clearCurrentEvent();
+        lobby.setLimitedType(type);
+        lobby.setLimitedMode(true);
+        lobby.selectEventForMatch(eventId, decksOnly);
+        return null;
+    }
+
+    /** Hosts a past event again, its kind read from its pools as desktop reads it. */
+    String hostAgain(final String eventId) {
+        Deck pool = null;
+        synchronized (DeckCatalog.DECKS) {
+            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
+                if (eventId != null && eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                    pool = d;
+                }
+            }
+        }
+        if (pool == null) {
+            return "There are no decks from that event.";
+        }
+        final boolean sealed = EventFormat.SEALED.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
+        return playEvent(eventId, sealed ? GameType.Sealed : GameType.Draft, true);
     }
 
     /**
@@ -787,8 +856,8 @@ final class Lobby {
         if (lobby == null) {
             return null;
         }
-        if (eventStarted()) {
-            return "The event has started, so the table stays as it is.";
+        if (drafting(lobby)) {
+            return "The draft is still on.";
         }
         if (kind == null) {
             if (lobby.getNumberOfSlots() > MAX_SEATS) {
@@ -798,6 +867,9 @@ final class Lobby {
             lobby.selectEventForMatch(null, false);
             lobby.setLimitedMode(false);
             return null;
+        }
+        if (eventStarted()) {
+            return "The event has started. Switch to Constructed first to set up a new one.";
         }
         final boolean sealed = "sealed".equals(kind);
         // An event is played without a format or casual variant, as desktop's Limited mode hides them

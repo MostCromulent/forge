@@ -31,6 +31,7 @@ import forge.web.FromBrowser.PoolPlay;
 import forge.web.FromBrowser.SealedCreate;
 import forge.web.FromBrowser.BenchSeat;
 import forge.web.FromBrowser.EventDecksOnly;
+import forge.web.FromBrowser.EventHostAgain;
 import forge.web.FromBrowser.EventSetup;
 import forge.web.FromBrowser.SetLimited;
 import forge.web.ToBrowser.Addresses;
@@ -51,6 +52,7 @@ import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.GameLobby;
+import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
@@ -369,7 +371,7 @@ public final class WebSession {
                     onSetup(channel, msg);
                 }
             }
-            case "setLimited", "eventSetup", "eventStart", "benchSeat", "eventDecksOnly" -> {
+            case "setLimited", "eventSetup", "eventStart", "benchSeat", "eventDecksOnly", "eventHostAgain" -> {
                 if (stage instanceof Setup) {
                     onEvent(channel, msg);
                 }
@@ -564,15 +566,18 @@ public final class WebSession {
     /** A change to the table's draft or sealed event. Everything but the finder's filter is the host's to do. */
     private void onEvent(final BrowserChannel channel, final JsonObject msg) {
         final String type = msg.get("t").getAsString();
-        if ("eventDecksOnly".equals(type)) {
-            lobby.setEventDecksOnly(Wire.decode(msg, EventDecksOnly.class).on());
-            channel.send(lobby.state());
-            return;
-        }
         if (!isHost) {
             return;
         }
         switch (type) {
+            case "eventDecksOnly" -> {
+                lobby.setEventDecksOnly(Wire.decode(msg, EventDecksOnly.class).on());
+                relistDecks(channel);
+            }
+            case "eventHostAgain" -> {
+                reportProblem(channel, lobby.hostAgain(Wire.decode(msg, EventHostAgain.class).eventId()));
+                relistDecks(channel);
+            }
             case "setLimited" -> {
                 final String kind = Wire.decode(msg, SetLimited.class).kind();
                 final String problem = lobby.setLimited(kind == null ? null : "sealed".equals(kind) ? "sealed" : "draft");
@@ -1316,8 +1321,18 @@ public final class WebSession {
             return;
         }
         if (isHost && b != null) {
+            // An event's matches follow one another, so the new table plays the same event's decks
+            final ServerGameLobby was = local.hostedLobby();
+            final GameLobbyData data = was == null ? null : was.getData();
+            final String event = data != null && data.isLimitedMode() ? data.getActiveEventId() : null;
+            final GameType type = data == null ? null : data.getLimitedType();
+            final boolean decksOnly = data != null && data.isActiveConformance();
             // Opening the lobby moves on from the match, and closes it
             openLobby(b, playing.invited());
+            if (event != null) {
+                lobby.playEvent(event, type, decksOnly);
+                relistDecks(b);
+            }
         } else if (move(from, new Menu())) {
             joinHostGame();
         }

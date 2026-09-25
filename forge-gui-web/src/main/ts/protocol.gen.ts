@@ -826,6 +826,11 @@ export interface EventDecksOnly {
   on: boolean;
 }
 
+export interface EventHostAgain {
+  t: 'eventHostAgain';
+  eventId: string;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -881,7 +886,8 @@ export type ClientMessage =
   | SetLimited
   | EventSetup
   | BenchSeat
-  | EventDecksOnly;
+  | EventDecksOnly
+  | EventHostAgain;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -1322,6 +1328,7 @@ export interface LimitedTable {
   activeEventId?: string;
   eventDecksOnly: boolean;
   started: boolean;
+  pastEvents: PastEvent[];
 }
 
 export type ZoneType = 'Hand' | 'Library' | 'Graveyard' | 'Battlefield' | 'Exile' | 'Flashback' | 'Command' | 'Stack' | 'Sideboard' | 'Ante' | 'Merged' | 'SchemeDeck' | 'PlanarDeck' | 'AttractionDeck' | 'Junkyard' | 'ContraptionDeck' | 'Subgame' | 'ExtraHand' | 'None';
@@ -1368,6 +1375,11 @@ export interface SeatExtra {
   count: number;
   detail?: string;
   problem?: string;
+}
+
+export interface PastEvent {
+  id: string;
+  label: string;
 }
 
 // ---- Game objects: TrackableProperty values as JsonCodec encodes them ----

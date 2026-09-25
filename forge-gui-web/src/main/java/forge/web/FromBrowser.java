@@ -330,6 +330,11 @@ final class FromBrowser {
     record BenchSeat(int index, boolean benched) {
     }
 
+    /** Plays a past event's decks again at this table, as desktop's Load Past Event does. */
+    @Command("eventHostAgain")
+    record EventHostAgain(String eventId) {
+    }
+
     /** Whether the deck finder lists only the event's decks. */
     @Command("eventDecksOnly")
     record EventDecksOnly(boolean on) {
@@ -345,5 +350,5 @@ final class FromBrowser {
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
             DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class,
-            EventDecksOnly.class);
+            EventDecksOnly.class, EventHostAgain.class);
 }

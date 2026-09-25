@@ -360,6 +360,10 @@ public final class LocalGame {
 
     public void endMatch() {
         abandonGame();
+        // A draft still running keeps its timers and would deal packs to whoever sits at the next table
+        if (hosted != null) {
+            hosted.clearCurrentEvent();
+        }
         // The server notices a closed connection later, in whichever lobby it is serving by then. Left with this
         // table's, it would count a finished match whose players have not yet chosen what next as still going, and
         // hold the seat for a reconnect under the player's name, which the next table's seat of that name then

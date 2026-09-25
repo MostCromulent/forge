@@ -4,6 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.gamemodes.limited.LimitedPoolType;
+import forge.gamemodes.net.draft.BoosterDraftHost;
+import forge.gamemodes.net.server.ServerGameLobby;
+import forge.StaticData;
+import java.util.UUID;
 import forge.model.FModel;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -208,6 +212,64 @@ public class OnlineEventTest {
         return new Recorder[] {host, guest};
     }
 
+    /** Stores a 40-Forest deck as a pool of a made-up sealed event, and answers the event's id. */
+    private String storedEventDeck(final String name) {
+        final String id = UUID.randomUUID().toString();
+        final Deck deck = new Deck(name + " " + id.substring(0, 8));
+        deck.getMain().add(StaticData.instance().getCommonCards().getCard("Forest"), 40);
+        deck.getTags().add("eventId:" + id);
+        deck.getTags().add("eventFormat:SEALED");
+        deck.getTags().add("eventDate:2026-09-26 10:00");
+        FModel.getDecks().getNetworkEventDecks().add(deck);
+        events.add(id);
+        return id;
+    }
+
+    private static JsonObject hostAgain(final String eventId) {
+        final JsonObject m = JsonCodec.message("eventHostAgain");
+        m.addProperty("eventId", eventId);
+        return m;
+    }
+
+    private static JsonObject decksOnly(final boolean on) {
+        final JsonObject m = JsonCodec.message("eventDecksOnly");
+        m.addProperty("on", on);
+        return m;
+    }
+
+    private static List<String> deckNames(final JsonObject decks) {
+        final List<String> out = new ArrayList<>();
+        decks.getAsJsonArray("decks").forEach(d -> out.add(d.getAsJsonObject().get("name").getAsString()));
+        return out;
+    }
+
+    /** The key the finder lists a deck under, waiting for a list that holds it. */
+    private static String keyOf(final Recorder browser, final String deckName) throws InterruptedException {
+        final JsonObject decks = browser.awaitMatching("decks", d -> deckNames(d).stream().anyMatch(n -> n.startsWith(deckName)));
+        Assert.assertNotNull(decks, "the finder never listed " + deckName + ": " + browser.got.stream()
+                .filter(m -> "decks".equals(m.get("t").getAsString())).map(OnlineEventTest::deckNames).toList() + " " + browser.latestTable());
+        for (final var d : decks.getAsJsonArray("decks")) {
+            if (d.getAsJsonObject().get("name").getAsString().startsWith(deckName)) {
+                return d.getAsJsonObject().get("key").getAsString();
+            }
+        }
+        return null;
+    }
+
+    private static JsonObject setSeatDeck(final int index, final String key) {
+        final JsonObject m = JsonCodec.message("setSeat");
+        m.addProperty("index", index);
+        m.addProperty("deck", key);
+        return m;
+    }
+
+    private static JsonObject bench(final int index, final boolean on) {
+        final JsonObject m = JsonCodec.message("benchSeat");
+        m.addProperty("index", index);
+        m.addProperty("benched", on);
+        return m;
+    }
+
     private static int picks(final JsonObject state) {
         return state.getAsJsonArray("picks").size();
     }
@@ -380,5 +442,110 @@ public class OnlineEventTest {
         Assert.assertNotNull(again.awaitMatching("hello", h -> h.get("drafting").getAsBoolean()), "the reload was not told it is drafting");
         Assert.assertNotNull(again.awaitMatching("draft", d -> d.get("step").equals(shown.get("step"))
                 && d.getAsJsonArray("cards").equals(shown.getAsJsonArray("cards"))), "the reload was not shown its pack again");
+    }
+
+    // Fails if the finder at a Limited table ignores the event-decks switch: on, only the table's event's decks; off, every event's
+    @Test(timeOut = 180_000)
+    public void eventDecksOnlyFilters() throws Exception {
+        final String mine = storedEventDeck("Web test ours");
+        storedEventDeck("Web test theirs");
+        final Recorder host = hostAt("lobby", "sealed");
+        sessions.onMessage(host, hostAgain(mine));
+        Assert.assertNotNull(host.awaitLobby(l -> mine.equals(l.getAsJsonObject("limited").has("activeEventId")
+                ? l.getAsJsonObject("limited").get("activeEventId").getAsString() : null)), "the past event was never hosted again");
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final JsonObject only = host.awaitMatching("decks", d -> true);
+        Assert.assertTrue(deckNames(only).stream().anyMatch(n -> n.startsWith("Web test ours")), "the event's deck was not listed");
+        Assert.assertTrue(deckNames(only).stream().noneMatch(n -> n.startsWith("Web test theirs")), "another event's deck was listed");
+        host.forget();
+        sessions.onMessage(host, decksOnly(false));
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final JsonObject all = host.awaitMatching("decks", d -> deckNames(d).stream().anyMatch(n -> n.startsWith("Web test theirs")));
+        Assert.assertNotNull(all, "with the switch off, another event's deck was still left out");
+    }
+
+    // Fails if closing a table leaves its draft host running, whose packs would then reach the next table's seats
+    @Test(timeOut = 180_000)
+    public void endMatchStopsTheDraftHost() throws Exception {
+        final Recorder host = hostAt("lobby", "draft");
+        sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), 2));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("product")), "the draft was never set up");
+        sessions.onMessage(host, ready(true));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
+                .allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean())), "the host never showed as ready");
+        final ServerGameLobby table = sessions.hostLobby();
+        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        Assert.assertNotNull(host.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0), "the host was never shown a pack");
+        final BoosterDraftHost draftHost = table.getDraftHost();
+        Assert.assertNotNull(draftHost);
+        sessions.onMessage(host, JsonCodec.message("leaveLobby"));
+        Assert.assertNotNull(host.awaitMatching("hello", h -> !h.get("inLobby").getAsBoolean()), "the host never left the table");
+        // The browser is told it left before the table is taken down
+        for (int i = 0; i < 250 && !draftHost.isFinished(); i++) {
+            Thread.sleep(20);
+        }
+        Assert.assertTrue(draftHost.isFinished(), "the draft host outlived its table");
+    }
+
+    // Fails if a Limited match seats more than four, or seats a benched player
+    @Test(timeOut = 300_000)
+    public void onlyFourPlay() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final String id = storedEventDeck("Web test forests");
+        final Recorder host = hostAt("lobby", "sealed");
+        sessions.onMessage(host, hostAgain(id));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("activeEventId")), "the past event was never hosted again");
+        for (int i = 0; i < 3; i++) {
+            final int before = host.latestTable().getAsJsonArray("seats").size();
+            sessions.onMessage(host, JsonCodec.message("addSeat"));
+            Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").size() == before + 1), "a seat was refused");
+        }
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String key = keyOf(host, "Web test forests");
+        for (int i = 0; i < 5; i++) {
+            sessions.onMessage(host, setSeatDeck(i, key));
+        }
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("problems").toString().contains("bench 1 more")),
+                "five players were let into one match");
+        sessions.onMessage(host, bench(4, true));
+        final JsonObject ok = host.awaitLobby(l -> l.get("canStart").getAsBoolean());
+        Assert.assertNotNull(ok, "the table could not start with one seat benched: " + host.latestTable().getAsJsonArray("problems"));
+        final ServerGameLobby table = sessions.hostLobby();
+        final JsonObject start = JsonCodec.message("start");
+        sessions.onMessage(host, start);
+        Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean()), "the match never started");
+        for (int i = 0; i < 500 && (table.getHostedMatch() == null || table.getHostedMatch().getGame() == null); i++) {
+            Thread.sleep(20);
+        }
+        Assert.assertEquals(table.getHostedMatch().getGame().getPlayers().size(), 4, "the benched seat played");
+        final String benched = table.getSlot(4).getName();
+        Assert.assertTrue(table.getHostedMatch().getGame().getPlayers().stream().noneMatch(p -> p.getName().equals(benched)),
+                "the benched seat played");
+        sessions.onMessage(host, JsonCodec.message("concede"));
+    }
+
+    // Fails if leaving a Limited match brings the host back to a Constructed table, or to one that has forgotten its event
+    @Test(timeOut = 300_000)
+    public void theEventOutlivesAMatch() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final String id = storedEventDeck("Web test later");
+        final Recorder host = hostAt("lobby", "sealed");
+        sessions.onMessage(host, hostAgain(id));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("activeEventId")), "the past event was never hosted again");
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String key = keyOf(host, "Web test later");
+        sessions.onMessage(host, setSeatDeck(0, key));
+        sessions.onMessage(host, setSeatDeck(1, key));
+        Assert.assertNotNull(host.awaitLobby(l -> l.get("canStart").getAsBoolean()), "the match could not start");
+        sessions.onMessage(host, JsonCodec.message("start"));
+        Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean()), "the match never started");
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("leave"));
+        final JsonObject back = host.awaitLobby(l -> l.has("limited") && l.getAsJsonObject("limited").has("activeEventId"));
+        Assert.assertNotNull(back, "leaving the match lost the Limited table");
+        Assert.assertEquals(back.getAsJsonObject("limited").get("activeEventId").getAsString(), id);
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        Assert.assertNotNull(keyOf(host, "Web test later"), "the event's deck was not in the finder after the match");
     }
 }
