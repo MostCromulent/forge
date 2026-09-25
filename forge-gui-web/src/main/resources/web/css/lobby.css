@@ -186,7 +186,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .format-pool { appearance: none; width: 30px; margin-left: -1px; border: 1px solid var(--line); border-radius: 0 999px 999px 0;
   background: var(--surface-2); color: transparent; cursor: pointer; font: inherit; }
 .format-pool option, .format-pool optgroup { color: var(--text); background: var(--surface); }
-.format-chip.split::after { content: 'BE'; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 11px; pointer-events: none; }
+.format-chip.split::after { content: '\25BE'; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
 .format-chip.split:has(.format[aria-pressed="true"]) .format-pool { background: var(--brass); border-color: var(--accent-2); }
 .format-chip.split:has(.format[aria-pressed="true"])::after { color: var(--on-brass); }
 .format-pool:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
