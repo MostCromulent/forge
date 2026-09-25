@@ -18,8 +18,8 @@ interface SettingBase {
   server?: boolean;
   /** Set from the volume control beside the options button rather than in the options dialog. */
   volume?: boolean;
-  /** Set in the auto-pass stops dialog, opened from the game menu, rather than in the options dialog. */
-  stops?: boolean;
+  /** Set in a dialog opened from the game menu rather than in the options dialog. */
+  menu?: 'stops' | 'decisions';
 }
 
 export type SettingDef = SettingBase & (
@@ -30,13 +30,13 @@ export type SettingDef = SettingBase & (
 );
 
 export const SETTINGS: SettingDef[] = [
-  { section: 'Stops', key: 'interruptAttackers', label: 'Attackers are declared', type: 'toggle', server: true, stops: true, def: true },
-  { section: 'Stops', key: 'interruptOpponentSpell', label: 'An opponent casts a spell', type: 'toggle', server: true, stops: true, def: true },
-  { section: 'Stops', key: 'interruptTargeting', label: 'Something targets me', type: 'toggle', server: true, stops: true, def: false },
-  { section: 'Stops', key: 'interruptTriggers', label: 'An ability triggers', type: 'toggle', server: true, stops: true, def: false },
-  { section: 'Stops', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, stops: true, def: false },
+  { section: 'Stops', key: 'interruptAttackers', label: 'Attackers are declared', type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: 'Stops', key: 'interruptOpponentSpell', label: 'An opponent casts a spell', type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: 'Stops', key: 'interruptTargeting', label: 'Something targets me', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: 'Stops', key: 'interruptTriggers', label: 'An ability triggers', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: 'Stops', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, menu: 'stops', def: false },
   {
-    section: 'Priority', key: 'autoYieldMode', label: 'Remember auto-yields', type: 'choice', server: true,
+    section: 'Priority', key: 'autoYieldMode', label: 'Remember them', type: 'choice', server: true, menu: 'decisions',
     options: [['ability', 'Per ability'], ['card', 'Per card']], def: 'ability',
   },
   {

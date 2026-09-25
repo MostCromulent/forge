@@ -10,7 +10,7 @@ export function Options({ close }: { close: () => void }) {
     search.current?.focus();
   }, []);
   const q = query.trim().toLowerCase();
-  const shown = SETTINGS.filter(def => !def.volume && !def.stops).filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
+  const shown = SETTINGS.filter(def => !def.volume && !def.menu).filter(def => !q || `${def.section} ${def.label} ${def.hint ?? ''}`.toLowerCase().includes(q));
   return (
     <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="options-dialog" role="dialog" aria-label="Options">

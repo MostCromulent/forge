@@ -3,7 +3,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Row } from './options';
-import { SETTINGS } from './settings';
+import { SETTINGS, set, setting } from './settings';
 import type { Actions } from './actions';
 import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
@@ -63,7 +63,7 @@ export function AutoPassStops({ close }: { close: () => void }) {
           </button>
         </header>
         <div class="rows">
-          {SETTINGS.filter(def => def.stops).map(def => <Row key={def.key} def={def} />)}
+          {SETTINGS.filter(def => def.menu === 'stops').map(def => <Row key={def.key} def={def} />)}
         </div>
         <footer>
           <span class="hint">Auto-passing gives you priority back at these moments. Changes apply at once.</span>
@@ -91,6 +91,20 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
           </button>
         </header>
         <div class="rows">
+          <div class="setting">
+            <div>
+              <div>Remember them</div>
+              <div class="hint">Per ability covers every card with the same ability; per card, only that card. Each mode keeps its own list.</div>
+            </div>
+            <div class="choice">
+              {([['ability', 'Per ability'], ['card', 'Per card']] as const).map(([v, label]) => (
+                <button key={v} class={setting('autoYieldMode') === v ? 'on' : ''} onClick={() => {
+                  set('autoYieldMode', v);
+                  actions.autoDecisions('list');
+                }}>{label}</button>
+              ))}
+            </div>
+          </div>
           {!all ? <p class="hint">Reading them…</p>
             : !entries.length ? <p class="hint">None set. Right-click an item on the stack to always yield to it, or answer a trigger with Always.</p>
               : entries.map(e => (
