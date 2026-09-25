@@ -190,12 +190,15 @@ final class DeckSession {
     }
 
     /** Opens a sealed or draft pool's deck, which saves back into its pool as desktop's limited editor does. */
+    /** channel may be null while no browser is attached; the editor is shown when one arrives. */
     synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
                 !host.getAsBoolean(), this::sendDeviceDeck);
         editorSeat = null;
         editorPath = "";
-        channel.send(new EditorMessage(editor.state(false)));
+        if (channel != null) {
+            channel.send(new EditorMessage(editor.state(false)));
+        }
     }
 
     /** The pool whose deck is open, or null. */

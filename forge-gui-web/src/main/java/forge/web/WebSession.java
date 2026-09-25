@@ -44,6 +44,7 @@ import org.tinylog.Logger;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * One browser: its start page, its seat and its match. The host's session also owns shutting the process down.
@@ -98,6 +99,8 @@ public final class WebSession {
     private volatile String name;
     /** The face chosen beside the name, before any seat exists to carry it; null until it has chosen one. */
     private volatile Integer avatar;
+    /** Whether a sealed pool is being opened, which takes seconds and may wait on a question to the player. */
+    private final AtomicBoolean openingPacks = new AtomicBoolean();
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -720,25 +723,35 @@ public final class WebSession {
             channel.send(new NameTaken(name));
             return;
         }
-        // A block whose booster the player chooses asks through the host's browser, and waits for the answer
+        // A second request while the first is opening would pass the name check above and replace its pool
+        if (!openingPacks.compareAndSet(false, true)) {
+            channel.send(error("Forge is already opening packs."));
+            return;
+        }
+        // A block whose booster the player chooses asks through the host's browser, and waits for the answer. The
+        // browser may have been reloaded by the time it is done, so results go to whichever is attached then.
         ui.runBackgroundTask("Sealed", () -> {
-            final DeckGroup group;
             try {
-                group = OfflineEvents.create(create, name);
-            } catch (final IllegalArgumentException ex) {
-                channel.send(error(ex.getMessage()));
-                return;
+                final DeckGroup group;
+                try {
+                    group = OfflineEvents.create(create, name);
+                } catch (final IllegalArgumentException ex) {
+                    tell(error(ex.getMessage()));
+                    return;
+                }
+                if (group == null) {
+                    return;
+                }
+                OfflineEvents.store(group);
+                final Stage now = stage;
+                if (now instanceof Event) {
+                    move(now, new Event(name));
+                }
+                tell(OfflineEvents.pools());
+                decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, browser);
+            } finally {
+                openingPacks.set(false);
             }
-            if (group == null) {
-                return;
-            }
-            OfflineEvents.store(group);
-            final Stage now = stage;
-            if (now instanceof Event) {
-                move(now, new Event(name));
-            }
-            channel.send(OfflineEvents.pools());
-            decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, channel);
         });
     }
 

@@ -139,6 +139,22 @@ public class LimitedEditorTest {
                 Set.of("Llanowar Elves", "Giant Growth", "Forest"));
     }
 
+    /** Fails if undo restores only some sections, leaving an Attraction both in the pool and in its own section. */
+    @Test
+    public void undoPutsAnAttractionBackOnce() {
+        final DeckEditor e = pool();
+        final PaperCard stand = card("Balloon Stand") != null ? card("Balloon Stand")
+                : StaticData.instance().getVariantCards().getCard("Balloon Stand");
+        assertNotNull(stand, "no Attraction card to test with");
+        e.deck().get(DeckSection.Sideboard).add(stand, 1);
+        assertNull(e.add("Balloon Stand", DeckSection.Main, 1));
+        assertEquals(e.deck().get(DeckSection.Attractions).countByName("Balloon Stand"), 1);
+        assertNull(e.undo());
+        assertEquals(e.deck().get(DeckSection.Sideboard).countByName("Balloon Stand"), 1);
+        final CardPool attractions = e.deck().get(DeckSection.Attractions);
+        assertEquals(attractions == null ? 0 : attractions.countByName("Balloon Stand"), 0);
+    }
+
     /** Fails if saving a pool's deck replaces its stored group with a bare deck, losing the opponents. */
     @Test
     public void aGroupSaveKeepsTheGroup() {

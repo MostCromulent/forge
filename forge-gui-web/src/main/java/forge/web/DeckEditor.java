@@ -358,7 +358,8 @@ final class DeckEditor {
             final String name = previous.deck().getName();
             renameTo(target instanceof Stored s ? DeckStore.freeName(s.storage(), name, owned) : name);
         }
-        replaceCards(previous.deck());
+        // Every section, since a limited deck's Attractions and Contraptions move there from the pool
+        replaceCards(previous.deck(), List.of(DeckSection.values()));
         return save();
     }
 
@@ -425,7 +426,7 @@ final class DeckEditor {
     /** Swaps the deck's cards for another deck's, keeping its name and where it is saved. */
     String replaceAll(final Deck other) {
         return change(null, () -> {
-            replaceCards(other);
+            replaceCards(other, List.of(DeckSection.Main, DeckSection.Sideboard, DeckSection.Commander));
             return null;
         });
     }
@@ -584,8 +585,11 @@ final class DeckEditor {
         commanders.add(card, 1);
     }
 
-    private void replaceCards(final Deck from) {
-        for (final DeckSection section : List.of(DeckSection.Main, DeckSection.Sideboard, DeckSection.Commander)) {
+    private void replaceCards(final Deck from, final List<DeckSection> sections) {
+        for (final DeckSection section : sections) {
+            if (!deck.has(section) && !from.has(section)) {
+                continue;
+            }
             final CardPool pool = deck.getOrCreate(section);
             pool.clear();
             final CardPool source = from.get(section);

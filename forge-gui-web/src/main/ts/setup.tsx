@@ -45,9 +45,9 @@ function reopen<V>(steps: Step<V>[], v: V, id: string): V {
   return next;
 }
 
-export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem }: {
+export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy }: {
   title: string; steps: Step<V>[]; value: V; onChange: (v: V) => void; sentence: (v: V) => string; action: string;
-  submit: () => void; problem?: JSX.Element | null;
+  submit: () => void; problem?: JSX.Element | null; busy?: boolean;
 }) {
   const open = openStep(steps, value);
   const shown = steps.filter(s => applies(s, value));
@@ -83,7 +83,7 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
       {open === null && (
         <div class="wfoot">
           {problem ?? <span class="sentence">{sentence(value)}</span>}
-          <button class="primary" onClick={submit}>{action}</button>
+          <button class="primary" disabled={busy} onClick={submit}>{busy ? 'Opening…' : action}</button>
         </div>
       )}
     </div>

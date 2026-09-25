@@ -176,6 +176,45 @@ public class OfflineSealedTest {
         Assert.assertTrue(FModel.getDecks().getSealed().contains(name));
     }
 
+    // Fails if a second click on Open the packs, sent before the first pool is made, silently replaces it
+    @Test(timeOut = 120_000)
+    public void aDoubleSubmitDoesNotReplaceThePool() throws Exception {
+        final Recorder host = host();
+        final String name = name();
+        sessions.onMessage(host, full(name, false));
+        sessions.onMessage(host, full(name, false));
+        Assert.assertNotNull(editorOn(host, name));
+        Assert.assertNotNull(host.await("error", m -> true), "the second request was not refused");
+        Thread.sleep(2_000);
+        final long editors = host.got.stream().filter(m -> "editor".equals(m.get("t").getAsString()) && m.has("state")
+                && name.equals(m.getAsJsonObject("state").get("name").getAsString())).count();
+        Assert.assertEquals(editors, 1, "the pool was made twice");
+    }
+
+    // Fails if a pool finished after a reload is sent to the tab that was closed, leaving the new one without it
+    @Test(timeOut = 120_000)
+    public void aReloadWhileOpeningStillDelivers() throws Exception {
+        final Recorder host = host();
+        final String name = name();
+        final String block = "Return to Ravnica Guild Sealed";
+        final String combo = SealedCardPoolGenerator.blockCombos(FModel.getBlocks().get(block)).stream()
+                .filter(c -> c.contains("Guild")).findFirst().orElseThrow();
+        sessions.onMessage(host, message("sealedCreate", "product", "Block", "block", block, "combo", combo,
+                "packs", 0, "name", name, "replace", false));
+        Assert.assertNotNull(host.await("hostChoice", m -> true));
+        sessions.disconnected(host);
+        final Recorder again = connect("host");
+        final JsonObject ask = again.await("hostChoice", m -> true);
+        Assert.assertNotNull(ask, "the question was not asked again after the reload");
+        final JsonObject answer = message("hostChoice", "id", ask.get("id").getAsInt());
+        final JsonArray first = new JsonArray();
+        first.add(0);
+        answer.add("value", first);
+        sessions.onMessage(again, answer);
+        Assert.assertNotNull(editorOn(again, name), "the new tab never got the pool's deck");
+        Assert.assertNotNull(again.await("limitedPools", m -> m.toString().contains(name)), "the new tab's pools list is stale");
+    }
+
     // Fails if a reload on the opponents screen falls back to the menu
     @Test(timeOut = 120_000)
     public void aReloadReturnsToThePool() throws Exception {

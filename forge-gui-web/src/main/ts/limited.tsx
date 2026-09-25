@@ -1,7 +1,7 @@
 // The Limited pages, as desktop's Sealed screen lays them out: the saved pools with New event beside them, the setup
 // form, and the opponents a pool's deck can be played against. The deck itself is built in the deck editor.
 
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { StepForm, sealedSentence, sealedSteps, type SealedValue } from './setup';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -72,18 +72,24 @@ function Pools({ pools, actions, create }: { pools: PoolRow[]; actions: Actions;
 
 function SealedSetup({ model, actions, cancel }: { model: Model; actions: Actions; cancel: () => void }) {
   const [value, setValue] = useState<SealedValue>({});
+  // Opening packs takes seconds; until the editor, an error or a taken name answers, a second click would open them again
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setBusy(false), [model.error, model.nameTaken]);
   const options = model.limitedOptions;
   if (!options) return <p class="muted pools-wait">Reading what Forge can open…</p>;
-  const send = (replace: boolean) => actions.sealedCreate({
-    product: value.product!, block: value.block, combo: value.combo, edition: value.edition, template: value.template,
-    cubeId: value.cubeId, packs: value.packs ?? 0, name: value.name!, replace,
-  });
+  const send = (replace: boolean) => {
+    setBusy(true);
+    actions.sealedCreate({
+      product: value.product!, block: value.block, combo: value.combo, edition: value.edition, template: value.template,
+      cubeId: value.cubeId, packs: value.packs ?? 0, name: value.name!, replace,
+    });
+  };
   // The server names a pool it would replace, and waits for a yes, as desktop's sealed screen asks
   const taken = model.nameTaken !== null && model.nameTaken === value.name;
   return (
     <div class="setup">
       <StepForm title="New sealed event" steps={sealedSteps(options)} value={value} onChange={setValue}
-        sentence={v => sealedSentence(options, v)} action="Open the packs" submit={() => send(false)}
+        sentence={v => sealedSentence(options, v)} action="Open the packs" submit={() => send(false)} busy={busy}
         problem={taken ? (
           <span class="sentence taken">
             You already have a pool called <b>{value.name}</b>.
@@ -124,10 +130,10 @@ function Opponents({ pool, actions }: { pool: PoolRow; actions: Actions }) {
         <span class="seg" role="group" aria-label="Games in match">
           {GAMES.map(n => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>{n === 1 ? '1' : `Best of ${n}`}</button>)}
         </span>
-        <button class="primary" disabled={short || !chosen} onClick={() => actions.poolPlay(pool.name, opponent, games)}>
+        <button class="primary" disabled={!chosen} onClick={() => actions.poolPlay(pool.name, opponent, games)}>
           Play {chosen?.name}
         </button>
-        <span class="muted">{short ? `Build a deck of at least ${DECK_SIZE} cards first.` : `${games === 1 ? 'One game' : `Best of ${games}`} against ${chosen?.name}.`}</span>
+        <span class="muted">{short ? `Your deck has ${pool.deckSize} cards. Limited decks need ${DECK_SIZE} when Forge enforces deck legality.` : `${games === 1 ? 'One game' : `Best of ${games}`} against ${chosen?.name}.`}</span>
         <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
       </div>
     </div>
