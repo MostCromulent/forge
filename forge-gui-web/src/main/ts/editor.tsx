@@ -120,8 +120,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
                 <hr />
                 <button role="menuitem" onClick={() => { setMenu(null); changeUi(u => { u.importer = { from: 'editor' }; }); }}>Import a list…</button>
                 <button role="menuitem" onClick={() => { setMenu(null); setDialog('text'); }}>Copy as text</button>
-                <hr />
-                <button role="menuitem" class="danger" onClick={() => { setMenu(null); setDialog('delete'); }}>Delete this deck…</button>
+                {/* A deck only being read (a precon, someone else's) has nothing of the player's to delete */}
+                {!state.copyOf && <hr />}
+                {!state.copyOf && (
+                  <button role="menuitem" class="danger" onClick={() => { setMenu(null); setDialog('delete'); }}>Delete this deck…</button>
+                )}
               </div>
             )}
             {menu === 'new' && (

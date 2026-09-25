@@ -484,7 +484,6 @@ final class Lobby {
                 text.getMessage("lblWebPlay" + type.name()));
     }
 
-    /** The deck behind a catalogue key, for tests in this package. */
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
     Decks loadNetDecks() {
         catalog.loadNetDecks(format());

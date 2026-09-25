@@ -114,7 +114,8 @@ final class Legality {
         final GameFormat banList = check.pool() != null ? check.pool() : commanderFormat(check.format());
         final Set<String> banned = banList == null ? Set.of() : new HashSet<>(banList.getBannedCardNames());
         final Predicate<PaperCard> inIdentity = commanders.isEmpty() ? card -> true : df.isLegalCardForCommanderPredicate(commanders);
-        final String outside = "outside " + String.join(" ", identityLetters(commanders).split(""));
+        final String letters = identityLetters(commanders);
+        final String outside = letters.isEmpty() ? "outside a colourless identity" : "outside " + String.join(" ", letters.split(""));
         return card -> {
             if (banned.contains(card.getName())) {
                 return "banned in " + formatName(check);

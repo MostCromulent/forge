@@ -44,6 +44,15 @@ public class LegalityTest {
         Assert.assertEquals(Legality.check(d, Check.of(GameType.Commander, null)).flags().get("Swords to Plowshares"), "outside B G");
     }
 
+    // Fails if a colourless commander's identity names no colours, leaving "outside " with nothing after it
+    @Test
+    public void colourlessIdentityIsNamed() {
+        final Deck d = commanderDeck("Kozilek, the Great Distortion");
+        d.getMain().add(card("Lightning Bolt"), 1);
+        Assert.assertEquals(Legality.check(d, Check.of(GameType.Commander, null)).flags().get("Lightning Bolt"),
+                "outside a colourless identity");
+    }
+
     // Fails if the copy limit ignores a copy sitting in the sideboard
     @Test
     public void copiesCountAcrossMainAndSideboard() {

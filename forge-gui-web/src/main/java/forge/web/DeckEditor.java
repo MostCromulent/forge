@@ -390,6 +390,10 @@ final class DeckEditor {
         if (target instanceof Group) {
             return GROUP_OWNS_IT;
         }
+        // A precon, or someone else's deck, being looked at: nothing of the player's is saved to delete
+        if (copyOf != null) {
+            return "Only your own decks can be deleted.";
+        }
         try {
             if (target instanceof Device d) {
                 sink.deviceDeck(d.id(), null, check.format());

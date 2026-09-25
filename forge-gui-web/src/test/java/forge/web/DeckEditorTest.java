@@ -103,6 +103,16 @@ public class DeckEditorTest {
         Assert.assertTrue(storages.of(GameType.Constructed).contains("Precon (copy)"));
     }
 
+    // Fails if deleting a deck that is only being read reports success, which closes the editor as if it were gone
+    @Test
+    public void readOnlyDeckIsNotDeleted() {
+        final Deck precon = new Deck("Precon");
+        precon.getMain().add(card("Forest"), 10);
+        final DeckEditor e = new DeckEditor(precon, true, false, new DeckEditor.Stored(storages.of(GameType.Constructed)),
+                Check.of(GameType.Constructed, null), storages, false, (id, text, f) -> { });
+        Assert.assertNotNull(e.delete());
+    }
+
     // Fails if a new deck's automatic name overwrites a deck the player already has
     @Test
     public void newDeckTakesFreeName() {
