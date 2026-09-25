@@ -22,7 +22,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose,
         ok, cancel, endTurn, autoPass, undo, concede }
 
     @Command
@@ -247,6 +247,40 @@ final class FromBrowser {
     record AutoDecisionCommand(AutoDecisionAction action, @Nullable String key, boolean on) {
     }
 
+    // ---- Limited ---------------------------------------------------------------------------------------------
+
+    /** Opens the Limited pages for a kind of event: sealed. */
+    @Command("limitedOpen")
+    record LimitedOpen(String kind) {
+    }
+
+    /**
+     * Opens a sealed pool from the setup form's answers. product is a LimitedPoolType name; the fields its product needs
+     * are set and the rest are null. replace says the player agreed to replace a pool of the same name.
+     */
+    @Command("sealedCreate")
+    record SealedCreate(String product, @Nullable String block, @Nullable String combo, @Nullable String edition,
+            @Nullable String template, @Nullable String cubeId, int packs, String name, boolean replace) {
+    }
+
+    /** A saved pool, by name: its opponents screen, its deck in the editor, or removing it. */
+    @Command("poolOpen")
+    record PoolOpen(String name) {
+    }
+
+    @Command("poolEdit")
+    record PoolEdit(String name) {
+    }
+
+    @Command("poolDelete")
+    record PoolDelete(String name) {
+    }
+
+    /** Plays a pool's deck against one of its opponents, 0-based, for games in the match. */
+    @Command("poolPlay")
+    record PoolPlay(String name, int opponent, int games) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
@@ -254,5 +288,6 @@ final class FromBrowser {
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
-            ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class);
+            ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
+            PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class);
 }

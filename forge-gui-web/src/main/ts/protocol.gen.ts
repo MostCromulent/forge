@@ -18,6 +18,9 @@ export interface Hello {
   avatarCount: number;
   sleeveCount: number;
   sleeveArt: SavedSleeveArt[];
+  inEvent: boolean;
+  eventPool?: string;
+  sealedPools: number;
 }
 
 export interface Presence {
@@ -242,6 +245,19 @@ export interface DeviceDeck {
   format: string;
 }
 
+export interface LimitedOptions {
+  t: 'limitedOptions';
+  blocks: SealedBlock[];
+  fantasyBlocks: SealedBlock[];
+  prereleases: LimitedEdition[];
+  templates: string[];
+}
+
+export interface LimitedPools {
+  t: 'limitedPools';
+  sealed: PoolRow[];
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -384,6 +400,8 @@ export type ServerMessage =
   | ImportResult
   | NameTaken
   | DeviceDeck
+  | LimitedOptions
+  | LimitedPools
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -396,7 +414,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {
@@ -652,6 +670,46 @@ export interface DeviceDecks {
   decks: DeviceDeckText[];
 }
 
+export interface LimitedOpen {
+  t: 'limitedOpen';
+  kind: string;
+}
+
+export interface SealedCreate {
+  t: 'sealedCreate';
+  product: string;
+  block?: string;
+  combo?: string;
+  edition?: string;
+  template?: string;
+  cubeId?: string;
+  packs: number;
+  name: string;
+  replace: boolean;
+}
+
+export interface PoolOpen {
+  t: 'poolOpen';
+  name: string;
+}
+
+export interface PoolEdit {
+  t: 'poolEdit';
+  name: string;
+}
+
+export interface PoolDelete {
+  t: 'poolDelete';
+  name: string;
+}
+
+export interface PoolPlay {
+  t: 'poolPlay';
+  name: string;
+  opponent: number;
+  games: number;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -693,7 +751,13 @@ export type ClientMessage =
   | ImportRead
   | ImportFetch
   | ImportCommit
-  | DeviceDecks;
+  | DeviceDecks
+  | LimitedOpen
+  | SealedCreate
+  | PoolOpen
+  | PoolEdit
+  | PoolDelete
+  | PoolPlay;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -964,6 +1028,24 @@ export interface Fetched {
   format: string;
 }
 
+export interface SealedBlock {
+  name: string;
+  packs: number;
+  combos: string[];
+}
+
+export interface LimitedEdition {
+  code: string;
+  name: string;
+}
+
+export interface PoolRow {
+  name: string;
+  built: boolean;
+  deckSize: number;
+  opponents: Opponent[];
+}
+
 export interface OrderAnswer {
   indices: number[];
   remember: boolean;
@@ -1108,6 +1190,11 @@ export interface ImportFix {
   kind: string;
   label: string;
   text?: string;
+}
+
+export interface Opponent {
+  name: string;
+  colors: string;
 }
 
 export interface TypeCount {

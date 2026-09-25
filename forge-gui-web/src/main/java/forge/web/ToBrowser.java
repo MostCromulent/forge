@@ -43,7 +43,7 @@ final class ToBrowser {
     @Message("hello")
     record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
-            int sleeveCount, List<SavedSleeveArt> sleeveArt) {
+            int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools) {
     }
 
     record SavedSleeveArt(String key, int offset) {
@@ -460,13 +460,38 @@ final class ToBrowser {
     record AutoPassRequest(int delay, @Name("default") boolean defaultAnswer) {
     }
 
+    /** What the sealed setup form can offer, as desktop's sealed dialogs list it. */
+    @Message("limitedOptions")
+    record LimitedOptions(List<SealedBlock> blocks, List<SealedBlock> fantasyBlocks, List<LimitedEdition> prereleases,
+            List<String> templates) {
+    }
+
+    /** A block's sealed product: how many packs, and the set combinations desktop offers for them. */
+    record SealedBlock(String name, int packs, List<String> combos) {
+    }
+
+    record LimitedEdition(String code, String name) {
+    }
+
+    /** The saved offline pools. */
+    @Message("limitedPools")
+    record LimitedPools(List<PoolRow> sealed) {
+    }
+
+    /** One saved pool: whether a deck has been built from it, and the opponents its match can be played against. */
+    record PoolRow(String name, boolean built, int deckSize, List<Opponent> opponents) {
+    }
+
+    record Opponent(String name, String colors) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class, CataloguePage.class, EditorMessage.class,
-            ImportResult.class, NameTaken.class, DeviceDeck.class);
+            ImportResult.class, NameTaken.class, DeviceDeck.class, LimitedOptions.class, LimitedPools.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

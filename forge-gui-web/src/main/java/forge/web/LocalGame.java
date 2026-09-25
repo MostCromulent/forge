@@ -245,6 +245,20 @@ public final class LocalGame {
         if (format != GameType.Constructed) {
             hosted.applyVariant(format);
         }
+        seatAndStart(seats);
+    }
+
+    /** A sealed or draft match against computer seats, typed as limitedType, as desktop's offline limited screens start one. */
+    public void startLimitedMatch(final List<Seat> seats, final GameType limitedType, final WebGuiGame gui) {
+        final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
+        openHost(mine.name(), gui, () -> { }, (from, text) -> { });
+        hosted.setLimitedMode(true);
+        hosted.setLimitedType(limitedType);
+        seatAndStart(seats);
+    }
+
+    private void seatAndStart(final List<Seat> seats) {
         while (hosted.getNumberOfSlots() < seats.size()) {
             hosted.addSlot();
         }
