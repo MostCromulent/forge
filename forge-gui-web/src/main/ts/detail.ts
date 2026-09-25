@@ -129,6 +129,7 @@ function drawDetail(model: Model): void {
   // A card the viewer may not see has no image, so its text is all there is to show
   const text = ui.cardText || !src;
   zoom.classList.toggle('image-only', !text);
+  zoom.classList.toggle('text-card', text);
   img.hidden = text;
   if (!text) setImage(img, src);
   q(zoom, '.detail').hidden = !face;
@@ -189,7 +190,7 @@ function ensureZoom(zoom: HTMLElement): void {
 
 function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   ensureZoom(zoom);
-  zoom.classList.remove('image-only');
+  zoom.classList.remove('image-only', 'text-card');
   q(zoom, 'img').hidden = true;
   q(zoom, '.detail').hidden = !d;
   setSource(q(zoom, '.from'), undefined);

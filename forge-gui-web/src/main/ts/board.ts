@@ -11,6 +11,8 @@ import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
 import { canShatter, shatter } from './shatter';
 import { byId, q } from './dom';
+import { setting } from './settings';
+import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from './actions';
 import type { CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
@@ -39,8 +41,9 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
-  renderSeat(byId('opponent'), model, opponents(model)[0], onField, actions, select);
+  renderOpponents(byId('opponent'), model, onField, actions, select);
   renderSeat(byId('me'), model, me(model), onField, actions, select);
+  renderOut(model, actions);
   announceTurn(model, g);
   renderPhaseBar(model, g, actions);
   renderStack(model);
@@ -49,6 +52,95 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   renderGameOver(model, g, actions);
   animateCardMoves(model, events);
 }
+
+/**
+ * The players across the table, in the order they sit: turn order, going round from you. The order is taken once,
+ * when the game is first drawn, so a card that reverses the turn order does not move anyone.
+ */
+let seating: number[] | null = null;
+
+function seated(model: Model): PlayerView[] {
+  const everyone = players(model);
+  if (!seating) {
+    const mine = everyone.findIndex(p => isLocal(model, p));
+    const from = Math.max(0, mine);
+    seating = [...everyone.slice(from), ...everyone.slice(0, from)].map(p => p.$key);
+  }
+  for (const p of everyone) {
+    if (!seating.includes(p.$key)) seating.push(p.$key);
+  }
+  const byKey = new Map(everyone.map(p => [p.$key, p]));
+  return seating.map(k => byKey.get(k)).filter((p): p is PlayerView => !!p && !isLocal(model, p));
+}
+
+/**
+ * One opponent fills the top half as a seat of its own. Two or three share it as columns, or with you as four
+ * quarters of the table, as the player chooses; each is then a compact seat, its details in a row above its cards.
+ */
+function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], actions: Actions, select: CardClick): void {
+  const across = seated(model);
+  const many = across.length > 1;
+  const quads = many && setting('boardLayout') === 'quadrants';
+  const match = byId('match');
+  match.classList.toggle('many', many);
+  match.classList.toggle('quads', quads);
+  match.dataset.opponents = String(across.length);
+  if (root.classList.contains('many') !== many) {
+    root.replaceChildren();
+    delete root.dataset.player;
+    root.classList.toggle('many', many);
+    root.classList.toggle('seat', !many);
+  }
+  if (!many) {
+    renderSeat(root, model, across[0], onField, actions, select);
+    return;
+  }
+  // Each opponent's seat is in the colour their name has in the log
+  const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
+  reconcile(root, across, p => p.$key,
+    () => {
+      const el = document.createElement('section');
+      el.className = 'seat compact';
+      return el;
+    },
+    (el, p) => {
+      el.style.setProperty('--tint', tints.find(t => t.name === p.Name)?.colour ?? 'var(--muted)');
+      renderSeat(el, model, p, onField, actions, select);
+    });
+}
+
+/** Out of a game that goes on: said once, over the board, with a way to leave when nobody else is waiting on you. */
+let outSaid = false;
+
+function renderOut(model: Model, actions: Actions): void {
+  const mine = me(model);
+  const out = !!mine?.HasLost && !model.gameOver;
+  let banner = document.getElementById('out-banner');
+  if (!out) {
+    banner?.remove();
+    if (!mine?.HasLost) outSaid = false;
+    return;
+  }
+  if (banner || outSaid) return;
+  outSaid = true;
+  banner = document.createElement('div');
+  banner.id = 'out-banner';
+  banner.setAttribute('role', 'status');
+  banner.innerHTML = `<span class="skull">${SKULL}</span><div><b>You're out</b><p>The game goes on between the others.</p></div>`
+    + '<button class="watch">Keep watching</button>' + (model.networked ? '' : '<button class="leave primary">Leave match</button>');
+  q(banner, '.watch').onclick = () => banner?.remove();
+  const leave = banner.querySelector<HTMLButtonElement>('.leave');
+  if (leave) {
+    leave.onclick = () => {
+      actions.quitMatch();
+      actions.leave();
+    };
+  }
+  byId('match').append(banner);
+}
+
+// Lucide's skull (ISC, see web/licenses/lucide-license.txt)
+const SKULL = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M15 22a1 1 0 0 0 1-1v-1a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20v1a1 1 0 0 0 1 1z"/><circle cx="15" cy="12" r="1"/><circle cx="9" cy="12" r="1"/></svg>';
 
 interface Badge {
   key: string;
@@ -64,8 +156,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   if (!root.firstChild) {
     root.innerHTML = `
       <div class="player">
-        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
-        <div class="name"></div>
+        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark" title="Out of the game">${SKULL}</span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
+        <div class="name"><span class="who"></span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         <div class="player-counters"></div>
         <div class="emblems"></div>
@@ -93,7 +185,10 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('ai', !!player.IsAI);
   root.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(player)));
   showLife(q(root, '.life'), avatar, player.Life ?? 0, isLocal(model, player));
-  q(root, '.name').textContent = player.Name ?? '';
+  q(root, '.name .who').textContent = player.Name ?? '';
+  // Out of the game: the seat stays where it was, greyed, with a skull by the name
+  root.classList.toggle('out', !!player.HasLost);
+  root.classList.toggle('turn', game(model)?.PlayerTurn?.ref === player.$key);
   avatar.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(player.$key));
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
@@ -210,6 +305,9 @@ let announced: string | null = null;
 export function resetTable(): void {
   announced = null;
   firstPlayer = null;
+  seating = null;
+  outSaid = false;
+  document.getElementById('out-banner')?.remove();
   choseStarter = false;
   broken = null;
   titleReady = true;

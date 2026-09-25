@@ -93,3 +93,5 @@ button.primary:active:not(:disabled) { box-shadow: none; transform: translateY(1
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 90; }
 .notice { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; max-width: 320px; cursor: pointer; }
 .notice.error { border-color: var(--danger); }
+.notice { display: grid; gap: 4px; justify-items: start; }
+.notice-view { margin-top: 6px; padding: 5px 12px; font-size: 12.5px; font-weight: 600; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }

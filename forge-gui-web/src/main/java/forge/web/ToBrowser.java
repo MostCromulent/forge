@@ -66,6 +66,11 @@ final class ToBrowser {
     record Notice(@Nullable String title, @Nullable String message, boolean error) {
     }
 
+    /** Cards put before the player without holding the game up, such as those the AI plays poorly; a notice offers them. */
+    @Message("aside")
+    record Aside(String title, List<RequestOption> cards) {
+    }
+
     /** The auto-yields and trigger answers the player has set, and whether either kind is switched off. */
     @Message("autoDecisions")
     record AutoDecisions(List<AutoDecision> entries, boolean yieldsOff, boolean triggersOff) {
@@ -352,7 +357,7 @@ final class ToBrowser {
             Decks.class, DeckDetailsMessage.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
-            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class);
+            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

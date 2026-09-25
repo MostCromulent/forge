@@ -2,6 +2,8 @@
 #hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
 /* With the log folded away the hand has the whole width, less the corner the console keeps */
 #hand { padding-right: var(--prompt-out); }
+/* In quarters the hand sits under your own quarter, away from the prompt */
+#match.quads #hand { padding-right: 0; }
 #match.side-folded #hand { padding-right: calc(var(--side-w) + var(--prompt-out) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */

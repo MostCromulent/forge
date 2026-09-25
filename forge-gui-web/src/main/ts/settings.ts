@@ -52,6 +52,11 @@ export const SETTINGS: SettingDef[] = [
     section: 'Cards', key: 'autoTapPreview', label: 'Highlight the lands Auto would tap', type: 'toggle', server: true, def: false,
   },
   {
+    section: 'Cards', key: 'boardLayout', label: 'Three or four players', type: 'choice',
+    hint: 'Columns lines the opponents up across the top; quadrants gives every player a quarter of the table.',
+    options: [['columns', 'Columns'], ['quadrants', 'Quadrants']], def: 'columns',
+  },
+  {
     section: 'Cards', key: 'handSort', label: 'Sort hand', type: 'choice',
     options: [['mana', 'By mana value'], ['draw', 'As drawn']], def: 'mana',
   },

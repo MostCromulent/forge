@@ -191,6 +191,12 @@ export interface AutoDecisions {
   triggersOff: boolean;
 }
 
+export interface Aside {
+  t: 'aside';
+  title: string;
+  cards: RequestOption[];
+}
+
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
 
 export interface ChoicesRequest {
@@ -326,6 +332,7 @@ export type ServerMessage =
   | GameOver
   | DrawOffer
   | AutoDecisions
+  | Aside
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest

@@ -26,6 +26,17 @@ export function createCard(onClick: CardClick): HTMLDivElement {
 
 const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
 
+/**
+ * The colour a card without its image is framed in, as a printed card is: one colour, gold for several, and
+ * colourless artifacts and lands in their own greys. The mask is MagicColor's, as in the player's Mana property.
+ */
+function frameColour(colours: number, type: string): string {
+  const one = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']].filter(([bit]) => colours & (bit as number));
+  if (one.length > 1) return 'M';
+  if (one.length === 1) return one[0][1] as string;
+  return /Land/.test(type) ? 'L' : 'C';
+}
+
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
   const visible = model.visible.has(card.$key);
@@ -49,10 +60,12 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     el.classList.remove('noimg');
   }
   el.dataset.zoom = src;
+  el.style.setProperty('--pile-img', src ? cssUrl(src) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setSymbolText(q(el, '.cost'), visible ? state.ManaCost : '');
   setSymbolText(q(el, '.cost-badge'), visible ? state.ManaCost : '');
   q(el, '.type').textContent = type;
+  el.dataset.frame = visible ? frameColour(state.Colors ?? 0, type) : '';
   const pt = q(el, '.pt');
   const creature = /Creature/.test(type);
   const damage = card.Damage ?? 0;

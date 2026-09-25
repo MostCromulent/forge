@@ -10,8 +10,13 @@ let stick = true;
 
 export function initLog(): void {
   const log = byId('log');
+  // Only the player scrolling decides it: a thumbnail loading, or the browser keeping the view steady as entries
+  // above are trimmed, also moves the log, and once read as scrolling back it stopped following for good
+  let handled = 0;
+  const byHand = () => { handled = Date.now(); };
+  for (const type of ['wheel', 'touchmove', 'pointerdown', 'keydown']) log.addEventListener(type, byHand, { passive: true });
   log.addEventListener('scroll', () => {
-    stick = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+    if (Date.now() - handled < 1000) stick = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   });
 }
 

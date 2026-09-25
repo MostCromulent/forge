@@ -25,6 +25,10 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   if (cardMenu(model) === req) {
     return <CardMenu key={req.id} req={req as ChoicesRequest} answer={value => actions.answer(req.id, value)} />;
   }
+  // Cards shown and nothing asked of them: the zone window, the same as looking through a pile
+  if (req.kind === 'reveal' && !req.atX && !req.atY) {
+    return <RevealWindow key={req.id} model={model} title={req.message ?? ''} cards={req.options} close={() => actions.answer(req.id, [])} />;
+  }
   // Keyed by the question, so nothing picked for one is still picked for the next
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
 }
@@ -106,6 +110,20 @@ function ButtonRow({ children }: { children: ComponentChildren }) {
 
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
+
+/** Cards laid out to be looked at, in the window a zone opens in, with OK (or Space) to put them away. */
+export function RevealWindow({ model, title, cards, close }: { model: Model; title: string; cards: RequestOption[]; close: () => void }) {
+  const count = cards.filter(c => c.card || c.imageKey || !SECTION.test(c.label ?? '')).length;
+  return (
+    <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+      <section class="zone-panel reveal-panel" role="dialog" aria-label={title}>
+        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{`${count} ${count === 1 ? 'card' : 'cards'}`}</span></header>
+        <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
+        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">OK</span><kbd>Space</kbd></button></footer>
+      </section>
+    </div>
+  );
+}
 
 /** What an option can show: a card on the table, a card by image and name, or a line of text. */
 type OptionLike = Pick<RequestOption, 'card' | 'name' | 'imageKey'> & { label?: string };

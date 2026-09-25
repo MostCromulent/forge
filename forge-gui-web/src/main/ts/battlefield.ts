@@ -67,7 +67,9 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
   const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
-  const height = root.clientHeight - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
+  // A compact seat keeps its player's details in a row above the cards, and that row is not the cards' room
+  const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
+  const height = root.clientHeight - header - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
   // A slot with its room either side is as wide as a tapped card, which lies on its side at 90% (board.css), plus
   // its air. An empty row still keeps 60% of a card's height (.row's min-height)
   const lines = (count: number, fit: number) =>

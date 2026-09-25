@@ -8,7 +8,7 @@ import type { UiState } from './ui';
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}`;
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'closeViewing';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
@@ -72,6 +72,14 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   if (menu) {
     if (escape) return 'closeCardMenu';
     return /^[1-9]$/.test(key) && Number(key) <= menu.options.length ? `pickCardMenu${key as Digit}` : null;
+  }
+  // Cards put up only to be seen go away on the prompt's keys, as the zone windows' OK does
+  if (ui.viewing) {
+    return escape || key === ' ' || key === 'Enter' ? 'closeViewing' : null;
+  }
+  const request = oldestRequest(model);
+  if (request?.kind === 'reveal' && (escape || key === ' ' || key === 'Enter')) {
+    return 'closeReveal';
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   if ((oldestRequest(model) && !stackPick(model)) || model.spectating) {

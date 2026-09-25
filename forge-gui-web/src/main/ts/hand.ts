@@ -65,6 +65,9 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const first = root.firstElementChild as HTMLElement | null;
   if (!first || cards.length < 2) return;
   const cardWidth = first.offsetWidth;
-  const step = Math.min(6, (root.clientWidth - 16 - cards.length * cardWidth) / (cards.length - 1));
+  // The room the hand keeps clear for the prompt beside it is not room for cards
+  const style = getComputedStyle(root);
+  const width = root.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const step = Math.min(6, (width - 16 - cards.length * cardWidth) / (cards.length - 1));
   root.style.setProperty('--step', `${step}px`);
 }

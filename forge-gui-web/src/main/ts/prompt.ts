@@ -47,8 +47,8 @@ export function renderPrompt(model: Model, actions: Actions): void {
       </div>
       <div class="choose-players" hidden></div>
       <div class="buttons">
-        <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
+        <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
     q(root, '.end-turn').onclick = () => actions.endTurn();
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();

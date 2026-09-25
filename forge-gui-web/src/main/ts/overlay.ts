@@ -5,23 +5,21 @@ import { ui } from './ui';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
-// of the hovered stack item. Each is a band that widens towards its target, with a bright core down the middle.
-// Colour names the kind, and width, dash and head repeat it, so nothing rests on telling two hues apart.
+// of the hovered stack item. Each is one solid shape, widest at its source and tapering into its head. Colour names
+// the kind, and width and head repeat it, so nothing rests on telling two hues apart.
 interface ArrowKind {
   color: string;
   band: number;
-  core: number;
-  dash: number[];
   head: 'spear' | 'chevron' | 'reticle';
 }
 
 const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target' | 'mustBlock', ArrowKind> = {
-  attack: { color: '#ff7a59', band: 16, core: 3.8, dash: [], head: 'spear' },
-  block: { color: '#5cc8ff', band: 13, core: 3, dash: [13, 8], head: 'chevron' },
-  plannedBlock: { color: '#8fb7cc', band: 10, core: 2.6, dash: [2, 9], head: 'chevron' },
-  target: { color: '#ffcc33', band: 9, core: 2.2, dash: [3, 8], head: 'reticle' },
-  // An obligation rather than a choice, so it is drawn thin and tight-dashed, unlike the block a player makes
-  mustBlock: { color: '#f2c344', band: 8, core: 2, dash: [4, 5], head: 'chevron' },
+  attack: { color: '#ff7a59', band: 16, head: 'spear' },
+  block: { color: '#5cc8ff', band: 13, head: 'chevron' },
+  plannedBlock: { color: '#8fb7cc', band: 10, head: 'chevron' },
+  target: { color: '#ffcc33', band: 9, head: 'reticle' },
+  // An obligation rather than a choice, so it is drawn thinner than the block a player makes
+  mustBlock: { color: '#f2c344', band: 7, head: 'chevron' },
 };
 
 interface Point {
@@ -156,36 +154,18 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   const bend = { x: (a.x + end.x) / 2 + (end.y - a.y) * bow, y: (a.y + end.y) / 2 - (end.x - a.x) * bow };
   // A spear's head is solid, so the band and line stop at its waist rather than run on under it to the tip
   const [bodyBend, bodyEnd] = kind.head === 'spear' ? trim(a, bend, end, SPEAR_WAIST) : [bend, end];
-  const path = () => {
-    ctx.beginPath();
-    ctx.moveTo(a.x, a.y);
-    ctx.quadraticCurveTo(bodyBend.x, bodyBend.y, bodyEnd.x, bodyEnd.y);
-  };
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.setLineDash([]);
-  // The band is the shape; the core is the line the eye follows. It narrows at the source and darkens towards
-  // the target, so which end is which reads without following the curve.
-  taper(ctx, a, bodyBend, bodyEnd, t => (kind.band / 2) * (0.18 + 0.82 * Math.pow(t, 0.75)));
-  ctx.strokeStyle = 'rgba(0,0,0,.55)';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  const wash = ctx.createLinearGradient(a.x, a.y, end.x, end.y);
-  wash.addColorStop(0, rgba(kind.color, 0.06));
-  wash.addColorStop(1, rgba(kind.color, 0.34));
-  ctx.fillStyle = wash;
+  // One solid shape in one colour: widest where it leaves the source and narrowing into the head, like a thrown
+  // spear, so which end is which reads without following the curve
+  taper(ctx, a, bodyBend, bodyEnd, t => (kind.band / 2) * (0.2 + 0.8 * Math.pow(1 - t, 0.8)));
+  ctx.fillStyle = rgba(kind.color, 0.92);
   ctx.fill();
-  ctx.setLineDash(kind.dash);
-  ctx.strokeStyle = rgba(kind.color, 0.98);
-  ctx.lineWidth = kind.core;
-  path();
-  ctx.stroke();
-  ctx.setLineDash([]);
   head(ctx, end, Math.atan2(end.y - bend.y, end.x - bend.x), kind);
 }
 
 /** How far back from its tip a spear head narrows to its waist. */
-const SPEAR_WAIST = 13;
+const SPEAR_WAIST = 19;
 
 /** The same quadratic curve cut short where it comes within `back` pixels of its end, as a control point and an end. */
 function trim(a: Point, bend: Point, b: Point, back: number): [Point, Point] {
@@ -227,21 +207,19 @@ function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: Arr
     { x: at.x - len * Math.cos(angle - spread), y: at.y - len * Math.sin(angle - spread) },
     { x: at.x - len * Math.cos(angle + spread), y: at.y - len * Math.sin(angle + spread) },
   ];
-  ctx.strokeStyle = 'rgba(0,0,0,.6)';
+  ctx.strokeStyle = rgba(kind.color, 1);
+  ctx.fillStyle = rgba(kind.color, 1);
   if (kind.head === 'reticle') {
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(at.x, at.y, 11, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = rgba(kind.color, 1);
-    ctx.lineWidth = 2.6;
+    ctx.arc(at.x, at.y, 13, 0, Math.PI * 2);
     ctx.stroke();
     return;
   }
   if (kind.head === 'spear') {
     // A barbed head: the outer points swept back past a waist, so the tip reads at a glance on a busy board
-    const [l, r] = point(23, 0.42);
-    const [wl, wr] = point(13, 0.2);
+    const [l, r] = point(34, 0.42);
+    const [wl, wr] = point(SPEAR_WAIST, 0.2);
     ctx.beginPath();
     ctx.moveTo(at.x, at.y);
     ctx.lineTo(l.x, l.y);
@@ -249,20 +227,14 @@ function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: Arr
     ctx.lineTo(wr.x, wr.y);
     ctx.lineTo(r.x, r.y);
     ctx.closePath();
-    ctx.lineWidth = 3.5;
-    ctx.stroke();
-    ctx.fillStyle = rgba(kind.color, 1);
     ctx.fill();
     return;
   }
-  const [l, r] = point(18, 0.45);
+  const [l, r] = point(24, 0.45);
   ctx.beginPath();
   ctx.moveTo(l.x, l.y);
   ctx.lineTo(at.x, at.y);
   ctx.lineTo(r.x, r.y);
-  ctx.lineWidth = 7.5;
-  ctx.stroke();
-  ctx.strokeStyle = rgba(kind.color, 1);
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 5;
   ctx.stroke();
 }

@@ -12,6 +12,9 @@
 }
 /* The player column holds three zone tiles abreast, and the console in the corner below it is as wide */
 #match { --side-w: 340px; --prompt-out: 72px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
+/* Clipped, not hidden: the hand hangs below the edge, and a hidden overflow can still be scrolled by Space or a focus, which
+   slid the whole table up and cut off the top seat */
+#match { overflow: clip; }
 #opponent { grid-area: opp; }
 /* Your half of the table is lit a little, so whose side is whose reads without a label */
 #me { grid-area: me; background: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 2.5%, transparent) 0%, transparent 30%); }
@@ -35,6 +38,46 @@
 /* The stack panel floats over the right of the board, so the rows give it room rather than sliding under it */
 #match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }
 #hand { grid-area: hand; }
+/* Two or three opponents share the top half in columns, in the order they sit */
+#opponent.many { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; min-height: 0; }
+/* Quadrants: four quarters of the table, you in the bottom left with your hand under you, the others going round */
+#match.quads { grid-template-columns: 1fr 1fr var(--side-w); grid-template-areas: "q1 q2 side" "phase phase side" "me q3 side" "hand q3 side"; }
+#match.quads[data-opponents="2"] { grid-template-areas: "q1 q2 side" "phase phase side" "me me side" "hand hand side"; }
+#match.quads.side-folded { grid-template-columns: 1fr 1fr; grid-template-areas: "q1 q2" "phase phase" "me q3" "hand q3"; }
+#match.quads #opponent { display: contents; }
+#match.quads #opponent > .seat:nth-child(1) { grid-area: q1; }
+#match.quads #opponent > .seat:nth-child(2) { grid-area: q2; }
+#match.quads #opponent > .seat:nth-child(3) { grid-area: q3; }
+/* That seat is on your side of the table, so its lands lie nearest the bottom edge as yours do */
+#match.quads #opponent > .seat:nth-child(3) .battlefield { flex-direction: column-reverse; align-self: end; }
+/* A compact seat: the player's details in a row across the top, in their colour, and their cards below */
+.seat.compact { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 10px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 34px; }
+.seat.compact.turn { border-color: color-mix(in srgb, var(--tint) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint) 20%, transparent), 0 0 22px color-mix(in srgb, var(--tint) 14%, transparent); }
+.seat.compact .player { display: flex; align-items: center; justify-items: start; gap: 10px; flex-wrap: wrap; }
+.seat.compact .avatar { width: 46px; height: 46px; flex: none; }
+.seat.compact .avatar .initial { font-size: 18px; }
+.seat.compact .avatar .life { font-size: 11px; bottom: -7px; padding: 0 6px; }
+.seat.compact .avatar .ai-badge { width: 20px; height: 20px; left: -5px; top: -5px; }
+.seat.compact .name { color: var(--tint); font-weight: 700; font-size: 13px; }
+.seat.compact .hand-fan { position: static; }
+.seat.compact .zone-tiles { margin-left: auto; gap: 4px; }
+.seat.compact .zone-tile .zone-name { font-size: 7px; }
+.seat.compact .zone-tile .zone-count { font-size: 10px; min-width: 16px; }
+.seat.compact .battlefield { max-height: none; }
+/* Out of the game: the seat keeps its place, greyed, with a skull by the name */
+#out-banner .skull svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.seat.out .name { color: var(--muted); }
+.seat.out .battlefield, .seat.out .zone-tiles, .seat.out .hand-fan, .seat.out .emblems { filter: grayscale(1) brightness(.55); opacity: .6; pointer-events: none; }
+/* Nearly black and hatched, so an empty seat never reads as a live one */
+.seat.compact.out { border-style: dashed; border-color: #262d38; box-shadow: none;
+  background: repeating-linear-gradient(135deg, #07090d 0 10px, #0a0d12 10px 20px); }
+#out-banner { position: fixed; left: 50%; top: 18px; transform: translateX(calc(-50% - var(--side-w) / 2)); z-index: 45; display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 16px;
+  border-radius: 12px; background: color-mix(in srgb, var(--surface) 96%, transparent); border: 1px solid var(--line-bright); box-shadow: 0 16px 40px #000b; animation: out-in .35s ease both; }
+#out-banner .skull { width: 26px; height: 26px; color: var(--muted); flex: none; }
+#out-banner b { font-size: 14px; }
+#out-banner p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+@keyframes out-in { from { opacity: 0; transform: translate(calc(-50% - var(--side-w) / 2), -10px); } }
 .seat { display: grid; grid-template-columns: var(--seat-w) 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
@@ -85,8 +128,15 @@
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
 /* A player who has lost keeps an empty socket where their portrait was */
-.avatar.lost { background: #0e121a; border-color: #2a3240; box-shadow: inset 0 6px 14px #000c; }
-.avatar.lost .portrait, .avatar.lost .initial { visibility: hidden; }
+/* Out of the game: the portrait stays, greyed and dimmed, with a skull over it */
+.avatar.lost { border-color: #2a3240; }
+.avatar.lost .portrait { filter: grayscale(1) brightness(.45); animation: lost-return .9s ease 1.8s both; }
+/* The portrait breaks out of its socket first, so its grey ghost comes back only after the pieces have gone */
+@keyframes lost-return { from { opacity: 0; } }
+.avatar.lost .initial { opacity: .3; }
+.avatar.lost .skull-mark { display: grid; }
+.avatar .skull-mark { display: none; position: absolute; inset: 0; z-index: 2; place-items: center; color: #d8dde5; pointer-events: none; }
+.avatar .skull-mark svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px #000); }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--select), 0 0 6px color-mix(in srgb, var(--select) 35%, transparent); }
 /* A player the prompt lets you choose: dashed ring, so it differs from a chosen one by shape as well as glow */
 .avatar.selectable:not(.highlighted) { outline: 3px dashed var(--select); outline-offset: 3px; }
@@ -312,7 +362,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 .stack-item .who { color: var(--muted); }
 .stack-item .targets { color: var(--select); }
 .stack-item .desc:empty, .stack-item .targets:empty { display: none; }
-#log { background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
+#log { overflow-anchor: none; background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
 .log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }
 .log-entry.turn { color: var(--text); font-weight: 600; padding-top: 6px; }
@@ -340,6 +390,10 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* One shape whatever the zone holds: five across, scrolled, rather than a box that grows with its contents */
 /* Bigger than on the board, because reading them is the whole reason this is open */
 .zone-panel .cards { --fit: 1.45; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; padding: 16px 18px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; justify-items: center; align-content: start; }
+/* A reveal opens in the same window as a zone, over the same dimmed board */
+.reveal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--scrim-deep); }
+.reveal-panel { max-height: 88vh; }
+.reveal-panel .cards .section { grid-column: 1 / -1; justify-self: stretch; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .zone-panel footer { display: flex; align-items: center; gap: 12px; padding: 11px 18px; border-top: 1px solid var(--line); }
 .zone-hint { flex: 1; font-size: 12px; color: var(--muted); }
 .zone-answer { display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 14px; border-radius: 6px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
@@ -354,7 +408,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 .zone-shut { width: 30px; padding: 0; color: var(--muted); background: none; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
-#zoom { position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+/* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view */
+#zoom { --zoom-w: 260px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
@@ -363,7 +418,13 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #zoom.image-only .detail { width: auto; padding: 0; background: none; border: 0; box-shadow: none; text-shadow: 0 1px 3px #000; }
 #zoom.image-only .detail > :not(.from, .hint) { display: none; }
 #zoom.image-only .detail .hint { padding: 2px 8px; border-radius: 8px; background: #0b0f16d9; }
-#zoom img { width: 300px; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
+/* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
+#zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
+  padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--line-bright); font-size: 14px; line-height: 1.45; }
+#zoom.text-card .detail .name { font-size: 16px; }
+#zoom.text-card .detail .pt { margin-top: auto; }
+
+#zoom img { width: var(--zoom-w); border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
 #zoom .detail .type { color: var(--muted); }
@@ -419,6 +480,24 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    type line on a small card otherwise hangs out below it */
 .card .frame { position: absolute; inset: 0; display: grid; gap: 2px; padding: 6px; font-size: 10px; align-content: start; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); }
 .card.noimg img { display: none; }
+/* Without its image a card is drawn as a small printed card: a frame in its colour, the name and cost in a bar
+   across the top, the type in a bar near the foot, and the space between where the art would be */
+.card { --frame: #9aa1ab; }
+.card[data-frame="W"] { --frame: #e8dfc0; }
+.card[data-frame="U"] { --frame: #5f9fd6; }
+.card[data-frame="B"] { --frame: #8a7d98; }
+.card[data-frame="R"] { --frame: #d9714f; }
+.card[data-frame="G"] { --frame: #5fa86a; }
+.card[data-frame="M"] { --frame: #d9b04e; }
+.card[data-frame="L"] { --frame: #a58d6b; }
+.card.noimg .frame { --u: calc(var(--card-w) * var(--fit, 1) / 100); grid-template-rows: auto auto 1fr auto; gap: 0; padding: calc(var(--u) * 5);
+  border: calc(var(--u) * 4) solid #0b0d11; background: linear-gradient(165deg, color-mix(in srgb, var(--frame) 42%, #1b2029), color-mix(in srgb, var(--frame) 18%, #0d1016));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 60%, transparent); font-size: calc(var(--u) * 10); color: #f2f4f7; }
+.card.noimg .frame .name { padding: calc(var(--u) * 2) calc(var(--u) * 4); border-radius: calc(var(--u) * 3); background: color-mix(in srgb, var(--frame) 30%, #0d1016); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 50%, transparent);
+  line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card.noimg .frame .cost { justify-self: end; margin-top: calc(var(--u) * 2); }
+.card.noimg .frame .type { grid-row: 4; margin-bottom: calc(var(--u) * 16); padding: calc(var(--u) * 2) calc(var(--u) * 4); border-radius: calc(var(--u) * 3); background: color-mix(in srgb, var(--frame) 22%, #0d1016);
+  font-size: calc(var(--u) * 8.5); line-height: 1.2; color: #d9dee5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }
 .card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
@@ -484,14 +563,15 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
-/* The cards under the top one show as the stack seen edge-on, beside the card rather than behind it */
-.card.pile::before, .card.pile::after { content: ''; position: absolute; display: none; width: calc(4px * var(--fit, 1)); border-radius: 3px 0 0 3px; background: linear-gradient(180deg, #2b2e34, #111317); box-shadow: inset -1px 0 0 #000c, inset 1px 0 0 #ffffff1a; }
-.card.pile::after { left: calc(-5px * var(--fit, 1)); top: calc(3px * var(--fit, 1)); bottom: calc(3px * var(--fit, 1)); }
-.card.pile::before { left: calc(-10px * var(--fit, 1)); top: calc(6px * var(--fit, 1)); bottom: calc(6px * var(--fit, 1)); }
+/* The cards under the top one are the same card, stepped out behind it and a little darker, so their own frames
+   show at the edges. Isolated, so they sit under the top card's image but above whatever the board paints. */
+.card.pile { isolation: isolate; }
+.card.pile::before, .card.pile::after { content: ''; position: absolute; inset: 0; z-index: -1; display: none; border-radius: var(--radius);
+  background: var(--pile-img, none) center / cover, var(--surface-2); box-shadow: 0 1px 4px #000a; }
+.card.pile::after { transform: translate(calc(-5px * var(--fit, 1)), calc(-4px * var(--fit, 1))); filter: brightness(.78); }
+.card.pile::before { transform: translate(calc(-10px * var(--fit, 1)), calc(-8px * var(--fit, 1))); filter: brightness(.58); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
-/* The fourth card and beyond share one thicker edge, since the edges stop being countable past three */
-.card.pile[data-depth="3"]::before { left: calc(-15px * var(--fit, 1)); width: calc(8px * var(--fit, 1)); }
 .card .count { display: none; position: absolute; right: 4px; top: 4px; z-index: 3; min-width: 22px; height: 20px; padding: 0 5px; place-items: center; background: #0e1116e6; color: var(--text); border: 1px solid var(--accent-2); border-radius: 11px; font-size: 11.5px; font-weight: 700; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { border-style: dashed; color: var(--muted); }
@@ -542,7 +622,7 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 }
 /* Who goes first, over the board as the hands are dealt. Every face shows, then the starter is lit in brass and
    the rest step back. It never takes a click, so the mulligan prompt under it can be answered straight away. */
-#first-reveal { position: fixed; inset: 0 268px 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
+#first-reveal { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
   background: radial-gradient(closest-side, #070910d9, #07091000); animation: first-reveal 3s ease forwards; }
 #first-reveal .reveal-faces { display: flex; gap: 36px; }
 #first-reveal .reveal-face { display: grid; justify-items: center; gap: 8px; }

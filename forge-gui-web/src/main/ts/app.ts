@@ -3,7 +3,7 @@
 // arrangement. Nothing it draws with sends anything itself.
 
 import { connect } from './net';
-import { createModel, applyState, cardMenu, isLocal, players } from './model';
+import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
 import { createActions, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
@@ -100,6 +100,12 @@ function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
+    case 'closeViewing': changeUi(u => { u.viewing = null; }); break;
+    case 'closeReveal': {
+      const reveal = oldestRequest(model);
+      if (reveal) actions.answer(reveal.id, []);
+      break;
+    }
     case 'closeVolume': changeUi(u => { u.volumeOpen = false; }); break;
     case 'closeStackMenu': changeUi(u => { u.stackMenuAt = null; }); break;
     case 'closeStops': changeUi(u => { u.stopsOpen = false; }); break;
@@ -230,6 +236,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
     case 'autoDecisions': model.autoDecisions = msg; break;
+    case 'aside': notify({ t: 'notice', title: msg.title, message: '', error: false }, () => changeUi(u => { u.viewing = msg; }), ASIDE_MS); break;
     case 'gameOver':
       model.gameOver = true;
       model.drawOffer = null;
@@ -270,11 +277,14 @@ function offerRememberedName(): void {
 let noticeId = 0;
 const NOTICE_MS = 6000;
 
+/** Long enough to reach the notice's button before it goes. */
+const ASIDE_MS = 15000;
+
 // An error stays until the player dismisses it; anything else goes by itself
-function notify(notice: Notice): void {
+function notify(notice: Notice, view?: () => void, ms = NOTICE_MS): void {
   const id = ++noticeId;
-  model.notices = [...model.notices, { id, notice }];
-  if (!notice.error) setTimeout(() => dismissNotice(id), NOTICE_MS);
+  model.notices = [...model.notices, { id, notice, view }];
+  if (!notice.error) setTimeout(() => dismissNotice(id), ms);
 }
 
 function dismissNotice(id: number): void {

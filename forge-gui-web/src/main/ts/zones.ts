@@ -76,8 +76,8 @@ function createPanel(): HTMLElement {
     + '<button class="zone-fold">Show board</button></header>'
     + '<div class="cards"></div>'
     + '<footer><span class="zone-hint"></span><button class="zone-done primary">Done</button>'
-    + '<button class="zone-answer cancel"><span class="label"></span><kbd>Esc</kbd></button>'
-    + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button></footer>';
+    + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button>'
+    + '<button class="zone-answer cancel"><span class="label"></span><kbd>Esc</kbd></button></footer>';
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
   sort.innerHTML = SORTS.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
   return el;
