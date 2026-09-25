@@ -200,9 +200,11 @@ function apply(msg: ServerMessage): void {
       model.looks = { avatarCount: msg.avatarCount, sleeveCount: msg.sleeveCount };
       model.savedSleeveArt = msg.sleeveArt ?? [];
       model.error = null;
-      // A new lobby has an address and a conversation of its own
-      model.addresses = null;
-      askedAddresses = false;
+      // A new lobby has an address and a conversation of its own; coming back to the same one keeps them
+      if (!msg.inLobby) {
+        model.addresses = null;
+        askedAddresses = false;
+      }
       model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();

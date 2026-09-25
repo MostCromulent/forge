@@ -49,11 +49,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       )}
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
-      {log && state && (
-        <aside class="draft-log" aria-label="Draft log">
-          {state.log.map((line, i) => <p key={i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
-        </aside>
-      )}
+      {log && state && <DraftLog lines={state.log} close={() => setLog(false)} />}
     </div>
   );
 }
@@ -105,7 +101,7 @@ function Picks({ state }: { state: DraftState }) {
           <b>Pack {state.pack} <span class="muted">· pick {state.pick} of {state.packSize}</span></b>
           <span class="muted">Passing {direction > 0 ? 'right' : 'left'}, to {neighbour?.name}</span>
           {next !== null && <span class="muted">Next pack from <b>{state.seats[next].name}</b></span>}
-          {depths[busiest] > 2 && <span class="muted">{state.seats[busiest].name} is holding {depths[busiest]}</span>}
+          {depths[busiest] > 2 && <span class="muted">{busiest === 0 ? 'You are' : `${state.seats[busiest].name} is`} holding {depths[busiest]} packs</span>}
         </div>
       </div>
       <div class="draft-picks-head">
@@ -134,6 +130,22 @@ function Picks({ state }: { state: DraftState }) {
   );
 }
 
+/** Other seats' picks are most of the log, so they are shown only when asked for; the newest line comes first. */
+function DraftLog({ lines, close }: { lines: string[]; close: () => void }) {
+  const [everyone, setEveryone] = useState(false);
+  const shown = lines.filter(l => everyone || !/ picked · \d+ waiting$/.test(l)).reverse();
+  return (
+    <aside class="draft-log" aria-label="Draft log">
+      <header>
+        <b>Draft log</b>
+        <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> Every seat's picks</label>
+        <button class="dk-close" title="Close" onClick={close}>&times;</button>
+      </header>
+      {shown.map((line, i) => <p key={shown.length - i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
+    </aside>
+  );
+}
+
 const COLOURS: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
 
 function grouped(picks: DraftCard[], by: GroupBy): [string, DraftCard[]][] {
@@ -141,7 +153,7 @@ function grouped(picks: DraftCard[], by: GroupBy): [string, DraftCard[]][] {
   const groups = new Map<string, DraftCard[]>();
   for (const c of picks) {
     const key = by === 'type' ? typeHeading(c.type)
-      : c.colors.length === 0 ? 'Colourless' : c.colors.length > 1 ? 'Multicolour' : COLOURS[c.colors] ?? c.colors;
+      : c.colors.length === 0 || c.colors === 'C' ? 'Colourless' : c.colors.length > 1 ? 'Multicolour' : COLOURS[c.colors] ?? c.colors;
     groups.set(key, [...(groups.get(key) ?? []), c]);
   }
   return [...groups.entries()];

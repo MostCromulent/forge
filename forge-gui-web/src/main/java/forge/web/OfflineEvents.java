@@ -201,7 +201,13 @@ final class OfflineEvents {
     }
 
     private static List<DraftBlockOption> draftBlocks(final List<DraftProducts.DraftBlock> blocks) {
-        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos())).toList();
+        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos(), podSize(b.sets()))).toList();
+    }
+
+    /** As BoosterDraft.block sets it: a single set's recommended pod, and a full pod for anything else. */
+    private static int podSize(final List<String> sets) {
+        final CardEdition edition = sets.size() == 1 ? StaticData.instance().getEditions().get(sets.get(0)) : null;
+        return edition == null ? BoosterDraft.N_PLAYERS : edition.getDraftOptions().getRecommendedPodSize();
     }
 
     private static List<SealedBlock> blocks(final List<DraftProducts.Block> blocks) {

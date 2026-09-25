@@ -1,7 +1,7 @@
 package forge.web;
 
 import forge.card.CardRules;
-import forge.gamemodes.limited.DraftRankCache;
+import forge.gamemodes.limited.CardRanker;
 import forge.item.PaperCard;
 import forge.web.ToBrowser.DraftCard;
 import forge.web.ToBrowser.DraftState;
@@ -40,10 +40,11 @@ final class DraftView {
 
     static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber) {
         final CardRules rules = card.getRules();
-        final Double ranking = DraftRankCache.getRanking(card.getName(), card.getEdition());
+        // Desktop's draft ranking overlay: a score to 99, higher is better, and none for a card nobody ranked
+        final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(), CardCatalog.pt(rules),
-                card.getRarity().toString(), ranking == null ? null : (int) Math.round(ranking), packNumber, pickNumber);
+                card.getRarity().toString(), score <= 0 ? null : (int) Math.round(Math.min(99, score)), packNumber, pickNumber);
     }
 
     /** Builds and remembers the next state from its step, which goes up only when newPack says the pack in hand changed. */

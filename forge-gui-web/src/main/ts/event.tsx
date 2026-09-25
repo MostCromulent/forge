@@ -2,7 +2,7 @@
 // event up one question at a time, and deals the packs once every seat is ready. Everyone else reads it as it goes.
 
 import { useState } from 'preact/hooks';
-import { StepForm, draftCombo, draftSteps, rulesLine, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
+import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -38,6 +38,7 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
   const lim = lobby.limited!;
   const [editing, setEditing] = useState(false);
   const draft = lim.kind === 'draft';
+  const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? 'you' : s.name ?? 'a player'));
   if (lobby.host && !lim.started && (!lim.product || editing)) {
     return (
       <section class="event-panel">
@@ -64,10 +65,12 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
       {lobby.host && !lim.started && lim.product && (
         <div class="event-actions">
           <button onClick={() => setEditing(true)}>Edit event</button>
-          <button class="primary" onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
+          <button class="primary" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
         </div>
       )}
-      {!lim.started && lim.product && <p class="hint">Everyone presses Ready on their seat before the {draft ? 'draft starts' : 'packs are opened'}.</p>}
+      {!lim.started && lim.product && (
+        <p class="hint">{unready.length ? `Waiting for ${unready.join(', ')} to press Ready.` : `Everyone is ready.${lobby.host ? '' : ' The host starts when they choose.'}`}</p>
+      )}
     </section>
   );
 }
@@ -110,7 +113,7 @@ function DraftForm({ model, lobby, actions, done }: { model: Model; lobby: Lobby
   const seated = lobby.seats.filter(s => s.type !== 'OPEN').length;
   return (
     <StepForm title="Set up the draft" steps={draftSteps(options, { seated })} value={value} onChange={setValue}
-      sentence={rulesLine} action="Save event" submit={() => {
+      sentence={v => draftSentence(v, true)} action="Save event" submit={() => {
         actions.eventSetup({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
           theme: value.theme, cubeId: value.cubeId, packs: 3, podSize: value.podSize ?? 0, pickRule: value.pickRule,
           timer: value.timer ?? 0, grace: value.grace ?? 0 });

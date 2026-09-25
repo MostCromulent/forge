@@ -487,8 +487,11 @@ final class ToBrowser {
             List<String> themes, @Nullable String lastCube) {
     }
 
-    /** A draftable block: its sets, and desktop's preset combinations, or none when each pack's set is chosen. */
-    record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos) {
+    /**
+     * A draftable block: its sets, desktop's preset combinations, or none when each pack's set is chosen, and the pod size
+     * a draft of it starts at.
+     */
+    record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos, int podSize) {
     }
 
     /** A block's sealed product: how many packs, and the set combinations desktop offers for them. */
@@ -527,7 +530,10 @@ final class ToBrowser {
     record DraftSeat(String name, boolean ai, int packs, boolean held) {
     }
 
-    /** A card in the pack or among the picks, with the pack and pick it was drafted at. rank is the draft ranking, when known. */
+    /**
+     * A card in the pack or among the picks, with the pack and pick it was drafted at. rank is desktop's draft score to
+     * 99, higher being better, when the card is ranked.
+     */
     record DraftCard(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
             String rarity, @Nullable Integer rank, int pack, int pick) {
     }

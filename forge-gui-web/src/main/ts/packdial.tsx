@@ -93,14 +93,17 @@ export function Dial({ state }: { state: DraftState }) {
         const waiting = seat.packs - 1;
         return (
           <div key={i} class={cls} style={{ left: `${p.x}px`, top: `${p.y}px` }}>
-            <span class={seat.ai ? 'dial-face ai' : 'dial-face'}>{initials(i === 0 ? 'You' : seat.name)}</span>
-            <span class="dial-name">{i === 0 ? 'You' : seat.name}</span>
+            <span class={seat.ai ? 'dial-face ai' : 'dial-face'} title={i === 0 ? 'You' : seat.name}>{i === 0 ? 'You' : initials(seat.name)}</span>
+            {/* The face already says who you are, and a numbered seat's number */}
+            {i !== 0 && !/^Seat \d+$/.test(seat.name) && <span class="dial-name">{seat.name}</span>}
             {seat.held && <span class="dial-held" title="Away: the draft holds or picks for this seat">❚❚</span>}
             {waiting > 1 && <span class="dial-count" title={`${seat.packs} packs`}>{waiting}</span>}
           </div>
         );
       })}
-      <div class="dial-centre"><b>Pack {state.pack}</b><span>pick {state.pick}</span></div>
+      <div class="dial-centre"><b>Pack {state.pack}</b><span>pick {state.pick}</span>
+        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'dial-time low' : 'dial-time'}>{Math.ceil(left / 1000)} s</span>}
+      </div>
     </div>
   );
 }

@@ -1174,6 +1174,7 @@ export interface DraftBlockOption {
   packs: number;
   sets: string[];
   combos: string[];
+  podSize: number;
 }
 
 export interface PoolRow {

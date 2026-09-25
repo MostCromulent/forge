@@ -53,11 +53,15 @@
 @media (max-width: 900px) { .drafting-shell { grid-template-columns: 1fr; } .draft-picks { border-left: 0; } }
 
 /* The pick clock rings the dial and runs down anticlockwise; the last seconds turn amber and thick */
-.dial-clock { fill: none; stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }
-.dial-clock.low { stroke: var(--danger); stroke-width: 5; }
+.dial-clock { fill: none; stroke: var(--accent-2); stroke-width: 3; stroke-linecap: round; }
+.dial-clock.low { stroke: var(--danger); stroke-width: 6; }
+.dial-time { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; margin-top: 2px; }
+.dial-time.low { color: var(--danger); font-size: 15px; }
 .dial-held { font-size: 9px; color: var(--muted); letter-spacing: -1px; }
 
 .draft-log { position: fixed; right: 16px; top: 64px; width: min(320px, calc(100vw - 32px)); max-height: 60vh; overflow: auto;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 8px; padding: 10px 14px; z-index: 20; }
+.draft-log header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.draft-log header label { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; margin-left: auto; }
 .draft-log p { margin: 2px 0; font-size: 13px; color: var(--muted); }
 .draft-log p.head { color: var(--text); font-weight: 700; margin-top: 10px; }

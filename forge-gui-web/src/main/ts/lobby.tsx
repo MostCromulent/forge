@@ -60,7 +60,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           {lobby.casualVariants.some(v => variantBlocked(lobby, v.id)) && <span class="row-note">{variantBlocked(lobby, 'Vanguard')}</span>}
         </div>}
         <div class="head-right">
-          <label class="spectate" hidden={!lobby.host}>
+          {/* Watching is for a match, which a Limited table has only once the pools are out */}
+          <label class="spectate" hidden={!lobby.host || (!!lim && !lim.activeEventId)}>
             <input type="checkbox" checked={ui.spectate}
               onChange={e => { const on = e.currentTarget.checked; changeUi(u => { u.spectate = on; }); }} /> Watch the computer play
           </label>
@@ -78,7 +79,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
         <div class="seat-add">
-          <button hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
+          <button hidden={lobby.seats.length >= lobby.maxSeats || (lim?.phase === 'DRAFTING' && !lim.activeEventId)} disabled={!lobby.host}
             onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
         {/* Until the pools are out the event panel says what comes next; the match follows them */}
@@ -369,9 +370,11 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
         {beforePools && !waiting && (mine
           ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={lim.started}
-              onClick={() => actions.ready(!seat.ready)}>{seat.ready ? 'Ready ✓' : 'Press when ready'}</button>
+              aria-pressed={seat.ready} title={seat.ready ? 'Press again if you are not ready after all' : ''}
+              onClick={() => actions.ready(!seat.ready)}>{seat.ready ? '✓ Ready' : 'Press when ready'}</button>
           : <p class="deck-row fixed">{seat.ready ? 'Ready' : 'Not ready yet'}</p>)}
-        {lim?.activeEventId && lobby.host && !waiting && (
+        {/* Sitting out matters only with a match to fill from more players than it needs */}
+        {lim?.activeEventId && lobby.host && !waiting && lobby.seats.filter(s => s.type !== 'OPEN').length > 2 && (
           <label class="sits-out"><input type="checkbox" checked={seat.benched}
             onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> Sits out the next match</label>
         )}

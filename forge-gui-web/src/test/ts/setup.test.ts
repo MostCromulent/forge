@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  choose, draftBlockChoice, draftCombo, draftSteps, openStep, podChoices, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
+  choose, draftBlockChoice, draftCombo, draftSteps, openStep, podChoices, podStart, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
 } from '../../main/ts/setup';
 import type { LimitedOptions } from '../../main/ts/protocol';
 
@@ -14,9 +14,9 @@ const options: LimitedOptions = {
   prereleases: [{ code: 'DSK', name: 'Duskmourn' }],
   templates: ['Vintage cube'],
   draftBlocks: [
-    { name: 'Innistrad', packs: 3, sets: ['DKA', 'ISD', 'AVR', 'SOI'], combos: [] },
-    { name: 'Return to Ravnica', packs: 3, sets: ['DGM', 'GTC', 'RTR'], combos: ['RTR/RTR/RTR', 'GTC/GTC/RTR'] },
-    { name: 'Magic 2014', packs: 3, sets: ['M14'], combos: [] },
+    { name: 'Innistrad', packs: 3, sets: ['DKA', 'ISD', 'AVR', 'SOI'], combos: [], podSize: 8 },
+    { name: 'Return to Ravnica', packs: 3, sets: ['DGM', 'GTC', 'RTR'], combos: ['RTR/RTR/RTR', 'GTC/GTC/RTR'], podSize: 8 },
+    { name: 'Magic 2014', packs: 3, sets: ['M14'], combos: [], podSize: 8 },
   ],
   draftFantasyBlocks: [], cubes: ['Vintage cube'], themes: ['Core sets'],
 };
@@ -101,10 +101,12 @@ describe('the table rules of an online draft', () => {
     expect(openStep(draftSteps(options, { seated: 3 }), done)).toBe('rules');
   });
 
-  // Fails if the pod starts at a size other than the set's own, or the stepper allows fewer seats than players
-  it('starts at the set\'s pod size and never goes under the players seated', () => {
-    expect(podChoices(3)).toEqual([0, 3, 4, 5, 6, 7, 8]);
-    expect(podChoices(1)[1]).toBe(2);
-    expect(podChoices(3)[0]).toBe(0);
+  // Fails if the pod starts at a size other than the product's own, or the stepper allows fewer seats than players
+  it('starts at the product\'s pod size and never goes under the players seated', () => {
+    expect(podChoices(3)).toEqual([3, 4, 5, 6, 7, 8]);
+    expect(podChoices(1)[0]).toBe(2);
+    expect(podStart(4, 2)).toBe(4);
+    expect(podStart(4, 6)).toBe(6);
+    expect(podStart(8, 1)).toBe(8);
   });
 });
