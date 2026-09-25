@@ -20,6 +20,10 @@ import forge.web.FromBrowser.SetSetting;
 import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.SleeveArt;
 import forge.web.FromBrowser.Start;
+import forge.web.FromBrowser.DraftPick;
+import forge.web.FromBrowser.DraftSave;
+import forge.web.FromBrowser.DraftStart;
+import forge.web.FromBrowser.LimitedOpen;
 import forge.web.FromBrowser.PoolDelete;
 import forge.web.FromBrowser.PoolEdit;
 import forge.web.FromBrowser.PoolOpen;
@@ -37,6 +41,8 @@ import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckGroup;
 import forge.game.GameType;
+import forge.gamemodes.limited.BoosterDraft;
+import forge.util.storage.IStorage;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
@@ -45,6 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * One browser: its start page, its seat and its match. The host's session also owns shutting the process down.
@@ -69,8 +76,16 @@ public final class WebSession {
     /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
     record Setup(WebGuiGame gui, boolean invited) implements Stage { }
 
-    /** The Limited pages: the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
-    record Event(String pool) implements Stage { }
+    /** The Limited pages for kind (sealed or draft): the saved pools, the setup form, and the opponents screen of pool, when it is not null. */
+    record Event(String kind, String pool) implements Stage {
+        IStorage<DeckGroup> storage() {
+            return OfflineEvents.storage(kind);
+        }
+
+        GameType type() {
+            return "draft".equals(kind) ? GameType.Draft : GameType.Sealed;
+        }
+    }
 
     /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, or null for the table. */
     record Playing(WebGuiGame gui, boolean invited, boolean spectating, Event back) implements Stage { }
@@ -101,6 +116,8 @@ public final class WebSession {
     private volatile Integer avatar;
     /** Whether a sealed pool is being opened, which takes seconds and may wait on a question to the player. */
     private final AtomicBoolean openingPacks = new AtomicBoolean();
+    /** The offline draft being played, while there is one. */
+    private volatile OfflineDraft offlineDraft;
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -254,6 +271,10 @@ public final class WebSession {
             channel.send(lobby.state());
         } else if (now instanceof Event) {
             sendLimited(channel);
+            final OfflineDraft draft = offlineDraft;
+            if (draft != null && draft.latest() != null) {
+                channel.send(draft.latest());
+            }
         } else if (now instanceof Menu) {
             // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
             joinHostGame();
@@ -365,22 +386,34 @@ public final class WebSession {
             }
             case "leave" -> ui.invokeInEdtLater(this::leave);
             case "limitedOpen" -> {
+                final String kind = "draft".equals(Wire.decode(msg, LimitedOpen.class).kind()) ? "draft" : "sealed";
                 final Stage now = stage;
-                if (isHost && (now instanceof Event || (now instanceof Menu && move(now, new Event(null))))) {
+                if (isHost && ((now instanceof Event e && e.kind().equals(kind))
+                        || ((now instanceof Menu || now instanceof Event) && move(now, new Event(kind, null))))) {
                     sendLimited(channel);
                 }
             }
             case "limitedLeave", "poolClose", "poolOpen" -> {
                 final Stage now = stage;
-                if (now instanceof Event) {
+                if (now instanceof Event e) {
                     final String type = msg.get("t").getAsString();
                     move(now, "limitedLeave".equals(type) ? new Menu()
-                            : new Event("poolOpen".equals(type) ? Wire.decode(msg, PoolOpen.class).name() : null));
+                            : new Event(e.kind(), "poolOpen".equals(type) ? Wire.decode(msg, PoolOpen.class).name() : null));
                 }
             }
             case "poolEdit" -> editPool(channel, Wire.decode(msg, PoolEdit.class).name());
             case "poolDelete" -> deletePool(channel, Wire.decode(msg, PoolDelete.class).name());
             case "sealedCreate" -> createSealed(channel, Wire.decode(msg, SealedCreate.class));
+            case "draftStart" -> startDraft(channel, Wire.decode(msg, DraftStart.class));
+            case "draftPick" -> {
+                final OfflineDraft draft = offlineDraft;
+                if (draft != null) {
+                    final DraftPick pick = Wire.decode(msg, DraftPick.class);
+                    draft.pick(pick.pack(), pick.pick(), pick.index());
+                }
+            }
+            case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
+            case "draftDiscard" -> endDraft();
             // A match is started on the host UI thread, as a table's is
             case "poolPlay" -> {
                 final PoolPlay play = Wire.decode(msg, PoolPlay.class);
@@ -668,7 +701,8 @@ public final class WebSession {
                 // Seat 0 is the player and seat 1 the opponent, as in the desktop lobby's saved choices
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
-                now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0);
+                now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
+                now instanceof Event e ? e.kind() : null, offlineDraft != null, isHost ? OfflineEvents.storage("draft").size() : 0);
     }
 
     /** The Limited pages are drawn from the pools and what the setup form offers. Reading the lists touches files, so not here. */
@@ -680,12 +714,14 @@ public final class WebSession {
     }
 
     private void editPool(final BrowserChannel channel, final String name) {
-        final DeckGroup group = stage instanceof Event ? OfflineEvents.sealed().get(name) : null;
+        final Stage now = stage;
+        final DeckGroup group = now instanceof Event e ? e.storage().get(name) : null;
         if (group == null) {
             channel.send(error("There is no pool called " + name + "."));
             return;
         }
-        decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, channel);
+        final Event e = (Event) now;
+        decks.openPool(group.getHumanDeck(), e.storage(), e.type(), channel);
     }
 
     private void deletePool(final BrowserChannel channel, final String name) {
@@ -698,19 +734,19 @@ public final class WebSession {
             return;
         }
         synchronized (DeckCatalog.DECKS) {
-            if (OfflineEvents.sealed().contains(name)) {
-                OfflineEvents.sealed().delete(name);
+            if (e.storage().contains(name)) {
+                e.storage().delete(name);
             }
         }
         if (name.equals(e.pool())) {
-            move(now, new Event(null));
+            move(now, new Event(e.kind(), null));
         }
         channel.send(OfflineEvents.pools());
     }
 
     /** Opens a sealed pool as desktop's sealed screen does, then its deck in the editor. Asking for a taken name comes first. */
     private void createSealed(final BrowserChannel channel, final SealedCreate create) {
-        if (!isHost || !(stage instanceof Event)) {
+        if (!isHost || !(stage instanceof Event e) || !"sealed".equals(e.kind())) {
             return;
         }
         final String name = create.name() == null ? "" : create.name().trim();
@@ -742,10 +778,10 @@ public final class WebSession {
                 if (group == null) {
                     return;
                 }
-                OfflineEvents.store(group);
+                OfflineEvents.store(OfflineEvents.sealed(), group);
                 final Stage now = stage;
                 if (now instanceof Event) {
-                    move(now, new Event(name));
+                    move(now, new Event("sealed", name));
                 }
                 tell(OfflineEvents.pools());
                 decks.openPool(group.getHumanDeck(), OfflineEvents.sealed(), GameType.Sealed, browser);
@@ -755,13 +791,89 @@ public final class WebSession {
         });
     }
 
+    /** Starts an offline booster draft against the computer, as desktop's Draft screen does. One runs at a time. */
+    private synchronized void startDraft(final BrowserChannel channel, final DraftStart start) {
+        final Stage now = stage;
+        if (!isHost || !(now instanceof Event e) || !"draft".equals(e.kind())) {
+            return;
+        }
+        if (offlineDraft != null) {
+            channel.send(error("A draft is already running."));
+            return;
+        }
+        final Supplier<BoosterDraft> make;
+        try {
+            make = OfflineEvents.draft(start);
+        } catch (final IllegalArgumentException ex) {
+            channel.send(error(ex.getMessage()));
+            return;
+        }
+        offlineDraft = new OfflineDraft(make, playerName(), this::tell, problem -> {
+            endDraft();
+            tell(error(problem));
+        });
+        move(now, new Event("draft", null));
+    }
+
+    /** Stops the draft without saving it, as desktop's "quit without saving" does. */
+    private void endDraft() {
+        final OfflineDraft draft;
+        synchronized (this) {
+            draft = offlineDraft;
+            offlineDraft = null;
+        }
+        if (draft == null) {
+            return;
+        }
+        draft.close();
+        final Stage now = stage;
+        if (now instanceof Event e) {
+            move(now, new Event(e.kind(), e.pool()));
+        }
+    }
+
+    /** Saves a finished draft as desktop does, asking before replacing one of the same name, then opens its deck. */
+    private void saveDraft(final BrowserChannel channel, final DraftSave save) {
+        final OfflineDraft draft = offlineDraft;
+        if (!isHost || draft == null || draft.latest() == null || !draft.latest().done()) {
+            return;
+        }
+        final String name = save.name() == null ? "" : save.name().trim();
+        final String problem = DeckStore.nameProblem(name);
+        if (problem != null) {
+            channel.send(error(problem));
+            return;
+        }
+        final IStorage<DeckGroup> drafts = OfflineEvents.storage("draft");
+        if (drafts.contains(name) && !save.replace()) {
+            channel.send(new NameTaken(name));
+            return;
+        }
+        // Off the draft's own thread, which closing the draft interrupts
+        draft.save(name).whenCompleteAsync((group, ex) -> {
+            if (ex != null) {
+                tell(error("Could not save the draft: " + ex.getMessage()));
+                return;
+            }
+            OfflineEvents.store(drafts, group);
+            endDraft();
+            final Stage now = stage;
+            if (now instanceof Event) {
+                move(now, new Event("draft", name));
+            }
+            tell(OfflineEvents.pools());
+            decks.openPool(group.getHumanDeck(), drafts, GameType.Draft, browser);
+        });
+    }
+
     /** Plays a pool's deck against one of its opponents, as desktop's sealed screen does. Leaving the match returns to the pool. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Stage from = stage;
-        final DeckGroup group = from instanceof Event ? OfflineEvents.sealed().get(play.name()) : null;
+        final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;
         if (!isHost || group == null) {
             return;
         }
+        final Event event = (Event) from;
         if (play.opponent() < 0 || play.opponent() >= group.getAiDecks().size()) {
             channel.send(error("There is no such opponent."));
             return;
@@ -780,7 +892,7 @@ public final class WebSession {
         }
         // Saved before the match so HostedMatch never reaches the first-run name prompt
         lobby.saveLooks();
-        final Event back = new Event(play.name());
+        final Event back = new Event(event.kind(), play.name());
         final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
         if (!move(from, playing)) {
             playing.gui().close();
@@ -795,7 +907,7 @@ public final class WebSession {
                     new LocalGame.Seat(playerName(), false, avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), human),
                     new LocalGame.Seat("Opponent " + (play.opponent() + 1), true, LocalGame.storedIndex(FPref.UI_AVATARS, 1),
                             LocalGame.storedIndex(FPref.UI_SLEEVES, 1), group.getAiDecks().get(play.opponent()))),
-                    GameType.Sealed, playing.gui());
+                    event.type(), playing.gui());
         } catch (final RuntimeException ex) {
             Logger.error(ex, "Could not start the match");
             local.endMatch();

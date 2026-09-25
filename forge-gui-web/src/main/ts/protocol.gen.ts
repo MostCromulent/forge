@@ -21,6 +21,9 @@ export interface Hello {
   inEvent: boolean;
   eventPool?: string;
   sealedPools: number;
+  eventKind?: string;
+  drafting: boolean;
+  draftPools: number;
 }
 
 export interface Presence {
@@ -251,11 +254,32 @@ export interface LimitedOptions {
   fantasyBlocks: SealedBlock[];
   prereleases: LimitedEdition[];
   templates: string[];
+  draftBlocks: DraftBlockOption[];
+  draftFantasyBlocks: DraftBlockOption[];
+  cubes: string[];
+  themes: string[];
+  lastCube?: string;
 }
 
 export interface LimitedPools {
   t: 'limitedPools';
   sealed: PoolRow[];
+  draft: PoolRow[];
+}
+
+export interface DraftState {
+  t: 'draft';
+  product: string;
+  pack: number;
+  packs: number;
+  pick: number;
+  packSize: number;
+  direction: number;
+  seats: DraftSeat[];
+  cards: DraftCard[];
+  picks: DraftCard[];
+  passed: boolean;
+  done: boolean;
 }
 
 // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} ----
@@ -401,6 +425,7 @@ export type ServerMessage =
   | DeviceDeck
   | LimitedOptions
   | LimitedPools
+  | DraftState
   | ChoicesRequest
   | OrderRequest
   | ManipulateRequest
@@ -413,7 +438,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addSeat' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {
@@ -709,6 +734,29 @@ export interface PoolPlay {
   games: number;
 }
 
+export interface DraftStart {
+  t: 'draftStart';
+  product: string;
+  block?: string;
+  combo?: string;
+  cube?: string;
+  theme?: string;
+  cubeId?: string;
+}
+
+export interface DraftPick {
+  t: 'draftPick';
+  pack: number;
+  pick: number;
+  index: number;
+}
+
+export interface DraftSave {
+  t: 'draftSave';
+  name: string;
+  replace: boolean;
+}
+
 export type ClientMessage =
   | Bare
   | SetName
@@ -756,7 +804,10 @@ export type ClientMessage =
   | PoolOpen
   | PoolEdit
   | PoolDelete
-  | PoolPlay;
+  | PoolPlay
+  | DraftStart
+  | DraftPick
+  | DraftSave;
 
 // ---- Game events: what happened, carried by the state message that shows its result ----
 
@@ -1036,11 +1087,39 @@ export interface LimitedEdition {
   name: string;
 }
 
+export interface DraftBlockOption {
+  name: string;
+  packs: number;
+  sets: string[];
+  combos: string[];
+}
+
 export interface PoolRow {
   name: string;
   built: boolean;
   deckSize: number;
   opponents: Opponent[];
+}
+
+export interface DraftSeat {
+  name: string;
+  ai: boolean;
+  packs: number;
+  held: boolean;
+}
+
+export interface DraftCard {
+  name: string;
+  image: string;
+  cost: string;
+  mv: number;
+  colors: string;
+  type: string;
+  pt?: string;
+  rarity: string;
+  rank?: number;
+  pack: number;
+  pick: number;
 }
 
 export interface OrderAnswer {

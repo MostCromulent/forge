@@ -6,15 +6,19 @@ import forge.card.ColorSet;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckGroup;
+import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.CustomLimited;
 import forge.gamemodes.limited.DraftProducts;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
+import forge.gamemodes.limited.ThemedChaosDraft;
 import forge.item.PaperCard;
 import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
+import forge.web.FromBrowser.DraftStart;
 import forge.web.FromBrowser.SealedCreate;
+import forge.web.ToBrowser.DraftBlockOption;
 import forge.web.ToBrowser.LimitedEdition;
 import forge.web.ToBrowser.LimitedOptions;
 import forge.web.ToBrowser.LimitedPools;
@@ -25,6 +29,7 @@ import forge.web.ToBrowser.SealedBlock;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /** The host's offline sealed pools, kept where desktop keeps them: what the setup form offers, making a pool, and listing them. */
 final class OfflineEvents {
@@ -35,16 +40,27 @@ final class OfflineEvents {
         return FModel.getDecks().getSealed();
     }
 
+    /** Where pools of a kind are kept: "draft" in desktop's drafts, anything else in its sealed pools. */
+    static IStorage<DeckGroup> storage(final String kind) {
+        return "draft".equals(kind) ? FModel.getDecks().getDraft() : sealed();
+    }
+
     static LimitedOptions options() {
         final DraftProducts.SealedLists lists = DraftProducts.sealed();
+        final DraftProducts.DraftLists draft = DraftProducts.draft();
         return new LimitedOptions(blocks(lists.blocks()), blocks(lists.fantasyBlocks()),
-                lists.prereleases().stream().map(e -> new LimitedEdition(e.code(), e.name())).toList(), lists.templates());
+                lists.prereleases().stream().map(e -> new LimitedEdition(e.code(), e.name())).toList(), lists.templates(),
+                draftBlocks(draft.blocks()), draftBlocks(draft.fantasyBlocks()), draft.cubes(), draft.themes(), draft.lastCube());
     }
 
     static LimitedPools pools() {
+        return new LimitedPools(rows(sealed()), rows(storage("draft")));
+    }
+
+    private static List<PoolRow> rows(final IStorage<DeckGroup> storage) {
         final List<PoolRow> rows = new ArrayList<>();
         synchronized (DeckCatalog.DECKS) {
-            for (final DeckGroup group : sealed()) {
+            for (final DeckGroup group : storage) {
                 final Deck human = group.getHumanDeck();
                 final int size = human == null ? 0 : human.getMain().countAll();
                 final List<Opponent> opponents = new ArrayList<>();
@@ -54,7 +70,7 @@ final class OfflineEvents {
                 rows.add(new PoolRow(group.getName(), size > 0, size, opponents));
             }
         }
-        return new LimitedPools(rows);
+        return rows;
     }
 
     /**
@@ -71,13 +87,68 @@ final class OfflineEvents {
         return pool == null ? null : gen.buildGroup(name, pool);
     }
 
-    /** Stores a pool, replacing one of the same name, as desktop's sealed screen does once the player agrees. */
-    static void store(final DeckGroup group) {
-        synchronized (DeckCatalog.DECKS) {
-            if (sealed().contains(group.getName())) {
-                sealed().delete(group.getName());
+    /**
+     * What builds the draft the form describes. Building runs later, on the draft's own thread, since importing a cube
+     * waits on a web site; what can be checked now is checked now. Throws IllegalArgumentException with a reason.
+     */
+    static Supplier<BoosterDraft> draft(final DraftStart d) {
+        final LimitedPoolType type;
+        try {
+            type = LimitedPoolType.valueOf(d.product());
+        } catch (final IllegalArgumentException | NullPointerException e) {
+            throw new IllegalArgumentException("There is no product called " + d.product() + ".");
+        }
+        return switch (type) {
+            case Full -> BoosterDraft::full;
+            case Block, FantasyBlock -> {
+                final CardBlock block = d.block() == null ? null : DraftProducts.block(d.block(), type == LimitedPoolType.FantasyBlock);
+                if (block == null || !BoosterDraft.isDraftableBlock(block)) {
+                    throw new IllegalArgumentException("That block can't be drafted.");
+                }
+                final List<String> sets = BoosterDraft.blockSets(block);
+                final String combo = sets.size() == 1 ? sets.get(0) : d.combo();
+                if (combo == null || (sets.size() > 1 && !validCombo(combo, sets, block.getCntBoostersDraft()))) {
+                    throw new IllegalArgumentException("Choose a set for each pack.");
+                }
+                yield () -> BoosterDraft.block(block, combo, type);
             }
-            sealed().add(group);
+            case Custom -> {
+                final CustomLimited cube = d.cube() == null ? null : DraftProducts.cube(d.cube());
+                if (cube == null) {
+                    throw new IllegalArgumentException("There is no cube called " + d.cube() + ".");
+                }
+                yield () -> BoosterDraft.cube(cube);
+            }
+            case Chaos -> {
+                final ThemedChaosDraft theme = d.theme() == null ? null : DraftProducts.theme(d.theme());
+                if (theme == null) {
+                    throw new IllegalArgumentException("There is no chaos theme called " + d.theme() + ".");
+                }
+                yield () -> BoosterDraft.chaos(theme);
+            }
+            case Import -> {
+                if (d.cubeId() == null || d.cubeId().isBlank()) {
+                    throw new IllegalArgumentException("Enter a CubeCobra link or ID.");
+                }
+                final String id = d.cubeId().trim();
+                yield () -> BoosterDraft.cubeCobra(id);
+            }
+            case Prerelease -> throw new IllegalArgumentException("A prerelease is opened, not drafted.");
+        };
+    }
+
+    private static boolean validCombo(final String combo, final List<String> sets, final int packs) {
+        final String[] parts = combo.split("/");
+        return parts.length == packs && sets.containsAll(List.of(parts));
+    }
+
+    /** Stores a pool, replacing one of the same name, as desktop's limited screens do once the player agrees. */
+    static void store(final IStorage<DeckGroup> storage, final DeckGroup group) {
+        synchronized (DeckCatalog.DECKS) {
+            if (storage.contains(group.getName())) {
+                storage.delete(group.getName());
+            }
+            storage.add(group);
         }
     }
 
@@ -127,6 +198,10 @@ final class OfflineEvents {
             throw new IllegalArgumentException("Choose between 3 and 12 packs.");
         }
         return wanted;
+    }
+
+    private static List<DraftBlockOption> draftBlocks(final List<DraftProducts.DraftBlock> blocks) {
+        return blocks.stream().map(b -> new DraftBlockOption(b.name(), b.packs(), b.sets(), b.combos())).toList();
     }
 
     private static List<SealedBlock> blocks(final List<DraftProducts.Block> blocks) {

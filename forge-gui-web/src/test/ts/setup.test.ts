@@ -11,6 +11,7 @@ const options: LimitedOptions = {
   fantasyBlocks: [],
   prereleases: [{ code: 'DSK', name: 'Duskmourn' }],
   templates: ['Vintage cube'],
+  draftBlocks: [], draftFantasyBlocks: [], cubes: [], themes: [],
 };
 const steps = sealedSteps(options);
 

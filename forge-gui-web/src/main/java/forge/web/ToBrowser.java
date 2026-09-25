@@ -43,7 +43,8 @@ final class ToBrowser {
     @Message("hello")
     record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
-            int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools) {
+            int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
+            @Nullable String eventKind, boolean drafting, int draftPools) {
     }
 
     record SavedSleeveArt(String key, int offset) {
@@ -457,7 +458,12 @@ final class ToBrowser {
     /** What the sealed setup form can offer, as desktop's sealed dialogs list it. */
     @Message("limitedOptions")
     record LimitedOptions(List<SealedBlock> blocks, List<SealedBlock> fantasyBlocks, List<LimitedEdition> prereleases,
-            List<String> templates) {
+            List<String> templates, List<DraftBlockOption> draftBlocks, List<DraftBlockOption> draftFantasyBlocks, List<String> cubes,
+            List<String> themes, @Nullable String lastCube) {
+    }
+
+    /** A draftable block: its sets, and desktop's preset combinations, or none when each pack's set is chosen. */
+    record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos) {
     }
 
     /** A block's sealed product: how many packs, and the set combinations desktop offers for them. */
@@ -469,7 +475,7 @@ final class ToBrowser {
 
     /** The saved offline pools. */
     @Message("limitedPools")
-    record LimitedPools(List<PoolRow> sealed) {
+    record LimitedPools(List<PoolRow> sealed, List<PoolRow> draft) {
     }
 
     /** One saved pool: whether a deck has been built from it, and the opponents its match can be played against. */
@@ -479,13 +485,33 @@ final class ToBrowser {
     record Opponent(String name, String colors) {
     }
 
+    /**
+     * An offline draft as the player sees it after a step. pick counts from 1 within the pack; direction is 1 while packs
+     * go to the next seat and -1 while they go to the previous one; passed says every pack moved on one seat since the last
+     * state; done says the draft is over and waits for a name.
+     */
+    @Message("draft")
+    record DraftState(String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
+            List<DraftCard> cards, List<DraftCard> picks, boolean passed, boolean done) {
+    }
+
+    /** A seat in pass order, seat 0 being the player: how many packs it holds, and whether its player has gone away. */
+    record DraftSeat(String name, boolean ai, int packs, boolean held) {
+    }
+
+    /** A card in the pack or among the picks, with the pack and pick it was drafted at. rank is the draft ranking, when known. */
+    record DraftCard(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
+            String rarity, @Nullable Integer rank, int pack, int pick) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class, CataloguePage.class, EditorMessage.class,
-            ImportResult.class, NameTaken.class, DeviceDeck.class, LimitedOptions.class, LimitedPools.class);
+            ImportResult.class, NameTaken.class, DeviceDeck.class, LimitedOptions.class, LimitedPools.class,
+            DraftState.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

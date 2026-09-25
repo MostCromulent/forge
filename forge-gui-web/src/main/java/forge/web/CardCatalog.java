@@ -200,7 +200,7 @@ final class CardCatalog {
                 row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem);
     }
 
-    private static String pt(final CardRules rules) {
+    static String pt(final CardRules rules) {
         if (rules.getType().isCreature()) {
             return rules.getPower() + "/" + rules.getToughness();
         }

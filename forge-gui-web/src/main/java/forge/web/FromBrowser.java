@@ -22,7 +22,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addSeat, addresses, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard,
         ok, cancel, endTurn, autoPass, undo, concede }
 
     @Command
@@ -263,6 +263,22 @@ final class FromBrowser {
             @Nullable String template, @Nullable String cubeId, int packs, String name, boolean replace) {
     }
 
+    /** Starts an offline booster draft. product is a LimitedPoolType name; the fields its product needs are set. combo is "A/B/C". */
+    @Command("draftStart")
+    record DraftStart(String product, @Nullable String block, @Nullable String combo, @Nullable String cube, @Nullable String theme,
+            @Nullable String cubeId) {
+    }
+
+    /** Picks the card at index of the pack shown at pack and pick, so a click on a pack that has moved on is ignored. */
+    @Command("draftPick")
+    record DraftPick(int pack, int pick, int index) {
+    }
+
+    /** Saves a finished draft; replace says the player agreed to replace a draft of the same name. */
+    @Command("draftSave")
+    record DraftSave(String name, boolean replace) {
+    }
+
     /** A saved pool, by name: its opponents screen, its deck in the editor, or removing it. */
     @Command("poolOpen")
     record PoolOpen(String name) {
@@ -289,5 +305,6 @@ final class FromBrowser {
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
-            PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class);
+            PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
+            DraftStart.class, DraftPick.class, DraftSave.class);
 }
