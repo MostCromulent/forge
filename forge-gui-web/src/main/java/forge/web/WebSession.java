@@ -424,7 +424,7 @@ public final class WebSession {
                 final OfflineDraft draft = offlineDraft;
                 if (draft != null) {
                     final DraftPick pick = Wire.decode(msg, DraftPick.class);
-                    draft.pick(pick.pack(), pick.pick(), pick.index());
+                    draft.pick(pick.step(), pick.index());
                 }
             }
             case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
@@ -939,7 +939,16 @@ public final class WebSession {
                 lastResult = null;
                 gauntlet.setRoundStarter((type, players, me) -> playLimited(back, type, List.of(mySeat(players.get(0).getDeck()),
                         opponentSeat(gauntlet.getCurrentRound(), 1, players.get(1).getDeck()))));
-                gauntlet.launch(ai.size(), human, event.type());
+                try {
+                    gauntlet.launch(ai.size(), human, event.type());
+                } catch (final RuntimeException ex) {
+                    Logger.error(ex, "Could not start the gauntlet");
+                    channel.send(error("Could not start the gauntlet: " + ex.getMessage()));
+                }
+                // A first round that did not start leaves the pool showing, and no gauntlet to carry on
+                if (!(stage instanceof Playing)) {
+                    stopGauntlet();
+                }
             }
             case "several" -> {
                 final int count = Math.min(Math.min(play.count(), MOST_OPPONENTS), ai.size());

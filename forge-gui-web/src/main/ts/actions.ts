@@ -59,8 +59,8 @@ export interface Actions {
   /** Opens the Limited pages for a kind of event. */
   limitedOpen(kind: 'sealed' | 'draft'): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
-  /** Picks the card at index of the pack shown at pack and pick. */
-  draftPick(pack: number, pick: number, index: number): void;
+  /** Picks the card at index of the pack shown in state step. */
+  draftPick(step: number, index: number): void;
   draftSave(name: string, replace: boolean): void;
   draftDiscard(): void;
   limitedLeave(): void;
@@ -155,7 +155,7 @@ export function createActions(send: Send): Actions {
     leaveLobby: () => send({ t: 'leaveLobby' }),
     limitedOpen: kind => send({ t: 'limitedOpen', kind }),
     draftStart: d => send({ t: 'draftStart', ...d }),
-    draftPick: (pack, pick, index) => send({ t: 'draftPick', pack, pick, index }),
+    draftPick: (step, index) => send({ t: 'draftPick', step, index }),
     draftSave: (name, replace) => send({ t: 'draftSave', name, replace }),
     draftDiscard: () => send({ t: 'draftDiscard' }),
     limitedLeave: () => send({ t: 'limitedLeave' }),

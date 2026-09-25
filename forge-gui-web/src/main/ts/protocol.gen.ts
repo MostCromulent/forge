@@ -280,6 +280,7 @@ export interface LimitedPools {
 
 export interface DraftState {
   t: 'draft';
+  step: number;
   product: string;
   pack: number;
   packs: number;
@@ -779,8 +780,7 @@ export interface DraftStart {
 
 export interface DraftPick {
   t: 'draftPick';
-  pack: number;
-  pick: number;
+  step: number;
   index: number;
 }
 

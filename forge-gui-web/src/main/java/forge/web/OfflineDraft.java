@@ -35,12 +35,17 @@ final class OfflineDraft {
     });
     private final String playerName;
     private final Consumer<DraftState> publish;
+    private final Consumer<String> fail;
     private final List<DraftCard> picks = new ArrayList<>();
     private BoosterDraft draft;
     private String product;
     private List<PaperCard> pack = List.of();
     private int round;
     private int packSize;
+    /** Picks made from the current round's packs, which numbers the pick; pack sizes can differ within a round. */
+    private int roundPicks;
+    /** Counts the states sent, so a pick names exactly the state it was made on. */
+    private int step;
     private volatile DraftState latest;
 
     /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; fail hears why it could not. */
@@ -48,6 +53,7 @@ final class OfflineDraft {
             final Consumer<String> fail) {
         this.playerName = playerName;
         this.publish = publish;
+        this.fail = fail;
         thread.execute(() -> {
             try {
                 draft = make.get();
@@ -65,24 +71,33 @@ final class OfflineDraft {
         return latest;
     }
 
-    /** Picks the card at index of the pack the browser was shown. A click on a pack that has moved on since is ignored. */
-    void pick(final int packNumber, final int pickNumber, final int index) {
+    /** Picks the card at index of the pack shown in state step. A click on a state that has moved on since is ignored. */
+    void pick(final int stepShown, final int index) {
         thread.execute(() -> {
-            final DraftState now = latest;
-            if (now == null || now.done() || now.pack() != packNumber || now.pick() != pickNumber || index < 0 || index >= pack.size()) {
-                return;
+            try {
+                pickOn(stepShown, index);
+            } catch (final RuntimeException e) {
+                fail.accept("The draft stopped: " + e.getMessage());
             }
-            final LimitedPlayer me = draft.getHumanPlayer();
-            // Desktop checks these two before taking the card, in this order
-            if (me.shouldSkipThisPick()) {
-                advance(false);
-                return;
-            }
-            final PaperCard card = me.hasArchdemonCurse() ? me.pickFromArchdemonCurse(me.nextChoice()) : pack.get(index);
-            final boolean passed = draft.setChoice(card, DeckSection.Sideboard);
-            picks.add(card(card, round, pickNumber));
-            advance(passed);
         });
+    }
+
+    private void pickOn(final int stepShown, final int index) {
+        final DraftState now = latest;
+        if (now == null || now.done() || now.step() != stepShown || index < 0 || index >= pack.size()) {
+            return;
+        }
+        final LimitedPlayer me = draft.getHumanPlayer();
+        // Desktop checks these two before taking the card, in this order
+        if (me.shouldSkipThisPick()) {
+            advance(false);
+            return;
+        }
+        final PaperCard card = me.hasArchdemonCurse() ? me.pickFromArchdemonCurse(me.nextChoice()) : pack.get(index);
+        final boolean passed = draft.setChoice(card, DeckSection.Sideboard);
+        picks.add(card(card, round, now.pick()));
+        roundPicks++;
+        advance(passed);
     }
 
     /** The finished draft as desktop saves it: the player's picks and each computer's deck, all under name. */
@@ -116,6 +131,7 @@ final class OfflineDraft {
                 if (draft.getRound() != round) {
                     round = draft.getRound();
                     packSize = pack.size();
+                    roundPicks = 0;
                 }
                 send(passed, false);
                 return;
@@ -134,10 +150,10 @@ final class OfflineDraft {
             final String name = i == 0 ? playerName : p.getName() == null || p.getName().isBlank() ? "Seat " + (i + 1) : p.getName();
             seats.add(new DraftSeat(name, p instanceof LimitedPlayerAI, p.getPackQueueSize(), false));
         }
-        final int pick = packSize - pack.size() + 1;
+        final int pick = roundPicks + 1;
         final List<DraftCard> cards = pack.stream().map(c -> card(c, round, pick)).toList();
         // Packs go to the next seat in odd rounds and the previous seat in even ones, as BoosterDraft.passPacks alternates
-        latest = new DraftState(product, round, draft.getNumRounds(), pick, packSize, round % 2 == 1 ? 1 : -1, seats, cards,
+        latest = new DraftState(++step, product, round, draft.getNumRounds(), pick, packSize, round % 2 == 1 ? 1 : -1, seats, cards,
                 List.copyOf(picks), passed, done);
         publish.accept(latest);
     }

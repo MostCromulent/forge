@@ -281,9 +281,9 @@ final class FromBrowser {
             @Nullable String cubeId) {
     }
 
-    /** Picks the card at index of the pack shown at pack and pick, so a click on a pack that has moved on is ignored. */
+    /** Picks the card at index of the pack shown in state step, so a click on a state that has moved on is ignored. */
     @Command("draftPick")
-    record DraftPick(int pack, int pick, int index) {
+    record DraftPick(int step, int index) {
     }
 
     /** Saves a finished draft; replace says the player agreed to replace a draft of the same name. */

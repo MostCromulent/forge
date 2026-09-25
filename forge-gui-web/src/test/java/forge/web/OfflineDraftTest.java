@@ -120,13 +120,11 @@ public class OfflineDraftTest {
     /** Picks the first card of the latest pack and waits for the state after it. */
     private JsonObject pick(final Recorder host) throws InterruptedException {
         final JsonObject now = host.await("draft", d -> true);
-        final int pack = now.get("pack").getAsInt();
-        final int pick = now.get("pick").getAsInt();
+        final int step = now.get("step").getAsInt();
         final int from = host.got.size();
-        sessions.onMessage(host, message("draftPick", "pack", pack, "pick", pick, "index", 0));
-        final JsonObject next = host.awaitAfter(from, "draft", d -> d.get("done").getAsBoolean()
-                || d.get("pack").getAsInt() != pack || d.get("pick").getAsInt() != pick);
-        Assert.assertNotNull(next, "the pick at pack " + pack + ", pick " + pick + " never moved the draft on");
+        sessions.onMessage(host, message("draftPick", "step", step, "index", 0));
+        final JsonObject next = host.awaitAfter(from, "draft", d -> d.get("step").getAsInt() > step);
+        Assert.assertNotNull(next, "the pick at step " + step + " never moved the draft on");
         return next;
     }
 
@@ -161,7 +159,7 @@ public class OfflineDraftTest {
     public void aStalePickIsIgnored() throws Exception {
         final Recorder host = drafting();
         final JsonObject first = host.await("draft", d -> true);
-        final JsonObject click = message("draftPick", "pack", first.get("pack").getAsInt(), "pick", first.get("pick").getAsInt(), "index", 0);
+        final JsonObject click = message("draftPick", "step", first.get("step").getAsInt(), "index", 0);
         sessions.onMessage(host, click);
         sessions.onMessage(host, click);
         final JsonObject after = host.await("draft", d -> d.get("pick").getAsInt() == 2);
@@ -170,6 +168,22 @@ public class OfflineDraftTest {
         final JsonObject latest = host.await("draft", d -> true);
         Assert.assertEquals(latest.get("pick").getAsInt(), 2, "the second click drafted another card");
         Assert.assertEquals(latest.getAsJsonArray("picks").size(), 1);
+    }
+
+    // Fails if a pick made on an earlier state is taken from the pack shown now, which chaos drafts' mixed pack sizes
+    // can number alike
+    @Test(timeOut = 120_000)
+    public void aPickOnAnEarlierStateIsIgnored() throws Exception {
+        final Recorder host = drafting();
+        final int first = host.await("draft", d -> true).get("step").getAsInt();
+        pick(host);
+        final JsonObject now = host.await("draft", d -> true);
+        final int from = host.got.size();
+        sessions.onMessage(host, message("draftPick", "step", first, "index", 0));
+        Thread.sleep(1_000);
+        Assert.assertTrue(host.got.subList(from, host.got.size()).stream().noneMatch(m -> "draft".equals(m.get("t").getAsString())),
+                "a pick on an earlier state was taken");
+        Assert.assertEquals(host.await("draft", d -> true).getAsJsonArray("picks").size(), now.getAsJsonArray("picks").size());
     }
 
     // Fails if a reload in the middle of a draft loses it, or lands on the menu

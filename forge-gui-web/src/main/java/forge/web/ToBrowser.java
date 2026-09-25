@@ -501,7 +501,7 @@ final class ToBrowser {
      * state; done says the draft is over and waits for a name.
      */
     @Message("draft")
-    record DraftState(String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
+    record DraftState(int step, String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
             List<DraftCard> cards, List<DraftCard> picks, boolean passed, boolean done) {
     }
 

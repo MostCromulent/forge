@@ -16,13 +16,12 @@ type GroupBy = 'colour' | 'type' | 'pick';
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
-  if (!state) return <p class="muted drafting-wait">Opening the packs…</p>;
   return (
     <div class="drafting-page">
       <header class="limited-head">
         <span class="wordmark">Forge</span>
         <span class="limited-title">Booster draft</span>
-        <span class="muted">{state.product} · {state.seats.length} seats</span>
+        {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
         <div class="head-right">
           {leaving
             ? <>
@@ -34,27 +33,31 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       </header>
       {model.error && <p class="limited-error">{model.error}</p>}
-      <div class="drafting-shell">
-        <Pack state={state} actions={actions} />
-        <Picks state={state} />
-      </div>
-      {state.done && <SaveDraft model={model} state={state} actions={actions} />}
+      {/* Opening packs can wait on a web site, so leaving stays possible while it does */}
+      {!state && <p class="muted drafting-wait">Opening the packs…</p>}
+      {state && (
+        <div class="drafting-shell">
+          <Pack state={state} actions={actions} />
+          <Picks state={state} />
+        </div>
+      )}
+      {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
     </div>
   );
 }
 
 function Pack({ state, actions }: { state: DraftState; actions: Actions }) {
   const [selected, setSelected] = useState<number | null>(null);
-  // A new pack clears the selection, since its cards are not the ones selected
-  useEffect(() => setSelected(null), [state.pack, state.pick]);
-  const pick = (index: number) => actions.draftPick(state.pack, state.pick, index);
+  // A new state clears the selection, since its cards are not the ones selected
+  useEffect(() => setSelected(null), [state.step]);
+  const pick = (index: number) => actions.draftPick(state.step, index);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && selected !== null && !(e.target instanceof HTMLInputElement)) pick(selected);
     };
     addEventListener('keydown', onKey);
     return () => removeEventListener('keydown', onKey);
-  }, [selected, state.pack, state.pick]);
+  }, [selected, state.step]);
   return (
     <section class="draft-pack">
       <div class="bar"><span class="band-lab">Pack {state.pack} · {state.cards.length} cards</span></div>
