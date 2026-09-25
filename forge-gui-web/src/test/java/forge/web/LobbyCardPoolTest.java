@@ -163,6 +163,24 @@ public class LobbyCardPoolTest {
         }
     }
 
+    /**
+     * Fails if a Pauper archetype deck, which a computer seat may be dealt at random, holds a card Pauper bans. The
+     * archetype data predates some bans, so a key card taken from it unchecked would break the table's format.
+     */
+    @Test(timeOut = 300_000)
+    public void everyPauperArchetypeBuildsLegal() {
+        Assert.assertTrue(FModel.isdeckGenMatrixLoaded(), "no archetype data loaded, so this test proves nothing");
+        final GameFormat pauper = FModel.getFormats().getFormat("Pauper");
+        final List<String> illegal = new java.util.ArrayList<>();
+        for (final forge.deck.DeckProxy archetype : forge.deck.ArchetypeDeckGenerator.getMatrixDecks(pauper, false)) {
+            final String problem = DeckCatalog.poolProblem(pauper, archetype.getDeck());
+            if (problem != null) {
+                illegal.add(archetype.getName() + ": " + problem);
+            }
+        }
+        Assert.assertTrue(illegal.isEmpty(), illegal.size() + " archetypes build illegal decks: " + illegal);
+    }
+
     /** Fails if a restricted-list problem is worded as a ban, or the card's name is lost. */
     @Test
     public void restrictedCardsAreNamedAsRestricted() {
