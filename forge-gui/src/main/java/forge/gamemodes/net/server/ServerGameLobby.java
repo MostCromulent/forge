@@ -358,6 +358,8 @@ public final class ServerGameLobby extends GameLobby implements IHasForgeLog {
         draftHost = new BoosterDraftHost(draft, event);
         // Broadcast the fully-populated event (with participants and numRounds) so
         // clients can initialize their overlay with pod names before the first pack.
+        // The phase is set first, as startSealedEvent does, so the broadcast says the draft is on.
+        event.setPhase(EventPhase.DRAFTING);
         updateView(true);
         draftHost.start();
 

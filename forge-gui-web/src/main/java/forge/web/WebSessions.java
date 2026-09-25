@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.gamemodes.net.server.ServerGameLobby;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
@@ -48,6 +49,8 @@ final class WebSessions implements WebServer.Endpoint {
     static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
     private static final long HOST_GRACE_MILLIS = 20_000;
+    /** How long a drafting seat's browser may be gone before the draft host is told its player left. */
+    long draftHoldMillis = 15_000;
     /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
     private ScheduledFuture<?> idle;
 
@@ -190,6 +193,7 @@ final class WebSessions implements WebServer.Endpoint {
         if (session != null) {
             session.disconnected(channel);
             announcePresence();
+            timer.schedule(session::goneAWhile, draftHoldMillis, TimeUnit.MILLISECONDS);
         }
         letGo();
         // A seat held by a browser that never comes back would leave nobody able to set the table
@@ -201,6 +205,19 @@ final class WebSessions implements WebServer.Endpoint {
         final WebSession session = byChannel.get(channel);
         if (session != null) {
             session.onMessage(channel, message);
+        }
+    }
+
+    /** The host's lobby, where the table's event and its draft run, or null when nobody is hosting one. */
+    ServerGameLobby hostLobby() {
+        final WebSession h = host;
+        return h == null ? null : h.hostedLobby();
+    }
+
+    /** Every seat's dial reads again which pod seats are held, after a player went or came back. */
+    void seatsChanged() {
+        for (final WebSession session : byId.values()) {
+            session.seatsChanged();
         }
     }
 

@@ -14,11 +14,13 @@ import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.MessageEvent;
+import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
+import forge.gui.interfaces.IDraftEventHandler;
 import forge.interfaces.ILobbyListener;
 import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -58,9 +60,23 @@ public final class LocalGame {
     private ClientGameLobby joined;
     private FGameClient client;
     private int webSeat = -1;
+    /** Hears the draft and pool events the host sends this seat; set before a table is opened or joined. */
+    private IDraftEventHandler draftHandler;
 
     /** One seat of a game set up in a single call. */
     public record Seat(String name, boolean ai, int avatar, int sleeve, Deck deck) {
+    }
+
+    public void setDraftHandler(final IDraftEventHandler handler) {
+        draftHandler = handler;
+    }
+
+    /** Sends an event to the host as this seat's client, which is how a draft pick reaches the draft host. */
+    public void sendToHost(final NetEvent event) {
+        final FGameClient c = client;
+        if (c != null) {
+            c.send(event);
+        }
     }
 
     public ServerGameLobby hostedLobby() {
@@ -174,6 +190,7 @@ public final class LocalGame {
         final CountDownLatch ready = new CountDownLatch(1);
         client = new FGameClient(playerName, gui, "127.0.0.1", onPort);
         client.setDispatchExecutor(gui.dispatchExecutor());
+        client.setDraftHandler(draftHandler);
         client.addLobbyListener(new ClientListener(joined, ready, onChat, onClosed, seat -> {
             webSeat = seat;
             onUpdate.run();

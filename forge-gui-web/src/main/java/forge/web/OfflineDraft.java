@@ -153,6 +153,6 @@ final class OfflineDraft {
         final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
         // Packs go to the next seat in odd rounds and the previous seat in even ones, as BoosterDraft.passPacks alternates
         publish.accept(view.state(true, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
-                round % 2 == 1 ? 1 : -1, seats, cards, List.copyOf(picks), moved, 0, 0, done)));
+                round % 2 == 1 ? 1 : -1, seats, cards, List.copyOf(picks), moved, 0, 0, List.of(), done)));
     }
 }

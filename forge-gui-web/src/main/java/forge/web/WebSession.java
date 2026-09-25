@@ -34,6 +34,7 @@ import forge.web.FromBrowser.EventDecksOnly;
 import forge.web.FromBrowser.EventSetup;
 import forge.web.FromBrowser.SetLimited;
 import forge.web.ToBrowser.Addresses;
+import forge.web.ToBrowser.DraftState;
 import forge.web.ToBrowser.CardSearch;
 import forge.web.ToBrowser.ChatLine;
 import forge.web.ToBrowser.ErrorMessage;
@@ -49,7 +50,11 @@ import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.GauntletMini;
+import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.net.EventFormat;
+import forge.gamemodes.net.NetworkEventView;
+import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.storage.IStorage;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -128,6 +133,10 @@ public final class WebSession {
     private final AtomicBoolean openingPacks = new AtomicBoolean();
     /** The offline draft being played, while there is one. */
     private volatile OfflineDraft offlineDraft;
+    /** This seat's part in the table's draft or sealed event; a new one comes with each table. */
+    private volatile OnlineDraft onlineDraft;
+    /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
+    private volatile boolean seatReportedGone;
     /** A match seats at most four players, so several opponents at once are at most three. */
     private static final int MOST_OPPONENTS = 3;
     /** Whether this session is playing a limited gauntlet, and the result of its last game. */
@@ -291,6 +300,18 @@ public final class WebSession {
             if (isHost && lobby.settingUpEvent()) {
                 sendEventOptions(channel);
             }
+            final OnlineDraft draft = onlineDraft;
+            if (draft != null && draft.drafting()) {
+                channel.send(draft.latest());
+            }
+            if (seatReportedGone) {
+                seatReportedGone = false;
+                final ServerGameLobby table = sessions.hostLobby();
+                if (table != null && table.getDraftHost() != null && podSeat() >= 0) {
+                    table.getDraftHost().onSeatReconnected(podSeat());
+                }
+                sessions.seatsChanged();
+            }
         } else if (now instanceof Event) {
             sendLimited(channel);
             final OfflineDraft draft = offlineDraft;
@@ -433,10 +454,13 @@ public final class WebSession {
             case "sealedCreate" -> createSealed(channel, Wire.decode(msg, SealedCreate.class));
             case "draftStart" -> startDraft(channel, Wire.decode(msg, DraftStart.class));
             case "draftPick" -> {
+                final DraftPick pick = Wire.decode(msg, DraftPick.class);
                 final OfflineDraft draft = offlineDraft;
+                final OnlineDraft online = onlineDraft;
                 if (draft != null) {
-                    final DraftPick pick = Wire.decode(msg, DraftPick.class);
                     draft.pick(pick.step(), pick.index());
+                } else if (online != null && stage instanceof Setup) {
+                    online.pick(pick.step(), pick.index());
                 }
             }
             case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
@@ -612,6 +636,7 @@ public final class WebSession {
         final WebGuiGame gui = new WebGuiGame(settings);
         lobby.forget();
         lobby.setShareable(invite);
+        newOnlineDraft(gui);
         try {
             local.openHost(playerName(), gui, this::lobbyChanged, this::chatted);
             if (invite) {
@@ -651,6 +676,7 @@ public final class WebSession {
             lobby.forget();
             final WebGuiGame gui = new WebGuiGame(settings);
             gui.whenOpened(() -> guestMatchOpened(gui));
+            newOnlineDraft(gui);
             try {
                 local.openGuest(seatName, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
@@ -677,6 +703,107 @@ public final class WebSession {
                 b.send(lobby.state());
             }
         });
+    }
+
+    /**
+     * Makes this table's online draft and hands it to the seat's client. Its events are handled on the client's
+     * dispatch executor, one at a time, as the match's are.
+     */
+    private void newOnlineDraft(final WebGuiGame gui) {
+        seatReportedGone = false;
+        toldDrafting = false;
+        final OnlineDraft draft = new OnlineDraft(gui.dispatchExecutor(), this::eventView, this::podSeat, this::seatHeld,
+                local::sendToHost, this::showDraft, this::poolArrived);
+        onlineDraft = draft;
+        local.setDraftHandler(draft);
+    }
+
+    /** The table's event as this seat's lobby last heard it. */
+    private NetworkEventView eventView() {
+        final GameLobby table = local.hostedLobby() != null ? local.hostedLobby() : local.clientLobby();
+        return table == null || table.getData() == null ? null : table.getData().getEventView();
+    }
+
+    ServerGameLobby hostedLobby() {
+        return local.hostedLobby();
+    }
+
+    /** This seat's place in the draft pod, or -1 before the pod is seated. */
+    private int podSeat() {
+        final ServerGameLobby table = sessions.hostLobby();
+        return table == null ? -1 : table.findSeatForLobbySlot(local.webSeat());
+    }
+
+    /** Whether a pod seat's player has gone. Every seat's session lives in the host's process, where the draft runs. */
+    private boolean seatHeld(final int seat) {
+        final ServerGameLobby table = sessions.hostLobby();
+        return table != null && table.getDraftHost() != null && table.getDraftHost().isSeatHeld(seat);
+    }
+
+    private volatile boolean toldDrafting;
+
+    private void showDraft(final DraftState state) {
+        // The first pack takes the browser to the draft, which the hello says it is in
+        if (!toldDrafting) {
+            toldDrafting = true;
+            tell(hello());
+        }
+        tell(state);
+    }
+
+    /**
+     * The event's pool arrived. The host keeps it among the event decks and sets the table to play them, as desktop's
+     * host does; a guest's is kept in its browser. Either way it opens in the limited editor.
+     */
+    private void poolArrived(final String eventId, final Deck pool) {
+        final NetworkEventView event = eventView();
+        final GameType type = event != null && event.getFormat() == EventFormat.SEALED ? GameType.Sealed : GameType.Draft;
+        final BrowserChannel b = browser;
+        if (isHost) {
+            final IStorage<Deck> eventDecks = FModel.getDecks().getNetworkEventDecks();
+            final Deck kept;
+            synchronized (DeckCatalog.DECKS) {
+                // Two events of one product on one day share a name, and the older pool is not the newer one's to replace
+                String name = pool.getName();
+                for (int n = 2; eventDecks.contains(name); n++) {
+                    name = pool.getName() + " (" + n + ")";
+                }
+                kept = new Deck(pool, name);
+                eventDecks.add(kept);
+            }
+            final ServerGameLobby table = local.hostedLobby();
+            if (table != null) {
+                table.selectEventForMatch(eventId, true);
+            }
+            decks.openEventPool(kept, type, eventDecks, null, b);
+        } else {
+            decks.openEventPool(pool, type, null, "event-" + eventId, b);
+        }
+        tell(hello());
+    }
+
+    /** A pod seat's player went or came back, so this seat's dial shows it afresh. */
+    void seatsChanged() {
+        final OnlineDraft draft = onlineDraft;
+        if (draft != null) {
+            draft.refresh();
+        }
+    }
+
+    /**
+     * The browser has been gone a while. If this seat is drafting, the draft host is told its player left, as a closed
+     * connection tells desktop's, and holds or picks for the seat until the browser is back.
+     */
+    void goneAWhile() {
+        final OnlineDraft draft = onlineDraft;
+        final ServerGameLobby table = sessions.hostLobby();
+        final int seat = podSeat();
+        if (browser != null || draft == null || !draft.drafting() || table == null || table.getDraftHost() == null || seat < 0) {
+            return;
+        }
+        table.getDraftHost().onSeatDisconnected(seat);
+        seatReportedGone = true;
+        sessions.seatsChanged();
     }
 
     /** The host started the match, so this guest's browser follows its seat into the game. */
@@ -806,7 +933,13 @@ public final class WebSession {
                 seatIndices(FPref.UI_AVATARS), seatIndices(FPref.UI_SLEEVES),
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
-                now instanceof Event e ? e.kind() : null, offlineDraft != null, isHost ? OfflineEvents.storage("draft").size() : 0);
+                now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
+                isHost ? OfflineEvents.storage("draft").size() : 0);
+    }
+
+    private boolean onlineDrafting() {
+        final OnlineDraft draft = onlineDraft;
+        return draft != null && draft.drafting();
     }
 
     /** The Limited pages are drawn from the pools and what the setup form offers. Reading the lists touches files, so not here. */

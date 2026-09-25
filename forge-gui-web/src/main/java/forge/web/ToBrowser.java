@@ -508,12 +508,13 @@ final class ToBrowser {
      * An offline draft as the player sees it after a step. pick counts from 1 within the pack; direction is 1 while packs
      * go to the next seat and -1 while they go to the previous one; moved lists the seats whose pack went on to the next seat
      * since the last state; clockSeconds is the pick timer's length and clockLeftMillis what is left of it, both 0 when
-     * there is no timer; done says the draft is over and waits for a name.
+     * there is no timer; log is the draft's story so far, which only an online draft tells; done says the draft is over
+     * and waits for a name.
      */
     @Message("draft")
     record DraftState(int step, String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
             List<DraftCard> cards, List<DraftCard> picks, List<Integer> moved, int clockSeconds, int clockLeftMillis,
-            boolean done) {
+            List<String> log, boolean done) {
     }
 
     /** A seat in pass order, seat 0 being the player: how many packs it holds, and whether its player has gone away. */

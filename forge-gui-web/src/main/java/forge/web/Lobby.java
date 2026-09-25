@@ -734,9 +734,8 @@ final class Lobby {
     }
 
     /** Seats stay as they are while their players draft, since each player's seat is where their packs go. */
-    private static boolean drafting(final GameLobby lobby) {
-        final NetworkEventView event = lobby.getData() == null ? null : lobby.getData().getEventView();
-        return event != null && event.getPhase() == EventPhase.DRAFTING;
+    private static boolean drafting(final ServerGameLobby lobby) {
+        return lobby.getDraftHost() != null && !lobby.getDraftHost().isFinished();
     }
 
     /** Whether the table's event has begun: its packs are out, or a past event's decks were chosen for the match. */
@@ -769,7 +768,10 @@ final class Lobby {
         final GameLobbyData data = lobby.getData();
         final NetworkEventView event = data.getEventView();
         final boolean draft = data.getLimitedType() != GameType.Sealed;
-        return new LimitedTable(draft ? "draft" : "sealed", event == null ? null : event.getProductDescription(),
+        // An event's product is blank until the event is set up
+        final String product = event == null || event.getProductDescription() == null || event.getProductDescription().isEmpty()
+                ? null : event.getProductDescription();
+        return new LimitedTable(draft ? "draft" : "sealed", product,
                 event == null ? 0 : event.getPodSize(),
                 event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
                 event == null ? 0 : event.getPickTimerSeconds(), event == null ? null : event.getPhase().name(),

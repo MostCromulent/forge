@@ -6,6 +6,7 @@ import forge.item.PaperCard;
 import forge.web.ToBrowser.DraftCard;
 import forge.web.ToBrowser.DraftState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.IntFunction;
 
@@ -16,6 +17,7 @@ import java.util.function.IntFunction;
 final class DraftView {
     private int step;
     private volatile DraftState latest;
+    private final List<String> log = new ArrayList<>();
 
     /**
      * Seats whose head pack went on to the next seat between two readings of every seat's pack count, taken around
@@ -51,6 +53,15 @@ final class DraftView {
         }
         latest = build.apply(step);
         return latest;
+    }
+
+    /** Adds a line to the draft's log, as desktop's draft log words it. */
+    void log(final String line) {
+        log.add(line);
+    }
+
+    List<String> lines() {
+        return List.copyOf(log);
     }
 
     /** The state last built, for a browser that arrives again; null before the first pack. */

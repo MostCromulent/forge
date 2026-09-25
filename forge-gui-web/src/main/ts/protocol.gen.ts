@@ -293,6 +293,7 @@ export interface DraftState {
   moved: number[];
   clockSeconds: number;
   clockLeftMillis: number;
+  log: string[];
   done: boolean;
 }
 

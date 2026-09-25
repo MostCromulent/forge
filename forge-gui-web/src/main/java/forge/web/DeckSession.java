@@ -82,6 +82,10 @@ final class DeckSession {
 
     /** A browser arrived again: it is shown the editor it left, and a guest is sent the deck it may have missed. */
     synchronized void reconnected(final BrowserChannel channel) {
+        final EventPool p = pendingPool;
+        if (p != null) {
+            channel.send(deviceDeck(p.id(), p.deck(), p.format()));
+        }
         if (editor == null) {
             return;
         }
@@ -199,6 +203,34 @@ final class DeckSession {
         if (channel != null) {
             channel.send(new EditorMessage(editor.state(false)));
         }
+    }
+
+    /**
+     * Opens an online event's pool in the limited editor. The host keeps it among the event decks, as desktop does; a
+     * guest's is kept in its browser, and is sent again on each arrival until the browser says it keeps it.
+     */
+    synchronized void openEventPool(final Deck pool, final GameType type, final IStorage<Deck> eventDecks, final String deviceId,
+            final BrowserChannel channel) {
+        final DeckEditor.Target target;
+        if (eventDecks == null) {
+            pendingPool = new EventPool(deviceId, pool, type);
+            sendDeviceDeck(deviceId, String.join("\n", DeckSerializer.serializeDeck(pool)), type);
+            target = new DeckEditor.Device(deviceId);
+        } else {
+            target = new DeckEditor.Stored(eventDecks);
+        }
+        editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck);
+        editorSeat = null;
+        editorPath = "";
+        if (channel != null) {
+            channel.send(new EditorMessage(editor.state(false)));
+        }
+    }
+
+    /** A guest's event pool its browser has not yet said it keeps. */
+    private volatile EventPool pendingPool;
+
+    private record EventPool(String id, Deck deck, GameType format) {
     }
 
     /** The pool whose deck is open, or null. */
@@ -428,6 +460,12 @@ final class DeckSession {
     }
 
     private void keepDeviceDecks(final List<DeviceDeckText> decks) {
+        final EventPool p = pendingPool;
+        if (p != null && decks.stream().anyMatch(d -> p.id().equals(d.id()))) {
+            pendingPool = null;
+        } else if (p != null) {
+            sendDeviceDeck(p.id(), String.join("\n", DeckSerializer.serializeDeck(p.deck())), p.format());
+        }
         for (final DeviceDeckText d : decks) {
             try {
                 device.put(d.id(), new OnDevice(parse(d.text()), gameType(d.format())));
