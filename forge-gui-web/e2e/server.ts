@@ -29,7 +29,8 @@ export async function startServer(onPort?: number): Promise<Server> {
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
     `-Dforge.web.port=${port}`,
-    `-Dforge.web.pageDir=${join(module, 'src/main/resources/web')}`,
+    // FORGE_PAGE_DIR serves another build of the page, so a measurement can compare two against the same server
+    `-Dforge.web.pageDir=${process.env.FORGE_PAGE_DIR ?? join(module, 'src/main/resources/web')}`,
     `-Duser.home=${home}`,
     '-jar', join(module, 'target/forge-gui-web.jar'),
   // On Windows Forge keeps its preferences under APPDATA rather than the home folder
