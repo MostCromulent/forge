@@ -747,6 +747,9 @@ export interface DeckCard {
 export interface Format {
   id: string;
   name: string;
+  desc: string;
+  facts: string[];
+  play: string;
 }
 
 export interface LegalityGroup {

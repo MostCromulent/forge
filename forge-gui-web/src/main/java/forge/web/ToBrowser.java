@@ -133,7 +133,8 @@ final class ToBrowser {
     record LegalityGroup(String name, List<String> formats) {
     }
 
-    record Format(String id, String name) {
+    /** A format as the lobby offers it: what it is, its deck and life at a glance, and what changes in a match. */
+    record Format(String id, String name, String desc, List<String> facts, String play) {
     }
 
     /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. */

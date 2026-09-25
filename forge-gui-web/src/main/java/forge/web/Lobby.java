@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.deck.Deck;
+import forge.deck.DeckFormat;
 import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.gamemodes.match.GameLobby;
@@ -10,7 +11,9 @@ import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.util.NameGenerator;
+import org.apache.commons.lang3.Range;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
@@ -78,6 +81,39 @@ final class Lobby {
             }
         }
         return GameType.Constructed;
+    }
+
+    /** A format with what the lobby says about it. The description is the engine's own, already translated. */
+    static Format explained(final GameType type) {
+        final Localizer text = Localizer.getInstance();
+        final String desc = type.getDescription();
+        return new Format(type.name(), type.toString(),
+                desc == null || desc.isBlank() ? text.getMessage("lblConstructedDesc") : desc,
+                List.of(deckFact(type), lifeFact(type)), text.getMessage("lblWebPlay" + type.name()));
+    }
+
+    /** The deck size a player builds to, counting the cards that start in the command zone. */
+    private static String deckFact(final GameType type) {
+        final DeckFormat deck = type.getDeckFormat();
+        final Range<Integer> main = deck.getMainRange();
+        if (main.getMaximum() == Integer.MAX_VALUE) {
+            return Localizer.getInstance().getMessage("lblWebFactDeckAtLeast", main.getMinimum());
+        }
+        // Oathbreaker's command zone holds the oathbreaker and its signature spell
+        final int commandZone = type == GameType.Oathbreaker ? 2 : deck.hasCommander() ? 1 : 0;
+        return Localizer.getInstance().getMessage(deck.getMaxCardCopies() == 1 ? "lblWebFactDeckSingleton"
+                : "lblWebFactDeckAtLeast", main.getMaximum() + commandZone);
+    }
+
+    /** Starting life as RegisteredPlayer.forVariants sets it: 20, plus each format's bonus. */
+    private static String lifeFact(final GameType type) {
+        final Localizer text = Localizer.getInstance();
+        return switch (type) {
+            case Commander -> text.getMessage("lblWebFactLife", 40);
+            case TinyLeaders -> text.getMessage("lblWebFactLife", 25);
+            case Brawl -> text.getMessage("lblWebFactLifeByPlayers", 25, 30);
+            default -> text.getMessage("lblWebFactLife", 20);
+        };
     }
 
     /** The card pool every deck must come from, or null. Only Constructed has one. */
@@ -180,7 +216,7 @@ final class Lobby {
             }
             final List<Format> formats = new ArrayList<>();
             for (final GameType t : FORMATS) {
-                formats.add(new Format(t.name(), t.toString()));
+                formats.add(explained(t));
             }
             final List<Seat> seats = new ArrayList<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
