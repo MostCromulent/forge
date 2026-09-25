@@ -1,6 +1,8 @@
 // The cog dialog: one scrolling list of settings with a search box
 
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { saveText } from './dom';
 import { KeyControl } from './keysdialog';
 import { SETTINGS, set, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
@@ -28,53 +30,71 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu), query);
   return (
+    <OptionsDialog title="Options" close={close}
+      head={<input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"
+        value={query} onInput={e => setQuery(e.currentTarget.value)} />}
+      footer={<span class="hint">Changes apply at once. Conceding, auto-pass stops and keys are in the ⋯ menu beside this button.</span>}>
+      {shown.flatMap((def, i) => [
+        ...(def.section !== shown[i - 1]?.section ? [<h4 key={`section ${def.section}`}>{def.section}</h4>] : []),
+        <Row key={def.key} def={def} />,
+      ])}
+      {!shown.length && <p class="hint">No setting matches that.</p>}
+    </OptionsDialog>
+  );
+}
+
+export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
+
+/**
+ * The frame the options dialog and the game menu's dialogs share: a title with a close button, the rows, and a footer.
+ * head takes the header's free space, which is otherwise left empty; label names the dialog when the title is a phrase.
+ */
+export function OptionsDialog({ title, label, kind, head, footer, close, children }: {
+  title: string; label?: string; kind?: string; head?: ComponentChildren; footer: ComponentChildren; close: () => void;
+  children: ComponentChildren;
+}) {
+  return (
     <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div class="options-dialog" role="dialog" aria-label="Options">
+      <div class={kind ? `options-dialog ${kind}` : 'options-dialog'} role="dialog" aria-label={label ?? title}>
         <header>
-          <b>Options</b>
-          <input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"
-            value={query} onInput={e => setQuery(e.currentTarget.value)} />
-          <button class="close" title="Close (Esc)" onClick={close}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
-          </button>
+          <b>{title}</b>
+          {head ?? <span class="spacer" />}
+          <button class="close" title="Close (Esc)" onClick={close}><CloseIcon /></button>
         </header>
-        <div class="rows">
-          {shown.flatMap((def, i) => [
-            ...(def.section !== shown[i - 1]?.section ? [<h4 key={`section ${def.section}`}>{def.section}</h4>] : []),
-            <Row key={def.key} def={def} />,
-          ])}
-          {!shown.length && <p class="hint">No setting matches that.</p>}
-        </div>
-        <footer>
-          <span class="hint">Changes apply at once. Conceding, auto-pass stops and keys are in the ⋯ menu beside this button.</span>
-        </footer>
+        <div class="rows">{children}</div>
+        <footer>{footer}</footer>
       </div>
     </div>
   );
 }
 
-export function Row({ def }: { def: SettingDef }) {
+/** One setting with its control. onChange runs after the setting is changed, for a dialog that must follow it. */
+export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   return (
     <div class={def.type === 'css' ? 'setting wide' : 'setting'}>
       <div>
         <div>{def.label}</div>
         {def.hint && <div class="hint">{def.hint}</div>}
       </div>
-      <Control def={def} />
+      <Control def={def} onChange={onChange} />
     </div>
   );
 }
 
-function Control({ def }: { def: SettingDef }) {
+function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   const value = setting(def.key);
+  const change = (next: string | number | boolean) => {
+    set(def.key, next);
+    onChange?.();
+  };
   switch (def.type) {
     case 'toggle':
       return <button class={value ? 'switch on' : 'switch'} role="switch" aria-checked={!!value}
-        onClick={() => set(def.key, !setting(def.key))} />;
+        onClick={() => change(!setting(def.key))} />;
     case 'choice':
       return (
         <div class="choice">
-          {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} onClick={() => set(def.key, v)}>{label}</button>)}
+          {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} onClick={() => change(v)}>{label}</button>)}
         </div>
       );
     case 'css':
@@ -85,7 +105,7 @@ function Control({ def }: { def: SettingDef }) {
       return (
         <div class="slider">
           <input type="range" min={def.min} max={def.max} step={def.step ?? 5} value={Number(value)}
-            onInput={e => set(def.key, Number(e.currentTarget.value))} />
+            onInput={e => change(Number(e.currentTarget.value))} />
           <span>{def.unit === 'seconds' ? `${(Number(value) / 1000).toFixed(2).replace(/0$/, '')}s` : `${value}%`}</span>
         </div>
       );
@@ -101,7 +121,7 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
         onInput={e => set(def.key, e.currentTarget.value)} />
       <div class="css-buttons">
         <button onClick={() => file.current?.click()}>Import</button>
-        <button onClick={() => saveCss(value)}>Export</button>
+        <button onClick={() => saveText(value, 'forge-theme.css', 'text/css')}>Export</button>
         <button onClick={() => set(def.key, '')}>Clear</button>
       </div>
       <input ref={file} type="file" accept=".css,text/css" hidden onChange={async e => {
@@ -114,13 +134,4 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
       }} />
     </div>
   );
-}
-
-function saveCss(text: string): void {
-  const url = URL.createObjectURL(new Blob([text], { type: 'text/css' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'forge-theme.css';
-  link.click();
-  URL.revokeObjectURL(url);
 }

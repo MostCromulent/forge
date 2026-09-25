@@ -35,9 +35,6 @@ export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' |
  *  is the game's, not a player's. */
 export type PlayerZone = Exclude<Extract<ZoneType, keyof TrackedProps>, 'Stack'>;
 
-/** The zones the board draws on its own; any other opens in a panel when the game shows it. */
-export type ZoneName = Extract<PlayerZone, 'Hand' | 'Library' | 'Graveyard' | 'Exile' | 'Battlefield' | 'Command'>;
-
 /** A list of references as the table holds them; an object Forge could not name is null. */
 export type Refs = readonly (Ref | null)[];
 

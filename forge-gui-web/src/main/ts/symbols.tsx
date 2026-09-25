@@ -11,5 +11,8 @@ export function SymbolText({ text, muted }: { text: string | null | undefined; m
 
 /** A deck's colours as the pips the lobby and the deck finder show. */
 export function Pips({ colors }: { colors: string | null | undefined }) {
-  return <>{[...(colors ?? '')].map(c => <i key={c} class={`pip pip-${c}`}>{c}</i>)}</>;
+  return <>{[...(colors ?? '')].map(c => <Pip key={c} letter={c} />)}</>;
 }
+
+/** One colour's pip: W, U, B, R, G or C. */
+export const Pip = ({ letter }: { letter: string }) => <i class={`pip pip-${letter}`}>{letter}</i>;

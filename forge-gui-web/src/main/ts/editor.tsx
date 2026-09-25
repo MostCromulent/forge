@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { Catalogue } from './catalogue';
 import { CardMenu, PrintingPicker, type MenuAt } from './cardmenu';
 import { DeckHalf, removeOne } from './deckhalf';
+import { saveText } from './dom';
 import { longPress, startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
 import { deckText } from './decklist';
 import { peekAt } from './deckfinder';
@@ -226,13 +227,7 @@ function TextDialog({ state, close }: { state: EditorState; close: () => void })
   useEffect(() => {
     area.current?.select();
   }, []);
-  const download = () => {
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
-    link.download = `${state.name}.txt`;
-    link.click();
-    URL.revokeObjectURL(link.href);
-  };
+  const download = () => saveText(text, `${state.name}.txt`, 'text/plain');
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog deck-text">

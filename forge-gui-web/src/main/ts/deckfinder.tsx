@@ -5,7 +5,8 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
-import { Pips } from './symbols';
+import { Curve } from './deckhalf';
+import { Pip, Pips } from './symbols';
 import { changeUi, ui } from './ui';
 import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from './search';
@@ -209,7 +210,7 @@ export function DeckFinder({ model, actions, seat, close }: {
                       if (!colours.delete(letter)) colours.add(letter);
                       change({ colours });
                     }}>
-                    <i class={`pip pip-${letter}`}>{letter}</i>
+                    <Pip letter={letter} />
                   </button>
                 ))}
               </div>
@@ -326,9 +327,6 @@ function Title({ deck }: { deck: DeckSummary }) {
   );
 }
 
-// Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
-const CURVE_PX = 42;
-
 // Hovering a card in the list shows it, the way hovering one on the table does: beside the line being pointed at,
 // pushed left of it so the cursor never covers the card
 export function peekAt(e: PointerEvent, frameSelector: string): { image: string; left: number; top: number } | null {
@@ -347,7 +345,6 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
 
 function Chosen({ details }: { details: DeckDetails }) {
   const s = details.stats;
-  const tallest = Math.max(1, ...s.curve);
   return (
     <>
       <div class="dk-chosen-head">
@@ -355,17 +352,7 @@ function Chosen({ details }: { details: DeckDetails }) {
         <p class="sizes">{s.main} cards{s.sideboard ? ` · ${s.sideboard} sideboard` : ''} · {s.lands} lands</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? 'Legal for this format.'}</p>
         <div class="stats">
-          <div class="curve">
-            <h4>Mana curve</h4>
-            <div class="bars">
-              {s.curve.map((n, i) => {
-                // The last bucket holds everything at that mana value and above
-                const label = i === s.curve.length - 1 ? `${i}+` : `${i}`;
-                const h = n === 0 ? 2 : Math.max(3, Math.round((n / tallest) * CURVE_PX));
-                return <span key={i} class="bar" title={`${n} at ${label}`}><i style={{ height: `${h}px` }} /><em>{label}</em></span>;
-              })}
-            </div>
-          </div>
+          <Curve curve={s.curve} px={42} />
           <div class="types">
             {s.types.map(t => <div key={t.name} class="type"><span>{t.name}</span><b>{t.count}</b></div>)}
             <div class="type avg"><span>Average mana value</span><b>{s.averageMana}</b></div>

@@ -4,7 +4,7 @@
 import { useState } from 'preact/hooks';
 import { drawHand, regroup, type GroupBy } from './decklist';
 import { imageUrl } from './images';
-import { Pips, SymbolText } from './symbols';
+import { Pip, Pips, SymbolText } from './symbols';
 import { showNotice } from './notices';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
@@ -13,7 +13,6 @@ import { store, stored } from './storage';
 
 const GROUP_KEY = 'forge.groupBy';
 const HAND = 7;
-const CURVE_PX = 34;
 
 export function DeckHalf({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
@@ -34,7 +33,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
             : <p class="verdict yes">Legal for {state.check}.</p>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>Sample hand</button>
         </div>
-        <Curve curve={state.stats.curve} average={state.stats.averageMana} />
+        <Curve curve={state.stats.curve} average={state.stats.averageMana} px={34} />
       </div>
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
@@ -65,7 +64,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
         <span class="band-lab">Basic lands</span>
         {state.lands.map(l => (
           <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : `${l.name} is outside the commander's colours`}>
-            <i class={`pip pip-${l.letter}`}>{l.letter}</i>
+            <Pip letter={l.letter} />
             <button class="step" disabled={!l.count} aria-label={`One fewer ${l.name}`}
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count - 1 }] })}>&minus;</button>
             <span class="n">{l.count}</span>
@@ -155,15 +154,18 @@ export function removeOne(actions: Actions, name: string, zone: DeckSection): vo
     () => actions.editorUndo(), 'Undo');
 }
 
-function Curve({ curve, average }: { curve: number[]; average: number }) {
+/** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
+// Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
+export function Curve({ curve, average, px }: { curve: number[]; average?: number; px: number }) {
   const tallest = Math.max(1, ...curve);
   return (
     <div class="curve">
-      <h4>Mana curve <span>avg {average}</span></h4>
+      <h4>Mana curve{average !== undefined && <> <span>avg {average}</span></>}</h4>
       <div class="bars">
         {curve.map((n, i) => {
+          // The last bucket holds everything at that mana value and above
           const label = i === curve.length - 1 ? `${i}+` : `${i}`;
-          return <span key={i} class="bar" title={`${n} at ${label}`}><i style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * CURVE_PX)) : 2}px` }} /><em>{label}</em></span>;
+          return <span key={i} class="bar" title={`${n} at ${label}`}><i style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }} /><em>{label}</em></span>;
         })}
       </div>
     </div>

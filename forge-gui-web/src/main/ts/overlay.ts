@@ -1,6 +1,7 @@
 import { game, derefAll, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
+import { cardElement, pileTopFor } from './motion';
 import { ui } from './ui';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
@@ -103,12 +104,8 @@ export function stackTargets(model: Model, item: StackItemView): TrackedObject[]
 // A card inside a pile is drawn by the pile's top card
 function elementFor(key: number | undefined): HTMLElement | null {
   if (key === undefined) return null;
-  const player = document.querySelector<HTMLElement>(`.seat[data-player="${key}"] .avatar`);
-  if (player) return player;
-  const card = document.querySelector<HTMLElement>(`#opponent .card[data-key="${key}"], #me .card[data-key="${key}"], #hand .card[data-key="${key}"], #zones .card[data-key="${key}"]`);
-  if (card) return card;
-  const pile = [...document.querySelectorAll<HTMLElement>('.slot[data-members]')].find(s => (s.dataset.members ?? '').split(',').includes(String(key)));
-  return (pile?.lastChild as HTMLElement | null | undefined) ?? null;
+  return document.querySelector<HTMLElement>(`.seat[data-player="${key}"] .avatar`)
+    ?? cardElement(String(key)) ?? pileTopFor(String(key));
 }
 
 function center(el: HTMLElement): Point {

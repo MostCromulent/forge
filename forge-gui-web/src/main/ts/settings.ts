@@ -40,6 +40,7 @@ export const SETTINGS: SettingDef[] = [
   { section: 'Stops', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, menu: 'stops', def: false },
   {
     section: 'Priority', key: 'autoYieldMode', label: 'Remember them', type: 'choice', server: true, menu: 'decisions',
+    hint: 'Per ability covers every card with the same ability; per card, only that card. Each mode keeps its own list.',
     options: [['ability', 'Per ability'], ['card', 'Per card']], def: 'ability',
   },
   {

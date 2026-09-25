@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from './images';
+import { normalize } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ExtraChoice, Seat } from './protocol';
@@ -26,7 +27,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
     actions.setSeatExtra(index, section, choice.key);
     close();
   };
-  const shown = (listed ?? []).filter(c => !query || c.label.toLowerCase().includes(query.toLowerCase()));
+  const shown = (listed ?? []).filter(c => !query || normalize(c.label).includes(normalize(query)));
   return (
     <div class="finder-back" onClick={e => { if (e.target === e.currentTarget) close(); }}>
       <div class={`finder extra-picker ${kind}`}>

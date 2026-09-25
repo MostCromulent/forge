@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
-import { SymbolText } from './symbols';
+import { Pip, SymbolText } from './symbols';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
 import type { Model } from './model';
@@ -131,7 +131,7 @@ export function Catalogue({ model, actions, state, handlers }: {
               const next = new Set(colours);
               if (!next.delete(letter)) next.add(letter);
               setColours(next);
-            }}><i class={`pip pip-${letter}`}>{letter}</i></button>
+            }}><Pip letter={letter} /></button>
           ))}
         </div>
         {!state.commanderWanted && state.identity && <>

@@ -188,7 +188,7 @@ const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-
 const BOARD_CARDS = '#me .battlefield .card[data-key], #opponent .battlefield .card[data-key]';
 const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item')];
 
-function cardElement(key: string): HTMLElement | null {
+export function cardElement(key: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#me .card[data-key="${key}"], #opponent .card[data-key="${key}"], `
     + `#hand .card[data-key="${key}"], #zones .card[data-key="${key}"]`);
 }
@@ -203,7 +203,7 @@ function elementFor(key: string): HTMLElement | null {
   return cardElement(key) ?? stackItemFor(key) ?? pileTopFor(key);
 }
 
-function pileTopFor(key: string): HTMLElement | null {
+export function pileTopFor(key: string): HTMLElement | null {
   for (const { keys, top } of pileSlots()) {
     if (keys.includes(key)) {
       return top;
