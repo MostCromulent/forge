@@ -53,7 +53,7 @@ export interface Actions {
   // Match setup
   leaveLobby(): void;
   setFormat(format: string): void;
-  setLegality(legality: string | null): void;
+  setCardPool(cardPool: string | null): void;
   addSeat(): void;
   removeSeat(index: number): void;
   /** Turns a seat between a computer and one someone can join. */
@@ -106,7 +106,7 @@ export function createActions(send: Send): Actions {
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     setFormat: format => send({ t: 'setFormat', format }),
-    setLegality: legality => send(legality ? { t: 'setLegality', legality } : { t: 'setLegality' }),
+    setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     addSeat: () => send({ t: 'addSeat' }),
     removeSeat: index => send({ t: 'removeSeat', index }),
     openSeat: index => send({ t: 'openSeat', index }),

@@ -9,7 +9,7 @@ import forge.web.FromBrowser.Say;
 import forge.web.FromBrowser.SearchCards;
 import forge.web.FromBrowser.SeatCommand;
 import forge.web.FromBrowser.SetFormat;
-import forge.web.FromBrowser.SetLegality;
+import forge.web.FromBrowser.SetCardPool;
 import forge.web.FromBrowser.SetName;
 import forge.web.FromBrowser.SetSeat;
 import forge.web.FromBrowser.SetSetting;
@@ -268,7 +268,7 @@ public final class WebSession {
                 }
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
-            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setLegality", "addSeat", "setSeat", "sleeveArt" -> {
+            case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "addSeat", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -362,8 +362,8 @@ public final class WebSession {
                     channel.send(lobby.decks());
                 }
             }
-            case "setLegality" -> {
-                lobby.setLegality(Wire.decode(msg, SetLegality.class).legality());
+            case "setCardPool" -> {
+                lobby.setCardPool(Wire.decode(msg, SetCardPool.class).cardPool());
                 if (lobby.restrictionsChanged()) {
                     channel.send(lobby.decks());
                 }
@@ -490,7 +490,7 @@ public final class WebSession {
     private void lobbyChanged() {
         final BrowserChannel b = browser;
         if (b != null && stage instanceof Setup) {
-            // A guest learns of the host's format or Legality only here, so its deck list is rebuilt here too
+            // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too
             if (lobby.restrictionsChanged()) {
                 b.send(lobby.decks());
             }

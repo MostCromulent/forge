@@ -88,7 +88,7 @@ final class ToBrowser {
     }
 
     @Message("decks")
-    record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String legality) {
+    record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool) {
     }
 
     /** A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts. */
@@ -125,16 +125,16 @@ final class ToBrowser {
     }
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
-            @Nullable String legality, List<LegalityGroup> legalities,
+            @Nullable String cardPool, List<CardPoolGroup> cardPools,
             int maxSeats, List<Seat> seats, List<String> problems, boolean canStart) {
     }
 
-    /** Card pools the Legality control offers, under the heading Forge files them by. */
-    record LegalityGroup(String name, List<String> formats) {
+    /** Card pools the card pool control offers, under the heading Forge files them by. */
+    record CardPoolGroup(String name, List<String> formats) {
     }
 
-    /** A format as the lobby offers it: what it is, its deck and life at a glance, and what changes in a match. */
-    record Format(String id, String name, String desc, List<String> facts, String play) {
+    /** A format as the lobby offers it: its group, what it is, its deck and life at a glance, and what changes in a match. */
+    record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
     /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. */

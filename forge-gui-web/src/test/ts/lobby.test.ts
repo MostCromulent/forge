@@ -6,7 +6,7 @@ const deck = (name: string, more: Partial<DeckSummary> = {}): DeckSummary =>
   ({ key: name, name, source: 'precons', colors: '', ...more });
 
 describe("a computer seat's random deck", () => {
-  // Fails if a deck the lobby would refuse, such as one outside the Legality, can be dealt to a computer seat
+  // Fails if a deck the lobby would refuse, such as one outside the card pool, can be dealt to a computer seat
   it('comes only from decks with no problem, generators included', () => {
     const pool = randomPool([
       deck('Atog Pile', { problem: 'Not legal in Pauper: 1 card. Atog.' }),
@@ -20,15 +20,15 @@ describe("a computer seat's random deck", () => {
 describe('the sentence under the lobby header', () => {
   const table = (more: Partial<LobbyTable> = {}): LobbyTable => ({
     host: true, mySeat: 0, shareable: false, format: 'Constructed', maxSeats: 4, seats: [], problems: [], canStart: false,
-    legalities: [],
-    formats: [{ id: 'Constructed', name: 'Constructed', desc: 'Each player brings a deck of 60 or more cards.', facts: [], play: '' }],
+    cardPools: [],
+    formats: [{ id: 'Constructed', name: 'Constructed', group: 'Constructed', desc: 'Each player brings a deck of 60 or more cards.', facts: [], play: '' }],
     ...more,
   });
 
-  // Fails if the sentence names the format but drops the Legality the table is held to
-  it("names the format and its Legality, then says what the format is", () => {
-    expect(matchSentence(table({ legality: 'Pauper' })))
-      .toEqual({ title: 'Constructed, Pauper legality', text: 'Each player brings a deck of 60 or more cards.' });
-    expect(matchSentence(table()).title).toBe('Constructed');
+  // Fails if the sentence names Constructed but drops the format that limits its cards
+  it("names Constructed with its format, then says what Constructed is", () => {
+    expect(matchSentence(table({ cardPool: 'Pauper' })))
+      .toEqual({ title: 'Constructed · Pauper', text: 'Each player brings a deck of 60 or more cards.' });
+    expect(matchSentence(table()).title).toBe('Constructed · any cards');
   });
 });

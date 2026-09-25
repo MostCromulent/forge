@@ -53,7 +53,7 @@ export interface Model {
   /** The formats a deck's cards can be checked against, for narrowing the deck list. */
   cardFormats: string[];
   /** The card pool the lobby holds decks to, which the deck finder pins. */
-  deckLegality: string | null;
+  deckCardPool: string | null;
   /** The deck last asked about, with its card list and statistics. */
   deckDetails: DeckDetails | null;
   /** Card names matching the last search, and the printings of the last name asked about, for picking sleeve art. */
@@ -81,7 +81,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
-    cardFormats: [], deckLegality: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
+    cardFormats: [], deckCardPool: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null,
   };
 }

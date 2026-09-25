@@ -41,7 +41,7 @@ export interface Decks {
   t: 'decks';
   decks: DeckSummary[];
   cardFormats: string[];
-  legality?: string;
+  cardPool?: string;
 }
 
 export interface DeckDetailsMessage {
@@ -384,9 +384,9 @@ export interface SetFormat {
   format: string;
 }
 
-export interface SetLegality {
-  t: 'setLegality';
-  legality?: string;
+export interface SetCardPool {
+  t: 'setCardPool';
+  cardPool?: string;
 }
 
 export interface AskDeckDetails {
@@ -495,7 +495,7 @@ export type ClientMessage =
   | SeatCommand
   | SetSeat
   | SetFormat
-  | SetLegality
+  | SetCardPool
   | AskDeckDetails
   | HostChoiceAnswer
   | SearchCards
@@ -608,8 +608,8 @@ export interface LobbyTable {
   shareable: boolean;
   format: string;
   formats: Format[];
-  legality?: string;
-  legalities: LegalityGroup[];
+  cardPool?: string;
+  cardPools: CardPoolGroup[];
   maxSeats: number;
   seats: Seat[];
   problems: string[];
@@ -747,12 +747,13 @@ export interface DeckCard {
 export interface Format {
   id: string;
   name: string;
+  group: string;
   desc: string;
   facts: string[];
   play: string;
 }
 
-export interface LegalityGroup {
+export interface CardPoolGroup {
   name: string;
   formats: string[];
 }

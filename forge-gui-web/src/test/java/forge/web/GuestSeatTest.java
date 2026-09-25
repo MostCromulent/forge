@@ -274,11 +274,11 @@ public class GuestSeatTest {
     }
 
     /**
-     * Fails if a guest keeps judging decks by the old rules after the host picks a Legality: its table must show
-     * the Legality, and it must receive a deck list built for it without asking.
+     * Fails if a guest keeps judging decks by the old rules after the host picks a card pool: its table must show
+     * the card pool, and it must receive a deck list built for it without asking.
      */
     @Test(timeOut = 120_000)
-    public void aGuestFollowsTheHostsLegality() throws Exception {
+    public void aGuestFollowsTheHostsCardPool() throws Exception {
         final Recorder hostBrowser = connect("host");
         sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
         Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
@@ -288,20 +288,20 @@ public class GuestSeatTest {
         Assert.assertNotNull(hostBrowser.awaitLobbyWithSeat(), "the host never got a seat");
 
         // A session of its own, since a name given here would otherwise follow the "guest" id into other tests
-        final Recorder guestBrowser = connect("legality-guest");
+        final Recorder guestBrowser = connect("cardPool-guest");
         Assert.assertNotNull(guestBrowser.await("hello"));
-        sessions.onMessage(guestBrowser, named("Legality Guest"));
+        sessions.onMessage(guestBrowser, named("Pool Guest"));
         Assert.assertNotNull(guestBrowser.awaitLobbyWithSeat(), "the guest never sat down");
         guestBrowser.forget();
 
-        final JsonObject choose = JsonCodec.message("setLegality");
-        choose.addProperty("legality", "Pauper");
+        final JsonObject choose = JsonCodec.message("setCardPool");
+        choose.addProperty("cardPool", "Pauper");
         sessions.onMessage(hostBrowser, choose);
 
-        Assert.assertNotNull(guestBrowser.awaitLobby(t -> t.has("legality") && "Pauper".equals(t.get("legality").getAsString())),
-                "the guest's table never showed the Legality");
-        Assert.assertNotNull(guestBrowser.awaitMatching("decks", d -> d.has("legality")
-                && "Pauper".equals(d.get("legality").getAsString())), "the guest was never sent a Pauper deck list");
+        Assert.assertNotNull(guestBrowser.awaitLobby(t -> t.has("cardPool") && "Pauper".equals(t.get("cardPool").getAsString())),
+                "the guest's table never showed the card pool");
+        Assert.assertNotNull(guestBrowser.awaitMatching("decks", d -> d.has("cardPool")
+                && "Pauper".equals(d.get("cardPool").getAsString())), "the guest was never sent a Pauper deck list");
     }
 
     /** The first deck in a list that is built and legal, rather than generated when the game starts. */

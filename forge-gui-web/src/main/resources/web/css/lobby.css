@@ -178,10 +178,19 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .guide-name { font-weight: 650; font-size: 13.5px; }
 .guide-name small { display: block; color: var(--accent-2); font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
 
-/* The card pool sits after the format it belongs to, a pill like the chips so it reads as part of the same choice */
-.legality { display: flex; align-items: center; gap: 8px; padding-left: 14px; border-left: 1px solid var(--line); color: var(--muted); font-size: 12px; }
-.legality select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 13px; }
-.legality.set select { border-color: var(--accent-2); background: var(--accent-soft); }
+/* Formats in Wizards' groups: Constructed, the Commander family, the rest, divided by a rule */
+.format-group { display: flex; flex-wrap: wrap; gap: 6px; }
+.format-group + .format-group { padding-left: 10px; border-left: 1px solid var(--line); }
+/* Constructed is one split chip: its name and format on the left, the caret that picks the format on the right */
+.format-chip.split .format { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.format-pool { appearance: none; width: 30px; margin-left: -1px; border: 1px solid var(--line); border-radius: 0 999px 999px 0;
+  background: var(--surface-2); color: transparent; cursor: pointer; font: inherit; }
+.format-pool option, .format-pool optgroup { color: var(--text); background: var(--surface); }
+.format-chip.split::after { content: 'BE'; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 11px; pointer-events: none; }
+.format-chip.split:has(.format[aria-pressed="true"]) .format-pool { background: var(--brass); border-color: var(--accent-2); }
+.format-chip.split:has(.format[aria-pressed="true"])::after { color: var(--on-brass); }
+.format-pool:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.guide-group { margin: 14px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); }
 
 .seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
 /* Three or four seats read as a grid rather than a row that wraps unevenly */

@@ -41,7 +41,7 @@ export const FINDER_DEFAULTS: DeckFilter = {
   query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, sort: 'name',
 };
 
-/** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
+/** The decks the filter lets through, in its order. A generator has built nothing yet, so cardPool cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
     && (!f.colours.size || [...f.colours].some(c => (d.colors ?? '').includes(c)))
@@ -160,9 +160,9 @@ export function DeckFinder({ model, actions, index, seat, close }: {
             </section>
             <section>
               <h4>Legal in</h4>
-              {/* The lobby's Legality is the match's rule, so it is shown here but changed only there */}
-              {model.deckLegality
-                ? <p class="pinned">{model.deckLegality}<span>set in the lobby</span></p>
+              {/* The lobby's card pool is the match's rule, so it is shown here but changed only there */}
+              {model.deckCardPool
+                ? <p class="pinned">{model.deckCardPool}<span>set in the lobby</span></p>
                 : <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
                     <option value="any">Any format</option>
                     {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}

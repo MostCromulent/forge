@@ -11,8 +11,8 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-/** The Legality a host chooses for Constructed, checked against every seat. No match is played. */
-public class LobbyLegalityTest {
+/** The card pool a host chooses for Constructed, checked against every seat. No match is played. */
+public class LobbyCardPoolTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
@@ -49,36 +49,36 @@ public class LobbyLegalityTest {
     @Test(timeOut = 60_000)
     public void aBannedCardStopsPlay() throws Exception {
         atTable(TestDecks.of("Atog Pile", "Atog", 4, "Mountain", 56), (local, lobby) -> {
-            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(() -> lobby.setCardPool("Pauper"));
             final List<String> problems = lobby.problems();
             Assert.assertTrue(problems.stream().anyMatch(p -> p.contains("Pauper") && p.contains("Atog")),
                     "no problem names Atog under Pauper: " + problems);
         });
     }
 
-    /** Fails if the Legality survives a switch to Commander, where Pauper would then judge commander decks. */
+    /** Fails if the card pool survives a switch to Commander, where Pauper would then judge commander decks. */
     @Test(timeOut = 60_000)
-    public void leavingConstructedClearsTheLegality() throws Exception {
+    public void leavingConstructedClearsTheCardPool() throws Exception {
         atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
-            onUi(() -> lobby.setLegality("Pauper"));
-            Assert.assertNotNull(lobby.legality(), "the Legality was not taken");
+            onUi(() -> lobby.setCardPool("Pauper"));
+            Assert.assertNotNull(lobby.cardPool(), "the card pool was not taken");
             onUi(() -> lobby.setFormat(GameType.Commander.name()));
-            Assert.assertNull(lobby.legality(), "Commander kept the Pauper Legality");
-            onUi(() -> lobby.setLegality("Pauper"));
-            Assert.assertNull(lobby.legality(), "a Legality was accepted outside Constructed");
+            Assert.assertNull(lobby.cardPool(), "Commander kept the Pauper card pool");
+            onUi(() -> lobby.setCardPool("Pauper"));
+            Assert.assertNull(lobby.cardPool(), "a card pool was accepted outside Constructed");
         });
     }
 
     /**
-     * Fails if the finder's list ignores the Legality: a colour generator builds from the whole card pool, or theme
+     * Fails if the finder's list ignores the card pool: a colour generator builds from the whole card pool, or theme
      * decks, which cannot honour a pool, are still offered.
      */
     @Test(timeOut = 120_000)
-    public void theDeckListFollowsTheLegality() throws Exception {
+    public void theDeckListFollowsTheCardPool() throws Exception {
         atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
-            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(() -> lobby.setCardPool("Pauper"));
             final ToBrowser.Decks decks = lobby.decks();
-            Assert.assertEquals(decks.legality(), "Pauper");
+            Assert.assertEquals(decks.cardPool(), "Pauper");
             Assert.assertTrue(decks.decks().stream().noneMatch(d -> d.key().startsWith("gen:theme:")),
                     "a theme deck was offered under a card pool");
             final Deck coloured = lobby.deckForTest("gen:color:Red");
@@ -88,24 +88,24 @@ public class LobbyLegalityTest {
         });
     }
 
-    /** Fails if the Legality control offers a heading with nothing under it, as the Block group can be. */
+    /** Fails if the card pool control offers a heading with nothing under it, as the Block group can be. */
     @Test(timeOut = 60_000)
-    public void everyLegalityHeadingHasFormats() throws Exception {
+    public void everyCardPoolHeadingHasFormats() throws Exception {
         atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
-            final var groups = lobby.state().table().legalities();
+            final var groups = lobby.state().table().cardPools();
             Assert.assertFalse(groups.isEmpty(), "no card pools offered");
-            for (final ToBrowser.LegalityGroup g : groups) {
+            for (final ToBrowser.CardPoolGroup g : groups) {
                 Assert.assertFalse(g.formats().isEmpty(), g.name() + " is offered with nothing in it");
             }
         });
     }
 
     /**
-     * Fails if a generated deck dealt before the Legality keeps playing afterwards: the catalogue rebuilds its key
+     * Fails if a generated deck dealt before the card pool keeps playing afterwards: the catalogue rebuilds its key
      * under the new pool, so the seat would show a legal deck while the slot still holds the old one.
      */
     @Test(timeOut = 120_000)
-    public void aGeneratedDeckDealtBeforeTheLegalityIsDealtAgain() throws Exception {
+    public void aGeneratedDeckDealtBeforeTheCardPoolIsDealtAgain() throws Exception {
         atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
             final int computer = local.webSeat() == 0 ? 1 : 0;
             lobby.decks();
@@ -113,7 +113,7 @@ public class LobbyLegalityTest {
             final GameFormat pauper = FModel.getFormats().getFormat("Pauper");
             Assert.assertNotNull(DeckCatalog.poolProblem(pauper, local.hostedLobby().getSlot(computer).getDeck()),
                     "the red deck was already Pauper-legal, so this test proves nothing");
-            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(() -> lobby.setCardPool("Pauper"));
             onUi(lobby::decks);
             Assert.assertNull(DeckCatalog.poolProblem(pauper, local.hostedLobby().getSlot(computer).getDeck()),
                     "the computer still plays its pre-Pauper deck");
@@ -154,7 +154,7 @@ public class LobbyLegalityTest {
                 }
             }, (from, text) -> { }));
             final Lobby lobby = new Lobby(local);
-            onUi(() -> lobby.setLegality("Pauper"));
+            onUi(() -> lobby.setCardPool("Pauper"));
             onUi(() -> lobby.setFormat(GameType.Commander.name()));
             Assert.assertFalse(leaked.get(), "an update showed Commander with the Pauper pool");
         } finally {

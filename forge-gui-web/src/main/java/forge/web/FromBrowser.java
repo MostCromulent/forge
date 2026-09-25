@@ -58,8 +58,8 @@ final class FromBrowser {
     }
 
     /** A card pool for Constructed, or none to lift it. */
-    @Command("setLegality")
-    record SetLegality(@Nullable String legality) {
+    @Command("setCardPool")
+    record SetCardPool(@Nullable String cardPool) {
     }
 
     @Command("deckDetails")
@@ -151,7 +151,7 @@ final class FromBrowser {
 
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
-            SeatCommand.class, SetSeat.class, SetFormat.class, SetLegality.class, AskDeckDetails.class, HostChoiceAnswer.class,
+            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, AskDeckDetails.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class);

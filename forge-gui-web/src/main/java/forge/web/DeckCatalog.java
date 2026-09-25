@@ -314,7 +314,7 @@ final class DeckCatalog {
         }
     }
 
-    /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with legality off. */
+    /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with deck legality checks off. */
     static String problem(final Deck deck, final GameType format, final GameFormat pool) {
         if (deck == null) {
             return "No deck chosen.";

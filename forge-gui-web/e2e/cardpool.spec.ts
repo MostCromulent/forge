@@ -6,7 +6,7 @@ let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
 test.afterEach(async () => { await server.stop(); });
 
-// Fails if the host's Legality does not reach the deck finder, lets a computer seat be dealt an illegal deck,
+// Fails if the host's card pool does not reach the deck finder, lets a computer seat be dealt an illegal deck,
 // or outlives the switch away from Constructed
 test('a Constructed table held to Pauper offers and deals only Pauper decks', async ({ page }) => {
   await page.goto(server.url);
@@ -14,10 +14,10 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   await hostTable(page, false);
   const seats = page.locator('#seats .plate');
 
-  await page.selectOption('.legality select', 'Pauper');
-  await expect(page.locator('.legality.set')).toBeVisible();
+  await page.selectOption('.format-pool', 'Pauper');
+  await expect(page.locator('button.format[aria-pressed=true]')).toHaveText('Constructed · Pauper');
 
-  // The finder opens pinned to the table's Legality, with illegal decks left out until asked for
+  // The finder opens pinned to the table's card pool, with illegal decks left out until asked for
   await seats.nth(0).locator('.sleeve').click();
   await expect(page.locator('.finder .rail .pinned')).toContainText('Pauper');
   await expect(page.locator('.dk-hit').first()).toBeVisible();
@@ -35,7 +35,7 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
     await expect(computer.locator('.seat-problem')).toBeHidden();
   }
 
-  // A card pool belongs to Constructed, so the control goes with it
+  // A card pool belongs to Constructed, so leaving it clears the pool
   await page.locator('button.format', { hasText: 'Commander' }).click();
-  await expect(page.locator('.legality')).toHaveCount(0);
+  await expect(page.locator('button.format', { hasText: 'Constructed' })).toHaveText('Constructed · any cards');
 });

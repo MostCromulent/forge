@@ -18,7 +18,7 @@ import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
 import forge.web.ToBrowser.Format;
-import forge.web.ToBrowser.LegalityGroup;
+import forge.web.ToBrowser.CardPoolGroup;
 import forge.web.ToBrowser.LobbyMessage;
 import forge.web.ToBrowser.LobbyTable;
 import forge.web.ToBrowser.Seat;
@@ -36,7 +36,7 @@ final class Lobby {
     static final int MAX_SEATS = 4;
     /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
-            GameType.Oathbreaker, GameType.Brawl, GameType.TinyLeaders);
+            GameType.Brawl, GameType.Oathbreaker, GameType.TinyLeaders);
 
     private final DeckCatalog catalog = new DeckCatalog();
     private final LocalGame local;
@@ -87,7 +87,10 @@ final class Lobby {
     static Format explained(final GameType type) {
         final Localizer text = Localizer.getInstance();
         final String desc = type.getDescription();
-        return new Format(type.name(), type.toString(),
+        // Grouped as Wizards groups formats: Constructed ones, the Commander family, and the rest
+        final String group = type == GameType.Constructed ? "Constructed"
+                : type.getDeckFormat().hasCommander() ? "Commander" : "Other";
+        return new Format(type.name(), type.toString(), group,
                 desc == null || desc.isBlank() ? text.getMessage("lblConstructedDesc") : desc,
                 List.of(deckFact(type), lifeFact(type)), text.getMessage("lblWebPlay" + type.name()));
     }
@@ -117,14 +120,14 @@ final class Lobby {
     }
 
     /** The card pool every deck must come from, or null. Only Constructed has one. */
-    GameFormat legality() {
+    GameFormat cardPool() {
         final GameLobby lobby = view();
         final String name = lobby == null ? null : lobby.getCardPool();
         return name == null ? null : FModel.getFormats().getFormat(name);
     }
 
-    /** The Legality belongs to the game, so only the host sets it, and only for Constructed. */
-    void setLegality(final String name) {
+    /** The card pool belongs to the game, so only the host sets it, and only for Constructed. */
+    void setCardPool(final String name) {
         final ServerGameLobby lobby = host();
         if (lobby == null || format() != GameType.Constructed) {
             return;
@@ -134,13 +137,13 @@ final class Lobby {
     }
 
     /** The pools on offer, grouped as Forge's format files group them. */
-    private static List<LegalityGroup> legalities() {
+    private static List<CardPoolGroup> cardPools() {
         final var formats = FModel.getFormats();
-        final List<LegalityGroup> out = new ArrayList<>();
-        out.add(new LegalityGroup("Sanctioned", names(formats.getSanctionedList())));
-        out.add(new LegalityGroup("Casual", names(formats.getCasualList())));
-        out.add(new LegalityGroup("Archived", names(formats.getArchivedList())));
-        out.add(new LegalityGroup("Block", names(formats.getBlockList())));
+        final List<CardPoolGroup> out = new ArrayList<>();
+        out.add(new CardPoolGroup("Sanctioned", names(formats.getSanctionedList())));
+        out.add(new CardPoolGroup("Casual", names(formats.getCasualList())));
+        out.add(new CardPoolGroup("Archived", names(formats.getArchivedList())));
+        out.add(new CardPoolGroup("Block", names(formats.getBlockList())));
         // Which formats load depends on the install, so a heading can come up empty
         out.removeIf(g -> g.formats().isEmpty());
         return out;
@@ -160,16 +163,16 @@ final class Lobby {
         final boolean newPool;
         synchronized (DeckCatalog.DECKS) {
             final GameType format = format();
-            final GameFormat legality = legality();
-            final String legalityName = legality == null ? null : legality.getName();
+            final GameFormat cardPool = cardPool();
+            final String poolName = cardPool == null ? null : cardPool.getName();
             // A deck key names a deck in one format's lists, so it means nothing in another
             if (seenFormat != null && format != seenFormat) {
                 deckKeys.clear();
             }
-            newPool = format == seenFormat && !Objects.equals(legalityName, seenLegality);
+            newPool = format == seenFormat && !Objects.equals(poolName, seenCardPool);
             seenFormat = format;
-            seenLegality = legalityName;
-            out = new Decks(catalog.refresh(format, legality), DeckCatalog.cardFormats(), legalityName);
+            seenCardPool = poolName;
+            out = new Decks(catalog.refresh(format, cardPool), DeckCatalog.cardFormats(), poolName);
         }
         if (newPool) {
             dealGeneratorsAgain();
@@ -223,10 +226,10 @@ final class Lobby {
                 seats.add(seat(lobby, i));
             }
             final List<String> problems = problems();
-            final GameFormat legality = legality();
+            final GameFormat cardPool = cardPool();
             // Only the machine running the game can start it; everyone else waits on the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
-                    legality == null ? null : legality.getName(), legalities(),
+                    cardPool == null ? null : cardPool.getName(), cardPools(),
                     MAX_SEATS, seats, problems, local.isHost() && problems.isEmpty()));
         }
     }
@@ -241,7 +244,7 @@ final class Lobby {
                 deck == null ? null : deck.getName(),
                 deck == null ? 0 : deck.getMain().countAll(),
                 deck == null ? "" : DeckCatalog.colors(deck),
-                deck == null ? null : DeckCatalog.problem(deck, format(), legality()),
+                deck == null ? null : DeckCatalog.problem(deck, format(), cardPool()),
                 // A deck with a card-art sleeve overrides the numbered one, as it does in every other client
                 deck == null ? "" : deck.getSleeveArtKey(),
                 deck == null ? 0 : deck.getSleeveArtOffset());
@@ -284,7 +287,7 @@ final class Lobby {
                     out.add(who + " no deck.");
                     continue;
                 }
-                final String problem = DeckCatalog.problem(deck, format(), legality());
+                final String problem = DeckCatalog.problem(deck, format(), cardPool());
                 if (problem != null) {
                     out.add(deck.getName() + ": " + problem);
                 }
@@ -300,18 +303,18 @@ final class Lobby {
     void forget() {
         deckKeys.clear();
         seenFormat = null;
-        seenLegality = null;
+        seenCardPool = null;
     }
 
-    /** The format and Legality this browser's deck list was last built for, recorded by {@link #decks()}. */
+    /** The format and card pool this browser's deck list was last built for, recorded by {@link #decks()}. */
     private GameType seenFormat;
-    private String seenLegality;
+    private String seenCardPool;
 
-    /** True when the format or Legality differs from the one the last deck list was built for. */
+    /** True when the format or card pool differs from the one the last deck list was built for. */
     boolean restrictionsChanged() {
         synchronized (DeckCatalog.DECKS) {
-            final GameFormat legality = legality();
-            return format() != seenFormat || !Objects.equals(legality == null ? null : legality.getName(), seenLegality);
+            final GameFormat cardPool = cardPool();
+            return format() != seenFormat || !Objects.equals(cardPool == null ? null : cardPool.getName(), seenCardPool);
         }
     }
 
