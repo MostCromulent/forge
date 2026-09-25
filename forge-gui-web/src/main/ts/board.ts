@@ -6,6 +6,7 @@ import { renderZones, togglePile } from './zones';
 import { renderBattlefield } from './battlefield';
 import { hoverPlayer, hoverable } from './detail';
 import { renderStack } from './stack';
+import { renderPlanes } from './planes';
 import { renderPhaseBar } from './phasebar';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
@@ -15,7 +16,7 @@ import { setting } from './settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from './actions';
-import type { CardStateView, CardView, GameEvent, GameView, PlayerView, ZoneName } from './protocol';
+import type { CardStateView, CardView, GameEvent, GameView, PlayerView, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
@@ -48,6 +49,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   announceTurn(model, g);
   renderPhaseBar(model, g, actions);
   renderStack(model);
+  renderPlanes(model, actions);
   renderHand(model, me(model), select);
   renderZones(model, actions, select);
   renderGameOver(model, g, actions);
@@ -262,19 +264,28 @@ function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void 
 // Cards drift down into a graveyard and circle in exile, so the two piles read as places at a glance
 const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6) + '</span>';
 
+/** Decks some variants and cards bring, shown only while they hold something. Only the junkyard is face up. */
+const EXTRA_ZONES: [ZoneType, string][] = [['PlanarDeck', 'Planes'], ['SchemeDeck', 'Schemes'],
+  ['AttractionDeck', 'Attractions'], ['ContraptionDeck', 'Contraptions'], ['Junkyard', 'Junkyard']];
+
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): void {
-  const zones: ZoneName[] = ['Library', 'Graveyard', 'Exile'];
-  reconcile<ZoneName, HTMLButtonElement>(root, zones, z => z,
+  const zones: ZoneType[] = ['Library', 'Graveyard', 'Exile',
+    ...EXTRA_ZONES.map(([z]) => z).filter(z => zone(model, player, z).length > 0)];
+  reconcile<ZoneType, HTMLButtonElement>(root, zones, z => z,
     zoneName => {
       const el = document.createElement('button');
       el.className = 'zone-tile';
       el.dataset.zone = zoneName;
       el.innerHTML = '<img alt="" draggable="false">' + (zoneName === 'Library' ? '' : AMBIENT)
         + '<span class="zone-name"></span><span class="zone-count"></span>';
-      q(el, '.zone-name').textContent = zoneName;
+      q(el, '.zone-name').textContent = EXTRA_ZONES.find(([z]) => z === zoneName)?.[1] ?? zoneName;
+      // A planar, scheme, attraction or contraption deck is face down, so only its count is shown
+      el.classList.toggle('hidden-deck', zoneName !== 'Junkyard' && EXTRA_ZONES.some(([z]) => z === zoneName));
       const img = q<HTMLImageElement>(el, 'img');
       hideOnError(img);
-      el.onclick = () => togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
+      el.onclick = () => {
+        if (!el.classList.contains('hidden-deck')) togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
+      };
       // The hover data sits on the image: the tile's own data-key is how the render finds it again
       hoverable(el, img);
       return el;

@@ -668,3 +668,18 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 
 /* A one-pixel highlight along the top edge is what makes a dark panel read as a solid thing, not a hole */
 #log, .zone-panel { box-shadow: inset 0 1px 0 #ffffff12; }
+
+/* Planechase: the face-up planes in a dock over the divider, the die beside them, and the plane's art tinting the table */
+#plane-dock { position: absolute; left: 16px; z-index: 6; display: flex; gap: 10px; align-items: stretch; padding: 8px;
+  background: #0e1219e6; border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 12px 30px #000b; }
+#plane-dock .planes { display: flex; gap: 6px; }
+#plane-dock .plane { width: 150px; aspect-ratio: 88 / 63; border-radius: 6px; overflow: hidden; position: relative; cursor: zoom-in; background: var(--surface-2); }
+/* A plane card is printed sideways, so it is turned to lie landscape */
+#plane-dock .plane img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
+#plane-dock .plane-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 6px 3px; font-size: 11px; font-weight: 700; background: linear-gradient(180deg, transparent, #000000d0 45%); }
+#plane-dock .plane-side { display: grid; align-content: space-between; gap: 6px; width: 150px; }
+#plane-dock .plane-from { margin: 0; color: var(--muted); font-size: 11.5px; }
+#plane-dock .die-button { width: 100%; }
+#plane-dock .die-button:not(:disabled) { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 650; }
+#match.planar::before { content: ''; position: absolute; inset: 0; background: var(--plane-art) center / cover no-repeat; opacity: .12; pointer-events: none; z-index: 0; }
+.zone-tile.hidden-deck { cursor: default; }

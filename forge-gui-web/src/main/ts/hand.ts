@@ -1,3 +1,4 @@
+import { commandKind } from './command';
 import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { deref, isLocal, players, stateOf, zone, type Model } from './model';
@@ -44,7 +45,9 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const root = byId('hand');
   const elsewhere = fromElsewhere(model, player);
   const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
-  const cards = [...handOrder(model, zone(model, player, 'Flashback')), ...handOrder(model, zone(model, player, 'Hand'))];
+  // The planar die has a button of its own by the plane, so it is not laid out with the cards
+  const others = zone(model, player, 'Flashback').filter(c => commandKind(c, stateOf(model, c)) !== 'dice');
+  const cards = [...handOrder(model, others), ...handOrder(model, zone(model, player, 'Hand'))];
   reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => {
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
