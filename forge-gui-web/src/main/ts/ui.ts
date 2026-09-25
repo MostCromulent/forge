@@ -58,6 +58,8 @@ export interface UiState {
   cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
   sidePanels: { log: boolean };
+  /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
+  draftHidden: boolean;
 }
 
 const SIDE_KEY = 'forge.sidePanels';
@@ -84,6 +86,7 @@ export const ui: UiState = {
   faceIndex: 0,
   cardText: false,
   sidePanels: { log: true, ...storedSidePanels() },
+  draftHidden: false,
 };
 
 let redraw: () => void = () => {};

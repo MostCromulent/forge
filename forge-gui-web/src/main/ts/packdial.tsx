@@ -11,6 +11,9 @@ const CENTRE = SIZE / 2;
 const SEAT_R = 104;
 const TRACK_R = 70;
 const SLIDE_MS = 650;
+const CLOCK_R = SEAT_R + 22;
+/** Under this much time the clock turns amber and thick. */
+const CLOCK_LOW_MS = 15_000;
 
 const at = (angle: number, r: number) => ({ x: CENTRE + r * Math.cos(angle), y: CENTRE + r * Math.sin(angle) });
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -41,6 +44,18 @@ export function Dial({ state }: { state: DraftState }) {
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [state]);
+  // The pick clock counts down from what the state said was left when it stamp
+  const stamp = useRef(Date.now());
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    stamp.current = Date.now();
+    setNow(stamp.current);
+    if (!state.clockSeconds || !state.clockLeftMillis) return;
+    const tick = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(tick);
+  }, [state]);
+  const left = state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
+  const around = 2 * Math.PI * CLOCK_R;
   // While sliding, a passed pack, the newest at the seat after the one that passed it, starts a gap back and eases into its place
   const back = slide > 0 ? direction * gap * (1 - ease(slide)) : 0;
   const arrived = new Set(state.moved.map(s => (((s + direction) % n) + n) % n));
@@ -52,6 +67,11 @@ export function Dial({ state }: { state: DraftState }) {
       aria-label={`Pack ${state.pack}, pick ${state.pick}. ${next === null ? '' : `Next pack from ${state.seats[next].name}.`}`}>
       <svg viewBox={`0 0 ${SIZE} ${SIZE}`} width={SIZE} height={SIZE}>
         <circle class="dial-track" cx={CENTRE} cy={CENTRE} r={TRACK_R} />
+        {left > 0 && (
+          <circle class={left < CLOCK_LOW_MS ? 'dial-clock low' : 'dial-clock'} cx={CENTRE} cy={CENTRE} r={CLOCK_R}
+            stroke-dasharray={`${(around * left) / (state.clockSeconds * 1000)} ${around}`}
+            transform={`rotate(-90 ${CENTRE} ${CENTRE})`} />
+        )}
         {feeder !== null && <path class="dial-feed" d={arc(feeder, seatAngle(0, n), TRACK_R + 13, direction)} />}
         {state.seats.map((_, i) => {
           const mid = seatAngle(i, n) - (direction * gap) / 2;
@@ -75,6 +95,7 @@ export function Dial({ state }: { state: DraftState }) {
           <div key={i} class={cls} style={{ left: `${p.x}px`, top: `${p.y}px` }}>
             <span class={seat.ai ? 'dial-face ai' : 'dial-face'}>{initials(i === 0 ? 'You' : seat.name)}</span>
             <span class="dial-name">{i === 0 ? 'You' : seat.name}</span>
+            {seat.held && <span class="dial-held" title="Away: the draft holds or picks for this seat">❚❚</span>}
             {waiting > 1 && <span class="dial-count" title={`${seat.packs} packs`}>{waiting}</span>}
           </div>
         );

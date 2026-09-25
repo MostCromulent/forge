@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  choose, draftBlockChoice, draftCombo, draftSteps, openStep, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
+  choose, draftBlockChoice, draftCombo, draftSteps, openStep, podChoices, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
 } from '../../main/ts/setup';
 import type { LimitedOptions } from '../../main/ts/protocol';
 
@@ -89,5 +89,22 @@ describe('the draft setup form', () => {
     const changed = choose(draft, v, 'product', { product: 'Full' });
     expect(changed.packs).toBeUndefined();
     expect(openStep(draft, changed)).toBeNull();
+  });
+});
+
+describe('the table rules of an online draft', () => {
+  const done: DraftValue = { product: 'Full' };
+
+  // Fails if an offline draft is asked for table rules, which only a lobby of players has
+  it('asks only when the draft is online', () => {
+    expect(openStep(draft, done)).toBeNull();
+    expect(openStep(draftSteps(options, { seated: 3 }), done)).toBe('rules');
+  });
+
+  // Fails if the pod starts at a size other than the set's own, or the stepper allows fewer seats than players
+  it('starts at the set\'s pod size and never goes under the players seated', () => {
+    expect(podChoices(3)).toEqual([0, 3, 4, 5, 6, 7, 8]);
+    expect(podChoices(1)[1]).toBe(2);
+    expect(podChoices(3)[0]).toBe(0);
   });
 });

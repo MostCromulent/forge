@@ -15,6 +15,7 @@ import { DeckFinder } from './deckfinder';
 import { ExtraPicker } from './extrapicker';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
+import { EventPanel, LimitedSwitch } from './event';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Address, DeckSummary, Format, LobbyTable, Seat, SeatExtra } from './protocol';
@@ -30,11 +31,13 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const seat = picker ? lobby.seats[picker.seat] : undefined;
   const close = () => changeUi(u => { u.picker = null; });
   const sentence = matchSentence(lobby);
+  const lim = lobby.limited;
   return (
     <>
       <header class="lobby-head">
         <span class="wordmark">Forge</span>
-        <div class="formats">
+        <LimitedSwitch lobby={lobby} actions={actions} />
+        {!lim && <div class="formats">
           {groupsOf(lobby.formats).map(([group, formats]) => (
             <div key={group} class="format-group">
               {formats.map(f => (
@@ -47,15 +50,15 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             </div>
           ))}
           <button class="guide-link" onClick={() => setGuide(true)}>What are these?</button>
-        </div>
-        <div class="formats variants">
+        </div>}
+        {!lim && <div class="formats variants">
           <span class="row-label">Casual variants</span>
           {lobby.casualVariants.map(v => (
             <FormatChip key={v.id} format={v} label={v.name} pressed={lobby.variantsOn.includes(v.id)}
               host={lobby.host && !variantBlocked(lobby, v.id)} choose={() => actions.setVariant(v.id, !lobby.variantsOn.includes(v.id))} />
           ))}
           {lobby.casualVariants.some(v => variantBlocked(lobby, v.id)) && <span class="row-note">{variantBlocked(lobby, 'Vanguard')}</span>}
-        </div>
+        </div>}
         <div class="head-right">
           <label class="spectate" hidden={!lobby.host}>
             <input type="checkbox" checked={ui.spectate}
@@ -65,10 +68,11 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
         </div>
       </header>
-      <p class="match-sentence"><b>{sentence.title}.</b> {sentence.text}</p>
+      {!lim && <p class="match-sentence"><b>{sentence.title}.</b> {sentence.text}</p>}
       {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)}
         toggle={id => actions.setVariant(id, !lobby.variantsOn.includes(id))} close={() => setGuide(false)} />}
       <div class="lobby-main">
+        {lim && <EventPanel model={model} lobby={lobby} actions={actions} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
@@ -77,7 +81,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           <button hidden={lobby.seats.length >= lobby.maxSeats} disabled={!lobby.host}
             onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
-        <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />
+        {/* Until the pools are out the event panel says what comes next; the match follows them */}
+        {(!lim || lim.activeEventId) && <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
         {/* The conversation moved to the dock, which follows you in; only the links belong to the table */}
         <div class="lobby-net" hidden={!lobby.shareable}>
           <section class="share">
@@ -319,13 +324,16 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
   // Momir Basic and MoJhoSto deal every seat its deck at the start, so there is none to choose
   const format = lobby.formats.find(f => f.id === lobby.format);
   const dealt = format?.group === 'Other';
+  // A Limited seat has no deck to choose until its pool is out; until then it says whether it is ready
+  const lim = lobby.limited;
+  const beforePools = !!lim && !lim.activeEventId;
   // The host turns a seat between a computer and one someone can join; everyone else only reads it
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
   return (
-    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}`}>
-      <div class="sleeve-slot">
+    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}`}>
+      <div class="sleeve-slot" hidden={beforePools}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
           data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
@@ -359,8 +367,16 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
+        {beforePools && !waiting && (mine
+          ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={lim.started}
+              onClick={() => actions.ready(!seat.ready)}>{seat.ready ? 'Ready ✓' : 'Press when ready'}</button>
+          : <p class="deck-row fixed">{seat.ready ? 'Ready' : 'Not ready yet'}</p>)}
+        {lim?.activeEventId && lobby.host && !waiting && (
+          <label class="sits-out"><input type="checkbox" checked={seat.benched}
+            onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> Sits out the next match</label>
+        )}
         {/* With no deck the sleeve above already offers to choose one, so an empty row would only repeat it */}
-        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={dealt || (!hasDeck && !waiting)} disabled={!seat.mayEdit}
+        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={dealt || beforePools || (!hasDeck && !waiting)} disabled={!seat.mayEdit}
           onClick={() => choose('deck')}>
           <span class="pips"><Pips colors={seat.colors} /></span>
           <span class="deck-name">{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>

@@ -7,6 +7,7 @@ import { Dial } from './packdial';
 import { nextFrom } from './dial';
 import { imageUrl } from './images';
 import { SymbolText } from './symbols';
+import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DraftCard, DraftState } from './protocol';
@@ -16,6 +17,9 @@ type GroupBy = 'colour' | 'type' | 'pick';
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
+  const [log, setLog] = useState(false);
+  // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
+  const online = model.inLobby;
   return (
     <div class="drafting-page">
       <header class="limited-head">
@@ -23,7 +27,10 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         <span class="limited-title">Booster draft</span>
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
         <div class="head-right">
-          {leaving
+          {online && state && state.log.length > 0 && <button onClick={() => setLog(!log)}>Draft log</button>}
+          {online
+            ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>Back to the table</button>
+            : leaving
             ? <>
                 <span class="muted">Leave the draft? It will not be saved.</span>
                 <button onClick={() => setLeaving(false)}>Keep drafting</button>
@@ -42,6 +49,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         </div>
       )}
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
+      {log && state && (
+        <aside class="draft-log" aria-label="Draft log">
+          {state.log.map((line, i) => <p key={i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
+        </aside>
+      )}
     </div>
   );
 }

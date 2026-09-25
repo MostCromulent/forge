@@ -11,7 +11,7 @@ function freshUi(): UiState {
     openPiles: new Set(), openZones: new Set(), zonesMinimised: false, zoneSearch: '', zoneSort: 'order',
     stackCollapsed: false, hoveredStackItem: null, stackMenuAt: null,
     stopsOpen: false, optionsOpen: false, gameMenu: null, viewing: null, volumeOpen: false, picker: null, browse: null, importer: null, spectate: false, hover: null, faceIndex: 0, cardText: false,
-    sidePanels: { log: true },
+    sidePanels: { log: true }, draftHidden: false,
   };
 }
 

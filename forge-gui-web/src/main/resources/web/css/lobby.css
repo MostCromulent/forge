@@ -605,3 +605,16 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
   position: absolute; inset: 10px; z-index: 6; display: grid; place-items: center; pointer-events: none; font-size: 16px; font-weight: 700;
   border: 2px dashed var(--accent-2); border-radius: 12px; background: var(--accent-soft);
 }
+
+/* A Limited table: the switch above, the event beside the seats, and seats that ready up before any deck exists */
+.limited-switch .format[aria-pressed="true"]:disabled { opacity: 1; }
+.event-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+.event-panel.summary h3 { margin: 0 0 4px; }
+.event-product { margin: 0 0 4px; font-weight: 600; }
+.event-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.past-events { display: grid; gap: 6px; margin-bottom: 14px; }
+.past-events h4 { margin: 0; color: var(--muted); font-weight: 600; }
+.table-rules label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ready-toggle { justify-content: center; font-weight: 600; }
+.sits-out { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.plate.benched { opacity: .6; }

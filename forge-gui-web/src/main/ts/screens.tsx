@@ -72,7 +72,8 @@ export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | '
   if (!model.playerName) return 'name';
   // The editor sits over the menu or the table without leaving either, so closing it returns to where it was opened
   if (model.editor) return 'editor';
-  if (model.drafting) return 'drafting';
+  // An online draft runs at a table, which the player may look at while it goes on
+  if (model.drafting && !(model.inLobby && ui.draftHidden)) return 'drafting';
   if (model.inEvent) return 'limited';
   return model.inLobby ? 'lobby' : 'menu';
 }

@@ -169,6 +169,13 @@ export function DeckFinder({ model, actions, seat, close }: {
               </select></span>
             </label>
           )}
+          {/* A Limited table plays event pools; the host chooses whether other events' pools may be played too */}
+          {model.lobby?.limited?.activeEventId && (
+            <label class="legality set">
+              <input type="checkbox" checked={model.lobby.limited.eventDecksOnly} disabled={!model.lobby.host}
+                onChange={e => actions.eventDecksOnly(e.currentTarget.checked)} /> Only this event's decks
+            </label>
+          )}
           <span class="head-tools">
             <button onClick={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}>+ New deck</button>
             <button onClick={() => importer()}>Import</button>

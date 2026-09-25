@@ -215,7 +215,29 @@ export interface DraftValue {
   cube?: string;
   theme?: string;
   cubeId?: string;
+  /** An online draft's table rules: pod seats (0 for the set's own), a DoublePick name, and the timer and grace in seconds. */
+  podSize?: number;
+  pickRule?: string;
+  timer?: number;
+  grace?: number;
 }
+
+/** An online draft's table: how many players are seated, which the pod can never be smaller than. */
+export interface DraftTable {
+  seated: number;
+}
+
+/** The pod sizes on offer: the set's own (0), then from the players seated, and never under two, up to eight. */
+export function podChoices(seated: number): number[] {
+  const out = [0];
+  for (let n = Math.max(2, seated); n <= 8; n++) out.push(n);
+  return out;
+}
+
+const PICK_RULES: [string, string][] = [['NEVER', 'One pick per pass'], ['FIRST_PICK', 'Two on the first pick'], ['ALWAYS', 'Two every pass']];
+const TIMERS = [0, 30, 45, 60, 90];
+const GRACES = [0, 60, 120, 300];
+const seconds = (n: number, none: string) => (n === 0 ? none : `${n} s`);
 
 /** The draft products desktop offers; LimitedPoolType's names are the ids. */
 const DRAFT_PRODUCTS: [string, string, string][] = [
@@ -241,7 +263,8 @@ export function draftCombo(v: DraftValue): string | undefined {
   return v.combo ?? v.packs?.join('/');
 }
 
-export function draftSteps(options: LimitedOptions): Step<DraftValue>[] {
+/** The draft's questions; an online draft adds the table rules desktop's host sets before dealing. */
+export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<DraftValue>[] {
   const isBlock = (v: DraftValue) => (v.product === 'Block' || v.product === 'FantasyBlock') && !!v.block;
   return [
     {
@@ -297,7 +320,58 @@ export function draftSteps(options: LimitedOptions): Step<DraftValue>[] {
       answer: v => v.cubeId ?? null,
       render: (_, set) => <TextStep placeholder="CubeCobra link or ID" initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
     },
+    {
+      id: 'rules', label: 'Table rules', hint: 'Seats, picks and the pick timer', fields: ['podSize', 'pickRule', 'timer', 'grace'],
+      applies: () => !!table,
+      answer: v => v.timer === undefined ? null : rulesLine(v),
+      render: (_, set) => <TableRules seated={table?.seated ?? 2} done={set} />,
+    },
   ];
+}
+
+/** The table rules as the folded step and the event panel say them. */
+export function rulesLine(v: DraftValue): string {
+  const seats = v.podSize ? `${v.podSize} seats` : "The set's seats";
+  const picks = PICK_RULES.find(p => p[0] === v.pickRule)?.[1] ?? PICK_RULES[0][1];
+  return `${seats} · ${picks.toLowerCase()} · ${seconds(v.timer ?? 0, 'no timer')}`;
+}
+
+function TableRules({ seated, done }: { seated: number; done: (v: Partial<DraftValue>) => void }) {
+  const pods = podChoices(seated);
+  const [pod, setPod] = useState(0);
+  const [pickRule, setPickRule] = useState('NEVER');
+  const [timer, setTimer] = useState(0);
+  const [grace, setGrace] = useState(60);
+  const at = pods.indexOf(pod);
+  return (
+    <div class="rows table-rules">
+      <label>Seats
+        <span class="stepper">
+          <button class="step" disabled={at <= 0} aria-label="Fewer seats" onClick={() => setPod(pods[at - 1])}>&minus;</button>
+          <span class="n">{pod === 0 ? "Set's own" : pod}</span>
+          <button class="step" disabled={at >= pods.length - 1} aria-label="More seats" onClick={() => setPod(pods[at + 1])}>+</button>
+        </span>
+      </label>
+      <span class="hint">Empty seats draft as computers, which do not play the matches.</span>
+      <label>Picks
+        <select value={pickRule} onChange={e => setPickRule(e.currentTarget.value)}>
+          {PICK_RULES.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+      </label>
+      <label>Pick timer
+        <select value={timer} onChange={e => setTimer(Number(e.currentTarget.value))}>
+          {TIMERS.map(n => <option key={n} value={n}>{seconds(n, 'None')}</option>)}
+        </select>
+      </label>
+      <label>A player who leaves has
+        <select value={grace} onChange={e => setGrace(Number(e.currentTarget.value))}>
+          {GRACES.map(n => <option key={n} value={n}>{n === 0 ? 'No time' : `${n / 60} min`}</option>)}
+        </select>
+        to come back
+      </label>
+      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>Continue</button>
+    </div>
+  );
 }
 
 export function draftSentence(v: DraftValue): string {

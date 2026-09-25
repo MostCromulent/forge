@@ -3,7 +3,7 @@
 // drives the game the same way.
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, EventSetup, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
   YieldAction,
 } from './protocol';
 
@@ -75,6 +75,18 @@ export interface Actions {
   gauntletNext(): void;
   gauntletRestart(): void;
 
+  // Online draft and sealed, at a table
+  /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
+  openLimitedTable(kind: 'sealed' | 'draft'): void;
+  /** The table's Limited switch: a kind of event, or null for Constructed. */
+  setLimited(kind: 'sealed' | 'draft' | null): void;
+  eventSetup(s: Omit<EventSetup, 't'>): void;
+  eventStart(): void;
+  eventHostAgain(eventId: string): void;
+  eventDecksOnly(on: boolean): void;
+  benchSeat(index: number, benched: boolean): void;
+  ready(on: boolean): void;
+
   // Match setup
   leaveLobby(): void;
   setFormat(format: string): void;
@@ -120,6 +132,9 @@ export interface Actions {
   deviceDecks(decks: DeviceDeckText[]): void;
 }
 
+/** The kind of event a table opened from the start page is to be, until the table arrives and is switched to it. */
+export const pendingTable: { kind: 'sealed' | 'draft' | null } = { kind: null };
+
 export function createActions(send: Send): Actions {
   return {
     selectCard: (key, menu, x, y) => send({ t: 'selectCard', key, menu, x: Math.round(x), y: Math.round(y) }),
@@ -153,6 +168,17 @@ export function createActions(send: Send): Actions {
     join: () => send({ t: 'join' }),
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
+    openLimitedTable: kind => {
+      pendingTable.kind = kind;
+      send({ t: 'invite' });
+    },
+    setLimited: kind => send(kind ? { t: 'setLimited', kind } : { t: 'setLimited' }),
+    eventSetup: s => send({ t: 'eventSetup', ...s }),
+    eventStart: () => send({ t: 'eventStart' }),
+    eventHostAgain: eventId => send({ t: 'eventHostAgain', eventId }),
+    eventDecksOnly: on => send({ t: 'eventDecksOnly', on }),
+    benchSeat: (index, benched) => send({ t: 'benchSeat', index, benched }),
+    ready: on => send({ t: 'ready', ready: on }),
     limitedOpen: kind => send({ t: 'limitedOpen', kind }),
     draftStart: d => send({ t: 'draftStart', ...d }),
     draftPick: (step, index) => send({ t: 'draftPick', step, index }),

@@ -4,7 +4,7 @@
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
-import { createActions, type Actions } from './actions';
+import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
@@ -181,7 +181,10 @@ function apply(msg: ServerMessage): void {
       model.limitedResult = null;
       model.eventKind = msg.eventKind ?? null;
       model.drafting = msg.drafting;
-      if (!msg.drafting) model.draft = null;
+      if (!msg.drafting) {
+        model.draft = null;
+        ui.draftHidden = false;
+      }
       // A picker belongs to the table it was opened over
       if (!model.inLobby) ui.picker = null;
       model.joining = msg.joining;
@@ -249,6 +252,11 @@ function apply(msg: ServerMessage): void {
       break;
     case 'lobby': {
       model.lobby = msg.table ?? null;
+      // A draft or sealed table from the start page opens as a table first, then becomes one
+      if (pendingTable.kind && model.lobby?.host) {
+        if (!model.lobby.limited) wire.setLimited(pendingTable.kind);
+        pendingTable.kind = null;
+      }
       // Renaming your seat renames you, so the next server you reach knows you by it too
       const mine = model.lobby?.seats[model.lobby.mySeat]?.name;
       if (mine) rememberName(mine);
