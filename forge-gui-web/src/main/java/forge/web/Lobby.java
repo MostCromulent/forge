@@ -31,8 +31,9 @@ import java.util.Objects;
  */
 final class Lobby {
     static final int MAX_SEATS = 4;
-    /** The formats the vertical slice covers. Commander is a variant; Constructed is the absence of one. */
-    private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander);
+    /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
+    private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
+            GameType.Oathbreaker, GameType.Brawl, GameType.TinyLeaders);
 
     private final DeckCatalog catalog = new DeckCatalog();
     private final LocalGame local;

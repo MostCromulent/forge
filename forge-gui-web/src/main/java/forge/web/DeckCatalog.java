@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The decks a seat may choose from, and what the browser shows about each one: your own, the preconstructed ones,
- * quest opponents, generated decks and downloaded net decks, for Constructed and Commander.
+ * quest opponents, generated decks and downloaded net decks, for each format the lobby offers.
  */
 final class DeckCatalog {
     /** Where a deck came from, which the browser tags each row with. */
@@ -121,11 +121,18 @@ final class DeckCatalog {
             this.pool = pool;
             byKey.clear();
             final List<DeckSummary> out = new ArrayList<>();
-            final boolean commander = format == GameType.Commander;
-            add(out, format, commander ? DeckProxy.getAllCommanderDecks() : DeckProxy.getAllConstructedDecks(), MINE);
-            add(out, format, commander ? DeckProxy.getAllCommanderPreconDecks()
-                    : DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
-            if (!commander) {
+            // Each commander format keeps its own decks; only Commander has precons of its own
+            add(out, format, switch (format) {
+                case Commander -> DeckProxy.getAllCommanderDecks();
+                case Oathbreaker -> DeckProxy.getAllOathbreakerDecks();
+                case Brawl -> DeckProxy.getAllBrawlDecks();
+                case TinyLeaders -> DeckProxy.getAllTinyLeadersDecks();
+                default -> DeckProxy.getAllConstructedDecks();
+            }, MINE);
+            if (format == GameType.Commander) {
+                add(out, format, DeckProxy.getAllCommanderPreconDecks(), PRECON);
+            } else if (format == GameType.Constructed) {
+                add(out, format, DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
                 add(out, format, DeckProxy.getAllQuestEventAndChallenges(), QUEST);
                 addGenerators(out);
             }
