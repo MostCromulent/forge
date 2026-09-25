@@ -962,7 +962,6 @@ export interface TrackedProps {
   CanPlay?: boolean;
   PromptIfOnlyPossibleAbility?: boolean;
   SA_IsSpell?: boolean;
-  HasBackSide?: boolean;
   Key?: string;
   SourceTrigger?: number;
   SourceCard?: Ref;
