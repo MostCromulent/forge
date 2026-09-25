@@ -29,14 +29,25 @@ interface Point {
 }
 
 let settleTimer = 0;
+let drawn: Model | null = null;
+let repaintQueued = false;
 
 export function initOverlay(schedule: () => void): void {
   window.addEventListener('resize', schedule);
-  // A scrolling log or zone panel moves the cards the arrows point at; schedule coalesces to one render per frame
-  document.addEventListener('scroll', schedule, true);
+  // A scrolling log or zone panel moves the cards the arrows point at and nothing else, so only the arrows are
+  // redrawn, once a frame, rather than the whole page
+  document.addEventListener('scroll', () => {
+    if (repaintQueued || !drawn) return;
+    repaintQueued = true;
+    requestAnimationFrame(() => {
+      repaintQueued = false;
+      if (drawn) paint(drawn);
+    });
+  }, true);
 }
 
 export function drawOverlay(model: Model): void {
+  drawn = model;
   paint(model);
   // Cards animate into place (tapping, attacking), so measure again once they settle
   clearTimeout(settleTimer);

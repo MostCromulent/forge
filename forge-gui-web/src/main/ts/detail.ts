@@ -166,6 +166,9 @@ function setSource(el: HTMLElement, zone: string | undefined): void {
 // CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other
 // tag is dropped and its text kept, so card text can never inject markup.
 function setRulesText(el: HTMLElement, html: string): void {
+  // The preview is redrawn every frame while a card is hovered, so the text is parsed again only when it changes
+  if (el.dataset.html === html) return;
+  el.dataset.html = html;
   el.replaceChildren();
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const walk = (node: Node, muted: boolean) => {
@@ -198,7 +201,9 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cost').textContent = '';
   q(zoom, '.type').textContent = '';
-  q(zoom, '.text').textContent = d.lines.join('\n');
+  const text = q(zoom, '.text');
+  text.textContent = d.lines.join('\n');
+  delete text.dataset.html;
   q(zoom, '.pt').textContent = '';
   q(zoom, '.hint').textContent = '';
 }

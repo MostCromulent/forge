@@ -68,8 +68,8 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.dataset.zoom = src;
   el.style.setProperty('--pile-img', src ? cssUrl(src) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
-  setSymbolText(q(el, '.cost'), visible ? state.ManaCost : '');
-  setSymbolText(q(el, '.cost-badge'), visible ? state.ManaCost : '');
+  setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');
+  setCost(q(el, '.cost-badge'), visible ? state.ManaCost ?? '' : '');
   q(el, '.type').textContent = type;
   el.dataset.frame = visible ? frameColour(state.Colors ?? 0, type) : '';
   const pt = q(el, '.pt');
@@ -95,7 +95,13 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
   showKeywords(q(el, '.kws'), visible ? state.Keywords : undefined, visible ? card.ShieldCount : undefined);
-  q(el, '.mech').replaceChildren(...(visible ? mechanic(card, type) : []));
+  const mech = visible ? mechanic(card, type) : [];
+  const box = q(el, '.mech');
+  const html = mech.map(n => (n as HTMLElement).outerHTML).join('');
+  if (box.dataset.html !== html) {
+    box.dataset.html = html;
+    box.replaceChildren(...mech);
+  }
   showBlocking(el, card);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push('Ring-bearer');
@@ -145,6 +151,14 @@ function shieldBadge(): HTMLElement {
  * Room, a contraption's sprocket, an attraction's lit numbers, an Omen's intensity. They never co-occur, so one
  * chip serves them all, and it sits above the keyword icons rather than on the top edge, which is the card's name.
  */
+// Every card is updated on every frame, so its cost is rebuilt only when it changes
+function setCost(el: HTMLElement, text: string): void {
+  if (el.dataset.text !== text) {
+    el.dataset.text = text;
+    setSymbolText(el, text);
+  }
+}
+
 function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
     const pips = document.createElement('span');

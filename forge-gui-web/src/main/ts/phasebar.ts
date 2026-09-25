@@ -103,8 +103,12 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   drawTrack(pill, model, step, phase, myTurn, actions);
   drawWaiting(pill, model);
   drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
-  q(pill, '.caret').innerHTML = glyph(myTurn ? 'up' : 'down', 12);
-  pill.dataset.opens = myTurn ? 'up' : 'down';
+  const opens = myTurn ? 'up' : 'down';
+  // Drawn every frame, so the markup is parsed again only when it changes
+  if (pill.dataset.opens !== opens) {
+    q(pill, '.caret').innerHTML = glyph(opens, 12);
+    pill.dataset.opens = opens;
+  }
   pill.classList.toggle('open', open);
   pill.classList.toggle('priority', !!me(model)?.HasPriority);
 
@@ -113,8 +117,12 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   // Opens away from the player who is acting, so their half of the board stays visible
   panel.classList.toggle('above', myTurn);
   if (open) {
-    panel.innerHTML = stopsGrid(model, step, myTurn, theirs);
-    wireGrid(panel, actions);
+    const grid = stopsGrid(model, step, myTurn, theirs);
+    if (panel.dataset.grid !== grid) {
+      panel.dataset.grid = grid;
+      panel.innerHTML = grid;
+      wireGrid(panel, actions);
+    }
   }
 }
 

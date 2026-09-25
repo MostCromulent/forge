@@ -122,7 +122,11 @@ export function applyState(model: Model, msg: StateMessage): void {
       else target[name] = value;
     }
   }
-  prune(model);
+  // Only a new object, or a property cleared or given an object or list, can leave something unreachable. Most
+  // packets only change numbers and flags, and walking every object for each of them is wasted.
+  const mayOrphan = msg.full || Object.keys(msg.newObjects).length > 0
+    || Object.values(msg.deltas).some(props => Object.values(props).some(v => v === null || typeof v === 'object'));
+  if (mayOrphan) prune(model);
   model.visible = new Set(msg.visible);
   model.localPlayers = msg.localPlayers;
 }

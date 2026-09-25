@@ -274,7 +274,8 @@ function note(): void {
   lastSeen.clear();
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
-    lastSeen.set(el.dataset.key as string, { rect: restingRect(el), ghost: el.cloneNode(true) as HTMLElement });
+    // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
+    lastSeen.set(el.dataset.key as string, { rect: restingRect(el), ghost: el });
     ownPlace.add(el.dataset.key as string);
   }
   for (const el of stackItems()) {
@@ -288,7 +289,7 @@ function note(): void {
     const shown = lastSeen.get(top.dataset.key as string);
     for (const key of keys) {
       if (shown && covered.has(key)) {
-        lastSeen.set(key, { rect: shown.rect, ghost: shown.ghost?.cloneNode(true) as HTMLElement | null });
+        lastSeen.set(key, { rect: shown.rect, ghost: shown.ghost });
       }
     }
   }
@@ -334,7 +335,9 @@ function land(key: string): void {
   waiting.delete(key);
 }
 
-function place(ghost: HTMLElement, rect: DOMRect): HTMLElement {
+function place(from: HTMLElement, rect: DOMRect): HTMLElement {
+  // Copied only now, when a ghost is actually shown, rather than for every card on every frame
+  const ghost = from.cloneNode(true) as HTMLElement;
   ghost.style.cssText = `position: fixed; left: ${rect.left}px; top: ${rect.top}px; width: ${rect.width}px;`
     + `height: ${rect.height}px; margin: 0; z-index: 40; pointer-events: none;`;
   document.body.append(ghost);
