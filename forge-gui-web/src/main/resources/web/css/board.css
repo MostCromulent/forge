@@ -683,3 +683,16 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 #plane-dock .die-button:not(:disabled) { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 650; }
 #match.planar::before { content: ''; position: absolute; inset: 0; background: var(--plane-art) center / cover no-repeat; opacity: .12; pointer-events: none; z-index: 0; }
 .zone-tile.hidden-deck { cursor: default; }
+
+/* Archenemy: a brass tag by the name, the ongoing schemes in a row under the seat, and a scheme set in motion shown large */
+.role-tag { margin-left: 6px; font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; background: var(--brass); color: var(--on-brass); vertical-align: middle; }
+.schemes-ongoing:empty { display: none; }
+.schemes-ongoing { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.scheme { width: 72px; aspect-ratio: 88 / 63; border-radius: 5px; overflow: hidden; position: relative; cursor: zoom-in; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
+/* A scheme is printed sideways, so it is turned to lie landscape, as a plane is */
+.scheme img { position: absolute; left: 50%; top: 50%; width: 71.6%; height: 139.7%; object-fit: cover; transform: translate(-50%, -50%) rotate(90deg); }
+.scheme .scheme-name { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 4px 2px; font-size: 8.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: linear-gradient(180deg, transparent, #000000d0 45%); }
+.scheme-reveal { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; align-content: center; gap: 12px; background: var(--scrim); pointer-events: none; }
+.scheme-reveal .scheme.big { width: min(420px, 80vw); }
+.scheme-reveal .scheme.big .scheme-name { font-size: 15px; padding: 14px 10px 6px; }
+.scheme-reveal p { margin: 0; color: var(--text); font-size: 15px; }

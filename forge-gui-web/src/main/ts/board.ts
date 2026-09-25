@@ -7,6 +7,7 @@ import { renderBattlefield } from './battlefield';
 import { hoverPlayer, hoverable } from './detail';
 import { renderStack } from './stack';
 import { renderPlanes } from './planes';
+import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar } from './phasebar';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves } from './motion';
@@ -50,6 +51,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   renderPhaseBar(model, g, actions);
   renderStack(model);
   renderPlanes(model, actions);
+  revealSchemes(model);
   renderHand(model, me(model), select);
   renderZones(model, actions, select);
   renderGameOver(model, g, actions);
@@ -160,10 +162,11 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     root.innerHTML = `
       <div class="player">
         <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark" title="Out of the game">${SKULL}</span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
-        <div class="name"><span class="who"></span></div>
+        <div class="name"><span class="who"></span><span class="role-tag" hidden>Archenemy</span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         <div class="player-counters"></div>
         <div class="emblems"></div>
+        <div class="schemes-ongoing"></div>
         <div class="zone-tiles"></div>
         <div class="mana" hidden><span class="mana-label">Floating mana</span><div class="mana-chips"></div></div>
       </div>
@@ -220,6 +223,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       el.classList.toggle('commander-damage', !!b.title);
     });
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
+  q(root, '.role-tag').hidden = !isArchenemy(model, player);
+  renderOngoing(q(root, '.schemes-ongoing'), model, player);
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
 }
 
@@ -322,6 +327,7 @@ export function resetTable(): void {
   document.getElementById('out-banner')?.remove();
   choseStarter = false;
   broken = null;
+  resetSchemes();
   titleReady = true;
   finalRunning = false;
   byId('match').classList.remove('ending');

@@ -62,3 +62,22 @@ test('a Planechase match shows the plane, and the die button rolls on your own m
   await die.click();
   await expect(page.getByText(/Planar dice result/i).first()).toBeVisible({ timeout: 20_000 });
 });
+
+// Fails if the archenemy is not marked on the board, or the lobby's role does not reach the match
+test('an Archenemy match marks the archenemy on the board', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await hostTable(page, false);
+  const seats = page.locator('#seats .plate');
+  await chooseDeck(page, seats.nth(0));
+  await chooseDeck(page, seats.nth(1));
+  await page.locator('.variants button.format', { hasText: /^Archenemy$/ }).click();
+  await expect(seats.nth(0).locator('.role.archenemy')).toBeVisible();
+  await expect(seats.nth(1).locator('.role.hero')).toBeVisible();
+  await expect(seats.nth(0).locator('.seat-extra', { hasText: 'Schemes' })).toBeVisible();
+  await page.click('#play');
+  await expect(page.locator('#match')).toBeVisible();
+  await expect(page.locator('#me .role-tag')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#opponent .role-tag')).toBeHidden();
+});
