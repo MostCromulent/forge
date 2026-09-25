@@ -518,7 +518,8 @@ final class Lobby {
             final var rules = cards.iterator().next().getKey().getRules();
             detail = "hand " + signed(rules.getHand()) + " · life " + signed(rules.getLife());
         }
-        final String problem = section == DeckSection.Avatar ? (count == 0 ? "No avatar." : null)
+        // Before a seat has a deck nothing has been dealt to it, so an empty section is not yet a fault
+        final String problem = deck == null ? null : section == DeckSection.Avatar ? (count == 0 ? "No avatar." : null)
                 : DeckCatalog.sectionProblem(section, cards);
         return new SeatExtra(label == null ? "None" : label, count, detail, problem);
     }

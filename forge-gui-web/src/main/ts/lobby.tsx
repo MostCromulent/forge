@@ -12,6 +12,7 @@ import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { DeckFinder } from './deckfinder';
+import { ExtraPicker } from './extrapicker';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
@@ -88,6 +89,9 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </div>
       {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
+      {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (
+        <ExtraPicker model={model} actions={actions} index={picker.seat} seat={seat} kind={picker.kind} close={close} />
+      )}
       {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
         <LookPicker title={`Choose an avatar for ${seat.name}`} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
