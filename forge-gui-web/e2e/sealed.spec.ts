@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { enterName } from './steps';
+import { buildLimitedDeck, enterName } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -25,14 +25,7 @@ test('a sealed pool opened from the menu is played against the computer', async 
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.check-fixed')).toHaveText('Limited · 40 cards');
-  const tiles = page.locator('.cat-grid .slot .tile');
-  await expect(tiles.first()).toBeVisible();
-  for (let i = 0; i < 23; i++) {
-    await tiles.nth(i).click();
-    await expect(page.locator('.deck-head .sizes')).toContainText(`${i + 1} cards`);
-  }
-  await page.click('.land-row button:has-text("Suggest")');
-  await expect(page.locator('.deck-head .sizes')).not.toContainText('23 cards ·');
+  await buildLimitedDeck(page);
   await page.click('.editor-head button.primary');
 
   await expect(page.locator('.opponents')).toBeVisible();

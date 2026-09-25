@@ -177,6 +177,8 @@ function apply(msg: ServerMessage): void {
       model.eventPool = msg.eventPool ?? null;
       model.sealedPools = msg.sealedPools;
       model.draftPools = msg.draftPools;
+      // A gauntlet's result belongs to the game it followed; every new match arrives with a hello
+      model.limitedResult = null;
       model.eventKind = msg.eventKind ?? null;
       model.drafting = msg.drafting;
       if (!msg.drafting) model.draft = null;
@@ -229,6 +231,7 @@ function apply(msg: ServerMessage): void {
     case 'nameTaken': model.nameTaken = msg.name; break;
     case 'limitedOptions': model.limitedOptions = msg; break;
     case 'limitedPools': model.limitedPools = msg; break;
+    case 'limitedResult': model.limitedResult = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;

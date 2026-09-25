@@ -79,3 +79,24 @@ export async function flipOption(page: Page, label: string): Promise<void> {
   await page.keyboard.press('Escape');
   await expect(page.locator('#options')).toHaveCount(0);
 }
+
+/**
+ * Builds the open limited deck to forty cards: 23 cards from the pool, the suggested lands, then basics until there are
+ * forty, since the suggestion depends on the pool and a short deck is refused when deck legality is enforced.
+ */
+export async function buildLimitedDeck(page: Page): Promise<void> {
+  const sizes = page.locator('.deck-head .sizes');
+  const tiles = page.locator('.cat-grid .slot .tile');
+  for (let i = 0; i < 23; i++) {
+    await tiles.nth(i).click();
+    await expect(sizes).toContainText(`${i + 1} cards`);
+  }
+  await page.click('.land-row button:has-text("Suggest")');
+  const size = async () => Number(/^(\d+) cards/.exec(await sizes.innerText())?.[1] ?? 0);
+  await expect.poll(size).toBeGreaterThan(23);
+  while (await size() < 40) {
+    const before = await size();
+    await page.locator('.land-row .land button[aria-label^="One more"]').first().click();
+    await expect.poll(size).toBeGreaterThan(before);
+  }
+}

@@ -70,7 +70,10 @@ export interface Actions {
   poolClose(): void;
   poolEdit(name: string): void;
   poolDelete(name: string): void;
-  poolPlay(name: string, opponent: number, games: number): void;
+  /** Plays a pool: mode is one, several or gauntlet; opponent counts from 0 and count is how many for several. */
+  poolPlay(name: string, mode: 'one' | 'several' | 'gauntlet', opponent: number, count: number, games: number): void;
+  gauntletNext(): void;
+  gauntletRestart(): void;
 
   // Match setup
   leaveLobby(): void;
@@ -161,7 +164,9 @@ export function createActions(send: Send): Actions {
     poolClose: () => send({ t: 'poolClose' }),
     poolEdit: name => send({ t: 'poolEdit', name }),
     poolDelete: name => send({ t: 'poolDelete', name }),
-    poolPlay: (name, opponent, games) => send({ t: 'poolPlay', name, mode: 'one', opponent, count: 0, games }),
+    poolPlay: (name, mode, opponent, count, games) => send({ t: 'poolPlay', name, mode, opponent, count, games }),
+    gauntletNext: () => send({ t: 'gauntletNext' }),
+    gauntletRestart: () => send({ t: 'gauntletRestart' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),

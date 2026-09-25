@@ -145,6 +145,21 @@ public class GauntletTest {
         }
     }
 
+    // Fails if a draft's gauntlet does not start, which reads its pool from the drafts rather than the sealed pools
+    @Test(timeOut = 240_000)
+    public void aDraftGauntletStarts() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final WebSessions sessions = new WebSessions((WebGuiBase) GuiBase.getInterface(), 120_000, () -> { });
+        try {
+            final Recorder host = hostWithPool(sessions, "draft");
+            sessions.onMessage(host, message("poolPlay", "name", pool, "mode", "gauntlet", "opponent", 0, "count", 0, "games", 1));
+            Assert.assertNotNull(host.await("hello", h -> h.get("inMatch").getAsBoolean()), "the draft gauntlet never started");
+            Assert.assertNotNull(host.await("state", m -> m.toString().contains("\"GameType\":\"Draft\"")), "the match is not a draft match");
+        } finally {
+            sessions.shutdown();
+        }
+    }
+
     // Fails if a lost gauntlet match is not recorded, offers the next round, or leaving it keeps the record
     @Test(timeOut = 240_000)
     public void aLostMatchOffersNoNextRound() throws Exception {

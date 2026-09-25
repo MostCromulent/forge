@@ -600,7 +600,10 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     }
     return;
   }
-  if (!root.hidden) return;
+  // A gauntlet's result follows the game's end, so a panel drawn before it arrives is drawn again
+  const limited = model.limitedResult;
+  if (!root.hidden && root.dataset.limited === String(!!limited)) return;
+  root.dataset.limited = String(!!limited);
   root.hidden = false;
   const matchOver = !!g.MatchOver;
   const everyone = players(model);
@@ -627,7 +630,9 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   if (winner) face.style.backgroundImage = cssUrl(playerAvatarUrl(winner));
   face.hidden = !winner;
   q(root, '.word').textContent = word;
-  q(root, '.sub').textContent = sub;
+  q(root, '.sub').textContent = limited
+    ? `${sub} · round ${limited.round} of ${limited.rounds} · ${limited.wins} won, ${limited.losses} lost`
+    : sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
@@ -636,9 +641,11 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     b.onclick = onClick;
     buttons.append(b);
   };
+  if (limited?.nextRound) add(`Next round (${limited.round + 1}/${limited.rounds})`, true, () => actions.gauntletNext());
   if (!matchOver) add('Next game', true, () => actions.nextGame());
   add('View battlefield', false, () => view(true));
-  add(matchOver ? 'Back to start' : 'Quit match', matchOver, () => {
+  if (limited) add('Restart round', false, () => actions.gauntletRestart());
+  add(limited ? 'Quit' : matchOver ? 'Back to start' : 'Quit match', matchOver && !limited?.nextRound, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();
   });

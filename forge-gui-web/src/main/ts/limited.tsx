@@ -28,7 +28,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
       </header>
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
-        ? <Opponents pool={pool} actions={actions} />
+        ? <Opponents pool={pool} draft={draft} actions={actions} />
         : creating
           ? (draft ? <DraftSetup model={model} actions={actions} cancel={() => setCreating(false)} />
             : <SealedSetup model={model} actions={actions} cancel={() => setCreating(false)} />)
@@ -124,39 +124,62 @@ function DraftSetup({ model, actions, cancel }: { model: Model; actions: Actions
   );
 }
 
-function Opponents({ pool, actions }: { pool: PoolRow; actions: Actions }) {
+/** How many opponents a free-for-all can seat: a match holds at most four players, and a pool has so many decks. */
+export function severalCap(opponents: number): number {
+  return Math.min(3, opponents);
+}
+
+type Mode = 'one' | 'several' | 'gauntlet';
+
+/** Desktop's ways to play a pool: one opponent, several at once (a draft only), or every one in turn. */
+function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; actions: Actions }) {
+  const [mode, setMode] = useState<Mode>('one');
   const [opponent, setOpponent] = useState(0);
+  const cap = severalCap(pool.opponents.length);
+  const [count, setCount] = useState(cap);
   const [games, setGames] = useState(3);
   const short = pool.deckSize < DECK_SIZE;
   const chosen = pool.opponents[opponent];
+  const several = draft && cap >= 2;
+  const play = mode === 'gauntlet' ? 'Start the gauntlet' : mode === 'several' ? `Play ${count} opponents` : `Play ${chosen?.name}`;
+  const row = (id: Mode, title: string, line: string, extra?: preact.ComponentChildren) => (
+    <div class={mode === id ? 'radio on' : 'radio'} data-mode={id} onClick={() => setMode(id)}>
+      <i />
+      <div><b>{title}</b><span>{line}</span>{extra}</div>
+    </div>
+  );
   return (
     <div class="opponents">
       <div class="opps">
         <h3>{pool.name} <span class="muted">Your deck: {pool.deckSize} cards</span></h3>
-        <div class="radio on">
-          <i />
-          <div>
-            <b>One opponent</b><span>A match against one of the decks built from the same packs.</span>
-            <div class="opp-list">
-              {pool.opponents.map((o, i) => (
-                <button key={o.name} class={i === opponent ? 'opp on' : 'opp'} aria-pressed={i === opponent} onClick={() => setOpponent(i)}>
-                  {o.name}<span class="opp-colours">{o.colors.split('').map(c => <i key={c} class={`pip sm pip-${c}`}>{c}</i>)}</span>
-                </button>
-              ))}
-            </div>
+        {row('one', 'One opponent', 'A match against one of the decks built from the same packs.', (
+          <div class="opp-list">
+            {pool.opponents.map((o, i) => (
+              <button key={o.name} class={i === opponent ? 'opp on' : 'opp'} aria-pressed={i === opponent}
+                onClick={() => { setMode('one'); setOpponent(i); }}>
+                {o.name}<span class="opp-colours">{o.colors.split('').map(c => <i key={c} class={`pip sm pip-${c}`}>{c}</i>)}</span>
+              </button>
+            ))}
           </div>
-        </div>
-        <div class="radio off"><i /><div><b>Gauntlet</b><span>Every opponent in turn. Coming soon.</span></div></div>
+        ))}
+        {several && row('several', 'Several opponents', 'A free-for-all against decks chosen at random.', (
+          <span class="stepper">
+            <button class="step" disabled={count <= 2} aria-label="One opponent fewer" onClick={() => setCount(count - 1)}>&minus;</button>
+            <span class="n">{count}</span>
+            <button class="step" disabled={count >= cap} aria-label="One opponent more" onClick={() => setCount(count + 1)}>+</button>
+          </span>
+        ))}
+        {row('gauntlet', 'Gauntlet', `All ${pool.opponents.length} opponents, one match at a time. Win a match to meet the next.`)}
       </div>
       <div class="opp-side">
         <span class="muted">Games in match</span>
         <span class="seg" role="group" aria-label="Games in match">
           {GAMES.map(n => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>{n === 1 ? '1' : `Best of ${n}`}</button>)}
         </span>
-        <button class="primary" disabled={!chosen} onClick={() => actions.poolPlay(pool.name, opponent, games)}>
-          Play {chosen?.name}
+        <button class="primary" disabled={mode === 'one' && !chosen} onClick={() => actions.poolPlay(pool.name, mode, opponent, count, games)}>
+          {play}
         </button>
-        <span class="muted">{short ? `Your deck has ${pool.deckSize} cards. Limited decks need ${DECK_SIZE} when Forge enforces deck legality.` : `${games === 1 ? 'One game' : `Best of ${games}`} against ${chosen?.name}.`}</span>
+        {short && <span class="muted">Your deck has {pool.deckSize} cards. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</span>}
         <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
       </div>
     </div>
