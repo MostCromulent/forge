@@ -907,6 +907,7 @@ export interface CatalogueRow {
   heading: string;
   inDeck: number;
   problem?: string;
+  left?: number;
 }
 
 export interface EditorState {
@@ -929,6 +930,9 @@ export interface EditorState {
   canUndo: boolean;
   landed?: string;
   onSeat: boolean;
+  limited: boolean;
+  landSet?: string;
+  landSets: LandSet[];
 }
 
 export interface ImportLine {
@@ -980,7 +984,7 @@ export type Action = 'OFFER' | 'ACCEPT' | 'DECLINE';
 
 export type AutoDecisionAction = 'list' | 'remove' | 'clear' | 'disableYields' | 'disableTriggers';
 
-export type EditOp = 'add' | 'remove' | 'move' | 'commander' | 'printings' | 'lands';
+export type EditOp = 'add' | 'remove' | 'move' | 'commander' | 'printings' | 'lands' | 'landSet' | 'suggestLands';
 
 export type DeckSection = 'Main' | 'Sideboard' | 'Commander' | 'Avatar' | 'Planes' | 'Schemes' | 'Conspiracy' | 'Dungeon' | 'Attractions' | 'Contraptions';
 
@@ -1094,6 +1098,11 @@ export interface EditorLand {
   letter: string;
   count: number;
   allowed: boolean;
+}
+
+export interface LandSet {
+  code: string;
+  name: string;
 }
 
 export interface ImportFix {

@@ -124,7 +124,7 @@ final class FromBrowser {
     record EditorBare(EditorPlain t) {
     }
 
-    enum EditOp { add, remove, move, commander, printings, lands }
+    enum EditOp { add, remove, move, commander, printings, lands, landSet, suggestLands }
 
     /** A name and how many: a card printing's image key in a printings change, a basic land's name in a lands change. */
     record CountedName(String name, int count) {

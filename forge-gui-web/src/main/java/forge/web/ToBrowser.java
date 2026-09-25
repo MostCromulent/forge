@@ -191,7 +191,12 @@ final class ToBrowser {
     record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
-            @Nullable String verdict, int problemCount, boolean canUndo, @Nullable String landed, boolean onSeat) {
+            @Nullable String verdict, int problemCount, boolean canUndo, @Nullable String landed, boolean onSeat,
+            boolean limited, @Nullable String landSet, List<LandSet> landSets) {
+    }
+
+    /** An edition basic lands can come from, for a limited deck's land row. */
+    record LandSet(String code, String name) {
     }
 
     record EditorGroup(String heading, List<EditorCard> cards) {
@@ -243,7 +248,7 @@ final class ToBrowser {
 
     /** One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String heading, int inDeck, @Nullable String problem) {
+            String heading, int inDeck, @Nullable String problem, @Nullable Integer left) {
     }
 
     @Message("cardSearch")

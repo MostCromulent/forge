@@ -8,6 +8,7 @@ const deck = (format: string, main: EditorCard[], commanders: EditorCard[] = [])
   name: 'Deck', check: format, format, unrestricted: false, target: 'storage', commanders, commanderWanted: false,
   identity: '', main: [{ heading: 'Instants', cards: main }], sideboard: [], lands: [],
   stats: { main: 0, sideboard: 0, lands: 0, averageMana: 0, curve: [], types: [] }, problemCount: 0, canUndo: false, onSeat: false,
+  limited: false, landSets: [],
 });
 
 describe('what releasing a dragged card does', () => {

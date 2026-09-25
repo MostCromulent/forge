@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
+import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.deck.DeckUrlLoader;
 import forge.deck.io.DeckSerializer;
@@ -187,6 +188,20 @@ final class DeckSession {
         editorTable = lobby.table();
     }
 
+    /** Opens a sealed or draft pool's deck, which saves back into its pool as desktop's limited editor does. */
+    synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
+        editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
+                !host.getAsBoolean(), this::sendDeviceDeck);
+        editorSeat = null;
+        editorPath = "";
+        channel.send(new EditorMessage(editor.state(false)));
+    }
+
+    /** The pool whose deck is open, or null. */
+    synchronized String openPoolName() {
+        return editor != null && editor.target() instanceof DeckEditor.Group ? editor.deck().getName() : null;
+    }
+
     private String change(final EditorEdit e) {
         final DeckSection from = e.from() == null ? DeckSection.Main : e.from();
         final DeckSection to = e.to() == null ? DeckSection.Main : e.to();
@@ -197,6 +212,8 @@ final class DeckSession {
             case commander -> editor.makeCommander(e.name(), e.from());
             case printings -> editor.setPrintings(e.name(), from, counts(e.printings()));
             case lands -> editor.setLands(counts(e.lands()));
+            case landSet -> editor.setLandSet(e.name());
+            case suggestLands -> editor.suggestLands();
         };
     }
 
@@ -257,7 +274,7 @@ final class DeckSession {
                 : null;
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
-        return CardCatalog.get().query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.mv(), q.sort(),
+        return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.mv(), q.sort(),
                 q.offset(), q.showAll()), problems, commanderOnly, inDeck::countByName);
     }
 

@@ -14,7 +14,7 @@ const state = (more: Partial<EditorState> = {}): EditorState => ({
   ],
   sideboard: [card('Duress', 1, 1, 'B')], lands: [],
   stats: { main: 22, sideboard: 1, lands: 20, averageMana: 3.5, curve: [], types: [] },
-  problemCount: 0, canUndo: false, onSeat: false, ...more,
+  problemCount: 0, canUndo: false, onSeat: false, limited: false, landSets: [], ...more,
 });
 
 describe('the deck list', () => {

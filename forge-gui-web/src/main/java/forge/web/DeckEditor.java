@@ -1,21 +1,27 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.card.CardEdition;
 import forge.card.CardRules;
+import forge.card.mana.ManaCostShard;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
+import forge.deck.DeckGroup;
+import forge.deck.DeckgenUtil;
 import forge.deck.DeckSection;
 import forge.deck.io.DeckSerializer;
 import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.util.ImageUtil;
+import forge.util.MyRandom;
 import forge.util.storage.IStorage;
 import forge.web.ToBrowser.EditorCard;
 import forge.web.ToBrowser.EditorGroup;
 import forge.web.ToBrowser.EditorLand;
 import forge.web.ToBrowser.EditorPrinting;
 import forge.web.ToBrowser.EditorState;
+import forge.web.ToBrowser.LandSet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -36,6 +42,7 @@ final class DeckEditor {
     /** The name a new deck starts with, until its commander names it or the player does. */
     static final String NEW_DECK = "New deck";
     private static final int MOST_UNDO = 100;
+    private static final String GROUP_OWNS_IT = "A pool's deck is renamed and deleted with its pool.";
     /** The basics the land row offers, with the colour each needs; Wastes needs none. */
     private static final Map<String, String> BASICS = new LinkedHashMap<>();
 
@@ -48,7 +55,7 @@ final class DeckEditor {
         BASICS.put("Wastes", "C");
     }
 
-    sealed interface Target permits Stored, Device {
+    sealed interface Target permits Stored, Device, Group {
     }
 
     /** A folder of the host's decks: a format's own, or a subfolder of it. */
@@ -57,6 +64,10 @@ final class DeckEditor {
 
     /** A guest's browser, which keeps the deck under this id. */
     record Device(String id) implements Target {
+    }
+
+    /** A sealed or draft pool: the deck is the human deck of the group of its name, whose opponents stay as they are. */
+    record Group(IStorage<DeckGroup> storage) implements Target {
     }
 
     /** Tells a guest's browser its deck changed: the deck as .dck text, or null when it was deleted. */
@@ -81,6 +92,8 @@ final class DeckEditor {
     /** Whether the deck exists where this editor saves it: opened from there, or saved there since. */
     private boolean saved;
     private String landed;
+    /** The edition new basic lands come from, in limited mode; null otherwise. */
+    private String landSet;
 
     /** saved says the deck was opened from where target saves it; a new deck, or one that is only being read, was not. */
     DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
@@ -95,6 +108,30 @@ final class DeckEditor {
         this.copyOf = readOnly ? deck.getName() : null;
         this.saved = saved && !readOnly;
         this.owned = this.saved && target instanceof Stored ? deck.getName() : null;
+        this.landSet = limited() ? poolLandSet() : null;
+    }
+
+    /** A sealed or draft deck: the pool is the catalogue, and cards move between it and the deck rather than appear. */
+    boolean limited() {
+        return !check.unrestricted() && check.deckFormat() == DeckFormat.Limited;
+    }
+
+    /** The cards the catalogue offers: the pool in limited mode, otherwise every card. */
+    CardCatalog catalogue() {
+        if (!limited()) {
+            return CardCatalog.get();
+        }
+        final Map<String, PaperCard> byName = new LinkedHashMap<>();
+        final CardPool side = deck.get(DeckSection.Sideboard);
+        if (side != null) {
+            side.forEach(e -> byName.putIfAbsent(e.getKey().getName(), e.getKey()));
+        }
+        for (final Map.Entry<PaperCard, Integer> e : deck.getMain()) {
+            if (!e.getKey().getRules().getType().isBasicLand()) {
+                byName.putIfAbsent(e.getKey().getName(), e.getKey());
+            }
+        }
+        return CardCatalog.of(byName.values(), side == null ? name -> 0 : side::countByName);
     }
 
     Deck deck() {
@@ -123,6 +160,9 @@ final class DeckEditor {
     }
 
     String add(final String name, final DeckSection to, final int count) {
+        if (limited()) {
+            return addFromPool(name, to, count);
+        }
         final PaperCard card = printingFor(name);
         if (card == null) {
             return "No card is called " + name + ".";
@@ -138,6 +178,9 @@ final class DeckEditor {
     }
 
     String remove(final String name, final DeckSection from, final int count) {
+        if (limited() && from != DeckSection.Sideboard) {
+            return move(name, from, DeckSection.Sideboard, count);
+        }
         final CardPool pool = deck.get(from);
         final int have = pool == null ? 0 : pool.countByName(name);
         if (have == 0) {
@@ -239,16 +282,45 @@ final class DeckEditor {
             for (final Map.Entry<String, Integer> e : countsByLand.entrySet()) {
                 final int have = deck.getMain().countByName(e.getKey());
                 if (e.getValue() > have) {
-                    deck.getMain().add(printingFor(e.getKey()), e.getValue() - have);
+                    addLands(e.getKey(), e.getValue() - have);
                 } else if (e.getValue() < have) {
-                    take(deck.getMain(), e.getKey(), have - e.getValue());
+                    final CardPool taken = take(deck.getMain(), e.getKey(), have - e.getValue());
+                    // A pool's lands are part of the pool, and desktop's limited editor moves them back to it
+                    if (limited()) {
+                        deck.getOrCreate(DeckSection.Sideboard).addAll(taken);
+                    }
                 }
             }
             return null;
         });
     }
 
+    /** Chooses the edition new basic lands come from, as desktop's Add Basic Lands dialog does. */
+    String setLandSet(final String editionCode) {
+        final CardEdition edition = StaticData.instance().getEditions().get(editionCode);
+        if (!limited() || edition == null || !edition.hasBasicLands()) {
+            return "There are no basic lands from " + editionCode + ".";
+        }
+        landSet = edition.getCode();
+        return null;
+    }
+
+    /** Sets the basics to the counts desktop's Add Basic Lands dialog suggests for the rest of the deck. */
+    String suggestLands() {
+        final Map<ManaCostShard, Integer> suggested = DeckgenUtil.suggestBasicLandCount(deck);
+        final Map<String, Integer> counts = new LinkedHashMap<>();
+        counts.put("Plains", suggested.getOrDefault(ManaCostShard.WHITE, 0));
+        counts.put("Island", suggested.getOrDefault(ManaCostShard.BLUE, 0));
+        counts.put("Swamp", suggested.getOrDefault(ManaCostShard.BLACK, 0));
+        counts.put("Mountain", suggested.getOrDefault(ManaCostShard.RED, 0));
+        counts.put("Forest", suggested.getOrDefault(ManaCostShard.GREEN, 0));
+        return setLands(counts);
+    }
+
     String rename(final String wanted) {
+        if (target instanceof Group) {
+            return GROUP_OWNS_IT;
+        }
         final String problem = DeckStore.nameProblem(wanted);
         if (problem != null) {
             return problem;
@@ -292,6 +364,9 @@ final class DeckEditor {
 
     /** Saves a copy under a free name, and carries on editing the copy. */
     String duplicate() {
+        if (target instanceof Group) {
+            return GROUP_OWNS_IT;
+        }
         if (copyOf != null) {
             becomeCopy();
             return save();
@@ -311,6 +386,9 @@ final class DeckEditor {
     }
 
     String delete() {
+        if (target instanceof Group) {
+            return GROUP_OWNS_IT;
+        }
         try {
             if (target instanceof Device d) {
                 sink.deviceDeck(d.id(), null, check.format());
@@ -362,7 +440,8 @@ final class DeckEditor {
                 target instanceof Device ? "device" : "storage", copyOf,
                 cards(deck.get(DeckSection.Commander), legality), wanted, Legality.identityLetters(leaders),
                 groups(deck.getMain(), legality), cards(deck.get(DeckSection.Sideboard), legality), lands(),
-                DeckCatalog.stats(deck), legality.verdict(), legality.problemCount(), !undo.isEmpty(), landed, onSeat);
+                DeckCatalog.stats(deck), legality.verdict(), legality.problemCount(), !undo.isEmpty(), landed, onSeat,
+                limited(), landSet, limited() ? landSets() : List.of());
     }
 
     private String change(final String cardName, final Supplier<String> op) {
@@ -396,6 +475,18 @@ final class DeckEditor {
         try {
             if (target instanceof Device d) {
                 sink.deviceDeck(d.id(), String.join("\n", DeckSerializer.serializeDeck(deck)), check.format());
+                saved = true;
+                return null;
+            }
+            if (target instanceof Group g) {
+                synchronized (DeckCatalog.DECKS) {
+                    final DeckGroup group = g.storage().get(deck.getName());
+                    if (group == null) {
+                        return "The pool " + deck.getName() + " is gone.";
+                    }
+                    group.setHumanDeck(new Deck(deck, deck.getName()));
+                    g.storage().add(group);
+                }
                 saved = true;
                 return null;
             }
@@ -525,6 +616,56 @@ final class DeckEditor {
             }
         }
         return taken;
+    }
+
+    private String addFromPool(final String name, final DeckSection to, final int count) {
+        final CardPool side = deck.get(DeckSection.Sideboard);
+        final PaperCard card = side == null ? null : side.find(c -> c.getName().equals(name));
+        if (card == null) {
+            return "No " + name + " left in the pool.";
+        }
+        // Attractions and Contraptions go to their own sections, as in desktop's limited editor
+        return move(name, DeckSection.Sideboard, to == DeckSection.Main ? DeckSection.matchingSection(card) : to, count);
+    }
+
+    /** Adds basics to the main deck: the pool's own first in limited mode, then new ones. */
+    private void addLands(final String name, final int count) {
+        int wanted = count;
+        if (limited()) {
+            final CardPool side = deck.get(DeckSection.Sideboard);
+            final int fromPool = side == null ? 0 : Math.min(wanted, side.countByName(name));
+            if (fromPool > 0) {
+                deck.getMain().addAll(take(side, name, fromPool));
+                wanted -= fromPool;
+            }
+        }
+        if (wanted > 0) {
+            final PaperCard fromSet = landSet == null ? null : StaticData.instance().getCommonCards().getCard(name, landSet);
+            deck.getMain().add(fromSet != null ? fromSet : printingFor(name), wanted);
+        }
+    }
+
+    /** A random edition among the pool's that has basic lands, as desktop's limited editor chooses. */
+    private String poolLandSet() {
+        final List<String> codes = new ArrayList<>();
+        for (final Map.Entry<PaperCard, Integer> e : deck.getAllCardsInASinglePool(false, true)) {
+            final CardEdition edition = StaticData.instance().getEditions().get(e.getKey().getEdition());
+            if (edition != null && edition.hasBasicLands() && !codes.contains(edition.getCode())) {
+                codes.add(edition.getCode());
+            }
+        }
+        return codes.isEmpty() ? CardEdition.Predicates.getRandomSetWithAllBasicLands(StaticData.instance().getEditions()).getCode()
+                : codes.get(MyRandom.getRandom().nextInt(codes.size()));
+    }
+
+    private static List<LandSet> landSets() {
+        final List<LandSet> out = new ArrayList<>();
+        for (final CardEdition e : StaticData.instance().getSortedEditions()) {
+            if (e.hasBasicLands()) {
+                out.add(new LandSet(e.getCode(), e.getName()));
+            }
+        }
+        return out;
     }
 
     /** The printing a new copy takes: the one the deck already holds, if it holds only one, or the preferred art. */

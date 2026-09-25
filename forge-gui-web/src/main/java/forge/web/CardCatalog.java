@@ -38,9 +38,19 @@ final class CardCatalog {
     }
 
     private final List<Row> rows;
+    /** How many of each card a pool has left to add, or null for the catalogue of every card. */
+    private final ToIntFunction<String> left;
 
-    private CardCatalog(final List<Row> rows) {
+    private CardCatalog(final List<Row> rows, final ToIntFunction<String> left) {
         this.rows = rows;
+        this.left = left;
+    }
+
+    /** A sealed or draft pool as a catalogue: these cards only, whatever their section, each with how many are left. */
+    static CardCatalog of(final Iterable<PaperCard> cards, final ToIntFunction<String> left) {
+        final List<Row> rows = new ArrayList<>();
+        cards.forEach(card -> rows.add(row(card)));
+        return new CardCatalog(rows, left);
     }
 
     // The holder idiom builds the catalogue on first use, once, whichever thread asks first
@@ -63,10 +73,15 @@ final class CardCatalog {
                     || DeckSection.matchingSection(card) != DeckSection.Main) {
                 continue;
             }
-            rows.add(new Row(card, normalize(card.getName()), letters(rules.getColor()), JsonCodec.manaCost(rules.getManaCost()),
-                    rules.getManaCost().getCMC(), heading(card)));
+            rows.add(row(card));
         }
-        return new CardCatalog(rows);
+        return new CardCatalog(rows, null);
+    }
+
+    private static Row row(final PaperCard card) {
+        final CardRules rules = card.getRules();
+        return new Row(card, normalize(card.getName()), letters(rules.getColor()), JsonCodec.manaCost(rules.getManaCost()),
+                rules.getManaCost().getCMC(), heading(card));
     }
 
     /**
@@ -108,7 +123,8 @@ final class CardCatalog {
         final int from = Math.min(Math.max(0, q.offset()), ordered.size());
         final List<CatalogueRow> page = new ArrayList<>();
         for (final Row row : ordered.subList(from, Math.min(from + PAGE, ordered.size()))) {
-            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName())));
+            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName()),
+                    left == null ? null : left.applyAsInt(row.card().getName())));
         }
         return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty());
     }
@@ -182,10 +198,10 @@ final class CardCatalog {
         };
     }
 
-    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck) {
+    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck, final Integer left) {
         final CardRules rules = row.card().getRules();
         return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
-                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem);
+                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem, left);
     }
 
     private static String pt(final CardRules rules) {
