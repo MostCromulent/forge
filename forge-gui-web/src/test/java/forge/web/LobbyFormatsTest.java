@@ -40,13 +40,14 @@ public class LobbyFormatsTest {
         Assert.assertEquals(Lobby.explained(GameType.Oathbreaker).facts().get(0), "60 cards, one of each");
         Assert.assertEquals(Lobby.explained(GameType.Brawl).facts().get(0), "60 cards, one of each");
         Assert.assertEquals(Lobby.explained(GameType.TinyLeaders).facts().get(0), "50 cards, one of each");
+        Assert.assertEquals(Lobby.explained(GameType.MomirBasic).facts().get(0), "No deck to build: 60 basic lands");
     }
 
     /** Fails if a format reaches the browser unexplained, or explained by a raw localisation key. */
     @Test
     public void everyFormatIsExplained() {
         for (final GameType format : List.of(GameType.Constructed, GameType.Commander, GameType.Oathbreaker,
-                GameType.Brawl, GameType.TinyLeaders)) {
+                GameType.Brawl, GameType.TinyLeaders, GameType.MomirBasic, GameType.MoJhoSto)) {
             final ToBrowser.Format f = Lobby.explained(format);
             for (final String text : List.of(f.desc(), f.play())) {
                 Assert.assertFalse(text.isBlank() || text.startsWith("lbl"), format + " is explained as \"" + text + "\"");

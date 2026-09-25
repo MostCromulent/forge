@@ -29,3 +29,18 @@ test('a host reads about the formats and picks one from the guide', async ({ pag
   await page.mouse.move(0, 400);
   await expect(page.locator('.format-card')).toHaveCount(0);
 });
+
+// Fails if Momir Basic cannot start without decks, or its avatar is not a card tile the player can find
+test('a Momir Basic match starts with no deck chosen, and the avatar sits beside the portrait', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await hostTable(page, false);
+  await page.click('.guide-link');
+  await page.locator('.guide-item', { hasText: 'Momir Basic' }).locator('.guide-choose').click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.deck-row.fixed').first()).toHaveText('No deck to build: 60 basic lands');
+  await expect(page.locator('#play')).toBeEnabled();
+  await page.click('#play');
+  await expect(page.locator('#match')).toBeVisible();
+  await expect(page.locator('#me .cmd-tile').first()).toHaveAttribute('title', /Momir Vig/, { timeout: 30_000 });
+});

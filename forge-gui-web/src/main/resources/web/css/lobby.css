@@ -254,6 +254,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .deck-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .deck-row .deck-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deck-row.unset .deck-name { color: var(--muted); }
+/* A deck the format deals at the start is a statement, not a choice */
+.deck-row.fixed { margin: 0; padding: 6px 10px; border: 1px dashed var(--line-bright); border-radius: 6px; color: var(--muted); font-size: 13px; }
 .deck-row .deck-size { color: var(--muted); font-size: 12px; }
 .seat-problem { margin: 0; color: var(--select); font-size: 12px; }
 

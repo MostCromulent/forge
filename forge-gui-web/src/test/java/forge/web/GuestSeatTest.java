@@ -304,6 +304,30 @@ public class GuestSeatTest {
                 && "Pauper".equals(d.get("cardPool").getAsString())), "the guest was never sent a Pauper deck list");
     }
 
+    /** Fails if a guest who sits down after the host chose Momir Basic can never be ready, having no deck to choose. */
+    @Test(timeOut = 120_000)
+    public void aGuestJoiningAMomirTableIsReady() throws Exception {
+        final Recorder hostBrowser = connect("host");
+        sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
+        Assert.assertNotNull(hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
+        hostBrowser.forget();
+        sessions.onMessage(hostBrowser, named("Host"));
+        sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
+        Assert.assertNotNull(hostBrowser.awaitLobbyWithSeat(), "the host never got a seat");
+        final JsonObject momir = JsonCodec.message("setFormat");
+        momir.addProperty("format", "MomirBasic");
+        sessions.onMessage(hostBrowser, momir);
+        Assert.assertNotNull(hostBrowser.awaitLobby(t -> "MomirBasic".equals(t.get("format").getAsString())));
+
+        final Recorder guestBrowser = connect("momir-guest");
+        Assert.assertNotNull(guestBrowser.await("hello"));
+        sessions.onMessage(guestBrowser, named("Momir Guest"));
+        Assert.assertNotNull(guestBrowser.awaitLobby(t -> {
+            final int mine = t.get("mySeat").getAsInt();
+            return mine >= 0 && t.getAsJsonArray("seats").get(mine).getAsJsonObject().get("ready").getAsBoolean();
+        }), "the guest's seat never became ready");
+    }
+
     /** The first deck in a list that is built and legal, rather than generated when the game starts. */
     private static String legalDeck(final JsonObject decks) {
         Assert.assertNotNull(decks, "no deck list arrived");

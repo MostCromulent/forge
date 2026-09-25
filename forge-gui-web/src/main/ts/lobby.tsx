@@ -277,6 +277,9 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
   const waiting = seat.type === 'OPEN';
   // Another player's deck comes from their own catalog, so it has a name here but no key
   const hasDeck = seat.deck != null || seat.deckName != null;
+  // Momir Basic and MoJhoSto deal every seat its deck at the start, so there is none to choose
+  const format = lobby.formats.find(f => f.id === lobby.format);
+  const dealt = format?.group === 'Other';
   // The host turns a seat between a computer and one someone can join; everyone else only reads it
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
@@ -285,10 +288,10 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}`}>
       <div class="sleeve-slot">
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
-        <button class={`sleeve${hasDeck ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title="Choose a deck"
+        <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
           data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
-          disabled={!seat.mayEdit} onClick={() => choose('deck')}>
-          <img alt="" hidden={!hasDeck} src={hasDeck ? sleeveSrc : undefined}
+          disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}>
+          <img alt="" hidden={!hasDeck && !dealt} src={hasDeck || dealt ? sleeveSrc : undefined}
             style={{ objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
@@ -306,14 +309,15 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
             {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
           </button>
           <button class="random-deck" title="Give this seat a random deck" aria-label="Random deck"
-            hidden={seat.type !== 'AI' || !lobby.host} onClick={random}>
+            hidden={seat.type !== 'AI' || !lobby.host || dealt} onClick={random}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
           </button>
           <button class="drop" title="Remove this seat" hidden={mine || !lobby.host || lobby.seats.length <= 2}
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
+        {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
         {/* With no deck the sleeve above already offers to choose one, so an empty row would only repeat it */}
-        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={!hasDeck && !waiting} disabled={!seat.mayEdit}
+        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={dealt || (!hasDeck && !waiting)} disabled={!seat.mayEdit}
           onClick={() => choose('deck')}>
           <span class="pips"><Pips colors={seat.colors} /></span>
           <span class="deck-name">{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>
