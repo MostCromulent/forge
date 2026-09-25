@@ -6,6 +6,7 @@ import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl } from './images';
 import { hoverCard } from './detail';
+import { rankByName } from './search';
 import { SymbolText } from './symbols';
 import type { Actions } from './actions';
 import { cardMenu, oldestRequest, stackPick, type Model } from './model';
@@ -199,7 +200,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
     search.current?.focus();
   }, []);
   useEffect(() => {
-    const timer = setTimeout(() => setQuery(typed.trim().toLowerCase()), SEARCH_DELAY_MS);
+    const timer = setTimeout(() => setQuery(typed), SEARCH_DELAY_MS);
     return () => clearTimeout(timer);
   }, [typed]);
   const toggle = (i: number) => {
@@ -211,11 +212,7 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
       return next;
     });
   };
-  const matches: number[] = [];
-  for (let i = 0; i < req.options.length && matches.length <= SHOW_AT_MOST; i++) {
-    const o = req.options[i];
-    if (!query || String(o.label ?? o.name ?? '').toLowerCase().includes(query)) matches.push(i);
-  }
+  const matches = rankByName(req.options.map(o => String(o.label ?? o.name ?? '')), query);
   const shown = matches.slice(0, SHOW_AT_MOST);
   const note = matches.length > SHOW_AT_MOST ? `Showing the first ${SHOW_AT_MOST} of ${req.options.length}. Type to narrow the list.`
     : searchable && picked.size ? `${picked.size} selected` : '';
