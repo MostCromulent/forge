@@ -50,6 +50,9 @@ test('a Planechase match shows the plane, and the die button rolls on your own m
   for (let i = 0; i < 400 && !(await ready()); i++) {
     if (await page.locator('#dialog-layer .dialog').count()) {
       await answerDialogs(page);
+    } else if (await page.locator('.avatar.selectable').count()) {
+      // A plane's trigger can ask for a target player, as Cliffside Market's does
+      await page.locator('.avatar.selectable').first().click();
     } else if (/discard/i.test(await page.locator('#prompt .message').textContent() ?? '')) {
       await page.locator('#hand .card').first().click();
     } else if (await page.locator('#prompt .ok').isEnabled().catch(() => false)) {
