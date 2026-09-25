@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { choose, openStep, sealedBlockChoice, sealedSteps, type SealedValue } from '../../main/ts/setup';
+import {
+  choose, draftBlockChoice, draftCombo, draftSteps, openStep, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
+} from '../../main/ts/setup';
 import type { LimitedOptions } from '../../main/ts/protocol';
 
 const options: LimitedOptions = {
@@ -11,9 +13,15 @@ const options: LimitedOptions = {
   fantasyBlocks: [],
   prereleases: [{ code: 'DSK', name: 'Duskmourn' }],
   templates: ['Vintage cube'],
-  draftBlocks: [], draftFantasyBlocks: [], cubes: [], themes: [],
+  draftBlocks: [
+    { name: 'Innistrad', packs: 3, sets: ['DKA', 'ISD', 'AVR', 'SOI'], combos: [] },
+    { name: 'Return to Ravnica', packs: 3, sets: ['DGM', 'GTC', 'RTR'], combos: ['RTR/RTR/RTR', 'GTC/GTC/RTR'] },
+    { name: 'Magic 2014', packs: 3, sets: ['M14'], combos: [] },
+  ],
+  draftFantasyBlocks: [], cubes: ['Vintage cube'], themes: ['Core sets'],
 };
 const steps = sealedSteps(options);
+const draft = draftSteps(options);
 
 describe('the sealed setup form', () => {
   // Fails if the form skips the pack count and jumps to naming the pool
@@ -49,5 +57,37 @@ describe('the sealed setup form', () => {
   it('is finished only when every step that applies has an answer', () => {
     expect(openStep(steps, { product: 'Prerelease', edition: 'DSK' })).toBe('name');
     expect(openStep(steps, { product: 'Prerelease', edition: 'DSK', name: 'Pre' })).toBeNull();
+  });
+});
+
+describe('the draft setup form', () => {
+  // Fails if a block without preset combinations joins its per-pack sets wrongly, or asks for presets it has none of
+  it('asks one set per pack when a block has no presets', () => {
+    const v = choose(draft, { product: 'Block' }, 'block', draftBlockChoice(options, 'Block', 'Innistrad'));
+    expect(openStep(draft, v)).toBe('packs');
+    const done = choose(draft, v, 'packs', { packs: ['ISD', 'DKA', 'ISD'] });
+    expect(openStep(draft, done)).toBeNull();
+    expect(draftCombo(done)).toBe('ISD/DKA/ISD');
+  });
+
+  // Fails if a block with presets is asked pack by pack instead
+  it('offers a block\'s preset combinations', () => {
+    const v = choose(draft, { product: 'Block' }, 'block', draftBlockChoice(options, 'Block', 'Return to Ravnica'));
+    expect(openStep(draft, v)).toBe('combo');
+  });
+
+  // Fails if a single-set block asks a question with one answer
+  it('needs nothing more for a single-set block', () => {
+    const v: DraftValue = choose(draft, { product: 'Block' }, 'block', draftBlockChoice(options, 'Block', 'Magic 2014'));
+    expect(openStep(draft, v)).toBeNull();
+    expect(draftCombo(v)).toBe('M14');
+  });
+
+  // Fails if the sets chosen for one block ride along after the product changes
+  it('forgets the packs when the product changes', () => {
+    const v: DraftValue = { product: 'Block', block: 'Innistrad', packs: ['ISD', 'ISD', 'ISD'] };
+    const changed = choose(draft, v, 'product', { product: 'Full' });
+    expect(changed.packs).toBeUndefined();
+    expect(openStep(draft, changed)).toBeNull();
   });
 });

@@ -2,7 +2,7 @@
 // form, and the opponents a pool's deck can be played against. The deck itself is built in the deck editor.
 
 import { useEffect, useState } from 'preact/hooks';
-import { StepForm, sealedSentence, sealedSteps, type SealedValue } from './setup';
+import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { PoolRow } from './protocol';
@@ -13,13 +13,14 @@ const GAMES = [1, 3, 5];
 
 export function Limited({ model, actions }: { model: Model; actions: Actions }) {
   const [creating, setCreating] = useState(false);
-  const pools = model.limitedPools?.sealed ?? [];
+  const draft = model.eventKind === 'draft';
+  const pools = (draft ? model.limitedPools?.draft : model.limitedPools?.sealed) ?? [];
   const pool = model.eventPool ? pools.find(p => p.name === model.eventPool) : undefined;
   return (
     <div class="limited-page">
       <header class="limited-head">
         <span class="wordmark">Forge</span>
-        <span class="limited-title">Sealed</span>
+        <span class="limited-title">{draft ? 'Booster draft' : 'Sealed'}</span>
         <span class="muted">Against the computer</span>
         <div class="head-right">
           <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>Back</button>
@@ -29,19 +30,22 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
       {pool
         ? <Opponents pool={pool} actions={actions} />
         : creating
-          ? <SealedSetup model={model} actions={actions} cancel={() => setCreating(false)} />
-          : <Pools pools={pools} actions={actions} create={() => setCreating(true)} />}
+          ? (draft ? <DraftSetup model={model} actions={actions} cancel={() => setCreating(false)} />
+            : <SealedSetup model={model} actions={actions} cancel={() => setCreating(false)} />)
+          : <Pools pools={pools} draft={draft} actions={actions} create={() => setCreating(true)} />}
     </div>
   );
 }
 
-function Pools({ pools, actions, create }: { pools: PoolRow[]; actions: Actions; create: () => void }) {
+function Pools({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
   const [deleting, setDeleting] = useState<string | null>(null);
   return (
     <div class="pools">
       <div class="pools-new">
         <button class="primary big" onClick={create}>New event</button>
-        <p class="muted">Open sealed packs, build a forty-card deck from them, and play it against the computer's decks from the same packs.</p>
+        <p class="muted">{draft
+          ? "Draft three packs against seven computer drafters, build a forty-card deck from your picks, and play their decks."
+          : "Open sealed packs, build a forty-card deck from them, and play it against the computer's decks from the same packs."}</p>
       </div>
       <div class="pools-list">
         <h4>Your sealed pools <span>{pools.length}</span></h4>
@@ -96,6 +100,25 @@ function SealedSetup({ model, actions, cancel }: { model: Model; actions: Action
             <button class="danger" onClick={() => send(true)}>Replace it</button>
           </span>
         ) : null} />
+      <button class="link setup-cancel" onClick={cancel}>Cancel</button>
+    </div>
+  );
+}
+
+function DraftSetup({ model, actions, cancel }: { model: Model; actions: Actions; cancel: () => void }) {
+  const [value, setValue] = useState<DraftValue>({});
+  const [busy, setBusy] = useState(false);
+  useEffect(() => setBusy(false), [model.error]);
+  const options = model.limitedOptions;
+  if (!options) return <p class="muted pools-wait">Reading what Forge can draft…</p>;
+  return (
+    <div class="setup">
+      <StepForm title="New booster draft" steps={draftSteps(options)} value={value} onChange={setValue}
+        sentence={draftSentence} action="Start draft" busy={busy} submit={() => {
+          setBusy(true);
+          actions.draftStart({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
+            theme: value.theme, cubeId: value.cubeId });
+        }} />
       <button class="link setup-cancel" onClick={cancel}>Cancel</button>
     </div>
   );

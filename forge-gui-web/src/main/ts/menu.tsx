@@ -84,7 +84,10 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
         <button class="kind" data-kind="constructed" onClick={() => actions.openLobby(!computer)}>
           <b>Constructed</b><span>Bring a deck you have built.</span>
         </button>
-        <button class="kind" data-kind="draft" disabled><b>Draft</b><span>Coming soon.</span></button>
+        <button class="kind" data-kind="draft" disabled={!computer} onClick={() => actions.limitedOpen('draft')}>
+          <b>Draft</b>
+          <span>{computer ? (model.draftPools ? `Draft against the computer, or play one of your ${model.draftPools} drafts.` : 'Draft against seven computer drafters.') : 'Coming soon.'}</span>
+        </button>
         <button class="kind" data-kind="sealed" disabled={!computer} onClick={() => actions.limitedOpen('sealed')}>
           <b>Sealed</b>
           <span>{computer ? (model.sealedPools ? `Open packs, or play one of your ${model.sealedPools} pools.` : 'Open packs and build a deck from them.') : 'Coming soon.'}</span>

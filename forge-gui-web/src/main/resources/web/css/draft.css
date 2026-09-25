@@ -28,3 +28,26 @@
 .dial-centre b { font-size: 16px; }
 .dial-centre span { font-size: 11px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .dial-pack { transition: none; } }
+
+.drafting-page { height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
+.drafting-wait { padding: 20px; }
+.drafting-shell { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); min-height: 0; }
+.draft-pack { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+.draft-pack .bar { padding: 8px 14px; border-bottom: 1px solid var(--line); }
+.draft-slot.chosen .tile img { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
+.draft-slot .confirm { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); z-index: 3; background: var(--brass);
+  color: var(--on-brass); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 11px; white-space: nowrap; box-shadow: 0 0 0 2px var(--bg); }
+.draft-slot .rank { position: absolute; left: -5px; top: -6px; z-index: 2; min-width: 22px; height: 20px; padding: 0 5px; border-radius: 5px;
+  display: grid; place-items: center; font-size: 10.5px; font-weight: 750; background: var(--surface-3); border: 1px solid var(--line-bright);
+  color: var(--text); font-variant-numeric: tabular-nums; }
+.draft-picks { border-left: 1px solid var(--line); background: var(--surface); display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; }
+.draft-head { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.draft-where { display: grid; gap: 6px; }
+.draft-where b { font-size: 16px; }
+.draft-picks-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px 6px; }
+.draft-picks-head h3 { margin: 0; font-size: 15px; }
+.draft-picks .ed-line { display: flex; gap: 8px; }
+.draft-picks .pk { font-size: 11px; font-variant-numeric: tabular-nums; }
+.draft-save input { width: 100%; }
+.pack-set { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--muted); }
+@media (max-width: 900px) { .drafting-shell { grid-template-columns: 1fr; } .draft-picks { border-left: 0; } }

@@ -176,6 +176,10 @@ function apply(msg: ServerMessage): void {
       model.inEvent = msg.inEvent;
       model.eventPool = msg.eventPool ?? null;
       model.sealedPools = msg.sealedPools;
+      model.draftPools = msg.draftPools;
+      model.eventKind = msg.eventKind ?? null;
+      model.drafting = msg.drafting;
+      if (!msg.drafting) model.draft = null;
       // A picker belongs to the table it was opened over
       if (!model.inLobby) ui.picker = null;
       model.joining = msg.joining;
@@ -210,7 +214,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'editor':
       // Back from a pool's deck, the pools are asked for again, since the deck just built changes them
-      if (!msg.state && model.editor && model.inEvent) wire.limitedOpen('sealed');
+      if (!msg.state && model.editor && model.inEvent) wire.limitedOpen(model.eventKind === 'draft' ? 'draft' : 'sealed');
       model.editor = msg.state ?? null;
       break;
     // Scrolling asks for the next page of the same query, which is added to what is shown
@@ -225,6 +229,10 @@ function apply(msg: ServerMessage): void {
     case 'nameTaken': model.nameTaken = msg.name; break;
     case 'limitedOptions': model.limitedOptions = msg; break;
     case 'limitedPools': model.limitedPools = msg; break;
+    case 'draft':
+      model.draft = msg;
+      model.error = null;
+      break;
     case 'deviceDeck':
       void (msg.text ? putDeviceDeck({ id: msg.id, text: msg.text, format: msg.format }) : deleteDeviceDeck(msg.id));
       return;
@@ -367,6 +375,7 @@ function render(): void {
   byId('lobby').hidden = page !== 'lobby';
   byId('editor').hidden = page !== 'editor';
   byId('limited').hidden = page !== 'limited';
+  byId('drafting').hidden = page !== 'drafting';
   byId('match').hidden = page !== 'match';
   renderScreens(model, actions, dismissNotice);
   if (!model.inMatch) {

@@ -3,7 +3,7 @@
 // drives the game the same way.
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, Send, SetSeat,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
   YieldAction,
 } from './protocol';
 
@@ -57,7 +57,12 @@ export interface Actions {
 
   // Limited
   /** Opens the Limited pages for a kind of event. */
-  limitedOpen(kind: 'sealed'): void;
+  limitedOpen(kind: 'sealed' | 'draft'): void;
+  draftStart(d: Omit<DraftStart, 't'>): void;
+  /** Picks the card at index of the pack shown at pack and pick. */
+  draftPick(pack: number, pick: number, index: number): void;
+  draftSave(name: string, replace: boolean): void;
+  draftDiscard(): void;
   limitedLeave(): void;
   sealedCreate(c: Omit<SealedCreate, 't'>): void;
   /** A pool's opponents screen, and back from it. */
@@ -146,6 +151,10 @@ export function createActions(send: Send): Actions {
     quit: () => send({ t: 'quit' }),
     leaveLobby: () => send({ t: 'leaveLobby' }),
     limitedOpen: kind => send({ t: 'limitedOpen', kind }),
+    draftStart: d => send({ t: 'draftStart', ...d }),
+    draftPick: (pack, pick, index) => send({ t: 'draftPick', pack, pick, index }),
+    draftSave: (name, replace) => send({ t: 'draftSave', name, replace }),
+    draftDiscard: () => send({ t: 'draftDiscard' }),
     limitedLeave: () => send({ t: 'limitedLeave' }),
     sealedCreate: c => send({ t: 'sealedCreate', ...c }),
     poolOpen: name => send({ t: 'poolOpen', name }),

@@ -2,7 +2,7 @@
 // Messages from the server change it here, and everything on the page is drawn from it.
 
 import type { DevState } from './protocol';
-import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools } from './protocol';
+import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
 export interface Looks {
@@ -88,6 +88,12 @@ export interface Model {
   eventPool: string | null;
   /** How many sealed pools are saved, for the menu. */
   sealedPools: number;
+  draftPools: number;
+  /** Which Limited pages are open: 'sealed' or 'draft'. */
+  eventKind: string | null;
+  /** An offline draft is running, and draft is its latest state. */
+  drafting: boolean;
+  draft: DraftState | null;
   limitedOptions: LimitedOptions | null;
   limitedPools: LimitedPools | null;
 }
@@ -102,7 +108,8 @@ export function createModel(): Model {
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
     cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
-    inEvent: false, eventPool: null, sealedPools: 0, limitedOptions: null, limitedPools: null,
+    inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null,
+    limitedOptions: null, limitedPools: null,
   };
 }
 

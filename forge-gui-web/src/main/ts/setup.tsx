@@ -203,6 +203,129 @@ export function sealedSentence(options: LimitedOptions, v: SealedValue): string 
   }
 }
 
+// ---- Draft -------------------------------------------------------------------------------------------------------
+
+export interface DraftValue {
+  product?: string;
+  block?: string;
+  /** A preset combination, or a single set's code. */
+  combo?: string;
+  /** One set per pack, for a block with no presets. */
+  packs?: string[];
+  cube?: string;
+  theme?: string;
+  cubeId?: string;
+}
+
+/** The draft products desktop offers; LimitedPoolType's names are the ids. */
+const DRAFT_PRODUCTS: [string, string, string][] = [
+  ['Full', 'Full card pool', 'Three packs drawn from every card in Forge.'],
+  ['Block', 'Block', 'Packs from a block or a set.'],
+  ['FantasyBlock', 'Fantasy block', "A made-up block from Forge's list."],
+  ['Custom', 'Cube', 'A cube saved in Forge.'],
+  ['Chaos', 'Chaos', 'Each pack from a random set, within a theme.'],
+  ['Import', 'CubeCobra', 'Any cube by its CubeCobra link or ID.'],
+];
+
+const draftBlocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.draftFantasyBlocks : options.draftBlocks;
+const draftBlockOf = (options: LimitedOptions, v: DraftValue) => draftBlocksFor(options, v.product).find(b => b.name === v.block);
+
+/** Choosing a block to draft: a single-set block needs no more questions, since there is nothing to choose. */
+export function draftBlockChoice(options: LimitedOptions, product: string, name: string): Partial<DraftValue> {
+  const sets = draftBlocksFor(options, product).find(b => b.name === name)?.sets ?? [];
+  return sets.length === 1 ? { block: name, combo: sets[0] } : { block: name };
+}
+
+/** The packs' sets as the server takes them: "A/B/C", or a single set's code. */
+export function draftCombo(v: DraftValue): string | undefined {
+  return v.combo ?? v.packs?.join('/');
+}
+
+export function draftSteps(options: LimitedOptions): Step<DraftValue>[] {
+  const isBlock = (v: DraftValue) => (v.product === 'Block' || v.product === 'FantasyBlock') && !!v.block;
+  return [
+    {
+      id: 'product', label: 'Product', hint: 'What the packs are', fields: ['product'],
+      answer: v => DRAFT_PRODUCTS.find(p => p[0] === v.product)?.[1] ?? null,
+      render: (_, set) => (
+        <div class="tiles">
+          {DRAFT_PRODUCTS.map(([id, name, line]) => (
+            <button key={id} class="tile-choice" onClick={() => set({ product: id })}><b>{name}</b><span>{line}</span></button>
+          ))}
+        </div>
+      ),
+    },
+    {
+      id: 'block', label: 'Block', hint: 'Which block', fields: ['block'], applies: v => v.product === 'Block' || v.product === 'FantasyBlock',
+      answer: v => v.block ?? null,
+      render: (v, set) => <Pick items={draftBlocksFor(options, v.product).map(b => [b.name, b.name])} placeholder="Find a block"
+        pick={name => set(draftBlockChoice(options, v.product!, name))} />,
+    },
+    {
+      id: 'combo', label: 'Packs', hint: 'Which sets', fields: ['combo'],
+      applies: v => isBlock(v) && (draftBlockOf(options, v)?.combos.length ?? 0) > 0,
+      answer: v => v.combo ?? null,
+      render: (v, set) => (
+        <div class="tiles">
+          {draftBlockOf(options, v)?.combos.map(c => <button key={c} class="tile-choice" onClick={() => set({ combo: c })}><b>{c}</b></button>)}
+        </div>
+      ),
+    },
+    {
+      id: 'packs', label: 'Packs', hint: 'A set for each pack', fields: ['packs'],
+      applies: v => isBlock(v) && (draftBlockOf(options, v)?.sets.length ?? 0) > 1 && (draftBlockOf(options, v)?.combos.length ?? 0) === 0,
+      answer: v => v.packs?.join(' / ') ?? null,
+      render: (v, set) => {
+        const block = draftBlockOf(options, v)!;
+        return <PackSets sets={block.sets} packs={block.packs} done={packs => set({ packs })} />;
+      },
+    },
+    {
+      id: 'cube', label: 'Cube', hint: 'Which cube', fields: ['cube'], applies: v => v.product === 'Custom',
+      answer: v => v.cube ?? null,
+      render: (_, set) => options.cubes.length
+        ? <Pick items={options.cubes.map(c => [c, c])} placeholder="Find a cube" pick={c => set({ cube: c })} />
+        : <p class="hint">Forge has no cubes saved.</p>,
+    },
+    {
+      id: 'theme', label: 'Theme', hint: 'Which sets the packs come from', fields: ['theme'], applies: v => v.product === 'Chaos',
+      answer: v => v.theme ?? null,
+      render: (_, set) => <Pick items={options.themes.map(t => [t, t])} placeholder="Find a theme" pick={t => set({ theme: t })} />,
+    },
+    {
+      id: 'cubeId', label: 'Cube', hint: 'A CubeCobra link or ID', fields: ['cubeId'], applies: v => v.product === 'Import',
+      answer: v => v.cubeId ?? null,
+      render: (_, set) => <TextStep placeholder="CubeCobra link or ID" initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
+    },
+  ];
+}
+
+export function draftSentence(v: DraftValue): string {
+  switch (v.product) {
+    case 'Full': return 'Three packs from the full card pool, with seven computer drafters.';
+    case 'Custom': return `A draft of ${v.cube}.`;
+    case 'Chaos': return `A chaos draft: ${v.theme}.`;
+    case 'Import': return `A draft of the CubeCobra cube ${v.cubeId}.`;
+    default: return `${v.block}: ${draftCombo(v)}.`;
+  }
+}
+
+function PackSets({ sets, packs, done }: { sets: string[]; packs: number; done: (packs: string[]) => void }) {
+  const [chosen, setChosen] = useState<string[]>(() => Array.from({ length: packs }, () => sets[0]));
+  return (
+    <div class="rows">
+      {chosen.map((code, i) => (
+        <label key={i} class="pack-set">Pack {i + 1}
+          <select value={code} onChange={e => setChosen(chosen.map((c, j) => (j === i ? e.currentTarget.value : c)))}>
+            {sets.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </label>
+      ))}
+      <button class="primary" onClick={() => done(chosen)}>Continue</button>
+    </div>
+  );
+}
+
 function Pick({ items, placeholder, pick }: { items: [string, string][]; placeholder: string; pick: (id: string) => void }) {
   const [filter, setFilter] = useState('');
   const shown = items.filter(([, label]) => label.toLowerCase().includes(filter.trim().toLowerCase()));
