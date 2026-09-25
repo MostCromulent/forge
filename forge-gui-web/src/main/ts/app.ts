@@ -177,6 +177,7 @@ function apply(msg: ServerMessage): void {
     case 'decks':
       model.decks = msg.decks;
       model.cardFormats = msg.cardFormats ?? [];
+      model.deckLegality = msg.legality ?? null;
       break;
     case 'lobby': {
       model.lobby = msg.table ?? null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchingDecks, type DeckFilter } from '../../main/ts/deckfinder';
+import { FINDER_DEFAULTS, matchingDecks, type DeckFilter } from '../../main/ts/deckfinder';
 import type { DeckSummary } from '../../main/ts/protocol';
 
 const deck = (name: string, more: Partial<DeckSummary> = {}): DeckSummary =>
@@ -40,5 +40,15 @@ describe('narrowing the deck list', () => {
   it('sorts by size largest first, and puts legal decks first, each falling back to the name', () => {
     expect(names(matchingDecks(decks, { ...all, sort: 'size' }))).toEqual(['Elves', 'Boros Blitz', 'Zombies', 'Random deck']);
     expect(names(matchingDecks(decks, { ...all, sort: 'legal' }))).toEqual(['Elves', 'Random deck', 'Zombies', 'Boros Blitz']);
+  });
+});
+
+describe('opening the finder', () => {
+  // Fails if the finder opens on decks the lobby would refuse
+  it('hides illegal decks until asked', () => {
+    expect(FINDER_DEFAULTS.legalOnly).toBe(true);
+    const shown = matchingDecks([deck('Legal'), deck('Illegal', { problem: 'Not legal in Pauper: 1 card. Atog.' })],
+      { ...FINDER_DEFAULTS, colours: new Set() });
+    expect(names(shown)).toEqual(['Legal']);
   });
 });

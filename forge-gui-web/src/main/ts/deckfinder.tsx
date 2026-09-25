@@ -35,6 +35,11 @@ export interface DeckFilter {
   sort: SortKey;
 }
 
+/** How the finder opens: every source, and only decks the lobby would accept. */
+export const FINDER_DEFAULTS: DeckFilter = {
+  query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: true, sort: 'name',
+};
+
 /** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
@@ -59,9 +64,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   const decks = model.decks ?? [];
   const [chosen, setChosen] = useState<string | null>(seat.deck ?? null);
   const [typed, setTyped] = useState('');
-  const [filter, setFilter] = useState<DeckFilter>({
-    query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: false, sort: 'name',
-  });
+  const [filter, setFilter] = useState<DeckFilter>({ ...FINDER_DEFAULTS, colours: new Set() });
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
   const find = useRef<HTMLInputElement>(null);
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
@@ -95,7 +98,7 @@ export function DeckFinder({ model, actions, index, seat, close }: {
   }
   const inNet = filter.source === NET || isNet(filter.source);
   const details = model.deckDetails?.key === chosen ? model.deckDetails : null;
-  const narrowed = filter.source !== 'all' || filter.colours.size > 0 || filter.cardFormat !== 'any' || filter.legalOnly || !!typed;
+  const narrowed = filter.source !== 'all' || filter.colours.size > 0 || filter.cardFormat !== 'any' || !filter.legalOnly || !!typed;
   // A deck from those the filters let through, and a different one each press while there is another to give
   const random = () => {
     const pool = list.length > 1 ? list.filter(d => d.key !== chosen) : list;
@@ -154,18 +157,21 @@ export function DeckFinder({ model, actions, index, seat, close }: {
             </section>
             <section>
               <h4>Legal in</h4>
-              <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
-                <option value="any">Any format</option>
-                {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}
-              </select>
+              {/* The lobby's Legality is the match's rule, so it is shown here but changed only there */}
+              {model.deckLegality
+                ? <p class="pinned">{model.deckLegality}<span>set in the lobby</span></p>
+                : <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
+                    <option value="any">Any format</option>
+                    {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}
+                  </select>}
             </section>
             <label class="legal-only">
-              <input type="checkbox" role="switch" checked={filter.legalOnly} onChange={e => change({ legalOnly: e.currentTarget.checked })} />
-              Only playable decks
+              <input type="checkbox" role="switch" checked={!filter.legalOnly} onChange={e => change({ legalOnly: !e.currentTarget.checked })} />
+              Show illegal decks too
             </label>
             <button class="clear" hidden={!narrowed} onClick={() => {
               setTyped('');
-              setFilter(f => ({ ...f, query: '', source: 'all', colours: new Set(), cardFormat: 'any', legalOnly: false }));
+              setFilter(f => ({ ...FINDER_DEFAULTS, colours: new Set(), sort: f.sort }));
             }}>Clear filters</button>
           </nav>
           <div class="results">
@@ -223,7 +229,7 @@ function Hit({ deck: d, chosen, choose, use, source }: {
       </button>
     );
   }
-  // An illegal deck is marked rather than hidden, so nobody hunts the editor for a deck that is here
+  // Shown only when asked for, and then marked, so a deck that is here is never hunted for elsewhere
   return (
     <button class="dk-hit" aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
       <Title deck={d} />

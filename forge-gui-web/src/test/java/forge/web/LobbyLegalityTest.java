@@ -87,6 +87,18 @@ public class LobbyLegalityTest {
         });
     }
 
+    /** Fails if the Legality control offers a heading with nothing under it, as the Block group can be. */
+    @Test(timeOut = 60_000)
+    public void everyLegalityHeadingHasFormats() throws Exception {
+        atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
+            final var groups = lobby.state().table().legalities();
+            Assert.assertFalse(groups.isEmpty(), "no card pools offered");
+            for (final ToBrowser.LegalityGroup g : groups) {
+                Assert.assertFalse(g.formats().isEmpty(), g.name() + " is offered with nothing in it");
+            }
+        });
+    }
+
     /** Fails if a restricted-list problem is worded as a ban, or the card's name is lost. */
     @Test
     public void restrictedCardsAreNamedAsRestricted() {

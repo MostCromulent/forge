@@ -104,6 +104,8 @@ final class Lobby {
         out.add(new LegalityGroup("Casual", names(formats.getCasualList())));
         out.add(new LegalityGroup("Archived", names(formats.getArchivedList())));
         out.add(new LegalityGroup("Block", names(formats.getBlockList())));
+        // Which formats load depends on the install, so a heading can come up empty
+        out.removeIf(g -> g.formats().isEmpty());
         return out;
     }
 

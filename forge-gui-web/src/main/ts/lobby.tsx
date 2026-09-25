@@ -15,7 +15,7 @@ import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { Address, LobbyTable, Seat } from './protocol';
+import type { Address, DeckSummary, LobbyTable, Seat } from './protocol';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
@@ -36,6 +36,20 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
               disabled={!lobby.host} onClick={() => actions.setFormat(f.id)}>{f.name}</button>
           ))}
         </div>
+        {lobby.format === 'Constructed' && (
+          <label class={`legality${lobby.legality ? ' set' : ''}`}>
+            <span>Legality</span>
+            <select value={lobby.legality ?? ''} disabled={!lobby.host}
+              onChange={e => actions.setLegality(e.currentTarget.value || null)}>
+              <option value="">Unrestricted</option>
+              {lobby.legalities.map(g => (
+                <optgroup key={g.name} label={g.name}>
+                  {g.formats.map(f => <option key={f} value={f}>{f}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+        )}
         <div class="head-right">
           <label class="spectate" hidden={!lobby.host}>
             <input type="checkbox" checked={ui.spectate}
@@ -97,9 +111,14 @@ function Addresses({ list }: { list: Address[] }) {
 // The seat kinds a netplay lobby can hold; offline shows only the first two
 const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
 
-/** A computer seat given any finished deck that is legal here, so a table fills without a trip to the chooser each. */
+/** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */
+export function randomPool(decks: readonly DeckSummary[]): DeckSummary[] {
+  return decks.filter(d => !d.problem);
+}
+
+/** A computer seat given a deck legal here, so a table fills without a trip to the chooser each. */
 function randomDeck(model: Model, actions: Actions, index: number): void {
-  const pool = (model.decks ?? []).filter(d => !d.generated && !d.problem);
+  const pool = randomPool(model.decks ?? []);
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
@@ -191,11 +210,12 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
     );
   }
   const format = lobby.formats.find(f => f.id === lobby.format)?.name ?? lobby.format;
+  const rules = lobby.legality ? `${format}, ${lobby.legality} legality` : format;
   return (
     <div class="play-row">
       <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start}>Play</button>
       <p class="match-line" hidden={!lobby.canStart}>
-        {`${format} · ${lobby.seats.length} players · Enter starts the match.`}
+        {`${rules} · ${lobby.seats.length} players · Enter starts the match.`}
       </p>
       <div class="not-yet" hidden={lobby.canStart}>
         <b>Not playable yet</b>

@@ -17,10 +17,9 @@ export async function hostTable(page: Page, invite: boolean): Promise<void> {
   await expect(page.locator('#seats .plate').first()).toBeVisible();
 }
 
-/** Chooses the first legal deck for a seat through the deck finder. */
+/** Chooses the first legal deck for a seat through the deck finder, which opens on legal decks only. */
 export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
   await plate.locator('.sleeve').click();
-  await page.check('.finder .legal-only input');
   await page.locator('.dk-hit:not(.generated)').first().dblclick();
   await expect(page.locator('.finder')).toHaveCount(0);
   await expect(plate.locator('.deck-name')).not.toHaveText('');
