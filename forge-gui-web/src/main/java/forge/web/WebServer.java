@@ -52,6 +52,7 @@ import forge.sound.SoundSystem;
 import org.tinylog.Logger;
 
 import java.io.File;
+import java.net.URLEncoder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -64,6 +65,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.CRC32;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
 
@@ -343,12 +345,12 @@ public final class WebServer implements AutoCloseable {
         respond(ctx, HttpResponseStatus.NOT_FOUND, new byte[0], "text/plain");
     }
 
-    /** Sends what was found, or says there was nothing. */
+    /** Sends a picture drawn from the skin, kept for an hour as the avatars are, or says there was nothing. */
     private void respondOrNotFound(final ChannelHandlerContext ctx, final byte[] body, final String type) {
         if (body == null) {
             notFound(ctx);
         } else {
-            respond(ctx, HttpResponseStatus.OK, body, type);
+            respond(ctx, HttpResponseStatus.OK, body, type, null, KEEP_AN_HOUR);
         }
     }
 
@@ -361,20 +363,47 @@ public final class WebServer implements AutoCloseable {
     /**
      * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
      * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
+        respond(ctx, status, body, type, cookieToken, cacheControl, null);
+    }
+
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+            final String cookieToken, final String cacheControl, final String etag) {
      * connection is held open when the browser asked for that, and what may be kept says for how long.
      */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
+        // A 304 has no body, and a length on it would claim the body the browser already holds is empty
+        if (status != HttpResponseStatus.NOT_MODIFIED) {
+            resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.length);
+        }
+        if (etag != null) {
+            resp.headers().set(HttpHeaderNames.ETAG, etag);
+        }
         resp.headers()
                 .set(HttpHeaderNames.CONTENT_TYPE, type)
-                .setInt(HttpHeaderNames.CONTENT_LENGTH, body.length)
                 .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
                 .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         if (cookieToken != null) {
             final DefaultCookie cookie = new DefaultCookie(COOKIE, cookieToken);
             cookie.setPath("/");
+        send(ctx, resp, keepAlive);
+    }
+
+    /** Sends the browser on to another address, asked for afresh every time. */
+    private void redirect(final ChannelHandlerContext ctx, final String location) {
+        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
+        final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.FOUND);
+        resp.headers()
+                .set(HttpHeaderNames.LOCATION, location)
+                .setInt(HttpHeaderNames.CONTENT_LENGTH, 0)
+                .set(HttpHeaderNames.CACHE_CONTROL, "no-store")
+                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
+        send(ctx, resp, keepAlive);
+    }
+
+    private static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp, final boolean keepAlive) {
             cookie.setHttpOnly(true);
             cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
             resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
@@ -404,22 +433,50 @@ public final class WebServer implements AutoCloseable {
         return "application/octet-stream";
     }
 
-    // The player's own sound set and music, resolved the way the desktop client resolves them
-    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name) throws IOException {
-        final File file = sound && name != null && !name.contains("/") && !name.contains("\\")
-                ? SoundSystem.instance.getSoundResource(name)
-                : sound ? null : musicTrack("menu".equals(name) ? MusicPlaylist.MENUS : MusicPlaylist.MATCH);
+    /**
+     * The player's own sound set and music, resolved the way the desktop client resolves them. A playlist is answered
+     * with a redirect to one of its tracks by name, so the shuffle stays here while each track is downloaded only once.
+     */
+    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track)
+            throws IOException {
+        if (sound) {
+            // Kept for an hour and no longer, since the name stays the same when the host picks another sound set
+            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, KEEP_AN_HOUR);
+            return;
+        }
+        final String list = "menu".equals(name) ? "menu" : "match";
+        final MusicPlaylist playlist = "menu".equals(list) ? MusicPlaylist.MENUS : MusicPlaylist.MATCH;
+        if (track == null) {
+            final String chosen = playlist.getRandomFilename();
+            if (chosen == null) {
+                notFound(ctx);
+            } else {
+                redirect(ctx, "/music?name=" + list + "&track="
+                        + URLEncoder.encode(new File(chosen).getName(), StandardCharsets.UTF_8));
+            }
+            return;
+        }
+        final File dir = SoundSystem.findMusicDirectory(playlist);
+        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, KEEP_FOREVER);
+    }
+
+    private static boolean isFileName(final String name) {
+        return name != null && !name.isEmpty() && !name.contains("/") && !name.contains("\\") && !name.contains("..");
+    }
+
+    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String cacheControl) throws IOException {
         if (file == null || !file.isFile()) {
             notFound(ctx);
             return;
         }
         final String type = file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg";
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type, null, cacheControl);
     }
 
-    private static File musicTrack(final MusicPlaylist playlist) {
-        final String track = playlist.getRandomFilename();
-        return track == null ? null : new File(track);
+    private static String etag(final byte[] body) {
+        final CRC32 crc = new CRC32();
+        crc.update(body);
+        return "\"" + Long.toHexString(crc.getValue()) + "-" + Integer.toHexString(body.length) + "\"";
     }
 
     private static byte[] readResource(final String resource) throws IOException {
@@ -492,7 +549,8 @@ public final class WebServer implements AutoCloseable {
             }
             if ("/sound".equals(path) || "/music".equals(path)) {
                 final List<String> name = q.parameters().get("name");
-                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0));
+                final List<String> track = q.parameters().get("track");
+                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0), track == null ? null : track.get(0));
                 return;
             }
             if ("/img".equals(path)) {
@@ -511,11 +569,15 @@ public final class WebServer implements AutoCloseable {
                 notFound(ctx);
                 return;
             }
+            // Any other page file keeps its name from one build to the next, so the browser asks whether it changed
+            final String etag = etag(body);
+            final boolean unchanged = etag.equals(req.headers().get(HttpHeaderNames.IF_NONE_MATCH));
             // The page keeps the link's token as a cookie, so its later requests come in on the same link
             final String token = queryToken(q);
             // A chunk's name carries a hash of its contents, so a changed chunk is a new file and an old one never goes stale
-            respond(ctx, HttpResponseStatus.OK, body, type, accessOf(token) == Access.NONE ? null : token,
-                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache");
+            respond(ctx, unchanged ? HttpResponseStatus.NOT_MODIFIED : HttpResponseStatus.OK, unchanged ? new byte[0] : body,
+                    type, accessOf(token) == Access.NONE ? null : token,
+                    resource.startsWith("js/chunks/") ? KEEP_FOREVER : "no-cache", etag);
         }
     }
 
