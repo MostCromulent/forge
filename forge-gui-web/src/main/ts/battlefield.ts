@@ -55,8 +55,6 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
 const MIN_FIT = 0.5;
 /** An empty board's cards start this large and shrink as it fills, as Arena's do. */
 const MAX_FIT = 1.4;
-/** Each row may wrap onto a second line before the cards start shrinking. */
-const LINES_PER_ROW = 2;
 
 /**
  * Sizes the cards to the board: as large as they can be while every row fits the seat, which keeps a wide board
@@ -70,7 +68,8 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
   const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
-  const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight);
+  // A row's two groups keep .row's 20px gap between them, and a couple of pixels more cover rounding
+  const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight) - 22;
   // A compact seat keeps its player's details in a row above the cards, and that row is not the cards' room
   const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
   const height = root.clientHeight - header - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
@@ -80,7 +79,9 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
     count === 0 ? 0.6 : Math.ceil(count / Math.max(1, Math.floor(width / ((h * 0.9 + 2 * air) * fit))));
   // 32px is the two rows' room above their cards, and 24px the gap between them with some to spare: a board filled
   // to the pixel scrolls on the next rounding and cuts off its top row
-  const fits = (fit: number) => lines(support, fit) <= LINES_PER_ROW && lines(creatures, fit) <= LINES_PER_ROW
+  // A row stays on one line, as a line that wraps breaks up the lands and the creatures; the cards shrink instead,
+  // and only past the smallest size do they wrap
+  const fits = (fit: number) => lines(support, fit) <= 1 && lines(creatures, fit) <= 1
     && (lines(support, fit) + lines(creatures, fit)) * h * fit + 32 + 24 <= height;
   let fit = MAX_FIT;
   while (fit > MIN_FIT && !fits(fit)) fit -= 0.02;
