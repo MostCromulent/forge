@@ -32,7 +32,7 @@
 .pools-list { padding: 16px 20px; display: grid; gap: 6px; }
 .pools-list h4 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
 .pool-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 12px; align-items: center; padding: 7px 10px; border-radius: 6px; }
-.pool-row:nth-child(odd) { background: var(--surface-2); }
+.pool-row:nth-child(odd of .pool-row) { background: var(--surface-2); }
 .pool-name b { font-weight: 600; display: block; }
 .pool-name span, .pool-state { color: var(--muted); font-size: 12px; }
 .pool-state.ok { color: var(--text); }

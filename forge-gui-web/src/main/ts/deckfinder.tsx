@@ -344,9 +344,11 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
     return null;
   }
   const box = el.getBoundingClientRect();
+  const before = box.left - frame.left - PEEK_W - 16;
   return {
     image: el.dataset.image ?? '',
-    left: Math.max(12, box.left - frame.left - PEEK_W - 16),
+    // With no room to its left, as for a card at the edge of a grid, it goes to the right instead
+    left: before >= 12 ? before : Math.min(frame.width - PEEK_W - 12, box.right - frame.left + 16),
     top: Math.min(frame.height - PEEK_H - 12, Math.max(12, box.top - frame.top - PEEK_H / 2)),
   };
 }

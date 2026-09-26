@@ -9,6 +9,7 @@ import { imageUrl } from './images';
 import { SymbolText } from './symbols';
 import { changeUi } from './ui';
 import { HeadControls, PageHeader } from './header';
+import { peekAt } from './deckfinder';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DraftCard, DraftState } from './protocol';
@@ -19,10 +20,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
   const [log, setLog] = useState(false);
+  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
   const online = model.inLobby;
   return (
-    <div class="drafting-page">
+    <div class="drafting-page" onPointerOver={e => setPeek(peekAt(e, '.drafting-page'))} onPointerLeave={() => setPeek(null)}>
       <PageHeader class="limited-head">
         <span class="limited-title">Booster draft</span>
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
@@ -51,6 +53,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       )}
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
       {log && state && <DraftLog lines={state.log} close={() => setLog(false)} />}
+      {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
   );
 }
@@ -72,11 +75,11 @@ function Pack({ state, actions }: { state: DraftState; actions: Actions }) {
       <div class="bar"><span class="band-lab">Pack {state.pack} · {state.cards.length} {state.cards.length === 1 ? 'card' : 'cards'}</span></div>
       <div class="cat-grid">
         {state.cards.map((card, i) => (
-          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name}>
+          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}>
             <button class="tile" title={card.name} onClick={() => (i === selected ? pick(i) : setSelected(i))}>
               <span class="tile-name">{card.name}</span>
               <img loading="lazy" alt="" src={imageUrl(card.image)} onError={e => { e.currentTarget.hidden = true; }} />
-              {card.rank !== undefined && <span class="rank" title="Draft ranking">{card.rank}</span>}
+              {card.rank !== undefined && <RankShield rank={card.rank} />}
             </button>
             {i === selected && <span class="confirm">Pick · click again or Enter</span>}
           </div>
@@ -84,6 +87,17 @@ function Pack({ state, actions }: { state: DraftState; actions: Actions }) {
         {state.cards.length === 0 && !state.done && <p class="muted">Waiting for a pack…</p>}
       </div>
     </section>
+  );
+}
+
+/** Desktop's draft ranking overlay: the score on a shield in the middle of the card, the shield graded by the score. */
+function RankShield({ rank }: { rank: number }) {
+  const tier = rank >= 90 ? 's' : rank >= 80 ? 'a' : rank >= 60 ? 'b' : rank >= 25 ? 'c' : 'd';
+  return (
+    <span class={`rank tier-${tier}`} title="Draft ranking">
+      <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1 L38 7 V22 C38 34 30 41 20 45 C10 41 2 34 2 22 V7 Z" /></svg>
+      <b>{rank}</b>
+    </span>
   );
 }
 
@@ -118,9 +132,9 @@ function Picks({ state }: { state: DraftState }) {
           <div key={heading} class="group">
             <h4>{heading}<span>{cards.length}</span></h4>
             {cards.map((c, i) => (
-              <div key={`${c.name}-${i}`} class="ed-line" data-card={c.name}>
+              <div key={`${c.name}-${i}`} class="ed-line" data-card={c.name} data-image={c.image}>
                 <span class="nm">{c.name}</span>
-                <SymbolText text={c.cost} />
+                <span class="cost"><SymbolText text={c.cost} /></span>
                 <span class="muted pk" title={`Pack ${c.pack}, pick ${c.pick}`}>{c.pack}·{c.pick}</span>
               </div>
             ))}
