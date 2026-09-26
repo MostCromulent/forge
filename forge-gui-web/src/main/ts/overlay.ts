@@ -50,14 +50,21 @@ export function initOverlay(schedule: () => void): void {
   window.addEventListener('resize', schedule);
   // A scrolling log or zone panel moves the cards the arrows point at and nothing else, so only the arrows are
   // redrawn, once a frame, rather than the whole page
-  document.addEventListener('scroll', () => {
-    if (repaintQueued || !drawn) return;
-    repaintQueued = true;
-    requestAnimationFrame(() => {
-      repaintQueued = false;
-      if (drawn) paint(drawn);
-    });
-  }, true);
+  document.addEventListener('scroll', repaintSoon, true);
+  document.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse') return;
+    pointer = { x: e.clientX, y: e.clientY };
+    if (aiming) repaintSoon();
+  });
+}
+
+function repaintSoon(): void {
+  if (repaintQueued || !drawn) return;
+  repaintQueued = true;
+  requestAnimationFrame(() => {
+    repaintQueued = false;
+    if (drawn) paint(drawn);
+  });
 }
 
 export function drawOverlay(model: Model): void {
@@ -109,6 +116,7 @@ function paint(model: Model): void {
   placeCharges(chargingAtPlayer(model));
   // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
   drawDrag(ctx);
+  drawAim(ctx, model);
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
@@ -161,6 +169,41 @@ function drawDrag(ctx: CanvasRenderingContext2D): void {
     ribbon(ctx, drag.from, drag.to, KINDS.block, 0, 1);
   } else {
     arrow(ctx, edge(drag.from, drag.to, 2), drag.to, KINDS.block);
+  }
+}
+
+const onStack = (key: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`#stack .stack-item img[data-key="${key}"]`)?.closest<HTMLElement>('.stack-item') ?? null;
+
+let pointer: Point | null = null;
+/** Whether the last paint drew the aim, so moving the mouse only repaints while there is one to follow it. */
+let aiming = false;
+
+/**
+ * While targets are chosen: from the card to each target already picked, and to the pointer, or to the target it is
+ * over. Only the targeting prompt names a card and offers picks (a confirm names one but offers none), so that pair
+ * marks it; a priority prompt can still carry the last ones for a moment. Cards picked from a zone panel are behind
+ * its scrim, so nothing is drawn while one covers the board.
+ */
+function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
+  const p = model.prompt;
+  const aimed = !!p?.card && !p.paying && !p.priority && (p.selectable.length > 0 || p.selectablePlayers.length > 0)
+    && !(model.zones.length > 0 && !ui.zonesMinimised);
+  const key = String(p?.card?.ref);
+  // A spell is already on the stack, awaiting payment, while its targets are chosen; an ability's card is on the board
+  const from = aimed ? onStack(key) ?? cardElement(key) ?? pileTopFor(key) : null;
+  aiming = !!from;
+  if (!from || !p) return;
+  p.highlighted.forEach((k, i) =>
+    ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target, i, p.highlighted.length));
+  if (!pointer) return;
+  const r = from.getBoundingClientRect();
+  if (pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom) return;
+  const over = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>('.selectable, .targetable');
+  if (over) {
+    ribbon(ctx, from, over, KINDS.target, 0, 1);
+  } else {
+    arrow(ctx, edge(from, pointer, 2), pointer, KINDS.target);
   }
 }
 
