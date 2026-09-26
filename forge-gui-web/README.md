@@ -15,9 +15,13 @@ The person running the server is the **host**. Anyone who joins with a link is a
 ### What you can play
 
 - **Constructed**, plus Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto.
-- The casual variants **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**, on top of any of those.
-- **Draft** and **Sealed**, against the computer or with friends. After you build a deck from your pool, you can
-  play one computer opponent, several at once, or all of them one after another.
+- The casual variants **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**, on top of those.
+  Vanguard doesn't go with Momir Basic or MoJhoSto.
+- **Draft** and **Sealed**, against the computer or with friends. Against the computer, you can play your deck
+  against one opponent, or all of them one after another. After a draft you can also play up to three at once.
+
+A match seats up to four players. A draft seats up to eight, and the computer fills any empty seats. At a table
+against the computer, the host can hand their own seat to the computer and watch.
 
 Not available yet: **Quest**, **Adventure**, **Planar Conquest**, **puzzles**, desktop's constructed
 **gauntlets** and **Winston** draft. Use desktop or mobile Forge for those.
@@ -41,8 +45,11 @@ untick **Quit when the last player leaves**.
 
 ### Playing
 
-The start page has three choices: **Play the computer**, **Play with friends** and **Decks**. Both ways of playing
-let you choose Constructed, Draft or Sealed.
+The host's start page has three choices: **Play the computer**, **Play with friends** and **Decks**. Both ways of
+playing let you choose Constructed, Draft or Sealed.
+
+A guest joins the host's table and plays there. A guest can't play the computer on their own, change how the table
+is set up, or use dev mode.
 
 ![A table with a guest seated](docs/table.webp)
 
@@ -57,15 +64,19 @@ At the table, the bar along the top sets up the match:
 Only the host can change these.
 
 To invite a friend, click **Invite** at the top of the table and send them the link. You can also click an address
-in the server window to copy it.
+in the server window to copy its link.
 
-- An address starting with `192.168.` works for people on your home network.
+- A local address (often starting with `192.168.`) works for people on your home network.
 - The internet address works for everyone else, but only if your router lets them through. Tick **Open the port on
   the router** in the server window and Forge will ask your router to allow it. The window tells you whether that
   worked. If it didn't, turn on UPnP in your router's settings, or set up port forwarding by hand.
 
-The links change every time Forge starts. If someone reloads the page or loses their connection, they go straight
-back to their seat and the game carries on.
+Anyone with a guest link can join, so only send it to people you're playing with. The links aren't encrypted. Never
+share the host's own link, the one Forge opens for you: it can change the table and stop the server. The links
+change every time Forge starts.
+
+If someone reloads the page or loses their connection, they go straight back to their seat and the game carries
+on.
 
 ![The end of a game](docs/victory.webp)
 
@@ -74,12 +85,18 @@ back to their seat and the game carries on.
 **Decks** lets you build, edit and import decks. You can import a pasted list, a deck file, or a link from
 Moxfield, Archidekt, TappedOut or MTGGoldfish. Any line Forge can't read is marked so you can fix it.
 
-The host shares decks and settings with desktop Forge, so changes in one show up in the other. A guest's decks are
-saved in their own browser. To keep a copy somewhere else, use **Copy as text** in the deck editor.
+The host shares decks and game settings with desktop Forge, so changes in one show up in the other. Display
+settings, keys and custom CSS are kept in the browser, for the host too.
 
-The cog button opens **Options**, where you'll find gameplay, display, keys, dev mode and custom CSS. The **⋯**
-button next to it has auto-pass stops, auto-yields and concede. Custom CSS changes the look as you type, and you can
-export it to share with others.
+A guest's decks are saved in their own browser, for the exact link they used. If a guest joins by the home-network
+address one day and the internet address the next, they won't see the decks they saved before, and a private window
+keeps nothing. To keep a copy somewhere else, use **Copy as text** in the deck editor.
+
+The cog button opens **Options**: gameplay, display, keys, custom CSS, and dev mode for the host. Custom CSS changes
+the look as you type, and you can export it to share with others. The speaker button sets sound and music volume.
+
+During a game, the **⋯** button next to the cog lets you offer a draw, set auto-pass stops and auto-yields, and
+concede. With dev mode on, it also has the host's dev cheats.
 
 ---
 
@@ -95,8 +112,9 @@ when it's used.
 The build command needs `-Pweb` because Forge's normal build leaves the web module out. Maven downloads its own copy
 of Node to build the browser code.
 
-Start the jar from the repository's top folder or from a Forge install, so Forge can find its `res` folder. If you
-start it anywhere else, add `-Dforge.assets.dir=<folder that contains res>`.
+The jar finds Forge's `res` folder by looking up from where it's started and from where the jar itself is, so it
+works from anywhere in the repository. If it can't find it, add `-Dforge.assets.dir=<folder that contains res>`.
+The jar needs the `target/lib/` folder beside it, and no Forge installer includes the web module yet.
 
 You can add these options before `-jar`:
 
@@ -104,7 +122,7 @@ You can add these options before `-jar`:
 |---|---|
 | `-Dforge.web.port=<n>` | Uses a different port. The default, 36743, is the same as desktop Forge's network port, so change it if you want to host from both at once. |
 | `-Dforge.web.noBrowser=true` | Doesn't open the game window. |
-| `-Dforge.web.noConsole=true` | Doesn't open the server window. The link is printed instead. |
+| `-Dforge.web.noConsole=true` | Doesn't open the server window. The host's link is printed instead; guest links then come from **Invite** in the page. |
 
 ### Changing the browser code
 
@@ -128,8 +146,10 @@ compiler will show you what needs updating in the browser code:
 
 ### Tests
 
-`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts`. `npm test` runs
-just the Vitest ones. Whole-game tests only run with `-Drun.stress.tests=true`.
+`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts`. Because of `-am`,
+it also runs the tests of the modules the web module depends on. `npm test` runs just the Vitest ones, and
+`npm run typecheck` checks the TypeScript without building. Whole-game tests only run with
+`-Drun.stress.tests=true`.
 
 `SharedTraceTest` and `model.test.ts` both replay the same recorded game
 (`src/test/resources/traces/whole-game.json`) through the Java and TypeScript models, which keeps the two in step.
@@ -144,6 +164,12 @@ temporary home folder. Build the jar first, then run:
     npm ci
     npx playwright install chromium   # first time only
     npx playwright test
+
+New tests should use the steps in `e2e/steps.ts`, such as `hostTable`, `chooseDeck` and `setUpState`. They wait for
+the game's next prompt rather than for a set time, which keeps tests from failing at random.
+
+`board.measure.ts` isn't a test. It measures how much work the browser does to draw a busy board. Run it with
+`npx playwright test --config playwright.measure.config.ts`.
 
 ### Where things are
 
