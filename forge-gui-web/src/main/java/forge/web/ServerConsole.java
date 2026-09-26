@@ -72,7 +72,7 @@ final class ServerConsole implements IProgressBar {
     private final JPanel links = new JPanel();
     private final JProgressBar progress = new JProgressBar();
     private final JCheckBox quitWhenEmpty = new JCheckBox("Quit when the last player leaves", true);
-    private final JCheckBox forwardPort = new JCheckBox("Ask the router to forward the port, so players on the internet can join");
+    private final JCheckBox forwardPort = new JCheckBox("Open the port on the router, for players on the internet");
     private final JLabel forwardState = new JLabel();
     private final TrafficGraph graph = new TrafficGraph();
     private final StatsBox stats = new StatsBox();
@@ -311,10 +311,13 @@ final class ServerConsole implements IProgressBar {
         trafficRow.add(Box.createHorizontalStrut(10));
         trafficRow.add(stats);
         head.add(trafficRow);
-        head.add(Box.createVerticalStrut(10));
-        head.add(quitWhenEmpty);
-        head.add(forwardPort);
-        head.add(forwardState);
+
+        final JPanel foot = new JPanel();
+        foot.setLayout(new BoxLayout(foot, BoxLayout.PAGE_AXIS));
+        foot.setBorder(BorderFactory.createEmptyBorder(10, 16, 12, 16));
+        foot.add(quitWhenEmpty);
+        foot.add(forwardPort);
+        foot.add(forwardState);
 
         text = new JTextArea();
         text.setEditable(false);
@@ -336,6 +339,7 @@ final class ServerConsole implements IProgressBar {
         });
         frame.getContentPane().add(head, BorderLayout.NORTH);
         frame.getContentPane().add(new JScrollPane(text), BorderLayout.CENTER);
+        frame.getContentPane().add(foot, BorderLayout.SOUTH);
         // Wide enough for the longest link row, caption and copy button included, without a sideways scrollbar
         frame.setSize(new Dimension(980, 620));
         frame.setLocationByPlatform(true);
