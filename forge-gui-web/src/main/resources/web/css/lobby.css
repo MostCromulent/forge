@@ -235,7 +235,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .match-line { margin: 0; color: var(--muted); }
 
 /* A blocked start says what is wrong in place, rather than hiding it in a tooltip */
-.not-yet { background: var(--surface); border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 8px; padding: 10px 16px; max-width: 560px; }
+.not-yet { background: var(--surface); border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 8px; padding: 10px 16px; max-width: 560px; margin-top: 12px; }
 .not-yet b { color: var(--danger); }
 .not-yet ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
 
