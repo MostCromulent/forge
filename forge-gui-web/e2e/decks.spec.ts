@@ -30,11 +30,11 @@ test('a Commander deck built from the start page reaches a seat', async ({ page 
 
   await search(page, 'sol ring', 'Sol Ring');
   await page.press('.catalogue .find', 'Enter');
-  await expect(page.locator('.ed-line[data-card="Sol Ring"]')).toBeVisible();
+  await expect(page.locator('.main-zone [data-card="Sol Ring"]')).toBeVisible();
   // Undo is the page's only while nothing is being typed
   await page.click('.deck-head h3');
   await page.keyboard.press('Control+z');
-  await expect(page.locator('.ed-line[data-card="Sol Ring"]')).toHaveCount(0);
+  await expect(page.locator('.main-zone [data-card="Sol Ring"]')).toHaveCount(0);
   await expect(page.locator('.commander .cname')).toContainText('Meren of Clan Nel Toth');
 
   await page.click('.editor-head button.primary');

@@ -12,10 +12,16 @@ import type { DeckSection, EditorCard, EditorState } from './protocol';
 import { store, stored } from './storage';
 
 const GROUP_KEY = 'forge.groupBy';
+const VIEW_KEY = 'forge.deckView';
 const HAND = 7;
 
 export function DeckHalf({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
+  const [cards, setCards] = useState(() => stored(VIEW_KEY) !== 'list');
+  const view = (asCards: boolean) => {
+    setCards(asCards);
+    store(VIEW_KEY, asCards ? 'cards' : 'list');
+  };
   const [hand, setHand] = useState<EditorCard[] | null>(null);
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
@@ -40,6 +46,10 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
         <h4>
           <span class="zn">Main deck</span>
           <span class="count">{state.stats.main}</span>
+          <span class="seg view-seg" role="group" aria-label="Show the deck as">
+            <button aria-pressed={cards} onClick={() => view(true)}>Cards</button>
+            <button aria-pressed={!cards} onClick={() => view(false)}>List</button>
+          </span>
           <select aria-label="Group by" value={by} onChange={e => {
             const next = e.currentTarget.value as GroupBy;
             setBy(next);
@@ -50,12 +60,14 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
             <option value="colour">Group: Colour</option>
           </select>
         </h4>
-        <div class="zone-body cols">
+        <div class={cards ? 'zone-body deck-cols' : 'zone-body cols'}>
           {state.main.length === 0 && <p class="none">{state.commanderWanted ? 'Choose a commander to start.' : 'Click a card to add it.'}</p>}
           {groups.map(g => (
             <div key={g.heading} class="group">
               <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
-              {g.cards.map(c => <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}
+              {g.cards.map(c => cards
+                ? <Stack key={c.name} card={c} zone="Main" landed={state.landed === c.name} handlers={handlers} />
+                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}
             </div>
           ))}
         </div>
@@ -83,11 +95,19 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
       </div>
       {!state.limited && <div class="zone side-zone" data-zone="Sideboard">
         <h4><span class="zn">Sideboard</span><span class="count">{state.stats.sideboard}</span></h4>
-        <div class="zone-body cols">
-          {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
-            <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
-          ))}
-        </div>
+        {cards
+          ? (
+            <div class="zone-body deck-cols">
+              <div class="group">{state.sideboard.map(c => <Stack key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} handlers={handlers} />)}</div>
+            </div>
+          )
+          : (
+            <div class="zone-body cols">
+              {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
+                <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
+              ))}
+            </div>
+          )}
       </div>}
       {hand && <SampleHand hand={hand} again={() => setHand(drawHand(state, HAND))}
         more={() => setHand(drawHand(state, hand.length + 1))} close={() => setHand(null)} />}
@@ -121,6 +141,17 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
             <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>Change…</button>
           </div>
         ))}
+    </div>
+  );
+}
+
+/** One card in a section drawn as the card, the copies counted on it; cards in a column overlap to show their names. */
+function Stack({ card, zone, landed, handlers }: { card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers }) {
+  return (
+    <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
+      title={card.problem ? `${card.name}: ${card.problem}` : card.name} {...handlers(card.name, zone, card.image, card.count)}>
+      <img alt={card.name} src={imageUrl(card.image)} draggable={false} />
+      {card.count > 1 && <span class="deck-count">×{card.count}</span>}
     </div>
   );
 }
