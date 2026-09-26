@@ -72,6 +72,8 @@
 #out-banner .skull svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .seat.out .name { color: var(--muted); }
 .seat.out .battlefield, .seat.out .zone-tiles, .seat.out .hand-fan, .seat.out .emblems { filter: grayscale(1) brightness(.55); opacity: .6; pointer-events: none; }
+/* Looking over the final board shows every seat as it ended, the loser's included */
+#match:has(#game-over.viewing) .seat.out :is(.battlefield, .zone-tiles, .hand-fan, .emblems) { filter: none; opacity: 1; pointer-events: auto; }
 /* Nearly black and hatched, so an empty seat never reads as a live one */
 .seat.compact.out { border-style: dashed; border-color: #262d38; box-shadow: none;
   background: repeating-linear-gradient(135deg, #07090d 0 10px, #0a0d12 10px 20px); }
@@ -462,7 +464,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
 /* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view */
-#zoom { --zoom-w: 310px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+#zoom { --zoom-w: 280px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
