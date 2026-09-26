@@ -91,9 +91,13 @@
 .dev-group { display: grid; gap: 1px; break-inside: avoid; }
 .dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 #options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
-/* Conceding is a button of its own below the list, drawn as the page's other buttons are, rather than one more row. Armed
-   for the second click it fills, so the change reads by brightness as well as colour */
-.game-menu .concede { justify-content: center; margin: 8px 4px 2px; padding: 7px 12px; text-align: center; background: var(--surface-2);
-  border: 1px solid var(--line-bright); border-radius: 8px; color: var(--danger); font-weight: 600; }
-.game-menu .concede:hover:not(:disabled), .game-menu .concede:focus-visible { background: color-mix(in srgb, var(--danger) 12%, var(--surface-2)); border-color: var(--danger); }
-.game-menu .concede.armed, .game-menu .concede.armed:hover { background: var(--danger); border-color: var(--danger); color: color-mix(in srgb, var(--danger) 18%, #000); font-weight: 700; }
+/* Conceding is a button of its own below the list: the brass button's bevel cast in red, since this one gives the game
+   away. Armed for the second click it brightens and glows, so the change reads by brightness as well as colour */
+.game-menu .concede { --red: #cf4336; justify-content: center; margin: 8px 4px 2px; padding: 7px 12px; text-align: center;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 68%, #fff) 0%, var(--red) 52%, color-mix(in srgb, var(--red) 72%, #000) 100%);
+  border: 1px solid color-mix(in srgb, var(--red) 52%, #fff); border-radius: 6px; box-shadow: 0 1px 0 color-mix(in srgb, var(--red) 42%, #000);
+  color: #fff; text-shadow: 0 1px 1px #0008; font-weight: 650; }
+.game-menu .concede:hover:not(:disabled), .game-menu .concede:focus-visible, .game-menu .concede.armed {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 52%, #fff) 0%, color-mix(in srgb, var(--red) 88%, #fff) 52%, var(--red) 100%); }
+.game-menu .concede:active:not(:disabled) { box-shadow: none; transform: translateY(1px); }
+.game-menu .concede.armed { box-shadow: 0 1px 0 color-mix(in srgb, var(--red) 42%, #000), 0 0 0 2px color-mix(in srgb, var(--red) 45%, transparent), 0 0 14px color-mix(in srgb, var(--red) 55%, transparent); font-weight: 700; }
