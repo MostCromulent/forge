@@ -75,6 +75,7 @@ final class ServerConsole implements IProgressBar {
     private final JCheckBox forwardPort = new JCheckBox("Ask the router to forward the port, so players on the internet can join");
     private final JLabel forwardState = new JLabel();
     private final TrafficGraph graph = new TrafficGraph();
+    private final StatsBox stats = new StatsBox();
     private volatile TrafficCounter traffic;
     private JFrame frame;
     private JTextArea text;
@@ -303,7 +304,13 @@ final class ServerConsole implements IProgressBar {
         head.add(Box.createVerticalStrut(14));
         head.add(progress);
         head.add(Box.createVerticalStrut(10));
-        head.add(graph);
+        final JPanel trafficRow = new JPanel();
+        trafficRow.setLayout(new BoxLayout(trafficRow, BoxLayout.LINE_AXIS));
+        trafficRow.setAlignmentX(0f);
+        trafficRow.add(graph);
+        trafficRow.add(Box.createHorizontalStrut(10));
+        trafficRow.add(stats);
+        head.add(trafficRow);
         head.add(Box.createVerticalStrut(10));
         head.add(quitWhenEmpty);
         head.add(forwardPort);
@@ -335,7 +342,11 @@ final class ServerConsole implements IProgressBar {
         frame.setVisible(true);
 
         new Timer(FLUSH_MILLIS, e -> flush()).start();
-        new Timer(TrafficGraph.SAMPLE_MILLIS, e -> graph.sample(traffic)).start();
+        new Timer(TrafficGraph.SAMPLE_MILLIS, e -> {
+            final TrafficCounter now = traffic;
+            graph.sample(now);
+            stats.show(now, service == null ? 0 : service.playersHere());
+        }).start();
     }
 
     private static JPanel row(final String caption, final JLabel value) {
@@ -496,14 +507,66 @@ final class ServerConsole implements IProgressBar {
         }
 
         private static String rate(final long bytesPerSecond) {
-            if (bytesPerSecond < 1024) {
-                return bytesPerSecond + " B/s";
-            }
-            if (bytesPerSecond < 1024 * 1024) {
-                return String.format(Locale.ROOT, "%.1f KB/s", bytesPerSecond / 1024.0);
-            }
-            return String.format(Locale.ROOT, "%.1f MB/s", bytesPerSecond / (1024.0 * 1024));
+            return bytes(bytesPerSecond) + "/s";
         }
+    }
+
+    /** Beside the graph, in its colours: how long the server has been up, who is on it, and every byte so far. */
+    private static final class StatsBox extends JComponent {
+        private static final int WIDTH = 210;
+        private static final String[] NAMES = {"Up", "Players", "Received", "Sent"};
+        private String[] values = {"—", "0", "—", "—"};
+
+        StatsBox() {
+            final Dimension size = new Dimension(WIDTH, 90);
+            setPreferredSize(size);
+            setMinimumSize(size);
+            setMaximumSize(size);
+        }
+
+        /** The counter is made when the server starts, so its first cumulative time is when it started. */
+        void show(final TrafficCounter counter, final int players) {
+            values = counter == null
+                    ? new String[] {"—", "0", "—", "—"}
+                    : new String[] {uptime(System.currentTimeMillis() - counter.lastCumulativeTime()),
+                            String.valueOf(players), bytes(counter.cumulativeReadBytes()),
+                            bytes(counter.cumulativeWrittenBytes())};
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            final Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setColor(TrafficGraph.BACKGROUND);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            g2.setFont(getFont().deriveFont(11f));
+            g2.setColor(TrafficGraph.LABEL);
+            for (int i = 0; i < NAMES.length; i++) {
+                final int baseline = 18 + i * 20;
+                g2.drawString(NAMES[i], 10, baseline);
+                g2.drawString(values[i], getWidth() - 10 - g2.getFontMetrics().stringWidth(values[i]), baseline);
+            }
+            g2.dispose();
+        }
+
+        private static String uptime(final long millis) {
+            final long seconds = millis / 1000;
+            return String.format(Locale.ROOT, "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60);
+        }
+    }
+
+    private static String bytes(final long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+        if (bytes < 1024 * 1024) {
+            return String.format(Locale.ROOT, "%.1f KB", bytes / 1024.0);
+        }
+        if (bytes < 1024L * 1024 * 1024) {
+            return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024));
+        }
+        return String.format(Locale.ROOT, "%.2f GB", bytes / (1024.0 * 1024 * 1024));
     }
 
     private void quit() {

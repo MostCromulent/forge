@@ -165,6 +165,12 @@ final class WebService {
         return server == null ? null : server.traffic();
     }
 
+    /** Takes no lock, so the console can ask on the event thread while a stop is under way. */
+    int playersHere() {
+        final WebSessions now = sessions;
+        return now == null ? 0 : now.playersHere();
+    }
+
     /** The port the browser connects on, or 0 while stopped. */
     synchronized int port() {
         return server == null ? 0 : server.port();

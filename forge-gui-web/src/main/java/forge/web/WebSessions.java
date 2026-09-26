@@ -238,6 +238,11 @@ final class WebSessions implements WebServer.Endpoint {
         byChannel.clear();
     }
 
+    /** How many sessions have a browser attached right now. */
+    int playersHere() {
+        return (int) byId.values().stream().filter(WebSession::attached).count();
+    }
+
     /** The loopback port a guest takes its seat on, or -1 while the host has no game open. */
     int hostPort() {
         final WebSession h = host;
