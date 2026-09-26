@@ -114,7 +114,8 @@ function paint(model: Model): void {
   // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
   const atFace = atLoneFace(model);
   // Once combat damage is dealt the attack has landed, so the chevrons go, though the attackers stay marked
-  placeCharges(g.Phase === 'COMBAT_DAMAGE' ? new Set() : chargingAtPlayer(model));
+  const landed = g.Phase === 'COMBAT_DAMAGE';
+  placeCharges(landed ? new Set() : chargingAtPlayer(model), landed);
   // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
   drawDrag(ctx);
   drawAim(ctx, model);
@@ -248,11 +249,11 @@ const charges = new Map<number, HTMLElement>();
  * Puts a chevron over each attacker in keys, measured from the card as it stands on screen, so a tapped card's is
  * over its turned edge. It points up from your side and down from the opponent's, towards the defender.
  */
-function placeCharges(keys: Set<number>): void {
+function placeCharges(keys: Set<number>, landed = false): void {
   for (const [key, mark] of charges) {
     if (!keys.has(key)) {
       charges.delete(key);
-      retreat(mark, !!elementFor(key));
+      retreat(mark, !!elementFor(key), landed);
     }
   }
   for (const key of keys) {
@@ -287,7 +288,7 @@ function placeCharges(keys: Set<number>): void {
   }
 }
 
-/** Just after the damage lands, so the hit reads before the chevrons draw back. */
+/** After combat damage, long enough for the hit to read before the chevrons draw back. */
 const RETREAT_DELAY_MS = 250;
 const RETREAT_MS = 450;
 
@@ -295,7 +296,7 @@ const RETREAT_MS = 450;
  * A chevron whose attack is over draws back towards its creature, shrinking and fading as it goes. One whose card has
  * left the battlefield has nothing to draw back to, and goes at once.
  */
-function retreat(mark: HTMLElement, cardStays: boolean): void {
+function retreat(mark: HTMLElement, cardStays: boolean, afterHit: boolean): void {
   if (!cardStays || document.documentElement.dataset.motion === 'reduced') {
     mark.remove();
     return;
@@ -305,7 +306,7 @@ function retreat(mark: HTMLElement, cardStays: boolean): void {
   const run = mark.animate([
     { opacity: 1, translate: '0 0', scale: '1' },
     { opacity: 0, translate: `0 ${back * mark.offsetHeight * 0.7}px`, scale: '.55' },
-  ], { duration: RETREAT_MS, delay: RETREAT_DELAY_MS, easing: 'cubic-bezier(.5, 0, .75, 0)', fill: 'forwards' });
+  ], { duration: RETREAT_MS, delay: afterHit ? RETREAT_DELAY_MS : 0, easing: 'cubic-bezier(.5, 0, .75, 0)', fill: 'forwards' });
   run.finished.then(() => mark.remove(), () => mark.remove());
 }
 

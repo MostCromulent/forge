@@ -622,6 +622,10 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 /* The bottom-left corner holds everything a permanent is carrying: the keywords that decide a block, the shield
    counters that decide whether removal lands, and wherever it has got to in its set's own track. They stack
    upward from the corner, so the first icon is always in the same place and the card's name stays clear. */
+.card .kind-tag { display: none; }
+.battlefield .card .kind-tag:not(:empty) { display: block; position: absolute; left: 50%; top: 14%; z-index: 3; transform: translateX(-50%);
+  padding: 1px 7px; border-radius: 999px; background: #0e1116e6; border: 1px solid var(--accent-2); color: var(--accent-2);
+  font-size: calc(8.5px * var(--fit, 1)); font-weight: 700; white-space: nowrap; pointer-events: none; }
 .card .corner { position: absolute; left: 3px; bottom: 3px; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: calc(60% - 3px); pointer-events: none; }
 .card .kws { display: flex; flex-wrap: wrap-reverse; gap: 1px; }
 .card .kws:empty { display: none; }

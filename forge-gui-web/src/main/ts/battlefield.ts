@@ -31,8 +31,9 @@ type Group = 'lands' | 'support' | 'creatures' | 'far';
 
 function groupOf(model: Model, slot: Slot): Group {
   const type = stateOf(model, slot.top).Type ?? '';
-  if (/Land/.test(type)) return 'lands';
+  // A land made a creature fights as one, so it stands with the creatures
   if (/Creature/.test(type)) return 'creatures';
+  if (/Land/.test(type)) return 'lands';
   if (/Planeswalker|Battle/.test(type)) return 'far';
   return 'support';
 }
@@ -331,6 +332,9 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     updateCard(c, model, card);
     // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
     c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
+    // A land standing among the creatures says why, since its art still reads as a land
+    const type = stateOf(model, card).Type ?? '';
+    q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? 'Land creature' : '';
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));
