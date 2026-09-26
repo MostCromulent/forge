@@ -295,7 +295,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       hideOnError(img);
       el.onclick = () => {
         // One commander here is cast straight from its tile; partners open the zone to choose which
-        if (zoneName === 'Command' && el.dataset.key) select(el, false);
+        if (zoneName === 'Command' && el.dataset.cast) select(q(el, 'img'), false);
         else if (!el.classList.contains('hidden-deck')) togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
       };
       // The hover data sits on the image: the tile's own data-key is how the render finds it again
@@ -336,7 +336,8 @@ function updateCommandTile(el: HTMLElement, model: Model, player: PlayerView): v
   img.hidden = !src;
   img.dataset.key = String(top?.$key ?? '');
   img.dataset.zoom = src;
-  el.dataset.key = cards.length === 1 ? String(top.$key) : '';
+  // The tile's own data-key is how the render finds it again, so the card to cast is marked apart from it
+  el.dataset.cast = cards.length === 1 ? 'yes' : '';
   el.classList.toggle('empty', cards.length === 0);
   el.classList.toggle('selectable', cards.some(c => (model.prompt?.selectable ?? []).some(r => r.ref === c.$key)));
   const tax = top ? commanderTax(player, top) : 0;
