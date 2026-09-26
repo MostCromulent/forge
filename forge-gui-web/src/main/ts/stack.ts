@@ -1,4 +1,5 @@
 import { reconcile } from './render';
+import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from './images';
 import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
 import { hoverCard, hoverable } from './detail';
@@ -93,8 +94,11 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
   for (const [key, move] of journeys(events)) {
     // Read before the zone it left is redrawn without it; a card cast from a hidden hand has no picture and is not shown
     const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img, .zone-tile img[data-key="${key}"]`);
-    if (move.to?.zone === 'Stack' && !onStack.has(key) && img?.getAttribute('src')) {
-      awaiting.set(key, { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '', since: Date.now() });
+    // The card may already be gone or hidden when its move is seen, so the picture it last had stands in
+    const picture = img?.getAttribute('src') ? { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '' }
+      : lastPicture(Number(key));
+    if (move.to?.zone === 'Stack' && !onStack.has(key) && picture) {
+      awaiting.set(key, { ...picture, since: Date.now() });
     } else {
       awaiting.delete(key);
     }

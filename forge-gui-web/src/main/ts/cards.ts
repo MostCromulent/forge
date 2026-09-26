@@ -43,6 +43,18 @@ export function frameColour(colours: number, type: string): string {
   return /Land/.test(type) ? 'L' : 'C';
 }
 
+/** The last picture each card was shown with, for a spell whose card is hidden by the time its cast is seen. */
+const pictures = new Map<number, { src: string; zoom: string }>();
+
+export function lastPicture(key: number): { src: string; zoom: string } | undefined {
+  return pictures.get(key);
+}
+
+/** A new table reuses card keys, so the pictures of the last one mean nothing. */
+export function forgetPictures(): void {
+  pictures.clear();
+}
+
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
   // A card held face down in exile under a permanent shows its owner's sleeve, as it lies, though one its owner may
@@ -70,6 +82,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     el.classList.remove('noimg');
   }
   el.dataset.zoom = src;
+  if (small) pictures.set(card.$key, { src: small, zoom: src });
   el.style.setProperty('--pile-img', small ? cssUrl(small) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');

@@ -12,6 +12,7 @@ import { renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
+import { forgetPictures } from './cards';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
@@ -397,6 +398,7 @@ export function resetTable(): void {
   announced = null;
   resetMotion();
   stopWaiting();
+  forgetPictures();
   firstPlayer = null;
   seating = null;
   outSaid = false;

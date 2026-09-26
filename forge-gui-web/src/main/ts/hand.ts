@@ -60,7 +60,9 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
   const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
   // The planar die has a button of its own by the plane, so it is not laid out with the cards
   const others = zone(model, player, 'Flashback').filter(c => commandKind(c, stateOf(model, c)) !== 'dice');
-  const cards = [...handOrder(model, others), ...handOrder(model, zone(model, player, 'Hand'))];
+  // The hand's list can lag its cards: one being cast is already on the stack, and hidden, while the list still holds it
+  const held = zone(model, player, 'Hand').filter(c => !c.Zone || c.Zone === 'Hand');
+  const cards = [...handOrder(model, others), ...handOrder(model, held)];
   reconcile(root, cards, c => c.$key, () => createCard(select), (el, c) => {
     updateCard(el, model, c);
     const source = elsewhere.get(c.$key);
