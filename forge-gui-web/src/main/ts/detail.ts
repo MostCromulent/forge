@@ -2,6 +2,8 @@ import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSym
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
+import { keyName } from './keys';
+import { boundKeys } from './settings';
 import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import type { CardView, PlayerDetail, PlayerView } from './protocol';
@@ -202,8 +204,11 @@ function drawDetail(model: Model): void {
   q(zoom, '.type').textContent = face.type ?? '';
   setRulesText(q(zoom, '.text'), face.text ?? '');
   q(zoom, '.pt').textContent = face.pt ?? '';
-  const faces = d.faces.length > 1 ? `F: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
-  q(zoom, '.hint').textContent = [faces, src ? `T: ${text ? 'card image' : 'rules text'}` : ''].filter(Boolean).join(' · ');
+  // The keys are the player's own, since either can be changed in the options
+  const keys = boundKeys();
+  const faces = d.faces.length > 1 ? `${keyName(keys.nextFace)}: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
+  const flip = src ? `${keyName(keys.cardText)}: flip to ${text ? 'card image' : 'rules'}` : '';
+  q(zoom, '.hint').textContent = [faces, flip].filter(Boolean).join(' · ');
 }
 
 // "your graveyard" rather than "your exile": the zones a card is played out of do not all take a possessive
