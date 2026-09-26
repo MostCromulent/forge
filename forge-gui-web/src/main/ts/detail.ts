@@ -185,6 +185,7 @@ function drawDetail(model: Model): void {
   if (!text) setImage(img, src);
   q(zoom, '.detail').hidden = !face;
   setSource(q(zoom, '.from'), hover.from);
+  setSource(q(zoom, '.from-tab'), hover.from);
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   setSymbolText(q(zoom, '.cost'), face.cost);
@@ -204,7 +205,8 @@ const ZONE_PHRASE: Record<string, string> = {
   Sideboard: 'your sideboard',
 };
 
-/** The line that says a card in hand is not really in hand. The glow around it is in this same zone's colour. */
+/** Says a card in hand is not really in hand: a tab on the image's foot, or a line in the text. The glow around the card
+ *  is in this same zone's colour. */
 function setSource(el: HTMLElement, zone: string | undefined): void {
   el.textContent = zone ? `Playable from ${ZONE_PHRASE[zone] ?? zone.toLowerCase()}` : '';
   if (zone) {
@@ -238,8 +240,14 @@ function setRulesText(el: HTMLElement, html: string): void {
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
-  hideOnError(q<HTMLImageElement>(zoom, 'img'));
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
+  const img = q<HTMLImageElement>(zoom, 'img');
+  hideOnError(img);
+  // The preview is placed before its image arrives, and grows when it does, so it is placed again to stay on screen
+  img.addEventListener('load', () => {
+    const hover = ui.hover;
+    if (hover && 'card' in hover && hover.at) placeZoom(zoom, hover.at);
+  });
 }
 
 /**
@@ -276,6 +284,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   q(zoom, 'img').hidden = true;
   q(zoom, '.detail').hidden = !d;
   setSource(q(zoom, '.from'), undefined);
+  setSource(q(zoom, '.from-tab'), undefined);
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cost').textContent = '';

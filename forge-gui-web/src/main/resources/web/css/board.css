@@ -481,7 +481,14 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* The image alone, with under it only the lines the art cannot show: where the card is playable from, and the keys */
 #zoom.image-only { flex-direction: column; align-items: center; gap: 6px; }
 #zoom.image-only .detail { width: auto; padding: 0; background: none; border: 0; box-shadow: none; text-shadow: 0 1px 3px #000; }
-#zoom.image-only .detail > :not(.from, .hint) { display: none; }
+#zoom.image-only .detail > :not(.hint) { display: none; }
+/* Where a card in hand is really played from, as a tab on the image's foot, clear of its cost and of the overlays at
+   its top; the text view says it in a line instead */
+#zoom .shot { position: relative; display: block; line-height: 0; }
+#zoom .from-tab { position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%); padding: 4px 12px; border-radius: 999px; background: var(--zone-glow);
+  color: #15121c; font: 800 12px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
+#zoom .from-tab:empty, #zoom.text-card .shot { display: none; }
+#zoom.image-only:has(.from-tab:not(:empty)) { gap: 20px; }
 #zoom.image-only .detail .hint { padding: 2px 8px; border-radius: 8px; background: #0b0f16d9; }
 /* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
 #zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
