@@ -64,6 +64,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
@@ -95,6 +96,7 @@ public final class WebServer implements AutoCloseable {
      * that are still downloading, which can hold every connection the browser allows to one server.
      */
     private static final String KEEP_AN_HOUR = "private, max-age=3600";
+    private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
@@ -433,11 +435,11 @@ public final class WebServer implements AutoCloseable {
      * The player's own sound set and music, resolved the way the desktop client resolves them. A playlist is answered
      * with a redirect to one of its tracks by name, so the shuffle stays here while each track is downloaded only once.
      */
-    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track)
-            throws IOException {
+    private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
+            final String range) throws IOException {
         if (sound) {
             // Kept for an hour and no longer, since the name stays the same when the host picks another sound set
-            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, KEEP_AN_HOUR);
+            respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_AN_HOUR);
             return;
         }
         final String list = "menu".equals(name) ? "menu" : "match";
@@ -453,20 +455,61 @@ public final class WebServer implements AutoCloseable {
             return;
         }
         final File dir = SoundSystem.findMusicDirectory(playlist);
-        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, KEEP_FOREVER);
+        respondAudio(ctx, dir != null && isFileName(track) ? new File(dir, track) : null, range, KEEP_FOREVER);
     }
 
     private static boolean isFileName(final String name) {
         return name != null && !name.isEmpty() && !name.contains("/") && !name.contains("\\") && !name.contains("..");
     }
 
-    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String cacheControl) throws IOException {
+    /**
+     * A browser asks for audio in byte ranges. Answered only in whole files, it cannot seek or reuse its cache, so it
+     * downloads a track or sound again each time it plays it.
+     */
+    private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl)
+            throws IOException {
         if (file == null || !file.isFile()) {
             notFound(ctx);
             return;
         }
-        final String type = file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg";
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type, null, cacheControl);
+        final byte[] body = Files.readAllBytes(file.toPath());
+        int from = 0;
+        int to = body.length - 1;
+        // Several ranges in one request, or a header this does not read, are answered with the whole file
+        final Matcher m = range == null ? null : BYTE_RANGE.matcher(range.trim());
+        final boolean partial = m != null && m.matches() && !(m.group(1).isEmpty() && m.group(2).isEmpty());
+        if (partial) {
+            final Integer first = m.group(1).isEmpty() ? null : Ints.tryParse(m.group(1));
+            final Integer last = m.group(2).isEmpty() ? null : Ints.tryParse(m.group(2));
+            if (m.group(1).isEmpty()) {
+                from = last == null ? body.length : Math.max(0, body.length - last);
+            } else {
+                from = first == null ? body.length : first;
+                if (last != null) {
+                    to = Math.min(to, last);
+                }
+            }
+        }
+        final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
+        final FullHttpResponse resp;
+        if (partial && from > to) {
+            resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
+            resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes */" + body.length);
+        } else {
+            resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
+                    partial ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK,
+                    Unpooled.wrappedBuffer(body, from, to - from + 1));
+            if (partial) {
+                resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes " + from + "-" + to + "/" + body.length);
+            }
+        }
+        resp.headers()
+                .set(HttpHeaderNames.CONTENT_TYPE, file.getName().toLowerCase(Locale.ROOT).endsWith(".wav") ? "audio/wav" : "audio/mpeg")
+                .set(HttpHeaderNames.ACCEPT_RANGES, HttpHeaderValues.BYTES)
+                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
+                .setInt(HttpHeaderNames.CONTENT_LENGTH, resp.content().readableBytes())
+                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
+        send(ctx, resp, keepAlive);
     }
 
     private static String etag(final byte[] body) {
@@ -548,7 +591,8 @@ public final class WebServer implements AutoCloseable {
             if ("/sound".equals(path) || "/music".equals(path)) {
                 final List<String> name = q.parameters().get("name");
                 final List<String> track = q.parameters().get("track");
-                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0), track == null ? null : track.get(0));
+                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0), track == null ? null : track.get(0),
+                        req.headers().get(HttpHeaderNames.RANGE));
                 return;
             }
             if ("/img".equals(path)) {

@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.ImageKeys;
 import forge.localinstance.properties.ForgeConstants;
+import forge.sound.SoundSystem;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -17,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -123,6 +125,35 @@ public class WebServerTest {
     public void missingImageAndPathTraversalAre404() throws Exception {
         Assert.assertEquals(get("/img?key=c:NoSuchCard%7CXXX&token=secret", null).statusCode(), 404);
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
+    }
+
+    /** Fails if audio is answered only in whole files, which makes the browser download it again on every play. */
+    @Test
+    public void audioIsServedInTheRangesTheBrowserAsksFor() throws Exception {
+        final File file = SoundSystem.instance.getSoundResource("daytime.mp3");
+        Assert.assertNotNull(file, "the default sound set has no daytime.mp3");
+        final byte[] whole = Files.readAllBytes(file.toPath());
+        final String url = origin() + "/sound?name=daytime.mp3&token=secret";
+
+        final HttpResponse<byte[]> all = http.send(HttpRequest.newBuilder(URI.create(url)).build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(all.statusCode(), 200);
+        Assert.assertEquals(all.headers().firstValue("accept-ranges").orElse(""), "bytes");
+        Assert.assertEquals(all.body(), whole);
+
+        final HttpResponse<byte[]> part = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=100-199").build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(part.statusCode(), 206);
+        Assert.assertEquals(part.headers().firstValue("content-range").orElse(""), "bytes 100-199/" + whole.length);
+        Assert.assertEquals(part.body(), Arrays.copyOfRange(whole, 100, 200));
+
+        final HttpResponse<byte[]> tail = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=-10").build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(tail.body(), Arrays.copyOfRange(whole, whole.length - 10, whole.length));
+
+        final HttpResponse<byte[]> past = http.send(HttpRequest.newBuilder(URI.create(url))
+                .header("Range", "bytes=" + whole.length + "-").build(), HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(past.statusCode(), 416);
     }
 
     // An image key is joined onto a folder, and some are also tried with no extension, so ".." in one reached any file
