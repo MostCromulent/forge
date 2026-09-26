@@ -328,7 +328,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
     updateCard(c, model, card);
     // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
-    c.classList.toggle('sickness', isSick(model, card));
+    c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
     c.classList.toggle('ghost', card.Zone === 'Exile');
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));

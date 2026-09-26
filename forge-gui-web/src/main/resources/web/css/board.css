@@ -419,7 +419,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* A panel of its own, so the stack never reads as loose cards over the board */
 #stack { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; width: calc(var(--stack-w) + 20px); display: grid; gap: 8px; padding: 8px 10px 10px; background: color-mix(in srgb, var(--surface) 93%, transparent); backdrop-filter: blur(4px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px #0009; }
 /* With several opponents the top seats have a row of details, and the panel starts below it rather than over their piles */
-#match.many #stack { top: 80px; }
+#match.many #stack, #match.many #storm { top: 80px; }
 #stack .head { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
 #stack .head .count { min-width: 18px; text-align: center; border-radius: 9px; background: var(--surface-2); color: var(--text); letter-spacing: 0; font-weight: 700; }
 #stack .head .collapse { margin-left: auto; font-size: 11px; padding: 2px 8px; letter-spacing: 0; text-transform: none; }
@@ -676,9 +676,10 @@ html[data-motion="reduced"] .charge::before { animation: none; }
 body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
 body.dragging-block #zoom { display: none; }
 .card.blocking { outline: 2px dashed var(--attack); }
-/* Damage on a creature: the card jolts and the amount is thrown off it */
+/* Damage on a creature: the card jolts and the amount is thrown off it. The jolt uses translate and rotate rather
+   than transform, so a tapped card keeps its own turn while it shakes */
 .card.struck { animation: card-struck .34s ease-out; }
-@keyframes card-struck { 25% { transform: translate(-3px, 2px) rotate(-1deg); } 60% { transform: translate(3px, -1px) rotate(1deg); } }
+@keyframes card-struck { 25% { translate: -3px 2px; rotate: -1deg; } 60% { translate: 3px -1px; rotate: 1deg; } }
 .card .hit-number { position: absolute; left: 50%; top: 28%; z-index: 4; transform: translateX(-50%); color: #ff7a59; font-size: 26px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 12px #000; animation: hit-number 1s ease-out forwards; }
 @keyframes hit-number { from { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 25% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } to { opacity: 0; transform: translate(-50%, -30px) scale(1); } }
 /* A power, toughness or loyalty change kicks its badge */
@@ -703,7 +704,6 @@ body.dragging-block #zoom { display: none; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { border-style: dashed; color: var(--muted); }
 .card .count:hover { border-color: var(--text); background: var(--brass); color: var(--on-brass); }
-.card.pile .count { display: block; }
 .card:hover { z-index: 5; }
 #stack-menu { position: fixed; z-index: 70; display: grid; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px #000c; }
 #stack-menu button { text-align: left; border: none; background: none; padding: 6px 10px; white-space: pre; }

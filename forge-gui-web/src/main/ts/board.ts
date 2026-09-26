@@ -11,7 +11,7 @@ import { followPointer, hoverPlayer, hoverable } from './detail';
 import { renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
-import { renderPhaseBar } from './phasebar';
+import { renderPhaseBar, stopWaiting } from './phasebar';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
@@ -396,6 +396,7 @@ let announced: string | null = null;
 export function resetTable(): void {
   announced = null;
   resetMotion();
+  stopWaiting();
   firstPlayer = null;
   seating = null;
   outSaid = false;

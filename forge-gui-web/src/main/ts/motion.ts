@@ -534,7 +534,7 @@ function place(from: HTMLElement, rect: DOMRect, size?: { w: number; h: number }
   const h = size?.h || rect.height;
   const left = rect.left + rect.width / 2 - w / 2;
   const top = rect.top + rect.height / 2 - h / 2;
-  ghost.style.cssText = `position: fixed; left: ${left}px; top: ${top}px; width: ${w}px; height: ${h}px;`
+  ghost.style.cssText += `position: fixed; left: ${left}px; top: ${top}px; width: ${w}px; height: ${h}px;`
     + 'margin: 0; z-index: 40; pointer-events: none;';
   document.body.append(ghost);
   return ghost;

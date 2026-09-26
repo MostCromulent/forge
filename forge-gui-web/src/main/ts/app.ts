@@ -169,10 +169,12 @@ const HOLD_LIMIT_MS = 4000;
 
 function receive(msg: ServerMessage): void {
   if (!held) {
-    if (msg.t === 'state' && announceComing(model, msg, release)) {
+    // Each release is for this turn's hold only, so an earlier banner ending late cannot free a later turn early
+    const releaseThis = () => { if (held?.[0] === msg) release(); };
+    if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
       held = [msg];
       // The banner's end releases the turn; this only guards the page against a release that never comes
-      setTimeout(() => { if (held?.[0] === msg) release(); }, HOLD_LIMIT_MS);
+      setTimeout(releaseThis, HOLD_LIMIT_MS);
     } else {
       apply(msg);
     }
@@ -246,6 +248,8 @@ function apply(msg: ServerMessage): void {
       if (!msg.inMatch) {
         model.objects.clear();
         model.gameOver = false;
+        // Nothing draws the match once it is left, so a card still waiting to be paid for would float over the menu
+        resetTable();
         send({ t: 'decks' });
       }
       if (!model.host && !sentDeviceDecks) {

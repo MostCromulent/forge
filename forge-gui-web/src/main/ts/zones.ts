@@ -54,7 +54,9 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
     drawBar(root, model, [...panels.values()]);
     return;
   }
-  root.replaceChildren(shelf(root));
+  // Put back only when missing: taking an open dialog out of the page resets its scroll and drops the search box's focus
+  const box = shelf(root);
+  if (root.firstElementChild !== box || root.childElementCount !== 1) root.replaceChildren(box);
   reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
     (el, [, p]) => updatePanel(el, model, actions, p, select));
 }
@@ -142,12 +144,15 @@ function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   const first = panels[0];
   const player = model.objects.get(first.player);
   const count = panels.length > 1 ? `${panels.length} zones` : `${zone(model, player, first.zone).length} cards`;
-  root.replaceChildren();
-  const bar = document.createElement('section');
-  bar.className = 'zone-bar';
-  bar.innerHTML = '<span class="zone-dot" aria-hidden="true"></span><b></b><span class="zone-count"></span>'
-    + '<button class="zone-unfold primary">Show cards</button>'
-    + '<button class="zone-shut" aria-label="Close the zone">×</button>';
+  // Kept across renders, so a click is not lost to a render between the press and the release
+  let bar = root.querySelector<HTMLElement>(':scope > .zone-bar');
+  if (!bar) {
+    bar = document.createElement('section');
+    bar.className = 'zone-bar';
+    bar.innerHTML = '<span class="zone-dot" aria-hidden="true"></span><b></b><span class="zone-count"></span>'
+      + '<button class="zone-unfold primary">Show cards</button>'
+      + '<button class="zone-shut" aria-label="Close the zone">×</button>';
+  }
   q(bar, 'b').textContent = panels.length > 1 ? 'Open zones' : `${player?.Name ?? ''} · ${first.zone}`;
   q(bar, '.zone-count').textContent = count;
   q(bar, '.zone-unfold').onclick = () => changeUi(u => { u.zonesMinimised = false; });
@@ -160,5 +165,5 @@ function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
       if (!p.forced) u.openZones.delete(`${p.player}/${p.zone}`);
     }
   });
-  root.append(bar);
+  if (root.firstElementChild !== bar || root.childElementCount !== 1) root.replaceChildren(bar);
 }

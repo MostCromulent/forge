@@ -222,6 +222,12 @@ let waitingTimer = 0;
 /** How long another player must be deciding before the pill says who the game is waiting on. */
 const WAIT_SHOWN_AFTER_S = 2;
 
+export function stopWaiting(): void {
+  waitingFor = null;
+  clearInterval(waitingTimer);
+  waitingTimer = 0;
+}
+
 function drawWaiting(pill: HTMLElement, model: Model): void {
   // Nobody is waited on while the game is waiting on you, whether that is priority or a declaration to make
   const onMe = me(model)?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled;
@@ -229,9 +235,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   const chip = q(pill, '.waiting');
   chip.hidden = !holder;
   if (!holder) {
-    waitingFor = null;
-    clearInterval(waitingTimer);
-    waitingTimer = 0;
+    stopWaiting();
     return;
   }
   if (waitingFor !== holder.$key) {
