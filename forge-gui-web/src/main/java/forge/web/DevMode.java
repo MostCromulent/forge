@@ -99,12 +99,14 @@ final class DevMode {
             } catch (final RuntimeException e) {
                 Logger.warn(e, "Could not apply a game state");
                 channel.send(new Notice("Game state not set up", String.valueOf(e.getMessage()), true));
+                return;
+            }
+            // Placing cards fires no game event, so nothing else would send the new board. It is sent from the same
+            // task, after the state: a second task can run on another game thread at once and send the board unchanged
+            if (gui instanceof RemoteClientGuiGame remote) {
+                remote.updateGameView();
             }
         });
-        // Placing cards fires no game event, so nothing else would send the new board; queued behind the state itself
-        if (gui instanceof RemoteClientGuiGame remote) {
-            game.getAction().invoke(remote::updateGameView);
-        }
     }
 
     private static void dump(final Game game, final BrowserChannel channel) {
