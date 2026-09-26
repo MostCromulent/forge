@@ -627,7 +627,8 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       const kind = effectKind(state);
       q(el, '.band i').innerHTML = kind.lasting ? STAR_ICON : HOURGLASS_ICON;
       q(el, '.band b').textContent = kind.label;
-      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : '';
+      // An effect that keeps a number, such as a player's speed, carries it as the text desktop lays over the card
+      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : card.OverlayText ?? '';
     });
 }
 

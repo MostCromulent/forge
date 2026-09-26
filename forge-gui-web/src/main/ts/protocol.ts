@@ -17,7 +17,7 @@ export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' |
   | 'PhasedOut' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'
   | 'ShieldCount' | 'MustBlockCards' | 'BlockAdditional' | 'BlockAny'
   | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'
-  | 'IsCommander' | 'ExiledWith' | 'Facedown'>;
+  | 'IsCommander' | 'ExiledWith' | 'Facedown' | 'OverlayText'>;
 
 export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'OriginalManaCost' | 'Power' | 'Toughness' | 'BasePower' | 'BaseToughness' | 'Loyalty'
   | 'Defense' | 'Keywords' | 'Colors' | 'RulesText'>;
