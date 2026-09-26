@@ -68,8 +68,16 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   const leavingHand: { was: Snapshot; target: DOMRect | null }[] = [];
   for (const [key, move] of journeys(events)) {
     const start = waiting.get(key)?.rect ?? lastSeen.get(key)?.rect ?? placeRect(move.from);
+    // A spell on the stack with no item yet is having its cost paid, in the slot the stack keeps for it
+    const slot = move.to?.zone === 'Stack' ? awaitingSlot(key) : null;
+    if (slot) {
+      waiting.set(key, { rect: restingRect(slot), ghost: null, since: Date.now() });
+      if (start) {
+        fly(slot, start, FLIGHT_MS, 0);
+      }
+      continue;
+    }
     const el = elementFor(key);
-    // A spell on the stack with no item yet is having its cost paid
     if (move.to?.zone === 'Stack' && !el) {
       if (start) {
         hold(key, start, lastSeen.get(key)?.ghost ?? null);
@@ -175,7 +183,7 @@ function settleWaiting(paying: boolean): void {
     if (arrived) {
       land(key);
       fly(arrived, held.rect, FLIGHT_MS, 0);
-    } else if (!paying && Date.now() - held.since > SETTLE_MS) {
+    } else if (!awaitingSlot(key) && !paying && Date.now() - held.since > SETTLE_MS) {
       land(key);
     }
   }
@@ -203,7 +211,9 @@ function layOutPiles(): void {
 
 const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-key], #zones .card[data-key]';
 const BOARD_CARDS = '#me .battlefield .card[data-key], #opponent .battlefield .card[data-key]';
-const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item')];
+const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item:not(.awaiting)')];
+const awaitingSlot = (key: string) =>
+  document.querySelector<HTMLElement>(`#stack .stack-item.awaiting img[data-key="${key}"]`)?.parentElement ?? null;
 
 export function cardElement(key: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`#me .card[data-key="${key}"], #opponent .card[data-key="${key}"], `

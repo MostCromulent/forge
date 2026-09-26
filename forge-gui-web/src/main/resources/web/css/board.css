@@ -416,6 +416,12 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 .stack-item .who { color: var(--muted); }
 .stack-item .targets { color: var(--select); }
 .stack-item .desc:empty, .stack-item .targets:empty { display: none; }
+/* A spell awaiting payment: a see-through, colourless outline of the card in the slot its item will take */
+.stack-item.awaiting { background: #8fb4ff14; border: 1px dashed #b9cdf0aa; outline: none; box-shadow: 0 0 18px #9fc0ff33, inset 0 0 22px #9fc0ff22; animation: awaiting 2.4s ease-in-out infinite; }
+.stack-item.awaiting img { opacity: .38; filter: grayscale(1); }
+.stack-item.awaiting .await { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 14px 6px 7px; border-radius: 0 0 8px 8px; text-align: center; background: linear-gradient(transparent, #070910e6 40%); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #dfe8fa; }
+@keyframes awaiting { 50% { box-shadow: 0 0 26px #9fc0ff55, inset 0 0 30px #9fc0ff33; border-color: #d6e3ffdd; } }
+html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 #log { overflow-anchor: none; background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
 .log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }

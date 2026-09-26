@@ -1,12 +1,13 @@
 import { reconcile } from './render';
 import { cardImageSrc, noImageOnError, setImage } from './images';
 import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
-import { hoverCard } from './detail';
+import { hoverCard, hoverable } from './detail';
+import { journeys } from './motion';
 import { stackTargets } from './overlay';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
-import type { StackItemView, YieldAction } from './protocol';
+import type { CardView, GameEvent, StackItemView, YieldAction } from './protocol';
 
 // The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
 // cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
@@ -15,6 +16,14 @@ const STEP_MIN = 14;
 const PUSH_Y = 26;
 
 let actions: Actions | null = null;
+
+/**
+ * Spells being cast, by card key. The game puts the card on the stack before its cost is paid but makes its item only
+ * once it is, and the card is not in the browser's copy of the game in between, so its picture is taken from where it was cast from.
+ */
+const awaiting = new Map<string, { src: string; zoom: string; since: number }>();
+/** How long a spell may go on awaiting once its caster has priority again; past this its item is not coming. */
+const SETTLE_MS = 900;
 
 export function initStack(actionsFor: Actions): void {
   actions = actionsFor;
@@ -25,7 +34,7 @@ export function initStack(actionsFor: Actions): void {
   });
 }
 
-export function renderStack(model: Model): void {
+export function renderStack(model: Model, events: readonly GameEvent[]): void {
   const root = byId('stack');
   if (!root.firstChild) {
     root.innerHTML = '<div class="head"><b>Stack</b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
@@ -33,26 +42,31 @@ export function renderStack(model: Model): void {
     window.addEventListener('resize', () => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
+  noteAwaiting(model, items, events);
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
     ui.hoveredStackItem = null;
   }
   const collapsed = ui.stackCollapsed;
-  root.hidden = items.length === 0;
+  root.hidden = items.length + awaiting.size === 0;
   root.classList.toggle('collapsed', collapsed);
   // The battlefield rows have no idea the panel is there, so the board is told to keep clear of it
   byId('match').classList.toggle('stack-open', !root.hidden && !collapsed);
-  q(root, '.count').textContent = String(items.length);
+  q(root, '.count').textContent = String(items.length + awaiting.size);
   const collapse = q(root, '.collapse');
   collapse.textContent = collapsed ? 'Show' : 'Hide';
   collapse.title = collapsed ? 'Show the stack' : 'Collapse the stack to its heading';
   const pile = q(root, '.pile');
   const pick = stackPick(model);
-  reconcile(pile, items, i => i.$key, () => createItem(model), (el, item) => {
-    updateItem(el, model, item);
-    el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(item.$key));
-  });
+  // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
+  const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
+  reconcile(pile, entries, e => typeof e === 'string' ? `awaiting-${e}` : e.$key,
+    e => typeof e === 'string' ? createAwaiting(e) : createItem(model), (el, e) => {
+      if (typeof e === 'string') return;
+      updateItem(el, model, e);
+      el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(e.$key));
+    });
   place(root);
-  layout(pile, items.length);
+  layout(pile, entries.length);
   renderMenu(model);
 }
 
@@ -60,6 +74,40 @@ export function renderStack(model: Model): void {
 function place(root: HTMLElement): void {
   const hand = byId('hand').getBoundingClientRect();
   q(root, '.pile').style.setProperty('--stack-room', `${Math.max(120, hand.top - root.getBoundingClientRect().top - 48)}px`);
+}
+
+function noteAwaiting(model: Model, items: StackItemView[], events: readonly GameEvent[]): void {
+  const onStack = new Set(items.map(i => String(i.SourceCard?.ref)));
+  for (const [key, move] of journeys(events)) {
+    // Read before the zone it left is redrawn without it; a card cast from a hidden hand has no picture and is not shown
+    const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img`);
+    if (move.to?.zone === 'Stack' && !onStack.has(key) && img?.getAttribute('src')) {
+      awaiting.set(key, { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '', since: Date.now() });
+    } else {
+      awaiting.delete(key);
+    }
+  }
+  for (const [key, spell] of awaiting) {
+    // A cancelled cast is undone without an event, and the card is back in a zone the browser can see
+    const back = model.objects.get(Number(key)) as CardView | undefined;
+    const given = model.prompt?.priority && Date.now() - spell.since > SETTLE_MS;
+    if (onStack.has(key) || (back?.Zone && back.Zone !== 'Stack') || given) {
+      awaiting.delete(key);
+    }
+  }
+}
+
+function createAwaiting(key: string): HTMLElement {
+  const spell = awaiting.get(key);
+  const el = document.createElement('div');
+  el.className = 'stack-item awaiting';
+  el.innerHTML = '<img alt="" draggable="false"><div class="await">Awaiting payment</div>';
+  const img = q<HTMLImageElement>(el, 'img');
+  img.src = spell?.src ?? '';
+  img.dataset.key = key;
+  img.dataset.zoom = spell?.zoom ?? '';
+  hoverable(el, img);
+  return el;
 }
 
 function createItem(model: Model): HTMLElement {
