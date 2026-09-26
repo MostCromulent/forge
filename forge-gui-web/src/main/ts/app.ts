@@ -128,6 +128,11 @@ function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
+    case 'autoDistribute': {
+      const split = oldestRequest(model);
+      if (split?.kind === 'distribute') actions.answer(split.id, split.default);
+      break;
+    }
     case 'closeReveal': {
       const reveal = oldestRequest(model);
       if (reveal) actions.answer(reveal.id, []);

@@ -94,6 +94,7 @@ html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > :is(#me,
 html[data-motion="reduced"] .row > .group { transition: none; }
 .seat { display: grid; grid-template-columns: var(--seat-w) 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
+.battlefield.settling { overflow: hidden; }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
    the hand rather than floating in the middle of its half, so the two read as one side of the table. */
 #me .battlefield { flex-direction: column-reverse; align-self: end; }
@@ -114,7 +115,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .row > .group { flex: 1 0 auto; display: flex; flex-wrap: nowrap; align-items: flex-end; }
 /* Split, the group breaks at the width battlefield.ts holds it to, with room between its lines for a back-line
    attacker to step forward into */
-.row > .group.two { flex-wrap: wrap; align-content: flex-end; row-gap: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
+.row > .group.two { max-width: calc(var(--split-w) * var(--fit, 1) + 2px); flex-wrap: wrap; align-content: flex-end; row-gap: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 .row > .group:first-child { justify-content: flex-start; }
 .row > .group:last-child { justify-content: flex-end; }
 .row:has(> .group:empty) > .group { justify-content: center; }
@@ -456,7 +457,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 .stack-item.awaiting .await { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 14px 6px 7px; border-radius: 0 0 8px 8px; text-align: center; background: linear-gradient(transparent, #070910e6 40%); font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #dfe8fa; }
 @keyframes awaiting { 50% { box-shadow: 0 0 26px #9fc0ff55, inset 0 0 30px #9fc0ff33; border-color: #d6e3ffdd; } }
 html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
-#log { overflow-anchor: none; background: var(--surface); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
+#log { overflow-anchor: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
 .log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }
 .log-entry.turn { color: var(--text); font-weight: 600; padding-top: 6px; }

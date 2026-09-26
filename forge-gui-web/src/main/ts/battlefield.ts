@@ -214,19 +214,35 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // Past the smallest size nothing fits; the smallest cards, split where they can be, scroll rather than shrink
   const chosen = best ?? { cap: MIN_FIT, sizes: [layRow(0, MIN_FIT, true), layRow(1, MIN_FIT, true)] };
   root.style.setProperty('--fit', chosen.cap.toFixed(2));
+  let shrinking = false;
   rows.forEach((row, r) => row.forEach((zone, z) => {
     const s = chosen.sizes[r][z];
     for (const g of zone) {
+      const was = parseFloat(g.el.style.getPropertyValue('--fit'));
+      if (s.fit < was - 0.001) shrinking = true;
       g.el.style.setProperty('--fit', s.fit.toFixed(3));
       g.el.dataset.lines = String(s.lines);
       g.el.classList.toggle('two', s.lines === 2);
-      // A split group is held to half its width plus a slot, so it breaks into two lines in the same place each time
-      g.el.style.maxWidth = s.lines === 2 ? `${Math.ceil(groupUnit(g, 2) * s.fit) + 1}px` : '';
+      // A split group is held to half its width plus a slot, so it breaks into two lines in the same place each time.
+      // The width is given at full size and scaled in CSS, so it shrinks with the cards rather than ahead of them
+      g.el.style.setProperty('--split-w', s.lines === 2 ? `${groupUnit(g, 2)}px` : '');
       // Below this the keyword icons are too small to tell apart, so the group drops them and keeps the art
       g.el.classList.toggle('cramped', s.fit < TWO_LINE_BELOW);
     }
   }));
+  // A card joining a full row is laid out at the old, larger size while the size eases down, so the row overflows for
+  // a moment; a scrollbar showing for that moment would push the whole seat and drop it back. Overflow is clipped
+  // until the ease is over
+  if (shrinking) {
+    field.classList.add('settling');
+    clearTimeout(settling.get(field));
+    settling.set(field, setTimeout(() => field.classList.remove('settling'), SETTLE_MS));
+  }
 }
+
+/** A little longer than the --fit transition in board.css. */
+const SETTLE_MS = 700;
+const settling = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
 export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): Slot[] {

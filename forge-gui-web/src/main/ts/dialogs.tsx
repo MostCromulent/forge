@@ -402,7 +402,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
         <Button onClick={() => setValues(req.options.map(() => req.perMin))}>Reset</Button>
         <Button disabled={left !== 0} onClick={() => answer(values)}>Confirm</Button>
         {/* As desktop's Auto: lethal damage to each in turn, the rest onward, sent at once */}
-        <Button primary onClick={() => answer(req.default)}>Auto</Button>
+        <Button primary onClick={() => answer(req.default)}>Auto <kbd>{keyName(boundKeys().ok)}</kbd></Button>
       </ButtonRow>
     </>
   );

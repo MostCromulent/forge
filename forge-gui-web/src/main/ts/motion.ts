@@ -15,6 +15,8 @@ interface Snapshot {
   laid?: { x: number; y: number };
   /** Its size as laid out, before any transform, so a copy of a tapped card is turned as the card was. */
   size?: { w: number; h: number };
+  /** How far a slide or flight still under way has it from where it will rest. */
+  drift?: { x: number; y: number };
 }
 
 /** A spell waiting for its cost, and the trip it is making to where it waits. */
@@ -229,8 +231,11 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>): void {
     // Compared as laid out, since a transform still under way (an attacker stepping forward) is not a move, and a
     // redraw that measured it part way, such as a hover's, would slide the card again
     const laid = laidCentre(el);
-    const dx = was.laid.x - laid.x;
-    const dy = was.laid.y - laid.y;
+    // A card redrawn as a new element loses the slide the old one was part way through, so it starts from where that
+    // one was showing rather than where it would have come to rest
+    const carried = was.ghost !== el ? was.drift : undefined;
+    const dx = was.laid.x + (carried?.x ?? 0) - laid.x;
+    const dy = was.laid.y + (carried?.y ?? 0) - laid.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
       // Measured mid-slide the card is still near where it came from, which a flight would set off from
       resting.set(key, restingRect(el));
@@ -463,8 +468,12 @@ function note(): void {
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
     // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
-    lastSeen.set(el.dataset.key as string,
-      { rect: restingRect(el), ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight } });
+    const rest = restingRect(el);
+    const now = el.getAnimations().length ? el.getBoundingClientRect() : rest;
+    lastSeen.set(el.dataset.key as string, {
+      rect: rest, ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight },
+      drift: { x: now.left + now.width / 2 - (rest.left + rest.width / 2), y: now.top + now.height / 2 - (rest.top + rest.height / 2) },
+    });
     ownPlace.add(el.dataset.key as string);
   }
   for (const el of stackItems()) {
