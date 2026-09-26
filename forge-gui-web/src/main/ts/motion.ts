@@ -147,6 +147,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     if (el) {
       const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
       land(key);
+      // A card joining a pile is drawn as the pile's top, so flying that element would carry the whole pile in; a copy
+      // of the card makes the trip instead, and the pile stays where it is
+      const pile = el.closest<HTMLElement>('.slot[data-members]');
+      if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
+        sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1);
+        continue;
+      }
       if (start) {
         if (drawn) dealt.push({ el, start });
         else fly(el, start, FLIGHT_MS, 0);
