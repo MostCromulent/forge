@@ -106,10 +106,10 @@ You can add these options before `-jar`:
 | `-Dforge.web.noBrowser=true` | Doesn't open the game window. |
 | `-Dforge.web.noConsole=true` | Doesn't open the server window. The link is printed instead. |
 
-### Running from IntelliJ
+### Changing the browser code
 
-The **Forge Web** run configuration builds the page and starts `forge.web.WebMain`. It reads the page straight from
-`src/main/resources/web`, so after a change you only need to reload the browser.
+Start the server with `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web` and it reads the page straight
+from the source folder, so after a change you only need to reload the browser.
 
 CSS and `index.html` changes show up on reload. For TypeScript, run `npm run watch` in this folder to rebuild as you
 save, or `npm run build` to check types and build once. Use the Node that Maven installed (`node/`) or any Node 22.
