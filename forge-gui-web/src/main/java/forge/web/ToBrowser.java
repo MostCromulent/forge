@@ -117,7 +117,8 @@ final class ToBrowser {
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
             @Nullable String cardPool, List<CardPoolGroup> cardPools, List<Format> casualVariants, List<String> variantsOn,
-            int maxSeats, List<Seat> seats, List<String> problems, boolean canStart, @Nullable LimitedTable limited) {
+            int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
+            @Nullable LimitedTable limited) {
     }
 
     /**

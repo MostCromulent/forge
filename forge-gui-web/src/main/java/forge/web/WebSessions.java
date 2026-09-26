@@ -214,6 +214,13 @@ final class WebSessions implements WebServer.Endpoint {
         return h == null ? null : h.hostedLobby();
     }
 
+    /** Every browser is sent the table again, after a change no lobby update carries. */
+    void lobbyChanged() {
+        for (final WebSession session : byId.values()) {
+            session.lobbyChanged();
+        }
+    }
+
     /** Every seat's dial reads again which pod seats are held, after a player went or came back. */
     void seatsChanged() {
         for (final WebSession session : byId.values()) {

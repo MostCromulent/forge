@@ -827,6 +827,11 @@ export interface SetPlayerCount {
   count: number;
 }
 
+export interface SetMatchLength {
+  t: 'setMatchLength';
+  games: number;
+}
+
 export interface EventDecksOnly {
   t: 'eventDecksOnly';
   on: boolean;
@@ -893,6 +898,7 @@ export type ClientMessage =
   | EventSetup
   | BenchSeat
   | SetPlayerCount
+  | SetMatchLength
   | EventDecksOnly
   | EventHostAgain;
 
@@ -1025,6 +1031,7 @@ export interface LobbyTable {
   casualVariants: Format[];
   variantsOn: string[];
   maxSeats: number;
+  gamesPerMatch: number;
   seats: Seat[];
   problems: string[];
   canStart: boolean;

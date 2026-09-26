@@ -6,8 +6,8 @@ let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
 test.afterEach(async () => { await server.stop(); });
 
-// Fails if the Game menu cannot change the format, or a format in it explains nothing when pointed at
-test('a host reads about the formats and picks one from the Game menu', async ({ page }) => {
+// Fails if the Mode menu cannot change the mode, or a format in it explains nothing when pointed at
+test('a host reads about the formats and picks one from the Mode menu', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
   await hostTable(page, false);
@@ -21,7 +21,7 @@ test('a host reads about the formats and picks one from the Game menu', async ({
   await expect(page.locator('.game-card')).toHaveCount(0);
 
   await chooseGame(page, 'Oathbreaker');
-  await expect(page.locator('.match-bar .field', { hasText: 'Cards' })).toHaveCount(0);
+  await expect(page.locator('.match-bar .field', { hasText: 'Format' })).toHaveCount(0);
 });
 
 // Fails if Momir Basic cannot start without decks, or its avatar is not a card tile the player can find

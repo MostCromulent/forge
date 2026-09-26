@@ -366,7 +366,7 @@ public final class WebSession {
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
             case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
-                    "setPlayerCount", "setSeat", "sleeveArt" -> {
+                    "setPlayerCount", "setMatchLength", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -554,6 +554,11 @@ public final class WebSession {
                 lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());
             }
             case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count());
+            case "setMatchLength" -> {
+                if (lobby.setMatchLength(Wire.decode(msg, FromBrowser.SetMatchLength.class).games())) {
+                    sessions.lobbyChanged();
+                }
+            }
             case "setSeat" -> applySeat(channel, Wire.decode(msg, SetSeat.class));
             case "sleeveArt" -> {
                 final SleeveArt art = Wire.decode(msg, SleeveArt.class);
@@ -852,7 +857,7 @@ public final class WebSession {
     }
 
     /** The table changed. The browser sees it only once it is set up; until then it is still being built. */
-    private void lobbyChanged() {
+    void lobbyChanged() {
         final BrowserChannel b = browser;
         if (b != null && stage instanceof Setup) {
             // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too

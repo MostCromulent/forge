@@ -26,16 +26,16 @@ export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
   await expect(plate.locator('.deck-name')).not.toHaveText('');
 }
 
-/** Opens the Game field's menu over the match bar. */
+/** Opens the Mode field's menu over the match bar. */
 export async function openGameMenu(page: Page): Promise<void> {
-  await page.locator('.match-bar .field', { hasText: 'Game' }).locator('.menu-button').click();
+  await page.locator('.match-bar .field', { hasText: 'Mode' }).locator('.menu-button').click();
 }
 
-/** Chooses what is played from the Game field: a format, Draft or Sealed. */
+/** Chooses what is played from the Mode field: a format, Draft or Sealed. */
 export async function chooseGame(page: Page, name: string): Promise<void> {
   await openGameMenu(page);
   await page.locator('.game-choice').filter({ has: page.locator('.game-name', { hasText: new RegExp(`^${name}$`) }) }).click();
-  await expect(page.locator('.match-bar .field', { hasText: 'Game' }).locator('.menu-button')).toHaveText(name);
+  await expect(page.locator('.match-bar .field', { hasText: 'Mode' }).locator('.menu-button')).toHaveText(name);
 }
 
 /** Turns a casual variant on or off from the Variants field. */

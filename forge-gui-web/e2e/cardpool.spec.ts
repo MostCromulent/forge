@@ -14,7 +14,7 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   await hostTable(page, false);
   const seats = page.locator('#seats .plate');
 
-  const cards = page.locator('.match-bar .field', { hasText: 'Cards' }).locator('.menu-button');
+  const cards = page.locator('.match-bar .field', { hasText: 'Format' }).locator('.menu-button');
   await cards.click();
   await expect(page.locator('.pool-tile', { hasText: 'Pauper' })).toContainText('Commons only');
   await page.locator('.pool-tile', { hasText: 'Pauper' }).click();

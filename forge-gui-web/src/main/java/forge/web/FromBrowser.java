@@ -59,6 +59,11 @@ final class FromBrowser {
             @Nullable Integer sleeve) {
     }
 
+    /** How many games the table's match is: 1, 3 or 5. */
+    @Command("setMatchLength")
+    record SetMatchLength(int games) {
+    }
+
     @Command("setFormat")
     record SetFormat(String format) {
     }
@@ -354,6 +359,6 @@ final class FromBrowser {
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class,
+            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,
             EventDecksOnly.class, EventHostAgain.class);
 }

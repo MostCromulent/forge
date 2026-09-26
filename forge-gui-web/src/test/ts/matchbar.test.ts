@@ -5,7 +5,7 @@ import type { Format, LobbyTable, Seat } from '../../main/ts/protocol';
 const seat = (type: string, more: Partial<Seat> = {}): Seat =>
   ({ type, mine: false, mayEdit: false, ready: false, avatar: 0, sleeve: 0, deckSize: 0, colors: '', sleeveOffset: 0, benched: false, ...more } as Seat);
 const table = (seats: Seat[]): LobbyTable => ({
-  host: true, mySeat: 0, shareable: true, format: 'Constructed', maxSeats: 4, seats, problems: [], canStart: false,
+  host: true, mySeat: 0, shareable: true, format: 'Constructed', maxSeats: 4, gamesPerMatch: 3, seats, problems: [], canStart: false,
   cardPools: [], casualVariants: [], variantsOn: [], formats: [],
 });
 const format = (facts: string[]): Format => ({ id: 'x', name: 'x', group: 'g', desc: '', facts, play: '' });
@@ -25,7 +25,7 @@ describe('lowering the player count', () => {
   });
 });
 
-describe("a game's mark in the Game menu", () => {
+describe("a game's mark in the Mode menu", () => {
   // Fails if the mark loses the plus that says a deck may be bigger, or shows a number for a game that deals its decks
   it('reads the deck size from the first fact', () => {
     expect(deckMark(format(['60+ cards', 'Life 20']))).toBe('60+');

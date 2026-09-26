@@ -593,7 +593,8 @@ final class Lobby {
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(), cardPools(),
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
-                    maxSeats(), seats, problems, local.isHost() && problems.isEmpty(), limitedTable(lobby)));
+                    maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
+                    local.isHost() && problems.isEmpty(), limitedTable(lobby)));
         }
     }
 
@@ -1008,6 +1009,20 @@ final class Lobby {
             lobby.getSlot(index).setBenched(benched);
             local.pushLobby();
         }
+    }
+
+    /**
+     * Sets how many games the match is. It is the host's preference, which Forge reads as the match starts, so every
+     * seat in this process already reads the same value; returns whether it changed, since no lobby update says so.
+     */
+    boolean setMatchLength(final int games) {
+        final var prefs = FModel.getPreferences();
+        if (host() == null || (games != 1 && games != 3 && games != 5) || prefs.getPrefInt(FPref.UI_MATCHES_PER_GAME) == games) {
+            return false;
+        }
+        prefs.setPref(FPref.UI_MATCHES_PER_GAME, String.valueOf(games));
+        prefs.save();
+        return true;
     }
 
     /**

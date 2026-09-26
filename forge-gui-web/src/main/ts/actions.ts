@@ -99,6 +99,7 @@ export interface Actions {
   askExtraChoices(index: number, section: string): void;
   /** How many seats the table has; seats come and go at the end, and never one a person holds. */
   setPlayerCount(count: number): void;
+  setMatchLength(games: number): void;
   removeSeat(index: number): void;
   /** Turns a seat between a computer and one someone can join. */
   openSeat(index: number): void;
@@ -204,6 +205,7 @@ export function createActions(send: Send): Actions {
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
     askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
+    setMatchLength: games => send({ t: 'setMatchLength', games }),
     removeSeat: index => send({ t: 'removeSeat', index }),
     openSeat: index => send({ t: 'openSeat', index }),
     aiSeat: index => send({ t: 'aiSeat', index }),

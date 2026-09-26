@@ -187,6 +187,20 @@ function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: 
   );
 }
 
+const MATCH_LENGTHS = [[1, 'One'], [3, 'Three'], [5, 'Five']] as const;
+
+/** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
+function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  return (
+    <span class="count" role="group" aria-label="Match">
+      {MATCH_LENGTHS.map(([n, word]) => (
+        <button key={n} aria-pressed={n === lobby.gamesPerMatch} disabled={!lobby.host} title={`Best-of-${word}`}
+          onClick={() => actions.setMatchLength(n)}>Bo{n}</button>
+      ))}
+    </span>
+  );
+}
+
 /**
  * Which cards a Constructed game allows: the sanctioned formats as tiles, the casual ones as chips, and a block on the
  * bottom line. Where each format's cards come from is asked for when it first opens.
@@ -237,7 +251,10 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
   );
 }
 
-/** Constructed · its card pool · players · variants, or at a Draft or Sealed table the game and players only. */
+/**
+ * Mode · format · players · match · variants, or at a Draft or Sealed table the mode and players only. The names are
+ * the tournament rules' own: a format says which cards are allowed, and a match is the games played between decks.
+ */
 export function MatchBar({ model, lobby, actions, preview, event }: {
   model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; event?: ComponentChildren;
 }) {
@@ -245,9 +262,10 @@ export function MatchBar({ model, lobby, actions, preview, event }: {
   return (
     <div class="match-bar">
       <div class="fields">
-        <Field name="Game"><GameMenu lobby={lobby} actions={actions} /></Field>
-        {!lim && lobby.format === 'Constructed' && <Field name="Cards"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
+        <Field name="Mode"><GameMenu lobby={lobby} actions={actions} /></Field>
+        {!lim && lobby.format === 'Constructed' && <Field name="Format"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
         <Field name="Players" grow={!!lim}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        {!lim && <Field name="Match"><MatchLength lobby={lobby} actions={actions} /></Field>}
         {!lim && <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>}
       </div>
       {event}
