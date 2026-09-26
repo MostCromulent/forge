@@ -44,12 +44,6 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
           {online && state && state.log.length > 0 && <button onClick={() => setLog(!log)}>Draft log</button>}
           {online
             ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>Back to the table</button>
-            : leaving
-            ? <>
-                <span class="muted">Leave the draft? It will not be saved.</span>
-                <button onClick={() => setLeaving(false)}>Keep drafting</button>
-                <button class="danger" onClick={() => actions.draftDiscard()}>Leave</button>
-              </>
             : <button onClick={() => setLeaving(true)}>Leave draft</button>}
         </div>
       </PageHeader>
@@ -64,6 +58,18 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       )}
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
       {log && state && <DraftLog lines={state.log} close={() => setLog(false)} />}
+      {leaving && (
+        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
+          <div class="dialog" role="alertdialog" aria-label="Leave the draft">
+            <h3>Leave the draft?</h3>
+            <p class="hint">Your picks so far will not be saved.</p>
+            <div class="actions">
+              <button onClick={() => setLeaving(false)}>Keep drafting</button>
+              <button class="danger" onClick={() => actions.draftDiscard()}>Leave</button>
+            </div>
+          </div>
+        </div>
+      )}
       {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
   );
