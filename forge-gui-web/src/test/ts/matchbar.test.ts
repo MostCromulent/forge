@@ -25,11 +25,11 @@ describe('lowering the player count', () => {
   });
 });
 
-describe("a game's mark in the Mode menu", () => {
-  // Fails if the mark loses the plus that says a deck may be bigger, or shows a number for a game that deals its decks
+describe("a game's deck size in the Game menu", () => {
+  // Fails if the size loses the plus that says a deck may be bigger, or shows a number for a game that deals its decks
   it('reads the deck size from the first fact', () => {
-    expect(deckMark(format(['60+ cards', 'Life 20']))).toBe('60+');
-    expect(deckMark(format(['100 cards, one of each']))).toBe('100');
-    expect(deckMark(format(['No deck to build: 60 basic lands']))).toBe('–');
+    expect(deckMark(format(['60+ cards', 'Life 20']))).toBe('60+ cards');
+    expect(deckMark(format(['100 cards, one of each']))).toBe('100 cards');
+    expect(deckMark(format(['No deck to build: 60 basic lands']))).toBe('no deck');
   });
 });

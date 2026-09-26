@@ -53,11 +53,20 @@ const LIMITED: (Format & { kind: 'draft' | 'sealed' })[] = [
     facts: ['40 cards from your pool', 'Life 20'], play: 'Each player plays the deck they built from their own pool.' },
 ];
 
-/** A game's deck size in a few characters, read from its first fact: "60+", "100", or a dash when the deck is dealt. */
+/** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
 export function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
-  return size ?? '–';
+  return size ? `${size} cards` : 'no deck';
 }
+
+/** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
+const GROUP_ICONS: Record<string, ComponentChildren> = {
+  Constructed: <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>,
+  Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
+  Other: <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><circle cx="5.7" cy="5.7" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="10.3" cy="10.3" r="1.3" fill="currentColor" stroke="none" /></svg>,
+  Limited: <svg viewBox="0 0 16 16"><path d="M4 2h8l1 3v9H3V5z" /><path d="M3 5h10" /></svg>,
+};
 
 /**
  * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
@@ -96,7 +105,8 @@ function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
                   <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
                     onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
                     onClick={() => pick(f, close)}>
-                    <i class="game-mark">{deckMark(f)}</i><span class="game-name">{f.name}</span>
+                    <i class="game-icon" aria-hidden="true">{GROUP_ICONS[f.group]}</i>
+                    <span class="game-name">{f.name}</span><span class="game-size">{deckMark(f)}</span>
                   </button>
                 ))}
               </div>
