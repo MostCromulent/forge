@@ -37,8 +37,6 @@
 #match.side-folded .side-toggle { writing-mode: vertical-rl; padding: 10px 4px; border-radius: 6px 0 0 6px; }
 /* The chat is drawn into a holder of its own; its log and input are the panel's rows */
 #match-chat { display: flex; flex: 1; min-height: 0; }
-/* The stack panel floats over the right of the board, so the rows give it room rather than sliding under it */
-#match.stack-open .battlefield { padding-right: calc(var(--stack-w) + 36px); }
 #hand { grid-area: hand; }
 /* Two or three opponents share the top half in columns, in the order they sit */
 #opponent.many { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; min-height: 0; }

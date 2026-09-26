@@ -57,7 +57,6 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
-  // Before the seats, as an open stack narrows the rows and the cards are sized to fit them
   renderStack(model, events);
   renderOpponents(byId('opponent'), model, onField, actions, select);
   renderSeat(byId('me'), model, me(model), onField, actions, select);

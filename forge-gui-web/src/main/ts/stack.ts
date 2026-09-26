@@ -49,8 +49,6 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   const collapsed = ui.stackCollapsed;
   root.hidden = items.length + awaiting.size === 0;
   root.classList.toggle('collapsed', collapsed);
-  // The battlefield rows have no idea the panel is there, so the board is told to keep clear of it
-  byId('match').classList.toggle('stack-open', !root.hidden && !collapsed);
   q(root, '.count').textContent = String(items.length + awaiting.size);
   const collapse = q(root, '.collapse');
   collapse.textContent = collapsed ? 'Show' : 'Hide';
