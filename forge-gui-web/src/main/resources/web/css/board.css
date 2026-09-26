@@ -84,6 +84,10 @@
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
    the hand rather than floating in the middle of its half, so the two read as one side of the table. */
 #me .battlefield { flex-direction: column-reverse; align-self: end; }
+/* Each battlefield keeps room on the side towards the phase pill, held always so the board never jumps: an attacker
+   steps into it, and its chevron with it, without reaching the pill. Your rows already carry some of it above them. */
+#opponent .battlefield { padding-bottom: calc(var(--glow) + 20px); }
+#me .battlefield { padding-top: calc(var(--glow) + 6px); }
 /* A tapped card lies on its side at 90% size, so it is (0.9 × height − width) / 2 wider each side than its box,
    11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
    would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
@@ -310,11 +314,12 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .pip.now { width: 9px; background: var(--on-brass); }
 #phase-strip .pip.on { background: var(--select); }
 /* Inside the brass step every pip is dark on light, as a tint of the brass barely shows: a filled circle for a step
-   gone, an open one for a step to come, and a bar for this one. The stops are left to the grid under the pill. */
+   gone or under way, an open one for a step to come, so the last filled one is where the game is. The stops are left
+   to the grid under the pill. */
 #phase-strip .current .pip { width: 5px; height: 5px; border-radius: 50%; }
 #phase-strip .current .pip, #phase-strip .current .pip.on { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-brass) 75%, transparent); }
 #phase-strip .current .pip.past, #phase-strip .current .pip.past.on { background: color-mix(in srgb, var(--on-brass) 75%, transparent); box-shadow: none; }
-#phase-strip .current .pip.now, #phase-strip .current .pip.now.on { width: 10px; border-radius: 3px; background: var(--on-brass); box-shadow: none; }
+#phase-strip .current .pip.now, #phase-strip .current .pip.now.on { width: 5px; background: var(--on-brass); box-shadow: none; }
 #phase-strip .pip.marked { box-shadow: 0 0 0 1.5px var(--select); }
 #phase-strip .current .pip.marked { box-shadow: 0 0 0 1.5px var(--on-brass); }
 /* Beside the pill, not in it, so the pill keeps its place as the chip comes and goes */

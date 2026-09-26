@@ -50,9 +50,22 @@ export function initOverlay(schedule: () => void): void {
 export function drawOverlay(model: Model): void {
   drawn = model;
   paint(model);
-  // Cards animate into place (tapping, attacking), so measure again once they settle
+  // Cards animate into place (tapping, attacking, flying in from another zone), so measure again until they settle
   clearTimeout(settleTimer);
-  settleTimer = setTimeout(() => paint(model), 200);
+  const settle = () => {
+    paint(model);
+    if (boardMoving()) settleTimer = setTimeout(settle, 120);
+  };
+  settleTimer = setTimeout(settle, 200);
+}
+
+/** Whether a card on the board is still on its way somewhere. Endless effects, such as a breathing glow, never settle. */
+function boardMoving(): boolean {
+  return document.getAnimations().some(a => {
+    const target = (a.effect as KeyframeEffect | null)?.target;
+    return a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity
+      && target instanceof Element && !!target.closest('#match .card, #match .slot');
+  });
 }
 
 function paint(model: Model): void {
@@ -145,12 +158,18 @@ function placeCharges(keys: Set<number>): void {
     const width = card.offsetWidth * .66;
     // The drawing leaves 17 of its 50 units empty below the chevron, for the glow; the chevron itself stands a
     // twentieth of the card's width clear of it
-    const sink = width * 50 / 64 * 17 / 50 - card.offsetWidth * .05;
+    const height = width * 50 / 64;
+    const sink = height * 17 / 50 - card.offsetWidth * .05;
     const down = !!card.closest('#opponent');
+    // A crowded battlefield scrolls, and its front row can sit at the very edge; the chevron stays inside the
+    // battlefield's box then, rather than spilling over the phase pill beyond it
+    const field = card.closest('.battlefield')?.getBoundingClientRect();
     mark.classList.toggle('down', down);
     mark.style.width = `${width}px`;
     mark.style.left = `${r.left + r.width / 2}px`;
-    mark.style.top = `${down ? r.bottom - sink : r.top + sink}px`;
+    mark.style.top = `${down
+      ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * 34 / 50)
+      : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * 34 / 50)}px`;
   }
 }
 
