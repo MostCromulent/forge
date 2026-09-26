@@ -22,7 +22,7 @@ interface Timing {
 }
 
 // Tuned on a 1440 by 900 board; a seat's portrait runs the same beats, shorter and without the slow motion
-const FINAL: Timing = { fly: 0.9, crack: 1.3, brk: 2.0, burst: 2.12, title: 3.05, end: 5.6 };
+const FINAL: Timing = { fly: 0.65, crack: 1.3, brk: 2.0, burst: 2.12, title: 3.05, end: 5.6 };
 const SEAT: Timing = { fly: 0.35, crack: 0.45, brk: 0.95, burst: 1.02, title: Infinity, end: 3.4 };
 const GRAVITY = 1500;
 
