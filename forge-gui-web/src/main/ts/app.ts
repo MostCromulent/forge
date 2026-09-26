@@ -16,6 +16,7 @@ import { initSide, renderSide, renderSky } from './side';
 import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
+import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
@@ -52,6 +53,7 @@ const wire = createActions(send);
 initAutoPass((id, go) => wire.answer(id, go), () => schedule());
 const actions: Actions = {
   ...wire,
+  ok: () => afterBlockDrags(() => wire.ok()),
   // An answered question leaves the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
     model.requests.delete(id);
@@ -93,6 +95,7 @@ initNotices((notice, view, label) => {
 initDetail(actions);
 initStack(actions);
 initOverlay(schedule);
+initBlockDrag(actions);
 initLog();
 initSide();
 initSettings(actions.setSetting, () => {
@@ -399,5 +402,6 @@ function render(): void {
   renderMatch(model, actions, events);
   renderPrompt(model, actions);
   renderDetail(model);
+  renderBlockDrag(model);
   drawOverlay(model);
 }

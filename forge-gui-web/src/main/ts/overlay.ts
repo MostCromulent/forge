@@ -101,6 +101,8 @@ function paint(model: Model): void {
   // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
   const atFace = atLoneFace(model);
   placeCharges(chargingAtPlayer(model));
+  // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
+  drawDrag(ctx);
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
@@ -136,6 +138,25 @@ function paint(model: Model): void {
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
+
+/** A block being dragged out: from the blocker to the attacker under the pointer, or to the pointer itself. */
+let drag: { from: HTMLElement; to: HTMLElement | Point } | null = null;
+
+export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point | null): void {
+  const next = from && to ? { from, to } : null;
+  if (!next && !drag) return;
+  drag = next;
+  if (drawn) paint(drawn);
+}
+
+function drawDrag(ctx: CanvasRenderingContext2D): void {
+  if (!drag) return;
+  if (drag.to instanceof HTMLElement) {
+    ribbon(ctx, drag.from, drag.to, KINDS.block, 0, 1);
+  } else {
+    arrow(ctx, edge(drag.from, drag.to, 2), drag.to, KINDS.block);
+  }
+}
 
 // The attack mark's drawing (board.css) is 64 by 54 units; its two chevrons fill it from 16 units below the top to 13.7
 // above the bottom, and the rest is room for their glow
@@ -267,7 +288,10 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   const target = spread(center(fromEl), center(toEl), index, count);
   const a = edge(fromEl, target, 2);
   const b = edge(toEl, a, 6);
-  const end = spread(a, b, index, count);
+  arrow(ctx, a, spread(a, b, index, count), kind);
+}
+
+function arrow(ctx: CanvasRenderingContext2D, a: Point, end: Point, kind: ArrowKind): void {
   // A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line
   const bow = 0.34;
   const bend = { x: (a.x + end.x) / 2 + (end.y - a.y) * bow, y: (a.y + end.y) / 2 - (end.x - a.x) * bow };

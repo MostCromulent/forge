@@ -585,6 +585,11 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 @keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 html[data-motion="reduced"] .charge::before { animation: none; }
 .slot.charging > .card.attacking { outline: none; }
+/* While blockers are declared a creature can be dragged onto an attacker, so a touch on one drags rather than
+   scrolls, and the card preview stays out of the way of the drop */
+#match.declaring-blocks #me .battlefield .card { touch-action: none; }
+body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
+body.dragging-block #zoom { display: none; }
 .card.blocking { outline: 2px dashed var(--attack); }
 /* Damage on a creature: the card jolts and the amount is thrown off it */
 .card.struck { animation: card-struck .34s ease-out; }
