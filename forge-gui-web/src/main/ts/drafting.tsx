@@ -40,7 +40,6 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         <span class="limited-title">Booster draft</span>
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
         <div class="head-right">
-          {state && <TableMenu state={state} faces={faces} />}
           <HeadControls />
           {online && state && state.log.length > 0 && <button onClick={() => setLog(!log)}>Draft log</button>}
           {online
@@ -156,7 +155,10 @@ function Pack({ state, faces, actions }: { state: DraftState; faces: string[]; a
         <span class="chip">Passing {direction > 0 ? 'right' : 'left'} to {seat(to)}</span>
         {next !== null && <span class="chip">Next from {seat(next)}</span>}
         {depths[busiest] > 2 && <span class="chip">{busiest === 0 ? 'You are' : `${state.seats[busiest].name} is`} holding {depths[busiest]} packs</span>}
-        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'chip clock low' : 'chip clock'}>{clockText(left)}</span>}
+        <span class="head-end">
+          {left > 0 && <span class={left < CLOCK_LOW_MS ? 'chip clock low' : 'chip clock'}>{clockText(left)}</span>}
+          <TableMenu state={state} faces={faces} />
+        </span>
       </div>
       <div class="cat-grid">
         {state.cards.map((card, i) => (
