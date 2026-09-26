@@ -19,7 +19,7 @@ export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' |
   | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'
   | 'IsCommander' | 'ExiledWith'>;
 
-export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'BasePower' | 'BaseToughness' | 'Loyalty'
+export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'OriginalManaCost' | 'Power' | 'Toughness' | 'BasePower' | 'BaseToughness' | 'Loyalty'
   | 'Defense' | 'Keywords' | 'Colors' | 'RulesText'>;
 
 export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'AvatarIndex' | 'AvatarCardImageKey'

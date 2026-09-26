@@ -61,6 +61,8 @@
   --slot-gap: 3px;
   /* How far a highlighted card's glow reaches past its edge: a scrolling box holds this much room, or cuts it off */
   --glow: 10px;
+  /* A cost that is not the one printed on the card */
+  --cost-changed: var(--zone-command);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }

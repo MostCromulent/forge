@@ -73,7 +73,11 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');
   // A commander waiting in the command zone costs its tax on top, so the cost to cast it says so
   const tax = card.Zone === 'Command' ? commanderTax(deref(model, card.Owner) as PlayerView | undefined, card) : 0;
-  setCost(q(el, '.cost-badge'), visible ? withTax(state.ManaCost ?? '', tax) : '');
+  const badge = q(el, '.cost-badge');
+  setCost(badge, visible ? withTax(state.ManaCost ?? '', tax) : '', true);
+  // A perpetual effect or a commander's tax has changed what the card costs from what is printed on it
+  const perpetual = state.OriginalManaCost !== undefined && (state.ManaCost ?? '') !== state.OriginalManaCost;
+  badge.classList.toggle('changed', visible && (tax > 0 || perpetual));
   q(el, '.type').textContent = type;
   el.dataset.frame = visible ? frameColour(state.Colors ?? 0, type) : '';
   const pt = q(el, '.pt');
@@ -172,10 +176,19 @@ function withTax(cost: string, tax: number): string {
   return generic ? `{${Number(generic[1]) + tax}}${cost.slice(generic[0].length)}` : `{${tax}}${cost}`;
 }
 
-function setCost(el: HTMLElement, text: string): void {
+function setCost(el: HTMLElement, text: string, pips = false): void {
   if (el.dataset.text !== text) {
     el.dataset.text = text;
     setSymbolText(el, text);
+    // An image cannot carry the light drawn round a changed cost, so each symbol gets a box of its own to hold it
+    if (pips) {
+      for (const sym of [...el.children]) {
+        const pip = document.createElement('span');
+        pip.className = 'pip';
+        sym.replaceWith(pip);
+        pip.append(sym);
+      }
+    }
   }
 }
 

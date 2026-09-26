@@ -74,6 +74,18 @@
     </feTurbulence>
     <feDisplacementMap in="SourceGraphic" in2="n" scale="18" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
+  <filter id="cost-warp-a" x="-60%" y="-60%" width="220%" height="220%">
+    <feTurbulence type="turbulence" baseFrequency="0.16 0.19" numOctaves="2" seed="2" result="n">
+      <animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite" values="0.16 0.19; 0.13 0.21; 0.11 0.19; 0.13 0.16; 0.16 0.19"/>
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
+  <filter id="cost-warp-b" x="-60%" y="-60%" width="220%" height="220%">
+    <feTurbulence type="turbulence" baseFrequency="0.13 0.21" numOctaves="2" seed="5" result="n">
+      <animate attributeName="baseFrequency" dur="9s" begin="-3s" repeatCount="indefinite" values="0.16 0.19; 0.13 0.21; 0.11 0.19; 0.13 0.16; 0.16 0.19"/>
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="n" scale="7" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
 </svg>
 <script type="module" src="js/app.js"></script>
 </body>

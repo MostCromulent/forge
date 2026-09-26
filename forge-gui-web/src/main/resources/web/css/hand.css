@@ -11,6 +11,18 @@
 #hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.15); width: calc(var(--hand-w) * 0.15); margin: 0; }
 /* The hovered card grows 1.8 times; its cost grows by only a fifth, so the symbols stay the size of a label */
 #hand .card:hover .cost-badge { transform: scale(.67); }
+#hand .card .cost-badge .pip { position: relative; display: flex; border-radius: 50%; }
+/* A cost changed from the printed one rings each of its symbols, as a card from another zone is ringed: a still
+   band, and light beyond it moved by a finer version of the zone rim's distortion, sized for a symbol */
+#hand .card .cost-badge.changed { gap: 3px; }
+#hand .card .cost-badge.changed .pip { outline: 1.5px solid var(--cost-changed); outline-offset: 1px;
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--cost-changed) 40%, transparent); }
+#hand .card .cost-badge.changed .pip::before {
+  content: ''; position: absolute; inset: -4px; z-index: -1; border-radius: 50%; pointer-events: none; mix-blend-mode: plus-lighter;
+  border: 2.5px solid color-mix(in srgb, var(--cost-changed) 50%, transparent); filter: url(#cost-warp-a) blur(1.2px);
+}
+#hand .card .cost-badge.changed .pip:nth-child(2n)::before { filter: url(#cost-warp-b) blur(1.2px); }
+html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filter: blur(2px); }
 /* Revealed to other players: a red eye in the top-left corner, on the row the cost sits on */
 /* Both marks are the hand's alone; a card anywhere else never shows them */
 .card .seen, .card .owned-by { display: none; }
