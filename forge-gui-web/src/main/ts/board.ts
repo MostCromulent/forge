@@ -13,6 +13,7 @@ import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
 import { forgetPictures } from './cards';
+import { artUrl } from './sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
@@ -559,7 +560,17 @@ function takeHit(amount: number): void {
  * The word goes on the badge because a bare "+6" on a card reads as a counter or a pump long before it reads as
  * a tax, and this is a number a player meets only a few times in a game.
  */
-// The rest of the command zone: the monarch, the initiative and emblems as round tokens, and avatars as cards.
+const STAR_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1l1.9 4.2 4.6.5-3.4 3.1 1 4.5L8 11l-4.1 2.3 1-4.5L1.5 5.7l4.6-.5z"/></svg>';
+const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 1h10v2l-3.6 5L13 13v2H3v-2l3.6-5L3 3zm2 2l3 4 3-4z"/></svg>';
+
+/** What a command zone effect is called on its plaque: an emblem or a lasting designation by name, else an effect. */
+function effectKind(state: Partial<CardStateView>): { label: string; lasting: boolean } {
+  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: 'Emblem', lasting: true };
+  const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
+  return named ? { label: named[1], lasting: true } : { label: 'Effect', lasting: false };
+}
+
+// The rest of the command zone: the monarch, the initiative and emblems as art plaques, and avatars as cards.
 // Commanders and signature spells have the Command tile among the zones.
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
@@ -572,8 +583,21 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       const el = document.createElement('div');
       el.className = tile ? 'cmd-tile' : 'emblem';
       el.innerHTML = tile ? '<img alt="" draggable="false"><span class="band"></span>'
-        : '<img alt="" draggable="false"><span class="initials"></span><span class="tax"></span>';
-      noImageOnError(el, q<HTMLImageElement>(el, 'img'));
+        : '<img alt="" draggable="false"><span class="initials"></span><span class="band"><i></i><b></b></span><span class="tax"></span>';
+      const img = q<HTMLImageElement>(el, 'img');
+      if (tile) {
+        noImageOnError(el, img);
+      } else {
+        // The art alone is fetched as a card-art sleeve's is; a card with none has its art box cut from the whole card
+        img.addEventListener('error', () => {
+          if (!el.classList.contains('whole') && el.dataset.zoom) {
+            el.classList.add('whole');
+            img.src = el.dataset.zoom;
+          } else {
+            el.classList.add('noimg');
+          }
+        });
+      }
       el.onclick = () => select(el, false);
       hoverable(el);
       return el;
@@ -581,9 +605,16 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
     (el, card) => {
       const state = stateOf(model, card);
       const src = cardImageSrc(model, card);
-      setImage(q<HTMLImageElement>(el, 'img'), src);
-      el.classList.toggle('noimg', !src);
       el.dataset.zoom = src;
+      if (el.classList.contains('cmd-tile')) {
+        setImage(q<HTMLImageElement>(el, 'img'), src);
+        el.classList.toggle('noimg', !src);
+      } else if (el.dataset.art !== (state.ImageKey ?? '')) {
+        el.dataset.art = state.ImageKey ?? '';
+        el.classList.remove('whole', 'noimg');
+        setImage(q<HTMLImageElement>(el, 'img'), src && state.ImageKey ? artUrl(state.ImageKey) : '');
+        el.classList.toggle('noimg', !src);
+      }
       const tax = commanderTax(player, card);
       el.title = tax > 0 ? `${state.Name ?? ''} — costs ${tax} more to cast from here` : state.Name ?? '';
       el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
@@ -593,6 +624,9 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       }
       const words = (state.Name ?? '').replace(/^(The|Emblem) /, '').split(/[\s-]+/).filter(w => /^\w/.test(w));
       q(el, '.initials').textContent = words.map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const kind = effectKind(state);
+      q(el, '.band i').innerHTML = kind.lasting ? STAR_ICON : HOURGLASS_ICON;
+      q(el, '.band b').textContent = kind.label;
       q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : '';
     });
 }

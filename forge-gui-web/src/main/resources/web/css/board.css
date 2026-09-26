@@ -294,15 +294,25 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .player-counter { font-size: 12px; font-weight: 600; background: var(--surface-2); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 8px; }
 .player-counters:empty, .emblems:empty { display: none; }
 .emblems { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.emblem { width: 54px; height: 54px; border-radius: 50%; overflow: hidden; border: 2px solid var(--accent-2); background: var(--surface-2); display: grid; place-items: center; cursor: pointer; position: relative; }
-.emblem img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 22%; transform: scale(1.8); }
+/* An emblem or effect is a small framed plaque of its card's art, with what it is along its foot */
+.emblem { width: 74px; height: 58px; border-radius: 6px; overflow: hidden; background: var(--surface-2); display: grid; place-items: center; cursor: pointer; position: relative;
+  box-shadow: 0 0 0 1.5px var(--accent-2), 0 0 0 2.5px color-mix(in srgb, var(--accent-2) 40%, #000), 0 4px 10px #0009; }
+.emblem img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; }
+/* The whole card, when no art alone could be had, sized and shifted so only its art box shows */
+.emblem.whole img { inset: auto; left: -10.2%; top: -22%; width: 120.5%; height: auto; object-fit: fill; }
 .emblem .initials { display: none; font-weight: 700; font-size: 16px; }
 .emblem.noimg img { display: none; }
 .emblem.noimg .initials { display: block; }
+.emblem .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 4px 2px; display: flex; gap: 3px; align-items: center; justify-content: center;
+  font: 800 8px/1 system-ui, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: color-mix(in srgb, var(--accent-2) 60%, #fff);
+  background: linear-gradient(180deg, transparent, #000d 50%); }
+.emblem .band i { display: flex; width: 9px; height: 9px; }
+.emblem .band svg { width: 100%; height: 100%; }
 /* What a commander costs beyond its printed cost. The word is there because a bare "+6" reads as a counter or a
-   pump long before it reads as a tax. Inside the circle, since the token clips whatever leaves it. */
+   pump long before it reads as a tax. It takes the band's place, since the plaque clips whatever leaves it. */
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
 .emblem .tax:empty { display: none; }
+.emblem:has(.tax:not(:empty)) .band { display: none; }
 /* A commander, signature spell or avatar is a card the player reads or activates, so it is drawn as a small card */
 .cmd-tile { width: 52px; height: 72px; border-radius: 5px; overflow: hidden; position: relative; cursor: pointer; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
 .cmd-tile img { width: 100%; height: 100%; object-fit: cover; }
