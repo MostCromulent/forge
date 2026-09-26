@@ -1533,6 +1533,8 @@ export interface TrackedProps {
   OracleName?: string;
   Power?: number;
   Toughness?: number;
+  BasePower?: number;
+  BaseToughness?: number;
   Loyalty?: string;
   Defense?: string;
   AttractionLights?: number[];

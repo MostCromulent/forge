@@ -66,6 +66,20 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   place(root);
   layout(pile, entries.length);
   renderMenu(model);
+  renderStorm(root, game(model)?.StormCount ?? 0);
+}
+
+/** How many spells have been cast this turn, under the stack where a storm spell will resolve, once there are any. */
+function renderStorm(stack: HTMLElement, count: number): void {
+  let chip = document.getElementById('storm');
+  if (!chip) {
+    chip = Object.assign(document.createElement('div'), { id: 'storm', title: 'Spells cast this turn, which a storm spell copies' });
+    stack.after(chip);
+  }
+  chip.hidden = count <= 0;
+  if (chip.hidden) return;
+  chip.textContent = `Storm ${count}`;
+  chip.style.top = stack.hidden ? '' : `${stack.getBoundingClientRect().bottom + 8}px`;
 }
 
 // The panel hangs from the top of the board and stops short of the hand

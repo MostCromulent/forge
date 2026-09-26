@@ -132,8 +132,15 @@ html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > :is(#me,
 .group > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
 /* Attachments sit behind their host, each showing a strip above the one in front of it */
 .slot > .card:last-child { z-index: 1; }
-.slot { position: relative; padding-top: calc(var(--attached, 0) * 28px); }
-.slot > .card:not(:last-child) { position: absolute; top: calc(var(--under) * 28px); left: 0; }
+/* What is attached to a card fans out behind it, each a step up and to the left of the next, as Forge desktop lays
+   it; the step is a share of the card, so a crowded board's smaller cards keep the same look. battlefield.ts counts
+   the room the fan takes when it sizes the cards */
+.battlefield { --fan: .12; }
+.slot { position: relative; padding-top: calc(var(--attached, 0) * var(--card-h) * var(--fit, 1) * var(--fan));
+  padding-left: calc(var(--attached, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }
+/* Each card behind the host is a layer of its own, so its P/T, badges and icons stay behind the host with it */
+.slot > .card:not(:last-child) { position: absolute; z-index: 0; top: calc(var(--under) * var(--card-h) * var(--fit, 1) * var(--fan));
+  left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .slot > .card:not(:last-child):hover { z-index: 6; }
 .player { display: grid; gap: 6px; justify-items: center; }
 /* The local player's zone tiles hang from the divider, clear of the prompt panel in the corner */
@@ -409,6 +416,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #stack .head .count { min-width: 18px; text-align: center; border-radius: 9px; background: var(--surface-2); color: var(--text); letter-spacing: 0; font-weight: 700; }
 #stack .head .collapse { margin-left: auto; font-size: 11px; padding: 2px 8px; letter-spacing: 0; text-transform: none; }
 #stack .pile { position: relative; --stack-room: 400px; }
+#storm { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; padding: 3px 12px; border-radius: 999px; background: var(--surface);
+  border: 1px solid var(--line); box-shadow: 0 6px 18px #0008; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
 #stack.collapsed .pile { display: none; }
 .stack-item { position: absolute; left: 0; width: var(--stack-w); height: calc(var(--stack-w) * 1.4); border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 6px 18px #000a; transition: top .15s ease, transform .15s ease, filter .3s ease; cursor: default; }
 .stack-item img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
@@ -578,10 +587,16 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
   font-size: calc(var(--u) * 8.5); line-height: 1.2; color: #d9dee5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }
+/* A card a permanent holds in exile sits under it like an attachment, as a faded ghost of itself edged in exile's
+   colour; dimmed rather than brightened, so its frame stays as dark as its holder's */
+.card.ghost { box-shadow: 0 0 0 1px var(--zone-exile); }
+.card.ghost > img { opacity: .55; filter: grayscale(.6); }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
 .card .pt i { font-style: normal; }
-.card .pt .hurt { color: #ff7a59; }
+.card .pt .hurt, .card .pt [data-shift="down"] { color: #ff7a59; }
+/* Blue above what the card is printed with, orange-red below: apart in lightness and on the blue-orange axis */
+.card .pt [data-shift="up"] { color: #7cc8ff; }
 .card .badges { position: absolute; left: 4px; top: 4px; font-size: 10px; background: #000c; border-radius: 4px; padding: 0 3px; }
 .card .badges:empty, .card .pt:empty { display: none; }
 /* The bottom-left corner holds everything a permanent is carrying: the keywords that decide a block, the shield

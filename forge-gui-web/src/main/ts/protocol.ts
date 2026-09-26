@@ -17,16 +17,16 @@ export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' |
   | 'PhasedOut' | 'Token' | 'Cloned' | 'Damage' | 'IsRingBearer' | 'Counters' | 'EntityAttachedTo' | 'Zone'
   | 'ShieldCount' | 'MustBlockCards' | 'BlockAdditional' | 'BlockAny'
   | 'ClassLevel' | 'CurrentRoom' | 'RingLevel' | 'Sprocket' | 'AttractionLights' | 'Intensity' | 'PlayerMayLook'
-  | 'IsCommander'>;
+  | 'IsCommander' | 'ExiledWith'>;
 
-export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'Loyalty'
+export type CardStateView = View<'Name' | 'ImageKey' | 'Type' | 'ManaCost' | 'Power' | 'Toughness' | 'BasePower' | 'BaseToughness' | 'Loyalty'
   | 'Defense' | 'Keywords' | 'Colors' | 'RulesText'>;
 
 export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'AvatarIndex' | 'AvatarCardImageKey'
   | 'SleeveIndex' | 'Counters' | 'Commander' | 'CommanderDamage' | 'CommanderCast' | 'Mana' | 'HasLost' | PlayerZone>;
 
 export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack' | 'CombatView' | 'GameOver' | 'MatchOver'
-  | 'WinningPlayerName' | 'PlanarPlayer'>;
+  | 'WinningPlayerName' | 'PlanarPlayer' | 'StormCount'>;
 
 export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' | 'Description' | 'SubInstance'
   | 'TargetCards' | 'TargetPlayers'>;

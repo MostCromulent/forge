@@ -47,8 +47,12 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   for (const [name, list] of Object.entries(groups)) {
     reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select, charging));
   }
-  fitCards(root, groups.lands.length + groups.support.length,
-    groups.creatures.length + groups.tokens.length + groups.far.length);
+  const row = (list: Slot[]): Row => ({
+    slots: list.length,
+    steps: list.reduce((n, s) => n + s.attached.length, 0),
+    depth: list.reduce((n, s) => Math.max(n, s.attached.length), 0),
+  });
+  fitCards(root, row([...groups.lands, ...groups.support]), row([...groups.creatures, ...groups.tokens, ...groups.far]));
 }
 
 /** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */
@@ -61,10 +65,12 @@ const MAX_FIT = 1.4;
  * whole rather than scrolling its oldest permanents out of sight. Measured against the seat, whose size the page
  * grid fixes, so the answer cannot feed back into itself the way measuring the cards themselves would.
  */
-function fitCards(root: HTMLElement, support: number, creatures: number): void {
+function fitCards(root: HTMLElement, support: Row, creatures: Row): void {
   const field = q(root, '.battlefield');
   const style = getComputedStyle(root);
   const h = parseFloat(style.getPropertyValue('--card-h')) || 123;
+  const w = parseFloat(style.getPropertyValue('--card-w')) || 88;
+  const fan = parseFloat(getComputedStyle(field).getPropertyValue('--fan')) || 0;
   const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
   // The field's padding is room for glows and for the stack panel, not for cards
   const pad = getComputedStyle(field);
@@ -75,20 +81,30 @@ function fitCards(root: HTMLElement, support: number, creatures: number): void {
   const height = root.clientHeight - header - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
   // A slot with its room either side is as wide as a tapped card, which lies on its side at 90% (board.css), plus
   // its air. An empty row still keeps 60% of a card's height (.row's min-height)
-  const lines = (count: number, fit: number) =>
-    count === 0 ? 0.6 : Math.ceil(count / Math.max(1, Math.floor(width / ((h * 0.9 + 2 * air) * fit))));
+  // A fan of attachments widens its slot by a step for each card behind the host, and heightens the row by the
+  // deepest fan in it
+  const lines = (row: Row, fit: number) =>
+    row.slots === 0 ? 0.6 : Math.ceil((row.slots * (h * 0.9 + 2 * air) + row.steps * w * fan) * fit / width);
+  const tall = (row: Row, fit: number) => (lines(row, fit) + row.depth * fan) * h * fit;
   // 32px is the two rows' room above their cards, and 24px the gap between them with some to spare: a board filled
   // to the pixel scrolls on the next rounding and cuts off its top row
   // A row stays on one line, as a line that wraps breaks up the lands and the creatures; the cards shrink instead,
   // and only past the smallest size do they wrap
   const fits = (fit: number) => lines(support, fit) <= 1 && lines(creatures, fit) <= 1
-    && (lines(support, fit) + lines(creatures, fit)) * h * fit + 32 + 24 <= height;
+    && tall(support, fit) + tall(creatures, fit) + 32 + 24 <= height;
   let fit = MAX_FIT;
   while (fit > MIN_FIT && !fits(fit)) fit -= 0.02;
   fit = Math.max(MIN_FIT, fit);
   root.style.setProperty('--fit', fit.toFixed(2));
   // Below this the keyword icons are too small to tell apart, so the board drops them and keeps the art
   field.classList.toggle('cramped', fit < 0.72);
+}
+
+/** A row's slots, the attachments fanned behind them, and the most behind any one, which decide the room it needs. */
+interface Row {
+  slots: number;
+  steps: number;
+  depth: number;
 }
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
@@ -112,6 +128,14 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
     const list = under.get(host) ?? [];
     list.push(c);
     under.set(host, list);
+  }
+  // A card a permanent holds in exile, such as an Oblivion Ring's, sits under it as an attachment would, as a ghost
+  for (const obj of model.objects.values()) {
+    const held = obj as CardView;
+    const holder = held.Zone === 'Exile' && held.ExiledWith ? byKey.get(held.ExiledWith.ref) : undefined;
+    if (!holder) continue;
+    const host = rootOf(holder).$key;
+    under.set(host, [...(under.get(host) ?? []), held]);
   }
   const hosts = cards.filter(c => !hostOf(c));
   const marks = [
@@ -185,6 +209,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     updateCard(c, model, card);
     // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
     c.classList.toggle('sickness', isSick(model, card));
+    c.classList.toggle('ghost', card.Zone === 'Exile');
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));

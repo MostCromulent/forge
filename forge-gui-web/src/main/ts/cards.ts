@@ -92,9 +92,14 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     void pt.offsetWidth;
     pt.classList.add('changed');
   }
-  q(el, '.pt-p').textContent = power;
+  // Above or below what the card is on its own, as a pump, a counter or a shrink leaves it; damage counts as below
+  const shift = (now: number, base: number | undefined) => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
+  const p = q(el, '.pt-p');
+  p.textContent = power;
+  p.dataset.shift = creature ? shift(state.Power ?? 0, state.BasePower) : '';
   const hurt = q(el, '.pt-t');
   hurt.textContent = toughness;
+  hurt.dataset.shift = creature ? shift((state.Toughness ?? 0) - damage, state.BaseToughness) : '';
   hurt.classList.toggle('hurt', creature && damage > 0);
   pt.classList.toggle('on', !!(power + toughness));
   showDamage(el, damage);
