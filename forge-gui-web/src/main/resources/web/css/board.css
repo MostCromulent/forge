@@ -81,6 +81,11 @@
 #out-banner b { font-size: 14px; }
 #out-banner p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
 @keyframes out-in { from { opacity: 0; transform: translate(calc(-50% - var(--side-w) / 2), -10px); } }
+/* A seat's card size (battlefield.ts) eases to its new value over a card's flight, so a board that fills up or empties
+   resizes as the card travels rather than jumping when it lands */
+@property --fit { syntax: '<number>'; inherits: true; initial-value: 1; }
+.seat { transition: --fit .6s cubic-bezier(.2,.7,.3,1); }
+html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > .seat { transition: none; }
 .seat { display: grid; grid-template-columns: var(--seat-w) 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
@@ -496,7 +501,7 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 #zoom .detail .pt:empty, #zoom .detail .hint:empty, #zoom .detail .from:empty { display: none; }
 #zoom .detail .hint { color: var(--muted); font-size: 11px; }
 /* The end of a game: the board recedes behind the breaking portrait, and the result is said over it */
-#match > :not(#game-over) { transition: filter .9s cubic-bezier(.3,.6,.3,1); }
+#match > :not(#game-over) { transition: filter .9s cubic-bezier(.3,.6,.3,1), --fit .6s cubic-bezier(.2,.7,.3,1); }
 #match.ending > :not(#game-over) { filter: grayscale(.75) brightness(.42) blur(3px); }
 /* A card preview left open by the pointer would sit over the breaking portrait */
 #match.ending #zoom { display: none; }

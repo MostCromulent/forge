@@ -75,7 +75,7 @@ function boardMoving(): boolean {
   return document.getAnimations().some(a => {
     const target = (a.effect as KeyframeEffect | null)?.target;
     return a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity
-      && target instanceof Element && !!target.closest('#match .card, #match .slot');
+      && target instanceof Element && !!target.closest('#match .card, #match .slot, #match .seat');
   });
 }
 
