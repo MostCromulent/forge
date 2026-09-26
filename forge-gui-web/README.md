@@ -6,7 +6,12 @@ open it.
 
 The first half of this page is for players. The second half is for developers.
 
-![A match in progress](docs/match.webp)
+<p>
+  <img src="docs/attack.webp" width="49%" alt="Attacking, with the opponent's blocks and a spell targeting an attacker">
+  <img src="docs/target.webp" width="49%" alt="A spell's targets while it is paid for">
+  <img src="docs/block.webp" width="49%" alt="Blocking an attack">
+  <img src="docs/four.webp" width="49%" alt="A four-player game, attacking two opponents">
+</p>
 
 ## For players
 
@@ -35,7 +40,7 @@ You need Java 17 or newer, and Maven. From the top folder of the Forge repositor
 
 Two windows open: the game, in your browser, and the **server window**.
 
-![The server window](docs/server.webp)
+<img src="docs/server.webp" width="49%" alt="The server window">
 
 The server window starts and stops the server, and shows the links people can use to join. It also shows a graph
 of network traffic, and a log you can copy with **Copy log**.
@@ -50,8 +55,6 @@ playing let you choose Constructed, Draft or Sealed.
 
 A guest joins the host's table and plays there. A guest can't play the computer on their own, change how the table
 is set up, or use dev mode.
-
-![A table with a guest seated](docs/table.webp)
 
 At the table, the bar along the top sets up the match:
 
@@ -78,7 +81,10 @@ change every time Forge starts.
 If someone reloads the page or loses their connection, they go straight back to their seat and the game carries
 on.
 
-![The end of a game](docs/victory.webp)
+<p>
+  <img src="docs/table.webp" width="49%" alt="A table with a guest seated">
+  <img src="docs/victory.webp" width="49%" alt="The end of a game">
+</p>
 
 ### Decks and settings
 
