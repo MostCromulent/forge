@@ -401,7 +401,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #stack .head .collapse { margin-left: auto; font-size: 11px; padding: 2px 8px; letter-spacing: 0; text-transform: none; }
 #stack .pile { position: relative; --stack-room: 400px; }
 #stack.collapsed .pile { display: none; }
-.stack-item { position: absolute; left: 0; width: var(--stack-w); height: calc(var(--stack-w) * 1.4); border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 6px 18px #000a; transition: top .15s ease, transform .15s ease; cursor: default; }
+.stack-item { position: absolute; left: 0; width: var(--stack-w); height: calc(var(--stack-w) * 1.4); border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 6px 18px #000a; transition: top .15s ease, transform .15s ease, filter .3s ease; cursor: default; }
 .stack-item img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
 .stack-item .frame { position: absolute; inset: 0; padding: 8px; font-weight: 700; font-size: 12px; }
 .stack-item.noimg img { display: none; }
@@ -529,7 +529,7 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 @keyframes ending-rise { from { opacity: 0; transform: translateY(10px); } }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
-.card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; flex: none; }
+.card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease; flex: none; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
 .card > img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
 .card .cost-badge { display: none; }
@@ -604,7 +604,8 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    already chosen */
 #match.picking .card.selectable { outline: none; }
 #match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
-#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.4) saturate(.6); }
+#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.55) saturate(.7); }
+.avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
 .slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); transition: transform .15s ease; }
