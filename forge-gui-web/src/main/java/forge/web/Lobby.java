@@ -161,15 +161,16 @@ final class Lobby {
         return catalog.deck(key);
     }
 
-    /** A format with what the lobby says about it. The description is the engine's own, already translated. */
+    /**
+     * A format with what the lobby says about it. The description is the web's own, worded as Wizards words the
+     * format, since the engine's older lines still call a commander a "General".
+     */
     static Format explained(final GameType type) {
         final Localizer text = Localizer.getInstance();
-        final String desc = type.getDescription();
         // Grouped as Wizards groups formats: Constructed ones, the Commander family, and the rest
         final String group = type == GameType.Constructed ? "Constructed"
                 : type.getDeckFormat().hasCommander() ? "Commander" : "Other";
-        return new Format(type.name(), type.toString(), group,
-                desc == null || desc.isBlank() ? text.getMessage("lblConstructedDesc") : desc,
+        return new Format(type.name(), type.toString(), group, text.getMessage("lblWebDesc" + type.name()),
                 List.of(deckFact(type), lifeFact(type)), text.getMessage("lblWebPlay" + type.name()));
     }
 
@@ -248,6 +249,10 @@ final class Lobby {
         if (f.getFormatSubType() == GameFormat.FormatSubType.BLOCK) {
             return f.getAllowedSetCodes().size() + " sets";
         }
+        // Standard rotates, so its first set is not worth naming
+        if (f.getFormatSubType() == GameFormat.FormatSubType.STANDARD) {
+            return "The most recent sets";
+        }
         final List<CardRarity> rarities = f.getAllowedRarities();
         if (rarities != null && !rarities.isEmpty()
                 && rarities.stream().noneMatch(r -> r == CardRarity.Uncommon || r == CardRarity.Rare || r == CardRarity.MythicRare)) {
@@ -261,7 +266,10 @@ final class Lobby {
             }
         }
         // A list that starts at Alpha is every set, whatever it leaves out after
-        return first == null || "LEA".equals(first.getCode()) ? "Every set" : "From " + first.getName();
+        if (first == null || "LEA".equals(first.getCode())) {
+            return f.getRestrictedCards().isEmpty() ? "Every set" : "Every set, some cards restricted";
+        }
+        return first.getName() + " forward";
     }
 
     private static List<String> names(final Iterable<GameFormat> formats) {
@@ -550,7 +558,7 @@ final class Lobby {
             case Archenemy -> List.of(text.getMessage("lblWebFactSchemesArchenemy"), text.getMessage("lblWebFactArchenemyLife"));
             default -> List.of(text.getMessage("lblWebFactSchemesEveryone"), text.getMessage("lblWebFactEveryoneLife"));
         };
-        return new Format(type.name(), type.toString(), "Casual variants", type.getDescription(), facts,
+        return new Format(type.name(), type.toString(), "Casual variants", text.getMessage("lblWebDesc" + type.name()), facts,
                 text.getMessage("lblWebPlay" + type.name()));
     }
 

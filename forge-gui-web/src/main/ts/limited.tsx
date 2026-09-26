@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
+import { HeadControls, PageHeader } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { PoolRow } from './protocol';
@@ -18,14 +19,14 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
   const pool = model.eventPool ? pools.find(p => p.name === model.eventPool) : undefined;
   return (
     <div class="limited-page">
-      <header class="limited-head">
-        <span class="wordmark">Forge</span>
+      <PageHeader class="limited-head">
         <span class="limited-title">{draft ? 'Booster draft' : 'Sealed'}</span>
         <span class="muted">Against the computer</span>
         <div class="head-right">
+          <HeadControls />
           <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>Back</button>
         </div>
-      </header>
+      </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
         ? <Opponents pool={pool} draft={draft} actions={actions} />
@@ -151,7 +152,7 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
   return (
     <div class="opponents">
       <div class="opps">
-        <h3>{pool.name} <span class="muted">Your deck: {pool.deckSize} cards</span></h3>
+        <h3>{pool.name} <span class="muted">Your deck: {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}</span></h3>
         {row('one', 'One opponent', 'A match against one of the decks built from the same packs.', (
           <div class="opp-list">
             {pool.opponents.map((o, i) => (
@@ -179,7 +180,7 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
         <button class="primary" disabled={mode === 'one' && !chosen} onClick={() => actions.poolPlay(pool.name, mode, opponent, count, games)}>
           {play}
         </button>
-        {short && <span class="muted">Your deck has {pool.deckSize} cards. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</span>}
+        {short && <span class="muted">Your deck has {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</span>}
         <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
       </div>
     </div>

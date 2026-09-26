@@ -13,6 +13,7 @@ import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.limited.ThemedChaosDraft;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.model.CardBlock;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
@@ -26,6 +27,7 @@ import forge.web.ToBrowser.Opponent;
 import forge.web.ToBrowser.PoolRow;
 import forge.web.ToBrowser.SealedBlock;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,6 +53,28 @@ final class OfflineEvents {
         return new LimitedOptions(blocks(lists.blocks()), blocks(lists.fantasyBlocks()),
                 lists.prereleases().stream().map(e -> new LimitedEdition(e.code(), e.name())).toList(), lists.templates(),
                 draftBlocks(draft.blocks()), draftBlocks(draft.fantasyBlocks()), draft.cubes(), draft.themes(), draft.lastCube());
+    }
+
+    /** The pool of a kind saved or played most recently, by its files' times on disk; null if there is none. */
+    static String latest(final String kind) {
+        final String dir = "draft".equals(kind) ? ForgeConstants.DECK_DRAFT_DIR : ForgeConstants.DECK_SEALED_DIR;
+        String latest = null;
+        long newest = Long.MIN_VALUE;
+        synchronized (DeckCatalog.DECKS) {
+            for (final String name : storage(kind).getItemNames()) {
+                final File folder = new File(dir, name);
+                long time = folder.lastModified();
+                final File[] files = folder.listFiles();
+                for (final File f : files == null ? new File[0] : files) {
+                    time = Math.max(time, f.lastModified());
+                }
+                if (time > newest) {
+                    newest = time;
+                    latest = name;
+                }
+            }
+        }
+        return latest;
     }
 
     static LimitedPools pools() {

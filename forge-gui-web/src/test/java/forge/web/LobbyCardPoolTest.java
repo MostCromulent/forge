@@ -97,7 +97,9 @@ public class LobbyCardPoolTest {
         details.lines().forEach(l -> lines.put(l.name(), l.line()));
         Assert.assertEquals(lines.get("Pauper"), "Commons only");
         Assert.assertEquals(lines.get("Legacy"), "Every set");
-        Assert.assertTrue(lines.get("Pioneer").startsWith("From Return to Ravnica"), lines.get("Pioneer"));
+        Assert.assertEquals(lines.get("Vintage"), "Every set, some cards restricted");
+        Assert.assertEquals(lines.get("Pioneer"), "Return to Ravnica forward");
+        Assert.assertEquals(lines.get("Standard"), "The most recent sets");
     }
 
     /** Fails if the card pool control offers a heading with nothing under it, as the Block group can be. */

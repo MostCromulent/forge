@@ -47,7 +47,7 @@ export async function toggleVariant(page: Page, name: string): Promise<void> {
 
 /** The address a guest opens, pointed at this machine, read from the header's Invite. */
 export async function inviteLink(page: Page, serverUrl: string): Promise<string> {
-  await page.locator('.lobby-head .menu-button', { hasText: 'Invite' }).click();
+  await page.locator('.page-head .menu-button', { hasText: 'Invite' }).click();
   await expect(page.locator('.share-url').first()).toBeVisible();
   const shared = await page.locator('.share-url').first().textContent();
   await page.keyboard.press('Escape');

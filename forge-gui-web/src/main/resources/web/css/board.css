@@ -11,7 +11,7 @@
               color-mix(in srgb, var(--bg-deep) 68%, transparent) 100%);
 }
 /* The player column holds three zone tiles abreast, and the console in the corner below it is as wide */
-#match { --side-w: 340px; --prompt-out: 72px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
+#match { --side-w: 300px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
 /* Clipped, not hidden: the hand hangs below the edge, and a hidden overflow can still be scrolled by Space or a focus, which
    slid the whole table up and cut off the top seat */
 #match { overflow: clip; }
@@ -307,11 +307,16 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .phase i { transition: background-color .18s ease; }
 #phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 2px; transition: gap .18s ease; }
 #phase-strip .pip { width: 4px; height: 4px; border-radius: 2px; background: var(--muted); transition: width .18s ease, background-color .18s ease; }
-#phase-strip .current .pip { background: color-mix(in srgb, var(--on-brass) 30%, transparent); }
-#phase-strip .current .pip.past { background: color-mix(in srgb, var(--on-brass) 65%, transparent); }
+/* Inside the brass step every pip is dark on light and told apart by shape, as a tint of the brass barely shows:
+   a ring for a step to come, a dot for one gone, a bar for this one, and a tall mark for a stop */
+#phase-strip .current .pip { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-brass) 70%, transparent); }
+#phase-strip .current .pip.past { background: color-mix(in srgb, var(--on-brass) 70%, transparent); box-shadow: none; }
 #phase-strip .pip.now { width: 9px; background: var(--on-brass); }
+#phase-strip .current .pip.now { box-shadow: none; }
+#phase-strip .current .pip.on { height: 9px; border-radius: 1px; background: var(--on-brass); box-shadow: none; }
 #phase-strip .pip.on { background: var(--select); }
 #phase-strip .pip.marked { box-shadow: 0 0 0 1.5px var(--select); }
+#phase-strip .current .pip.marked { box-shadow: 0 0 0 1.5px var(--on-brass); }
 /* Beside the pill, not in it, so the pill keeps its place as the chip comes and goes */
 /* Who is being waited on hangs off the left of the pill, and where you are skipping to off the right */
 #phase-strip .waiting { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px 0 7px; border-radius: 11px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 11px; white-space: nowrap; }
@@ -380,7 +385,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* A zone worth reading is worth the whole screen: the board has nothing to say while you look through a
    library of thirty, so it is dimmed rather than left to compete. Folded, the scrim goes and only the bar stays. */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
-#zones.minimised { background: none; place-items: end start; padding: 26px; pointer-events: none; }
+/* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
+#zones.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > * { pointer-events: auto; }
 /* A column, not a grid: a grid row grows to its content, so a long library pushed the footer and its OK off the screen */
 .zone-shelf { display: flex; flex-direction: column; gap: 12px; max-height: 88vh; }
@@ -597,6 +603,8 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    board, so it never covers the cards, and the pill steps aside for it rather than showing through. */
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color .15s ease; }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
+/* Who goes first and how the game ended are said in the middle of the board, so the pill steps aside for them too */
+#match:has(#first-reveal) #phase-strip .pill, #match.ending #phase-strip .pill { opacity: 0; pointer-events: none; }
 .turn-banner {
   position: absolute;
   left: 50%;
@@ -622,13 +630,6 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 38%, #ffffff5c 47%, #ffffffad 50%, #ffffff5c 53%, transparent 62%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 
-/* The opponent's turn is the same plate cast in copper: still warm, but half the brightness of the brass */
-.turn-banner:not(.mine) {
-  background: linear-gradient(180deg, #e0a86a 0%, #c98a4b 45%, #99612c 100%);
-  border-color: #eec49a;
-  box-shadow: 0 2px 0 #6b3f18, 0 10px 24px #000a;
-  color: #241209;
-}
 /* Who goes first, over the board as the hands are dealt. Every face shows, then the starter is lit in brass and
    the rest step back. It never takes a click, so the mulligan prompt under it can be answered straight away. */
 #first-reveal { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;

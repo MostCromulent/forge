@@ -8,6 +8,7 @@ import { nextFrom } from './dial';
 import { imageUrl } from './images';
 import { SymbolText } from './symbols';
 import { changeUi } from './ui';
+import { HeadControls, PageHeader } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DraftCard, DraftState } from './protocol';
@@ -22,11 +23,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   const online = model.inLobby;
   return (
     <div class="drafting-page">
-      <header class="limited-head">
-        <span class="wordmark">Forge</span>
+      <PageHeader class="limited-head">
         <span class="limited-title">Booster draft</span>
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
         <div class="head-right">
+          <HeadControls />
           {online && state && state.log.length > 0 && <button onClick={() => setLog(!log)}>Draft log</button>}
           {online
             ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>Back to the table</button>
@@ -38,7 +39,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
               </>
             : <button onClick={() => setLeaving(true)}>Leave draft</button>}
         </div>
-      </header>
+      </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
       {/* Opening packs can wait on a web site, so leaving stays possible while it does */}
       {!state && <p class="muted drafting-wait">Opening the packs…</p>}

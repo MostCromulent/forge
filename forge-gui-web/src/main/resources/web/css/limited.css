@@ -3,13 +3,15 @@
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
 .chooser .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .chooser h2 { margin: 0; font-size: 22px; }
-.chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.kind-col { display: grid; gap: 8px; }
+.kind-col .mode { height: 100%; }
+.kind-col .resume { justify-self: stretch; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 
 .limited-page { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
-.limited-head { display: flex; align-items: center; gap: 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .limited-head .limited-title { font-size: 16px; font-weight: 650; }
-.limited-head .head-right { margin-left: auto; display: flex; gap: 10px; }
+.limited-head .head-right { gap: 10px; }
 .limited-error { margin: 10px 20px 0; color: var(--select); }
 .limited-page .muted { color: var(--muted); font-size: 12.5px; }
 

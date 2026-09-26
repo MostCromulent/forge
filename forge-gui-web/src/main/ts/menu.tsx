@@ -7,8 +7,9 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
-import { changeUi } from './ui';
+import { changeUi, ui } from './ui';
 import { avatarUrl } from './looks';
+import { HeadControls, PageHeader, Wordmark } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import { store, stored } from './storage';
@@ -16,23 +17,12 @@ import { store, stored } from './storage';
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
 
-/** Magic's five colours, the one place they are pure decoration: no card art nearby and nothing encoded by hue. */
-export function Wordmark() {
-  return (
-    <div class="wordmark-block">
-      <span class="wordmark">Forge</span>
-      <span class="stripes" aria-hidden="true"><i /><i /><i /><i /><i /></span>
-    </div>
-  );
-}
-
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
-  const [renaming, setRenaming] = useState(false);
   const [choosing, setChoosing] = useState<'play' | 'friends' | null>(null);
   // A new name arriving means the change went through
-  useEffect(() => setRenaming(false), [model.playerName]);
-  if (renaming) {
-    return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => setRenaming(false)} />;
+  useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
+  if (ui.renaming) {
+    return <NamePrompt model={model} actions={actions} initial={model.playerName} cancel={() => changeUi(u => { u.renaming = false; })} />;
   }
   // A browser without the host's seat has no menu: it waits for somebody to open a table
   if (!model.host) {
@@ -42,31 +32,30 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   // Only the ones that open something are built; the rest are shown so the shape of the product is honest,
   // and greyed so nothing looks broken
   return (
-    <div class="menu-page">
-      <header class="menu-head">
-        <Wordmark />
-        <div class="menu-who">
-          <img class="menu-face" alt="" src={avatarUrl(rememberedAvatar())} />
-          <span class="menu-name">{model.playerName}</span>
-          <button class="link" onClick={() => setRenaming(true)}>Change name</button>
+    <div class="menu-shell">
+      <PageHeader>
+        <div class="head-right">
+          <HeadControls />
           <button onClick={() => actions.quit()}>Quit Forge</button>
         </div>
-      </header>
-      {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
-      <div class="modes" hidden={!!choosing}>
-        <Mode id="play" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
-          status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
-            model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
-          onClick={() => setChoosing('play')} />
-        <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
-          status="Gives you a link to share" onClick={() => setChoosing('friends')} />
-        <Mode id="editor" name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
-          onClick={() => {
-            changeUi(u => { u.browse = { format: 'Constructed' }; });
-            actions.browseFormat('Constructed');
-          }} />
+      </PageHeader>
+      <div class="menu-page">
+        {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
+        <div class="modes" hidden={!!choosing}>
+          <Mode id="play" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
+            status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
+              model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
+            onClick={() => setChoosing('play')} />
+          <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
+            status="Gives you a link to share" onClick={() => setChoosing('friends')} />
+          <Mode id="editor" name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
+            onClick={() => {
+              changeUi(u => { u.browse = { format: 'Constructed' }; });
+              actions.browseFormat('Constructed');
+            }} />
+        </div>
+        <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
       </div>
-      <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
     </div>
   );
 }
@@ -82,21 +71,16 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
       <div class="chooser-kinds">
         <Kind id="constructed" name="Constructed" onClick={() => actions.openLobby(!computer)}
           blurb={computer ? 'Bring a deck you have built, or a precon, and play the computer.' : 'Everyone brings a deck they have built.'} />
-        <Kind id="draft" name="Draft" onClick={() => (computer ? actions.limitedOpen('draft') : actions.openLimitedTable('draft'))}
+        <Kind id="draft" name="Draft" onClick={() => (computer ? actions.limitedOpen('draft', false) : actions.openLimitedTable('draft'))}
           blurb={computer ? 'Pass packs around a table of seven computer drafters, then build from your picks.'
             : 'Draft together, up to eight at the table. Computers fill the empty seats.'}
-          saved={computer ? saved(model.draftPools, 'draft') : ''} />
-        <Kind id="sealed" name="Sealed" onClick={() => (computer ? actions.limitedOpen('sealed') : actions.openLimitedTable('sealed'))}
+          resume={computer && model.draftPools > 0 ? () => actions.limitedOpen('draft', true) : undefined} />
+        <Kind id="sealed" name="Sealed" onClick={() => (computer ? actions.limitedOpen('sealed', false) : actions.openLimitedTable('sealed'))}
           blurb={computer ? 'Open six packs and build a deck from what you get.' : 'Everyone opens a pool and builds from it.'}
-          saved={computer ? saved(model.sealedPools, 'pool') : ''} />
+          resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
       </div>
     </div>
   );
-}
-
-/** Saved pools in words: "Your draft", "Your 3 drafts", or nothing. */
-export function saved(count: number, noun: string): string {
-  return count === 0 ? '' : count === 1 ? `Your ${noun} is saved here` : `Your ${count} ${noun}s are saved here`;
 }
 
 // A fanned deck for Constructed; two packs passing between players for Draft; an opened pack with its cards rising for Sealed
@@ -107,16 +91,19 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
 };
 
-function Kind({ id, name, blurb, saved, onClick }: { id: string; name: string; blurb: string; saved?: string; onClick: () => void }) {
+/** A kind of game, and under it a way back into the event of that kind saved last, when there is one. */
+function Kind({ id, name, blurb, resume, onClick }: { id: string; name: string; blurb: string; resume?: () => void; onClick: () => void }) {
   return (
-    <button class="mode" data-kind={id} onClick={onClick}>
-      <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
-      <span class="mode-text">
-        <span class="mode-name">{name}</span>
-        <span class="mode-blurb">{blurb}</span>
-        {saved && <span class="mode-status">{saved}</span>}
-      </span>
-    </button>
+    <div class="kind-col">
+      <button class="mode" data-kind={id} onClick={onClick}>
+        <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
+        <span class="mode-text">
+          <span class="mode-name">{name}</span>
+          <span class="mode-blurb">{blurb}</span>
+        </span>
+      </button>
+      {resume && <button class="resume" onClick={resume}>Resume last event</button>}
+    </div>
   );
 }
 

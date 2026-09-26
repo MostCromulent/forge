@@ -1,15 +1,12 @@
 /* The hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
 #hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); }
 /* With the log folded away the hand has the whole width, less the corner the console keeps */
-#hand { padding-right: var(--prompt-out); }
-/* In quarters the hand sits under your own quarter, away from the prompt */
-#match.quads #hand { padding-right: 0; }
-#match.side-folded #hand { padding-right: calc(var(--side-w) + var(--prompt-out) + 16px); }
+#match.side-folded #hand { padding-right: calc(var(--side-w) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
 /* Cards overlap only when the row would overflow; --step is set from the hand size */
 #hand .card + .card { margin-left: var(--step, 6px); }
 /* The cost to cast sits over the card's top-right corner as bare symbols, sized from the card */
-#hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.07); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 1px; filter: drop-shadow(0 1px 2px #000c); transform-origin: 100% 100%; transition: transform .12s ease; }
+#hand .card .cost-badge { display: flex; position: absolute; bottom: calc(100% - var(--hand-w) * 0.01); right: calc(var(--hand-w) * 0.03); z-index: 3; gap: 1px; filter: drop-shadow(0 1px 2px #000c); transform-origin: 100% 100%; transition: transform .12s ease; }
 #hand .card .cost-badge:empty { display: none; }
 #hand .card .cost-badge .sym { height: calc(var(--hand-w) * 0.15); width: calc(var(--hand-w) * 0.15); margin: 0; }
 /* The hovered card grows 1.8 times; its cost grows by only a fifth, so the symbols stay the size of a label */
@@ -17,7 +14,7 @@
 /* Revealed to other players: a red eye in the top-left corner, on the row the cost sits on */
 /* Both marks are the hand's alone; a card anywhere else never shows them */
 .card .seen, .card .owned-by { display: none; }
-#hand .card .seen { display: none; position: absolute; bottom: calc(100% - var(--hand-w) * 0.07); left: calc(var(--hand-w) * 0.03); z-index: 3;
+#hand .card .seen { display: none; position: absolute; bottom: calc(100% - var(--hand-w) * 0.01); left: calc(var(--hand-w) * 0.03); z-index: 3;
   width: calc(var(--hand-w) * 0.2); height: calc(var(--hand-w) * 0.2); padding: 2px; border-radius: 50%; background: #0e1116e6; color: #ff6b5a;
   filter: drop-shadow(0 1px 2px #000c); transform-origin: 0 100%; transition: transform .12s ease; }
 #hand .card .seen svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }

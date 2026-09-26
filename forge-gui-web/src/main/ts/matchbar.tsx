@@ -3,8 +3,7 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { Wordmark } from './menu';
-import { changeUi, ui } from './ui';
+import { HeadControls, PageHeader } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Address, Format, LobbyTable } from './protocol';
@@ -48,9 +47,9 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
 
 /** Draft and Sealed, in the shape the server gives a format, so the menu's card reads the same for them. */
 const LIMITED: (Format & { kind: 'draft' | 'sealed' })[] = [
-  { id: 'Draft', kind: 'draft', name: 'Draft', group: 'Limited', desc: 'Players pass packs around the table, taking one card at a time, then build a deck from their picks.',
+  { id: 'Draft', kind: 'draft', name: 'Draft', group: 'Limited', desc: 'Players open packs, take one card and pass the rest along until every card is taken. Then each builds a deck of at least 40 cards from their picks and basic lands.',
     facts: ['40 cards from your picks', 'Life 20'], play: 'Computers fill the empty seats in the draft; only the people at the table play the matches.' },
-  { id: 'Sealed', kind: 'sealed', name: 'Sealed', group: 'Limited', desc: 'Everyone opens six packs and builds a deck from what they opened.',
+  { id: 'Sealed', kind: 'sealed', name: 'Sealed', group: 'Limited', desc: 'Each player opens six packs and builds a deck of at least 40 cards from what they opened, plus basic lands.',
     facts: ['40 cards from your pool', 'Life 20'], play: 'Each player plays the deck they built from their own pool.' },
 ];
 
@@ -257,10 +256,9 @@ export function MatchBar({ model, lobby, actions, preview, event }: {
 }
 
 /** How others join, the sound and the options, and the way out. Who is here is the dock's to say. */
-export function TableHeader({ model, lobby, actions, openOptions }: { model: Model; lobby: LobbyTable; actions: Actions; openOptions: () => void }) {
+export function TableHeader({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   return (
-    <header class="lobby-head">
-      <Wordmark />
+    <PageHeader>
       <div class="head-right">
         {lobby.shareable && (
           <Popup label="Invite">
@@ -272,16 +270,11 @@ export function TableHeader({ model, lobby, actions, openOptions }: { model: Mod
             )}
           </Popup>
         )}
-        <button class="icon-button volume" title="Volume" aria-label="Volume" aria-expanded={ui.volumeOpen}
-          onClick={() => changeUi(u => { u.volumeOpen = !u.volumeOpen; })}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
-            <path d="M16 9a5 5 0 0 1 0 6" /><path d="M19.364 18.364a9 9 0 0 0 0-12.728" /></svg>
-        </button>
-        <button class="icon-button" title="Options" aria-label="Options" onClick={openOptions}>⚙</button>
+        <HeadControls />
         {/* The table belongs to the host, so a joined client has no menu to go back to */}
         <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Leave table</button>
       </div>
-    </header>
+    </PageHeader>
   );
 }
 

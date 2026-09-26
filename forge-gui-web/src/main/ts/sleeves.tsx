@@ -10,7 +10,7 @@ import type { Model } from './model';
 import type { Printing, Seat } from './protocol';
 
 const SEARCH_DEBOUNCE_MS = 250;
-const CENTRE = 500;
+export const CENTRE = 500;
 
 /** The stored 0-1000 crop offset as a CSS position along whichever axis the art overflows. */
 export const objectPosition = (value: number | undefined): string => `${(value ?? CENTRE) / 10}% ${(value ?? CENTRE) / 10}%`;

@@ -57,7 +57,7 @@ export interface Actions {
 
   // Limited
   /** Opens the Limited pages for a kind of event. */
-  limitedOpen(kind: 'sealed' | 'draft'): void;
+  limitedOpen(kind: 'sealed' | 'draft', resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
   /** Picks the card at index of the pack shown in state step. */
   draftPick(step: number, index: number): void;
@@ -182,7 +182,7 @@ export function createActions(send: Send): Actions {
     eventDecksOnly: on => send({ t: 'eventDecksOnly', on }),
     benchSeat: (index, benched) => send({ t: 'benchSeat', index, benched }),
     ready: on => send({ t: 'ready', ready: on }),
-    limitedOpen: kind => send({ t: 'limitedOpen', kind }),
+    limitedOpen: (kind, resume) => send({ t: 'limitedOpen', kind, resume }),
     draftStart: d => send({ t: 'draftStart', ...d }),
     draftPick: (step, index) => send({ t: 'draftPick', step, index }),
     draftSave: (name, replace) => send({ t: 'draftSave', name, replace }),

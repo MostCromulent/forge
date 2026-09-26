@@ -2,8 +2,7 @@ import { setting } from './settings';
 import type { Sound } from './protocol';
 
 // Sound effects come from the host as names, and both they and the music are files the server serves from the
-// player's own Forge sound set. A browser refuses to play until the page has been clicked, which the start
-// page's Play button covers.
+// player's own Forge sound set.
 
 const clips = new Map<string, HTMLAudioElement>();
 let music: HTMLAudioElement | null = null;
@@ -26,42 +25,66 @@ export function playSound(msg: Sound): void {
   clip.play().catch(() => {});
 }
 
-export function startMusic(): void {
-  if (volume('musicVolume') <= 0 || music) {
-    return;
+/** The music a screen plays: desktop's menu playlist, its match playlist, or none. */
+export type Playlist = 'menu' | 'match';
+
+let playing: Playlist | null = null;
+let wanted: Playlist | null = null;
+let awaitingGesture = false;
+
+export function playMusic(list: Playlist | null): void {
+  if (list !== wanted) {
+    wanted = list;
+    applyAudioSettings();
   }
-  music = new Audio();
-  music.addEventListener('ended', nextTrack);
-  music.addEventListener('error', () => stopMusic());
-  nextTrack();
 }
 
-export function stopMusic(): void {
-  if (!music) {
-    return;
+export function applyAudioSettings(): void {
+  const level = volume('musicVolume');
+  if (!wanted || level <= 0) {
+    stopMusic();
+  } else if (music && playing === wanted) {
+    music.volume = level;
+  } else {
+    stopMusic();
+    const track = new Audio();
+    music = track;
+    playing = wanted;
+    track.addEventListener('ended', nextTrack);
+    // A playlist with no tracks answers 404; it stays silent until the screen asks for another list
+    track.addEventListener('error', () => { if (music === track) stopMusic(); });
+    nextTrack();
   }
-  music.pause();
+}
+
+function stopMusic(): void {
+  music?.pause();
   music = null;
+  playing = null;
 }
 
-// Each request returns another track from the match playlist, so the server's shuffle does the choosing
+// Each request returns another track from the playlist, so the server's shuffle does the choosing
 function nextTrack(): void {
   if (!music) {
     return;
   }
-  music.src = `music?t=${Date.now()}`;
+  music.src = `music?name=${playing}&t=${Date.now()}`;
   music.volume = volume('musicVolume');
-  music.play().catch(() => stopMusic());
-}
-
-export function applyAudioSettings(): void {
-  if (volume('musicVolume') <= 0) {
+  music.play().catch(e => {
     stopMusic();
-  } else if (music) {
-    music.volume = volume('musicVolume');
-  } else {
-    startMusic();
-  }
+    // A browser plays nothing until the page is first clicked or typed into, so the menu's music waits for that
+    if (e instanceof DOMException && e.name === 'NotAllowedError' && !awaitingGesture) {
+      awaitingGesture = true;
+      const retry = () => {
+        if (awaitingGesture) {
+          awaitingGesture = false;
+          applyAudioSettings();
+        }
+      };
+      window.addEventListener('pointerdown', retry, { once: true, capture: true });
+      window.addEventListener('keydown', retry, { once: true, capture: true });
+    }
+  });
 }
 
 function volume(key: string): number {

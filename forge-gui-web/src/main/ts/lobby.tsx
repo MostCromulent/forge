@@ -12,7 +12,7 @@ import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { DeckFinder } from './deckfinder';
 import { ExtraPicker } from './extrapicker';
-import { SleevePicker, artUrl, objectPosition } from './sleeves';
+import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import { EventPanel, eventStatus } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
@@ -35,7 +35,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
   return (
     <>
-      <TableHeader model={model} lobby={lobby} actions={actions} openOptions={() => changeUi(u => { u.optionsOpen = true; })} />
+      <TableHeader model={model} lobby={lobby} actions={actions} />
       <div class="lobby-main">
         {/* A new kind of event is set up afresh, so its dialog opens again */}
         <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview}
@@ -43,6 +43,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         {lim && <p class="event-status">{eventStatus(lobby)}</p>}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
+            avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
         {/* Until the pools are out the event panel says what comes next; the match follows them */}
@@ -67,18 +68,11 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
 // The seat kinds a netplay lobby can hold; offline shows only the first two
 const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
 
-/** Constructed with the format that limits its cards, as the chip and the sentence both say it. */
-function constructedName(lobby: LobbyTable): string {
-  return `Constructed · ${lobby.cardPool ?? 'any cards'}`;
-}
-
-/** The line under the header: the format, then what it is, in the engine's words. */
-export function matchSentence(lobby: LobbyTable): { title: string; text: string } {
-  const format = lobby.formats.find(f => f.id === lobby.format);
-  const name = lobby.format === 'Constructed' ? constructedName(lobby) : format?.name ?? lobby.format;
-  const on = (lobby.casualVariants ?? []).filter(v => (lobby.variantsOn ?? []).includes(v.id)).map(v => v.name);
-  const variants = on.length ? ` with ${on.length > 1 ? `${on.slice(0, -1).join(', ')} and ${on[on.length - 1]}` : on[0]}` : '';
-  return { title: name + variants, text: format?.desc ?? '' };
+/** A number below count other than current, at random; current itself when it is the only one. */
+function another(current: number, count: number): number {
+  if (count <= 1) return current;
+  const pick = Math.floor(Math.random() * (count - (current >= 0 && current < count ? 1 : 0)));
+  return current >= 0 && pick >= current ? pick + 1 : pick;
 }
 
 /** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */
@@ -92,8 +86,9 @@ function randomDeck(model: Model, actions: Actions, index: number): void {
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
-function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
-  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; choose: (kind: Picker['kind']) => void; random: () => void;
+function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount, choose, random }: {
+  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; avatarCount: number; sleeveCount: number;
+  choose: (kind: Picker['kind']) => void; random: () => void;
 }) {
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
   const mine = seat.mine;
@@ -112,6 +107,12 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
   const watchable = lobby.host && mine && (!lobby.limited || !!lobby.limited.activeEventId);
   // Any seat whose deck this browser chooses can be dealt one at random; an event's decks are its players' own pools
   const randomable = seat.mayEdit && !dealt && !lim && !waiting;
+  // Right-click deals another at random: never the one already on, and a numbered sleeve replaces any card art
+  const randomSleeve = () => {
+    actions.setSleeveArt(index, '', CENTRE);
+    actions.setSeat(index, { sleeve: another(seat.sleeveArt ? -1 : seat.sleeve, sleeveCount) });
+  };
+  const randomAvatar = () => actions.setSeat(index, { avatar: another(seat.avatar, avatarCount) });
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
   return (
@@ -120,7 +121,8 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
           data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
-          disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}>
+          disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}
+          onContextMenu={e => { if (hasDeck && seat.mayEdit) { e.preventDefault(); randomSleeve(); } }}>
           <img alt="" hidden={!hasDeck && !dealt} src={hasDeck || dealt ? sleeveSrc : undefined}
             style={{ objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
@@ -132,7 +134,8 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
         <div class="who">
           {/* A seat nobody has taken has no face to show */}
           <button class="avatar" title="Choose an avatar" hidden={waiting} disabled={!seat.mayEdit}
-            onClick={() => choose('avatar')}><img alt="" src={avatarUrl(seat.avatar)} /></button>
+            onClick={() => choose('avatar')} onContextMenu={e => { if (seat.mayEdit) { e.preventDefault(); randomAvatar(); } }}>
+            <img alt="" src={avatarUrl(seat.avatar)} /></button>
           <SeatName seat={seat} rename={name => actions.setSeat(index, { name })} />
           {watchable
             ? <button class="kind" title="Choose who plays this seat" aria-pressed={ui.spectate}
@@ -234,13 +237,9 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
       </div>
     );
   }
-  const rules = matchSentence(lobby).title;
   return (
     <div class="play-row">
-      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start}>Play</button>
-      <p class="match-line" hidden={!lobby.canStart}>
-        {`${rules} · ${lobby.seats.length} players${ui.spectate ? ' · You watch' : ''} · Enter starts the match.`}
-      </p>
+      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start} title="Enter starts the match">Play</button>
       <div class="not-yet" hidden={lobby.canStart}>
         <b>Not playable yet</b>
         <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>

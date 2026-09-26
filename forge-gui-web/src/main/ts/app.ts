@@ -17,7 +17,7 @@ import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
-import { applyAudioSettings, playSound, startMusic, stopMusic } from './audio';
+import { applyAudioSettings, playMusic, playSound } from './audio';
 import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId, saveText } from './dom';
@@ -62,11 +62,6 @@ const actions: Actions = {
   askStackMenu: key => {
     model.stackMenu = null;
     wire.askStackMenu(key);
-  },
-  // A browser plays nothing before the player does something, so the music starts on the click or key that starts
-  startMatch: spectate => {
-    startMusic();
-    wire.startMatch(spectate);
   },
   // The engine thread waits on the answer, so the question goes as soon as it is answered
   answerHostChoice: (id, value) => {
@@ -171,6 +166,8 @@ function apply(msg: ServerMessage): void {
         stopMemory.restore(actions.setStops);
       }
       model.canClaimHost = msg.canClaimHost;
+      onServerSettings(msg.settings);
+      applyAudioSettings();
       model.inMatch = msg.inMatch;
       model.inLobby = msg.inLobby;
       model.inEvent = msg.inEvent;
@@ -221,7 +218,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'editor':
       // Back from a pool's deck, the pools are asked for again, since the deck just built changes them
-      if (!msg.state && model.editor && model.inEvent) wire.limitedOpen(model.eventKind === 'draft' ? 'draft' : 'sealed');
+      if (!msg.state && model.editor && model.inEvent) wire.limitedOpen(model.eventKind === 'draft' ? 'draft' : 'sealed', false);
       model.editor = msg.state ?? null;
       break;
     // Scrolling asks for the next page of the same query, which is added to what is shown
@@ -321,7 +318,6 @@ function apply(msg: ServerMessage): void {
       model.gameOver = true;
       model.drawOffer = null;
       dropCountdown();
-      stopMusic();
       break;
     case 'sound': playSound(msg); return;
     case 'playable':
@@ -330,6 +326,7 @@ function apply(msg: ServerMessage): void {
     case 'controls':
       model.controls = msg;
       onServerSettings(msg.settings);
+      applyAudioSettings();
       stopMemory.onControls(msg, !model.host);
       break;
     case 'log':
@@ -392,6 +389,8 @@ function render(): void {
   byId('drafting').hidden = page !== 'drafting';
   byId('match').hidden = page !== 'match';
   renderScreens(model, actions, dismissNotice);
+  // The name page comes before the player's volumes are known
+  playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');
   if (!model.inMatch) {
     return;
   }

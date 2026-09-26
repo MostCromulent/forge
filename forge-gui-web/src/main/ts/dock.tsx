@@ -22,7 +22,8 @@ function Crown() {
   );
 }
 
-export function Dock({ model, actions }: { model: Model; actions: Actions }) {
+/** rename, when given, puts an edit button on your own row: the name and face are changed from the menu only. */
+export function Dock({ model, actions, rename }: { model: Model; actions: Actions; rename?: () => void }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [listed, setListed] = useState(false);
@@ -87,6 +88,11 @@ export function Dock({ model, actions }: { model: Model; actions: Actions }) {
               <img class="face-small" alt="" src={avatarUrl(p.avatar)} />
               <span class="who">{p.name}</span>
               {p.host && <Crown />}
+              {rename && p.name === model.playerName && (
+                <button class="rename" title="Change your name and avatar" aria-label="Change your name and avatar" onClick={rename}>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h5L20 9a2.6 2.6 0 0 0-3.7-3.7L5.8 15.8z" /></svg>
+                </button>
+              )}
               <span class="spacer" />
               <span class="doing">{DOING[p.doing] ?? p.doing}</span>
             </li>

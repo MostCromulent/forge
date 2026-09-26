@@ -266,9 +266,9 @@ final class FromBrowser {
 
     // ---- Limited ---------------------------------------------------------------------------------------------
 
-    /** Opens the Limited pages for a kind of event: sealed. */
+    /** Opens the Limited pages for a kind of event, or with resume, straight to the pool saved last. */
     @Command("limitedOpen")
-    record LimitedOpen(String kind) {
+    record LimitedOpen(String kind, boolean resume) {
     }
 
     /**

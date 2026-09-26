@@ -24,6 +24,7 @@ export interface Hello {
   eventKind?: string;
   drafting: boolean;
   draftPools: number;
+  settings: ServerSettings;
 }
 
 export interface Presence {
@@ -738,6 +739,7 @@ export interface DeviceDecks {
 export interface LimitedOpen {
   t: 'limitedOpen';
   kind: string;
+  resume: boolean;
 }
 
 export interface SealedCreate {
@@ -954,6 +956,22 @@ export interface SavedSleeveArt {
   offset: number;
 }
 
+export interface ServerSettings {
+  interruptAttackers: boolean;
+  interruptOpponentSpell: boolean;
+  interruptTargeting: boolean;
+  interruptTriggers: boolean;
+  interruptMassRemoval: boolean;
+  autoTapPreview: boolean;
+  autoYieldMode: string;
+  logDetail: GameLogVerbosity;
+  arrows: string;
+  devMode: boolean;
+  highlightColor: string;
+  soundVolume: number;
+  musicVolume: number;
+}
+
 export interface Person {
   name: string;
   avatar: number;
@@ -1053,22 +1071,6 @@ export type PhaseType = 'UNTAP' | 'UPKEEP' | 'DRAW' | 'MAIN1' | 'COMBAT_BEGIN' |
 export interface TurnMarker {
   phase: PhaseType;
   mine: boolean;
-}
-
-export interface ServerSettings {
-  interruptAttackers: boolean;
-  interruptOpponentSpell: boolean;
-  interruptTargeting: boolean;
-  interruptTriggers: boolean;
-  interruptMassRemoval: boolean;
-  autoTapPreview: boolean;
-  autoYieldMode: string;
-  logDetail: GameLogVerbosity;
-  arrows: string;
-  devMode: boolean;
-  highlightColor: string;
-  soundVolume: number;
-  musicVolume: number;
 }
 
 export interface LogEntry {
@@ -1274,6 +1276,8 @@ export interface Attack {
   defender?: Ref;
 }
 
+export type GameLogVerbosity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CUSTOM';
+
 export interface DeckStats {
   main: number;
   sideboard: number;
@@ -1350,8 +1354,6 @@ export interface LimitedTable {
 }
 
 export type ZoneType = 'Hand' | 'Library' | 'Graveyard' | 'Battlefield' | 'Exile' | 'Flashback' | 'Command' | 'Stack' | 'Sideboard' | 'Ante' | 'Merged' | 'SchemeDeck' | 'PlanarDeck' | 'AttractionDeck' | 'Junkyard' | 'ContraptionDeck' | 'Subgame' | 'ExtraHand' | 'None';
-
-export type GameLogVerbosity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CUSTOM';
 
 export type GameLogEntryType = 'GAME_OUTCOME' | 'MATCH_RESULTS' | 'TURN' | 'MULLIGAN' | 'ANTE' | 'DRAFT' | 'ZONE_CHANGE' | 'PLAYER_CONTROL' | 'DAMAGE' | 'LIFE' | 'LAND' | 'DISCARD' | 'COMBAT' | 'INFORMATION' | 'STACK_RESOLVE' | 'STACK_ADD' | 'EFFECT_REPLACED' | 'MANA' | 'PHASE';
 

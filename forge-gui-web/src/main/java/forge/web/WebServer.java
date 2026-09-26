@@ -397,7 +397,7 @@ public final class WebServer implements AutoCloseable {
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name) throws IOException {
         final File file = sound && name != null && !name.contains("/") && !name.contains("\\")
                 ? SoundSystem.instance.getSoundResource(name)
-                : sound ? null : musicTrack();
+                : sound ? null : musicTrack("menu".equals(name) ? MusicPlaylist.MENUS : MusicPlaylist.MATCH);
         if (file == null || !file.isFile()) {
             notFound(ctx);
             return;
@@ -406,8 +406,8 @@ public final class WebServer implements AutoCloseable {
         respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), type);
     }
 
-    private static File musicTrack() {
-        final String track = MusicPlaylist.MATCH.getRandomFilename();
+    private static File musicTrack(final MusicPlaylist playlist) {
+        final String track = playlist.getRandomFilename();
         return track == null ? null : new File(track);
     }
 

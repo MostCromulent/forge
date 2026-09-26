@@ -12,6 +12,7 @@ import { deckText } from './decklist';
 import { peekAt } from './deckfinder';
 import { imageUrl } from './images';
 import { changeUi } from './ui';
+import { HeadControls, PageHeader } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckSection, EditorState } from './protocol';
@@ -87,8 +88,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         e.preventDefault();
         void file.text().then(text => changeUi(u => { u.importer = { from: 'editor', text }; }));
       }}>
-      <header class="lobby-head editor-head">
-        <span class="wordmark">Forge</span>
+      <PageHeader class="editor-head">
         {state.limited
           ? <span class="deck-name">{state.name}</span>
           : renaming
@@ -136,9 +136,10 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
               </div>
             )}
           </div>
+          <HeadControls />
           <button class="primary" onClick={() => actions.closeEditor()}>Done</button>
         </div>
-      </header>
+      </PageHeader>
       <div class="editor-shell">
         <Catalogue model={model} actions={actions} state={state} handlers={handlers} />
         <DeckHalf actions={actions} state={state} handlers={handlers} />

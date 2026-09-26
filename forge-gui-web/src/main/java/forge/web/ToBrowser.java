@@ -44,7 +44,7 @@ final class ToBrowser {
     record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
-            @Nullable String eventKind, boolean drafting, int draftPools) {
+            @Nullable String eventKind, boolean drafting, int draftPools, ServerSettings settings) {
     }
 
     record SavedSleeveArt(String key, int offset) {

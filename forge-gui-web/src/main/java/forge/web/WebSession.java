@@ -437,10 +437,12 @@ public final class WebSession {
             }
             case "leave" -> ui.invokeInEdtLater(this::leave);
             case "limitedOpen" -> {
-                final String kind = "draft".equals(Wire.decode(msg, LimitedOpen.class).kind()) ? "draft" : "sealed";
+                final LimitedOpen open = Wire.decode(msg, LimitedOpen.class);
+                final String kind = "draft".equals(open.kind()) ? "draft" : "sealed";
                 final Stage now = stage;
-                if (isHost && ((now instanceof Event e && e.kind().equals(kind))
-                        || ((now instanceof Menu || now instanceof Event) && move(now, new Event(kind, null))))) {
+                if (isHost && ((now instanceof Event e && e.kind().equals(kind) && !open.resume())
+                        || ((now instanceof Menu || now instanceof Event)
+                            && move(now, new Event(kind, open.resume() ? OfflineEvents.latest(kind) : null))))) {
                     sendLimited(channel);
                 }
             }
@@ -951,7 +953,9 @@ public final class WebSession {
                 SkinSprites.avatarCount(), SkinSprites.sleeveCount(), DeckCatalog.savedSleeveArt(),
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
-                isHost ? OfflineEvents.storage("draft").size() : 0);
+                isHost ? OfflineEvents.storage("draft").size() : 0,
+                // The menu's volume slider and music need them before any match sends them with its controls
+                WebSettings.values(settings));
     }
 
     private boolean onlineDrafting() {
