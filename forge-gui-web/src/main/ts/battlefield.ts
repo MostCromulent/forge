@@ -18,7 +18,7 @@ interface Slot {
 }
 
 /**
- * Which of the five groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
+ * Which of the four groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
  * row nearest the player's own edge; creatures and the tokens they make share the row nearest the middle.
  * A token that is not a creature — a Treasure, a Clue — belongs with the other artifacts rather than beside the
  * creatures.
@@ -27,12 +27,12 @@ interface Slot {
  * be aimed at either, so they belong in the row a player attacks into, but neither blocks and neither is part of
  * the fight, so they keep out of the way of the creatures that are. A battle sits with whoever protects it.
  */
-type Group = 'lands' | 'support' | 'creatures' | 'tokens' | 'far';
+type Group = 'lands' | 'support' | 'creatures' | 'far';
 
 function groupOf(model: Model, slot: Slot): Group {
   const type = stateOf(model, slot.top).Type ?? '';
   if (/Land/.test(type)) return 'lands';
-  if (/Creature/.test(type)) return slot.top.Token ? 'tokens' : 'creatures';
+  if (/Creature/.test(type)) return 'creatures';
   if (/Planeswalker|Battle/.test(type)) return 'far';
   return 'support';
 }
@@ -41,70 +41,188 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   const slots = slotsFor(model, cards, onField);
   const of = (group: Group) => slots.filter(s => groupOf(model, s) === group);
   const groups: Record<Group, Slot[]> = {
-    lands: of('lands'), support: of('support'), creatures: of('creatures'), tokens: of('tokens'), far: of('far'),
+    // Tokens are creatures like any other, laid out after the cards so the row's order stays readable
+    lands: of('lands'), support: of('support'),
+    creatures: [...of('creatures').filter(s => !s.top.Token), ...of('creatures').filter(s => s.top.Token)], far: of('far'),
   };
   const charging = chargingAtPlayer(model);
   for (const [name, list] of Object.entries(groups)) {
     reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select, charging));
   }
-  const row = (list: Slot[]): Row => ({
-    slots: list.length,
-    steps: list.reduce((n, s) => n + s.attached.length, 0),
-    depth: list.reduce((n, s) => Math.max(n, s.attached.length), 0),
-  });
-  fitCards(root, row([...groups.lands, ...groups.support]), row([...groups.creatures, ...groups.tokens, ...groups.far]));
+  const stats = (name: Group): GroupStats => {
+    const list = groups[name];
+    return {
+      el: q(root, `.${name}`),
+      slots: list.length,
+      steps: list.reduce((n, s) => n + s.attached.length, 0),
+      depth: list.reduce((n, s) => Math.max(n, s.attached.length), 0),
+      battles: list.filter(s => /Battle/.test(stateOf(model, s.top).Type ?? '')).length,
+    };
+  };
+  fitCards(root, [[[stats('lands')], [stats('support')]], [[stats('creatures')], [stats('far')]]]);
 }
 
 /** Below this the art stops being worth looking at, so a board wider than that scrolls after all. */
-const MIN_FIT = 0.5;
+const MIN_FIT = 0.42;
 /** An empty board's cards start this large and shrink as it fills, as Arena's do. */
 const MAX_FIT = 1.4;
+const STEP = 0.02;
+/** A zone takes a second line only when that makes its cards at least this much larger, and only once they are
+ *  already small, so a card coming or going does not flip it back and forth. */
+const TWO_LINE_GAIN = 0.08;
+const TWO_LINE_BELOW = 0.72;
+/** How much of the smallest zone's size a layout may give up to keep every other zone larger. */
+const SMALLEST_SLACK = 0.06;
 
-/**
- * Sizes the cards to the board: as large as they can be while every row fits the seat, which keeps a wide board
- * whole rather than scrolling its oldest permanents out of sight. Measured against the seat, whose size the page
- * grid fixes, so the answer cannot feed back into itself the way measuring the cards themselves would.
- */
-function fitCards(root: HTMLElement, support: Row, creatures: Row): void {
-  const field = q(root, '.battlefield');
-  const style = getComputedStyle(root);
-  const h = parseFloat(style.getPropertyValue('--card-h')) || 123;
-  const w = parseFloat(style.getPropertyValue('--card-w')) || 88;
-  const fan = parseFloat(getComputedStyle(field).getPropertyValue('--fan')) || 0;
-  const air = parseFloat(style.getPropertyValue('--slot-gap')) || 0;
-  // The field's padding is room for glows and for the stack panel, not for cards
-  const pad = getComputedStyle(field);
-  // A row's two groups keep .row's 20px gap between them, and a couple of pixels more cover rounding
-  const width = field.clientWidth - parseFloat(pad.paddingLeft) - parseFloat(pad.paddingRight) - 22;
-  // A compact seat keeps its player's details in a row above the cards, and that row is not the cards' room
-  const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
-  const height = root.clientHeight - header - parseFloat(pad.paddingTop) - parseFloat(pad.paddingBottom);
-  // A slot with its room either side is as wide as a tapped card, which lies on its side at 90% (board.css), plus
-  // its air. An empty row still keeps 60% of a card's height (.row's min-height)
-  // A fan of attachments widens its slot by a step for each card behind the host, and heightens the row by the
-  // deepest fan in it
-  const lines = (row: Row, fit: number) =>
-    row.slots === 0 ? 0.6 : Math.ceil((row.slots * (h * 0.9 + 2 * air) + row.steps * w * fan) * fit / width);
-  const tall = (row: Row, fit: number) => (lines(row, fit) + row.depth * fan) * h * fit;
-  // 32px is the two rows' room above their cards, and 24px the gap between them with some to spare: a board filled
-  // to the pixel scrolls on the next rounding and cuts off its top row
-  // A row stays on one line, as a line that wraps breaks up the lands and the creatures; the cards shrink instead,
-  // and only past the smallest size do they wrap
-  const fits = (fit: number) => lines(support, fit) <= 1 && lines(creatures, fit) <= 1
-    && tall(support, fit) + tall(creatures, fit) + 32 + 24 <= height;
-  let fit = MAX_FIT;
-  while (fit > MIN_FIT && !fits(fit)) fit -= 0.02;
-  fit = Math.max(MIN_FIT, fit);
-  root.style.setProperty('--fit', fit.toFixed(2));
-  // Below this the keyword icons are too small to tell apart, so the board drops them and keeps the art
-  field.classList.toggle('cramped', fit < 0.72);
+/** One group of a row's cards as the sizing needs it: how many slots, the fans behind them, and battles. */
+interface GroupStats {
+  el: HTMLElement;
+  slots: number;
+  /** Attachments fanned behind the group's hosts, all told. */
+  steps: number;
+  /** The most attachments behind any one host. */
+  depth: number;
+  /** Battles, which lie on their side and so are wider than a slot's usual room. */
+  battles: number;
 }
 
-/** A row's slots, the attachments fanned behind them, and the most behind any one, which decide the room it needs. */
-interface Row {
-  slots: number;
-  steps: number;
-  depth: number;
+/** The groups sized as one, sharing a card size and a line count; each is its own zone today. */
+type Zone = GroupStats[];
+/** The zones side by side in one of a battlefield's two rows. */
+type RowZones = Zone[];
+
+/** A zone's size and line count; raw is its size before the smallest size is applied, less than it when it overflows. */
+interface Sized { fit: number; lines: number; raw: number; }
+
+/**
+ * Sizes each zone of a battlefield on its own, as Arena does: a zone that fits keeps the largest size the seat's
+ * height allows, and when a row is too wide the zone taking the most room gives way first, shrinking, or taking a
+ * second line when that keeps its cards larger. So three artifacts stay full size beside a sprawl of lands. The
+ * rows share the seat's height, so the largest size is searched for from the top down, as Forge desktop searches
+ * for its card width. Measured against the seat, whose size the page grid fixes, so the answer cannot feed back
+ * into itself the way measuring the cards would.
+ */
+function fitCards(root: HTMLElement, rows: RowZones[]): void {
+  const field = q(root, '.battlefield');
+  const style = getComputedStyle(root);
+  const fieldStyle = getComputedStyle(field);
+  const px = (from: CSSStyleDeclaration, name: string) => parseFloat(from.getPropertyValue(name)) || 0;
+  const h = px(style, '--card-h') || 123;
+  const w = px(style, '--card-w') || 88;
+  const air = px(style, '--slot-gap');
+  const fan = px(fieldStyle, '--fan');
+  const glow = px(fieldStyle, '--glow');
+  const slotW = h * 0.9 + 2 * air;
+  // A group's width at a card size of 1, on one line or split over two
+  const groupUnit = (g: GroupStats, lines: number) => {
+    const total = g.slots * slotW + g.steps * w * fan + g.battles * (h - w);
+    // Two lines hold at most half the width plus the widest slot, as the second line takes what the first leaves
+    return lines === 1 ? total : total / 2 + slotW + g.depth * w * fan + (g.battles ? h - w : 0);
+  };
+  // Between a group's two lines, room for an attacker on the back line to step forward into, with its chevron
+  const lineGap = (fit: number) => 14 + (h - w * 0.9) / 2 * fit;
+  const live = (z: Zone) => z.filter(g => g.slots > 0);
+  const rowGap = (r: number) => (r === 1 ? 52 : 20);
+  const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
+    live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
+  const zoneHeight = (z: Zone, s: Sized) => {
+    const depth = live(z).reduce((n, g) => Math.max(n, g.depth), 0);
+    return (s.lines + depth * fan) * h * s.fit + (s.lines - 1) * lineGap(s.fit);
+  };
+
+  // offsetWidth, so a scrollbar appearing does not shrink the room it measures and feed back into the size
+  const width = field.offsetWidth - px(fieldStyle, 'padding-left') - px(fieldStyle, 'padding-right') - 2;
+  // A compact seat keeps its player's details in a row above the cards, and its own padding round both
+  const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
+  const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
+  // The room by the pill for an attacker's step and chevron grows with the cards (board.css), so it is worked out
+  // for each size tried rather than read back while the size is still easing
+  const mine = root.id === 'me';
+  const attacking = !!field.querySelector('.slot.attacking, .slot.charging');
+  const fieldPad = (fit: number) => {
+    const chevron = attacking ? w * fit * 0.38 : 0;
+    return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
+  };
+  const height = (fit: number) => root.clientHeight - header - seatPad - fieldPad(fit);
+
+  // A zone's size for the width it may take: one line or two, the second only as TWO_LINE_GAIN allows
+  const sizeFor = (z: Zone, room: number, cap: number, two: boolean, gap: number): Sized => {
+    const g = live(z);
+    const inner = gap * Math.max(0, g.length - 1);
+    // Compared before the smallest size is applied: a zone already past it is overflowing, and a second line that
+    // stops that is a gain even if both come out at the smallest size
+    const fitOn = (lines: number) =>
+      Math.min(cap, (room - inner) / Math.max(1, g.reduce((n, x) => n + groupUnit(x, lines), 0)));
+    const one = fitOn(1);
+    const floor = (fit: number) => Math.max(MIN_FIT, fit);
+    if (!two) return { fit: floor(one), lines: 1, raw: one };
+    const split = fitOn(2);
+    const was = Number(z[0].el.dataset.lines ?? '1');
+    const takeTwo = was === 2 ? split > one : split >= one + TWO_LINE_GAIN && one < TWO_LINE_BELOW;
+    return takeTwo ? { fit: floor(split), lines: 2, raw: split } : { fit: floor(one), lines: 1, raw: one };
+  };
+  // A row's zones under a largest size: each takes the width it needs at that size, up to an equal share of the
+  // row, so the widest zone gives way first and the rest keep their size. The share is found by halving
+  const layRow = (r: number, cap: number, two: boolean): Sized[] => {
+    const row = rows[r];
+    const gap = rowGap(r);
+    const zones = row.filter(z => live(z).length);
+    const need = zones.map(z => zoneWidth(z, { fit: cap, lines: 1 }, gap));
+    const gaps = gap * Math.max(0, zones.length - 1);
+    const used = (share: number) => need.reduce((n, x) => n + Math.min(x, share), 0) + gaps;
+    let lo = 0;
+    let hi = width;
+    for (let i = 0; i < 30; i++) {
+      const mid = (lo + hi) / 2;
+      if (used(mid) <= width) lo = mid;
+      else hi = mid;
+    }
+    const sizes = zones.map((z, i) => sizeFor(z, Math.min(need[i], lo), cap, two, gap));
+    return row.map(z => sizes[zones.indexOf(z)] ?? { fit: cap, lines: 1, raw: cap });
+  };
+  const rowHeight = (r: number, sizes: Sized[], cap: number) => {
+    const row = rows[r];
+    // An empty row still keeps 60% of a card's height (.row's min-height)
+    if (!row.some(z => live(z).length)) return 0.6 * h * cap;
+    return Math.max(...row.map((z, i) => (live(z).length ? zoneHeight(z, sizes[i]) : 0)));
+  };
+
+  // Every largest size and every choice of one line or two for each row is tried, and each layout that fits the
+  // height is judged by its smallest zone, before the smallest size is applied, so one that overflows less wins
+  const tried: { cap: number; sizes: Sized[][]; smallest: number; split: number }[] = [];
+  for (let cap = MAX_FIT; cap >= MIN_FIT - 1e-9; cap -= STEP) {
+    for (const twoA of [false, true]) {
+      for (const twoB of [false, true]) {
+        const sizes = [layRow(0, cap, twoA), layRow(1, cap, twoB)];
+        // 32px is the two rows' room above their cards, and 24px the gap between them with some to spare: a board
+        // filled to the pixel scrolls on the next rounding and cuts off its top row
+        const tall = rowHeight(0, sizes[0], cap) + rowHeight(1, sizes[1], cap) + 32 + 24;
+        if (tall > height(cap)) continue;
+        const flat = sizes.flat();
+        tried.push({ cap, sizes, smallest: Math.min(...flat.map(s => s.raw)), split: flat.filter(s => s.lines === 2).length });
+      }
+    }
+  }
+  // Within SMALLEST_SLACK of the best smallest zone, the larger largest size wins, so every other zone's size is not
+  // given up for a sliver on the smallest; then fewer split zones, then the larger smallest zone
+  const top = Math.max(...tried.map(t => t.smallest));
+  const best = tried.filter(t => t.smallest >= top - SMALLEST_SLACK)
+    .sort((a, b) => b.cap - a.cap || a.split - b.split || b.smallest - a.smallest)[0];
+  // Past the smallest size nothing fits; the smallest cards, split where they can be, scroll rather than shrink
+  const chosen = best ?? { cap: MIN_FIT, sizes: [layRow(0, MIN_FIT, true), layRow(1, MIN_FIT, true)] };
+  root.style.setProperty('--fit', chosen.cap.toFixed(2));
+  rows.forEach((row, r) => row.forEach((zone, z) => {
+    const s = chosen.sizes[r][z];
+    for (const g of zone) {
+      g.el.style.setProperty('--fit', s.fit.toFixed(3));
+      g.el.dataset.lines = String(s.lines);
+      g.el.classList.toggle('two', s.lines === 2);
+      // A split group is held to half its width plus a slot, so it breaks into two lines in the same place each time
+      g.el.style.maxWidth = s.lines === 2 ? `${Math.ceil(groupUnit(g, 2) * s.fit) + 1}px` : '';
+      // Below this the keyword icons are too small to tell apart, so the group drops them and keeps the art
+      g.el.classList.toggle('cramped', s.fit < TWO_LINE_BELOW);
+    }
+  }));
 }
 
 // An attachment sits under the card at the bottom of its chain, on whichever battlefield that card is
