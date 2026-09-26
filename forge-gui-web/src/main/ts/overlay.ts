@@ -1,4 +1,4 @@
-import { game, derefAll, type Model } from './model';
+import { game, derefAll, players, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
 import { cardElement, pileTopFor } from './motion';
@@ -73,10 +73,13 @@ function paint(model: Model): void {
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
+  const charging = chargingAtPlayer(model);
   for (const band of mode === '1' ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
     attackers.forEach((attacker, i) => {
-      ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack, i, attackers.length);
+      if (!charging.has(attacker.ref)) {
+        ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack, i, attackers.length);
+      }
       for (const blocker of present(band.blockers)) {
         ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block, 0, 1);
       }
@@ -103,6 +106,21 @@ function paint(model: Model): void {
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
+
+/**
+ * Attackers that can only be attacking the one opponent's face: in a two-player game, those attacking a player
+ * rather than a planeswalker or battle. An arrow would only point at the portrait, so they wear a chevron instead.
+ */
+export function chargingAtPlayer(model: Model): Set<number> {
+  const out = new Set<number>();
+  const everyone = players(model);
+  if (everyone.length !== 2) return out;
+  const faces = new Set(everyone.map(p => p.$key));
+  for (const band of game(model)?.CombatView ?? []) {
+    if (band.defender && faces.has(band.defender.ref)) present(band.attackers).forEach(a => out.add(a.ref));
+  }
+  return out;
+}
 
 export function stackTargets(model: Model, item: StackItemView): TrackedObject[] {
   const out: TrackedObject[] = [];

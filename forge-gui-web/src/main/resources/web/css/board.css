@@ -563,6 +563,21 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 /* The whole slot steps forward, so anything attached to the attacker travels with it */
 .slot.attacking { transform: translateY(-14px); transition: transform .15s ease; }
 .card.attacking { outline: 2px solid var(--attack); }
+/* An attacker that can only be attacking the lone opponent wears a chevron of light rather than an arrow to their
+   face: a red sheath round a white-hot core, in a slowly breathing halo. It hangs off the slot, which never turns,
+   so a tapped attacker's chevron stays upright, and it points at the defender: up from your side, down from theirs. */
+.slot.charging { --cw: calc(var(--card-w) * var(--fit, 1)); }
+.slot.charging:has(> .card.tapped:last-child) { --drop: calc((var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
+.slot.charging > .card.attacking { outline: none; }
+.slot.charging::before, .slot.charging::after { content: ''; position: absolute; left: 50%; z-index: 3; pointer-events: none; transform: translateX(-50%); }
+.slot.charging::before { width: calc(var(--cw) * .9); height: calc(var(--cw) * .44); bottom: calc(100% - var(--drop, 0px) + var(--cw) * .04); border-radius: 50%;
+  background: radial-gradient(closest-side, #ff3b2a40, transparent); animation: charge-breathe 3.2s ease-in-out infinite; }
+.slot.charging::after { width: calc(var(--cw) * .62); aspect-ratio: 60 / 44; bottom: calc(100% - var(--drop, 0px));
+  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 60 44'><filter id='b' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='5'/></filter><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
+#opponent .slot.charging::before { bottom: auto; top: calc(100% - var(--drop, 0px) + var(--cw) * .04); }
+#opponent .slot.charging::after { bottom: auto; top: calc(100% - var(--drop, 0px)); transform: translateX(-50%) rotate(180deg); }
+@keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+html[data-motion="reduced"] .slot.charging::before { animation: none; }
 .card.blocking { outline: 2px dashed var(--attack); }
 /* Damage on a creature: the card jolts and the amount is thrown off it */
 .card.struck { animation: card-struck .34s ease-out; }

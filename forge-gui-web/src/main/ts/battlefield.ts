@@ -4,6 +4,7 @@ import { reconcile } from './render';
 import { createCard, updateCard, setPileCount, type CardClick } from './cards';
 import { stateOf, type Model } from './model';
 import { mergeInto, spreadFrom } from './motion';
+import { chargingAtPlayer } from './overlay';
 import { q } from './dom';
 import { changeUi, ui } from './ui';
 import type { CardView } from './protocol';
@@ -42,8 +43,9 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
   const groups: Record<Group, Slot[]> = {
     lands: of('lands'), support: of('support'), creatures: of('creatures'), tokens: of('tokens'), far: of('far'),
   };
+  const charging = chargingAtPlayer(model);
   for (const [name, list] of Object.entries(groups)) {
-    reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select));
+    reconcile(q(root, `.${name}`), list, s => s.top.$key, createSlot, (el, s) => updateSlot(el, model, s, select, charging));
   }
   fitCards(root, groups.lands.length + groups.support.length,
     groups.creatures.length + groups.tokens.length + groups.far.length);
@@ -175,7 +177,7 @@ function createSlot(): HTMLElement {
   return el;
 }
 
-function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick): void {
+function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick, charging: Set<number>): void {
   // The host comes last so it paints over what is attached to it
   const cards = [...slot.attached, slot.top];
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
@@ -186,6 +188,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));
   el.classList.toggle('attacking', !!slot.top.Attacking);
+  el.classList.toggle('charging', charging.has(slot.top.$key));
   const sig = slot.sig;
   const opened = !!sig && ui.openPiles.has(sig);
   const spreadable = opened || (!!sig && slot.members.length > 1);
