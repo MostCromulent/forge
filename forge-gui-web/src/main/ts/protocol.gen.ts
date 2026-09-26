@@ -821,6 +821,11 @@ export interface BenchSeat {
   benched: boolean;
 }
 
+export interface SetPlayerCount {
+  t: 'setPlayerCount';
+  count: number;
+}
+
 export interface EventDecksOnly {
   t: 'eventDecksOnly';
   on: boolean;
@@ -886,6 +891,7 @@ export type ClientMessage =
   | SetLimited
   | EventSetup
   | BenchSeat
+  | SetPlayerCount
   | EventDecksOnly
   | EventHostAgain;
 

@@ -48,6 +48,11 @@ final class FromBrowser {
     record SeatCommand(SeatAction t, int index) {
     }
 
+    /** How many seats the table has. Seats come and go at the end, and a seat a person holds never goes. */
+    @Command("setPlayerCount")
+    record SetPlayerCount(int count) {
+    }
+
     /** Changes one or more of a seat's choices; a field left out is left alone. */
     @Command("setSeat")
     record SetSeat(int index, @Nullable String name, @Nullable String deck, @Nullable Integer avatar,
@@ -349,6 +354,6 @@ final class FromBrowser {
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class,
+            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class,
             EventDecksOnly.class, EventHostAgain.class);
 }

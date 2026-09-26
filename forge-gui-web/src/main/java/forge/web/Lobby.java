@@ -966,6 +966,42 @@ final class Lobby {
         }
     }
 
+    /**
+     * Sets how many seats the table has. New seats are computers, added at the end. Fewer seats take open seats first,
+     * then computers, from the end; a seat a person holds is never taken, and a table never has fewer than two.
+     */
+    void setPlayerCount(final int count) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || drafting(lobby)) {
+            return;
+        }
+        final int wanted = Math.min(maxSeats(), Math.max(2, count));
+        while (lobby.getNumberOfSlots() < wanted) {
+            final int before = lobby.getNumberOfSlots();
+            addSeat();
+            if (lobby.getNumberOfSlots() == before) {
+                return;
+            }
+        }
+        while (lobby.getNumberOfSlots() > wanted) {
+            final int seat = lastSeatOf(lobby, LobbySlotType.OPEN) >= 0 ? lastSeatOf(lobby, LobbySlotType.OPEN) : lastSeatOf(lobby, LobbySlotType.AI);
+            if (seat < 0) {
+                return;
+            }
+            removeSeat(seat);
+        }
+        local.pushLobby();
+    }
+
+    private int lastSeatOf(final GameLobby lobby, final LobbySlotType type) {
+        for (int i = lobby.getNumberOfSlots() - 1; i >= 0; i--) {
+            if (i != local.webSeat() && lobby.getSlot(i).getType() == type) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     void addSeat() {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
