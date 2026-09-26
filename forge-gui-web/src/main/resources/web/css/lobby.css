@@ -221,7 +221,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .deck-line .deck-row { flex: 1; min-width: 0; }
 .random-row { justify-content: center; gap: 8px; color: var(--accent-2); border-color: var(--accent-2); background: var(--accent-soft); font-weight: 600; }
 .deck-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
-.deck-row .deck-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A long name wraps rather than being cut short, so the whole of it can be read in the seat */
+.deck-row .deck-name { flex: 1; min-width: 0; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
 .deck-row.unset .deck-name { color: var(--muted); }
 /* A deck the format deals at the start is a statement, not a choice */
 .deck-row.fixed { margin: 0; padding: 6px 10px; border: 1px dashed var(--line-bright); border-radius: 6px; color: var(--muted); font-size: 13px; }
