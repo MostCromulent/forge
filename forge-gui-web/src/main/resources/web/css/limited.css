@@ -58,8 +58,8 @@
 .pick { display: grid; gap: 8px; }
 .pick-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px; max-height: 260px; overflow-y: auto; }
 .pick-list button { text-align: left; }
-.rows { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.rows input[type=text] { flex: 1; min-width: 220px; }
+.stp-open .rows { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.stp-open .rows input[type=text] { flex: 1; min-width: 220px; }
 .stepper { display: inline-flex; align-items: center; gap: 6px; }
 .stepper .n { min-width: 24px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
 .wfoot { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
