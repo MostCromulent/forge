@@ -1,147 +1,164 @@
 # Forge Web GUI
 
-Plays Forge in a web browser. One computer runs Forge as a small server, and everyone, the person running it
-included, plays in a browser. Other players need only a browser and a link; they install nothing.
+This lets you play Forge in a web browser. One computer runs Forge as a small server, and everyone plays in a
+browser, including the person running it. Friends don't need to install anything. You send them a link and they
+open it.
 
-The first half of this page is for players. The second, **For developers**, covers building and working on it.
+The first half of this page is for players. The second half is for developers.
 
 ![A match in progress](docs/match.webp)
 
 ## For players
 
-The person running the server is the **host**. Everyone who joins by link is a **guest**.
+The person running the server is the **host**. Anyone who joins with a link is a **guest**.
 
-### What it plays
+### What you can play
 
-- **Constructed** and the other game types: Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto.
-- The casual variants on top of them: **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**.
-- **Draft** and **Sealed**, against the computer or with friends at one table. A pool is played against one of the
-  computer's decks, several at once, or all of them in turn as a gauntlet.
+- **Constructed**, plus Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto.
+- The casual variants **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**, on top of any of those.
+- **Draft** and **Sealed**, against the computer or with friends. After you build a deck from your pool, you can
+  play one computer opponent, several at once, or all of them one after another.
 
-Not yet: **Quest**, **Adventure**, **Planar Conquest**, **puzzles**, desktop's constructed **gauntlets**, and
-**Winston** draft. These are played in desktop or mobile Forge.
+Not available yet: **Quest**, **Adventure**, **Planar Conquest**, **puzzles**, desktop's constructed
+**gauntlets** and **Winston** draft. Use desktop or mobile Forge for those.
 
 ### Starting it
 
-You need Java 17 or later and Maven. From the repository root:
+You need Java 17 or newer, and Maven. From the top folder of the Forge repository, run:
 
     mvn -Pweb -pl forge-gui-web -am install -DskipTests
     java -jar forge-gui-web/target/forge-gui-web.jar
 
-Two windows open: the game, in a browser window, and the **server window**.
+Two windows open: the game, in your browser, and the **server window**.
 
 ![The server window](docs/server.webp)
 
-The server window starts and stops the server and shows the links to join. It graphs the last five minutes of
-traffic, split into game, card art, audio and page, with totals and uptime beside it. Its log can be copied with
-**Copy log**. Closing it quits Forge, and so does closing the last browser, after 15 seconds, unless **Quit when
-the last player leaves** is unticked.
+The server window starts and stops the server, and shows the links people can use to join. It also shows a graph
+of network traffic, and a log you can copy with **Copy log**.
+
+Closing the server window quits Forge. Forge also quits 15 seconds after the last browser closes, unless you
+untick **Quit when the last player leaves**.
 
 ### Playing
 
-The start page offers **Play the computer**, **Play with friends** and **Decks**. Either way of playing leads to
-Constructed, Draft or Sealed.
+The start page has three choices: **Play the computer**, **Play with friends** and **Decks**. Both ways of playing
+let you choose Constructed, Draft or Sealed.
 
 ![A table with a guest seated](docs/table.webp)
 
-At a table, the match bar sets the **Mode** (Constructed, Commander and the other game types), the **Format** that
-limits the cards, the number of **Players**, the **Match** length (best of one, three or five) and any
-**Variants**. Only the host changes them.
+At the table, the bar along the top sets up the match:
 
-To invite someone, send them a link from **Invite** at the top of the table, or click an address in the server
-window's Invite row to copy it.
+- **Mode**: Constructed, Commander or another game type.
+- **Format**: which cards are allowed.
+- **Players**: how many seats there are.
+- **Match**: one game, or best of three or five.
+- **Variants**: Planechase, Archenemy and so on.
 
-- A home-network address (`192.168.…`) works for people on the same network.
-- The internet address works once the router forwards the port to this computer. Tick **Open the port on the
-  router** in the server window and Forge asks the router by UPnP each time the server starts. The window says
-  whether it agreed; if not, turn on UPnP in the router or forward the port by hand.
+Only the host can change these.
 
-Links are made afresh each time Forge starts. A player who reloads or loses the connection returns to their seat,
-and a match carries on where it was.
+To invite a friend, click **Invite** at the top of the table and send them the link. You can also click an address
+in the server window to copy it.
+
+- An address starting with `192.168.` works for people on your home network.
+- The internet address works for everyone else, but only if your router lets them through. Tick **Open the port on
+  the router** in the server window and Forge will ask your router to allow it. The window tells you whether that
+  worked. If it didn't, turn on UPnP in your router's settings, or set up port forwarding by hand.
+
+The links change every time Forge starts. If someone reloads the page or loses their connection, they go straight
+back to their seat and the game carries on.
 
 ![The end of a game](docs/victory.webp)
 
 ### Decks and settings
 
-**Decks** builds, edits and imports decks. Import takes a pasted list, a deck file, or a link from Moxfield,
-Archidekt, TappedOut or MTGGoldfish, and marks any line it could not read.
+**Decks** lets you build, edit and import decks. You can import a pasted list, a deck file, or a link from
+Moxfield, Archidekt, TappedOut or MTGGoldfish. Any line Forge can't read is marked so you can fix it.
 
-The host's decks and settings are desktop Forge's own, so a change in one shows in the other. A guest's decks are
-kept in the guest's browser, and its settings start from Forge's defaults. **Copy as text** in the deck editor
-keeps a copy anywhere.
+The host shares decks and settings with desktop Forge, so changes in one show up in the other. A guest's decks are
+saved in their own browser. To keep a copy somewhere else, use **Copy as text** in the deck editor.
 
-The cog opens **Options**: gameplay, display, keys, dev mode and custom CSS. Auto-pass stops, auto-yields and
-conceding are in the ⋯ menu beside it. Custom CSS applies as you type, and can be exported and imported to share a
-theme.
+The cog button opens **Options**, where you'll find gameplay, display, keys, dev mode and custom CSS. The **⋯**
+button next to it has auto-pass stops, auto-yields and concede. Custom CSS changes the look as you type, and you can
+export it to share with others.
 
 ---
 
 ## For developers
 
-The Java side (`src/main/java`) runs the engine and serves the page. The browser side (`src/main/ts`) is TypeScript
-and Preact, bundled into `src/main/resources/web/js/` (a build output, not committed). Rarely used code, such as
-three.js for a player's portrait breaking, is split into `js/chunks/` and loaded on first use.
+The Java code (`src/main/java`) runs the game engine and serves the page. The browser code (`src/main/ts`) is
+TypeScript and Preact. It's bundled into `src/main/resources/web/js/`, which is build output and isn't committed.
+Code that's rarely needed, such as three.js for the shattering portrait effect, goes in `js/chunks/` and only loads
+when it's used.
 
 ### Building
 
-`-Pweb` in the build command is needed because the web module is left out of Forge's normal build. Maven fetches
-its own Node for the browser code. Start the jar from the repository root or a Forge install, so Forge finds its
-`res` folder, or pass `-Dforge.assets.dir=<folder holding res>`.
+The build command needs `-Pweb` because Forge's normal build leaves the web module out. Maven downloads its own copy
+of Node to build the browser code.
 
-| Option (before `-jar`) | Effect |
+Start the jar from the repository's top folder or from a Forge install, so Forge can find its `res` folder. If you
+start it anywhere else, add `-Dforge.assets.dir=<folder that contains res>`.
+
+You can add these options before `-jar`:
+
+| Option | What it does |
 |---|---|
-| `-Dforge.web.port=<n>` | Another port. The default, 36743, is desktop Forge's network port; change it to host from both at once. |
-| `-Dforge.web.noBrowser=true` | Do not open the game window. |
-| `-Dforge.web.noConsole=true` | No server window. The link is printed instead. |
+| `-Dforge.web.port=<n>` | Uses a different port. The default, 36743, is the same as desktop Forge's network port, so change it if you want to host from both at once. |
+| `-Dforge.web.noBrowser=true` | Doesn't open the game window. |
+| `-Dforge.web.noConsole=true` | Doesn't open the server window. The link is printed instead. |
 
 ### Running from IntelliJ
 
-The **Forge Web** run configuration builds the bundle and starts `forge.web.WebMain` with
-`-Dforge.web.pageDir=forge-gui-web/src/main/resources/web`, so the page is read from disk and a change needs only a
-reload. CSS and `index.html` are served as they are; for TypeScript, run `npm run watch` in this folder, or
-`npm run build` to type-check and build once. Use the Node Maven installed (`node/`) or any Node 22.
+The **Forge Web** run configuration builds the page and starts `forge.web.WebMain`. It reads the page straight from
+`src/main/resources/web`, so after a change you only need to reload the browser.
+
+CSS and `index.html` changes show up on reload. For TypeScript, run `npm run watch` in this folder to rebuild as you
+save, or `npm run build` to check types and build once. Use the Node that Maven installed (`node/`) or any Node 22.
 
 ### The protocol
 
-Every message is a Java record in `ToBrowser` or `FromBrowser`. `src/main/ts/protocol.gen.ts` is generated from
-them and from Forge's `TrackableProperty`, so each field is named in one place. After changing a record, regenerate
-it, and the compiler shows what the client must change:
+Every message between the server and the browser is a Java record in `ToBrowser` or `FromBrowser`. The TypeScript
+types in `src/main/ts/protocol.gen.ts` are generated from those records and from Forge's `TrackableProperty`, so
+each field is only defined in one place. After you change a record, regenerate the file, and the TypeScript
+compiler will show you what needs updating in the browser code:
 
     mvn -Pweb -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
 
-`ProtocolTypesTest` fails whenever the committed file is out of date. A field may be null only when marked
-`@Nullable`; it is then left out of the JSON and optional in TypeScript.
+`ProtocolTypesTest` fails if the committed file is out of date. A field can only be null if it's marked
+`@Nullable`. Null fields are left out of the JSON and are optional in TypeScript.
 
 ### Tests
 
-`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts` (`npm test` runs
-only the latter). Whole-game tests need `-Drun.stress.tests=true`. `SharedTraceTest` and `model.test.ts` replay one
-recorded game (`src/test/resources/traces/whole-game.json`) through the Java and TypeScript models, so they cannot
-drift apart. After the model or the messages change, record a new one:
+`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts`. `npm test` runs
+just the Vitest ones. Whole-game tests only run with `-Drun.stress.tests=true`.
+
+`SharedTraceTest` and `model.test.ts` both replay the same recorded game
+(`src/test/resources/traces/whole-game.json`) through the Java and TypeScript models, which keeps the two in step.
+If you change the model or the messages, record a new game:
 
     mvn -Pweb -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
 
-`e2e/` drives the page in a real browser against a real server, each test on its own port with a throwaway home
-folder. Build the jar first, then:
+The tests in `e2e/` open the page in a real browser against a real server. Each test gets its own port and its own
+temporary home folder. Build the jar first, then run:
 
     cd forge-gui-web/e2e
     npm ci
-    npx playwright install chromium   # once
+    npx playwright install chromium   # first time only
     npx playwright test
 
 ### Where things are
 
-- `ToBrowser`, `FromBrowser` and `Wire` define and write the protocol; `protocol.ts` adds the views the client reads
-  game objects through.
-- `model.ts` is the browser's copy of the game's object table. `BrowserModel` is the server's copy, sent in full to
-  a browser that connects or reloads.
-- `app.ts` receives every message, is the only place that sends one, and draws at most once per frame. Everything
-  else acts through `actions.ts`.
-- `WebSession` is one browser, and where it is (start page, table, match) is one `Stage`, changed only through
-  `move`. `WebSessions` holds them all, and `Lobby` is one browser's view of match setup.
-- `PlayerSettings` is one player's settings: Forge's preferences for the host, the session's own for a guest.
+- `ToBrowser`, `FromBrowser` and `Wire` define the messages and write them. `protocol.ts` adds the views the browser
+  uses to read game objects.
+- `model.ts` is the browser's copy of the game. `BrowserModel` is the server's copy, which it sends in full when a
+  browser connects or reloads.
+- `app.ts` receives every message and is the only place that sends them. It redraws at most once per frame.
+  Everything else goes through `actions.ts`.
+- `WebSession` is one browser. Where that browser is (start page, table or match) is a `Stage`, and it only changes
+  through `move`. `WebSessions` holds all of them. `Lobby` is one browser's view of the match setup.
+- `PlayerSettings` holds one player's settings: Forge's own preferences for the host, and per-session settings for
+  a guest.
 - `DeckSession`, `DeckEditor`, `DeckImport` and `Legality` are the deck editor, the importer and the format checks.
-- `WebServer` serves the page, card images (`CardThumbnails` shrinks them for the board) and the socket, and
-  `ServerTraffic` counts its bytes for the server window, `ServerConsole`.
-- The board (`board.ts` and what it calls) is drawn by hand, as it is placed by measuring and animated card by card.
-  Everything around it is Preact components in the `.tsx` files, drawn by `screens.tsx` every frame.
+- `WebServer` serves the page, card images and the connection. `CardThumbnails` makes smaller images for the board.
+  `ServerTraffic` counts the traffic for the server window, `ServerConsole`.
+- The board (`board.ts` and what it calls) is drawn by hand, because cards are placed by measuring and animated one
+  by one. Everything else is Preact components in the `.tsx` files, drawn by `screens.tsx` every frame.
