@@ -188,3 +188,7 @@ the game's next prompt rather than for a set time, which keeps tests from failin
   `ServerTraffic` counts the traffic for the server window, `ServerConsole`.
 - The board (`board.ts` and what it calls) is drawn by hand, because cards are placed by measuring and animated one
   by one. Everything else is Preact components in the `.tsx` files, drawn by `screens.tsx` every frame.
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
