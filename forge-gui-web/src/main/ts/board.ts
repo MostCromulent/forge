@@ -24,6 +24,7 @@ import type { CardClick } from './cards';
 import type { Actions } from './actions';
 import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
+import { notePick } from './overlay';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
@@ -58,7 +59,10 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   byId('match').classList.toggle('picking', !!p && !p.paying
     && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
-  const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
+  const select: CardClick = (el, menu, e) => {
+    notePick(Number(el.dataset.key));
+    actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
+  };
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
   renderStack(model, events);
@@ -192,7 +196,10 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
         <div class="row together"><div class="group creatures"></div><div class="group far"></div></div>
       </div>`;
     const avatarEl = q(root, '.avatar');
-    avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
+    avatarEl.onclick = () => {
+      notePick(Number(root.dataset.player));
+      actions.selectPlayer(Number(root.dataset.player));
+    };
     avatarEl.addEventListener('mouseenter', e => { followPointer(e); hoverPlayer(Number(root.dataset.player)); });
     avatarEl.addEventListener('mousemove', followPointer);
     avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));

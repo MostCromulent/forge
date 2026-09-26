@@ -176,6 +176,18 @@ const onStack = (key: string): HTMLElement | null =>
   document.querySelector<HTMLElement>(`#stack .stack-item img[data-key="${key}"]`)?.closest<HTMLElement>('.stack-item') ?? null;
 
 let pointer: Point | null = null;
+/** The card being aimed and the targets picked for it, which the payment prompt that follows no longer carries. */
+let lastAim: { key: string; targets: number[] } | null = null;
+
+/**
+ * A card or player clicked while aiming. A spell with one target goes straight on to its payment, so the prompt never
+ * shows that target picked; the click is kept here for the arrow drawn while the spell is paid for.
+ */
+export function notePick(key: number): void {
+  const p = drawn?.prompt;
+  const offered = !!p && (p.selectable.some(r => r.ref === key) || p.selectablePlayers.some(r => r.ref === key));
+  if (aiming && lastAim && offered && !lastAim.targets.includes(key)) lastAim.targets.push(key);
+}
 /** Whether the last paint drew the aim, so moving the mouse only repaints while there is one to follow it. */
 let aiming = false;
 
@@ -193,6 +205,20 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   // A spell is already on the stack, awaiting payment, while its targets are chosen; an ability's card is on the board
   const from = aimed ? onStack(key) ?? cardElement(key) ?? pileTopFor(key) : null;
   aiming = !!from;
+  if (from && p) {
+    // Picks clicked for this card stay until the prompt shows them itself
+    const clicked = lastAim?.key === key ? lastAim.targets : [];
+    lastAim = { key, targets: [...new Set([...p.highlighted, ...clicked])] };
+  } else {
+    // Paying for it, the prompt no longer names the targets, so the ones last picked stay drawn from its waiting slot
+    const waiting = p?.paying && lastAim ? onStack(lastAim.key) : null;
+    if (waiting && lastAim) {
+      const targets = lastAim.targets;
+      targets.forEach((k, i) => ribbon(ctx, waiting, elementFor(k) ?? onStack(String(k)), KINDS.target, i, targets.length));
+    } else {
+      lastAim = null;
+    }
+  }
   if (!from || !p) return;
   p.highlighted.forEach((k, i) =>
     ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target, i, p.highlighted.length));

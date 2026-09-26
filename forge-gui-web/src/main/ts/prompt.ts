@@ -10,6 +10,7 @@ import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
+import { notePick } from './overlay';
 import type { PlayerView, PromptButton, Ref } from './protocol';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
@@ -167,7 +168,10 @@ function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly 
     const name = document.createElement('span');
     name.textContent = player?.Name ?? '';
     button.append(face, name);
-    button.onclick = () => actions.selectPlayer(r.ref);
+    button.onclick = () => {
+      notePick(r.ref);
+      actions.selectPlayer(r.ref);
+    };
     return button;
   }));
 }
