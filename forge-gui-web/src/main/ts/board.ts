@@ -7,7 +7,7 @@ import { game, me, opponents, players, zone, deref, stateOf, isLocal, type Model
 import { renderHand } from './hand';
 import { renderZones, togglePile } from './zones';
 import { renderBattlefield } from './battlefield';
-import { hoverPlayer, hoverable } from './detail';
+import { followPointer, hoverPlayer, hoverable } from './detail';
 import { renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
@@ -189,7 +189,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       </div>`;
     const avatarEl = q(root, '.avatar');
     avatarEl.onclick = () => actions.selectPlayer(Number(root.dataset.player));
-    avatarEl.addEventListener('mouseenter', () => hoverPlayer(Number(root.dataset.player)));
+    avatarEl.addEventListener('mouseenter', e => { followPointer(e); hoverPlayer(Number(root.dataset.player)); });
+    avatarEl.addEventListener('mousemove', followPointer);
     avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
   }

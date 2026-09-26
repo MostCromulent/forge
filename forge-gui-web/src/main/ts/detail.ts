@@ -84,6 +84,15 @@ export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
   el.addEventListener('mouseleave', () => hoverCard(null));
 }
 
+/** Where the pointer is over an avatar; the player's details are put beside it, and follow it. */
+let pointer = { x: 0, y: 0 };
+
+export function followPointer(e: MouseEvent): void {
+  pointer = { x: e.clientX, y: e.clientY };
+  const hover = ui.hover;
+  if (hover && 'player' in hover) placeAtPointer(byId('zoom'));
+}
+
 // Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
 export function hoverPlayer(key: number | null): void {
   clearTimeout(opening);
@@ -107,6 +116,8 @@ export function renderDetail(model: Model): void {
   const zoom = byId('zoom');
   if (hover && 'card' in hover && hover.at) {
     placeZoom(zoom, hover.at);
+  } else if (hover && 'player' in hover) {
+    placeAtPointer(zoom);
   } else {
     zoom.classList.remove('placed');
     zoom.style.left = zoom.style.top = '';
@@ -115,6 +126,17 @@ export function renderDetail(model: Model): void {
 
 /** The gap kept between a card and its preview, and between the preview and the edges it must stay inside. */
 const ZOOM_GAP = 16;
+
+/** Below and to the right of the pointer, turned back inside the window near its edges. */
+function placeAtPointer(zoom: HTMLElement): void {
+  if (zoom.hidden) return;
+  const w = zoom.offsetWidth, h = zoom.offsetHeight;
+  const x = pointer.x + ZOOM_GAP + w > window.innerWidth - 8 ? pointer.x - ZOOM_GAP - w : pointer.x + ZOOM_GAP;
+  const y = Math.min(pointer.y + ZOOM_GAP, window.innerHeight - h - 8);
+  zoom.classList.add('placed');
+  zoom.style.left = `${Math.round(Math.max(8, x))}px`;
+  zoom.style.top = `${Math.round(Math.max(8, y))}px`;
+}
 
 /**
  * Puts the preview beside the card it shows, never over it: to its right where there is room, else to its left, else
