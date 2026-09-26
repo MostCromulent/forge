@@ -64,7 +64,7 @@ export function mergeInto(keys: string[], rect: DOMRect): void {
 /** Animates what happened since the last frame. Runs after the board is drawn, so both ends can be measured. */
 export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   notePiles();
-  let dealt = 0;
+  const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null }[] = [];
   for (const [key, move] of journeys(events)) {
     const start = waiting.get(key)?.rect ?? lastSeen.get(key)?.rect ?? placeRect(move.from);
@@ -88,7 +88,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
       land(key);
       if (start) {
-        fly(el, start, FLIGHT_MS, drawn ? dealt++ * STAGGER_MS : 0);
+        if (drawn) dealt.push({ el, start });
+        else fly(el, start, FLIGHT_MS, 0);
       } else {
         // A token, or anything else that comes into being, grows into place rather than blinking on
         pop(el);
@@ -104,6 +105,9 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       else sendTo({ rect: start, ghost }, target ?? start, target ? 0.25 : 0);
     }
   }
+  // Cards drawn together land from left to right, wherever the hand's sort puts each one
+  dealt.sort((a, b) => restingRect(a.el).left - restingRect(b.el).left).forEach(({ el, start }, i) =>
+    fly(el, start, FLIGHT_MS, i * STAGGER_MS));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
   leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target }, i) =>
     sendTo(was, target ?? was.rect, target ? 0.25 : 0, i * STAGGER_MS));
