@@ -91,18 +91,26 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
 };
 
-/** A kind of game, and under it a way back into the event of that kind saved last, when there is one. */
+/**
+ * A kind of game, with a way back into the event of that kind saved last along its foot when there is one. The card
+ * is two buttons in one frame, as a button cannot hold another.
+ */
 function Kind({ id, name, blurb, resume, onClick }: { id: string; name: string; blurb: string; resume?: () => void; onClick: () => void }) {
   return (
-    <div class="kind-col">
-      <button class="mode" data-kind={id} onClick={onClick}>
+    <div class="mode kind-card">
+      <button class="kind-main" data-kind={id} onClick={onClick}>
         <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
           <span class="mode-blurb">{blurb}</span>
         </span>
       </button>
-      {resume && <button class="resume" onClick={resume}>Resume last event</button>}
+      {resume && (
+        <button class="kind-resume" onClick={resume}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M10 9l5 3-5 3z" /></svg>
+          Resume last event
+        </button>
+      )}
     </div>
   );
 }

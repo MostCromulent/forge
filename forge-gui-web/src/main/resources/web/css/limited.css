@@ -3,10 +3,16 @@
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
 .chooser .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .chooser h2 { margin: 0; font-size: 22px; }
-.chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
-.kind-col { display: grid; gap: 8px; }
-.kind-col .mode { height: 100%; }
-.kind-col .resume { justify-self: stretch; }
+.chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+/* A chooser card is two buttons in the mode card's frame: the card itself, and a resume strip along its foot */
+.kind-card { height: 100%; }
+.kind-card:has(button:hover) { border-color: var(--accent-2); }
+.kind-main { flex: 1; display: flex; flex-direction: column; align-items: stretch; padding: 0; background: none; border: 0; border-radius: 0; color: inherit; font: inherit; text-align: left; }
+.kind-resume { display: flex; align-items: center; gap: 8px; padding: 10px 18px; background: color-mix(in srgb, var(--accent-2) 6%, transparent); border: 0; border-top: 1px solid var(--line-bright); border-radius: 0; color: var(--accent-2); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1.2; text-align: left; }
+.kind-resume svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.kind-resume path:last-child { fill: currentColor; stroke: none; }
+.kind-resume:hover { background: color-mix(in srgb, var(--accent-2) 16%, transparent); color: var(--text); }
+.kind-main:focus-visible, .kind-resume:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 
 .limited-page { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
