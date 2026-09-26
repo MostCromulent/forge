@@ -473,6 +473,9 @@ function announceTurn(model: Model, g: GameView): void {
   if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), () => {});
 }
 
+/** How long before the turn banner has gone that the turn's own actions start. */
+const TURN_OVERLAP_MS = 300;
+
 function announce(model: Model, turnNumber: number | undefined, active: PlayerView | undefined, then: () => void): boolean {
   const turn = `${turnNumber ?? 0}/${active?.$key ?? ''}`;
   if (!active || announced === turn) {
@@ -496,13 +499,11 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   const strip = byId('phase-strip');
   strip.append(banner);
   strip.classList.add('announcing');
-  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out,
-  // and the turn goes on from there
+  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
   const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
-  setTimeout(() => {
-    strip.classList.remove('announcing');
-    then();
-  }, sweep * 0.84);
+  setTimeout(() => strip.classList.remove('announcing'), sweep * 0.84);
+  // The turn goes on just before the banner has quite gone
+  setTimeout(then, Math.max(0, sweep - TURN_OVERLAP_MS));
   // The light that travels across the plate is an animation on the banner's own ::after, and its end reaches
   // the banner too, so the sweep has to be named or the banner leaves less than half way through
   banner.addEventListener('animationend', e => {
