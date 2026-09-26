@@ -28,11 +28,10 @@
   --back-b: #251e0f;
   --back-edge: #574319;
   /* Selection and attack cues differ in luminance and shape, never only in red versus green. Lime marks what needs
-     putting right (a problem, a stop); what a prompt offers is ringed in gold, and what is already chosen in a paler,
-     brighter gold with more glow, so the two differ in luminance rather than hue. */
+     putting right (a problem, a stop) and the lands that can pay a cost. While a prompt offers a pick, what it does
+     not offer dims, and what is already chosen is ringed in gold. */
   --select: #b4f05a;
   --pick: var(--accent-2);
-  --picked: color-mix(in srgb, var(--accent-2) 40%, #fff);
   --attack: #ffffff;
   --danger: #f59e0b;
   /* Where a card you may play is really sitting. Taken from the zone banners the desktop client paints on these

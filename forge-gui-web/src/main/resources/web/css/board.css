@@ -171,9 +171,7 @@
 .avatar.lost .skull-mark { display: grid; }
 .avatar .skull-mark { display: none; position: absolute; inset: 0; z-index: 2; place-items: center; color: #d8dde5; pointer-events: none; }
 .avatar .skull-mark svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px #000); }
-.avatar.highlighted { box-shadow: 0 0 0 3px var(--picked), 0 0 14px 2px color-mix(in srgb, var(--pick) 65%, transparent); }
-/* A player the prompt lets you choose: a gold ring set off the portrait, thinner and darker than a chosen one's */
-.avatar.selectable:not(.highlighted) { outline: 2px solid var(--pick); outline-offset: 3px; }
+.avatar.highlighted { box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
 .avatar .initial { font-size: 28px; font-weight: 700; }
 .avatar .life { position: absolute; bottom: -8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-weight: 700; }
 /* Damage is loud: the number kicks, the ring flashes, and the amount floats away from the avatar */
@@ -277,7 +275,6 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .emblem .initials { display: none; font-weight: 700; font-size: 16px; }
 .emblem.noimg img { display: none; }
 .emblem.noimg .initials { display: block; }
-.emblem.selectable { outline: 2px solid var(--pick); outline-offset: 2px; }
 /* What a commander costs beyond its printed cost. The word is there because a bare "+6" reads as a counter or a
    pump long before it reads as a tax. Inside the circle, since the token clips whatever leaves it. */
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
@@ -286,7 +283,6 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .cmd-tile { width: 52px; height: 72px; border-radius: 5px; overflow: hidden; position: relative; cursor: pointer; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
 .cmd-tile img { width: 100%; height: 100%; object-fit: cover; }
 .cmd-tile.noimg img { display: none; }
-.cmd-tile.selectable { outline: 2px solid var(--pick); outline-offset: 2px; }
 .cmd-tile .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 1px 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--text); background: linear-gradient(180deg, transparent, #000000e0 38%); white-space: nowrap; }
 .cmd-tile .band:empty { display: none; }
 
@@ -597,15 +593,18 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 /* Mana and tap symbols sit on the text line at its size */
 .sym { height: 1em; width: 1em; vertical-align: -0.12em; margin: 0 1px; }
 #zoom .sym { height: 1.05em; width: 1.05em; }
-/* Gold for a card a prompt is offering; one already chosen is paler and glows more (below), the rule the avatars follow */
-.card.selectable { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 10px 1px color-mix(in srgb, var(--pick) 50%, transparent); }
+/* A land that can pay the cost being paid. Paying is not a pick among options, so the board does not dim for it */
+.card.selectable { outline: 2px dashed var(--select); outline-offset: 0; }
 /* A card you could act on now, and the stronger mark on what Auto would tap: paler and thinner than a card a
    prompt is asking for, so the two never read the same */
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent); }
-.card.highlighted { outline: 3px solid var(--picked); outline-offset: 0; box-shadow: 0 0 16px 3px color-mix(in srgb, var(--pick) 70%, transparent); }
-/* A window of cards to pick from dims those the prompt is not offering, so the choice stands out of a long zone */
-.zone-panel .cards:has(.card.selectable) .card:not(.selectable):not(.highlighted) { filter: brightness(.4) saturate(.6); }
+.card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
+/* While a prompt offers a pick, what it offers is left as it is and everything else dims; the gold ring is for what is
+   already chosen */
+#match.picking .card.selectable { outline: none; }
+#match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
+#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.4) saturate(.6); }
 /* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
 .slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); transition: transform .15s ease; }
@@ -730,8 +729,8 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
   background: radial-gradient(ellipse at center, transparent 50%, rgba(255,122,89,.3) 100%); }
 @keyframes hit-wash { from { opacity: 0; } 25% { opacity: 1; } to { opacity: 0; } }
 
-/* A spell that can be targeted is picked on the stack, so it is ringed there like a selectable card */
-#stack .stack-item.targetable { outline: 2px solid var(--pick); outline-offset: 2px; cursor: pointer; }
+/* A spell that can be targeted is picked on the stack, where it stays bright while the rest dims */
+#stack .stack-item.targetable { cursor: pointer; }
 #stack .stack-item.targetable:hover { outline-color: var(--text); }
 
 /* A one-pixel highlight along the top edge is what makes a dark panel read as a solid thing, not a hole */

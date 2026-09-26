@@ -49,6 +49,10 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     if (choice === 'toss' && mine) revealFirst(model, mine.$key, 'You won the coin toss');
   }
   noticeLosses(model, actions);
+  // A prompt offering cards or players to pick dims everything else (board.css); paying a cost is not such a pick
+  const p = model.prompt;
+  byId('match').classList.toggle('picking', !!p && !p.paying
+    && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
