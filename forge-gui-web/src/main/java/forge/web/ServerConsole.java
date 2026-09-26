@@ -25,6 +25,7 @@ import javax.swing.text.BadLocationException;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -40,7 +41,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -64,6 +66,7 @@ final class ServerConsole implements IProgressBar {
     /** Running is a filled lamp, stopped an empty ring: the shape carries it, so the colour need not. */
     private static final Color LIT = new Color(0x3f, 0xb9, 0x50);
     private static final Color DARK = new Color(0xd0, 0x57, 0x4e);
+    private static final Color LINK = new Color(0x1f, 0x5f, 0xc4);
 
     private final WebGuiBase ui;
     private final Runnable onQuit;
@@ -71,6 +74,8 @@ final class ServerConsole implements IProgressBar {
     private final Light light = new Light();
     private final JLabel state = new JLabel("Starting");
     private final JPanel links = new JPanel();
+    private final JLabel copied = new JLabel();
+    private final Timer copiedFade = new Timer(2000, e -> copied.setText(""));
     private final JProgressBar progress = new JProgressBar();
     private final JCheckBox quitWhenEmpty = new JCheckBox("Quit when the last player leaves", true);
     private final JCheckBox forwardPort = new JCheckBox("Open the port on the router, for players on the internet");
@@ -181,7 +186,7 @@ final class ServerConsole implements IProgressBar {
             progress.setIndeterminate(false);
             progress.setValue(0);
             progress.setString("Stopped");
-            showLinks(Map.of());
+            showLinks(List.of());
         });
     }
 
@@ -216,53 +221,66 @@ final class ServerConsole implements IProgressBar {
      * comes from the server, so what the console shows cannot drift from what a player is actually given.
      */
     private void findAddresses() {
-        final Map<String, String> found = new LinkedHashMap<>();
-        found.put("On this PC", service.url());
+        final List<Invite> found = new ArrayList<>();
         for (final Map.Entry<String, String> local : FServerManager.getAllLocalAddresses().entrySet()) {
-            found.put(local.getKey(), service.inviteUrl(local.getValue()));
+            found.add(new Invite(local.getKey(), local.getValue(), service.inviteUrl(local.getValue())));
         }
         final String external = FServerManager.getExternalAddress();
-        found.put(WebSessions.internetCaption(service.port(), service.forwarding() == WebService.Forwarding.FORWARDED),
-                external == null ? null : service.inviteUrl(external));
+        if (external != null) {
+            found.add(new Invite("Internet", external, service.inviteUrl(external)));
+        }
         SwingUtilities.invokeLater(() -> showLinks(found));
     }
 
-    /** One row per link, each with a copy button of its own. Rebuilt whenever the server starts or stops. */
-    private void showLinks(final Map<String, String> found) {
+    private record Invite(String caption, String address, String url) { }
+
+    /** Each address a guest could use, which copies that address's full link when clicked. */
+    private void showLinks(final List<Invite> found) {
         links.removeAll();
+        final JLabel name = new JLabel("Invite");
+        name.setPreferredSize(new Dimension(80, name.getPreferredSize().height));
+        name.setMaximumSize(name.getPreferredSize());
+        links.add(name);
         if (found.isEmpty()) {
-            links.add(row("", new JLabel("—")));
+            links.add(new JLabel("—"));
         }
-        boolean first = true;
-        for (final Map.Entry<String, String> link : found.entrySet()) {
-            if (!first) {
-                links.add(Box.createVerticalStrut(6));
+        for (int i = 0; i < found.size(); i++) {
+            if (i > 0) {
+                links.add(new JLabel("  ·  "));
             }
-            first = false;
-            links.add(linkRow(link.getKey(), link.getValue()));
+            links.add(inviteLink(found.get(i)));
         }
+        links.add(Box.createHorizontalStrut(12));
+        links.add(copied);
+        links.add(Box.createHorizontalGlue());
         links.revalidate();
         links.repaint();
     }
 
-    private JPanel linkRow(final String caption, final String address) {
-        final JLabel value = new JLabel(address == null ? "could not be found" : address);
-        value.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-        final JPanel line = row(caption, value);
-        if (address != null) {
-            line.add(Box.createHorizontalStrut(8));
-            line.add(button("Copy", () -> Toolkit.getDefaultToolkit().getSystemClipboard()
-                    .setContents(new StringSelection(address), null)));
-        }
-        return line;
+    private JButton inviteLink(final Invite invite) {
+        final JButton link = new JButton(invite.caption() + " " + invite.address());
+        link.setBorderPainted(false);
+        link.setContentAreaFilled(false);
+        link.setFocusPainted(false);
+        link.setMargin(new Insets(0, 0, 0, 0));
+        link.setForeground(LINK);
+        link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        link.setToolTipText("Copy " + invite.url());
+        link.addActionListener(e -> {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(invite.url()), null);
+            copied.setText(invite.caption() + " link copied");
+            copiedFade.restart();
+        });
+        return link;
     }
 
     private void build() {
         final Font mono = new Font(Font.MONOSPACED, Font.PLAIN, 12);
 
-        links.setLayout(new BoxLayout(links, BoxLayout.PAGE_AXIS));
+        links.setLayout(new BoxLayout(links, BoxLayout.LINE_AXIS));
         links.setAlignmentX(0f);
-        showLinks(Map.of());
+        copiedFade.setRepeats(false);
+        showLinks(List.of());
 
         progress.setStringPainted(true);
         progress.setString("Starting Forge");
@@ -361,19 +379,6 @@ final class ServerConsole implements IProgressBar {
             graph.sample(now);
             stats.show(now, service == null ? 0 : service.playersHere());
         }).start();
-    }
-
-    private static JPanel row(final String caption, final JLabel value) {
-        final JPanel line = new JPanel();
-        line.setLayout(new BoxLayout(line, BoxLayout.LINE_AXIS));
-        line.setAlignmentX(0f);
-        final JLabel name = new JLabel(caption);
-        name.setPreferredSize(new Dimension(130, name.getPreferredSize().height));
-        name.setMaximumSize(name.getPreferredSize());
-        line.add(name);
-        line.add(value);
-        line.add(Box.createHorizontalGlue());
-        return line;
     }
 
     private static JButton button(final String label, final Runnable action) {
