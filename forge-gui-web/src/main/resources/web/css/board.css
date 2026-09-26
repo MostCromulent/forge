@@ -85,7 +85,8 @@
    resizes as the card travels rather than jumping when it lands */
 @property --fit { syntax: '<number>'; inherits: true; initial-value: 1; }
 .seat { transition: --fit .6s cubic-bezier(.2,.7,.3,1); }
-html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > .seat { transition: none; }
+/* The seats are also children of #match, whose own transition rule is written with two ids, so this names them too */
+html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > :is(#me, #opponent) { transition: none; }
 .seat { display: grid; grid-template-columns: var(--seat-w) 1fr; gap: 12px; align-items: center; min-height: 0; }
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
@@ -485,6 +486,10 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* Where a card in hand is really played from, as a tab on the image's foot, clear of its cost and of the overlays at
    its top; the text view says it in a line instead */
 #zoom .shot { position: relative; display: block; line-height: 0; }
+/* Turned to its other side, image or text, the preview swings the new side in from edge-on */
+#zoom.flipping.image-only > .shot, #zoom.flipping.text-card > .detail { animation: zoom-flip .26s cubic-bezier(.2, .7, .3, 1); }
+@keyframes zoom-flip { from { transform: perspective(900px) rotateY(-90deg); } to { transform: perspective(900px) rotateY(0deg); } }
+html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom .from-tab { position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 50%); padding: 4px 12px; border-radius: 999px; background: var(--zone-glow);
   color: #15121c; font: 800 12px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
 #zoom .from-tab:empty, #zoom.text-card .shot { display: none; }

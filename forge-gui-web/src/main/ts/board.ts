@@ -13,7 +13,7 @@ import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar } from './phasebar';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
-import { animateCardMoves } from './motion';
+import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
 import { byId, q } from './dom';
 import { setting } from './settings';
@@ -35,6 +35,8 @@ const SWORDS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 
 export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
+  // Before anything is redrawn, so each card's move is measured from where it stood on screen
+  noteBoard();
   for (const e of events) {
     if (e.kind === 'gameStarted') {
       firstPlayer = e.first.ref;
@@ -393,6 +395,7 @@ let announced: string | null = null;
  */
 export function resetTable(): void {
   announced = null;
+  resetMotion();
   firstPlayer = null;
   seating = null;
   outSaid = false;

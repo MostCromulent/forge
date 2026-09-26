@@ -13,6 +13,14 @@ describe('what moved since the last frame', () => {
     expect(trips.get('5')).toMatchObject({ from: hand, to: field });
   });
 
+  // Fails if a card shuffled away and redrawn in one mulligan is merged into a slide within the hand
+  it('keeps the zone a card turned back in when it comes home in the same frame', () => {
+    const library = { zone: 'Library' as const, player: { ref: 1 } };
+    const trips = journeys([move(5, hand, library), move(5, library, hand)]);
+    expect(trips.get('5')).toMatchObject({ from: hand, to: hand, via: library });
+    expect(journeys([move(5, hand, stack), move(5, stack, field)]).get('5')?.via).toBeUndefined();
+  });
+
   it('keeps each card\'s own trip, and ignores events that are not moves', () => {
     const events: GameEvent[] = [move(5, hand, stack), { kind: 'shuffled', player: { ref: 1 } }, move(6, undefined, field)];
     const trips = journeys(events);

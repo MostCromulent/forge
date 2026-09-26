@@ -78,7 +78,7 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
   const onStack = new Set(items.map(i => String(i.SourceCard?.ref)));
   for (const [key, move] of journeys(events)) {
     // Read before the zone it left is redrawn without it; a card cast from a hidden hand has no picture and is not shown
-    const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img`);
+    const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img, .zone-tile img[data-key="${key}"]`);
     if (move.to?.zone === 'Stack' && !onStack.has(key) && img?.getAttribute('src')) {
       awaiting.set(key, { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '', since: Date.now() });
     } else {
