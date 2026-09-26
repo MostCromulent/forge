@@ -6,7 +6,6 @@
 
 import { byId } from './dom';
 import { game, me, stateOf, type Model } from './model';
-import { showNotice } from './notices';
 import { setDragArrow } from './overlay';
 import type { Actions } from './actions';
 import type { CardView, KeywordText, Ref } from './protocol';
@@ -15,6 +14,8 @@ import type { CardView, KeywordText, Ref } from './protocol';
 const DRAG_PX = 8;
 /** How long a click has to show on the board before the drag stops waiting for it. */
 const STEP_MS = 2000;
+
+type Point = { x: number; y: number };
 
 let current: Model | null = null;
 /** A drag has just ended: the click the browser fires straight after it is not a click on a card. */
@@ -80,7 +81,8 @@ export function initBlockDrag(actions: Actions): void {
     justDragged = true;
     setTimeout(() => { justDragged = false; });
     const attacker = attackerAt(current, e.clientX, e.clientY);
-    if (attacker) queued = queued.then(() => block(actions, blocker, Number(attacker.dataset.key)));
+    const at = { x: e.clientX, y: e.clientY };
+    if (attacker) queued = queued.then(() => block(actions, blocker, Number(attacker.dataset.key), at));
   });
   document.addEventListener('pointercancel', stop);
   document.addEventListener('click', e => {
@@ -134,7 +136,7 @@ function until(test: () => boolean): Promise<boolean> {
  * TODO: ideally the shared input code would take a block as a single intent and leave how it is selected to each GUI;
  * until it does, a drag is translated here into the clicks the block input already understands.
  */
-async function block(actions: Actions, blocker: number, attacker: number): Promise<void> {
+async function block(actions: Actions, blocker: number, attacker: number, at: Point): Promise<void> {
   if (!current || blocking(blocker, attacker)) return;
   // The prompt names the attacker being blocked by its id; one already named is not clicked again, as a click on it
   // changes nothing and would only run beside the next click on the host
@@ -152,7 +154,7 @@ async function block(actions: Actions, blocker: number, attacker: number): Promi
   }
   await choose(attacker);
   actions.selectCard(blocker, false, 0, 0);
-  if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker);
+  if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
 /**
@@ -160,7 +162,7 @@ async function block(actions: Actions, blocker: number, attacker: number): Promi
  * carry each keyword's reminder, and an attacker that evades a block says so in its own ("can't be blocked except by
  * creatures with flying or reach"). Anything else gets no reason rather than a guessed one.
  */
-function explainRefusal(blocker: number, attacker: number): void {
+function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const model = current;
   if (!model) return;
   const card = (key: number) => model.objects.get(key) as CardView | undefined;
@@ -170,10 +172,30 @@ function explainRefusal(blocker: number, attacker: number): void {
   const answers = new Set(keywords(blocker).map(k => k.title));
   const evasion = keywords(attacker).find(k => /can't be blocked/i.test(k.reminder)
     && !answers.has(k.title) && !(k.title === 'Flying' && answers.has('Reach')));
-  showNotice({
-    t: 'notice',
-    title: `${name(blocker)} can't block ${name(attacker)}`,
-    message: evasion ? `${name(attacker)} has ${evasion.title.toLowerCase()}. ${evasion.reminder}` : 'Forge would not allow that block.',
-    error: false,
-  });
+  showTip(at, `${name(blocker)} can't block ${name(attacker)}`, evasion ? `${evasion.title}: ${evasion.reminder}` : '');
+}
+
+/** How long the reason stays by the pointer, unless the next press takes it away sooner. */
+const TIP_MS = 3500;
+
+/** A small note where the drag was let go, so the reason is read where the eye already is. */
+function showTip(at: Point, title: string, reason: string): void {
+  document.querySelector('.block-tip')?.remove();
+  const tip = document.createElement('div');
+  tip.className = 'block-tip';
+  tip.append(Object.assign(document.createElement('b'), { textContent: title }));
+  if (reason) tip.append(Object.assign(document.createElement('span'), { textContent: reason }));
+  document.body.append(tip);
+  // Beside the pointer, turned back inside the window near its edges
+  const gap = 14;
+  const x = at.x + gap + tip.offsetWidth > innerWidth - 8 ? at.x - gap - tip.offsetWidth : at.x + gap;
+  const y = Math.min(at.y + gap, innerHeight - tip.offsetHeight - 8);
+  tip.style.left = `${Math.max(8, x)}px`;
+  tip.style.top = `${Math.max(8, y)}px`;
+  const gone = () => {
+    tip.classList.add('leaving');
+    tip.addEventListener('animationend', () => tip.remove());
+  };
+  const timer = setTimeout(gone, TIP_MS);
+  document.addEventListener('pointerdown', () => { clearTimeout(timer); tip.remove(); }, { once: true });
 }

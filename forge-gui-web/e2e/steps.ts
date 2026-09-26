@@ -54,9 +54,17 @@ export async function inviteLink(page: Page, serverUrl: string): Promise<string>
   return (shared ?? '').replace(/^https?:\/\/[^/]+/, new URL(serverUrl).origin);
 }
 
-/** Answers whatever the game asks in a dialog with its first choice, until none is open. */
+/**
+ * Answers whatever the game asks in a dialog with its first choice, until none is open. Cards only put up to be seen,
+ * such as those the AI plays poorly, are closed.
+ */
 export async function answerDialogs(page: Page): Promise<void> {
   const dialog = page.locator('#dialog-layer .dialog');
+  const reveal = page.locator('#dialog-layer .reveal-panel');
+  for (let i = 0; i < 10 && await reveal.count(); i++) {
+    await reveal.locator('.zone-answer.ok').click();
+    await page.waitForTimeout(300);
+  }
   for (let i = 0; i < 10 && await dialog.count(); i++) {
     const choice = dialog.locator('.options .card, .options .text-option').first();
     if (await choice.count()) await choice.click();

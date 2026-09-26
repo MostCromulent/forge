@@ -14,7 +14,7 @@
               color-mix(in srgb, var(--bg-deep) 68%, transparent) 100%);
 }
 /* The player column holds three zone tiles abreast, and the console in the corner below it is as wide */
-#match { --side-w: 300px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
+#match { --side-w: 250px; --prompt-w: 300px; --side-gap: calc(var(--side-w) + 20px); --seat-w: calc(var(--tile-w) * 3 + 24px); display: grid; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
 /* Clipped, not hidden: the hand hangs below the edge, and a hidden overflow can still be scrolled by Space or a focus, which
    slid the whole table up and cut off the top seat */
 #match { overflow: clip; }
@@ -755,3 +755,12 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 .scheme-reveal .scheme.big { width: min(420px, 80vw); }
 .scheme-reveal .scheme.big .scheme-name { font-size: 15px; padding: 14px 10px 6px; }
 .scheme-reveal p { margin: 0; color: var(--text); font-size: 15px; }
+/* Why a dragged block was refused, beside where it was let go */
+.block-tip { position: fixed; z-index: 90; max-width: 240px; display: grid; gap: 2px; padding: 6px 10px; pointer-events: none;
+  font-size: 12px; line-height: 1.35; color: var(--muted); background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(4px);
+  border: 1px solid var(--line-bright); border-left: 2px solid var(--accent-2); border-radius: 8px; box-shadow: 0 8px 22px var(--scrim-deep);
+  animation: block-tip-in .14s ease-out; }
+.block-tip b { color: var(--text); font-weight: 700; }
+.block-tip.leaving { animation: block-tip-out .2s ease-in forwards; }
+@keyframes block-tip-in { from { opacity: 0; transform: translateY(3px); } }
+@keyframes block-tip-out { to { opacity: 0; } }

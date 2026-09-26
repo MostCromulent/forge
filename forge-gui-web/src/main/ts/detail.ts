@@ -33,17 +33,35 @@ export function nextFace(model: Model): void {
   }
 }
 
+/** How long the pointer rests on a card or a player before a preview opens; one already open follows at once. */
+const HOVER_DELAY_MS = 300;
+let opening: ReturnType<typeof setTimeout> | undefined;
+
+/** Shows a preview after the pointer has rested, or at once when one is showing, so passing over the board is quiet. */
+function afterRest(show: () => void): void {
+  clearTimeout(opening);
+  if (ui.hover) show();
+  else opening = setTimeout(show, HOVER_DELAY_MS);
+}
+
 // el carries data-key (the card), data-zoom (its image, empty when the viewer may not see it) and, for a card in
 // hand that is really somewhere else, data-from (the zone it is in)
 export function hoverCard(el: HTMLElement | null): void {
   if (!el || !el.dataset.zoom) {
+    clearTimeout(opening);
     byId('zoom').classList.remove('settling');
     changeUi(u => { u.hover = null; u.faceIndex = 0; });
     return;
   }
+  afterRest(() => {
+    if (el.isConnected) showCard(el);
+  });
+}
+
+function showCard(el: HTMLElement): void {
   const key = Number(el.dataset.key);
   const card = Number.isInteger(key) ? key : null;
-  const src = el.dataset.zoom;
+  const src = el.dataset.zoom ?? '';
   const from = el.dataset.from;
   changeUi(u => { u.hover = { card, src, from, at: el }; u.faceIndex = 0; });
   if (card !== null) actions?.inspectCard(card);
@@ -68,8 +86,15 @@ export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
 
 // Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
 export function hoverPlayer(key: number | null): void {
-  changeUi(u => { u.hover = key === null ? null : { player: key }; u.faceIndex = 0; });
-  if (key !== null) actions?.inspectPlayer(key);
+  clearTimeout(opening);
+  if (key === null) {
+    changeUi(u => { u.hover = null; u.faceIndex = 0; });
+    return;
+  }
+  afterRest(() => {
+    changeUi(u => { u.hover = { player: key }; u.faceIndex = 0; });
+    actions?.inspectPlayer(key);
+  });
 }
 
 export function renderDetail(model: Model): void {

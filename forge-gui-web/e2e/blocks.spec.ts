@@ -54,9 +54,9 @@ test('a blocker dragged onto an attacker blocks it, and dragged onto another mov
   }
   await expect(message).toContainText('block');
 
-  // A wall cannot block a flier, and the notice quotes the keyword's own rule
+  // A wall cannot block a flier, and a note by the pointer quotes the keyword's own rule
   await drag(page, 'Wall of Wood', 'Serra Angel');
-  await expect(page.locator('.notice', { hasText: "Wall of Wood can't block Serra Angel" })).toContainText('flying');
+  await expect(page.locator('.block-tip', { hasText: "Wall of Wood can't block Serra Angel" })).toContainText('flying');
   // The second drag follows the first at once; the drag waits for the first block to reach the board before moving it
   await drag(page, 'Wall of Wood', 'Grizzly Bears');
   await drag(page, 'Wall of Wood', 'Hill Giant');

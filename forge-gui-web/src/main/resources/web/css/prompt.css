@@ -1,8 +1,9 @@
 /* The console: the foot of the side column, under the log, with the question above one wide answer. It stays in the
    bottom-right corner whatever the board around it looks like */
-#prompt { position: relative; flex: none; margin-bottom: 14px; z-index: 30; display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
+/* Wider than the log above it, reaching over the end of the hand's row, which leaves it room */
+#prompt { position: relative; flex: none; width: var(--prompt-w); align-self: flex-end; margin-bottom: 14px; z-index: 30; display: grid; gap: 10px; padding: 10px 12px 12px; background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px #000a; }
 /* With the log and chat folded away the column is only tabs, so the console keeps its corner by itself */
-#match.side-folded #prompt { position: fixed; right: 8px; bottom: 14px; width: var(--side-w); }
+#match.side-folded #prompt { position: fixed; right: 8px; bottom: 14px; }
 #prompt.waiting { border-color: var(--accent-2); }
 /* The tools keep a row of their own, so a long step name never pushes them out of the console */
 #prompt .tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin: -4px -6px -6px 0; }

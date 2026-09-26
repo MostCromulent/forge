@@ -20,7 +20,7 @@ import { setting } from './settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from './actions';
-import type { CardStateView, CardView, GameEvent, GameView, PlayerView, ZoneType } from './protocol';
+import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
@@ -53,12 +53,13 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   const select: CardClick = (el, menu, e) => actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
+  // Before the seats, as an open stack narrows the rows and the cards are sized to fit them
+  renderStack(model);
   renderOpponents(byId('opponent'), model, onField, actions, select);
   renderSeat(byId('me'), model, me(model), onField, actions, select);
   renderOut(model, actions);
   announceTurn(model, g);
   renderPhaseBar(model, g, actions);
-  renderStack(model);
   renderPlanes(model, actions);
   revealSchemes(model);
   renderHand(model, me(model), select);
@@ -449,22 +450,39 @@ function revealFirst(model: Model, first: number, said?: string): void {
   });
 }
 
+/**
+ * Announces the turn a state message starts before the message is shown, so nothing the turn does (an untap, a
+ * draw) happens under the banner. Returns whether a banner went up; `then` runs once it has gone.
+ */
+export function announceComing(model: Model, msg: StateMessage, then: () => void): boolean {
+  const g = game(model);
+  const delta = msg.deltas[model.root] as { Turn?: number; PlayerTurn?: Ref } | undefined;
+  if (msg.full || !g || !delta || (delta.Turn === undefined && delta.PlayerTurn === undefined)) {
+    return false;
+  }
+  return announce(model, delta.Turn ?? g.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
+}
+
+// Every turn after the first seen is announced as its message arrives; drawing the board only catches the turn a
+// table was first drawn in, as the board it held behind a banner is still the last turn's
 function announceTurn(model: Model, g: GameView): void {
-  const active = deref(model, g.PlayerTurn);
-  const turn = `${g.Turn ?? 0}/${active?.$key ?? ''}`;
+  if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), () => {});
+}
+
+function announce(model: Model, turnNumber: number | undefined, active: PlayerView | undefined, then: () => void): boolean {
+  const turn = `${turnNumber ?? 0}/${active?.$key ?? ''}`;
   if (!active || announced === turn) {
-    return;
+    return false;
   }
   const seenBefore = announced !== null;
   announced = turn;
-  const opening = g.Turn === 1;
-  if (!seenBefore && !opening) {
-    return;
+  if (!seenBefore && turnNumber !== 1) {
+    return false;
   }
   const mine = isLocal(model, active);
   // With several opponents most turns are someone else's, and the phase pill already names whose it is
   if (!mine && players(model).length > 2) {
-    return;
+    return false;
   }
   const banner = document.createElement('div');
   banner.className = `turn-banner${mine ? ' mine' : ''}`;
@@ -474,14 +492,19 @@ function announceTurn(model: Model, g: GameView): void {
   const strip = byId('phase-strip');
   strip.append(banner);
   strip.classList.add('announcing');
-  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
+  // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out,
+  // and the turn goes on from there
   const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
-  setTimeout(() => strip.classList.remove('announcing'), sweep * 0.84);
+  setTimeout(() => {
+    strip.classList.remove('announcing');
+    then();
+  }, sweep * 0.84);
   // The light that travels across the plate is an animation on the banner's own ::after, and its end reaches
   // the banner too, so the sweep has to be named or the banner leaves less than half way through
   banner.addEventListener('animationend', e => {
     if (e.animationName === 'turn-sweep') banner.remove();
   });
+  return true;
 }
 
 // A life change is easy to miss as a number, so the amount floats off the avatar and the ring answers

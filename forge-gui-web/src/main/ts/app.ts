@@ -9,7 +9,7 @@ import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
-import { renderMatch, resetTable } from './board';
+import { announceComing, renderMatch, resetTable } from './board';
 import { renderPrompt, flash, pressPromptButton } from './prompt';
 import { appendLog, initLog, logTints } from './log';
 import { initSide, renderSide, renderSky } from './side';
@@ -38,8 +38,8 @@ let sentDeviceDecks = false;
 let catalogueRequest = 0;
 let importRequest = 0;
 // The game is paced where it runs: it holds for the player on a pass they have something new to see before
-// (autopass.ts), so every message is shown as it arrives
-const send = connect(apply, online => {
+// (autopass.ts). The one pause made here is a new turn's, whose banner shows before anything the turn does
+const send = connect(receive, online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty
   if (!online) {
@@ -49,7 +49,12 @@ const send = connect(apply, online => {
   }
 });
 
-const wire = createActions(send);
+// While a new turn is announced the prompt on screen is still the last turn's, which the game has moved past, so an
+// answer to it would land on a question the player has not seen yet
+const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
+const wire = createActions(msg => {
+  if (!held || !HELD_INPUT.has(msg.t)) send(msg);
+});
 initAutoPass((id, go) => wire.answer(id, go), () => schedule());
 const actions: Actions = {
   ...wire,
@@ -154,6 +159,31 @@ function runKey(command: KeyCommand): void {
       if (menu && command.startsWith('pickCardMenu')) actions.answer(menu.id, [Number(command.slice(-1)) - 1]);
     }
   }
+}
+
+/** What has arrived since a new turn began, while its banner shows. */
+let held: ServerMessage[] | null = null;
+
+function receive(msg: ServerMessage): void {
+  if (!held) {
+    if (msg.t === 'state' && announceComing(model, msg, release)) {
+      held = [msg];
+    } else {
+      apply(msg);
+    }
+  } else if (msg.t === 'hello') {
+    // A new table or a reconnection starts over, so nothing waits behind the old turn
+    release();
+    apply(msg);
+  } else {
+    held.push(msg);
+  }
+}
+
+function release(): void {
+  const waiting = held ?? [];
+  held = null;
+  waiting.forEach(receive);
 }
 
 function apply(msg: ServerMessage): void {

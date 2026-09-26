@@ -11,6 +11,8 @@ import type { Model } from './model';
 interface Snapshot {
   rect: DOMRect;
   ghost: HTMLElement | null;
+  /** Its centre as laid out, before any transform: where a row put it, not where a tilt or a step forward shows it. */
+  laid?: { x: number; y: number };
 }
 
 /** Every card drawn last frame (hand, board, stack, open zones), by its key. */
@@ -113,15 +115,17 @@ function shiftBoard(travelled: Set<string>): void {
   for (const el of document.querySelectorAll<HTMLElement>(BOARD_CARDS)) {
     const key = el.dataset.key as string;
     const was = lastSeen.get(key);
-    if (!was || travelled.has(key) || fromHint.has(key)) {
+    if (!was?.laid || travelled.has(key) || fromHint.has(key)) {
       continue;
     }
-    const now = restingRect(el);
-    const dx = centre(was.rect).x - centre(now).x;
-    const dy = centre(was.rect).y - centre(now).y;
+    // Compared as laid out, since a transform still under way (an attacker stepping forward) is not a move, and a
+    // redraw that measured it part way, such as a hover's, would slide the card again
+    const laid = laidCentre(el);
+    const dx = was.laid.x - laid.x;
+    const dy = was.laid.y - laid.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
-      // Measured mid-slide the card is still near where it came from, which the next frame would slide it from again
-      resting.set(key, now);
+      // Measured mid-slide the card is still near where it came from, which a flight would set off from
+      resting.set(key, restingRect(el));
       el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
         { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', composite: 'add' });
     }
@@ -137,7 +141,16 @@ function shiftBoard(travelled: Set<string>): void {
   }
 }
 
-const centre = (r: DOMRect) => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 });
+/** Where the page's layout puts an element's centre; offsets, unlike a bounding box, leave out every transform. */
+function laidCentre(el: HTMLElement): { x: number; y: number } {
+  let x = el.offsetWidth / 2;
+  let y = el.offsetHeight / 2;
+  for (let at: HTMLElement | null = el; at; at = at.offsetParent as HTMLElement | null) {
+    x += at.offsetLeft - (at.offsetParent?.scrollLeft ?? 0);
+    y += at.offsetTop - (at.offsetParent?.scrollTop ?? 0);
+  }
+  return { x, y };
+}
 
 /** Each card's first origin and last destination this frame; a card that went out and back in one step moved once. */
 export function journeys(events: readonly GameEvent[]): Map<string, CardMoved> {
@@ -279,7 +292,7 @@ function note(): void {
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
     // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
-    lastSeen.set(el.dataset.key as string, { rect: restingRect(el), ghost: el });
+    lastSeen.set(el.dataset.key as string, { rect: restingRect(el), ghost: el, laid: laidCentre(el) });
     ownPlace.add(el.dataset.key as string);
   }
   for (const el of stackItems()) {

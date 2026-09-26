@@ -48,7 +48,7 @@ test('a Planechase match shows the plane, and the die button rolls on your own m
   const die = page.locator('#plane-dock .die-button');
   const ready = async () => (await die.isVisible().catch(() => false)) && (await die.isEnabled().catch(() => false));
   for (let i = 0; i < 400 && !(await ready()); i++) {
-    if (await page.locator('#dialog-layer .dialog').count()) {
+    if (await page.locator('#dialog-layer .dialog, #dialog-layer .reveal-panel').count()) {
       await answerDialogs(page);
     } else if (await page.locator('.avatar.selectable').count()) {
       // A plane's trigger can ask for a target player, as Cliffside Market's does
