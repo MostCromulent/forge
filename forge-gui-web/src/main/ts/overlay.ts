@@ -290,7 +290,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
 
 /** After combat damage, long enough for the hit to read before the chevrons draw back. */
 const RETREAT_DELAY_MS = 250;
-const RETREAT_MS = 450;
+const RETREAT_MS = 300;
 
 /**
  * A chevron whose attack is over draws back towards its creature, shrinking and fading as it goes. One whose card has

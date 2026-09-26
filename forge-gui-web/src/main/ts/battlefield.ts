@@ -213,6 +213,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     .sort((a, b) => b.cap - a.cap || a.split - b.split || b.smallest - a.smallest)[0];
   // Past the smallest size nothing fits; the smallest cards, split where they can be, scroll rather than shrink
   const chosen = best ?? { cap: MIN_FIT, sizes: [layRow(0, MIN_FIT, true), layRow(1, MIN_FIT, true)] };
+  field.classList.toggle('crowded', !best);
   root.style.setProperty('--fit', chosen.cap.toFixed(2));
   let shrinking = false;
   rows.forEach((row, r) => row.forEach((zone, z) => {

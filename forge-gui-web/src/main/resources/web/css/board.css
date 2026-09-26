@@ -93,8 +93,12 @@
 html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > :is(#me, #opponent),
 html[data-motion="reduced"] .row > .group { transition: none; }
 .seat { display: grid; grid-template-columns: var(--seat-w) 1fr; gap: 12px; align-items: center; min-height: 0; }
-.battlefield { display: flex; flex-direction: column; gap: 8px; overflow-y: auto; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
-.battlefield.settling { overflow: hidden; }
+/* The board is sized to fit, so it scrolls only when even the smallest cards do not (battlefield.ts marks it crowded).
+   Otherwise a card flying in, stepping out to attack or sliding along its row would count as overflow for a moment
+   and flash a scrollbar, and would be cut off at the board's edge */
+.battlefield { display: flex; flex-direction: column; gap: 8px; overflow: visible; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
+.battlefield.crowded { overflow-y: auto; }
+.battlefield.crowded.settling { overflow: hidden; }
 /* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
    the hand rather than floating in the middle of its half, so the two read as one side of the table. */
 #me .battlefield { flex-direction: column-reverse; align-self: end; }
