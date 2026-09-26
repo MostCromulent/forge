@@ -201,6 +201,10 @@ public class SeatExtrasTest {
                     lobby.decks();
                 }
             });
+            // The table's own update deals the seats on another thread, which can still be at it here
+            for (int i = 0; i < 250 && count(local.hostedLobby().getSlot(c).getDeck(), DeckSection.Planes) < 10; i++) {
+                Thread.sleep(20);
+            }
             Assert.assertTrue(count(local.hostedLobby().getSlot(c).getDeck(), DeckSection.Planes) >= 10,
                     "the computer lost its planes when the format changed");
         });
@@ -214,7 +218,7 @@ public class SeatExtrasTest {
             final String deck = legalDeck(lobby);
             onUi(() -> lobby.setVariant("Vanguard", true));
             onUi(lobby::decks);
-            onUi(lobby::addSeat);
+            onUi(() -> lobby.setPlayerCount(local.hostedLobby().getNumberOfSlots() + 1));
             final int added = local.hostedLobby().getNumberOfSlots() - 1;
             onUi(() -> lobby.setDeck(added, deck));
             Assert.assertEquals(count(local.hostedLobby().getSlot(added).getDeck(), DeckSection.Avatar), 1,
@@ -226,7 +230,7 @@ public class SeatExtrasTest {
     @Test(timeOut = 60_000)
     public void teamsGoBackWhenArchenemyEnds() throws Exception {
         atTable((local, lobby) -> {
-            onUi(lobby::addSeat);
+            onUi(() -> lobby.setPlayerCount(local.hostedLobby().getNumberOfSlots() + 1));
             onUi(() -> lobby.setVariant("Archenemy", true));
             onUi(() -> lobby.setArchenemy(computer(local)));
             onUi(() -> lobby.setVariant("Archenemy", false));
