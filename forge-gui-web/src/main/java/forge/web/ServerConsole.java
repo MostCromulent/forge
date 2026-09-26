@@ -2,7 +2,6 @@ package forge.web;
 
 import forge.gamemodes.net.server.FServerManager;
 import forge.gui.interfaces.IProgressBar;
-import io.netty.handler.traffic.TrafficCounter;
 import org.tinylog.Logger;
 
 import javax.swing.BorderFactory;
@@ -82,7 +81,7 @@ final class ServerConsole implements IProgressBar {
     private final JLabel forwardState = new JLabel();
     private final TrafficGraph graph = new TrafficGraph();
     private final StatsBox stats = new StatsBox();
-    private volatile TrafficCounter traffic;
+    private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextArea text;
     private JButton browse;
@@ -375,7 +374,7 @@ final class ServerConsole implements IProgressBar {
 
         new Timer(FLUSH_MILLIS, e -> flush()).start();
         new Timer(TrafficGraph.SAMPLE_MILLIS, e -> {
-            final TrafficCounter now = traffic;
+            final ServerTraffic now = traffic;
             graph.sample(now);
             stats.show(now, service == null ? 0 : service.playersHere());
         }).start();
@@ -419,31 +418,35 @@ final class ServerConsole implements IProgressBar {
     }
 
     /**
-     * The last minute of bytes in and out of the port. The two lines differ in lightness and in dash as well as in
-     * colour, and the legend gives the figures in words, so neither depends on telling the colours apart.
+     * The last five minutes of bytes through the port: what was sent stacked by what it carried, and what was
+     * received as a dashed line over it. The four fills step in lightness as well as colour, and the stats box
+     * beside it names each one with its total, so neither depends on telling the colours apart.
      */
     private static final class TrafficGraph extends JComponent {
         static final int SAMPLE_MILLIS = 1000;
         static final int HEIGHT = 130;
-        private static final int SAMPLES = 60;
+        static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
+        static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
+        /** Indexed by {@link ServerTraffic.Kind}, and stacked in that order from the bottom. */
+        static final String[] KIND_NAMES = {"Game", "Card art", "Audio", "Page"};
+        static final Color[] KIND_COLOURS = {new Color(0xf5, 0xc4, 0x51), new Color(0x4f, 0x86, 0xe8),
+                new Color(0xa9, 0xc4, 0xff), new Color(0x4a, 0x52, 0x60)};
+        private static final ServerTraffic.Kind[] KINDS = ServerTraffic.Kind.values();
+        private static final int SAMPLES = 300;
         /** The floor of the scale, so a server with nobody on it does not magnify a few bytes into peaks. */
         private static final long SMALLEST_SCALE = 1024;
-        private static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
         private static final Color GRID = new Color(0x2a, 0x31, 0x3c);
-        private static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
         private static final Color IN = new Color(0xe8, 0xee, 0xf4);
-        private static final Color OUT = new Color(0x3d, 0x8b, 0xfd);
-        private static final BasicStroke SOLID = new BasicStroke(1.5f);
         private static final BasicStroke DASHED = new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
                 10f, new float[] {5f, 3f}, 0f);
 
         private final long[] in = new long[SAMPLES];
-        private final long[] out = new long[SAMPLES];
+        private final long[][] out = new long[KINDS.length][SAMPLES];
         /** Where the next sample goes, which is also the oldest one still shown. */
         private int next;
-        private TrafficCounter counter;
-        private long readBefore;
-        private long writtenBefore;
+        private ServerTraffic counter;
+        private long receivedBefore;
+        private final long[] sentBefore = new long[KINDS.length];
 
         TrafficGraph() {
             setPreferredSize(new Dimension(400, HEIGHT));
@@ -452,18 +455,23 @@ final class ServerConsole implements IProgressBar {
         }
 
         /** The counters only ever grow, so a sample is the difference from the last; a new server starts from zero. */
-        void sample(final TrafficCounter now) {
-            final long read = now == null ? 0 : now.cumulativeReadBytes();
-            final long written = now == null ? 0 : now.cumulativeWrittenBytes();
+        void sample(final ServerTraffic now) {
+            final long received = now == null ? 0 : now.received();
+            final long[] sent = new long[KINDS.length];
+            for (final ServerTraffic.Kind kind : KINDS) {
+                sent[kind.ordinal()] = now == null ? 0 : now.sent(kind);
+            }
             if (now != counter) {
                 counter = now;
-                readBefore = read;
-                writtenBefore = written;
+                receivedBefore = received;
+                System.arraycopy(sent, 0, sentBefore, 0, sent.length);
             }
-            in[next] = read - readBefore;
-            out[next] = written - writtenBefore;
-            readBefore = read;
-            writtenBefore = written;
+            in[next] = received - receivedBefore;
+            receivedBefore = received;
+            for (int k = 0; k < sent.length; k++) {
+                out[k][next] = sent[k] - sentBefore[k];
+                sentBefore[k] = sent[k];
+            }
             next = (next + 1) % SAMPLES;
             repaint();
         }
@@ -477,53 +485,87 @@ final class ServerConsole implements IProgressBar {
             g2.setColor(BACKGROUND);
             g2.fillRect(0, 0, w, h);
 
+            // stacked[k][i] is everything the first k + 1 kinds sent in sample i, oldest sample first
+            final long[][] stacked = new long[KINDS.length][SAMPLES];
+            final long[] received = new long[SAMPLES];
             long top = SMALLEST_SCALE;
             for (int i = 0; i < SAMPLES; i++) {
-                top = Math.max(top, Math.max(in[i], out[i]));
+                final int at = (next + i) % SAMPLES;
+                long sum = 0;
+                for (int k = 0; k < KINDS.length; k++) {
+                    sum += out[k][at];
+                    stacked[k][i] = sum;
+                }
+                received[i] = in[at];
+                top = Math.max(top, Math.max(sum, in[at]));
             }
-            final int plotTop = 22;
+            final int plotTop = 38;
             final int plotHeight = h - plotTop - 4;
             g2.setColor(GRID);
             g2.drawLine(0, plotTop, w, plotTop);
             g2.drawLine(0, h - 4, w, h - 4);
-            line(g2, in, top, plotTop, plotHeight, IN, SOLID);
-            line(g2, out, top, plotTop, plotHeight, OUT, DASHED);
+            // The tallest layer first, so each lower one is painted over the part of it that is not its own
+            for (int k = KINDS.length - 1; k >= 0; k--) {
+                area(g2, stacked[k], top, plotTop, plotHeight, KIND_COLOURS[k]);
+            }
+            g2.setColor(IN);
+            g2.setStroke(DASHED);
+            g2.drawPolyline(xs(), ys(received, top, plotTop, plotHeight), SAMPLES);
 
-            final int latest = (next + SAMPLES - 1) % SAMPLES;
             g2.setFont(getFont().deriveFont(11f));
-            final int baseline = 14;
-            int x = 8;
-            x = legend(g2, x, baseline, IN, SOLID, "In " + rate(in[latest]));
-            legend(g2, x + 16, baseline, OUT, DASHED, "Out " + rate(out[latest]));
-            final String scale = "top " + rate(top) + " · last minute";
             g2.setColor(LABEL);
-            g2.drawString(scale, w - 8 - g2.getFontMetrics().stringWidth(scale), baseline);
+            g2.drawString("In " + rate(received[SAMPLES - 1]) + "     Out " + rate(stacked[KINDS.length - 1][SAMPLES - 1]), 8, 14);
+            final String scale = "top " + rate(top) + " · last 5 minutes";
+            g2.drawString(scale, w - 8 - g2.getFontMetrics().stringWidth(scale), 14);
+            int x = 8;
+            for (int k = 0; k < KINDS.length; k++) {
+                x = swatch(g2, x, 30, KIND_COLOURS[k], KIND_NAMES[k]) + 14;
+            }
+            g2.setColor(IN);
+            g2.setStroke(DASHED);
+            g2.drawLine(x, 26, x + 16, 26);
+            g2.setColor(LABEL);
+            g2.drawString("Received", x + 22, 30);
             g2.dispose();
         }
 
-        private void line(final Graphics2D g2, final long[] values, final long top, final int plotTop,
-                final int plotHeight, final Color colour, final BasicStroke stroke) {
-            final int[] xs = new int[SAMPLES];
-            final int[] ys = new int[SAMPLES];
-            for (int i = 0; i < SAMPLES; i++) {
-                final long v = values[(next + i) % SAMPLES];
-                xs[i] = i * (getWidth() - 1) / (SAMPLES - 1);
-                ys[i] = plotTop + plotHeight - (int) (v * plotHeight / top);
-            }
+        /** A filled square in a kind's colour and its name; returns where the next entry can start. */
+        static int swatch(final Graphics2D g2, final int x, final int baseline, final Color colour, final String name) {
             g2.setColor(colour);
-            g2.setStroke(stroke);
-            g2.drawPolyline(xs, ys, SAMPLES);
+            g2.fillRect(x, baseline - 9, 9, 9);
+            g2.setColor(LABEL);
+            g2.drawString(name, x + 14, baseline);
+            return x + 14 + g2.getFontMetrics().stringWidth(name);
         }
 
-        /** A short swatch of the line followed by its figure; returns where the next entry can start. */
-        private static int legend(final Graphics2D g2, final int x, final int baseline, final Color colour,
-                final BasicStroke stroke, final String text) {
+        private void area(final Graphics2D g2, final long[] values, final long top, final int plotTop,
+                final int plotHeight, final Color colour) {
+            final int[] xs = new int[SAMPLES + 2];
+            final int[] ys = new int[SAMPLES + 2];
+            System.arraycopy(xs(), 0, xs, 0, SAMPLES);
+            System.arraycopy(ys(values, top, plotTop, plotHeight), 0, ys, 0, SAMPLES);
+            xs[SAMPLES] = xs[SAMPLES - 1];
+            xs[SAMPLES + 1] = xs[0];
+            ys[SAMPLES] = plotTop + plotHeight;
+            ys[SAMPLES + 1] = plotTop + plotHeight;
             g2.setColor(colour);
-            g2.setStroke(stroke);
-            g2.drawLine(x, baseline - 4, x + 18, baseline - 4);
-            g2.setColor(LABEL);
-            g2.drawString(text, x + 24, baseline);
-            return x + 24 + g2.getFontMetrics().stringWidth(text);
+            g2.fillPolygon(xs, ys, SAMPLES + 2);
+        }
+
+        private int[] xs() {
+            final int[] xs = new int[SAMPLES];
+            for (int i = 0; i < SAMPLES; i++) {
+                xs[i] = i * (getWidth() - 1) / (SAMPLES - 1);
+            }
+            return xs;
+        }
+
+        private static int[] ys(final long[] values, final long top, final int plotTop, final int plotHeight) {
+            final int[] ys = new int[SAMPLES];
+            for (int i = 0; i < SAMPLES; i++) {
+                ys[i] = plotTop + plotHeight - (int) (values[i] * plotHeight / top);
+            }
+            return ys;
         }
 
         private static String rate(final long bytesPerSecond) {
@@ -534,23 +576,27 @@ final class ServerConsole implements IProgressBar {
     /** Beside the graph, in its colours: how long the server has been up, who is on it, and every byte so far. */
     private static final class StatsBox extends JComponent {
         private static final int WIDTH = 210;
-        private static final String[] NAMES = {"Up", "Players", "Received", "Sent"};
-        private String[] values = {"—", "0", "—", "—"};
+        private static final String[] NAMES = {"Up", "Players", "Received"};
+        /** Up, players and received, then what was sent of each kind. */
+        private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length];
 
         StatsBox() {
             final Dimension size = new Dimension(WIDTH, TrafficGraph.HEIGHT);
             setPreferredSize(size);
             setMinimumSize(size);
             setMaximumSize(size);
+            show(null, 0);
         }
 
-        /** The counter is made when the server starts, so its first cumulative time is when it started. */
-        void show(final TrafficCounter counter, final int players) {
-            values = counter == null
-                    ? new String[] {"—", "0", "—", "—"}
-                    : new String[] {uptime(System.currentTimeMillis() - counter.lastCumulativeTime()),
-                            String.valueOf(players), bytes(counter.cumulativeReadBytes()),
-                            bytes(counter.cumulativeWrittenBytes())};
+        void show(final ServerTraffic traffic, final int players) {
+            final String[] now = new String[values.length];
+            now[0] = traffic == null ? "—" : uptime(System.currentTimeMillis() - traffic.started());
+            now[1] = String.valueOf(players);
+            now[2] = traffic == null ? "—" : bytes(traffic.received());
+            for (final ServerTraffic.Kind kind : ServerTraffic.Kind.values()) {
+                now[NAMES.length + kind.ordinal()] = traffic == null ? "—" : bytes(traffic.sent(kind));
+            }
+            values = now;
             repaint();
         }
 
@@ -561,10 +607,15 @@ final class ServerConsole implements IProgressBar {
             g2.setColor(TrafficGraph.BACKGROUND);
             g2.fillRect(0, 0, getWidth(), getHeight());
             g2.setFont(getFont().deriveFont(11f));
-            g2.setColor(TrafficGraph.LABEL);
-            for (int i = 0; i < NAMES.length; i++) {
-                final int baseline = 24 + i * 30;
-                g2.drawString(NAMES[i], 10, baseline);
+            for (int i = 0; i < values.length; i++) {
+                final int baseline = 17 + i * 16;
+                if (i < NAMES.length) {
+                    g2.setColor(TrafficGraph.LABEL);
+                    g2.drawString(NAMES[i], 10, baseline);
+                } else {
+                    final int k = i - NAMES.length;
+                    TrafficGraph.swatch(g2, 10, baseline, TrafficGraph.KIND_COLOURS[k], "Sent · " + TrafficGraph.KIND_NAMES[k]);
+                }
                 g2.drawString(values[i], getWidth() - 10 - g2.getFontMetrics().stringWidth(values[i]), baseline);
             }
             g2.dispose();

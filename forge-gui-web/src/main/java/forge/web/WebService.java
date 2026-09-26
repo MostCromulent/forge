@@ -3,7 +3,6 @@ package forge.web;
 import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
-import io.netty.handler.traffic.TrafficCounter;
 import org.tinylog.Logger;
 
 import java.util.function.Consumer;
@@ -161,7 +160,7 @@ final class WebService {
     }
 
     /** The bytes through the port since it was last started, or null while stopped. */
-    synchronized TrafficCounter traffic() {
+    synchronized ServerTraffic traffic() {
         return server == null ? null : server.traffic();
     }
 

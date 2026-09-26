@@ -43,8 +43,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
-import io.netty.handler.traffic.GlobalTrafficShapingHandler;
-import io.netty.handler.traffic.TrafficCounter;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import forge.sound.MusicPlaylist;
@@ -52,9 +50,9 @@ import forge.sound.SoundSystem;
 import org.tinylog.Logger;
 
 import java.io.File;
-import java.net.URLEncoder;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -65,9 +63,9 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.zip.CRC32;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Pattern;
+import java.util.zip.CRC32;
 
 /**
  * Serves the page, its files and card images, and the browser's WebSocket. It listens on every interface so a
@@ -108,8 +106,7 @@ public final class WebServer implements AutoCloseable {
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
-    /** Sets no limits, so it only counts the bytes on every connection, as they cross the wire. */
-    private final GlobalTrafficShapingHandler traffic = new GlobalTrafficShapingHandler(group.next(), 0);
+    private final ServerTraffic traffic = new ServerTraffic();
     private final String hostToken;
     private final String guestToken;
     // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
@@ -150,8 +147,8 @@ public final class WebServer implements AutoCloseable {
     }
 
     /** Every byte in and out of the port since it was bound, card images included. */
-    public TrafficCounter traffic() {
-        return traffic.trafficCounter();
+    ServerTraffic traffic() {
+        return traffic;
     }
 
     public int port() {
@@ -171,7 +168,6 @@ public final class WebServer implements AutoCloseable {
     @Override
     public void close() {
         channel.close().syncUninterruptibly();
-        traffic.release();
         group.shutdownGracefully();
     }
 
@@ -363,17 +359,21 @@ public final class WebServer implements AutoCloseable {
     /**
      * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
      * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
+     * connection is held open when the browser asked for that, and what may be kept says for how long.
+     */
+    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
+            final String cookieToken, final String cacheControl) {
         respond(ctx, status, body, type, cookieToken, cacheControl, null);
     }
 
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
-     * connection is held open when the browser asked for that, and what may be kept says for how long.
-     */
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
-            final String cookieToken, final String cacheControl) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, status, Unpooled.wrappedBuffer(body));
+        resp.headers()
+                .set(HttpHeaderNames.CONTENT_TYPE, type)
+                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
+                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         // A 304 has no body, and a length on it would claim the body the browser already holds is empty
         if (status != HttpResponseStatus.NOT_MODIFIED) {
             resp.headers().setInt(HttpHeaderNames.CONTENT_LENGTH, body.length);
@@ -381,13 +381,13 @@ public final class WebServer implements AutoCloseable {
         if (etag != null) {
             resp.headers().set(HttpHeaderNames.ETAG, etag);
         }
-        resp.headers()
-                .set(HttpHeaderNames.CONTENT_TYPE, type)
-                .set(HttpHeaderNames.CACHE_CONTROL, cacheControl)
-                .set(HttpHeaderNames.CONNECTION, keepAlive ? HttpHeaderValues.KEEP_ALIVE : HttpHeaderValues.CLOSE);
         if (cookieToken != null) {
             final DefaultCookie cookie = new DefaultCookie(COOKIE, cookieToken);
             cookie.setPath("/");
+            cookie.setHttpOnly(true);
+            cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
+            resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
+        }
         send(ctx, resp, keepAlive);
     }
 
@@ -404,10 +404,6 @@ public final class WebServer implements AutoCloseable {
     }
 
     private static void send(final ChannelHandlerContext ctx, final FullHttpResponse resp, final boolean keepAlive) {
-            cookie.setHttpOnly(true);
-            cookie.setSameSite(CookieHeaderNames.SameSite.Strict);
-            resp.headers().set(HttpHeaderNames.SET_COOKIE, ServerCookieEncoder.STRICT.encode(cookie));
-        }
         final ChannelFuture sent = ctx.writeAndFlush(resp);
         if (!keepAlive) {
             sent.addListener(ChannelFutureListener.CLOSE);
@@ -515,6 +511,8 @@ public final class WebServer implements AutoCloseable {
         protected void channelRead0(final ChannelHandlerContext ctx, final FullHttpRequest req) throws IOException {
             final QueryStringDecoder q = new QueryStringDecoder(req.uri());
             final String path = q.path();
+            ServerTraffic.carrying(ctx.channel(), "/img".equals(path) || "/sleeveart".equals(path) ? ServerTraffic.Kind.CARD_ART
+                    : "/sound".equals(path) || "/music".equals(path) ? ServerTraffic.Kind.AUDIO : ServerTraffic.Kind.PAGE);
             if ("/avatar".equals(path) || "/sleeve".equals(path)) {
                 final List<String> index = q.parameters().get("i");
                 final Integer i = index == null ? null : Ints.tryParse(index.get(0));
@@ -569,11 +567,11 @@ public final class WebServer implements AutoCloseable {
                 notFound(ctx);
                 return;
             }
+            // The page keeps the link's token as a cookie, so its later requests come in on the same link
+            final String token = queryToken(q);
             // Any other page file keeps its name from one build to the next, so the browser asks whether it changed
             final String etag = etag(body);
             final boolean unchanged = etag.equals(req.headers().get(HttpHeaderNames.IF_NONE_MATCH));
-            // The page keeps the link's token as a cookie, so its later requests come in on the same link
-            final String token = queryToken(q);
             // A chunk's name carries a hash of its contents, so a changed chunk is a new file and an old one never goes stale
             respond(ctx, unchanged ? HttpResponseStatus.NOT_MODIFIED : HttpResponseStatus.OK, unchanged ? new byte[0] : body,
                     type, accessOf(token) == Access.NONE ? null : token,
@@ -592,6 +590,7 @@ public final class WebServer implements AutoCloseable {
         @Override
         public void userEventTriggered(final ChannelHandlerContext ctx, final Object evt) {
             if (evt instanceof WebSocketServerProtocolHandler.HandshakeComplete done) {
+                ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
                 final Channel ch = ctx.channel();
                 browser = new BrowserChannel() {
                     @Override
