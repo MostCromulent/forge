@@ -29,6 +29,19 @@ const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden
 
 let built = false;
 
+/** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
+function showPressed(button: Element | null): void {
+  if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+  button.classList.remove('pressed');
+  void button.offsetWidth;
+  button.classList.add('pressed');
+}
+
+/** The same feedback for a key that stands in for a prompt button: "ok", "cancel", "end-turn" or "undo". */
+export function pressPromptButton(name: string): void {
+  showPressed(document.querySelector(`#prompt .${name}`));
+}
+
 export function renderPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   if (!built) {
@@ -57,6 +70,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
     q(root, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
     q(root, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
     q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
+    root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
     const card = q<HTMLImageElement>(root, '.prompt-card');
     hideOnError(card);
     hoverable(card);

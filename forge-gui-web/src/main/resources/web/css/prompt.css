@@ -35,6 +35,9 @@
 #prompt.spectating { border-color: var(--line); box-shadow: 0 12px 34px #000a; }
 #prompt.flash { animation: shake .3s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+/* A button just used, by click or by its key, dips dark for a moment so the press is seen to land */
+#prompt button.pressed { animation: pressed .18s ease-out; }
+@keyframes pressed { from { filter: brightness(.6); } }
 /* Options: one scrolling list with a search box, as the settings are too many for columns */
 #options .options-dialog { width: min(560px, 92vw); max-height: 86vh; display: grid; grid-template-rows: auto 1fr auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 #options header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
