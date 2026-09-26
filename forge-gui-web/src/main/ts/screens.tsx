@@ -40,6 +40,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
   render(<>
     {page === 'match' && <Requests model={model} actions={actions} />}
     {page === 'match' && ui.volumeOpen && <Volume close={() => changeUi(u => { u.volumeOpen = false; })} />}
+    {page === 'lobby' && ui.volumeOpen && <Volume anchor=".lobby-head .volume" close={() => changeUi(u => { u.volumeOpen = false; })} />}
     {(page === 'match' || page === 'lobby') && ui.optionsOpen && <Options close={() => changeUi(u => { u.optionsOpen = false; })} />}
     {page === 'match' && ui.gameMenu === 'menu' && (
       <GameMenu model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })}

@@ -141,17 +141,13 @@ final class ToBrowser {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. */
-    /** What the card pool picker shows beyond the names: where each format's cards come from, and the old snapshots. */
+    /** What the card pool picker shows beyond the names: where each format's cards come from. */
     @Message("cardPoolDetails")
-    record CardPoolDetails(List<CardPoolLine> lines, List<ArchivedPool> archived) {
+    record CardPoolDetails(List<CardPoolLine> lines) {
     }
 
     /** A format and where its cards come from: "Every set", "Commons only", or the set it starts at. */
     record CardPoolLine(String name, String line) {
-    }
-
-    /** An old snapshot of a format: its name, the format it is a snapshot of, and the day it took effect as yyyy-MM-dd. */
-    record ArchivedPool(String name, String kind, String date) {
     }
 
     record CardPoolGroup(String name, List<String> formats) {

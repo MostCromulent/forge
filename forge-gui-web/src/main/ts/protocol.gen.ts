@@ -262,7 +262,6 @@ export interface DeviceDeck {
 export interface CardPoolDetails {
   t: 'cardPoolDetails';
   lines: CardPoolLine[];
-  archived: ArchivedPool[];
 }
 
 export interface LimitedOptions {
@@ -1174,12 +1173,6 @@ export interface Fetched {
 export interface CardPoolLine {
   name: string;
   line: string;
-}
-
-export interface ArchivedPool {
-  name: string;
-  kind: string;
-  date: string;
 }
 
 export interface SealedBlock {

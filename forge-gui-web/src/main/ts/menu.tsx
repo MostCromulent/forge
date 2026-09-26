@@ -17,7 +17,7 @@ import { store, stored } from './storage';
 const MAX_NAME_LENGTH = 24;
 
 /** Magic's five colours, the one place they are pure decoration: no card art nearby and nothing encoded by hue. */
-function Wordmark() {
+export function Wordmark() {
   return (
     <div class="wordmark-block">
       <span class="wordmark">Forge</span>
@@ -76,26 +76,47 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   const computer = who === 'play';
   return (
     <div class="chooser">
-      <div class="chooser-head">
-        <h2>{computer ? 'Play the computer' : 'Play with friends'}</h2>
-        <button class="link" onClick={back}>Back</button>
-      </div>
+      <nav class="crumb"><button class="link" onClick={back}>Start</button><span aria-hidden="true">›</span>
+        <span>{computer ? 'Play the computer' : 'Play with friends'}</span></nav>
+      <h2>What do you want to play?</h2>
       <div class="chooser-kinds">
-        <button class="kind" data-kind="constructed" onClick={() => actions.openLobby(!computer)}>
-          <b>Constructed</b><span>Bring a deck you have built.</span>
-        </button>
-        <button class="kind" data-kind="draft" onClick={() => (computer ? actions.limitedOpen('draft') : actions.openLimitedTable('draft'))}>
-          <b>Draft</b>
-          <span>{computer ? (model.draftPools ? `Draft against the computer, or play one of your ${model.draftPools} drafts.` : 'Draft against seven computer drafters.')
-            : 'Draft together, up to eight at the table; computers fill the empty seats.'}</span>
-        </button>
-        <button class="kind" data-kind="sealed" onClick={() => (computer ? actions.limitedOpen('sealed') : actions.openLimitedTable('sealed'))}>
-          <b>Sealed</b>
-          <span>{computer ? (model.sealedPools ? `Open packs, or play one of your ${model.sealedPools} pools.` : 'Open packs and build a deck from them.')
-            : 'Everyone opens a pool and builds from it.'}</span>
-        </button>
+        <Kind id="constructed" name="Constructed" onClick={() => actions.openLobby(!computer)}
+          blurb={computer ? 'Bring a deck you have built, or a precon, and play the computer.' : 'Everyone brings a deck they have built.'} />
+        <Kind id="draft" name="Draft" onClick={() => (computer ? actions.limitedOpen('draft') : actions.openLimitedTable('draft'))}
+          blurb={computer ? 'Pass packs around a table of seven computer drafters, then build from your picks.'
+            : 'Draft together, up to eight at the table. Computers fill the empty seats.'}
+          saved={computer ? saved(model.draftPools, 'draft') : ''} />
+        <Kind id="sealed" name="Sealed" onClick={() => (computer ? actions.limitedOpen('sealed') : actions.openLimitedTable('sealed'))}
+          blurb={computer ? 'Open six packs and build a deck from what you get.' : 'Everyone opens a pool and builds from it.'}
+          saved={computer ? saved(model.sealedPools, 'pool') : ''} />
       </div>
     </div>
+  );
+}
+
+/** Saved pools in words: "Your draft", "Your 3 drafts", or nothing. */
+export function saved(count: number, noun: string): string {
+  return count === 0 ? '' : count === 1 ? `Your ${noun} is saved here` : `Your ${count} ${noun}s are saved here`;
+}
+
+// A fanned deck for Constructed; two packs passing between players for Draft; an opened pack with its cards rising for Sealed
+const KIND_ICONS: Record<string, ComponentChildren> = {
+  constructed: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
+  draft: <><rect x="7" y="16" width="14" height="22" rx="2" /><rect x="27" y="16" width="14" height="22" rx="2" /><path d="M17 9h13l-3-3M31 45H18l3 3" /></>,
+  sealed: <><path d="M13 22v19h22V22" /><path d="M13 22l2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5" />
+    <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
+};
+
+function Kind({ id, name, blurb, saved, onClick }: { id: string; name: string; blurb: string; saved?: string; onClick: () => void }) {
+  return (
+    <button class="mode" data-kind={id} onClick={onClick}>
+      <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
+      <span class="mode-text">
+        <span class="mode-name">{name}</span>
+        <span class="mode-blurb">{blurb}</span>
+        {saved && <span class="mode-status">{saved}</span>}
+      </span>
+    </button>
   );
 }
 

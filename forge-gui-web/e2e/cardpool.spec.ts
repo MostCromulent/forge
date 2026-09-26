@@ -33,7 +33,7 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   // Every random deal to the computer is legal in Pauper
   const computer = seats.nth(1);
   for (let i = 0; i < 3; i++) {
-    await computer.locator('.random-deck').click();
+    await computer.locator('.random-row, .random-deck').click();
     await expect(computer.locator('.deck-name')).not.toHaveText('');
     await expect(computer.locator('.seat-problem')).toBeHidden();
   }

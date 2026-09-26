@@ -47,7 +47,6 @@ import forge.web.DeckCatalog.Extra;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
@@ -232,7 +231,7 @@ final class Lobby {
         return out;
     }
 
-    /** Where each format's cards come from, and the archived snapshots by format, newest first. */
+    /** Where each format's cards come from, for the card pool picker. */
     static ToBrowser.CardPoolDetails cardPoolDetails() {
         final var formats = FModel.getFormats();
         final List<ToBrowser.CardPoolLine> lines = new ArrayList<>();
@@ -241,23 +240,7 @@ final class Lobby {
                 lines.add(new ToBrowser.CardPoolLine(f.getName(), lineOf(f)));
             }
         }
-        return new ToBrowser.CardPoolDetails(lines, archivedPools(formats.getArchivedList()));
-    }
-
-    /** Old snapshots by the format they are of, newest first. Forge loads them only when its preferences ask it to. */
-    static List<ToBrowser.ArchivedPool> archivedPools(final Iterable<GameFormat> list) {
-        final List<ToBrowser.ArchivedPool> archived = new ArrayList<>();
-        final java.text.SimpleDateFormat day = new java.text.SimpleDateFormat("yyyy-MM-dd");
-        for (final GameFormat f : list) {
-            if (f.getFormatSubType() != GameFormat.FormatSubType.BLOCK && f.getEffectiveDate() != null) {
-                // A snapshot is named after its format and newest set, as "Standard (HOB)"
-                final int paren = f.getName().indexOf(" (");
-                archived.add(new ToBrowser.ArchivedPool(f.getName(), paren > 0 ? f.getName().substring(0, paren) : f.getName(),
-                        day.format(f.getEffectiveDate())));
-            }
-        }
-        archived.sort(Comparator.comparing(ToBrowser.ArchivedPool::kind).thenComparing(ToBrowser.ArchivedPool::date, Comparator.reverseOrder()));
-        return archived;
+        return new ToBrowser.CardPoolDetails(lines);
     }
 
     /** Where a format's cards come from, in a few words. */

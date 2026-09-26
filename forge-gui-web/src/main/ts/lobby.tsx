@@ -110,6 +110,8 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // The host may hand their own seat to the computer and watch; a match is only ever watched from the host's seat
   const watchable = lobby.host && mine && (!lobby.limited || !!lobby.limited.activeEventId);
+  // Any seat whose deck this browser chooses can be dealt one at random; an event's decks are its players' own pools
+  const randomable = seat.mayEdit && !dealt && !lim && !waiting;
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
   return (
@@ -139,10 +141,6 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
                 onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
                 {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
               </button>}
-          <button class="random-deck" title="Give this seat a random deck" aria-label="Random deck"
-            hidden={seat.type !== 'AI' || !lobby.host || dealt} onClick={random}>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-          </button>
           {seat.role && <span class={`role ${seat.role}`}>{seat.role === 'archenemy' ? 'Archenemy' : 'Hero'}</span>}
           {lobby.host && seat.role === 'hero' && (
             <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>Make archenemy</button>
@@ -162,19 +160,33 @@ function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
           <label class="sits-out"><input type="checkbox" checked={seat.benched}
             onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> Sits out the next match</label>
         )}
-        {/* With no deck the sleeve above already offers to choose one, so an empty row would only repeat it */}
-        <button class={`deck-row${hasDeck ? '' : ' unset'}`} hidden={dealt || beforePools || (!hasDeck && !waiting)} disabled={!seat.mayEdit}
-          onClick={() => choose('deck')}>
-          <span class="pips"><Pips colors={seat.colors} /></span>
-          <span class="deck-name">{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>
-          <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
-        </button>
+        {/* With no deck yet the row offers a random one; the sleeve beside it already offers to choose one */}
+        {randomable && !hasDeck && (
+          <button class="deck-row random-row" onClick={random}><Dice />Random deck</button>
+        )}
+        <div class="deck-line" hidden={dealt || beforePools || (!hasDeck && !waiting)}>
+          <button class={`deck-row${hasDeck ? '' : ' unset'}`} disabled={!seat.mayEdit} onClick={() => choose('deck')}>
+            <span class="pips"><Pips colors={seat.colors} /></span>
+            <span class="deck-name" title={seat.deckName ?? ''}>{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>
+            <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
+          </button>
+          {randomable && hasDeck && (
+            <button class="random-deck" title="Deal another random deck" aria-label="Random deck" onClick={random}><Dice /></button>
+          )}
+        </div>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
         {seat.planes && <ExtraRow name="Planes" extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
         {seat.schemes && <ExtraRow name="Schemes" extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
         {seat.vanguard && <ExtraRow name="Avatar" extra={seat.vanguard} mayEdit={seat.mayEdit} open={() => choose('vanguard')} />}
       </div>
     </div>
+  );
+}
+
+function Dice() {
+  return (
+    <svg class="dice" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" />
+      <circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
   );
 }
 

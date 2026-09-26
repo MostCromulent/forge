@@ -1,13 +1,9 @@
 /* The Limited pages: the kind-of-play chooser on the start page, the saved pools, the setup form and the opponents. */
 
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
-.chooser-head { display: flex; align-items: baseline; gap: 16px; }
-.chooser-head h2 { margin: 0; font-size: 20px; }
+.chooser .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.chooser h2 { margin: 0; font-size: 22px; }
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.chooser .kind { display: grid; gap: 4px; align-content: start; text-align: left; padding: 16px; min-height: 110px; border-radius: 10px; }
-.chooser .kind b { font-size: 16px; }
-.chooser .kind span { color: var(--muted); font-size: 12.5px; }
-.chooser .kind:disabled { opacity: .45; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 
 .limited-page { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; }

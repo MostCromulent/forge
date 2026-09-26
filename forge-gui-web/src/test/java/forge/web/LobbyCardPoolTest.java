@@ -100,20 +100,6 @@ public class LobbyCardPoolTest {
         Assert.assertTrue(lines.get("Pioneer").startsWith("From Return to Ravnica"), lines.get("Pioneer"));
     }
 
-    /** Fails if an archived snapshot cannot be found by its format and date, which is how the picker offers them. */
-    @Test
-    public void archivedFormatsGoUnderTheirFormatNewestFirst() {
-        // Read with the archived formats, which Forge's own model leaves out unless its preferences ask for them
-        final var all = new forge.game.GameFormat.Collection(new forge.game.GameFormat.Reader(
-                new java.io.File(forge.localinstance.properties.ForgeConstants.FORMATS_DATA_DIR),
-                new java.io.File(forge.localinstance.properties.ForgeConstants.USER_FORMATS_DIR), true));
-        final var standard = Lobby.archivedPools(all.getArchivedList()).stream().filter(a -> "Standard".equals(a.kind())).toList();
-        Assert.assertTrue(standard.size() > 100, "only " + standard.size() + " archived Standard lists");
-        for (int i = 1; i < standard.size(); i++) {
-            Assert.assertTrue(standard.get(i - 1).date().compareTo(standard.get(i).date()) >= 0, "Standard's lists are out of date order at " + i);
-        }
-    }
-
     /** Fails if the card pool control offers a heading with nothing under it, as the Block group can be. */
     @Test(timeOut = 60_000)
     public void everyCardPoolHeadingHasFormats() throws Exception {

@@ -3,7 +3,8 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { avatarUrl } from './looks';
+import { Wordmark } from './menu';
+import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Address, Format, LobbyTable } from './protocol';
@@ -61,14 +62,12 @@ export function deckMark(format: Format): string {
 
 /**
  * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
- * pointed at. A click on a name chooses it; a tap only shows its card, which then offers to choose it, so a touch never
- * changes the game by accident.
+ * pointed at, and keeps showing that one while the pointer crosses over to read it. A click on a name chooses it.
  */
 function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
   const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
   const [pointed, setPointed] = useState<Format | null>(null);
-  const touch = useRef(false);
   // A new kind of event waits until the one begun is over; a format waits out a draft
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
   const limitedOffered = lobby.shareable || !!lim;
@@ -90,15 +89,14 @@ function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
     <Popup label={chosen?.name ?? lobby.format} disabled={!lobby.host} wide>
       {close => (
         <div class="game-menu-list">
-          <div class="game-choices" onPointerLeave={() => { if (!touch.current) setPointed(null); }}>
+          <div class="game-choices">
             {groups.map(([group, formats]) => (
               <div key={group} class="game-group">
                 <span class="game-group-name">{group}</span>
                 {formats.map(f => (
                   <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
-                    onPointerDown={e => { touch.current = e.pointerType === 'touch'; }}
                     onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
-                    onClick={() => (touch.current ? setPointed(f) : pick(f, close))}>
+                    onClick={() => pick(f, close)}>
                     <i class="game-mark">{deckMark(f)}</i><span class="game-name">{f.name}</span>
                   </button>
                 ))}
@@ -111,7 +109,6 @@ function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
               <p class="desc">{shown.desc}</p>
               <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
               <p class="format-play"><b>In a match:</b> {shown.play}</p>
-              {shown !== chosen && !blocked(shown) && <button class="primary game-choose" onClick={() => pick(shown, close)}>Choose {shown.name}</button>}
             </div>
           )}
         </div>
@@ -191,21 +188,14 @@ function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: 
   );
 }
 
-const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
 /**
- * Which cards a Constructed game allows: the sanctioned formats as tiles, the casual ones as chips, and a block or an
- * old snapshot of a format on the bottom line. Where each format's cards come from is asked for when it first opens.
+ * Which cards a Constructed game allows: the sanctioned formats as tiles, the casual ones as chips, and a block on the
+ * bottom line. Where each format's cards come from is asked for when it first opens.
  */
 function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const details = model.cardPoolDetails;
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
   const group = (name: string) => lobby.cardPools.find(g => g.name === name)?.formats ?? [];
-  const archived = details?.archived ?? [];
-  const kinds = [...new Set(archived.map(a => a.kind))];
-  const current = archived.find(a => a.name === lobby.cardPool);
-  const [kind, setKind] = useState<string | null>(null);
-  const shownKind = kind ?? current?.kind ?? kinds[0];
   return (
     <Popup label={lobby.cardPool ?? 'Any cards'} disabled={!lobby.host} wide
       onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>
@@ -230,8 +220,8 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
                 ))}
               </div>
             </>}
+            {group('Block').length > 0 && (
             <div class="pool-more">
-              {group('Block').length > 0 && (
                 <label>A block
                   <span class="pill-select"><select value={group('Block').includes(lobby.cardPool ?? '') ? lobby.cardPool : ''}
                     onChange={e => choose(e.currentTarget.value)}>
@@ -239,20 +229,8 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
                     {group('Block').map(name => <option key={name} value={name}>{name}</option>)}
                   </select></span>
                 </label>
-              )}
-              {kinds.length > 0 && (
-                <label>An older format
-                  <span class="pill-select"><select value={shownKind} onChange={e => setKind(e.currentTarget.value)}>
-                    {kinds.map(k => <option key={k} value={k}>{k}</option>)}
-                  </select></span>
-                  as of
-                  <span class="pill-select"><select value={current?.kind === shownKind ? current.name : ''} onChange={e => choose(e.currentTarget.value)}>
-                    <option value="" disabled>Choose a date</option>
-                    {archived.filter(a => a.kind === shownKind).map(a => <option key={a.name} value={a.name}>{day(a.date)}</option>)}
-                  </select></span>
-                </label>
-              )}
             </div>
+            )}
           </div>
         );
       }}
@@ -278,15 +256,11 @@ export function MatchBar({ model, lobby, actions, preview, event }: {
   );
 }
 
-/** Whose table this is and who is here; how others join; the options; and the way out. */
+/** How others join, the sound and the options, and the way out. Who is here is the dock's to say. */
 export function TableHeader({ model, lobby, actions, openOptions }: { model: Model; lobby: LobbyTable; actions: Actions; openOptions: () => void }) {
-  const host = model.presence.find(p => p.host);
-  const here = model.presence.filter(p => p.doing !== 'waiting');
   return (
     <header class="lobby-head">
-      <span class="wordmark">Forge</span>
-      <span class="table-name"><b>{host ? `${host.name}'s table` : 'The table'}</b> · {here.length || 1} here</span>
-      <span class="faces" aria-hidden="true">{here.slice(0, 4).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}</span>
+      <Wordmark />
       <div class="head-right">
         {lobby.shareable && (
           <Popup label="Invite">
@@ -298,6 +272,11 @@ export function TableHeader({ model, lobby, actions, openOptions }: { model: Mod
             )}
           </Popup>
         )}
+        <button class="icon-button volume" title="Volume" aria-label="Volume" aria-expanded={ui.volumeOpen}
+          onClick={() => changeUi(u => { u.volumeOpen = !u.volumeOpen; })}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+            <path d="M16 9a5 5 0 0 1 0 6" /><path d="M19.364 18.364a9 9 0 0 0 0-12.728" /></svg>
+        </button>
         <button class="icon-button" title="Options" aria-label="Options" onClick={openOptions}>⚙</button>
         {/* The table belongs to the host, so a joined client has no menu to go back to */}
         <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Leave table</button>

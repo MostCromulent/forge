@@ -192,7 +192,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 /* Secondary to the sleeve it sits on, so it stays out of the way until the pointer is over the slot */
 .sleeve-style { position: absolute; right: 4px; bottom: 4px; padding: 2px 7px; font-size: 11px; border-radius: 6px; background: #0b0e14cc; opacity: 0; transition: opacity .12s ease; }
 .sleeve-slot:hover .sleeve-style, .sleeve-style:focus-visible { opacity: 1; }
-.seats[data-count="3"] .who .avatar, .seats[data-count="4"] .who .avatar { width: 38px; height: 38px; }
+.seats[data-count="3"] .who .avatar, .seats[data-count="4"] .who .avatar { width: 52px; height: 52px; }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 /* An empty slot is a card-shaped outline, not a sleeve: there is nothing sleeved yet */
@@ -214,7 +214,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .plate .sleeve.empty:hover { border-color: var(--accent-2); }
 
 .who { display: flex; align-items: center; gap: 8px; }
-.who .avatar { padding: 0; width: 48px; height: 48px; border-radius: 8px; overflow: hidden; flex: none; }
+/* The face is the seat's person, so it is the largest thing beside the sleeve */
+.who .avatar { padding: 0; width: 64px; height: 64px; border-radius: 10px; overflow: hidden; flex: none; border: 1px solid var(--line-bright); box-shadow: 0 2px 10px #0006; }
 .who .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .who .avatar:hover { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .who-name { font-weight: 600; font-size: 16px; min-width: 40px; }
@@ -223,8 +224,11 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .drop { margin-left: auto; padding: 2px 8px; color: var(--muted); }
 
 .random-deck { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); }
-.random-deck svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
-.random-deck svg circle { fill: currentColor; stroke: none; }
+.dice { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; flex: none; }
+.dice circle { fill: currentColor; stroke: none; }
+.deck-line { display: flex; gap: 6px; align-items: center; }
+.deck-line .deck-row { flex: 1; min-width: 0; }
+.random-row { justify-content: center; gap: 8px; color: var(--accent-2); border-color: var(--accent-2); background: var(--accent-soft); font-weight: 600; }
 .deck-row { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
 .deck-row .deck-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .deck-row.unset .deck-name { color: var(--muted); }
@@ -579,17 +583,16 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .plate.benched { opacity: .6; }
 .event-setup .wiz { border: none; background: transparent; }
 
-/* The page header: whose table this is and how to leave it. The match settings are in the bar under it. */
-.table-name { color: var(--muted); font-size: 13px; }
-.table-name b { color: var(--text); }
-.lobby-head .faces { display: inline-flex; }
-.lobby-head .faces img { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--bg); margin-left: -6px; }
-.lobby-head .faces img:first-child { margin-left: 0; }
-.icon-button { width: 32px; padding: 4px 0; }
+/* The page header: the wordmark, and how to invite, set the sound and options, and leave. The match settings are in the bar under it. */
+.lobby-head .wordmark-block { justify-items: start; gap: 4px; }
+.lobby-head .stripes i { width: 14px; }
+.icon-button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
+.icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.icon-button[aria-expanded="true"] { background: var(--surface-2); }
 .invite { display: grid; gap: 8px; width: min(460px, calc(100vw - 32px)); }
 
 /* The match bar: labelled fields in one strip above the seats */
-.match-bar { width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.match-bar { margin-bottom: 14px; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .match-bar .fields { display: flex; flex-wrap: wrap; }
 /* A Draft or Sealed table's event: a second row of the bar */
 .event-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 9px 14px; border-top: 1px solid var(--line);
@@ -639,7 +642,6 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .game-card .desc { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
 .game-card .fact { font-size: 12px; padding: 2px 9px; }
 .game-card .format-play { border-top: 1px solid var(--line); padding-top: 10px; }
-.game-choose { justify-self: start; }
 .variant-list { display: grid; gap: 8px; width: min(340px, calc(100vw - 32px)); }
 .variant { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
 .variant span { display: grid; gap: 1px; }
