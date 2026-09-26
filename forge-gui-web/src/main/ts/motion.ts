@@ -38,10 +38,11 @@ function restingRect(el: HTMLElement): DOMRect {
 }
 
 const FLIGHT_MS = 340;
-const DEAL_MS = 400;
 /** A paid card's trip from where it waited, which crosses most of the table and so needs longer to be followed. */
 const LANDING_MS = 600;
-const STAGGER_MS = 55;
+/** A drawn card crosses from the library as far, and an opening hand is followed card by card rather than as a blur. */
+const DEAL_MS = LANDING_MS;
+const STAGGER_MS = 110;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;
 const POP_MS = 220;
