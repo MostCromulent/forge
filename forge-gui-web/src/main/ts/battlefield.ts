@@ -139,9 +139,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // The room by the pill for an attacker's step and chevron grows with the cards (board.css), so it is worked out
   // for each size tried rather than read back while the size is still easing
   const mine = root.id === 'me';
-  const attacking = !!field.querySelector('.slot.attacking, .slot.charging');
   const fieldPad = (fit: number) => {
-    const chevron = attacking ? w * fit * 0.38 : 0;
+    const chevron = w * fit * 0.38;
     return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
   };
   const height = (fit: number) => root.clientHeight - header - seatPad - fieldPad(fit);
