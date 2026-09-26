@@ -7,8 +7,12 @@ open it.
 The first half of this page is for players. The second half is for developers.
 
 <p>
-  <img src="docs/attack.webp" width="49%" alt="Attacking, with the opponent's blocks and a spell targeting an attacker">
+  <img src="docs/table.webp" width="49%" alt="A table with a guest seated">
+  <img src="docs/target.webp" width="49%" alt="A spell's targets while it is paid for">
+</p>
+<p>
   <img src="docs/four.webp" width="49%" alt="A four-player game, attacking two opponents">
+  <img src="docs/victory.webp" width="49%" alt="The end of a game">
 </p>
 
 ## For players
@@ -53,11 +57,6 @@ playing let you choose Constructed, Draft or Sealed.
 
 A guest joins the host's table and plays there. A guest can't play the computer on their own, change how the table
 is set up, or use dev mode.
-
-<p>
-  <img src="docs/target.webp" width="49%" alt="A spell's targets while it is paid for">
-  <img src="docs/table.webp" width="49%" alt="A table with a guest seated">
-</p>
 
 At the table, the bar along the top sets up the match:
 
