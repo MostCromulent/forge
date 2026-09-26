@@ -40,7 +40,9 @@ interface Point {
   y: number;
 }
 
-let settleTimer = 0;
+let settleFrame = 0;
+/** How long after a redraw the overlay follows the board even before anything is seen moving. */
+const SETTLE_START_MS = 100;
 let drawn: Model | null = null;
 let repaintQueued = false;
 
@@ -61,13 +63,17 @@ export function initOverlay(schedule: () => void): void {
 export function drawOverlay(model: Model): void {
   drawn = model;
   paint(model);
-  // Cards animate into place (tapping, attacking, flying in from another zone), so measure again until they settle
-  clearTimeout(settleTimer);
+  // Cards animate into place (tapping, attacking, flying in from another zone), so the arrows and chevrons are
+  // measured again every frame until they settle, keeping step with the card rather than catching up in jumps. A
+  // transition starts a frame after the change that causes it, so the first frames run whether or not one has
+  cancelAnimationFrame(settleFrame);
+  const since = performance.now();
   const settle = () => {
+    if (drawn !== model) return;
     paint(model);
-    if (boardMoving()) settleTimer = setTimeout(settle, 120);
+    if (performance.now() - since < SETTLE_START_MS || boardMoving()) settleFrame = requestAnimationFrame(settle);
   };
-  settleTimer = setTimeout(settle, 200);
+  settleFrame = requestAnimationFrame(settle);
 }
 
 /** Whether a card on the board is still on its way somewhere. Endless effects, such as a breathing glow, never settle. */
@@ -75,7 +81,7 @@ function boardMoving(): boolean {
   return document.getAnimations().some(a => {
     const target = (a.effect as KeyframeEffect | null)?.target;
     return a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity
-      && target instanceof Element && !!target.closest('#match .card, #match .slot, #match .seat');
+      && target instanceof Element && !!target.closest('#match .card, #match .slot, #match .seat, #match .group');
   });
 }
 
