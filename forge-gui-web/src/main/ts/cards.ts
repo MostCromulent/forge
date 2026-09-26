@@ -3,7 +3,7 @@
 
 import { stateOf, type Model } from './model';
 import { hoverable } from './detail';
-import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText } from './images';
+import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
 import { reconcile } from './render';
 import { q } from './dom';
@@ -61,12 +61,14 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('attacking', !!card.Attacking);
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
+  // The zoom shows the card large, so it keeps the full image
   const src = cardImageSrc(model, card);
-  if (setImage(q<HTMLImageElement>(el, 'img'), src)) {
+  const small = smallImage(src);
+  if (setImage(q<HTMLImageElement>(el, 'img'), small)) {
     el.classList.remove('noimg');
   }
   el.dataset.zoom = src;
-  el.style.setProperty('--pile-img', src ? cssUrl(src) : 'none');
+  el.style.setProperty('--pile-img', small ? cssUrl(small) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');
   setCost(q(el, '.cost-badge'), visible ? state.ManaCost ?? '' : '');

@@ -240,10 +240,11 @@ public final class WebServer implements AutoCloseable {
     }
 
     // A missing image is downloaded as on desktop, and the request answered when it lands
-    private void serveImage(final ChannelHandlerContext ctx, final String key) throws IOException {
+    /** small asks for the card at the size the board draws it, which is shrunk here rather than in the browser. */
+    private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
         final File file = cardImage(key);
         if (file != null) {
-            respondImage(ctx, file);
+            respondCardImage(ctx, file, small);
             return;
         }
         if (!safeImageKey(key) || unavailableImages.contains(key)
@@ -257,7 +258,7 @@ public final class WebServer implements AutoCloseable {
             if (answered.compareAndSet(false, true)) {
                 try {
                     if (fetched != null) {
-                        respondImage(ctx, fetched);
+                        respondCardImage(ctx, fetched, small);
                     } else {
                         notFound(ctx);
                     }
@@ -277,9 +278,31 @@ public final class WebServer implements AutoCloseable {
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
+    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small) throws IOException {
+        if (!small) {
+            respondImage(ctx, file);
+            return;
+        }
+        CardThumbnails.of(file).whenComplete((bytes, failed) -> {
+            if (bytes != null) {
+                respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER);
+                return;
+            }
+            Logger.warn("Could not shrink {}: {}", file, failed.getMessage());
+            try {
+                respondImage(ctx, file);
+            } catch (final IOException e) {
+                notFound(ctx);
+            }
+        });
+    }
+
+    private static String imageType(final File file) {
+        return file.getName().endsWith(".png") ? "image/png" : "image/jpeg";
+    }
+
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()),
-                file.getName().endsWith(".png") ? "image/png" : "image/jpeg", null, KEEP_FOREVER);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), imageType(file), null, KEEP_FOREVER);
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -597,10 +620,11 @@ public final class WebServer implements AutoCloseable {
             }
             if ("/img".equals(path)) {
                 final List<String> key = q.parameters().get("key");
+                final List<String> width = q.parameters().get("w");
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveImage(ctx, key.get(0));
+                    serveImage(ctx, key.get(0), width != null && String.valueOf(CardThumbnails.WIDTH).equals(width.get(0)));
                 }
                 return;
             }
