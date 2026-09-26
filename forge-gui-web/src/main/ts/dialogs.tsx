@@ -381,20 +381,28 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return next;
   });
   const left = req.amount - values.reduce((a, b) => a + b, 0);
+  // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>
-      {req.options.map((opt, i) => (
-        <div key={i} class="row">
-          <OptionView model={model} opt={opt} />
-          <Button onClick={() => step(i, -1)}>−</Button>
-          <b>{values[i]}</b>
-          <Button onClick={() => step(i, 1)}>+</Button>
-        </div>
-      ))}
+      <div class="dist-row">
+        {req.options.map((opt, i) => (
+          <div key={i} class="dist-target">
+            <OptionView model={model} opt={opt} />
+            <div class="dist-step">
+              <Button onClick={() => step(i, -1)}>−</Button>
+              <b>{values[i]}</b>
+              <Button onClick={() => step(i, 1)}>+</Button>
+            </div>
+          </div>
+        ))}
+      </div>
       <p class="hint">{`${left} left to assign`}</p>
       <ButtonRow>
         {req.maySkip && <Button onClick={() => answer(null)}>Skip</Button>}
-        <Button primary disabled={left !== 0} onClick={() => answer(values)}>Confirm</Button>
+        <Button onClick={() => setValues(req.options.map(() => req.perMin))}>Reset</Button>
+        <Button disabled={left !== 0} onClick={() => answer(values)}>Confirm</Button>
+        {/* As desktop's Auto: lethal damage to each in turn, the rest onward, sent at once */}
+        <Button primary onClick={() => answer(req.default)}>Auto</Button>
       </ButtonRow>
     </>
   );

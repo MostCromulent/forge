@@ -11,6 +11,11 @@
 .dialog .picked { box-shadow: 0 0 0 3px var(--pick); }
 .dialog .text-option.picked { background: var(--brass); color: var(--on-brass); }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
+.dialog .dist-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-end; }
+.dialog .dist-target { display: grid; justify-items: center; gap: 8px; }
+.dialog .dist-step { display: flex; align-items: center; gap: 8px; }
+.dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
+.dialog .actions button.primary { min-width: 110px; font-size: 15px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
 .sb-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: min(80vw, 760px); }
 .sb-columns h4 { margin: 0 0 6px; }
