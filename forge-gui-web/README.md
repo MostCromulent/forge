@@ -7,6 +7,16 @@ The person running the server is the **host**. Everyone who joins by link is a *
 
 ![A match in progress](docs/match.webp)
 
+## What it plays
+
+- **Constructed** and the other game types: Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto.
+- The casual variants on top of them: **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**.
+- **Draft** and **Sealed**, against the computer or with friends at one table. A pool is played against one of the
+  computer's decks, several at once, or all of them in turn as a gauntlet.
+
+Not yet: **Quest**, **Adventure**, **Planar Conquest**, **puzzles**, desktop's constructed **gauntlets**, and
+**Winston** draft. These are played in desktop or mobile Forge.
+
 ## Build and start
 
 You need Java 17 or later and Maven. From the repository root:
