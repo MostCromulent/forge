@@ -25,6 +25,16 @@ export function playSound(msg: Sound): void {
   clip.play().catch(() => {});
 }
 
+/** A sound the page ships itself rather than one from the host's sound set, played from `from` seconds in. */
+export function playEffect(clip: HTMLAudioElement, from = 0): void {
+  if (volume('soundVolume') <= 0) {
+    return;
+  }
+  clip.volume = volume('soundVolume');
+  clip.currentTime = from;
+  clip.play().catch(() => {});
+}
+
 /** The music a screen plays: desktop's menu playlist, its match playlist, or none. */
 export type Playlist = 'menu' | 'match';
 

@@ -3,6 +3,8 @@
 // 3D slabs, so this draws with WebGL, and three.js is fetched the first time a portrait breaks rather than with
 // the page.
 
+import { playEffect } from './audio';
+
 type Three = typeof import('three');
 
 export interface ShatterOptions {
@@ -22,9 +24,13 @@ interface Timing {
 }
 
 // Tuned on a 1440 by 900 board; a seat's portrait runs the same beats, shorter and without the slow motion
-const FINAL: Timing = { fly: 0.65, crack: 1.3, brk: 2.0, burst: 2.12, title: 3.05, end: 5.6 };
+const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 2.2, burst: 2.32, title: 3.25, end: 5.8 };
 const SEAT: Timing = { fly: 0.35, crack: 0.45, brk: 0.95, burst: 1.02, title: Infinity, end: 3.4 };
 const GRAVITY = 1500;
+// The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
+// a little before it, which reads as on time
+const BUILD_PEAK = 2.35;
+const BURST_LEAD = 0.13;
 
 let three: Promise<{ THREE: Three; Room: typeof import('three/examples/jsm/environments/RoomEnvironment.js').RoomEnvironment }> | null = null;
 
@@ -143,6 +149,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 
 /** Breaks one portrait. Resolves once it is over; rejects if WebGL or the portrait cannot be had, before anything shows. */
 export async function shatter(o: ShatterOptions): Promise<void> {
+  // Only the end of the game has sound; the files load while three.js does
+  const build = o.final ? new Audio('audio/shatter-build.mp3') : null;
+  const burst = o.final ? new Audio('audio/shatter-burst.mp3') : null;
   const [{ THREE, Room }, img] = await Promise.all([loadThree(), loadImage(o.image)]);
   const T = o.final ? FINAL : SEAT;
   const W = window.innerWidth, H = window.innerHeight;
@@ -269,6 +278,9 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       }
       const dt = real * scale;
       t += dt;
+      const reaches = (at: number) => (before < at || before === 0) && t >= at;
+      if (build && reaches(Math.max(0, T.burst - BUILD_PEAK))) playEffect(build, Math.max(0, BUILD_PEAK - T.burst));
+      if (burst && reaches(T.burst - BURST_LEAD)) playEffect(burst);
       step(before, dt);
       renderer.render(scene, camera);
       if (!titled && t >= T.title) {
