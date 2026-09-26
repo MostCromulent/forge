@@ -19,6 +19,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.text.BadLocationException;
 import java.awt.BasicStroke;
@@ -154,13 +155,16 @@ final class ServerConsole implements IProgressBar {
 
     /** Shows where asking the router stands, and relists the links, since the internet one depends on it. */
     private void forwarding(final WebService.Forwarding now) {
-        SwingUtilities.invokeLater(() -> forwardState.setText(switch (now) {
-            case OFF -> "";
-            case ASKING -> "Asking the router…";
-            case FORWARDED -> "The router is forwarding port " + service.port() + ".";
-            case REFUSED -> "The router did not forward the port. Turn on UPnP in its settings, or forward port "
-                    + service.port() + " by hand.";
-        }));
+        SwingUtilities.invokeLater(() -> {
+            forwardState.setForeground(now == WebService.Forwarding.REFUSED ? DARK : UIManager.getColor("Label.foreground"));
+            forwardState.setText(switch (now) {
+                case OFF -> "";
+                case ASKING -> "Asking the router…";
+                case FORWARDED -> "The router is forwarding port " + service.port() + ".";
+                case REFUSED -> "The router refused. Turn on UPnP in its settings, or forward port "
+                        + service.port() + " by hand.";
+            });
+        });
         if (now == WebService.Forwarding.FORWARDED || now == WebService.Forwarding.REFUSED) {
             lookUpAddresses();
         }
@@ -286,14 +290,18 @@ final class ServerConsole implements IProgressBar {
         quitWhenEmpty.setAlignmentX(0f);
         quitWhenEmpty.setEnabled(false);
         quitWhenEmpty.addActionListener(e -> service.quitWhenEmpty(quitWhenEmpty.isSelected()));
-        forwardPort.setAlignmentX(0f);
         forwardPort.setEnabled(false);
         forwardPort.addActionListener(e -> {
             final boolean on = forwardPort.isSelected();
             inBackground("ForgePortForward", () -> service.forwardPort(on));
         });
-        forwardState.setAlignmentX(0f);
-        forwardState.setBorder(BorderFactory.createEmptyBorder(2, 24, 0, 0));
+        final JPanel forwardRow = new JPanel();
+        forwardRow.setLayout(new BoxLayout(forwardRow, BoxLayout.LINE_AXIS));
+        forwardRow.setAlignmentX(0f);
+        forwardRow.add(forwardPort);
+        forwardRow.add(Box.createHorizontalStrut(12));
+        forwardRow.add(forwardState);
+        forwardRow.add(Box.createHorizontalGlue());
 
         final JPanel head = new JPanel();
         head.setLayout(new BoxLayout(head, BoxLayout.PAGE_AXIS));
@@ -316,8 +324,7 @@ final class ServerConsole implements IProgressBar {
         foot.setLayout(new BoxLayout(foot, BoxLayout.PAGE_AXIS));
         foot.setBorder(BorderFactory.createEmptyBorder(10, 16, 12, 16));
         foot.add(quitWhenEmpty);
-        foot.add(forwardPort);
-        foot.add(forwardState);
+        foot.add(forwardRow);
 
         text = new JTextArea();
         text.setEditable(false);
@@ -409,6 +416,7 @@ final class ServerConsole implements IProgressBar {
      */
     private static final class TrafficGraph extends JComponent {
         static final int SAMPLE_MILLIS = 1000;
+        static final int HEIGHT = 130;
         private static final int SAMPLES = 60;
         /** The floor of the scale, so a server with nobody on it does not magnify a few bytes into peaks. */
         private static final long SMALLEST_SCALE = 1024;
@@ -430,8 +438,8 @@ final class ServerConsole implements IProgressBar {
         private long writtenBefore;
 
         TrafficGraph() {
-            setPreferredSize(new Dimension(400, 90));
-            setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+            setPreferredSize(new Dimension(400, HEIGHT));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, HEIGHT));
             setAlignmentX(0f);
         }
 
@@ -522,7 +530,7 @@ final class ServerConsole implements IProgressBar {
         private String[] values = {"—", "0", "—", "—"};
 
         StatsBox() {
-            final Dimension size = new Dimension(WIDTH, 90);
+            final Dimension size = new Dimension(WIDTH, TrafficGraph.HEIGHT);
             setPreferredSize(size);
             setMinimumSize(size);
             setMaximumSize(size);
@@ -547,7 +555,7 @@ final class ServerConsole implements IProgressBar {
             g2.setFont(getFont().deriveFont(11f));
             g2.setColor(TrafficGraph.LABEL);
             for (int i = 0; i < NAMES.length; i++) {
-                final int baseline = 18 + i * 20;
+                final int baseline = 24 + i * 30;
                 g2.drawString(NAMES[i], 10, baseline);
                 g2.drawString(values[i], getWidth() - 10 - g2.getFontMetrics().stringWidth(values[i]), baseline);
             }
