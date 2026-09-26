@@ -363,11 +363,10 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
   if (el.dataset.key) {
     resting.set(el.dataset.key, to);
   }
+  const start = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
+  // A card waiting its turn in a deal is not shown until it sets off; it appears where it starts as it leaves
   el.animate([
-    {
-      transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`,
-      opacity: delay ? 0.4 : 1,
-    },
+    ...(delay ? [{ transform: start, opacity: 0 }, { transform: start, opacity: 1, offset: 0.001 }] : [{ transform: start, opacity: 1 }]),
     { transform: 'none', opacity: 1 },
   ], { duration, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'backwards' });
 }
