@@ -45,7 +45,9 @@ export function frameColour(colours: number, type: string): string {
 
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
-  const visible = model.visible.has(card.$key);
+  // A card held face down in exile under a permanent shows its owner's sleeve, as it lies, though one its owner may
+  // look at still shows its face in the zoom
+  const visible = model.visible.has(card.$key) && !(card.Facedown && el.classList.contains('ghost'));
   // Only a prompt that demands a pick rings its cards; an optional one leaves the playable outline to do it
   const selectable = (model.prompt?.selectableMin ?? 0) > 0 && has(model.prompt?.selectable, card.$key);
   const type = visible ? (state.Type ?? '') : '';
@@ -63,7 +65,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('phased', !!card.PhasedOut);
   // The zoom shows the card large, so it keeps the full image
   const src = cardImageSrc(model, card);
-  const small = smallImage(src);
+  const small = visible ? smallImage(src) : '';
   if (setImage(q<HTMLImageElement>(el, 'img'), small)) {
     el.classList.remove('noimg');
   }

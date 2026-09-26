@@ -326,10 +326,11 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   // The host comes last so it paints over what is attached to it
   const cards = [...slot.attached, slot.top];
   reconcile(el, cards, c => c.$key, () => createCard(select), (c, card) => {
+    // Marked first, since a ghost lying face down is drawn as its sleeve
+    c.classList.toggle('ghost', card.Zone === 'Exile');
     updateCard(c, model, card);
     // The engine flags creatures off the battlefield as sick too, so the mark belongs to battlefield cards only
     c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
-    c.classList.toggle('ghost', card.Zone === 'Exile');
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));
