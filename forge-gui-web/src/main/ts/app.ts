@@ -235,6 +235,7 @@ function apply(msg: ServerMessage): void {
       break;
     case 'nameTaken': model.nameTaken = msg.name; break;
     case 'limitedOptions': model.limitedOptions = msg; break;
+    case 'cardPoolDetails': model.cardPoolDetails = msg; break;
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
     case 'draft':

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchSentence, poolMenuValue, randomPool } from '../../main/ts/lobby';
+import { matchSentence, randomPool } from '../../main/ts/lobby';
 import type { DeckSummary, LobbyTable } from '../../main/ts/protocol';
 
 const deck = (name: string, more: Partial<DeckSummary> = {}): DeckSummary =>
@@ -33,9 +33,4 @@ describe('the sentence under the lobby header', () => {
   });
 
   // Fails if the caret menu already shows "Any cards" under another format, so choosing it sends nothing
-  it('shows no Constructed format while another format is chosen', () => {
-    expect(poolMenuValue(table({ format: 'Commander' }))).not.toBe('');
-    expect(poolMenuValue(table())).toBe('');
-    expect(poolMenuValue(table({ cardPool: 'Pauper' }))).toBe('Pauper');
-  });
 });

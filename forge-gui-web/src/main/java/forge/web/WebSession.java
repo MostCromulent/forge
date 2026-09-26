@@ -415,6 +415,7 @@ public final class WebSession {
                     ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
                 }
             }
+            case "cardPoolDetails" -> channel.send(Lobby.cardPoolDetails());
             case "cardSearch" -> channel.send(new CardSearch(
                     DeckCatalog.searchCardNames(Wire.decode(msg, SearchCards.class).query(), CARD_SEARCH_LIMIT)));
             case "printings" -> {

@@ -14,8 +14,11 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   await hostTable(page, false);
   const seats = page.locator('#seats .plate');
 
-  await page.selectOption('.format-pool', 'Pauper');
-  await expect(page.locator('.match-bar .format-pool')).toHaveValue('Pauper');
+  const cards = page.locator('.match-bar .field', { hasText: 'Cards' }).locator('.menu-button');
+  await cards.click();
+  await expect(page.locator('.pool-tile', { hasText: 'Pauper' })).toContainText('Commons only');
+  await page.locator('.pool-tile', { hasText: 'Pauper' }).click();
+  await expect(cards).toHaveText('Pauper');
 
   // The finder opens pinned to the table's card pool, with illegal decks left out until asked for
   await seats.nth(0).locator('.sleeve').click();
@@ -38,5 +41,5 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   // A card pool belongs to Constructed, so leaving it clears the pool
   await chooseGame(page, 'Commander');
   await chooseGame(page, 'Constructed');
-  await expect(page.locator('.match-bar .format-pool')).toHaveValue('');
+  await expect(cards).toHaveText('Any cards');
 });

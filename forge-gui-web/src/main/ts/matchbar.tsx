@@ -9,7 +9,9 @@ import type { Model } from './model';
 import type { Address, Format, LobbyTable } from './protocol';
 
 /** A field's popup: opened by its button, closed by Escape or a press anywhere outside it. */
-function Popup({ label, disabled, children, wide }: { label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean }) {
+function Popup({ label, disabled, children, wide, onOpen }: {
+  label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -25,7 +27,10 @@ function Popup({ label, disabled, children, wide }: { label: ComponentChildren; 
   }, [open]);
   return (
     <span ref={root} class="popup-anchor">
-      <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => setOpen(!open)}>{label}</button>
+      <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => {
+        if (!open) onOpen?.();
+        setOpen(!open);
+      }}>{label}</button>
       {open && <div class={wide ? 'popup wide' : 'popup'} role="dialog">{children(() => setOpen(false))}</div>}
     </span>
   );
@@ -169,16 +174,85 @@ function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: 
   );
 }
 
+const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/**
+ * Which cards a Constructed game allows: the sanctioned formats as tiles, the casual ones as chips, and a block or an
+ * old snapshot of a format on the bottom line. Where each format's cards come from is asked for when it first opens.
+ */
+function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
+  const details = model.cardPoolDetails;
+  const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
+  const group = (name: string) => lobby.cardPools.find(g => g.name === name)?.formats ?? [];
+  const archived = details?.archived ?? [];
+  const kinds = [...new Set(archived.map(a => a.kind))];
+  const current = archived.find(a => a.name === lobby.cardPool);
+  const [kind, setKind] = useState<string | null>(null);
+  const shownKind = kind ?? current?.kind ?? kinds[0];
+  return (
+    <Popup label={lobby.cardPool ?? 'Any cards'} disabled={!lobby.host} wide
+      onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>
+      {close => {
+        const choose = (name: string | null) => { actions.setCardPool(name); close(); };
+        return (
+          <div class="pool-picker">
+            <span class="field-name">Any cards, or a format</span>
+            <div class="pool-tiles">
+              <button class="pool-tile" aria-pressed={!lobby.cardPool} onClick={() => choose(null)}><b>Any cards</b><span>No limit</span></button>
+              {group('Sanctioned').map(name => (
+                <button key={name} class="pool-tile" aria-pressed={lobby.cardPool === name} onClick={() => choose(name)}>
+                  <b>{name}</b><span>{lines.get(name) ?? ''}</span>
+                </button>
+              ))}
+            </div>
+            {group('Casual').length > 0 && <>
+              <span class="field-name">Casual</span>
+              <div class="pool-chips">
+                {group('Casual').map(name => (
+                  <button key={name} class="pool-chip" aria-pressed={lobby.cardPool === name} title={lines.get(name)} onClick={() => choose(name)}>{name}</button>
+                ))}
+              </div>
+            </>}
+            <div class="pool-more">
+              {group('Block').length > 0 && (
+                <label>A block
+                  <span class="pill-select"><select value={group('Block').includes(lobby.cardPool ?? '') ? lobby.cardPool : ''}
+                    onChange={e => choose(e.currentTarget.value)}>
+                    <option value="" disabled>Choose a block</option>
+                    {group('Block').map(name => <option key={name} value={name}>{name}</option>)}
+                  </select></span>
+                </label>
+              )}
+              {kinds.length > 0 && (
+                <label>An older format
+                  <span class="pill-select"><select value={shownKind} onChange={e => setKind(e.currentTarget.value)}>
+                    {kinds.map(k => <option key={k} value={k}>{k}</option>)}
+                  </select></span>
+                  as of
+                  <span class="pill-select"><select value={current?.kind === shownKind ? current.name : ''} onChange={e => choose(e.currentTarget.value)}>
+                    <option value="" disabled>Choose a date</option>
+                    {archived.filter(a => a.kind === shownKind).map(a => <option key={a.name} value={a.name}>{day(a.date)}</option>)}
+                  </select></span>
+                </label>
+              )}
+            </div>
+          </div>
+        );
+      }}
+    </Popup>
+  );
+}
+
 /** Constructed · its card pool · players · variants, or at a Draft or Sealed table the game and players only. */
-export function MatchBar({ lobby, actions, preview, cards, event }: {
-  lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; cards: ComponentChildren; event?: ComponentChildren;
+export function MatchBar({ model, lobby, actions, preview, event }: {
+  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; event?: ComponentChildren;
 }) {
   const lim = lobby.limited;
   return (
     <div class="match-bar">
       <div class="fields">
         <Field name="Game"><GameMenu lobby={lobby} actions={actions} /></Field>
-        {!lim && lobby.format === 'Constructed' && <Field name="Cards">{cards}</Field>}
+        {!lim && lobby.format === 'Constructed' && <Field name="Cards"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
         <Field name="Players" grow={!!lim}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
         {!lim && <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>}
       </div>

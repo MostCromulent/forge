@@ -91,6 +91,8 @@ export interface Actions {
   leaveLobby(): void;
   setFormat(format: string): void;
   setCardPool(cardPool: string | null): void;
+  /** Where each format's cards come from, and the old snapshots, for the card pool picker; they arrive later in the model. */
+  askCardPoolDetails(): void;
   setVariant(variant: string, on: boolean): void;
   setArchenemy(index: number): void;
   setSeatExtra(index: number, section: string, choice: string): void;
@@ -200,6 +202,7 @@ export function createActions(send: Send): Actions {
     setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
+    askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     removeSeat: index => send({ t: 'removeSeat', index }),
     openSeat: index => send({ t: 'openSeat', index }),

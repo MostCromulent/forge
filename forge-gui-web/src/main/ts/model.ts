@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { DevState } from './protocol';
+import type { CardPoolDetails, DevState } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -97,6 +97,8 @@ export interface Model {
   /** Where a limited gauntlet stands after its last game; null outside a gauntlet. */
   limitedResult: LimitedResult | null;
   limitedOptions: LimitedOptions | null;
+  /** The card pool picker's lines and old snapshots, asked for the first time it opens. */
+  cardPoolDetails: CardPoolDetails | null;
   limitedPools: LimitedPools | null;
 }
 
@@ -111,7 +113,7 @@ export function createModel(): Model {
     cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
-    limitedOptions: null, limitedPools: null,
+    limitedOptions: null, cardPoolDetails: null, limitedPools: null,
   };
 }
 

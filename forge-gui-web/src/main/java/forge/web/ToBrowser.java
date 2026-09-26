@@ -141,6 +141,19 @@ final class ToBrowser {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. */
+    /** What the card pool picker shows beyond the names: where each format's cards come from, and the old snapshots. */
+    @Message("cardPoolDetails")
+    record CardPoolDetails(List<CardPoolLine> lines, List<ArchivedPool> archived) {
+    }
+
+    /** A format and where its cards come from: "Every set", "Commons only", or the set it starts at. */
+    record CardPoolLine(String name, String line) {
+    }
+
+    /** An old snapshot of a format: its name, the format it is a snapshot of, and the day it took effect as yyyy-MM-dd. */
+    record ArchivedPool(String name, String kind, String date) {
+    }
+
     record CardPoolGroup(String name, List<String> formats) {
     }
 
@@ -552,7 +565,7 @@ final class ToBrowser {
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, Aside.class, CataloguePage.class, EditorMessage.class,
-            ImportResult.class, NameTaken.class, DeviceDeck.class, LimitedOptions.class, LimitedPools.class,
+            ImportResult.class, NameTaken.class, DeviceDeck.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
             DraftState.class, LimitedResult.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,

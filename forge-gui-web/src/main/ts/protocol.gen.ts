@@ -259,6 +259,12 @@ export interface DeviceDeck {
   format: string;
 }
 
+export interface CardPoolDetails {
+  t: 'cardPoolDetails';
+  lines: CardPoolLine[];
+  archived: ArchivedPool[];
+}
+
 export interface LimitedOptions {
   t: 'limitedOptions';
   blocks: SealedBlock[];
@@ -451,6 +457,7 @@ export type ServerMessage =
   | ImportResult
   | NameTaken
   | DeviceDeck
+  | CardPoolDetails
   | LimitedOptions
   | LimitedPools
   | DraftState
@@ -467,7 +474,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addresses' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'eventStart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addresses' | 'cardPoolDetails' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'eventStart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {
@@ -1162,6 +1169,17 @@ export interface Fetched {
   url: string;
   text: string;
   format: string;
+}
+
+export interface CardPoolLine {
+  name: string;
+  line: string;
+}
+
+export interface ArchivedPool {
+  name: string;
+  kind: string;
+  date: string;
 }
 
 export interface SealedBlock {

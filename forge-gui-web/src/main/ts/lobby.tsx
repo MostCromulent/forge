@@ -38,7 +38,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       <TableHeader model={model} lobby={lobby} actions={actions} openOptions={() => changeUi(u => { u.optionsOpen = true; })} />
       <div class="lobby-main">
         {/* A new kind of event is set up afresh, so its dialog opens again */}
-        <MatchBar lobby={lobby} actions={actions} preview={setPreview} cards={<ConstructedMenu lobby={lobby} actions={actions} />}
+        <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview}
           event={lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />} />
         {lim && <p class="event-status">{eventStatus(lobby)}</p>}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
@@ -79,35 +79,6 @@ export function matchSentence(lobby: LobbyTable): { title: string; text: string 
   const on = (lobby.casualVariants ?? []).filter(v => (lobby.variantsOn ?? []).includes(v.id)).map(v => v.name);
   const variants = on.length ? ` with ${on.length > 1 ? `${on.slice(0, -1).join(', ')} and ${on[on.length - 1]}` : on[0]}` : '';
   return { title: name + variants, text: format?.desc ?? '' };
-}
-
-/** The card pool menu's placeholder: no Constructed format, while another format is chosen. */
-const NO_POOL_CHOSEN = '-';
-
-/** The card pool menu's value. Under another format it shows no entry, so choosing any one of them, "Any cards" included, is a change. */
-export function poolMenuValue(lobby: LobbyTable): string {
-  return lobby.format === 'Constructed' ? lobby.cardPool ?? '' : NO_POOL_CHOSEN;
-}
-
-
-function ConstructedMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
-  return (
-    <select class="format-pool" aria-label="Constructed format" disabled={!lobby.host}
-      value={poolMenuValue(lobby)}
-      onChange={e => {
-        const pool = e.currentTarget.value || null;
-        if (lobby.format !== 'Constructed') actions.setFormat('Constructed');
-        actions.setCardPool(pool);
-      }}>
-      <option value={NO_POOL_CHOSEN} disabled hidden>Choose a Constructed format</option>
-      <option value="">Any cards</option>
-      {lobby.cardPools.map(g => (
-        <optgroup key={g.name} label={g.name}>
-          {g.formats.map(f => <option key={f} value={f}>{f}</option>)}
-        </optgroup>
-      ))}
-    </select>
-  );
 }
 
 /** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */

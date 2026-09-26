@@ -641,3 +641,18 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .variant .muted { font-size: 12px; }
 .variant.blocked { opacity: .55; }
 @media (max-width: 560px) { .game-menu-list { grid-template-columns: 1fr; } .game-card { border-left: 0; padding-left: 0; } }
+
+/* The card pool picker: sanctioned formats as tiles, casual ones as chips, blocks and old snapshots on the bottom line */
+.pool-picker { display: grid; gap: 10px; }
+.pool-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; }
+.pool-tile { display: grid; gap: 1px; text-align: left; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); font: inherit; }
+.pool-tile b { font-size: 13px; }
+.pool-tile span { font-size: 11px; color: var(--muted); }
+.pool-tile:hover { border-color: var(--line-bright); }
+.pool-tile[aria-pressed="true"] { border-color: var(--accent-2); background: var(--accent-soft); }
+.pool-tile[aria-pressed="true"] b { color: var(--accent-2); }
+.pool-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pool-chip { font: inherit; font-size: 12.5px; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.pool-chip[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); background: var(--accent-soft); }
+.pool-more { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; font-size: 12.5px; color: var(--muted); }
+.pool-more label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
