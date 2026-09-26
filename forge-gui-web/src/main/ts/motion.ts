@@ -37,11 +37,9 @@ function restingRect(el: HTMLElement): DOMRect {
   return el.getBoundingClientRect();
 }
 
-const FLIGHT_MS = 340;
-/** A paid card's trip from where it waited, which crosses most of the table and so needs longer to be followed. */
-const LANDING_MS = 600;
-/** A drawn card crosses from the library as far, and an opening hand is followed card by card rather than as a blur. */
-const DEAL_MS = LANDING_MS;
+/** Every card's trip from one place to another takes this long: a play, a draw, a discard, a paid spell's landing. */
+const FLIGHT_MS = 600;
+/** Cards moving together (a deal, a mulligan, a discard) set off this far apart, so each can be followed. */
 const STAGGER_MS = 110;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;
@@ -65,6 +63,7 @@ export function mergeInto(keys: string[], rect: DOMRect): void {
 export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   notePiles();
   let dealt = 0;
+  const leavingHand: { was: Snapshot; target: DOMRect | null }[] = [];
   for (const [key, move] of journeys(events)) {
     const start = waiting.get(key)?.rect ?? lastSeen.get(key)?.rect ?? placeRect(move.from);
     const el = elementFor(key);
@@ -79,7 +78,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
       land(key);
       if (start) {
-        fly(el, start, drawn ? DEAL_MS : FLIGHT_MS, drawn ? dealt++ * STAGGER_MS : 0);
+        fly(el, start, FLIGHT_MS, drawn ? dealt++ * STAGGER_MS : 0);
       } else {
         // A token, or anything else that comes into being, grows into place rather than blinking on
         pop(el);
@@ -91,9 +90,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     land(key);
     if (ghost && start) {
       const target = tileImageRect(key) ?? placeRect(move.to);
-      sendTo({ rect: start, ghost }, target ?? start, target ? 0.25 : 0);
+      if (move.from?.zone === 'Hand') leavingHand.push({ was: { rect: start, ghost }, target });
+      else sendTo({ rect: start, ghost }, target ?? start, target ? 0.25 : 0);
     }
   }
+  // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
+  leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target }, i) =>
+    sendTo(was, target ?? was.rect, target ? 0.25 : 0, i * STAGGER_MS));
   settleWaiting(!!model.prompt?.paying);
   shiftBoard(new Set(journeys(events).keys()));
   layOutPiles();
@@ -158,7 +161,7 @@ function settleWaiting(paying: boolean): void {
     const arrived = stackItemFor(key) ?? cardElement(key);
     if (arrived) {
       land(key);
-      fly(arrived, held.rect, LANDING_MS, 0);
+      fly(arrived, held.rect, FLIGHT_MS, 0);
     } else if (!paying && Date.now() - held.since > SETTLE_MS) {
       land(key);
     }
@@ -327,7 +330,7 @@ function hold(key: string, from: DOMRect, ghost: HTMLElement | null): void {
     {
       transform: `translate(${spot.left - from.left}px, ${spot.top - from.top}px) scale(${spot.width / from.width})`,
     },
-  ], { duration: LANDING_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+  ], { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
   waiting.set(key, { rect: spot, ghost: shown, since: Date.now() });
 }
 
@@ -370,7 +373,7 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
-function sendTo(was: Snapshot, target: DOMRect, endOpacity: number): void {
+function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0): void {
   if (!was.ghost) {
     return;
   }
@@ -381,5 +384,5 @@ function sendTo(was: Snapshot, target: DOMRect, endOpacity: number): void {
       transform: `translate(${target.left - was.rect.left}px, ${target.top - was.rect.top}px) scale(${target.width / was.rect.width})`,
       opacity: endOpacity,
     },
-  ], { duration: FLIGHT_MS, easing: 'cubic-bezier(.4,0,.8,.4)' }).finished.then(() => ghost.remove(), () => ghost.remove());
+  ], { duration: FLIGHT_MS, delay, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
 }
