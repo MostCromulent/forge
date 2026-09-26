@@ -3,11 +3,15 @@
 Plays Forge in a web browser. One computer runs Forge as a small server, and everyone, the person running it
 included, plays in a browser. Other players need only a browser and a link; they install nothing.
 
-The person running the server is the **host**. Everyone who joins by link is a **guest**.
+The first half of this page is for players. The second, **For developers**, covers building and working on it.
 
 ![A match in progress](docs/match.webp)
 
-## What it plays
+## For players
+
+The person running the server is the **host**. Everyone who joins by link is a **guest**.
+
+### What it plays
 
 - **Constructed** and the other game types: Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto.
 - The casual variants on top of them: **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**.
@@ -17,16 +21,12 @@ The person running the server is the **host**. Everyone who joins by link is a *
 Not yet: **Quest**, **Adventure**, **Planar Conquest**, **puzzles**, desktop's constructed **gauntlets**, and
 **Winston** draft. These are played in desktop or mobile Forge.
 
-## Build and start
+### Starting it
 
 You need Java 17 or later and Maven. From the repository root:
 
     mvn -Pweb -pl forge-gui-web -am install -DskipTests
     java -jar forge-gui-web/target/forge-gui-web.jar
-
-`-Pweb` is needed because the web module is left out of Forge's normal build. Maven fetches its own Node for the
-browser code. Start from the repository root or a Forge install, so Forge finds its `res` folder, or pass
-`-Dforge.assets.dir=<folder holding res>`.
 
 Two windows open: the game, in a browser window, and the **server window**.
 
@@ -37,13 +37,7 @@ traffic, split into game, card art, audio and page, with totals and uptime besid
 **Copy log**. Closing it quits Forge, and so does closing the last browser, after 15 seconds, unless **Quit when
 the last player leaves** is unticked.
 
-| Option (before `-jar`) | Effect |
-|---|---|
-| `-Dforge.web.port=<n>` | Another port. The default, 36743, is desktop Forge's network port; change it to host from both at once. |
-| `-Dforge.web.noBrowser=true` | Do not open the game window. |
-| `-Dforge.web.noConsole=true` | No server window. The link is printed instead. |
-
-## Playing
+### Playing
 
 The start page offers **Play the computer**, **Play with friends** and **Decks**. Either way of playing leads to
 Constructed, Draft or Sealed.
@@ -67,7 +61,7 @@ and a match carries on where it was.
 
 ![The end of a game](docs/victory.webp)
 
-## Decks and settings
+### Decks and settings
 
 **Decks** builds, edits and imports decks. Import takes a pasted list, a deck file, or a link from Moxfield,
 Archidekt, TappedOut or MTGGoldfish, and marks any line it could not read.
@@ -88,24 +82,42 @@ The Java side (`src/main/java`) runs the engine and serves the page. The browser
 and Preact, bundled into `src/main/resources/web/js/` (a build output, not committed). Rarely used code, such as
 three.js for a player's portrait breaking, is split into `js/chunks/` and loaded on first use.
 
-**Running from IntelliJ.** The **Forge Web** run configuration builds the bundle and starts `forge.web.WebMain` with
+### Building
+
+`-Pweb` in the build command is needed because the web module is left out of Forge's normal build. Maven fetches
+its own Node for the browser code. Start the jar from the repository root or a Forge install, so Forge finds its
+`res` folder, or pass `-Dforge.assets.dir=<folder holding res>`.
+
+| Option (before `-jar`) | Effect |
+|---|---|
+| `-Dforge.web.port=<n>` | Another port. The default, 36743, is desktop Forge's network port; change it to host from both at once. |
+| `-Dforge.web.noBrowser=true` | Do not open the game window. |
+| `-Dforge.web.noConsole=true` | No server window. The link is printed instead. |
+
+### Running from IntelliJ
+
+The **Forge Web** run configuration builds the bundle and starts `forge.web.WebMain` with
 `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web`, so the page is read from disk and a change needs only a
 reload. CSS and `index.html` are served as they are; for TypeScript, run `npm run watch` in this folder, or
 `npm run build` to type-check and build once. Use the Node Maven installed (`node/`) or any Node 22.
 
-**The protocol.** Every message is a Java record in `ToBrowser` or `FromBrowser`. `src/main/ts/protocol.gen.ts` is
-generated from them and from Forge's `TrackableProperty`, so each field is named in one place. After changing a
-record, regenerate it, and the compiler shows what the client must change:
+### The protocol
+
+Every message is a Java record in `ToBrowser` or `FromBrowser`. `src/main/ts/protocol.gen.ts` is generated from
+them and from Forge's `TrackableProperty`, so each field is named in one place. After changing a record, regenerate
+it, and the compiler shows what the client must change:
 
     mvn -Pweb -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
 
 `ProtocolTypesTest` fails whenever the committed file is out of date. A field may be null only when marked
 `@Nullable`; it is then left out of the JSON and optional in TypeScript.
 
-**Tests.** `mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts`
-(`npm test` runs only the latter). Whole-game tests need `-Drun.stress.tests=true`. `SharedTraceTest` and
-`model.test.ts` replay one recorded game (`src/test/resources/traces/whole-game.json`) through the Java and
-TypeScript models, so they cannot drift apart. After the model or the messages change, record a new one:
+### Tests
+
+`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests in `src/test/ts` (`npm test` runs
+only the latter). Whole-game tests need `-Drun.stress.tests=true`. `SharedTraceTest` and `model.test.ts` replay one
+recorded game (`src/test/resources/traces/whole-game.json`) through the Java and TypeScript models, so they cannot
+drift apart. After the model or the messages change, record a new one:
 
     mvn -Pweb -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
 
@@ -117,7 +129,7 @@ folder. Build the jar first, then:
     npx playwright install chromium   # once
     npx playwright test
 
-**Where things are.**
+### Where things are
 
 - `ToBrowser`, `FromBrowser` and `Wire` define and write the protocol; `protocol.ts` adds the views the client reads
   game objects through.
