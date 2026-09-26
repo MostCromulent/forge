@@ -327,7 +327,7 @@ function hold(key: string, from: DOMRect, ghost: HTMLElement | null): void {
     {
       transform: `translate(${spot.left - from.left}px, ${spot.top - from.top}px) scale(${spot.width / from.width})`,
     },
-  ], { duration: FLIGHT_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+  ], { duration: LANDING_MS, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
   waiting.set(key, { rect: spot, ghost: shown, since: Date.now() });
 }
 

@@ -4,9 +4,12 @@
   content: ''; position: fixed; inset: -16px; z-index: -3;
   background: radial-gradient(120% 90% at 50% 42%, var(--bg) 0%, var(--bg-deep) 100%);
 }
+/* Your half of the table is lit a little from the bottom of the window, so whose side is whose reads without a
+   label; the light runs on under the hand and the console rather than stopping at the edge of your seat */
 #match::before {
   content: ''; position: fixed; inset: -16px; z-index: -3;
-  background: radial-gradient(120% 90% at 50% 42%,
+  background: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 2.5%, transparent) 0%, transparent 42%),
+              radial-gradient(120% 90% at 50% 42%,
               color-mix(in srgb, var(--bg) 42%, transparent) 0%,
               color-mix(in srgb, var(--bg-deep) 68%, transparent) 100%);
 }
@@ -16,8 +19,7 @@
    slid the whole table up and cut off the top seat */
 #match { overflow: clip; }
 #opponent { grid-area: opp; }
-/* Your half of the table is lit a little, so whose side is whose reads without a label */
-#me { grid-area: me; background: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 2.5%, transparent) 0%, transparent 30%); }
+#me { grid-area: me; }
 #phase-strip { grid-area: phase; }
 #side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 /* The log takes what the chat leaves; shut, each is only its own tab */
@@ -436,7 +438,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
 /* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view */
-#zoom { --zoom-w: 260px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+#zoom { --zoom-w: 310px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
@@ -647,7 +649,7 @@ body.dragging-block #zoom { display: none; }
   transform: translate(-50%, -50%);
   overflow: hidden;
   padding: 9px 34px;
-  border-radius: 4px;
+  border-radius: 999px;
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 68%, #fff) 0%, var(--accent-2) 45%, color-mix(in srgb, var(--accent-2) 72%, #000) 100%);
   border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff);
   box-shadow: 0 2px 0 color-mix(in srgb, var(--accent-2) 42%, #000), 0 10px 24px #000a;
@@ -674,7 +676,7 @@ body.dragging-block #zoom { display: none; }
 #first-reveal .reveal-name { font-size: 13px; font-weight: 600; }
 #first-reveal .reveal-face.first > :first-child { animation: first-lit .45s cubic-bezier(.2,.8,.3,1.2) .7s forwards; }
 #first-reveal .reveal-face:not(.first) { animation: first-dim .45s ease .7s forwards; }
-#first-reveal p { margin: 0; padding: 9px 30px; border-radius: 4px; background: var(--brass); color: var(--on-brass); font-size: 15px; font-weight: 800;
+#first-reveal p { margin: 0; padding: 9px 30px; border-radius: 999px; background: var(--brass); color: var(--on-brass); font-size: 15px; font-weight: 800;
   letter-spacing: .16em; text-transform: uppercase; box-shadow: 0 10px 24px #000a; opacity: 0; animation: first-say .4s cubic-bezier(.2,.8,.3,1) .85s forwards; }
 @keyframes first-reveal { from { opacity: 0; } 8% { opacity: 1; } 86% { opacity: 1; } to { opacity: 0; } }
 @keyframes first-lit { to { transform: scale(1.14); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); } }

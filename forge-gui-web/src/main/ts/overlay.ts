@@ -196,8 +196,8 @@ function placeCharges(keys: Set<number>): void {
     const r = card.getBoundingClientRect();
     const width = card.offsetWidth * .66;
     const height = width * MARK_H / MARK_W;
-    // The chevrons stand a twentieth of the card's width clear of it
-    const sink = height * MARK_BELOW / MARK_H - card.offsetWidth * .05;
+    // The chevrons stand an eighth of the card's width clear of it, so the trailing one is not lost behind the card
+    const sink = height * MARK_BELOW / MARK_H - card.offsetWidth * .12;
     const down = !!card.closest('#opponent');
     // A crowded battlefield scrolls, and its front row can sit at the very edge; the chevron stays inside the
     // battlefield's box then, rather than spilling over the phase pill beyond it
