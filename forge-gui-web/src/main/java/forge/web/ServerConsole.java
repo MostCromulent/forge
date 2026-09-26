@@ -345,7 +345,10 @@ final class ServerConsole implements IProgressBar {
             }
         });
         frame.getContentPane().add(head, BorderLayout.NORTH);
-        frame.getContentPane().add(new JScrollPane(text), BorderLayout.CENTER);
+        final JPanel log = new JPanel(new BorderLayout());
+        log.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
+        log.add(new JScrollPane(text));
+        frame.getContentPane().add(log, BorderLayout.CENTER);
         frame.getContentPane().add(foot, BorderLayout.SOUTH);
         // Wide enough for the longest link row, caption and copy button included, without a sideways scrollbar
         frame.setSize(new Dimension(980, 620));
