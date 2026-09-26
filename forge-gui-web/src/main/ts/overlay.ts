@@ -6,23 +6,34 @@ import { ui } from './ui';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
-// of the hovered stack item. Each is one solid shape, widest at its source and tapering into its head. A block is
-// drawn as an attack is, in blue rather than orange, a pair that stays apart for red-green colour blindness; the
-// rest differ in width and head as well as colour.
+// of the hovered stack item. All are one arrow in three colours, drawn as the attack chevron is: a coloured body that
+// swells and narrows to a neck, a faceted head, and a hairline of white-hot light down both. Red, blue and yellow
+// differ in brightness as well as hue, so they stay apart for red-green colour blindness.
 interface ArrowKind {
-  color: string;
-  band: number;
-  head: 'spear' | 'chevron' | 'reticle';
+  sheath: string;
+  rim: string;
+  glow: string;
+  core: string;
+  /** A block only planned, or one a card is made to make, is drawn fainter than one declared. */
+  alpha: number;
 }
 
+const ATTACK = { sheath: '#e8321f', rim: '#ff6a4c', glow: '#ff2a14', core: '#fff4ee' };
+const BLOCK = { sheath: '#2f7df0', rim: '#6fb0ff', glow: '#2a8cff', core: '#eef6ff' };
+const TARGET = { sheath: '#f0b81f', rim: '#ffd95a', glow: '#ffc21a', core: '#fffbea' };
+
 const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target' | 'mustBlock', ArrowKind> = {
-  attack: { color: '#ff7a59', band: 16, head: 'spear' },
-  block: { color: '#5cc8ff', band: 16, head: 'spear' },
-  plannedBlock: { color: '#8fb7cc', band: 12, head: 'spear' },
-  target: { color: '#ffcc33', band: 9, head: 'reticle' },
-  // An obligation rather than a choice, so it is drawn thinner than the block a player makes
-  mustBlock: { color: '#f2c344', band: 7, head: 'chevron' },
+  attack: { ...ATTACK, alpha: 1 },
+  block: { ...BLOCK, alpha: 1 },
+  plannedBlock: { ...BLOCK, alpha: 0.55 },
+  target: { ...TARGET, alpha: 1 },
+  mustBlock: { ...BLOCK, alpha: 0.4 },
 };
+
+/** The arrow was designed at a smaller card size; this is how much larger it is drawn over the board's cards. */
+const SCALE = 1.4;
+/** How far back from its tip the head's neck is, where the body meets it, in the head's design units. */
+const NECK = 14;
 
 interface Point {
   x: number;
@@ -88,15 +99,15 @@ function paint(model: Model): void {
     return;
   }
   // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
-  const charging = chargingAtPlayer(model);
-  placeCharges(charging);
+  const atFace = atLoneFace(model);
+  placeCharges(chargingAtPlayer(model));
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
   for (const band of mode === '1' ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
     attackers.forEach((attacker, i) => {
-      if (!charging.has(attacker.ref)) {
+      if (!atFace.has(attacker.ref)) {
         ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack, i, attackers.length);
       }
       for (const blocker of present(band.blockers)) {
@@ -125,6 +136,13 @@ function paint(model: Model): void {
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
+
+// The attack mark's drawing (board.css) is 64 by 54 units; its two chevrons fill it from 16 units below the top to 13.7
+// above the bottom, and the rest is room for their glow
+const MARK_W = 64;
+const MARK_H = 54;
+const MARK_TOP = 16;
+const MARK_BELOW = 13.7;
 
 /** The chevron over each charging attacker, kept between paints so its halo breathes on rather than restarting. */
 const charges = new Map<number, HTMLElement>();
@@ -156,10 +174,9 @@ function placeCharges(keys: Set<number>): void {
     }
     const r = card.getBoundingClientRect();
     const width = card.offsetWidth * .66;
-    // The drawing leaves 17 of its 50 units empty below the chevron, for the glow; the chevron itself stands a
-    // twentieth of the card's width clear of it
-    const height = width * 50 / 64;
-    const sink = height * 17 / 50 - card.offsetWidth * .05;
+    const height = width * MARK_H / MARK_W;
+    // The chevrons stand a twentieth of the card's width clear of it
+    const sink = height * MARK_BELOW / MARK_H - card.offsetWidth * .05;
     const down = !!card.closest('#opponent');
     // A crowded battlefield scrolls, and its front row can sit at the very edge; the chevron stays inside the
     // battlefield's box then, rather than spilling over the phase pill beyond it
@@ -168,24 +185,34 @@ function placeCharges(keys: Set<number>): void {
     mark.style.width = `${width}px`;
     mark.style.left = `${r.left + r.width / 2}px`;
     mark.style.top = `${down
-      ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * 34 / 50)
-      : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * 34 / 50)}px`;
+      ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * (MARK_H - MARK_TOP) / MARK_H)
+      : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * (MARK_H - MARK_TOP) / MARK_H)}px`;
   }
 }
 
 /**
- * Attackers that can only be attacking the one opponent's face: in a two-player game, those attacking a player
- * rather than a planeswalker or battle. An arrow would only point at the portrait, so they wear a chevron instead.
+ * Attackers that can only be attacking the one opponent's face, each with whether it is blocked: in a two-player
+ * game, those attacking a player rather than a planeswalker or battle. An arrow would only point at the portrait, so
+ * none of them gets one.
  */
-export function chargingAtPlayer(model: Model): Set<number> {
-  const out = new Set<number>();
+function atLoneFace(model: Model): Map<number, boolean> {
+  const out = new Map<number, boolean>();
   const everyone = players(model);
   if (everyone.length !== 2) return out;
   const faces = new Set(everyone.map(p => p.$key));
   for (const band of game(model)?.CombatView ?? []) {
-    if (band.defender && faces.has(band.defender.ref)) present(band.attackers).forEach(a => out.add(a.ref));
+    const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
+    if (band.defender && faces.has(band.defender.ref)) present(band.attackers).forEach(a => out.set(a.ref, blocked));
   }
   return out;
+}
+
+/**
+ * The attackers at the lone opponent's face that wear a chevron: the unblocked ones. A blocked one's block arrow is
+ * what matters now, and a chevron at the face would say otherwise.
+ */
+export function chargingAtPlayer(model: Model): Set<number> {
+  return new Set([...atLoneFace(model)].filter(([, blocked]) => !blocked).map(([key]) => key));
 }
 
 export function stackTargets(model: Model, item: StackItemView): TrackedObject[] {
@@ -244,20 +271,27 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   // A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line
   const bow = 0.34;
   const bend = { x: (a.x + end.x) / 2 + (end.y - a.y) * bow, y: (a.y + end.y) / 2 - (end.x - a.x) * bow };
-  // A spear's head is solid, so the band and line stop at its waist rather than run on under it to the tip
-  const [bodyBend, bodyEnd] = kind.head === 'spear' ? trim(a, bend, end, SPEAR_WAIST) : [bend, end];
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  // One solid shape in one colour: widest where it leaves the source and narrowing into the head, like a thrown
-  // spear, so which end is which reads without following the curve
-  taper(ctx, a, bodyBend, bodyEnd, t => (kind.band / 2) * (0.2 + 0.8 * Math.pow(1 - t, 0.8)));
-  ctx.fillStyle = rgba(kind.color, 0.92);
+  // The body stops at the head's neck, so the head stands on it rather than covering its end
+  const [bodyBend, bodyEnd] = trim(a, bend, end, NECK * SCALE);
+  // Fine at the source, fullest a little past the middle, and narrow again at the neck
+  const half = (t: number) => (0.9 + 1.7 * Math.sin(Math.PI * Math.pow(t, 1.35))) * SCALE;
+  ctx.save();
+  ctx.globalAlpha = kind.alpha;
+  taper(ctx, a, bodyBend, bodyEnd, half);
+  ctx.shadowColor = rgba(kind.glow, 0.6);
+  ctx.shadowBlur = 7 * SCALE;
+  ctx.fillStyle = kind.sheath;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.strokeStyle = kind.rim;
+  ctx.lineWidth = 0.6;
+  ctx.stroke();
+  taper(ctx, a, bodyBend, bodyEnd, t => half(t) * 0.28);
+  ctx.fillStyle = kind.core;
   ctx.fill();
   head(ctx, end, Math.atan2(end.y - bend.y, end.x - bend.x), kind);
+  ctx.restore();
 }
-
-/** How far back from its tip a spear head narrows to its waist. */
-const SPEAR_WAIST = 19;
 
 /** The same quadratic curve cut short where it comes within `back` pixels of its end, as a control point and an end. */
 function trim(a: Point, bend: Point, b: Point, back: number): [Point, Point] {
@@ -294,39 +328,55 @@ function taper(ctx: CanvasRenderingContext2D, a: Point, bend: Point, b: Point, h
   ctx.closePath();
 }
 
+/**
+ * The head, drawn pointing along its angle with its tip on the point: two barbs swept back on curved edges, one facet
+ * in shadow and one lit, and a hairline ridge of white-hot light between them.
+ */
 function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: ArrowKind): void {
-  const point = (len: number, spread: number): [Point, Point] => [
-    { x: at.x - len * Math.cos(angle - spread), y: at.y - len * Math.sin(angle - spread) },
-    { x: at.x - len * Math.cos(angle + spread), y: at.y - len * Math.sin(angle + spread) },
-  ];
-  ctx.strokeStyle = rgba(kind.color, 1);
-  ctx.fillStyle = rgba(kind.color, 1);
-  if (kind.head === 'reticle') {
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(at.x, at.y, 13, 0, Math.PI * 2);
-    ctx.stroke();
-    return;
-  }
-  if (kind.head === 'spear') {
-    // A barbed head: the outer points swept back past a waist, so the tip reads at a glance on a busy board
-    const [l, r] = point(34, 0.42);
-    const [wl, wr] = point(SPEAR_WAIST, 0.2);
-    ctx.beginPath();
-    ctx.moveTo(at.x, at.y);
-    ctx.lineTo(l.x, l.y);
-    ctx.lineTo(wl.x, wl.y);
-    ctx.lineTo(wr.x, wr.y);
-    ctx.lineTo(r.x, r.y);
-    ctx.closePath();
-    ctx.fill();
-    return;
-  }
-  const [l, r] = point(24, 0.45);
+  ctx.save();
+  ctx.translate(at.x, at.y);
+  ctx.rotate(angle);
+  ctx.scale(SCALE, SCALE);
   ctx.beginPath();
-  ctx.moveTo(l.x, l.y);
-  ctx.lineTo(at.x, at.y);
-  ctx.lineTo(r.x, r.y);
-  ctx.lineWidth = 5;
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(-9, 2, -21, 9.5);
+  ctx.lineTo(-NECK, 0);
+  ctx.lineTo(-21, -9.5);
+  ctx.quadraticCurveTo(-9, -2, 0, 0);
+  ctx.closePath();
+  ctx.shadowColor = rgba(kind.glow, 0.53);
+  ctx.shadowBlur = 6;
+  ctx.fillStyle = shade(kind.sheath, -0.35);
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(-9, -2, -21, -9.5);
+  ctx.lineTo(-NECK, 0);
+  ctx.closePath();
+  ctx.fillStyle = kind.sheath;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(-8, -1.4, -16, -5);
+  ctx.lineTo(-12, 0);
+  ctx.closePath();
+  ctx.globalAlpha *= 0.55;
+  ctx.fillStyle = shade(kind.rim, 0.15);
+  ctx.fill();
+  ctx.globalAlpha /= 0.55;
+  ctx.beginPath();
+  ctx.moveTo(-0.5, 0);
+  ctx.lineTo(-NECK + 0.5, 0);
+  ctx.strokeStyle = kind.core;
+  ctx.lineWidth = 0.8;
   ctx.stroke();
+  ctx.restore();
+}
+
+/** A colour darkened (amount below 0) or lightened (above 0) by that fraction of the way to black or white. */
+function shade(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const move = (v: number) => Math.round(amount < 0 ? v * (1 + amount) : v + (255 - v) * amount);
+  return `rgb(${move((n >> 16) & 255)},${move((n >> 8) & 255)},${move(n & 255)})`;
 }

@@ -572,15 +572,16 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 #opponent .slot.attacking { transform: translateY(var(--advance)); }
 .card.attacking { outline: 2px solid var(--attack); }
 /* An attacker that can only be attacking the lone opponent wears a chevron of light rather than an arrow to their
-   face: a red sheath round a white-hot core, in a slowly breathing halo, pointing at the defender. The marks sit in
+   face: a red chevron with a smaller, fainter one trailing it, each a red sheath round a white-hot core, in a slowly
+   breathing halo, pointing at the defender. The marks sit in
    a layer of their own over the board, since the battlefield scrolls and would clip the glow above its top row. */
 #charges { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
-.charge { position: absolute; aspect-ratio: 64 / 50; transform: translate(-50%, -100%); }
+.charge { position: absolute; aspect-ratio: 64 / 54; transform: translate(-50%, -100%); }
 .charge.down { transform: translate(-50%, 0) rotate(180deg); }
 .charge::before, .charge::after { content: ''; position: absolute; }
 .charge::before { left: 50%; top: 58%; width: 140%; height: 70%; transform: translate(-50%, -50%); border-radius: 50%;
   background: radial-gradient(closest-side, #ff3b2a40, transparent); animation: charge-breathe 3.2s ease-in-out infinite; }
-.charge::after { inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -14 64 50'><filter id='b' filterUnits='userSpaceOnUse' x='-12' y='-14' width='64' height='50'><feGaussianBlur stdDeviation='5'/></filter><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
+.charge::after { inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -14 64 54'><filter id='b' filterUnits='userSpaceOnUse' x='-12' y='-14' width='64' height='54'><feGaussianBlur stdDeviation='5'/></filter><g transform='translate(6 13) scale(.7)' opacity='.55'><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></g><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
 @keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 html[data-motion="reduced"] .charge::before { animation: none; }
 .slot.charging > .card.attacking { outline: none; }
