@@ -3828,8 +3828,13 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (!mayAutoPass()) {
             return;
         }
+        final boolean wasYielding = yieldController.autoPassUntilEndOfTurn();
         yieldController.setAutoPassUntilEndOfTurn(false);
         PlayerView playerView = getLocalPlayerView();
+        // A remote client keeps its own copy of the yield for its display, so it is told the yield has ended
+        if (wasYielding && playerView != null) {
+            getGui().applyYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(playerView, false));
+        }
         getGui().showPromptMessage(playerView, "");
         getGui().updateButtons(playerView, false, false, false);
         getGui().awaitNextInput();

@@ -1116,7 +1116,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 case "concede" -> controller.concede();
                 case "drawOffer" -> controller.drawOfferAction(Wire.decode(msg, DrawOfferCommand.class).action());
                 case "autoDecisions" -> autoDecisions(controller, Wire.decode(msg, AutoDecisionCommand.class));
-                case "endTurn" -> YieldController.endTurn(controller, getCurrentPlayer());
+                case "endTurn" -> {
+                    YieldController.endTurn(controller, getCurrentPlayer());
+                    // The yield is set on this side at once, so the chip beside the phase pill names it straight away
+                    send(controlsMessage());
+                }
                 case "undo" -> controller.undoLastAction();
                 case "autoPass" -> {
                     WebSettings.set(settings, controller, "autoPassNoActions",
