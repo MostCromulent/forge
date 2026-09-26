@@ -54,6 +54,7 @@ const send = connect(receive, online => {
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
+  else console.warn(`Not sent while a new turn is announced: ${msg.t}`);
 });
 initAutoPass((id, go) => wire.answer(id, go), () => schedule());
 const actions: Actions = {
@@ -163,11 +164,15 @@ function runKey(command: KeyCommand): void {
 
 /** What has arrived since a new turn began, while its banner shows. */
 let held: ServerMessage[] | null = null;
+/** Longer than any banner, so it only matters if the banner's own release is lost. */
+const HOLD_LIMIT_MS = 4000;
 
 function receive(msg: ServerMessage): void {
   if (!held) {
     if (msg.t === 'state' && announceComing(model, msg, release)) {
       held = [msg];
+      // The banner's end releases the turn; this only guards the page against a release that never comes
+      setTimeout(() => { if (held?.[0] === msg) release(); }, HOLD_LIMIT_MS);
     } else {
       apply(msg);
     }

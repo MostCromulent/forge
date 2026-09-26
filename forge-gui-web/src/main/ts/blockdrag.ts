@@ -82,7 +82,8 @@ export function initBlockDrag(actions: Actions): void {
     setTimeout(() => { justDragged = false; });
     const attacker = attackerAt(current, e.clientX, e.clientY);
     const at = { x: e.clientX, y: e.clientY };
-    if (attacker) queued = queued.then(() => block(actions, blocker, Number(attacker.dataset.key), at));
+    // A failed block must not stop every later one, or the OK that waits for them
+    if (attacker) queued = queued.then(() => block(actions, blocker, Number(attacker.dataset.key), at)).catch(e => console.error(e));
   });
   document.addEventListener('pointercancel', stop);
   document.addEventListener('click', e => {
