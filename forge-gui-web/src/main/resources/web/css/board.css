@@ -745,7 +745,7 @@ body.dragging-block #zoom { display: none; }
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--on-brass);
-  animation: turn-sweep 2.4s cubic-bezier(.2,.8,.3,1) forwards;
+  animation: turn-sweep 1.6s cubic-bezier(.2,.8,.3,1) forwards;
 }
 
 /* A light travels across the plate as it lands */
