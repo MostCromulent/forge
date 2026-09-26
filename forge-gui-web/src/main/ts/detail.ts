@@ -262,6 +262,13 @@ function ensureZoom(zoom: HTMLElement): void {
   zoom.addEventListener('animationend', e => {
     if (e.animationName === 'zoom-flip') zoom.classList.remove('flipping');
   });
+  // The preview lets the pointer through, so rules text too long for it scrolls with the wheel over the card itself
+  const detail = q(zoom, '.detail');
+  document.addEventListener('wheel', e => {
+    if (zoom.hidden || !zoom.classList.contains('text-card') || detail.scrollHeight <= detail.clientHeight) return;
+    e.preventDefault();
+    detail.scrollTop += e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 16 : e.deltaY;
+  }, { passive: false });
   // The preview is placed before its image arrives, and grows when it does, so it is placed again to stay on screen
   img.addEventListener('load', () => {
     const hover = ui.hover;
