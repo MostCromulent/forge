@@ -54,14 +54,22 @@ export async function startServer(onPort?: number): Promise<Server> {
     url,
     port,
     async stop() {
-      const exited = new Promise(done => java.once('exit', done));
-      // On Windows `java` can be a launcher that starts the real JVM as a child, which must go too or it keeps the port
-      if (process.platform === 'win32') {
-        execFileSync('taskkill', ['/pid', String(java.pid), '/T', '/F'], { stdio: 'ignore' });
-      } else {
-        java.kill();
+      // A server that has already exited has nothing left to stop, and taskkill fails on a process that is gone
+      if (java.exitCode === null && java.signalCode === null) {
+        const exited = new Promise(done => java.once('exit', done));
+        // On Windows `java` can be a launcher that starts the real JVM as a child, which must go too or it keeps the port
+        if (process.platform === 'win32') {
+          try {
+            execFileSync('taskkill', ['/pid', String(java.pid), '/T', '/F'], { stdio: 'ignore' });
+          } catch {
+            // It exited between the check and the kill; the exit event still comes
+          }
+        } else {
+          java.kill();
+        }
+        await exited;
       }
-      await exited;      rmSync(home, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     },
   };
 }
