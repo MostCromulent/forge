@@ -1,7 +1,7 @@
 // One card on the page: its image, counters, damage, tapped and selectable states. Every zone that shows a card
 // builds it here, so a card looks the same wherever it is.
 
-import { stateOf, type Model } from './model';
+import { combatShown, stateOf, type Model } from './model';
 import { hoverable } from './detail';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
@@ -58,7 +58,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('playable', has(model.playable?.cards, card.$key));
   el.classList.toggle('auto-tap', has(model.playable?.autoTap, card.$key));
   el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(card.$key));
-  el.classList.toggle('attacking', !!card.Attacking);
+  el.classList.toggle('attacking', !!card.Attacking && combatShown(model));
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
   // The zoom shows the card large, so it keeps the full image

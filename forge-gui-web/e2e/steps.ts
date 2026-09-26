@@ -73,6 +73,15 @@ export async function answerDialogs(page: Page): Promise<void> {
   }
 }
 
+/** Waits for the game's first question, closing the window of cards the AI plays poorly, which the game waits on. */
+export async function gameStarted(page: Page): Promise<void> {
+  await expect(async () => {
+    const reveal = page.locator('#dialog-layer .reveal-panel .zone-answer.ok');
+    if (await reveal.count()) await reveal.click();
+    await expect(page.locator('#prompt .message')).not.toBeEmpty({ timeout: 1000 });
+  }).toPass({ timeout: 60_000 });
+}
+
 /** Concedes from the game menu, which asks twice. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);

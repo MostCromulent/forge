@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { buildLimitedDeck, chooseDeck, enterName, inviteLink } from './steps';
+import { buildLimitedDeck, chooseDeck, enterName, gameStarted, inviteLink } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -53,7 +53,7 @@ test('online sealed with a guest', async ({ page, browser }) => {
   await page.click('#play');
   for (const p of [page, guest]) {
     await expect(p.locator('#match')).toBeVisible({ timeout: 60_000 });
-    await expect(p.locator('#prompt .message')).not.toBeEmpty({ timeout: 60_000 });
+    await gameStarted(p);
   }
 });
 

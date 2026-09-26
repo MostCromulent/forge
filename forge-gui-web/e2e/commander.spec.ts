@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { chooseGame, enterName, flipOption, hostTable } from './steps';
+import { chooseGame, enterName, flipOption, gameStarted, hostTable } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -16,7 +16,7 @@ test('commander damage shows on the portrait and is broken down in its hover', a
   for (let i = 0; i < 2; i++) await page.locator('#seats .plate').nth(i).locator('.random-row').click();
   await expect(page.locator('#play')).toBeEnabled({ timeout: 60_000 });
   await page.click('#play');
-  await expect(page.locator('#prompt .message')).not.toBeEmpty({ timeout: 60_000 });
+  await gameStarted(page);
   await flipOption(page, 'Dev mode');
   // As in dev.spec: the state is placed by the game's thread, so it is set while the game waits on this player
   const priority = page.locator('#phase-strip .pill.priority');

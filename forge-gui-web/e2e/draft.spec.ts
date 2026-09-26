@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { buildLimitedDeck, enterName } from './steps';
+import { buildLimitedDeck, enterName, gameStarted } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -43,5 +43,5 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.opponents .radio[data-mode=gauntlet]');
   await page.click('.opp-side button.primary:has-text("Start the gauntlet")');
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('#prompt .message')).not.toBeEmpty({ timeout: 60_000 });
+  await gameStarted(page);
 });

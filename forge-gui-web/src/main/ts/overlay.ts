@@ -1,4 +1,4 @@
-import { game, derefAll, players, type Model } from './model';
+import { combatShown, game, derefAll, players, type Model } from './model';
 import { setting } from './settings';
 import { byId } from './dom';
 import { cardElement, pileTopFor } from './motion';
@@ -106,7 +106,7 @@ function paint(model: Model): void {
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
-  for (const band of mode === '1' ? [] : g.CombatView ?? []) {
+  for (const band of mode === '1' || !combatShown(model) ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
     attackers.forEach((attacker, i) => {
       if (!atFace.has(attacker.ref)) {
@@ -219,7 +219,7 @@ function placeCharges(keys: Set<number>): void {
 function atLoneFace(model: Model): Map<number, boolean> {
   const out = new Map<number, boolean>();
   const everyone = players(model);
-  if (everyone.length !== 2) return out;
+  if (everyone.length !== 2 || !combatShown(model)) return out;
   const faces = new Set(everyone.map(p => p.$key));
   for (const band of game(model)?.CombatView ?? []) {
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;

@@ -2,7 +2,7 @@
 
 import { reconcile } from './render';
 import { createCard, updateCard, setPileCount, type CardClick } from './cards';
-import { stateOf, type Model } from './model';
+import { combatShown, stateOf, type Model } from './model';
 import { mergeInto, spreadFrom } from './motion';
 import { chargingAtPlayer } from './overlay';
 import { q } from './dom';
@@ -188,7 +188,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--attached', String(slot.attached.length));
-  el.classList.toggle('attacking', !!slot.top.Attacking);
+  el.classList.toggle('attacking', !!slot.top.Attacking && combatShown(model));
   el.classList.toggle('charging', charging.has(slot.top.$key));
   const sig = slot.sig;
   const opened = !!sig && ui.openPiles.has(sig);

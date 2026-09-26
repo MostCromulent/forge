@@ -207,6 +207,9 @@ export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | 
 export const derefAll = (model: Model, list: Refs | null | undefined): TrackedObject[] =>
   (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
 export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
+/** The steps the board shows a combat in. Forge keeps the combat through the end of combat step, after its damage. */
+const COMBAT_SHOWN = new Set(['COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'COMBAT_FIRST_STRIKE_DAMAGE', 'COMBAT_DAMAGE']);
+export const combatShown = (model: Model): boolean => COMBAT_SHOWN.has(game(model)?.Phase ?? '');
 export const players = (model: Model): PlayerView[] => derefAll(model, game(model)?.Players);
 export const isLocal = (model: Model, player: PlayerView): boolean => model.localPlayers.includes(player.$key);
 export const me = (model: Model): PlayerView | undefined => players(model).find(p => isLocal(model, p));
