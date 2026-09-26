@@ -239,8 +239,10 @@ public final class WebServer implements AutoCloseable {
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    // A missing image is downloaded as on desktop, and the request answered when it lands
-    /** small asks for the card at the size the board draws it, which is shrunk here rather than in the browser. */
+    /**
+     * A missing image is downloaded as on desktop, and the request answered when it lands. small asks for the card at
+     * the size the board draws it, which is shrunk here rather than in the browser.
+     */
     private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
         final File file = cardImage(key);
         if (file != null) {
@@ -381,16 +383,16 @@ public final class WebServer implements AutoCloseable {
         respond(ctx, status, body, type, cookieToken, "no-cache");
     }
 
-    /**
-     * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
-     * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
-     * connection is held open when the browser asked for that, and what may be kept says for how long.
-     */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl) {
         respond(ctx, status, body, type, cookieToken, cacheControl, null);
     }
 
+    /**
+     * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
+     * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
+     * connection is held open when the browser asked for that, and what may be kept says for how long.
+     */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
@@ -465,14 +467,14 @@ public final class WebServer implements AutoCloseable {
             respondAudio(ctx, isFileName(name) ? SoundSystem.instance.getSoundResource(name) : null, range, KEEP_AN_HOUR);
             return;
         }
-        final String list = "menu".equals(name) ? "menu" : "match";
-        final MusicPlaylist playlist = "menu".equals(list) ? MusicPlaylist.MENUS : MusicPlaylist.MATCH;
+        final boolean menu = "menu".equals(name);
+        final MusicPlaylist playlist = menu ? MusicPlaylist.MENUS : MusicPlaylist.MATCH;
         if (track == null) {
             final String chosen = playlist.getRandomFilename();
             if (chosen == null) {
                 notFound(ctx);
             } else {
-                redirect(ctx, "/music?name=" + list + "&track="
+                redirect(ctx, "/music?name=" + (menu ? "menu" : "match") + "&track="
                         + URLEncoder.encode(new File(chosen).getName(), StandardCharsets.UTF_8));
             }
             return;

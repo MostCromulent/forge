@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -36,9 +37,10 @@ final class CardThumbnails {
         t.setDaemon(true);
         return t;
     });
-    private static final Map<String, byte[]> KEPT = Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
+    /** Each card's thumbnail as it is being made or once made, so browsers asking at once share one making of it. */
+    private static final Map<String, CompletableFuture<byte[]>> KEPT = Collections.synchronizedMap(new LinkedHashMap<>(64, 0.75f, true) {
         @Override
-        protected boolean removeEldestEntry(final Map.Entry<String, byte[]> eldest) {
+        protected boolean removeEldestEntry(final Map.Entry<String, CompletableFuture<byte[]>> eldest) {
             return size() > MOST_KEPT;
         }
     });
@@ -49,25 +51,29 @@ final class CardThumbnails {
     /** The image shrunk to WIDTH, in its own format; an image already that narrow comes back as it is. */
     static CompletableFuture<byte[]> of(final File file) {
         final String key = file.getAbsolutePath() + ':' + file.lastModified();
-        final byte[] kept = KEPT.get(key);
-        if (kept != null) {
-            return CompletableFuture.completedFuture(kept);
-        }
-        return CompletableFuture.supplyAsync(() -> {
+        final CompletableFuture<byte[]> made = KEPT.computeIfAbsent(key, k -> CompletableFuture.supplyAsync(() -> {
             try {
-                final byte[] made = shrink(file);
-                KEPT.put(key, made);
-                return made;
+                return shrink(file);
             } catch (final IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }, WORKERS);
+        }, WORKERS));
+        // A failure is not kept, so the next request tries again
+        made.whenComplete((bytes, failed) -> {
+            if (failed != null) {
+                KEPT.remove(key, made);
+            }
+        });
+        return made;
     }
 
     private static byte[] shrink(final File file) throws IOException {
         final BufferedImage source = ImageIO.read(file);
         if (source == null) {
             throw new IOException("Not an image: " + file);
+        }
+        if (source.getWidth() <= WIDTH) {
+            return Files.readAllBytes(file.toPath());
         }
         final boolean png = file.getName().toLowerCase(Locale.ROOT).endsWith(".png");
         BufferedImage image = source;

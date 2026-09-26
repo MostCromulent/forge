@@ -2,7 +2,7 @@
 
 import { commandKind } from './command';
 import { reconcile } from './render';
-import { createCard, updateCard, type CardClick } from './cards';
+import { createCard, frameColour, updateCard, type CardClick } from './cards';
 import { deref, isLocal, players, stateOf, zone, type Model } from './model';
 import { logTints } from './log';
 import { setting } from './settings';
@@ -17,13 +17,9 @@ function manaValue(cost: string | undefined): number {
   }, 0);
 }
 
-const WUBRG = [1, 2, 4, 8, 16];
-
 // As Arena sorts by colour: each single colour in WUBRG order, then multicoloured, colourless, and lands last
 function colourRank(colours: number, type: string): number {
-  if (/Land/.test(type)) return 8;
-  const found = WUBRG.filter(bit => colours & bit);
-  return found.length === 1 ? WUBRG.indexOf(found[0]) : found.length ? 5 : 6;
+  return /Land/.test(type) ? 7 : 'WUBRGMC'.indexOf(frameColour(colours, type));
 }
 
 function handOrder(model: Model, cards: CardView[]): CardView[] {

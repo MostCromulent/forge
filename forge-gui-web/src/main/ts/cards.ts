@@ -36,7 +36,7 @@ const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.r
  * The colour a card without its image is framed in, as a printed card is: one colour, gold for several, and
  * colourless artifacts and lands in their own greys. The mask is MagicColor's, as in the player's Mana property.
  */
-function frameColour(colours: number, type: string): string {
+export function frameColour(colours: number, type: string): string {
   const one = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']].filter(([bit]) => colours & (bit as number));
   if (one.length > 1) return 'M';
   if (one.length === 1) return one[0][1] as string;

@@ -143,10 +143,6 @@ final class ServerConsole implements IProgressBar {
             progress.setValue(progress.getMaximum());
             progress.setString("Ready");
         });
-        lookUpAddresses();
-    }
-
-    private void lookUpAddresses() {
         inBackground("ForgeAddresses", this::findAddresses);
     }
 
@@ -157,7 +153,7 @@ final class ServerConsole implements IProgressBar {
         t.start();
     }
 
-    /** Shows where asking the router stands, and relists the links, since the internet one depends on it. */
+    /** Shows where asking the router stands. */
     private void forwarding(final WebService.Forwarding now) {
         SwingUtilities.invokeLater(() -> {
             forwardState.setForeground(now == WebService.Forwarding.REFUSED ? DARK : UIManager.getColor("Label.foreground"));
@@ -169,9 +165,6 @@ final class ServerConsole implements IProgressBar {
                         + service.port() + " by hand.";
             });
         });
-        if (now == WebService.Forwarding.FORWARDED || now == WebService.Forwarding.REFUSED) {
-            lookUpAddresses();
-        }
     }
 
     /** The port is closed: there is nothing to link to until it is started again. */
@@ -518,13 +511,15 @@ final class ServerConsole implements IProgressBar {
             g2.setColor(GRID);
             g2.drawLine(0, plotTop, w, plotTop);
             g2.drawLine(0, h - 4, w, h - 4);
+            final int[] xs = xs();
             // The tallest layer first, so each lower one is painted over the part of it that is not its own
             for (int k = KINDS.length - 1; k >= 0; k--) {
-                area(g2, stacked[k], top, plotTop, plotHeight, KIND_COLOURS[k]);
+                g2.setColor(KIND_COLOURS[k]);
+                g2.fillPolygon(xs, ys(stacked[k], top, plotTop, plotHeight), SAMPLES + 2);
             }
             g2.setColor(IN);
             g2.setStroke(DASHED);
-            g2.drawPolyline(xs(), ys(received, top, plotTop, plotHeight), SAMPLES);
+            g2.drawPolyline(xs, ys(received, top, plotTop, plotHeight), SAMPLES);
 
             g2.setFont(getFont().deriveFont(11f));
             g2.setColor(LABEL);
@@ -552,33 +547,25 @@ final class ServerConsole implements IProgressBar {
             return x + 14 + g2.getFontMetrics().stringWidth(name);
         }
 
-        private void area(final Graphics2D g2, final long[] values, final long top, final int plotTop,
-                final int plotHeight, final Color colour) {
-            final int[] xs = new int[SAMPLES + 2];
-            final int[] ys = new int[SAMPLES + 2];
-            System.arraycopy(xs(), 0, xs, 0, SAMPLES);
-            System.arraycopy(ys(values, top, plotTop, plotHeight), 0, ys, 0, SAMPLES);
-            xs[SAMPLES] = xs[SAMPLES - 1];
-            xs[SAMPLES + 1] = xs[0];
-            ys[SAMPLES] = plotTop + plotHeight;
-            ys[SAMPLES + 1] = plotTop + plotHeight;
-            g2.setColor(colour);
-            g2.fillPolygon(xs, ys, SAMPLES + 2);
-        }
-
+        /** Each sample's x, then the plot's two bottom corners, so the same points close an area under a line. */
         private int[] xs() {
-            final int[] xs = new int[SAMPLES];
+            final int[] xs = new int[SAMPLES + 2];
             for (int i = 0; i < SAMPLES; i++) {
                 xs[i] = i * (getWidth() - 1) / (SAMPLES - 1);
             }
+            xs[SAMPLES] = xs[SAMPLES - 1];
+            xs[SAMPLES + 1] = xs[0];
             return xs;
         }
 
+        /** Each sample's y, then the plot's floor twice, to go with xs. */
         private static int[] ys(final long[] values, final long top, final int plotTop, final int plotHeight) {
-            final int[] ys = new int[SAMPLES];
+            final int[] ys = new int[SAMPLES + 2];
             for (int i = 0; i < SAMPLES; i++) {
                 ys[i] = plotTop + plotHeight - (int) (values[i] * plotHeight / top);
             }
+            ys[SAMPLES] = plotTop + plotHeight;
+            ys[SAMPLES + 1] = plotTop + plotHeight;
             return ys;
         }
 

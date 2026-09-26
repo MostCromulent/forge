@@ -258,7 +258,7 @@ function ensureZoom(zoom: HTMLElement): void {
   zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
-  // Cleared once played, or the side a later card is shown on would match and flip without being turned
+  // Cleared once played: a preview still carrying the class would flip again the next time it is shown
   zoom.addEventListener('animationend', e => {
     if (e.animationName === 'zoom-flip') zoom.classList.remove('flipping');
   });

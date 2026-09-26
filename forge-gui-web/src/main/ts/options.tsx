@@ -3,8 +3,8 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
-import { KeyControl } from './keysdialog';
-import { SETTINGS, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
+import { keyName, rebind, type KeyBindings } from './keys';
+import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 
 // Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
@@ -128,6 +128,7 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         </div>
       );
     case 'css':
+      // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
       return null;
     case 'key':
       return <KeyControl action={def.action} value={String(value)} />;
@@ -163,5 +164,25 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
         input.value = '';
       }} />
     </div>
+  );
+}
+
+// Click, then press the new key. Escape leaves the key as it was.
+function KeyControl({ action, value }: { action: keyof KeyBindings; value: string }) {
+  const [listening, setListening] = useState(false);
+  return (
+    <button class={listening ? 'key-bind listening' : 'key-bind'} onClick={() => setListening(true)} onBlur={() => setListening(false)}
+      onKeyDown={e => {
+        if (!listening || e.ctrlKey || e.altKey || e.metaKey || ['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) return;
+        // The page's own key handling must not also act on the key being chosen
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key !== 'Escape') setKeys(rebind(boundKeys(), action, e.key));
+        setListening(false);
+        // Blurring stops a Space from also clicking the button when it is released, which would listen again
+        e.currentTarget.blur();
+      }}>
+      {listening ? 'Press a key' : keyName(value)}
+    </button>
   );
 }
