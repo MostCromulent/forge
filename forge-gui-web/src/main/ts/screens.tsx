@@ -11,7 +11,7 @@ import { Limited } from './limited';
 import { Drafting } from './drafting';
 import { Importer } from './importer';
 import { DeckFinder } from './deckfinder';
-import { RevealWindow, Requests } from './dialogs';
+import { Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './gamemenu';
@@ -54,9 +54,6 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
     {page === 'match' && ui.gameMenu === 'keys' && <KeysDialog close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && ui.gameMenu === 'devSetup' && <DevSetupDialog actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
-    {page === 'match' && ui.viewing && (
-      <RevealWindow model={model} title={ui.viewing.title} cards={ui.viewing.cards} close={() => changeUi(u => { u.viewing = null; })} />
-    )}
     {page !== 'match' && ui.importer && (
       <Importer model={model} actions={actions} from={ui.importer.from} seat={ui.importer.seat} initialText={ui.importer.text}
         initialUrl={ui.importer.url} sync={ui.importer.sync}

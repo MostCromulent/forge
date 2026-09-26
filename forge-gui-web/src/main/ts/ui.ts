@@ -2,7 +2,6 @@
 // of it goes to the server. It lives here, in one place, so any renderer reads the same arrangement and a new match
 // clears it at once.
 
-import type { Aside } from './protocol';
 import { storeJson, storedJson } from './storage';
 
 /** The card or player the pointer is over, whose details the zoom panel shows. A card's src is its image, empty
@@ -39,8 +38,6 @@ export interface UiState {
   optionsOpen: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
   gameMenu: 'menu' | 'stops' | 'decisions' | 'keys' | 'dev' | 'devSetup' | null;
-  /** Cards set aside by a notice that the player opened to look at. */
-  viewing: Aside | null;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The menu is asking for a new name and face, as the dock's edit button asked. */
@@ -78,7 +75,6 @@ export const ui: UiState = {
   stopsOpen: false,
   optionsOpen: false,
   gameMenu: null,
-  viewing: null,
   volumeOpen: false,
   renaming: false,
   picker: null,
@@ -116,7 +112,6 @@ export function resetMatchUi(): void {
   ui.stopsOpen = false;
   ui.optionsOpen = false;
   ui.gameMenu = null;
-  ui.viewing = null;
   ui.volumeOpen = false;
   ui.picker = null;
   ui.hover = null;

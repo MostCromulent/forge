@@ -217,12 +217,6 @@ export interface AutoDecisions {
   triggersOff: boolean;
 }
 
-export interface Aside {
-  t: 'aside';
-  title: string;
-  cards: RequestOption[];
-}
-
 export interface CataloguePage {
   t: 'catalogue';
   request: number;
@@ -451,7 +445,6 @@ export type ServerMessage =
   | GameOver
   | DrawOffer
   | AutoDecisions
-  | Aside
   | CataloguePage
   | EditorMessage
   | ImportResult
@@ -1096,14 +1089,6 @@ export interface AutoDecision {
   kind: 'yield' | 'accept' | 'decline';
 }
 
-export interface RequestOption {
-  label: string;
-  card?: Ref;
-  name?: string;
-  imageKey?: string;
-  player?: Ref;
-}
-
 export interface CatalogueRow {
   name: string;
   image: string;
@@ -1222,6 +1207,14 @@ export interface DraftCard {
   rank?: number;
   pack: number;
   pick: number;
+}
+
+export interface RequestOption {
+  label: string;
+  card?: Ref;
+  name?: string;
+  imageKey?: string;
+  player?: Ref;
 }
 
 export interface OrderAnswer {

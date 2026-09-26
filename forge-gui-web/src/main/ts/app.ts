@@ -122,7 +122,6 @@ function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
-    case 'closeViewing': changeUi(u => { u.viewing = null; }); break;
     case 'closeReveal': {
       const reveal = oldestRequest(model);
       if (reveal) actions.answer(reveal.id, []);
@@ -316,7 +315,6 @@ function apply(msg: ServerMessage): void {
       break;
     case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
     case 'autoDecisions': model.autoDecisions = msg; break;
-    case 'aside': notify({ t: 'notice', title: msg.title, message: '', error: false }, () => changeUi(u => { u.viewing = msg; }), ASIDE_MS); break;
     case 'gameOver':
       model.gameOver = true;
       model.drawOffer = null;
@@ -358,9 +356,6 @@ function offerRememberedName(): void {
 
 let noticeId = 0;
 const NOTICE_MS = 6000;
-
-/** Long enough to reach the notice's button before it goes. */
-const ASIDE_MS = 15000;
 
 // An error stays until the player dismisses it; anything else goes by itself
 function notify(notice: Notice, view?: () => void, ms = NOTICE_MS, label?: string): void {

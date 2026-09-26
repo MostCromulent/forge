@@ -687,12 +687,6 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public <T> List<T> getChoices(final String message, final int min, final int max, final List<T> choices, final List<T> selected, final FSerializableFunction<T, String> display) {
         if (min < 0 && max < 0) {
-            // The AI's unplayable cards are shown as the game is set up, and nothing depends on reading them, so the
-            // game goes on and a notice offers them instead of a dialog it waits on
-            if (message != null && message.startsWith(Localizer.getInstance().getMessage("lblAICantPlayCards"))) {
-                send(new ToBrowser.Aside(message, options(choices, display)));
-                return new ArrayList<>();
-            }
             // AbstractGuiGame.reveal: display only, the return value is ignored
             ask(choicesRequest(ChoiceKind.reveal, message, min, max, choices, selected, display, null, null, List.of()), v -> true);
             return new ArrayList<>();
