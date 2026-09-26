@@ -365,6 +365,20 @@ final class ServerConsole implements IProgressBar {
         final JPanel log = new JPanel(new BorderLayout());
         log.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
         log.add(new JScrollPane(text));
+        final JButton copyLog = new JButton("Copy log");
+        final Timer copyLogReset = new Timer(2000, e -> copyLog.setText("Copy log"));
+        copyLogReset.setRepeats(false);
+        copyLog.addActionListener(e -> {
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text.getText()), null);
+            copyLog.setText("Copied");
+            copyLogReset.restart();
+        });
+        final JPanel logActions = new JPanel();
+        logActions.setLayout(new BoxLayout(logActions, BoxLayout.LINE_AXIS));
+        logActions.setBorder(BorderFactory.createEmptyBorder(6, 0, 0, 0));
+        logActions.add(Box.createHorizontalGlue());
+        logActions.add(copyLog);
+        log.add(logActions, BorderLayout.SOUTH);
         frame.getContentPane().add(log, BorderLayout.CENTER);
         frame.getContentPane().add(foot, BorderLayout.SOUTH);
         // Wide enough for the port option with the router's refusal beside it, the longest row the console shows
@@ -577,8 +591,8 @@ final class ServerConsole implements IProgressBar {
     private static final class StatsBox extends JComponent {
         private static final int WIDTH = 210;
         private static final String[] NAMES = {"Up", "Players", "Received"};
-        /** Up, players and received, then what was sent of each kind. */
-        private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length];
+        /** Up, players and received, then what was sent of each kind, then everything sent. */
+        private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length + 1];
 
         StatsBox() {
             final Dimension size = new Dimension(WIDTH, TrafficGraph.HEIGHT);
@@ -593,9 +607,13 @@ final class ServerConsole implements IProgressBar {
             now[0] = traffic == null ? "—" : uptime(System.currentTimeMillis() - traffic.started());
             now[1] = String.valueOf(players);
             now[2] = traffic == null ? "—" : bytes(traffic.received());
+            long sent = 0;
             for (final ServerTraffic.Kind kind : ServerTraffic.Kind.values()) {
-                now[NAMES.length + kind.ordinal()] = traffic == null ? "—" : bytes(traffic.sent(kind));
+                final long bytes = traffic == null ? 0 : traffic.sent(kind);
+                now[NAMES.length + kind.ordinal()] = traffic == null ? "—" : bytes(bytes);
+                sent += bytes;
             }
+            now[now.length - 1] = traffic == null ? "—" : bytes(sent);
             values = now;
             repaint();
         }
@@ -608,10 +626,12 @@ final class ServerConsole implements IProgressBar {
             g2.fillRect(0, 0, getWidth(), getHeight());
             g2.setFont(getFont().deriveFont(11f));
             for (int i = 0; i < values.length; i++) {
-                final int baseline = 17 + i * 16;
+                final int baseline = 16 + i * 15;
+                g2.setColor(TrafficGraph.LABEL);
                 if (i < NAMES.length) {
-                    g2.setColor(TrafficGraph.LABEL);
                     g2.drawString(NAMES[i], 10, baseline);
+                } else if (i == values.length - 1) {
+                    g2.drawString("Sent · Total", 24, baseline);
                 } else {
                     final int k = i - NAMES.length;
                     TrafficGraph.swatch(g2, 10, baseline, TrafficGraph.KIND_COLOURS[k], "Sent · " + TrafficGraph.KIND_NAMES[k]);
