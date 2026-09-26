@@ -11,6 +11,22 @@ export function HostChoice({ question, actions }: { question: Question; actions:
     first.current?.focus();
   }, []);
   const answer = (value: number[]) => actions.answerHostChoice(question.id, value);
+  // Desktop's dialog of a few buttons: its title, its message line by line, and the buttons in a row
+  if (question.kind === 'confirm') {
+    return (
+      <div class="host-back">
+        <div class="host-choice confirm" role="alertdialog" aria-label={question.title ?? question.message ?? ''}>
+          <h2>{question.title || question.message}</h2>
+          {question.title && question.message && <p class="host-message">{question.message}</p>}
+          <footer>
+            {question.options.map((name, i) => (
+              <button key={i} ref={i === 0 ? first : undefined} class={i === 0 ? 'primary' : ''} onClick={() => answer([i])}>{name}</button>
+            ))}
+          </footer>
+        </div>
+      </div>
+    );
+  }
   return (
     <div class="host-back">
       <div class="host-choice">

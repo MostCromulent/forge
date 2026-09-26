@@ -115,13 +115,15 @@ public class SeatExtrasTest {
                 onUi(() -> lobby.setSeatExtra(c, "Avatar", DeckCatalog.OWN));
                 onUi(() -> lobby.setSeatExtra(c, "Planes", DeckCatalog.OWN));
                 final List<String> problems = lobby.problems();
+                final List<String> illegal = lobby.illegalDecks();
                 final String name = local.hostedLobby().getSlot(c).getName();
                 Assert.assertTrue(problems.contains(name + " has no avatar."), "no avatar problem: " + problems);
-                Assert.assertTrue(problems.stream().anyMatch(p -> p.startsWith(name + "'s planar deck")), "no planes problem: " + problems);
+                Assert.assertTrue(illegal.stream().anyMatch(p -> p.startsWith(name + "'s planar deck")), "no planes problem: " + illegal);
                 onUi(() -> lobby.setSeatExtra(c, "Avatar", DeckCatalog.RANDOM));
                 onUi(() -> lobby.setSeatExtra(c, "Planes", DeckCatalog.GENERATE));
-                Assert.assertTrue(lobby.problems().stream().noneMatch(p -> p.startsWith(name)),
-                        "a legal computer seat still had problems: " + lobby.problems());
+                Assert.assertTrue(lobby.problems().stream().noneMatch(p -> p.startsWith(name))
+                        && lobby.illegalDecks().stream().noneMatch(p -> p.startsWith(name)),
+                        "a legal computer seat still had problems: " + lobby.problems() + " " + lobby.illegalDecks());
             });
         } finally {
             prefs.setPref(FPref.ENFORCE_DECK_LEGALITY, enforced);

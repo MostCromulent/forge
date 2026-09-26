@@ -10,7 +10,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
-import { DeckFinder } from './deckfinder';
+import { DeckFinder, peekAt } from './deckfinder';
+import { imageUrl } from './images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
@@ -25,6 +26,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const lobby = model.lobby;
   // A lower player count being pointed at, whose leaving seats are dimmed before anything changes
   const [preview, setPreview] = useState<number | null>(null);
+  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   if (!lobby) {
     return null;
   }
@@ -36,7 +38,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   return (
     <>
       <TableHeader model={model} lobby={lobby} actions={actions} />
-      <div class="lobby-main">
+      <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
+        {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
         {/* A new kind of event is set up afresh, so its dialog opens again */}
         <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview}
           event={lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />} />
@@ -115,20 +118,23 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
   const randomAvatar = () => actions.setSeat(index, { avatar: another(seat.avatar, avatarCount) });
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
+  // A deck led by a commander shows the commander, which says more about it than its sleeve does
+  const commander = seat.commander;
   return (
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
-      <div class="sleeve-slot" hidden={beforePools}>
+      <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
-        <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
+        <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
           data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
           disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}
-          onContextMenu={e => { if (hasDeck && seat.mayEdit) { e.preventDefault(); randomSleeve(); } }}>
-          <img alt="" hidden={!hasDeck && !dealt} src={hasDeck || dealt ? sleeveSrc : undefined}
-            style={{ objectPosition: objectPosition(seat.sleeveOffset) }} />
+          // A new sleeve dealt under a commander would not be seen
+          onContextMenu={e => { if (hasDeck && seat.mayEdit && !commander) { e.preventDefault(); randomSleeve(); } }}>
+          <img alt="" hidden={!hasDeck && !dealt} src={commander ? imageUrl(commander) : hasDeck || dealt ? sleeveSrc : undefined}
+            style={commander ? undefined : { objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
         <button class="sleeve-style" title="Choose a sleeve" hidden={!hasDeck || !seat.mayEdit}
-          onClick={() => choose('sleeve')}>Sleeve</button>
+          onClick={() => choose('sleeve')}>Change Sleeve</button>
       </div>
       <div class="plate-body">
         <div class="who">
@@ -244,6 +250,16 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
         <b>Not playable yet</b>
         <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
       </div>
+      {/* Illegal decks do not stop the match; as on desktop, Play asks whether to ignore them */}
+      {lobby.canStart && lobby.illegalDecks.length > 0 && (
+        <div class="not-yet warn">
+          <b>Not legal for this format</b>
+          <ul>{lobby.illegalDecks.map(p => <li key={p}>{p}</li>)}</ul>
+          <p class="hint">{lobby.legalityEnforced
+            ? 'Play will ask whether to ignore this and play anyway.'
+            : 'Deck legality is not enforced in the options, so these decks play as they are.'}</p>
+        </div>
+      )}
     </div>
   );
 }

@@ -362,7 +362,7 @@ function Chosen({ details }: { details: DeckDetails }) {
         <p class="sizes">{s.main} cards{s.sideboard ? ` · ${s.sideboard} sideboard` : ''} · {s.lands} lands</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? 'Legal for this format.'}</p>
         <div class="stats">
-          <Curve curve={s.curve} px={42} />
+          <Curve curve={s.curve} creatures={s.creatures} px={42} />
           <div class="types">
             {s.types.map(t => <div key={t.name} class="type"><span>{t.name}</span><b>{t.count}</b></div>)}
             <div class="type avg"><span>Average mana value</span><b>{s.averageMana}</b></div>

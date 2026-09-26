@@ -165,8 +165,7 @@ public final class WebGuiBase implements IGuiBase {
             noticeSink.accept(Wire.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
             return defaultOption;
         }
-        final List<Integer> answer = hostRequests.ask("choices", title == null ? message : title + " — " + message,
-                options, 1, 1);
+        final List<Integer> answer = hostRequests.ask("confirm", title, message, options, 1, 1);
         if (answer != null && !answer.isEmpty()) {
             final int picked = answer.get(0);
             if (picked >= 0 && picked < options.size()) {

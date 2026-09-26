@@ -289,6 +289,7 @@ final class DeckCatalog {
     static DeckStats stats(final Deck deck) {
         final CardPool main = deck.get(DeckSection.Main);
         final int[] curve = new int[CURVE_BUCKETS];
+        final int[] creatures = new int[CURVE_BUCKETS];
         final Map<String, Integer> types = new LinkedHashMap<>();
         int lands = 0;
         int spells = 0;
@@ -305,20 +306,25 @@ final class DeckCatalog {
                 // A land has no mana value worth curving, so the curve and the average are spells only
                 final int cmc = card.getRules().getManaCost().getCMC();
                 curve[Math.min(cmc, CURVE_BUCKETS - 1)] += n;
+                if (card.getRules().getType().isCreature()) {
+                    creatures[Math.min(cmc, CURVE_BUCKETS - 1)] += n;
+                }
                 spells += n;
                 totalMana += cmc * n;
             }
         }
         final List<Integer> buckets = new ArrayList<>();
-        for (final int n : curve) {
-            buckets.add(n);
+        final List<Integer> creatureBuckets = new ArrayList<>();
+        for (int i = 0; i < CURVE_BUCKETS; i++) {
+            buckets.add(curve[i]);
+            creatureBuckets.add(creatures[i]);
         }
         final List<TypeCount> typeCounts = new ArrayList<>();
         for (final Map.Entry<String, Integer> e : types.entrySet()) {
             typeCounts.add(new TypeCount(e.getKey(), e.getValue()));
         }
         return new DeckStats(count(main), count(deck.get(DeckSection.Sideboard)), lands,
-                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, buckets, typeCounts);
+                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, buckets, creatureBuckets, typeCounts);
     }
 
     /** Sources that build a deck when you pick one. They are listed by name only: there is nothing to

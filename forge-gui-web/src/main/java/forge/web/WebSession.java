@@ -1316,6 +1316,18 @@ public final class WebSession {
         }
         // Saved before the match so HostedMatch never reaches the first-run name prompt
         lobby.saveLooks();
+        // Asked before leaving the lobby, so going back from desktop's illegal-deck question leaves the page where it was
+        final Runnable begin;
+        try {
+            begin = local.prepare();
+        } catch (final RuntimeException e) {
+            Logger.error(e, "Could not start the match");
+            channel.send(error("Could not start the match: " + e.getMessage()));
+            return;
+        }
+        if (begin == null) {
+            return;
+        }
         final Playing playing = new Playing(setup.gui(), setup.invited(), msg.spectate(), null);
         if (!move(from, playing)) {
             return;
@@ -1325,7 +1337,7 @@ public final class WebSession {
             playing.gui().attach(b);
         }
         try {
-            local.start();
+            begin.run();
             if (playing.spectating()) {
                 local.spectate();
             }

@@ -46,12 +46,12 @@ public class LobbyCardPoolTest {
         }
     }
 
-    /** Fails if only the deck-size check runs, so a Pauper table starts with a banned card in a deck. */
+    /** Fails if only the deck-size check runs, so a Pauper table does not name a banned card in a deck as illegal. */
     @Test(timeOut = 60_000)
-    public void aBannedCardStopsPlay() throws Exception {
+    public void aBannedCardMakesTheDeckIllegal() throws Exception {
         atTable(TestDecks.of("Atog Pile", "Atog", 4, "Mountain", 56), (local, lobby) -> {
             onUi(() -> lobby.setCardPool("Pauper"));
-            final List<String> problems = lobby.problems();
+            final List<String> problems = lobby.illegalDecks();
             Assert.assertTrue(problems.stream().anyMatch(p -> p.contains("Pauper") && p.contains("Atog")),
                     "no problem names Atog under Pauper: " + problems);
         });

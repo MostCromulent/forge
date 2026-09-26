@@ -133,7 +133,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 
 #lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
 /* Seats, Add a seat and Play sit together as one block rather than being pushed to opposite edges */
-.lobby-main { display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
+.lobby-main { position: relative; display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
 /* Every page's top bar: the wordmark, the page's own middle, and its buttons on the right */
 .page-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
@@ -183,6 +183,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 /* Secondary to the sleeve it sits on, so it stays out of the way until the pointer is over the slot */
 .sleeve-style { position: absolute; right: 4px; bottom: 4px; padding: 2px 7px; font-size: 11px; border-radius: 6px; background: #0b0e14cc; opacity: 0; transition: opacity .12s ease; }
 .sleeve-slot:hover .sleeve-style, .sleeve-style:focus-visible { opacity: 1; }
+.seats[data-count="3"] .sleeve-style, .seats[data-count="4"] .sleeve-style { left: 4px; text-align: center; }
 .seats[data-count="3"] .who .avatar, .seats[data-count="4"] .who .avatar { width: 52px; height: 52px; }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
@@ -239,6 +240,9 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .not-yet { background: var(--surface); border: 1px solid color-mix(in srgb, var(--danger) 55%, var(--line)); border-radius: 8px; padding: 10px 16px; max-width: 560px; margin-top: 12px; }
 .not-yet b { color: var(--danger); }
 .not-yet ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+.not-yet.warn { border-color: color-mix(in srgb, var(--accent-2) 55%, var(--line)); }
+.not-yet.warn b { color: var(--accent-2); }
+.not-yet .hint { margin: 8px 0 0; font-size: 12.5px; color: var(--faint); }
 
 /* --- deck finder ------------------------------------------------------ */
 
@@ -383,7 +387,14 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .curve h4, .types h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .bars { display: flex; align-items: flex-end; gap: 4px; }
 .bars .bar { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; width: 22px; gap: 3px; }
-.bars .bar i { width: 100%; background: var(--accent-2); border-radius: 2px 2px 0 0; display: block; }
+/* Each bar is its creatures in brass under its other spells in a pale steel, which differ in lightness as well as hue */
+.bars .bar .stack { width: 100%; display: flex; flex-direction: column; border-radius: 3px 3px 1px 1px; overflow: hidden; }
+.bars .bar .stack.empty { background: var(--surface-3); }
+.bars .bar .stack i { display: block; width: 100%; flex-basis: 0; }
+.bars .creature, .curve-key .creature { background: linear-gradient(180deg, color-mix(in srgb, var(--accent-2) 55%, #fff), var(--accent-2)); }
+.bars .other, .curve-key .other { background: #6f86a8; }
+.curve-key { display: flex; gap: 10px; margin-top: 5px; font-size: 10px; color: var(--muted); }
+.curve-key i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .bars .bar em { font-style: normal; font-size: 10px; color: var(--muted); }
 .types { display: grid; align-content: start; gap: 1px; }
 .types .type { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--muted); }
@@ -440,6 +451,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .host-back { position: fixed; inset: 0; background: rgba(6, 8, 12, .75); display: grid; place-items: center; z-index: 80; }
 .host-choice { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: min(520px, 92vw); display: grid; gap: 12px; }
 .host-choice h2 { margin: 0; font-size: 16px; }
+.host-choice .host-message { margin: 0; white-space: pre-line; color: var(--muted); font-size: 13.5px; line-height: 1.5; max-height: 50vh; overflow: auto; }
+.host-choice.confirm footer { display: flex; justify-content: flex-end; gap: 8px; }
 .host-options { display: grid; gap: 4px; max-height: 60vh; overflow: auto; }
 .host-option { text-align: left; }
 .host-choice footer { display: flex; justify-content: flex-end; }

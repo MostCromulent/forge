@@ -94,6 +94,7 @@ export interface HostChoice {
   t: 'hostChoice';
   id: number;
   kind: string;
+  title?: string;
   message?: string;
   min: number;
   max: number;
@@ -1043,6 +1044,8 @@ export interface LobbyTable {
   seats: Seat[];
   problems: string[];
   canStart: boolean;
+  illegalDecks: string[];
+  legalityEnforced: boolean;
   limited?: LimitedTable;
 }
 
@@ -1294,6 +1297,7 @@ export interface DeckStats {
   lands: number;
   averageMana: number;
   curve: number[];
+  creatures: number[];
   types: TypeCount[];
 }
 
@@ -1348,6 +1352,7 @@ export interface Seat {
   schemes?: SeatExtra;
   vanguard?: SeatExtra;
   benched: boolean;
+  commander?: string;
 }
 
 export interface LimitedTable {

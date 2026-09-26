@@ -234,16 +234,15 @@ public final class LocalGame {
         }
     }
 
-    /** Starts the match. Only the machine hosting it can. */
-    public void start() {
+    /**
+     * Readies the match, which only the machine hosting it can, and returns what starts it; null when it will not start.
+     * With deck legality enforced this is where desktop's lobby lists illegal decks and asks whether to play anyway.
+     */
+    public Runnable prepare() {
         if (hosted == null) {
             throw new IllegalStateException("Only the host can start the match");
         }
-        final Runnable start = hosted.startGame();
-        if (start == null) {
-            throw new IllegalStateException("The lobby refused to start the match");
-        }
-        start.run();
+        return hosted.startGame();
     }
 
     /** Sets a game up and starts it at once, which is what a test wants. */
@@ -295,7 +294,11 @@ public final class LocalGame {
             hosted.getSlot(index).setDeck(seat.deck());
         }
         hosted.getSlot(webSeat).setIsReady(true);
-        start();
+        final Runnable begin = prepare();
+        if (begin == null) {
+            throw new IllegalStateException("The lobby refused to start the match");
+        }
+        begin.run();
     }
 
     private int nextAiSlot(final int from) {

@@ -7,7 +7,7 @@ const card = (name: string, count: number): EditorCard => ({ name, count, image:
 const deck = (format: string, main: EditorCard[], commanders: EditorCard[] = []): EditorState => ({
   name: 'Deck', check: format, format, unrestricted: false, target: 'storage', commanders, commanderWanted: false,
   identity: '', main: [{ heading: 'Instants', cards: main }], sideboard: [], lands: [],
-  stats: { main: 0, sideboard: 0, lands: 0, averageMana: 0, curve: [], types: [] }, problemCount: 0, canUndo: false, onSeat: false,
+  stats: { main: 0, sideboard: 0, lands: 0, averageMana: 0, curve: [], creatures: [], types: [] }, problemCount: 0, canUndo: false, onSeat: false,
   limited: false, landSets: [],
 });
 

@@ -594,7 +594,8 @@ final class Lobby {
                     cardPool == null ? null : cardPool.getName(), cardPools(),
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
-                    local.isHost() && problems.isEmpty(), limitedTable(lobby)));
+                    local.isHost() && problems.isEmpty(), illegalDecks(), FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
+                    limitedTable(lobby)));
         }
     }
 
@@ -617,7 +618,9 @@ final class Lobby {
                 sectionsFor(lobby, index).contains(DeckSection.Planes) ? seatExtra(lobby, index, deck, DeckSection.Planes) : null,
                 sectionsFor(lobby, index).contains(DeckSection.Schemes) ? seatExtra(lobby, index, deck, DeckSection.Schemes) : null,
                 sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
-                slot.isBenched());
+                slot.isBenched(),
+                deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
+                        : deck.getCommanders().get(0).getImageKey(false));
     }
 
     /**
@@ -672,6 +675,20 @@ final class Lobby {
 
     /** What stops the match starting, in the order the seats appear. */
     List<String> problems() {
+        return problems(new ArrayList<>());
+    }
+
+    /**
+     * Decks that break their format's rules. They do not stop the match: as on desktop, starting it with deck legality
+     * enforced lists them and asks whether to play anyway.
+     */
+    List<String> illegalDecks() {
+        final List<String> illegal = new ArrayList<>();
+        problems(illegal);
+        return illegal;
+    }
+
+    private List<String> problems(final List<String> illegal) {
         synchronized (DeckCatalog.DECKS) {
             final List<String> out = new ArrayList<>();
             final GameLobby lobby = view();
@@ -700,7 +717,7 @@ final class Lobby {
                     }
                     final String problem = DeckCatalog.problem(deck, format(), cardPool());
                     if (problem != null) {
-                        out.add(deck.getName() + ": " + problem);
+                        illegal.add(deck.getName() + ": " + problem);
                     }
                 }
                 // As startGame: a missing avatar always stops the match, the other sections only with legality on
@@ -713,7 +730,7 @@ final class Lobby {
                         final String fault = section == DeckSection.Avatar ? null
                                 : DeckCatalog.sectionProblem(section, deck == null ? null : deck.get(section));
                         if (fault != null) {
-                            out.add(slot.getName() + (section == DeckSection.Planes ? "'s planar deck " : "'s scheme deck ") + fault);
+                            illegal.add(slot.getName() + (section == DeckSection.Planes ? "'s planar deck " : "'s scheme deck ") + fault);
                         }
                     }
                 }

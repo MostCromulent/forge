@@ -39,7 +39,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
             : <p class="verdict yes">Legal for {state.check}.</p>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>Sample hand</button>
         </div>
-        <Curve curve={state.stats.curve} average={state.stats.averageMana} px={34} />
+        <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />
       </div>
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
@@ -187,7 +187,7 @@ export function removeOne(actions: Actions, name: string, zone: DeckSection): vo
 
 /** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
 // Bar heights are pixels because a percentage would resolve against an auto-sized row and collapse
-export function Curve({ curve, average, px }: { curve: number[]; average?: number; px: number }) {
+export function Curve({ curve, creatures, average, px }: { curve: number[]; creatures: number[]; average?: number; px: number }) {
   const tallest = Math.max(1, ...curve);
   return (
     <div class="curve">
@@ -196,9 +196,19 @@ export function Curve({ curve, average, px }: { curve: number[]; average?: numbe
         {curve.map((n, i) => {
           // The last bucket holds everything at that mana value and above
           const label = i === curve.length - 1 ? `${i}+` : `${i}`;
-          return <span key={i} class="bar" title={`${n} at ${label}`}><i style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }} /><em>{label}</em></span>;
+          const beasts = creatures[i] ?? 0;
+          return (
+            <span key={i} class="bar" title={`${label}: ${beasts} ${beasts === 1 ? 'creature' : 'creatures'}, ${n - beasts} other`}>
+              <span class={n ? 'stack' : 'stack empty'} style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }}>
+                {n > beasts && <i class="other" style={{ flexGrow: n - beasts }} />}
+                {beasts > 0 && <i class="creature" style={{ flexGrow: beasts }} />}
+              </span>
+              <em>{label}</em>
+            </span>
+          );
         })}
       </div>
+      <div class="curve-key"><span><i class="creature" />Creatures</span><span><i class="other" />Other spells</span></div>
     </div>
   );
 }

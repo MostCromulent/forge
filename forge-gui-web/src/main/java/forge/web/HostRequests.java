@@ -41,8 +41,12 @@ final class HostRequests {
 
     /** Asks the browser to pick from a list and waits. Returns the indices chosen, or null when nobody answers. */
     List<Integer> ask(final String kind, final String message, final List<String> options, final int min, final int max) {
+        return ask(kind, null, message, options, min, max);
+    }
+
+    List<Integer> ask(final String kind, final String title, final String message, final List<String> options, final int min, final int max) {
         final int id = nextId.incrementAndGet();
-        final HostChoice request = new HostChoice(id, kind, message, min, max, options);
+        final HostChoice request = new HostChoice(id, kind, title, message, min, max, options);
         final CompletableFuture<List<Integer>> answer = new CompletableFuture<>();
         open.put(id, answer);
         pending.put(id, request);

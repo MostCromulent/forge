@@ -103,7 +103,8 @@ final class ToBrowser {
             List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset) {
     }
 
-    record DeckStats(int main, int sideboard, int lands, float averageMana, List<Integer> curve,
+    /** curve counts the spells at each mana value, the last holding it and above; creatures counts the creatures among them. */
+    record DeckStats(int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
             List<TypeCount> types) {
     }
 
@@ -118,7 +119,7 @@ final class ToBrowser {
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
             @Nullable String cardPool, List<CardPoolGroup> cardPools, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
-            @Nullable LimitedTable limited) {
+            List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited) {
     }
 
     /**
@@ -153,11 +154,15 @@ final class ToBrowser {
     record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /** A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. benched says it sits the next match out. */
+    /**
+     * A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. benched says it sits the next match out.
+     * commander is the image of the deck's first commander, in a format played with one.
+     */
     record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
-            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched) {
+            @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched,
+            @Nullable String commander) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */
@@ -283,9 +288,12 @@ final class ToBrowser {
     record DeviceDeck(String id, @Nullable String text, String format) {
     }
 
-    /** A question the host asks outside a match; the browser answers with the indices chosen. */
+    /**
+     * A question the host asks outside a match; the browser answers with the indices chosen. A "confirm" is desktop's
+     * dialog of a few buttons, with a title over its message; "choices" is a list to pick from.
+     */
     @Message("hostChoice")
-    record HostChoice(int id, String kind, @Nullable String message, int min, int max, List<String> options) {
+    record HostChoice(int id, String kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options) {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
