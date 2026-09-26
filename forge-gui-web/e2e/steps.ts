@@ -82,6 +82,73 @@ export async function gameStarted(page: Page): Promise<void> {
   }).toPass({ timeout: 60_000 });
 }
 
+/** How many prompts the page has shown. A newer one is the game's answer to whatever was just done. */
+export async function promptCount(page: Page): Promise<number> {
+  return Number(await page.locator('#prompt').getAttribute('data-seq') ?? 0);
+}
+
+/**
+ * Waits for a prompt newer than the count given, whose message matches when a pattern is given, and returns its
+ * count. Waiting on the game's own next question, rather than on time, is what keeps a script in step with it.
+ */
+export async function nextPrompt(page: Page, after: number, message?: RegExp): Promise<number> {
+  let seen = after;
+  await expect(async () => {
+    seen = await promptCount(page);
+    expect(seen).toBeGreaterThan(after);
+    if (message) await expect(page.locator('#prompt .message')).toHaveText(message, { timeout: 500 });
+  }).toPass({ timeout: 30_000 });
+  return seen;
+}
+
+/**
+ * Waits until nothing on the page is moving. A card flying between zones is drawn over the board until it lands, so a
+ * click aimed at the board while one passes lands on the card in flight. Endless effects, such as a glow, never end.
+ */
+export async function settled(page: Page): Promise<void> {
+  await page.waitForFunction(() => !document.getAnimations().some(a =>
+    a.playState === 'running' && a.effect?.getTiming().iterations !== Infinity));
+}
+
+/** Does something, then waits for the prompt that answers it and for the board to stop moving. */
+export async function andThen(page: Page, act: () => Promise<void>, message?: RegExp): Promise<void> {
+  const before = await promptCount(page);
+  await act();
+  await nextPrompt(page, before, message);
+  await settled(page);
+}
+
+/**
+ * Places a game state with dev mode's "Set up a game state" the first time this player holds priority on an empty
+ * stack, since a trigger left on it would stay under the new board, and waits for the card named to be on the board. Auto-pass is turned off first: a pass the server asks for when there is nothing
+ * to play would carry the game on past the phase the state names. Nothing is passed afterwards, so the player holds
+ * priority in that phase. Each question before then is answered once, when it is asked.
+ */
+export async function setUpState(page: Page, state: string[], card: string): Promise<void> {
+  await gameStarted(page);
+  await flipOption(page, 'Dev mode');
+  const autoPass = page.locator('#prompt .auto-pass.on');
+  if (await autoPass.count()) await autoPass.click();
+  await expect(autoPass).toHaveCount(0);
+  const priority = page.locator('#phase-strip .pill.priority');
+  const stack = page.locator('#stack:not([hidden])');
+  const ready = async () => await priority.count() > 0 && await stack.count() === 0;
+  let seen = await promptCount(page);
+  for (let i = 0; i < 40 && !(await ready()); i++) {
+    await answerDialogs(page);
+    if (await page.locator('#prompt .ok').isEnabled()) await page.keyboard.press(' ');
+    seen = await nextPrompt(page, seen);
+  }
+  expect(await ready()).toBe(true);
+  await settled(page);
+  await page.click('#prompt .more');
+  await page.getByRole('menuitem', { name: 'Dev mode ›' }).click();
+  await page.getByRole('menuitem', { name: 'Set up a game state…' }).click();
+  await page.fill('.dev-state', state.join('\n'));
+  await page.getByRole('button', { name: 'Set up', exact: true }).click();
+  await expect(page.locator('#me .card, #opponent .card, #hand .card', { hasText: card }).first()).toBeVisible();
+}
+
 /** Concedes from the game menu, which asks twice. */
 export async function concede(page: Page): Promise<void> {
   await answerDialogs(page);

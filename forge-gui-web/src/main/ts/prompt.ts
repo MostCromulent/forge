@@ -28,6 +28,9 @@ const ICONS = {
 const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
 let built = false;
+/** The prompt last drawn, and how many have arrived: a script waits for a newer one rather than for time to pass. */
+let shown: Model['prompt'] = null;
+let arrived = 0;
 
 /** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
 function showPressed(button: Element | null): void {
@@ -81,6 +84,10 @@ export function renderPrompt(model: Model, actions: Actions): void {
   q(root, '.end-turn').title = `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
   q(root, '.undo').title = `Undo your last undoable action, such as tapping a land for mana (${keyName(keys.undo)})`;
   q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
+  if (model.prompt !== shown) {
+    shown = model.prompt;
+    root.dataset.seq = String(++arrived);
+  }
   root.classList.toggle('spectating', !!model.spectating);
   const volume = q(root, '.volume');
   const silent = String(isSilent());
