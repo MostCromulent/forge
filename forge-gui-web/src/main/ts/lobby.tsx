@@ -14,7 +14,7 @@ import { DeckFinder } from './deckfinder';
 import { ExtraPicker } from './extrapicker';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
-import { EventPanel } from './event';
+import { EventPanel, eventStatus } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -37,9 +37,10 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
     <>
       <TableHeader model={model} lobby={lobby} actions={actions} openOptions={() => changeUi(u => { u.optionsOpen = true; })} />
       <div class="lobby-main">
-        <MatchBar lobby={lobby} actions={actions} preview={setPreview} cards={<ConstructedMenu lobby={lobby} actions={actions} />} />
         {/* A new kind of event is set up afresh, so its dialog opens again */}
-        {lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />}
+        <MatchBar lobby={lobby} actions={actions} preview={setPreview} cards={<ConstructedMenu lobby={lobby} actions={actions} />}
+          event={lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />} />
+        {lim && <p class="event-status">{eventStatus(lobby)}</p>}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}

@@ -9,17 +9,19 @@ import type { Model } from './model';
 import type { LimitedTable, LobbyTable } from './protocol';
 
 /**
- * The event above the seats: what it is and how to begin it. The host sets it up in a dialog over the table, which
- * opens by itself on a table with no event yet, so the seats never move while the form is filled in.
+ * The event's row of the match bar: what it is, where it has got to, and the next step. The host sets it up in a
+ * dialog over the table, which opens by itself on a table with no event yet.
  */
 export function EventPanel({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited!;
   const [setting, setSetting] = useState(!lim.product);
   const draft = lim.kind === 'draft';
-  const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? 'you' : s.name ?? 'a player'));
+  const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready);
   const close = () => setSetting(false);
+  const stages = ['Ready up', draft ? 'Draft' : 'Open packs', 'Build', 'Play'];
+  const at = eventStage(lobby);
   return (
-    <section class="event-panel summary">
+    <div class="event-row">
       {lobby.host && !lim.started && setting && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
           <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
@@ -31,30 +33,47 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
           </div>
         </div>
       )}
-      <h3>{draft ? 'Booster draft' : 'Sealed'}</h3>
-      <p class="event-product">{lim.product ?? (lobby.host ? 'Not set up yet.' : 'The host is setting it up.')}</p>
-      {lobby.host && !lim.started && !lim.product && (
-        <div class="event-actions"><button class="primary" onClick={() => setSetting(true)}>Set up the {draft ? 'draft' : 'event'}</button></div>
+      <span class="event-product">{lim.product ?? 'Not set up yet'}</span>
+      {draft && lim.product && <>
+        <span>{lim.podSize} seats</span>
+        <span>{pickRuleName(lim.pickRule)}</span>
+        <span>{lim.timer ? `${lim.timer} s to pick` : 'No pick timer'}</span>
+      </>}
+      {lobby.host && !lim.started && <button class="link" onClick={() => setSetting(true)}>{lim.product ? 'Edit' : 'Set up'}</button>}
+      <span class="sp" />
+      <ol class="event-trail" aria-label="Where the event is">
+        {stages.map((name, i) => <li key={name} class={i < at ? 'done' : i === at ? 'now' : ''}>{name}</li>)}
+      </ol>
+      {lobby.host && !lim.started && lim.product && (
+        <button class="primary" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
       )}
-      {draft && lim.product && (
-        <p class="muted">{lim.podSize} seats · {pickRuleName(lim.pickRule).toLowerCase()} · {lim.timer ? `${lim.timer} s to pick` : 'no pick timer'}</p>
-      )}
-      {lim.activeEventId && <p class="muted">Pools are out. Build your deck, then play.</p>}
-      {!lim.activeEventId && lim.phase === 'DRAFTING' && <p class="muted">The draft is on.</p>}
       {model.drafting && ui.draftHidden && (
         <button class="primary" onClick={() => changeUi(u => { u.draftHidden = false; })}>Return to draft</button>
       )}
-      {lobby.host && !lim.started && lim.product && (
-        <div class="event-actions">
-          <button onClick={() => setSetting(true)}>Edit event</button>
-          <button class="primary" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
-        </div>
-      )}
-      {!lim.started && lim.product && (
-        <p class="hint">{unready.length ? `Waiting for ${unready.join(', ')} to press Ready.` : `Everyone is ready.${lobby.host ? '' : ' Waiting for the host.'}`}</p>
-      )}
-    </section>
+    </div>
   );
+}
+
+/** Where the event has got to: ready up, the draft or the opening, building, then playing once your deck is on your seat. */
+function eventStage(lobby: LobbyTable): number {
+  const lim = lobby.limited!;
+  if (!lim.started) return 0;
+  if (!lim.activeEventId) return 1;
+  const mine = lobby.seats[lobby.mySeat];
+  return mine && (mine.deck != null || mine.deckName != null) ? 3 : 2;
+}
+
+/** The line under the bar at a Draft or Sealed table: who or what the table is waiting on. */
+export function eventStatus(lobby: LobbyTable): string {
+  const lim = lobby.limited!;
+  if (!lim.product) return lobby.host ? 'Set the event up, then everyone presses Ready.' : 'The host is setting the event up.';
+  if (!lim.started) {
+    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? 'you' : s.name ?? 'a player'));
+    if (unready.length) return `Waiting for ${unready.join(', ')} to press Ready.`;
+    return lobby.host ? 'Everyone is ready.' : 'Everyone is ready. Waiting for the host.';
+  }
+  if (!lim.activeEventId) return lim.kind === 'draft' ? 'The draft is on.' : 'Opening the packs.';
+  return 'Pools are out. Build your deck, then play.';
 }
 
 function PastEvents({ lim, actions }: { lim: LimitedTable; actions: Actions }) {

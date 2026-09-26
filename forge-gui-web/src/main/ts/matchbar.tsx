@@ -170,16 +170,19 @@ function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: 
 }
 
 /** Constructed · its card pool · players · variants, or at a Draft or Sealed table the game and players only. */
-export function MatchBar({ lobby, actions, preview, cards }: {
-  lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; cards: ComponentChildren;
+export function MatchBar({ lobby, actions, preview, cards, event }: {
+  lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; cards: ComponentChildren; event?: ComponentChildren;
 }) {
   const lim = lobby.limited;
   return (
     <div class="match-bar">
-      <Field name="Game"><GameMenu lobby={lobby} actions={actions} /></Field>
-      {!lim && lobby.format === 'Constructed' && <Field name="Cards">{cards}</Field>}
-      <Field name="Players"><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
-      {!lim && <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>}
+      <div class="fields">
+        <Field name="Game"><GameMenu lobby={lobby} actions={actions} /></Field>
+        {!lim && lobby.format === 'Constructed' && <Field name="Cards">{cards}</Field>}
+        <Field name="Players" grow={!!lim}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        {!lim && <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>}
+      </div>
+      {event}
     </div>
   );
 }

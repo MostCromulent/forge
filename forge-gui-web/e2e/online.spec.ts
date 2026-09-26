@@ -12,7 +12,7 @@ async function hostEvent(page: Page, kind: 'draft' | 'sealed'): Promise<void> {
   await enterName(page, 'Alice');
   await page.click('[data-mode=multiplayer]');
   await page.click(`.chooser [data-kind=${kind}]`);
-  await expect(page.locator('.event-panel .wiz')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.event-setup .wiz')).toBeVisible({ timeout: 30_000 });
 }
 
 async function ready(page: Page): Promise<void> {
@@ -37,7 +37,7 @@ test('online sealed with a guest', async ({ page, browser }) => {
   await page.click('.tile-choice:has-text("Full card pool")');
   await page.click('.stp-open button:has-text("Continue")');
   await page.click('.wfoot button:has-text("Save")');
-  await expect(page.locator('.event-panel .event-product')).toContainText('Full');
+  await expect(page.locator('.event-row .event-product')).toContainText('Full');
 
   const guest = await (await browser.newContext()).newPage();
   await guest.goto(await inviteLink(page, server.url));
@@ -46,7 +46,7 @@ test('online sealed with a guest', async ({ page, browser }) => {
   await ready(guest);
   await ready(page);
 
-  await page.click('.event-panel button:has-text("Open packs")');
+  await page.click('.event-row button:has-text("Open packs")');
   await buildAndSit(page);
   await buildAndSit(guest);
   await expect(page.locator('#play')).toBeEnabled({ timeout: 30_000 });
@@ -69,9 +69,9 @@ test('online draft for one', async ({ page }) => {
   await page.selectOption('.table-rules select >> nth=1', '90');
   await page.click('.table-rules button:has-text("Continue")');
   await page.click('.wfoot button:has-text("Save")');
-  await expect(page.locator('.event-panel .event-product')).toContainText('Full');
+  await expect(page.locator('.event-row .event-product')).toContainText('Full');
   await ready(page);
-  await page.click('.event-panel button:has-text("Start draft")');
+  await page.click('.event-row button:has-text("Start draft")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.dial-clock')).toBeVisible();
 
