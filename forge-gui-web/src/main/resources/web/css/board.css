@@ -494,7 +494,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
   color: #15121c; font: 800 12px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
 #zoom .from-tab:empty, #zoom.text-card .shot { display: none; }
 #zoom.image-only:has(.from-tab:not(:empty)) { gap: 20px; }
-#zoom.image-only .detail .hint { padding: 2px 8px; border-radius: 8px; background: #0b0f16d9; }
+/* Under the image the hint is a pill like the playable-from tab, so it stands clear of whatever is behind it */
+#zoom.image-only .detail .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 4px 14px #000a; }
 /* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
 #zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
   padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--line-bright); font-size: 14px; line-height: 1.45; }
