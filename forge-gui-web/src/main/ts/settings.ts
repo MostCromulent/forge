@@ -67,7 +67,7 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: 'Display', key: 'handSort', label: 'Hand order', type: 'choice',
-    options: [['mana', 'Mana value'], ['draw', 'Drawn']], def: 'mana',
+    options: [['mana', 'Mana value'], ['color', 'Colour'], ['draw', 'Drawn']], def: 'mana',
   },
   { section: 'Display', key: 'handSize', label: 'Hand size', type: 'slider', min: 70, max: 130, def: 100 },
   {

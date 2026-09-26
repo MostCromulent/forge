@@ -17,12 +17,27 @@ function manaValue(cost: string | undefined): number {
   }, 0);
 }
 
+const WUBRG = [1, 2, 4, 8, 16];
+
+// As Arena sorts by colour: each single colour in WUBRG order, then multicoloured, colourless, and lands last
+function colourRank(colours: number, type: string): number {
+  if (/Land/.test(type)) return 8;
+  const found = WUBRG.filter(bit => colours & bit);
+  return found.length === 1 ? WUBRG.indexOf(found[0]) : found.length ? 5 : 6;
+}
+
 function handOrder(model: Model, cards: CardView[]): CardView[] {
-  if (setting('handSort') !== 'mana') {
+  const sort = setting('handSort');
+  if (sort !== 'mana' && sort !== 'color') {
     return cards;
   }
-  return [...cards].sort((a, b) => manaValue(stateOf(model, a).ManaCost) - manaValue(stateOf(model, b).ManaCost)
-    || String(stateOf(model, a).Name ?? '').localeCompare(stateOf(model, b).Name ?? ''));
+  return [...cards].sort((a, b) => {
+    const sa = stateOf(model, a);
+    const sb = stateOf(model, b);
+    return (sort === 'color' ? colourRank(sa.Colors ?? 0, sa.Type ?? '') - colourRank(sb.Colors ?? 0, sb.Type ?? '') : 0)
+      || manaValue(sa.ManaCost) - manaValue(sb.ManaCost)
+      || String(sa.Name ?? '').localeCompare(sb.Name ?? '');
+  });
 }
 
 /**
