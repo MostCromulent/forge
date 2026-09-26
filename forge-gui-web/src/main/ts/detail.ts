@@ -1,9 +1,10 @@
-import { appendSymbolText, hideOnError, imageUrl, setImage, setSymbolText } from './images';
+import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSymbolText } from './images';
+import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
-import type { Model } from './model';
-import type { PlayerDetail } from './protocol';
+import { deref, stateOf, type Model } from './model';
+import type { CardView, PlayerDetail, PlayerView } from './protocol';
 
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
 // it arrives in the model a moment after the pointer does
@@ -117,8 +118,11 @@ function drawDetail(model: Model): void {
   const hover = ui.hover;
   zoom.hidden = !hover;
   if (!hover) return;
+  ensureZoom(zoom);
+  q(zoom, '.cmdr-taken').hidden = true;
   if ('player' in hover) {
     drawPlayer(zoom, model.playerDetails.get(hover.player));
+    drawCommanderDamage(q(zoom, '.cmdr-taken'), model, hover.player);
     return;
   }
   const d = hover.card !== null ? model.cardDetails.get(hover.card) : undefined;
@@ -187,8 +191,36 @@ function setRulesText(el: HTMLElement, html: string): void {
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
+  zoom.innerHTML = '<img alt=""><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
   hideOnError(q<HTMLImageElement>(zoom, 'img'));
+}
+
+/**
+ * The commander damage a player has taken, one row per commander that has dealt any, most first: its art, its name,
+ * a bar to 21 and the number. The server leaves desktop's own lines for it out of the text below.
+ */
+function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void {
+  const player = model.objects.get(key) as PlayerView | undefined;
+  const hits = (player?.CommanderDamage ?? []).filter(h => h.value > 0).sort((a, b) => b.value - a.value);
+  root.hidden = hits.length === 0;
+  root.replaceChildren();
+  if (!hits.length) return;
+  const title = document.createElement('h6');
+  title.textContent = 'Commander damage taken';
+  root.append(title);
+  for (const { card, value } of hits) {
+    const commander = deref(model, card) as CardView | undefined;
+    const row = document.createElement('div');
+    row.className = value >= COMMANDER_WARNING ? 'cmdr-row near' : 'cmdr-row';
+    row.innerHTML = '<span class="art"></span><span class="who"><span class="nm"></span><span class="bar"><i></i></span></span><span class="v"><b></b><small></small></span>';
+    const src = cardImageSrc(model, commander);
+    if (src) q(row, '.art').style.backgroundImage = `url("${src}")`;
+    q(row, '.nm').textContent = (commander ? stateOf(model, commander).Name : undefined) ?? 'Commander';
+    q(row, '.bar i').style.width = `${Math.min(value, COMMANDER_LETHAL) / COMMANDER_LETHAL * 100}%`;
+    q(row, '.v b').textContent = String(value);
+    q(row, '.v small').textContent = ` / ${COMMANDER_LETHAL}`;
+    root.append(row);
+  }
 }
 
 function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {

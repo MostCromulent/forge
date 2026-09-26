@@ -26,6 +26,12 @@ import { avatarModifiers, commandKind, type CommandKind } from './command';
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
 
+/** Commander damage that loses the game, and the point from which the portrait warns of it. */
+export const COMMANDER_LETHAL = 21;
+export const COMMANDER_WARNING = 15;
+// Lucide's swords (ISC, see web/licenses/lucide-license.txt)
+const SWORDS = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 17.5 3 6V3h3l11.5 11.5M13 19l6-6M16 16l4 4M19 21l2-2M14.5 6.5 18 3h3v3l-3.5 3.5M5 14l4 4M7 17l-3 3M3 19l2 2"/></svg>';
+
 export function renderMatch(model: Model, actions: Actions, events: readonly GameEvent[]): void {
   const g = game(model);
   if (!g) return;
@@ -164,7 +170,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   if (!root.firstChild) {
     root.innerHTML = `
       <div class="player">
-        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark" title="Out of the game">${SKULL}</span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="life"></span></div>
+        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark" title="Out of the game">${SKULL}</span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="cmdr-arc" hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48"/></svg></span><span class="cmdr-chip" hidden>${SWORDS}<b></b></span><span class="life"></span></div>
         <div class="name"><span class="who"></span><span class="role-tag" hidden>Archenemy</span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         <div class="player-counters"></div>
@@ -208,12 +214,8 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player, select);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
+  showCommanderDamage(avatar, model, player);
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
-  for (const { card, value } of player.CommanderDamage ?? []) {
-    const commander = deref(model, card);
-    const name = (commander ? stateOf(model, commander).Name : undefined) ?? 'Commander';
-    if (value > 0) badges.push({ key: `cmdr-${card.ref}`, text: `${name} ${value}`, title: `Commander damage from ${name}` });
-  }
   reconcile(q(root, '.player-counters'), badges, b => b.key,
     () => {
       const el = document.createElement('span');
@@ -223,12 +225,34 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     (el, b) => {
       el.textContent = b.text;
       el.title = b.title;
-      el.classList.toggle('commander-damage', !!b.title);
     });
   renderEmblems(q(root, '.emblems'), model, player, zone(model, player, 'Command'), select);
   q(root, '.role-tag').hidden = !isArchenemy(model, player);
   renderOngoing(q(root, '.schemes-ongoing'), model, player);
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
+}
+
+/**
+ * Commander damage on the portrait: an arc round it that fills towards 21 with the most any one commander has dealt
+ * this player, and that number on a chip. Both burn from 15. The breakdown by commander is in the portrait's hover.
+ */
+function showCommanderDamage(avatar: HTMLElement, model: Model, player: PlayerView): void {
+  const hits = (player.CommanderDamage ?? []).filter(h => h.value > 0);
+  const top = hits.reduce((best, h) => (h.value > best.value ? h : best), { card: { ref: -1 }, value: 0 });
+  const arc = q(avatar, '.cmdr-arc');
+  const chip = q(avatar, '.cmdr-chip');
+  arc.hidden = chip.hidden = top.value === 0;
+  if (top.value === 0) return;
+  const near = top.value >= COMMANDER_WARNING;
+  arc.classList.toggle('near', near);
+  chip.classList.toggle('near', near);
+  const circle = q(arc, 'circle');
+  const around = 2 * Math.PI * 48;
+  circle.setAttribute('stroke-dasharray', `${around * Math.min(top.value, COMMANDER_LETHAL) / COMMANDER_LETHAL} ${around}`);
+  q(chip, 'b').textContent = String(top.value);
+  const commander = deref(model, top.card);
+  const name = (commander ? stateOf(model, commander).Name : undefined) ?? 'a commander';
+  chip.title = `${top.value} of ${COMMANDER_LETHAL} commander damage from ${name}`;
 }
 
 // Mana in the pool is spent or lost when the step ends, so it is shown apart from everything that stays, under its

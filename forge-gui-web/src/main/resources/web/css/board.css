@@ -131,6 +131,31 @@
 .avatar .portrait { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .avatar .ai-badge { display: none; position: absolute; left: -6px; top: -6px; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); border: 1px solid var(--accent-2); padding: 3px; }
 .avatar.ai .ai-badge { display: block; }
+/* Commander damage: an arc on the portrait's rim under the life badge, and a chip on the left like the computer's */
+.avatar .life { z-index: 2; }
+.avatar .cmdr-arc { position: absolute; inset: -4px; z-index: 1; pointer-events: none; }
+.avatar .cmdr-arc svg { width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.avatar .cmdr-arc circle { fill: none; stroke: var(--text); stroke-width: 3.2; stroke-linecap: round; opacity: .85; }
+.avatar .cmdr-chip { position: absolute; left: -12px; bottom: 6px; z-index: 3; display: flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px 0 4px;
+  border-radius: 10px; background: var(--bg); border: 1px solid var(--line-bright); font-size: 11.5px; font-weight: 800; line-height: 1; color: var(--text); }
+.avatar .cmdr-chip svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.seat.compact .avatar .cmdr-chip { left: -14px; bottom: -2px; height: 17px; font-size: 10px; }
+/* From 15 both burn: the warning is carried by brightness and glow, not by hue alone */
+.avatar .cmdr-arc.near circle { stroke: #fff4ee; opacity: 1; filter: drop-shadow(0 0 2px #ff3b2a) drop-shadow(0 0 6px #ff2a14aa); }
+.avatar .cmdr-chip.near { border-color: #ff5a3c; color: #fff; box-shadow: 0 0 7px #ff3b2a99; }
+/* The commander damage section in a portrait's hover */
+#zoom .cmdr-taken { display: grid; gap: 6px; padding: 6px 0 8px; border-bottom: 1px solid var(--line); }
+#zoom .cmdr-taken h6 { margin: 0; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+#zoom .cmdr-row { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+#zoom .cmdr-row .art { width: 26px; height: 26px; border-radius: 50%; background: var(--surface-2) no-repeat 50% 26% / 240% auto; box-shadow: 0 0 0 1px #000c; }
+#zoom .cmdr-row .who { display: grid; gap: 3px; min-width: 0; }
+#zoom .cmdr-row .nm { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#zoom .cmdr-row .bar { height: 4px; border-radius: 2px; background: #ffffff1a; overflow: hidden; }
+#zoom .cmdr-row .bar i { display: block; height: 100%; border-radius: 2px; background: #c9ced6; }
+#zoom .cmdr-row .v b { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+#zoom .cmdr-row .v small { color: var(--muted); font-size: 11px; font-weight: 600; }
+#zoom .cmdr-row.near .bar i { background: #fff4ee; box-shadow: 0 0 5px #ff3b2a; }
+#zoom .cmdr-row.near .v b { color: #fff; text-shadow: 0 0 6px #ff3b2a; }
 .ai-badge svg { width: 100%; height: 100%; fill: var(--text); }
 .ai-badge svg .eye { fill: var(--bg); }
 .avatar.active { border-color: var(--accent-2); }
@@ -285,7 +310,6 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .mana-chip:hover:not(:disabled) { border-color: var(--accent-2); }
 .mana-chip:disabled { opacity: 1; cursor: default; }
 @keyframes floating { 50% { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 25%, transparent); } }
-.player-counter.commander-damage { border-style: dashed; }
 /* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
 #phase-strip { display: flex; justify-content: center; position: relative; }
 /* A hairline across the battlefield column separates the two halves of the board */

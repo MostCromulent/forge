@@ -11,7 +11,9 @@ import forge.web.ToBrowser.Detail;
 import forge.web.ToBrowser.PlayerDetail;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** What the zoom panel shows for a card or a player: the text the desktop client composes (CardDetailUtil). */
 final class CardDetails {
@@ -21,9 +23,17 @@ final class CardDetails {
     static PlayerDetail player(final PlayerView player) {
         final List<String> lines = new ArrayList<>();
         final String[] parts = player.getDetails().split("\n");
+        // The commander damage lines follow the commanders' cast counts in the engine's list; the browser draws that
+        // damage itself, above these lines, so it is left out of them
+        final List<String> commander = player.getPlayerCommanderInfo();
+        final int casts = player.getCommanders() == null ? 0 : 1 + player.getCommanders().size();
+        final Set<String> damage = new HashSet<>();
+        for (int i = casts; i < commander.size(); i++) {
+            damage.add(commander.get(i).trim());
+        }
         // The first line is the player's name, which travels separately
         for (int i = 1; i < parts.length; i++) {
-            if (!parts[i].isBlank()) {
+            if (!parts[i].isBlank() && !damage.contains(parts[i].trim())) {
                 lines.add(parts[i]);
             }
         }
