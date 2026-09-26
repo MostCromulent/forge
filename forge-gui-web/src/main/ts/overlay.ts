@@ -113,7 +113,8 @@ function paint(model: Model): void {
   }
   // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
   const atFace = atLoneFace(model);
-  placeCharges(chargingAtPlayer(model));
+  // Once combat damage is dealt the attack has landed, so the chevrons go, though the attackers stay marked
+  placeCharges(g.Phase === 'COMBAT_DAMAGE' ? new Set() : chargingAtPlayer(model));
   // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
   drawDrag(ctx);
   drawAim(ctx, model);
@@ -250,8 +251,8 @@ const charges = new Map<number, HTMLElement>();
 function placeCharges(keys: Set<number>): void {
   for (const [key, mark] of charges) {
     if (!keys.has(key)) {
-      mark.remove();
       charges.delete(key);
+      retreat(mark, !!elementFor(key));
     }
   }
   for (const key of keys) {
@@ -284,6 +285,28 @@ function placeCharges(keys: Set<number>): void {
       ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * (MARK_H - MARK_TOP) / MARK_H)
       : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * (MARK_H - MARK_TOP) / MARK_H)}px`;
   }
+}
+
+/** Just after the damage lands, so the hit reads before the chevrons draw back. */
+const RETREAT_DELAY_MS = 250;
+const RETREAT_MS = 450;
+
+/**
+ * A chevron whose attack is over draws back towards its creature, shrinking and fading as it goes. One whose card has
+ * left the battlefield has nothing to draw back to, and goes at once.
+ */
+function retreat(mark: HTMLElement, cardStays: boolean): void {
+  if (!cardStays || document.documentElement.dataset.motion === 'reduced') {
+    mark.remove();
+    return;
+  }
+  // translate and scale are separate properties, so they add to the transform that places and turns the mark
+  const back = mark.classList.contains('down') ? -1 : 1;
+  const run = mark.animate([
+    { opacity: 1, translate: '0 0', scale: '1' },
+    { opacity: 0, translate: `0 ${back * mark.offsetHeight * 0.7}px`, scale: '.55' },
+  ], { duration: RETREAT_MS, delay: RETREAT_DELAY_MS, easing: 'cubic-bezier(.5, 0, .75, 0)', fill: 'forwards' });
+  run.finished.then(() => mark.remove(), () => mark.remove());
 }
 
 /**
