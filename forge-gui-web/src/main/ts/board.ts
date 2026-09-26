@@ -3,7 +3,7 @@
 
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
-import { game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';
+import { commanderTax, game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';
 import { renderHand } from './hand';
 import { renderZones, togglePile } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -553,11 +553,6 @@ function takeHit(amount: number): void {
  * The word goes on the badge because a bare "+6" on a card reads as a counter or a pump long before it reads as
  * a tax, and this is a number a player meets only a few times in a game.
  */
-function commanderTax(player: PlayerView | undefined, card: CardView): number {
-  const cast = (player?.CommanderCast ?? []).find(c => c.card.ref === card.$key);
-  return (cast?.value ?? 0) * 2;
-}
-
 // The rest of the command zone: the monarch, the initiative and emblems as round tokens, and avatars as cards.
 // Commanders and signature spells have the Command tile among the zones.
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],

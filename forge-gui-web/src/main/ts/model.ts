@@ -207,6 +207,12 @@ export const deref = (model: Model, v: Ref | null | undefined): TrackedObject | 
 export const derefAll = (model: Model, list: Refs | null | undefined): TrackedObject[] =>
   (list ?? []).map(v => deref(model, v)).filter((o): o is TrackedObject => !!o);
 export const game = (model: Model): GameView | undefined => model.objects.get(model.root);
+/** What casting a commander from the command zone costs beyond its printed cost: two for each earlier cast. */
+export function commanderTax(player: PlayerView | undefined, card: CardView): number {
+  const cast = (player?.CommanderCast ?? []).find(c => c.card.ref === card.$key);
+  return (cast?.value ?? 0) * 2;
+}
+
 /** The steps the board shows a combat in. Forge keeps the combat through the end of combat step, after its damage. */
 const COMBAT_SHOWN = new Set(['COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'COMBAT_FIRST_STRIKE_DAMAGE', 'COMBAT_DAMAGE']);
 export const combatShown = (model: Model): boolean => COMBAT_SHOWN.has(game(model)?.Phase ?? '');

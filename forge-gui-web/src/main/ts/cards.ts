@@ -1,13 +1,13 @@
 // One card on the page: its image, counters, damage, tapped and selectable states. Every zone that shows a card
 // builds it here, so a card looks the same wherever it is.
 
-import { combatShown, stateOf, type Model } from './model';
+import { combatShown, commanderTax, deref, stateOf, type Model } from './model';
 import { hoverable } from './detail';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
 import { reconcile } from './render';
 import { q } from './dom';
-import type { CardView, KeywordText, Ref } from './protocol';
+import type { CardView, KeywordText, PlayerView, Ref } from './protocol';
 
 /** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
@@ -71,7 +71,9 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.style.setProperty('--pile-img', small ? cssUrl(small) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');
-  setCost(q(el, '.cost-badge'), visible ? state.ManaCost ?? '' : '');
+  // A commander waiting in the command zone costs its tax on top, so the cost to cast it says so
+  const tax = card.Zone === 'Command' ? commanderTax(deref(model, card.Owner) as PlayerView | undefined, card) : 0;
+  setCost(q(el, '.cost-badge'), visible ? withTax(state.ManaCost ?? '', tax) : '');
   q(el, '.type').textContent = type;
   el.dataset.frame = visible ? frameColour(state.Colors ?? 0, type) : '';
   const pt = q(el, '.pt');
@@ -158,6 +160,13 @@ function shieldBadge(): HTMLElement {
  * chip serves them all, and it sits above the keyword icons rather than on the top edge, which is the card's name.
  */
 // Every card is updated on every frame, so its cost is rebuilt only when it changes
+/** A mana cost with more generic mana added to it, as a tax adds it: {2}{G} with 2 more is {4}{G}. */
+function withTax(cost: string, tax: number): string {
+  if (!tax) return cost;
+  const generic = /^\{(\d+)\}/.exec(cost);
+  return generic ? `{${Number(generic[1]) + tax}}${cost.slice(generic[0].length)}` : `{${tax}}${cost}`;
+}
+
 function setCost(el: HTMLElement, text: string): void {
   if (el.dataset.text !== text) {
     el.dataset.text = text;
