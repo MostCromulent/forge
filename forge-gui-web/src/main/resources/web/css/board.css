@@ -157,6 +157,12 @@
 .avatar .life-change.healed { color: #5cc8ff; }
 @keyframes life-float { from { opacity: 0; transform: translate(-50%, 6px) scale(.7); } 25% { opacity: 1; transform: translate(-50%, -6px) scale(1.1); } to { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
 .zone-tiles { display: grid; grid-template-columns: repeat(3, var(--tile-w)); gap: 6px; }
+/* The Command tile keeps a row of its own above the other three, centred under the portrait, where the commander
+   has always sat; a compact seat runs every tile in one row */
+.zone-tile[data-zone="Command"] { grid-column: 2; }
+.zone-tile[data-zone="Command"] ~ .zone-tile[data-zone="Library"] { grid-column-start: 1; }
+.seat.compact .zone-tiles { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: var(--tile-w); }
+.seat.compact .zone-tile[data-zone="Command"], .seat.compact .zone-tile[data-zone="Library"] { grid-column: auto; }
 .zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .zone-tile.back, .card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }

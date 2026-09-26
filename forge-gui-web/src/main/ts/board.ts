@@ -206,7 +206,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   // A player who has lost leaves an empty socket: their portrait broke, or breaks now, out of it
   avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
-  renderZoneTiles(q(root, '.zone-tiles'), model, player);
+  renderZoneTiles(q(root, '.zone-tiles'), model, player, select);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
   for (const { card, value } of player.CommanderDamage ?? []) {
@@ -276,8 +276,10 @@ const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6
 const EXTRA_ZONES: [ZoneType, string][] = [['PlanarDeck', 'Planes'], ['SchemeDeck', 'Schemes'],
   ['AttractionDeck', 'Attractions'], ['ContraptionDeck', 'Contraptions'], ['Junkyard', 'Junkyard']];
 
-function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): void {
-  const zones: ZoneType[] = ['Library', 'Graveyard', 'Exile',
+function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, select: CardClick): void {
+  // A player with a commander has a Command tile for the whole game, empty while the commander is elsewhere
+  const commanded = (player.Commander ?? []).some(r => r);
+  const zones: ZoneType[] = [...(commanded ? ['Command' as ZoneType] : []), 'Library', 'Graveyard', 'Exile',
     ...EXTRA_ZONES.map(([z]) => z).filter(z => zone(model, player, z).length > 0)];
   reconcile<ZoneType, HTMLButtonElement>(root, zones, z => z,
     zoneName => {
@@ -292,13 +294,19 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): v
       const img = q<HTMLImageElement>(el, 'img');
       hideOnError(img);
       el.onclick = () => {
-        if (!el.classList.contains('hidden-deck')) togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
+        // One commander here is cast straight from its tile; partners open the zone to choose which
+        if (zoneName === 'Command' && el.dataset.key) select(el, false);
+        else if (!el.classList.contains('hidden-deck')) togglePile(Number(el.closest<HTMLElement>('.seat')?.dataset.player), zoneName);
       };
       // The hover data sits on the image: the tile's own data-key is how the render finds it again
       hoverable(el, img);
       return el;
     },
     (el, zoneName) => {
+      if (zoneName === 'Command') {
+        updateCommandTile(el, model, player);
+        return;
+      }
       const cards = zone(model, player, zoneName);
       // New cards go to the end of the graveyard and exile lists, so the last is on top
       const top = zoneName === 'Graveyard' || zoneName === 'Exile' ? cards[cards.length - 1] : undefined;
@@ -312,6 +320,37 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView): v
       el.classList.toggle('empty', cards.length === 0);
       q(el, '.zone-count').textContent = String(cards.length);
     });
+}
+
+/**
+ * The Command tile holds what is cast from the command zone: commanders, and an oathbreaker's signature spell. It
+ * shows the first of them, and its badge carries the tax where the other tiles carry a count, or how many are
+ * there when partners share it.
+ */
+function updateCommandTile(el: HTMLElement, model: Model, player: PlayerView): void {
+  const cards = castFromCommand(model, zone(model, player, 'Command'));
+  const top = cards[0];
+  const src = cardImageSrc(model, top);
+  const img = q<HTMLImageElement>(el, 'img');
+  setImage(img, src);
+  img.hidden = !src;
+  img.dataset.key = String(top?.$key ?? '');
+  img.dataset.zoom = src;
+  el.dataset.key = cards.length === 1 ? String(top.$key) : '';
+  el.classList.toggle('empty', cards.length === 0);
+  el.classList.toggle('selectable', cards.some(c => (model.prompt?.selectable ?? []).some(r => r.ref === c.$key)));
+  const tax = top ? commanderTax(player, top) : 0;
+  q(el, '.zone-count').textContent = cards.length > 1 ? String(cards.length) : tax > 0 ? `Tax +${tax}` : '';
+  el.title = cards.map(c => {
+    const t = commanderTax(player, c);
+    const name = stateOf(model, c).Name ?? '';
+    return t > 0 ? `${name}: costs ${t} more to cast from here` : name;
+  }).join('\n');
+}
+
+/** The command zone's cards that are cast from it, as against avatars and reminders like the monarch. */
+function castFromCommand(model: Model, cards: CardView[]): CardView[] {
+  return cards.filter(c => ['commander', 'signature'].includes(commandKind(c, stateOf(model, c))));
 }
 
 // Whose turn it is, said once as the turn begins. The game's first turn says who goes first. A table first seen
@@ -466,11 +505,12 @@ function commanderTax(player: PlayerView | undefined, card: CardView): number {
   return (cast?.value ?? 0) * 2;
 }
 
-// The command zone: the monarch, the initiative, emblems and commanders, shown as round tokens beside the player
+// The rest of the command zone: the monarch, the initiative and emblems as round tokens, and avatars as cards.
+// Commanders and signature spells have the Command tile among the zones.
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
   // Planes, schemes and the planar die have places of their own; the rest stay beside the portrait
-  const shown = cards.filter(c => ['avatar', 'commander', 'signature', 'effect'].includes(commandKind(c, stateOf(model, c))));
+  const shown = cards.filter(c => ['avatar', 'effect'].includes(commandKind(c, stateOf(model, c))));
   reconcile(root, shown, c => c.$key,
     card => {
       // A card the player reads or activates is drawn as a card; a reminder like the monarch stays a round token
