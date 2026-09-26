@@ -43,6 +43,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler;
+import io.netty.handler.traffic.GlobalTrafficShapingHandler;
+import io.netty.handler.traffic.TrafficCounter;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import forge.sound.MusicPlaylist;
@@ -104,6 +106,8 @@ public final class WebServer implements AutoCloseable {
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
+    /** Sets no limits, so it only counts the bytes on every connection, as they cross the wire. */
+    private final GlobalTrafficShapingHandler traffic = new GlobalTrafficShapingHandler(group.next(), 0);
     private final String hostToken;
     private final String guestToken;
     // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
@@ -126,6 +130,7 @@ public final class WebServer implements AutoCloseable {
                     @Override
                     protected void initChannel(final SocketChannel ch) {
                         ch.pipeline().addLast(
+                                traffic,
                                 new HttpServerCodec(),
                                 new HttpObjectAggregator(1 << 20),
                                 new AccessGate(),
@@ -140,6 +145,11 @@ public final class WebServer implements AutoCloseable {
                     }
                 });
         channel = b.bind(port).sync().channel();
+    }
+
+    /** Every byte in and out of the port since it was bound, card images included. */
+    public TrafficCounter traffic() {
+        return traffic.trafficCounter();
     }
 
     public int port() {
@@ -159,6 +169,7 @@ public final class WebServer implements AutoCloseable {
     @Override
     public void close() {
         channel.close().syncUninterruptibly();
+        traffic.release();
         group.shutdownGracefully();
     }
 

@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.gamemodes.net.server.FServerManager;
 import forge.gui.interfaces.IProgressBar;
+import io.netty.handler.traffic.TrafficCounter;
 import org.tinylog.Logger;
 
 import javax.swing.BorderFactory;
@@ -20,6 +21,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.WindowConstants;
 import javax.swing.text.BadLocationException;
+import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -38,6 +40,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -71,6 +74,8 @@ final class ServerConsole implements IProgressBar {
     private final JCheckBox quitWhenEmpty = new JCheckBox("Quit when the last player leaves", true);
     private final JCheckBox forwardPort = new JCheckBox("Ask the router to forward the port, so players on the internet can join");
     private final JLabel forwardState = new JLabel();
+    private final TrafficGraph graph = new TrafficGraph();
+    private volatile TrafficCounter traffic;
     private JFrame frame;
     private JTextArea text;
     private JButton browse;
@@ -122,6 +127,7 @@ final class ServerConsole implements IProgressBar {
 
     /** The port is bound: the lamp is lit and the links are worth copying. */
     private void running() {
+        traffic = service.traffic();
         SwingUtilities.invokeLater(() -> {
             light.lit(true);
             state.setText("Running");
@@ -161,6 +167,7 @@ final class ServerConsole implements IProgressBar {
 
     /** The port is closed: there is nothing to link to until it is started again. */
     private void stopped() {
+        traffic = null;
         SwingUtilities.invokeLater(() -> {
             light.lit(false);
             state.setText("Stopped");
@@ -296,6 +303,8 @@ final class ServerConsole implements IProgressBar {
         head.add(Box.createVerticalStrut(14));
         head.add(progress);
         head.add(Box.createVerticalStrut(10));
+        head.add(graph);
+        head.add(Box.createVerticalStrut(10));
         head.add(quitWhenEmpty);
         head.add(forwardPort);
         head.add(forwardState);
@@ -326,6 +335,7 @@ final class ServerConsole implements IProgressBar {
         frame.setVisible(true);
 
         new Timer(FLUSH_MILLIS, e -> flush()).start();
+        new Timer(TrafficGraph.SAMPLE_MILLIS, e -> graph.sample(traffic)).start();
     }
 
     private static JPanel row(final String caption, final JLabel value) {
@@ -375,6 +385,124 @@ final class ServerConsole implements IProgressBar {
                 g2.drawOval(0, 0, SIZE - 1, SIZE - 1);
             }
             g2.dispose();
+        }
+    }
+
+    /**
+     * The last minute of bytes in and out of the port. The two lines differ in lightness and in dash as well as in
+     * colour, and the legend gives the figures in words, so neither depends on telling the colours apart.
+     */
+    private static final class TrafficGraph extends JComponent {
+        static final int SAMPLE_MILLIS = 1000;
+        private static final int SAMPLES = 60;
+        /** The floor of the scale, so a server with nobody on it does not magnify a few bytes into peaks. */
+        private static final long SMALLEST_SCALE = 1024;
+        private static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
+        private static final Color GRID = new Color(0x2a, 0x31, 0x3c);
+        private static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
+        private static final Color IN = new Color(0xe8, 0xee, 0xf4);
+        private static final Color OUT = new Color(0x3d, 0x8b, 0xfd);
+        private static final BasicStroke SOLID = new BasicStroke(1.5f);
+        private static final BasicStroke DASHED = new BasicStroke(1.5f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_ROUND,
+                10f, new float[] {5f, 3f}, 0f);
+
+        private final long[] in = new long[SAMPLES];
+        private final long[] out = new long[SAMPLES];
+        /** Where the next sample goes, which is also the oldest one still shown. */
+        private int next;
+        private TrafficCounter counter;
+        private long readBefore;
+        private long writtenBefore;
+
+        TrafficGraph() {
+            setPreferredSize(new Dimension(400, 90));
+            setMaximumSize(new Dimension(Integer.MAX_VALUE, 90));
+            setAlignmentX(0f);
+        }
+
+        /** The counters only ever grow, so a sample is the difference from the last; a new server starts from zero. */
+        void sample(final TrafficCounter now) {
+            final long read = now == null ? 0 : now.cumulativeReadBytes();
+            final long written = now == null ? 0 : now.cumulativeWrittenBytes();
+            if (now != counter) {
+                counter = now;
+                readBefore = read;
+                writtenBefore = written;
+            }
+            in[next] = read - readBefore;
+            out[next] = written - writtenBefore;
+            readBefore = read;
+            writtenBefore = written;
+            next = (next + 1) % SAMPLES;
+            repaint();
+        }
+
+        @Override
+        protected void paintComponent(final Graphics g) {
+            final Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            final int w = getWidth();
+            final int h = getHeight();
+            g2.setColor(BACKGROUND);
+            g2.fillRect(0, 0, w, h);
+
+            long top = SMALLEST_SCALE;
+            for (int i = 0; i < SAMPLES; i++) {
+                top = Math.max(top, Math.max(in[i], out[i]));
+            }
+            final int plotTop = 22;
+            final int plotHeight = h - plotTop - 4;
+            g2.setColor(GRID);
+            g2.drawLine(0, plotTop, w, plotTop);
+            g2.drawLine(0, h - 4, w, h - 4);
+            line(g2, in, top, plotTop, plotHeight, IN, SOLID);
+            line(g2, out, top, plotTop, plotHeight, OUT, DASHED);
+
+            final int latest = (next + SAMPLES - 1) % SAMPLES;
+            g2.setFont(getFont().deriveFont(11f));
+            final int baseline = 14;
+            int x = 8;
+            x = legend(g2, x, baseline, IN, SOLID, "In " + rate(in[latest]));
+            legend(g2, x + 16, baseline, OUT, DASHED, "Out " + rate(out[latest]));
+            final String scale = "top " + rate(top) + " · last minute";
+            g2.setColor(LABEL);
+            g2.drawString(scale, w - 8 - g2.getFontMetrics().stringWidth(scale), baseline);
+            g2.dispose();
+        }
+
+        private void line(final Graphics2D g2, final long[] values, final long top, final int plotTop,
+                final int plotHeight, final Color colour, final BasicStroke stroke) {
+            final int[] xs = new int[SAMPLES];
+            final int[] ys = new int[SAMPLES];
+            for (int i = 0; i < SAMPLES; i++) {
+                final long v = values[(next + i) % SAMPLES];
+                xs[i] = i * (getWidth() - 1) / (SAMPLES - 1);
+                ys[i] = plotTop + plotHeight - (int) (v * plotHeight / top);
+            }
+            g2.setColor(colour);
+            g2.setStroke(stroke);
+            g2.drawPolyline(xs, ys, SAMPLES);
+        }
+
+        /** A short swatch of the line followed by its figure; returns where the next entry can start. */
+        private static int legend(final Graphics2D g2, final int x, final int baseline, final Color colour,
+                final BasicStroke stroke, final String text) {
+            g2.setColor(colour);
+            g2.setStroke(stroke);
+            g2.drawLine(x, baseline - 4, x + 18, baseline - 4);
+            g2.setColor(LABEL);
+            g2.drawString(text, x + 24, baseline);
+            return x + 24 + g2.getFontMetrics().stringWidth(text);
+        }
+
+        private static String rate(final long bytesPerSecond) {
+            if (bytesPerSecond < 1024) {
+                return bytesPerSecond + " B/s";
+            }
+            if (bytesPerSecond < 1024 * 1024) {
+                return String.format(Locale.ROOT, "%.1f KB/s", bytesPerSecond / 1024.0);
+            }
+            return String.format(Locale.ROOT, "%.1f MB/s", bytesPerSecond / (1024.0 * 1024));
         }
     }
 

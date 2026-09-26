@@ -3,6 +3,7 @@ package forge.web;
 import forge.gamemodes.net.server.PortForward;
 import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
+import io.netty.handler.traffic.TrafficCounter;
 import org.tinylog.Logger;
 
 import java.util.function.Consumer;
@@ -157,6 +158,11 @@ final class WebService {
     /** A link for another player at one of this machine's addresses, or null while stopped. */
     synchronized String inviteUrl(final String address) {
         return server == null ? null : server.inviteUrl(address);
+    }
+
+    /** The bytes through the port since it was last started, or null while stopped. */
+    synchronized TrafficCounter traffic() {
+        return server == null ? null : server.traffic();
     }
 
     /** The port the browser connects on, or 0 while stopped. */
