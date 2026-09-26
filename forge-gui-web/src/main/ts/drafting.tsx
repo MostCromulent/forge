@@ -70,7 +70,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
           </div>
         </div>
       )}
-      {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
+      {peek && (
+        <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}>
+          <span class="peek-card"><CardFace card={cardFor(state, peek.image)} /></span>
+        </div>
+      )}
     </div>
   );
 }
@@ -173,7 +177,7 @@ function Pack({ state, faces, actions }: { state: DraftState; faces: string[]; a
               onDragStart={e => startDrag(e, { from: 'pack', index: i })}
               onClick={() => (i === selected ? pick(i) : setSelected(i))}>
               <span class="tile-name">{card.name}</span>
-              <img loading="lazy" alt="" draggable={false} src={imageUrl(card.image)} onError={e => { e.currentTarget.hidden = true; }} />
+              <CardFace card={card} />
               {card.rank !== undefined && <RankShield rank={card.rank} />}
             </button>
             {i === selected && <span class="confirm">Pick · click again or Enter</span>}
@@ -182,6 +186,29 @@ function Pack({ state, faces, actions }: { state: DraftState; faces: string[]; a
         {state.cards.length === 0 && !state.done && <p class="muted">Waiting for a pack…</p>}
       </div>
     </section>
+  );
+}
+
+/** The pack card or pick drawn from an image key, so its preview can fall back to its text as well. */
+function cardFor(state: DraftState | null, image: string): DraftCard {
+  return [...(state?.cards ?? []), ...(state?.picks ?? [])].find(c => c.image === image)
+    ?? { name: '', image, cost: '', mv: 0, colors: '', type: '', text: '', rarity: '', pack: 0, pick: 0, sideboard: false };
+}
+
+/** A card's picture, or when none can be had, its name, cost, type and rules text in the card's own shape. */
+function CardFace({ card }: { card: DraftCard }) {
+  const [failed, setFailed] = useState(false);
+  useEffect(() => setFailed(false), [card.image]);
+  if (!failed) {
+    return <img loading="lazy" alt="" draggable={false} src={imageUrl(card.image)} onError={() => setFailed(true)} />;
+  }
+  return (
+    <span class="text-face">
+      <span class="tf-head"><b>{card.name}</b><span class="cost"><SymbolText text={card.cost} /></span></span>
+      <span class="tf-type">{card.type}</span>
+      <span class="tf-text"><SymbolText text={card.text} /></span>
+      {card.pt && <span class="tf-pt">{card.pt}</span>}
+    </span>
   );
 }
 

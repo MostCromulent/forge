@@ -57,6 +57,25 @@
 .draft-pack { grid-template-rows: auto minmax(0, 1fr); overflow: visible; }
 .draft-pack .cat-grid { border-radius: 0 0 12px 12px; }
 .draft-slot.chosen .tile img { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
+/* A card whose picture cannot be had is drawn as its text, in the card's shape */
+.text-face { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; border-radius: 6px; overflow: hidden;
+  background: var(--surface-2); border: 1px solid var(--line-bright); box-shadow: 0 3px 10px #0007; text-align: left; color: var(--text); font-size: 10px; line-height: 1.3; }
+.text-face .tf-head { display: flex; justify-content: space-between; gap: 4px; align-items: flex-start; }
+.text-face .tf-head b { font-size: 11px; }
+.text-face .cost { display: inline-flex; gap: 1px; flex: none; }
+.text-face .cost .sym { width: 11px; height: 11px; }
+.text-face .tf-type { color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+.text-face .tf-text { flex: 1; white-space: pre-line; overflow: hidden; }
+.text-face .tf-text .sym { width: 10px; height: 10px; vertical-align: -1px; }
+.text-face .tf-pt { align-self: flex-end; font-weight: 700; }
+/* A tile lays its picture over the whole card; the symbols in its text are pictures too, and stay in the line */
+.tile .text-face img.sym { position: static; inset: auto; border-radius: 50%; box-shadow: none; transform: none; outline: none; }
+/* The hover preview draws the text larger, in a card-shaped frame of its own */
+.peek-card { position: relative; display: block; aspect-ratio: 63 / 88; }
+.deck-peek .text-face { font-size: 13px; line-height: 1.4; gap: 7px; padding: 12px 14px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
+.deck-peek .text-face .tf-head b { font-size: 15px; }
+.deck-peek .text-face .cost .sym, .deck-peek .text-face .tf-text .sym { width: 14px; height: 14px; }
+.draft-slot.chosen .tile .text-face { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
 .draft-slot .confirm { position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%); z-index: 3; background: var(--brass);
   color: var(--on-brass); font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 11px; white-space: nowrap; box-shadow: 0 0 0 2px var(--bg); }
 /* The ranking stands on a bevelled metal shield in the middle of the card, as desktop draws it. The grades run gold,

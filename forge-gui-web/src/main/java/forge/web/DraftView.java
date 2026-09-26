@@ -44,7 +44,7 @@ final class DraftView {
 
     /** The same pick, moved to the sideboard or to the main deck. */
     static DraftCard moved(final DraftCard c, final boolean sideboard) {
-        return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.pt(), c.rarity(), c.rank(), c.pack(),
+        return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.text(), c.pt(), c.rarity(), c.rank(), c.pack(),
                 c.pick(), sideboard);
     }
 
@@ -53,7 +53,8 @@ final class DraftView {
         // Desktop's draft ranking overlay: a score to 99, higher is better, and none for a card nobody ranked
         final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
-                rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(), CardCatalog.pt(rules),
+                rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),
+                rules.getOracleText().replace("\\n", "\n").replace("\r\n", "\n"), CardCatalog.pt(rules),
                 card.getRarity().toString(), score <= 0 ? null : (int) Math.round(Math.min(99, score)), packNumber, pickNumber, sideboard);
     }
 

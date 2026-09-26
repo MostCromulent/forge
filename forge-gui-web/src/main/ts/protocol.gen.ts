@@ -1217,6 +1217,7 @@ export interface DraftCard {
   mv: number;
   colors: string;
   type: string;
+  text: string;
   pt?: string;
   rarity: string;
   rank?: number;
