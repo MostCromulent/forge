@@ -144,7 +144,10 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* What is attached to a card fans out behind it, each a step up and to the left of the next, as Forge desktop lays
    it; the step is a share of the card, so a crowded board's smaller cards keep the same look. battlefield.ts counts
    the room the fan takes when it sizes the cards */
-.battlefield { --fan: .12; }
+.battlefield { --fan: .12; --support-indent: 28px; }
+/* The artifacts and enchantments at the end of the lands' row stand in from its edge, so they do not line up with
+   the edge of the stack panel above them; battlefield.ts counts the room */
+.row > .group.support { margin-right: var(--support-indent); }
 .slot { position: relative; padding-top: calc(var(--attached, 0) * var(--card-h) * var(--fit, 1) * var(--fan));
   padding-left: calc(var(--attached, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 /* Each card behind the host is a layer of its own, so its P/T, badges and icons stay behind the host with it */

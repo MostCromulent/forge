@@ -112,6 +112,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const air = px(style, '--slot-gap');
   const fan = px(fieldStyle, '--fan');
   const glow = px(fieldStyle, '--glow');
+  const supportIndent = px(fieldStyle, '--support-indent');
   const slotW = h * 0.9 + 2 * air;
   // A group's width at a card size of 1, on one line or split over two
   const groupUnit = (g: GroupStats, lines: number) => {
@@ -168,7 +169,9 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const gap = rowGap(r);
     const zones = row.filter(z => live(z).length);
     const need = zones.map(z => zoneWidth(z, { fit: cap, lines: 1 }, gap));
-    const gaps = gap * Math.max(0, zones.length - 1);
+    // The other permanents stand in from the row's end (board.css), clear of the stack panel's edge
+    const indent = r === 0 && live(rows[0][1]).length ? supportIndent : 0;
+    const gaps = gap * Math.max(0, zones.length - 1) + indent;
     const used = (share: number) => need.reduce((n, x) => n + Math.min(x, share), 0) + gaps;
     let lo = 0;
     let hi = width;
