@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.gamemodes.net.EventParticipant;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.event.DraftPickEvent;
@@ -13,7 +14,9 @@ import forge.web.ToBrowser.DraftState;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -46,6 +49,7 @@ final class OnlineDraft implements IDraftEventHandler {
     private int[] depths;
     /** The card this seat sent as its pick, which counts once the draft host says the seat picked. */
     private PaperCard pending;
+    private boolean pendingSideboard;
     private volatile boolean pooled;
 
     /**
@@ -100,7 +104,7 @@ final class OnlineDraft implements IDraftEventHandler {
             final boolean mine = seatIndex == seat;
             if (mine) {
                 if (pending != null) {
-                    picks.add(DraftView.card(pending, packNumber, pickNumber + 1));
+                    picks.add(DraftView.card(pending, packNumber, pickNumber + 1, pendingSideboard));
                     view.log("You picked " + pending.getName());
                     pending = null;
                 }
@@ -130,20 +134,62 @@ final class OnlineDraft implements IDraftEventHandler {
     public void receiveEventPool(final String eventId, final Deck pool) {
         serial.execute(() -> {
             pooled = true;
-            onPool.accept(eventId, pool);
+            onPool.accept(eventId, sorted(pool));
         });
     }
 
     /** Picks the card at index of the pack shown in state step. A click on a pack that has moved on is ignored. */
-    void pick(final int step, final int index) {
+    void pick(final int step, final int index, final boolean sideboard) {
         serial.execute(() -> {
             final DraftState now = view.latest();
             if (pooled || now == null || now.step() != step || pending != null || index < 0 || index >= pack.size()) {
                 return;
             }
             pending = pack.get(index);
+            pendingSideboard = sideboard;
             send.accept(new DraftPickEvent(mySeat, pending));
         });
+    }
+
+    /** Moves the pick at index into the sideboard or back into the main deck; the host's pool is sorted by it at the end. */
+    void move(final int index, final boolean sideboard) {
+        serial.execute(() -> {
+            if (pooled || view.latest() == null || index < 0 || index >= picks.size()) {
+                return;
+            }
+            picks.set(index, DraftView.moved(picks.get(index), sideboard));
+            send(false, List.of());
+        });
+    }
+
+    /**
+     * The pool the event ends with, each card in the main deck or the sideboard as it was picked into. The host does not
+     * hear where a pick went, so its pool is sorted here by the picks this seat remembers; anything else is sideboard.
+     */
+    private Deck sorted(final Deck pool) {
+        final Map<String, Integer> main = new HashMap<>();
+        for (final DraftCard pick : picks) {
+            if (!pick.sideboard()) {
+                main.merge(pick.name(), 1, Integer::sum);
+            }
+        }
+        final List<PaperCard> all = new ArrayList<>(pool.getMain().toFlatList());
+        if (pool.has(DeckSection.Sideboard)) {
+            all.addAll(pool.get(DeckSection.Sideboard).toFlatList());
+        }
+        final Deck out = new Deck(pool, pool.getName());
+        out.getMain().clear();
+        out.getOrCreate(DeckSection.Sideboard).clear();
+        for (final PaperCard card : all) {
+            final int left = main.getOrDefault(card.getName(), 0);
+            if (left > 0) {
+                main.put(card.getName(), left - 1);
+                out.getMain().add(card);
+            } else {
+                out.get(DeckSection.Sideboard).add(card);
+            }
+        }
+        return out;
     }
 
     /** Sends the state again with each seat's held flag read afresh, after a player went or came back. */

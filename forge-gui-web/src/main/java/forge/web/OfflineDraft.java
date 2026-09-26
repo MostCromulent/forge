@@ -36,6 +36,8 @@ final class OfflineDraft {
     private final Consumer<DraftState> publish;
     private final Consumer<String> fail;
     private final List<DraftCard> picks = new ArrayList<>();
+    /** The cards behind picks, in the same order, to move between the deck's sections. */
+    private final List<PaperCard> picked = new ArrayList<>();
     private BoosterDraft draft;
     private String product;
     private List<PaperCard> pack = List.of();
@@ -69,17 +71,33 @@ final class OfflineDraft {
     }
 
     /** Picks the card at index of the pack shown in state step. A click on a state that has moved on since is ignored. */
-    void pick(final int stepShown, final int index) {
+    void pick(final int stepShown, final int index, final boolean sideboard) {
         thread.execute(() -> {
             try {
-                pickOn(stepShown, index);
+                pickOn(stepShown, index, sideboard);
             } catch (final RuntimeException e) {
                 fail.accept("The draft stopped: " + e.getMessage());
             }
         });
     }
 
-    private void pickOn(final int stepShown, final int index) {
+    /** Moves the pick at index into the sideboard or back into the main deck, as desktop lets a drafter sort picks as they go. */
+    void move(final int index, final boolean sideboard) {
+        thread.execute(() -> {
+            final DraftState now = view.latest();
+            if (now == null || now.done() || index < 0 || index >= picks.size() || picks.get(index).sideboard() == sideboard) {
+                return;
+            }
+            final Deck deck = draft.getHumanPlayer().getDeck();
+            final PaperCard card = picked.get(index);
+            deck.getOrCreate(sideboard ? DeckSection.Main : DeckSection.Sideboard).remove(card);
+            deck.getOrCreate(sideboard ? DeckSection.Sideboard : DeckSection.Main).add(card);
+            picks.set(index, DraftView.moved(picks.get(index), sideboard));
+            send(false, false, false);
+        });
+    }
+
+    private void pickOn(final int stepShown, final int index, final boolean sideboard) {
         final DraftState now = view.latest();
         if (now == null || now.done() || now.step() != stepShown || index < 0 || index >= pack.size()) {
             return;
@@ -91,8 +109,9 @@ final class OfflineDraft {
             return;
         }
         final PaperCard card = me.hasArchdemonCurse() ? me.pickFromArchdemonCurse(me.nextChoice()) : pack.get(index);
-        final boolean passed = draft.setChoice(card, DeckSection.Sideboard);
-        picks.add(DraftView.card(card, round, now.pick()));
+        final boolean passed = draft.setChoice(card, sideboard ? DeckSection.Sideboard : DeckSection.Main);
+        picks.add(DraftView.card(card, round, now.pick(), sideboard));
+        picked.add(card);
         roundPicks++;
         advance(passed);
     }
@@ -140,6 +159,11 @@ final class OfflineDraft {
     }
 
     private void send(final boolean passed, final boolean done) {
+        send(passed, done, true);
+    }
+
+    /** newPack false keeps the step, so a pick the player has selected in the pack stays selected. */
+    private void send(final boolean passed, final boolean done, final boolean newPack) {
         final List<DraftSeat> seats = new ArrayList<>();
         final List<LimitedPlayer> players = draft.getAllPlayers();
         for (int i = 0; i < players.size(); i++) {
@@ -152,7 +176,7 @@ final class OfflineDraft {
         // Offline every pack moves in lock step, so a pass moves every seat's pack
         final List<Integer> moved = passed ? IntStream.range(0, seats.size()).boxed().toList() : List.of();
         // Packs go to the next seat in odd rounds and the previous seat in even ones, as BoosterDraft.passPacks alternates
-        publish.accept(view.state(true, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
+        publish.accept(view.state(newPack, step -> new DraftState(step, product, round, draft.getNumRounds(), pick, packSize,
                 round % 2 == 1 ? 1 : -1, seats, cards, List.copyOf(picks), moved, 0, 0, List.of(), done)));
     }
 }

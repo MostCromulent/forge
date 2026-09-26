@@ -39,12 +39,22 @@ final class DraftView {
     }
 
     static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber) {
+        return card(card, packNumber, pickNumber, false);
+    }
+
+    /** The same pick, moved to the sideboard or to the main deck. */
+    static DraftCard moved(final DraftCard c, final boolean sideboard) {
+        return new DraftCard(c.name(), c.image(), c.cost(), c.mv(), c.colors(), c.type(), c.pt(), c.rarity(), c.rank(), c.pack(),
+                c.pick(), sideboard);
+    }
+
+    static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber, final boolean sideboard) {
         final CardRules rules = card.getRules();
         // Desktop's draft ranking overlay: a score to 99, higher is better, and none for a card nobody ranked
         final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(), CardCatalog.pt(rules),
-                card.getRarity().toString(), score <= 0 ? null : (int) Math.round(Math.min(99, score)), packNumber, pickNumber);
+                card.getRarity().toString(), score <= 0 ? null : (int) Math.round(Math.min(99, score)), packNumber, pickNumber, sideboard);
     }
 
     /** Builds and remembers the next state from its step, which goes up only when newPack says the pack in hand changed. */

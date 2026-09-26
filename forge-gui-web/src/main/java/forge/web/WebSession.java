@@ -20,6 +20,7 @@ import forge.web.FromBrowser.SetSetting;
 import forge.web.FromBrowser.SetStops;
 import forge.web.FromBrowser.SleeveArt;
 import forge.web.FromBrowser.Start;
+import forge.web.FromBrowser.DraftMove;
 import forge.web.FromBrowser.DraftPick;
 import forge.web.FromBrowser.DraftSave;
 import forge.web.FromBrowser.DraftStart;
@@ -458,14 +459,24 @@ public final class WebSession {
             case "poolDelete" -> deletePool(channel, Wire.decode(msg, PoolDelete.class).name());
             case "sealedCreate" -> createSealed(channel, Wire.decode(msg, SealedCreate.class));
             case "draftStart" -> startDraft(channel, Wire.decode(msg, DraftStart.class));
+            case "draftMove" -> {
+                final DraftMove move = Wire.decode(msg, DraftMove.class);
+                final OfflineDraft draft = offlineDraft;
+                final OnlineDraft online = onlineDraft;
+                if (draft != null) {
+                    draft.move(move.index(), move.sideboard());
+                } else if (online != null && stage instanceof Setup) {
+                    online.move(move.index(), move.sideboard());
+                }
+            }
             case "draftPick" -> {
                 final DraftPick pick = Wire.decode(msg, DraftPick.class);
                 final OfflineDraft draft = offlineDraft;
                 final OnlineDraft online = onlineDraft;
                 if (draft != null) {
-                    draft.pick(pick.step(), pick.index());
+                    draft.pick(pick.step(), pick.index(), pick.sideboard());
                 } else if (online != null && stage instanceof Setup) {
-                    online.pick(pick.step(), pick.index());
+                    online.pick(pick.step(), pick.index(), pick.sideboard());
                 }
             }
             case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));

@@ -786,6 +786,13 @@ export interface DraftPick {
   t: 'draftPick';
   step: number;
   index: number;
+  sideboard: boolean;
+}
+
+export interface DraftMove {
+  t: 'draftMove';
+  index: number;
+  sideboard: boolean;
 }
 
 export interface DraftSave {
@@ -893,6 +900,7 @@ export type ClientMessage =
   | PoolPlay
   | DraftStart
   | DraftPick
+  | DraftMove
   | DraftSave
   | SetLimited
   | EventSetup
@@ -1214,6 +1222,7 @@ export interface DraftCard {
   rank?: number;
   pack: number;
   pick: number;
+  sideboard: boolean;
 }
 
 export interface RequestOption {

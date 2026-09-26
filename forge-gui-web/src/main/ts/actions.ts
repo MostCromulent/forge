@@ -60,7 +60,8 @@ export interface Actions {
   limitedOpen(kind: 'sealed' | 'draft', resume: boolean): void;
   draftStart(d: Omit<DraftStart, 't'>): void;
   /** Picks the card at index of the pack shown in state step. */
-  draftPick(step: number, index: number): void;
+  draftPick(step: number, index: number, sideboard: boolean): void;
+  draftMove(index: number, sideboard: boolean): void;
   draftSave(name: string, replace: boolean): void;
   draftDiscard(): void;
   limitedLeave(): void;
@@ -185,7 +186,8 @@ export function createActions(send: Send): Actions {
     ready: on => send({ t: 'ready', ready: on }),
     limitedOpen: (kind, resume) => send({ t: 'limitedOpen', kind, resume }),
     draftStart: d => send({ t: 'draftStart', ...d }),
-    draftPick: (step, index) => send({ t: 'draftPick', step, index }),
+    draftPick: (step, index, sideboard) => send({ t: 'draftPick', step, index, sideboard }),
+    draftMove: (index, sideboard) => send({ t: 'draftMove', index, sideboard }),
     draftSave: (name, replace) => send({ t: 'draftSave', name, replace }),
     draftDiscard: () => send({ t: 'draftDiscard' }),
     limitedLeave: () => send({ t: 'limitedLeave' }),

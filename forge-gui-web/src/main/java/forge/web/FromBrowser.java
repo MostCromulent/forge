@@ -291,9 +291,17 @@ final class FromBrowser {
             @Nullable String cubeId) {
     }
 
-    /** Picks the card at index of the pack shown in state step, so a click on a state that has moved on is ignored. */
+    /**
+     * Picks the card at index of the pack shown in state step, so a click on a state that has moved on is ignored.
+     * sideboard puts it in the sideboard rather than the main deck.
+     */
     @Command("draftPick")
-    record DraftPick(int step, int index) {
+    record DraftPick(int step, int index, boolean sideboard) {
+    }
+
+    /** Moves the pick at index, in the order picked, into the sideboard or back into the main deck. */
+    @Command("draftMove")
+    record DraftMove(int index, boolean sideboard) {
     }
 
     /** Saves a finished draft; replace says the player agreed to replace a draft of the same name. */
@@ -359,6 +367,6 @@ final class FromBrowser {
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,
+            DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,
             EventDecksOnly.class, EventHostAgain.class);
 }

@@ -537,10 +537,10 @@ final class ToBrowser {
 
     /**
      * A card in the pack or among the picks, with the pack and pick it was drafted at. rank is desktop's draft score to
-     * 99, higher being better, when the card is ranked.
+     * 99, higher being better, when the card is ranked. sideboard says a pick went to the sideboard, not the main deck.
      */
     record DraftCard(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String rarity, @Nullable Integer rank, int pack, int pick) {
+            String rarity, @Nullable Integer rank, int pack, int pick, boolean sideboard) {
     }
 
     /**

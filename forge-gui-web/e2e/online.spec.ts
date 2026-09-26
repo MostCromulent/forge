@@ -73,9 +73,9 @@ test('online draft for one', async ({ page }) => {
   await ready(page);
   await page.click('.event-row button:has-text("Start draft")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.dial-clock')).toBeVisible();
+  await expect(page.locator('.draft-panel-head .clock')).toBeVisible();
 
-  const picked = page.locator('.draft-picks-head h3 .muted');
+  const picked = page.locator('.draft-picks .draft-panel-head b .muted');
   for (let i = 0; i < 45; i++) {
     const first = page.locator('.draft-pack .draft-slot .tile').first();
     await first.click();

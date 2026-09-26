@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { buildLimitedDeck, enterName, gameStarted } from './steps';
+import { enterName, gameStarted } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -20,9 +20,9 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.tile-choice:has-text("Full card pool")');
   await page.click('.wfoot button:has-text("Start draft")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.dial')).toBeVisible();
+  await expect(page.locator('.table-btn')).toBeVisible();
 
-  const picked = page.locator('.draft-picks-head h3 .muted');
+  const picked = page.locator('.draft-picks .draft-panel-head b .muted');
   for (let i = 0; i < 45; i++) {
     const first = page.locator('.draft-pack .draft-slot .tile').first();
     await first.click();
@@ -36,7 +36,8 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.check-fixed')).toHaveText('Limited · 40 cards');
-  await buildLimitedDeck(page);
+  // A click picks into the main deck, so the deck opens already holding every pick
+  await expect(page.locator('.deck-head .sizes')).toContainText('45 cards');
   await page.click('.editor-head button.primary');
 
   await expect(page.locator('.opponents')).toBeVisible();
