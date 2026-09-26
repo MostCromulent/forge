@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { enterName, hostTable, inviteLink } from './steps';
+import { chooseGame, enterName, hostTable, inviteLink } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -40,7 +40,7 @@ test('a Commander deck built from the start page reaches a seat', async ({ page 
   await page.click('.editor-head button.primary');
   await expect(page.locator('#editor')).toBeHidden();
   await hostTable(page, false);
-  await page.locator('button.format', { hasText: 'Commander' }).click();
+  await chooseGame(page, 'Commander');
   await page.locator('#seats .plate.mine .sleeve').click();
   // Two cards is not yet a legal Commander deck, and the finder hides illegal decks until asked
   await page.click('.finder .legal-only input');

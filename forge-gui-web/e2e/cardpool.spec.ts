@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { enterName, hostTable } from './steps';
+import { chooseGame, enterName, hostTable } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -15,7 +15,7 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   const seats = page.locator('#seats .plate');
 
   await page.selectOption('.format-pool', 'Pauper');
-  await expect(page.locator('button.format[aria-pressed=true]')).toHaveText('Constructed · Pauper');
+  await expect(page.locator('.match-bar .format-pool')).toHaveValue('Pauper');
 
   // The finder opens pinned to the table's card pool, with illegal decks left out until asked for
   await seats.nth(0).locator('.sleeve').click();
@@ -36,6 +36,7 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   }
 
   // A card pool belongs to Constructed, so leaving it clears the pool
-  await page.locator('button.format', { hasText: 'Commander' }).click();
-  await expect(page.locator('button.format', { hasText: 'Constructed' })).toHaveText('Constructed · any cards');
+  await chooseGame(page, 'Commander');
+  await chooseGame(page, 'Constructed');
+  await expect(page.locator('.match-bar .format-pool')).toHaveValue('');
 });

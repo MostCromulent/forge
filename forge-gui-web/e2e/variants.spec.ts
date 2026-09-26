@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { answerDialogs, chooseDeck, enterName, hostTable } from './steps';
+import { answerDialogs, chooseDeck, enterName, hostTable, toggleVariant } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -14,8 +14,8 @@ test('a host sets up Vanguard and Planechase, choosing an avatar and a planar de
   const mine = page.locator('#seats .plate.mine');
   await chooseDeck(page, mine);
 
-  await page.locator('.variants button.format', { hasText: 'Vanguard' }).click();
-  await page.locator('.variants button.format', { hasText: 'Planechase' }).click();
+  await toggleVariant(page, 'Vanguard');
+  await toggleVariant(page, 'Planechase');
   await expect(mine.locator('.seat-extra', { hasText: 'Avatar' })).toContainText('Random');
 
   await mine.locator('.seat-extra', { hasText: 'Avatar' }).click();
@@ -38,7 +38,7 @@ test('a Planechase match shows the plane, and the die button rolls on your own m
   const seats = page.locator('#seats .plate');
   await chooseDeck(page, seats.nth(0));
   await chooseDeck(page, seats.nth(1));
-  await page.locator('.variants button.format', { hasText: 'Planechase' }).click();
+  await toggleVariant(page, 'Planechase');
   await expect(seats.nth(0).locator('.seat-extra', { hasText: 'Planes' })).toBeVisible();
   await expect(page.locator('#play')).toBeEnabled();
   await page.click('#play');
@@ -75,7 +75,7 @@ test('an Archenemy match marks the archenemy on the board', async ({ page }) => 
   const seats = page.locator('#seats .plate');
   await chooseDeck(page, seats.nth(0));
   await chooseDeck(page, seats.nth(1));
-  await page.locator('.variants button.format', { hasText: /^Archenemy$/ }).click();
+  await toggleVariant(page, 'Archenemy');
   await expect(seats.nth(0).locator('.role.archenemy')).toBeVisible();
   await expect(seats.nth(1).locator('.role.hero')).toBeVisible();
   await expect(seats.nth(0).locator('.seat-extra', { hasText: 'Schemes' })).toBeVisible();

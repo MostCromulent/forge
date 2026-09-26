@@ -26,9 +26,31 @@ export async function chooseDeck(page: Page, plate: Locator): Promise<void> {
   await expect(plate.locator('.deck-name')).not.toHaveText('');
 }
 
-/** The address a guest opens, pointed at this machine. */
+/** Opens the Game field's menu over the match bar. */
+export async function openGameMenu(page: Page): Promise<void> {
+  await page.locator('.match-bar .field', { hasText: 'Game' }).locator('.menu-button').click();
+}
+
+/** Chooses what is played from the Game field: a format, Draft or Sealed. */
+export async function chooseGame(page: Page, name: string): Promise<void> {
+  await openGameMenu(page);
+  await page.locator('.game-choice', { hasText: new RegExp(`^${name}$`) }).click();
+  await expect(page.locator('.match-bar .field', { hasText: 'Game' }).locator('.menu-button')).toHaveText(name);
+}
+
+/** Turns a casual variant on or off from the Variants field. */
+export async function toggleVariant(page: Page, name: string): Promise<void> {
+  await page.locator('.match-bar .field', { hasText: 'Variants' }).locator('.menu-button').click();
+  await page.locator('.variant').filter({ has: page.locator('b', { hasText: new RegExp(`^${name}$`) }) }).locator('input').click();
+  await page.keyboard.press('Escape');
+}
+
+/** The address a guest opens, pointed at this machine, read from the header's Invite. */
 export async function inviteLink(page: Page, serverUrl: string): Promise<string> {
+  await page.locator('.lobby-head .menu-button', { hasText: 'Invite' }).click();
+  await expect(page.locator('.share-url').first()).toBeVisible();
   const shared = await page.locator('.share-url').first().textContent();
+  await page.keyboard.press('Escape');
   return (shared ?? '').replace(/^https?:\/\/[^/]+/, new URL(serverUrl).origin);
 }
 

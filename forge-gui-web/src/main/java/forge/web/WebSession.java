@@ -366,7 +366,7 @@ public final class WebSession {
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
             case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
-                    "addSeat", "setPlayerCount", "setSeat", "sleeveArt" -> {
+                    "setPlayerCount", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -550,7 +550,6 @@ public final class WebSession {
                 final SetSeatExtra extra = Wire.decode(msg, SetSeatExtra.class);
                 lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());
             }
-            case "addSeat" -> lobby.addSeat();
             case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count());
             case "setSeat" -> applySeat(channel, Wire.decode(msg, SetSeat.class));
             case "sleeveArt" -> {

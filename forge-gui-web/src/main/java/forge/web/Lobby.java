@@ -1002,7 +1002,7 @@ final class Lobby {
         return -1;
     }
 
-    void addSeat() {
+    private void addSeat() {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
             lobby.addSlot();

@@ -263,6 +263,12 @@ public class OnlineEventTest {
         return m;
     }
 
+    private static JsonObject playerCount(final int count) {
+        final JsonObject m = JsonCodec.message("setPlayerCount");
+        m.addProperty("count", count);
+        return m;
+    }
+
     private static JsonObject bench(final int index, final boolean on) {
         final JsonObject m = JsonCodec.message("benchSeat");
         m.addProperty("index", index);
@@ -286,17 +292,14 @@ public class OnlineEventTest {
     @Test(timeOut = 180_000)
     public void aLimitedTableSeatsEight() throws Exception {
         final Recorder host = hostAt("lobby", "sealed");
-        for (int i = 0; i < 6; i++) {
-            final int before = host.latestTable().getAsJsonArray("seats").size();
-            sessions.onMessage(host, JsonCodec.message("addSeat"));
-            Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").size() == before + 1), "seat " + (before + 1) + " was refused");
-        }
-        final JsonObject full = host.latestTable();
+        sessions.onMessage(host, playerCount(8));
+        final JsonObject full = host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 8);
+        Assert.assertNotNull(full, "the table was refused eight seats");
         Assert.assertEquals(full.get("maxSeats").getAsInt(), 8);
         host.forget();
-        sessions.onMessage(host, JsonCodec.message("addSeat"));
+        sessions.onMessage(host, playerCount(9));
         final JsonObject after = host.awaitLobby(l -> true);
-        Assert.assertEquals(seatNames(after), seatNames(full), "an add at the cap changed the table");
+        Assert.assertEquals(seatNames(after), seatNames(full), "asking past the cap changed the table");
 
         sessions.onMessage(host, setLimited(null));
         Assert.assertNotNull(host.awaitMatching("error", e -> true), "going back to Constructed with eight seated was not refused");
@@ -496,11 +499,8 @@ public class OnlineEventTest {
         final Recorder host = hostAt("lobby", "sealed");
         sessions.onMessage(host, hostAgain(id));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("activeEventId")), "the past event was never hosted again");
-        for (int i = 0; i < 3; i++) {
-            final int before = host.latestTable().getAsJsonArray("seats").size();
-            sessions.onMessage(host, JsonCodec.message("addSeat"));
-            Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").size() == before + 1), "a seat was refused");
-        }
+        sessions.onMessage(host, playerCount(5));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 5), "the table never grew to five");
         sessions.onMessage(host, JsonCodec.message("decks"));
         final String key = keyOf(host, "Web test forests");
         for (int i = 0; i < 5; i++) {

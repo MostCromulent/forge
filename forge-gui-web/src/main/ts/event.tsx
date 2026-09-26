@@ -8,31 +8,6 @@ import type { Actions } from './actions';
 import type { Model } from './model';
 import type { LimitedTable, LobbyTable } from './protocol';
 
-const KINDS: [string, 'sealed' | 'draft' | null][] = [['Constructed', null], ['Draft', 'draft'], ['Sealed', 'sealed']];
-
-/**
- * Constructed · Draft · Sealed, at a table others can join; a table against the computer drafts from the start page.
- * A new kind of event waits until the one begun is over; Constructed waits out a draft.
- */
-export function LimitedSwitch({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
-  const lim = lobby.limited;
-  if (!lobby.shareable && !lim) return null;
-  const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
-  return (
-    <div class="formats limited-switch">
-      <span class="row-label">Play</span>
-      {KINDS.map(([name, kind]) => {
-        const pressed = (lim?.kind ?? null) === kind;
-        const locked = kind === null ? drafting : !!lim?.started;
-        return (
-          <button key={name} class="event-kind" aria-pressed={pressed} disabled={!lobby.host || pressed || locked}
-            onClick={() => actions.setLimited(kind)}>{name}</button>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * The event above the seats: what it is and how to begin it. The host sets it up in a dialog over the table, which
  * opens by itself on a table with no event yet, so the seats never move while the form is filled in.

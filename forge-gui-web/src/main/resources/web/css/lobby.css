@@ -146,13 +146,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .lobby-main { display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
 .lobby-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-.spectate { color: var(--muted); display: flex; align-items: center; gap: 6px; }
 
-.formats { display: flex; flex-wrap: wrap; gap: 6px; }
-/* The casual variants sit on a row of their own under the formats, since they stack on any of them */
-.formats.variants { order: 3; flex-basis: 100%; align-items: center; padding-left: 74px; }
-.formats .row-label { color: var(--faint); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; margin-right: 4px; }
-.formats .row-note { color: var(--muted); font-size: 12px; }
 /* The archenemy and the heroes: a brass tag for the one, a plain one for the rest */
 .role { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
 .role.archenemy { background: var(--brass); color: var(--on-brass); }
@@ -165,48 +159,12 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .seat-extra .extra-count, .seat-extra .extra-detail { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .seat-extra.warn { border-color: var(--danger); }
 .seat-extra .extra-problem { color: var(--danger); font-size: 11.5px; white-space: nowrap; }
-.format { border-radius: 999px; padding: 5px 14px; color: var(--muted); }
-.format[aria-pressed="true"] { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); font-weight: 600; }
-/* A format explains itself in a card under its chip, and all of them side by side in the guide */
-.format-chip { position: relative; display: inline-flex; }
-.format-card { position: absolute; z-index: 30; top: calc(100% + 8px); left: 0; width: 340px; display: grid; gap: 8px; padding: 12px 14px;
-  background: var(--surface); border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 16px 40px #000d; text-align: left; cursor: default; }
-.format-card h5 { margin: 0; font-size: 14px; }
-.format-card .desc, .guide .desc { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--text); }
 .facts { display: flex; flex-wrap: wrap; gap: 5px; }
 .fact { font-size: 11.5px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
 .format-play { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
-.format-card .format-play { border-top: 1px solid var(--line); padding-top: 8px; }
 .format-play b { color: var(--text); font-weight: 600; }
-.guide-link { background: none; border: 0; padding: 4px 6px; color: var(--accent-2); font-size: 12.5px; text-decoration: underline; text-underline-offset: 3px; }
-.match-sentence { margin: 0; padding: 8px 20px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12.5px; }
-.match-sentence b { color: var(--text); font-weight: 600; }
-/* The guide slides over the lobby from the right, so the seats stay in view behind it */
-.guide-back { position: fixed; inset: 0; z-index: 40; background: var(--scrim); display: flex; justify-content: flex-end; }
-.guide { width: min(640px, 100%); height: 100%; overflow-y: auto; background: var(--surface); border-left: 1px solid var(--line-bright); padding: 0 18px 18px; }
-.guide header { position: sticky; top: 0; background: var(--surface); display: flex; align-items: baseline; gap: 12px; padding: 14px 0 10px; border-bottom: 1px solid var(--line); }
-.guide header h2 { margin: 0; font-size: 16px; }
-.guide header p { margin: 0; color: var(--muted); font-size: 12.5px; }
-.guide-close { margin-left: auto; }
-.guide-item { display: grid; grid-template-columns: 120px 1fr auto; gap: 12px; align-items: start; padding: 10px; border-radius: 8px; }
-.guide-item > div:nth-child(2) { display: grid; gap: 6px; }
-.guide-item.on { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent-2); }
-.guide-name { font-weight: 650; font-size: 13.5px; }
-.guide-name small { display: block; color: var(--accent-2); font-size: 10.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
 
-/* Formats in Wizards' groups: Constructed, the Commander family, the rest, divided by a rule */
-.format-group { display: flex; flex-wrap: wrap; gap: 6px; }
-.format-group + .format-group { padding-left: 10px; border-left: 1px solid var(--line); }
-/* Constructed is one split chip: its name and format on the left, the caret that picks the format on the right */
-.format-chip.split .format { border-top-right-radius: 0; border-bottom-right-radius: 0; }
-.format-pool { appearance: none; width: 30px; margin-left: -1px; border: 1px solid var(--line); border-radius: 0 999px 999px 0;
-  background: var(--surface-2); color: transparent; cursor: pointer; font: inherit; }
-.format-pool option, .format-pool optgroup { color: var(--text); background: var(--surface); }
-.format-chip.split::after { content: '\25BE'; position: absolute; right: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; pointer-events: none; }
-.format-chip.split:has(.format[aria-pressed="true"]) .format-pool { background: var(--brass); border-color: var(--accent-2); }
-.format-chip.split:has(.format[aria-pressed="true"])::after { color: var(--on-brass); }
 .format-pool:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-.guide-group { margin: 14px 0 2px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em; color: var(--faint); }
 
 .seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
 /* Three or four seats read as a grid rather than a row that wraps unevenly */
@@ -275,8 +233,6 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .deck-row .deck-size { color: var(--muted); font-size: 12px; }
 .seat-problem { margin: 0; color: var(--select); font-size: 12px; }
 
-.seat-add { display: flex; justify-content: center; }
-.seat-add button { border-radius: 999px; color: var(--muted); }
 
 .play-row { display: grid; justify-items: center; gap: 10px; }
 .play { min-width: 240px; font-size: 17px; padding: 10px 24px; }
@@ -505,10 +461,6 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .kind:not(:disabled):hover { color: var(--accent-2); text-decoration: underline; }
 
 
-.lobby-net { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); width: min(100%, 960px); }
-.share { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.share h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-bottom: 8px; }
-.share-list { display: grid; gap: 6px; }
 
 .share-row {
   display: grid;
@@ -607,7 +559,6 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 }
 
 /* A Limited table: the switch above, the event beside the seats, and seats that ready up before any deck exists */
-.limited-switch { align-items: center; gap: 6px; }
 .event-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
 .event-panel.summary h3 { margin: 0 0 4px; }
 .event-setup { position: relative; width: min(760px, 100%); padding: 0; }
@@ -630,6 +581,56 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .ready-toggle[aria-pressed="true"] { border: 1px solid var(--accent-2); background: var(--accent-soft); color: var(--text); }
 .sits-out { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin-top: 6px; }
 .plate.benched { opacity: .6; }
-.event-kind { padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--text); }
-.event-kind[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); background: var(--accent-soft); opacity: 1; }
 .event-setup .wiz { border: none; background: transparent; }
+
+/* The page header: whose table this is and how to leave it. The match settings are in the bar under it. */
+.table-name { color: var(--muted); font-size: 13px; }
+.table-name b { color: var(--text); }
+.lobby-head .faces { display: inline-flex; }
+.lobby-head .faces img { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--bg); margin-left: -6px; }
+.lobby-head .faces img:first-child { margin-left: 0; }
+.icon-button { width: 32px; padding: 4px 0; }
+.invite { display: grid; gap: 8px; width: min(460px, calc(100vw - 32px)); }
+
+/* The match bar: labelled fields in one strip above the seats */
+.match-bar { display: flex; flex-wrap: wrap; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.field { display: grid; gap: 2px; padding: 7px 14px; border-right: 1px solid var(--line); min-width: 0; }
+.field:last-child { border-right: 0; }
+.field.grow { flex: 1; }
+.field-name { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+.field-value { font: inherit; font-size: 13.5px; font-weight: 600; background: none; border: 0; padding: 0; color: var(--text); text-align: left; }
+.menu-button::after { content: ' \25BE'; font-size: 10px; color: var(--muted); font-weight: 400; }
+.menu-button:disabled { opacity: 1; cursor: default; }
+.menu-button:disabled::after { content: none; }
+.match-bar .format-pool { appearance: auto; font: inherit; font-size: 13.5px; font-weight: 600; background: none; border: 0; padding: 0; color: var(--text); cursor: pointer; }
+.match-bar .format-pool option, .match-bar .format-pool optgroup { color: var(--text); background: var(--surface); }
+.count { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
+.count button { font: inherit; font-size: 12.5px; padding: 1px 9px; border: 0; border-radius: 0; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.count button + button { border-left: 1px solid var(--line); }
+.count button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); font-weight: 700; }
+.count button:disabled:not([aria-pressed="true"]) { opacity: .4; }
+.plate.leaving { opacity: .38; border-style: dashed; }
+.seat-note { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+/* A field's popup, under its field */
+.popup-anchor { position: relative; }
+.popup.wide { width: min(560px, calc(100vw - 32px)); }
+.popup { position: absolute; z-index: 30; top: calc(100% + 10px); left: -14px; padding: 12px; background: var(--surface); border: 1px solid var(--line-bright);
+  border-radius: 10px; box-shadow: 0 12px 32px #000a; min-width: 240px; }
+.lobby-head .popup { left: auto; right: 0; }
+.game-menu-list { display: grid; grid-template-columns: 180px minmax(0, 300px); gap: 14px; }
+.game-choices { display: grid; gap: 10px; align-content: start; }
+.game-group { display: grid; gap: 2px; }
+.game-group-name { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
+.game-choice { text-align: left; background: none; border: 0; padding: 4px 8px; border-radius: 6px; color: var(--text); font: inherit; font-size: 13px; }
+.game-choice:hover:not(:disabled), .game-choice:focus-visible { background: var(--surface-2); }
+.game-choice[aria-pressed="true"] { color: var(--accent-2); font-weight: 700; }
+.game-card { display: grid; gap: 8px; align-content: start; border-left: 1px solid var(--line); padding-left: 14px; }
+.game-card h5 { margin: 0; font-size: 14px; }
+.game-card .desc { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.variant-list { display: grid; gap: 8px; width: min(340px, calc(100vw - 32px)); }
+.variant { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
+.variant span { display: grid; gap: 1px; }
+.variant .muted { font-size: 12px; }
+.variant.blocked { opacity: .55; }
+@media (max-width: 560px) { .game-menu-list { grid-template-columns: 1fr; } .game-card { border-left: 0; padding-left: 0; } }

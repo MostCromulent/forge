@@ -95,7 +95,8 @@ export interface Actions {
   setArchenemy(index: number): void;
   setSeatExtra(index: number, section: string, choice: string): void;
   askExtraChoices(index: number, section: string): void;
-  addSeat(): void;
+  /** How many seats the table has; seats come and go at the end, and never one a person holds. */
+  setPlayerCount(count: number): void;
   removeSeat(index: number): void;
   /** Turns a seat between a computer and one someone can join. */
   openSeat(index: number): void;
@@ -199,7 +200,7 @@ export function createActions(send: Send): Actions {
     setSeatExtra: (index, section, choice) => send({ t: 'setSeatExtra', index, section, choice }),
     askExtraChoices: (index, section) => send({ t: 'extraChoices', index, section }),
     setCardPool: cardPool => send(cardPool ? { t: 'setCardPool', cardPool } : { t: 'setCardPool' }),
-    addSeat: () => send({ t: 'addSeat' }),
+    setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     removeSeat: index => send({ t: 'removeSeat', index }),
     openSeat: index => send({ t: 'openSeat', index }),
     aiSeat: index => send({ t: 'aiSeat', index }),

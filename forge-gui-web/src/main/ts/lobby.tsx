@@ -6,8 +6,7 @@
 // A seat's type is the one a netplay lobby slot carries. The browser reaches the game through a client even
 // when it hosts it, so your own seat arrives as REMOTE and is recognised by its "mine" flag, not its type.
 
-import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
@@ -15,85 +14,38 @@ import { DeckFinder } from './deckfinder';
 import { ExtraPicker } from './extrapicker';
 import { SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
-import { EventPanel, LimitedSwitch } from './event';
+import { EventPanel } from './event';
+import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { Address, DeckSummary, Format, LobbyTable, Seat, SeatExtra } from './protocol';
+import type { DeckSummary, LobbyTable, Seat, SeatExtra } from './protocol';
 
 export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const picker = ui.picker;
   const lobby = model.lobby;
-  const [guide, setGuide] = useState(false);
+  // A lower player count being pointed at, whose leaving seats are dimmed before anything changes
+  const [preview, setPreview] = useState<number | null>(null);
   if (!lobby) {
     return null;
   }
   // A seat can go while its picker is open, when the host removes it
   const seat = picker ? lobby.seats[picker.seat] : undefined;
   const close = () => changeUi(u => { u.picker = null; });
-  const sentence = matchSentence(lobby);
   const lim = lobby.limited;
+  const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
   return (
     <>
-      <header class="lobby-head">
-        <span class="wordmark">Forge</span>
-        <LimitedSwitch lobby={lobby} actions={actions} />
-        {!lim && <div class="formats">
-          {groupsOf(lobby.formats).map(([group, formats]) => (
-            <div key={group} class="format-group">
-              {formats.map(f => (
-                <FormatChip key={f.id} format={f} pressed={f.id === lobby.format} host={lobby.host}
-                  label={f.id === 'Constructed' ? constructedName(lobby) : f.name}
-                  choose={() => actions.setFormat(f.id)}>
-                  {f.id === 'Constructed' && <ConstructedMenu lobby={lobby} actions={actions} />}
-                </FormatChip>
-              ))}
-            </div>
-          ))}
-          <button class="guide-link" onClick={() => setGuide(true)}>What are these?</button>
-        </div>}
-        {!lim && <div class="formats variants">
-          <span class="row-label">Casual variants</span>
-          {lobby.casualVariants.map(v => (
-            <FormatChip key={v.id} format={v} label={v.name} pressed={lobby.variantsOn.includes(v.id)}
-              host={lobby.host && !variantBlocked(lobby, v.id)} choose={() => actions.setVariant(v.id, !lobby.variantsOn.includes(v.id))} />
-          ))}
-          {lobby.casualVariants.some(v => variantBlocked(lobby, v.id)) && <span class="row-note">{variantBlocked(lobby, 'Vanguard')}</span>}
-        </div>}
-        <div class="head-right">
-          {/* Watching is for a match, which a Limited table has only once the pools are out */}
-          <label class="spectate" hidden={!lobby.host || (!!lim && !lim.activeEventId)}>
-            <input type="checkbox" checked={ui.spectate}
-              onChange={e => { const on = e.currentTarget.checked; changeUi(u => { u.spectate = on; }); }} /> Watch the computer play
-          </label>
-          {/* The table belongs to the host, so a joined client has no menu to go back to */}
-          <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Back</button>
-        </div>
-      </header>
-      {!lim && <p class="match-sentence"><b>{sentence.title}.</b> {sentence.text}</p>}
-      {guide && <Guide lobby={lobby} choose={id => actions.setFormat(id)}
-        toggle={id => actions.setVariant(id, !lobby.variantsOn.includes(id))} close={() => setGuide(false)} />}
+      <TableHeader model={model} lobby={lobby} actions={actions} openOptions={() => changeUi(u => { u.optionsOpen = true; })} />
       <div class="lobby-main">
+        <MatchBar lobby={lobby} actions={actions} preview={setPreview} cards={<ConstructedMenu lobby={lobby} actions={actions} />} />
         {/* A new kind of event is set up afresh, so its dialog opens again */}
         {lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
-          {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions}
+          {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
-        </div>
-        <div class="seat-add">
-          <button hidden={lobby.seats.length >= lobby.maxSeats || (lim?.phase === 'DRAFTING' && !lim.activeEventId)} disabled={!lobby.host}
-            onClick={() => actions.addSeat()}>+ Add a seat</button>
         </div>
         {/* Until the pools are out the event panel says what comes next; the match follows them */}
         {(!lim || lim.activeEventId) && <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
-        {/* The conversation moved to the dock, which follows you in; only the links belong to the table */}
-        <div class="lobby-net" hidden={!lobby.shareable}>
-          <section class="share">
-            <h3>Others join at</h3>
-            <div class="share-list">
-              {lobby.shareable && <Addresses list={model.addresses ?? []} />}
-            </div>
-          </section>
-        </div>
       </div>
       {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} seat={{ index: picker.seat, seat }} close={close} />}
       {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (
@@ -109,22 +61,6 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       )}
     </>
   );
-}
-
-function Addresses({ list }: { list: Address[] }) {
-  const [copied, setCopied] = useState<string | null>(null);
-  if (!list.length) {
-    return <>Working out your address…</>;
-  }
-  return <>{list.map(a => (
-    <button key={a.url} class="share-row" onClick={async () => {
-      await navigator.clipboard.writeText(a.url);
-      setCopied(a.url);
-    }}>
-      <span class="share-label">{a.label}</span><code class="share-url">{a.url}</code>
-      <span class="share-copy">{copied === a.url ? 'Copied' : 'Copy'}</span>
-    </button>
-  ))}</>;
 }
 
 // The seat kinds a netplay lobby can hold; offline shows only the first two
@@ -144,27 +80,10 @@ export function matchSentence(lobby: LobbyTable): { title: string; text: string 
   return { title: name + variants, text: format?.desc ?? '' };
 }
 
-/** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
-function variantBlocked(lobby: LobbyTable, id: string): string | null {
-  const group = lobby.formats.find(f => f.id === lobby.format)?.group;
-  return id === 'Vanguard' && group === 'Other' ? 'Vanguard is off: this format brings its own avatar.' : null;
-}
-
-/** Formats under their group, in the order the server lists them. */
-function groupsOf(formats: Format[]): [string, Format[]][] {
-  const groups = new Map<string, Format[]>();
-  for (const f of formats) groups.set(f.group, [...(groups.get(f.group) ?? []), f]);
-  return [...groups];
-}
-
-/**
- * The Constructed formats behind the chip's caret. Choosing one also switches to Constructed, since a card pool
- * belongs to Constructed alone.
- */
-/** The caret menu's placeholder: no Constructed format, while another format is chosen. */
+/** The card pool menu's placeholder: no Constructed format, while another format is chosen. */
 const NO_POOL_CHOSEN = '-';
 
-/** The caret menu's value. Under another format it shows no entry, so choosing any one of them, "Any cards" included, is a change. */
+/** The card pool menu's value. Under another format it shows no entry, so choosing any one of them, "Any cards" included, is a change. */
 export function poolMenuValue(lobby: LobbyTable): string {
   return lobby.format === 'Constructed' ? lobby.cardPool ?? '' : NO_POOL_CHOSEN;
 }
@@ -190,120 +109,6 @@ function ConstructedMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actio
   );
 }
 
-/** How long a pointer rests on a format, or a finger presses one, before its card opens. */
-const CARD_REST_MS = 400;
-const CARD_PRESS_MS = 500;
-
-/**
- * A format chip that explains itself. The card opens on a resting pointer, on keyboard focus, or on a long press,
- * so it is never behind a hover alone; a long press opens the card instead of choosing the format.
- */
-function FormatChip({ format, label, pressed, host, choose, children }: {
-  format: Format; label: string; pressed: boolean; host: boolean; choose: () => void; children?: ComponentChildren;
-}) {
-  const [open, setOpen] = useState(false);
-  const timer = useRef<number>(0);
-  const pressedLong = useRef(false);
-  const later = (ms: number, then: () => void) => { clearTimeout(timer.current); timer.current = window.setTimeout(then, ms); };
-  const shut = () => { clearTimeout(timer.current); setOpen(false); };
-  const chip = useRef<HTMLSpanElement>(null);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  // An open card goes on Escape or a press anywhere else, however it was opened
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => { if (!chip.current?.contains(e.target as Node)) shut(); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') shut(); };
-    document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', outside);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
-  // Resting opens the card for a mouse only: a touch screen fires the same events for every tap
-  return (
-    <span ref={chip} class={`format-chip${children ? ' split' : ''}`}
-      onPointerEnter={e => { if (e.pointerType === 'mouse') later(CARD_REST_MS, () => setOpen(true)); }}
-      onPointerLeave={e => { if (e.pointerType === 'mouse') shut(); }}>
-      <button class="format" aria-pressed={pressed} disabled={!host} aria-describedby={open ? `card-${format.id}` : undefined}
-        onFocus={e => { if (e.currentTarget.matches(':focus-visible')) setOpen(true); }} onBlur={shut}
-        onPointerDown={e => {
-          if (e.pointerType !== 'touch') return;
-          pressedLong.current = false;
-          later(CARD_PRESS_MS, () => { pressedLong.current = true; setOpen(true); });
-        }}
-        onPointerUp={() => { if (!pressedLong.current) clearTimeout(timer.current); }}
-        onClick={() => { if (pressedLong.current) { pressedLong.current = false; return; } choose(); }}>{label}</button>
-      {children}
-      {/* A disabled button takes no focus or pointer, so a guest reads the card by resting on the chip's wrapper */}
-      {open && <FormatCard id={`card-${format.id}`} format={format} />}
-    </span>
-  );
-}
-
-function FormatCard({ id, format }: { id?: string; format: Format }) {
-  return (
-    <div class="format-card" id={id} role="tooltip">
-      <h5>{format.name}</h5>
-      <p class="desc">{format.desc}</p>
-      <div class="facts">{format.facts.map(f => <span key={f} class="fact">{f}</span>)}</div>
-      <p class="format-play"><b>In a match:</b> {format.play}</p>
-    </div>
-  );
-}
-
-/** Every format side by side, each with its own Choose, so a player can read and pick in one place. */
-function Guide({ lobby, choose, toggle, close }: {
-  lobby: LobbyTable; choose: (id: string) => void; toggle: (id: string) => void; close: () => void;
-}) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-  return (
-    <div class="guide-back" onClick={e => { if (e.target === e.currentTarget) close(); }}>
-      <aside class="guide" aria-label="Formats">
-        <header>
-          <h2>Formats</h2>
-          <p>Each is a different way to build a deck and play.</p>
-          <button class="guide-close" title="Close" onClick={close}>&times;</button>
-        </header>
-        {groupsOf(lobby.formats).map(([group, formats]) => [
-          <h3 key={group} class="guide-group">{group}</h3>,
-          ...formats.map(f => (
-          <div key={f.id} class={`guide-item${f.id === lobby.format ? ' on' : ''}`}>
-            <div class="guide-name">{f.id === lobby.format && <small>Chosen</small>}{f.name}</div>
-            <div>
-              <p class="desc">{f.desc}</p>
-              <div class="facts">{f.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
-              <p class="format-play"><b>In a match:</b> {f.play}</p>
-            </div>
-            {lobby.host && f.id !== lobby.format && <button class="guide-choose" onClick={() => choose(f.id)}>Choose</button>}
-          </div>
-          )),
-        ])}
-        <h3 class="guide-group">Casual variants</h3>
-        {lobby.casualVariants.map(v => {
-          const on = lobby.variantsOn.includes(v.id);
-          return (
-            <div key={`v:${v.id}`} class={`guide-item${on ? ' on' : ''}`}>
-              <div class="guide-name">{on && <small>On</small>}{v.name}</div>
-              <div>
-                <p class="desc">{v.desc}</p>
-                <div class="facts">{v.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
-                <p class="format-play"><b>In a match:</b> {v.play}</p>
-              </div>
-              {lobby.host && !variantBlocked(lobby, v.id)
-                && <button class="guide-choose" onClick={() => toggle(v.id)}>{on ? 'Turn off' : 'Turn on'}</button>}
-            </div>
-          );
-        })}
-      </aside>
-    </div>
-  );
-}
-
 /** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */
 export function randomPool(decks: readonly DeckSummary[]): DeckSummary[] {
   return decks.filter(d => !d.problem);
@@ -315,8 +120,8 @@ function randomDeck(model: Model, actions: Actions, index: number): void {
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
-function Plate({ seat, index, lobby, actions, choose, random }: {
-  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; choose: (kind: Picker['kind']) => void; random: () => void;
+function Plate({ seat, index, lobby, actions, leaving, choose, random }: {
+  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; choose: (kind: Picker['kind']) => void; random: () => void;
 }) {
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
   const mine = seat.mine;
@@ -331,10 +136,12 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
   const beforePools = !!lim && !lim.activeEventId;
   // The host turns a seat between a computer and one someone can join; everyone else only reads it
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
+  // The host may hand their own seat to the computer and watch; a match is only ever watched from the host's seat
+  const watchable = lobby.host && mine && (!lobby.limited || !!lobby.limited.activeEventId);
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
   return (
-    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}`}>
+    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
       <div class="sleeve-slot" hidden={beforePools}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
@@ -353,10 +160,13 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
           <button class="avatar" title="Choose an avatar" hidden={waiting} disabled={!seat.mayEdit}
             onClick={() => choose('avatar')}><img alt="" src={avatarUrl(seat.avatar)} /></button>
           <SeatName seat={seat} rename={name => actions.setSeat(index, { name })} />
-          <button class="kind" disabled={!swappable} title={swappable ? 'Swap between a computer and an open seat' : ''}
-            onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
-            {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
-          </button>
+          {watchable
+            ? <button class="kind" title="Choose who plays this seat" aria-pressed={ui.spectate}
+                onClick={() => changeUi(u => { u.spectate = !u.spectate; })}>{ui.spectate ? 'Computer' : KIND.LOCAL}</button>
+            : <button class="kind" disabled={!swappable} title={swappable ? 'Swap between a computer and an open seat' : ''}
+                onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
+                {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
+              </button>}
           <button class="random-deck" title="Give this seat a random deck" aria-label="Random deck"
             hidden={seat.type !== 'AI' || !lobby.host || dealt} onClick={random}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
@@ -368,6 +178,7 @@ function Plate({ seat, index, lobby, actions, choose, random }: {
           <button class="drop" title="Remove this seat" hidden={mine || !lobby.host || lobby.seats.length <= 2}
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
+        {watchable && ui.spectate && <p class="seat-note">The computer plays this seat. You watch.</p>}
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
         {beforePools && !waiting && (mine
           ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={lim.started}
@@ -444,7 +255,7 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
     <div class="play-row">
       <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start}>Play</button>
       <p class="match-line" hidden={!lobby.canStart}>
-        {`${rules} · ${lobby.seats.length} players · Enter starts the match.`}
+        {`${rules} · ${lobby.seats.length} players${ui.spectate ? ' · You watch' : ''} · Enter starts the match.`}
       </p>
       <div class="not-yet" hidden={lobby.canStart}>
         <b>Not playable yet</b>
