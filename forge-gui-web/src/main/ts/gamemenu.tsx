@@ -32,7 +32,7 @@ export function GameMenu({ model, actions, close, open }: {
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
           {offer?.mine ? 'Draw offered, waiting for an answer' : 'Offer a draw'}
         </button>
-        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>Auto-pass stops…</button>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>Auto-pass interrupts…</button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
           actions.autoDecisions('list');
           open('decisions');
@@ -61,7 +61,7 @@ export function GameMenu({ model, actions, close, open }: {
 /** Where auto-passing stops by itself, as the options dialog would list them. */
 export function AutoPassStops({ close }: { close: () => void }) {
   return (
-    <OptionsDialog title="Stop auto-passing when…" label="Auto-pass stops" kind="stops-dialog" close={close}
+    <OptionsDialog title="Stop auto-passing when…" label="Auto-pass interrupts" kind="stops-dialog" close={close}
       footer={<span class="hint">Auto-passing gives you priority back at these moments. Changes apply at once.</span>}>
       {SETTINGS.filter(def => def.menu === 'stops').map(def => <Row key={def.key} def={def} />)}
     </OptionsDialog>

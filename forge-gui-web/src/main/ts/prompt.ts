@@ -51,7 +51,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
         <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
         <button class="volume" title="Volume">${icon('volume')}</button>
-        <button class="more" title="Game: offer a draw, auto-pass stops, concede">${icon('more')}</button>
+        <button class="more" title="Game: offer a draw, auto-pass interrupts, concede">${icon('more')}</button>
         <button class="cog" title="Options">${icon('cog')}</button>
       </div>
       <p class="step"></p>

@@ -35,11 +35,11 @@ export type SettingDef = SettingBase & (
 );
 
 export const SETTINGS: SettingDef[] = [
-  { section: 'Stops', key: 'interruptAttackers', label: 'Attackers are declared', type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: 'Stops', key: 'interruptOpponentSpell', label: 'An opponent casts a spell', type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: 'Stops', key: 'interruptTargeting', label: 'Something targets me', type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: 'Stops', key: 'interruptTriggers', label: 'An ability triggers', type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: 'Stops', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: 'Interrupts', key: 'interruptAttackers', label: 'Attackers are declared', type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: 'Interrupts', key: 'interruptOpponentSpell', label: 'An opponent casts a spell', type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: 'Interrupts', key: 'interruptTargeting', label: 'Something targets me', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: 'Interrupts', key: 'interruptTriggers', label: 'An ability triggers', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: 'Interrupts', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, menu: 'stops', def: false },
   {
     section: 'Priority', key: 'autoYieldMode', label: 'Remember them', type: 'choice', server: true, menu: 'decisions',
     hint: 'Per ability covers every card with the same ability; per card, only that card. Each mode keeps its own list.',

@@ -33,7 +33,7 @@ export function Options({ close }: { close: () => void }) {
     <OptionsDialog title="Options" close={close}
       head={<input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
-      footer={<span class="hint">Changes apply at once. Auto-pass stops and conceding are in the ⋯ menu beside this button.</span>}>
+      footer={<span class="hint">Changes apply at once. Auto-pass interrupts and conceding are in the ⋯ menu beside this button.</span>}>
       {shown.flatMap((def, i) => [
         ...(def.section !== shown[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} />] : []),
         <Row key={def.key} def={def} />,
