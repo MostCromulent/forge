@@ -161,7 +161,7 @@ final class ServerConsole implements IProgressBar {
                 case OFF -> "";
                 case ASKING -> "Asking the router…";
                 case FORWARDED -> "The router is forwarding port " + service.port() + ".";
-                case REFUSED -> "The router refused. Turn on UPnP in its settings, or forward port "
+                case REFUSED -> "Refused. Turn on UPnP on the router, or forward port "
                         + service.port() + " by hand.";
             });
         });
@@ -350,8 +350,8 @@ final class ServerConsole implements IProgressBar {
         log.add(new JScrollPane(text));
         frame.getContentPane().add(log, BorderLayout.CENTER);
         frame.getContentPane().add(foot, BorderLayout.SOUTH);
-        // Wide enough for the longest link row, caption and copy button included, without a sideways scrollbar
-        frame.setSize(new Dimension(980, 620));
+        // Wide enough for the port option with the router's refusal beside it, the longest row the console shows
+        frame.setSize(new Dimension(780, 620));
         frame.setLocationByPlatform(true);
         frame.setVisible(true);
 
