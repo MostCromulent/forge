@@ -45,58 +45,75 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
   );
 }
 
-/** Draft and Sealed are offered only at a table others can join; a table against the computer drafts from the start page. */
-const LIMITED: [string, 'draft' | 'sealed', string][] = [
-  ['Draft', 'draft', 'Draft packs around the table, then build a deck from your picks.'],
-  ['Sealed', 'sealed', 'Everyone opens packs and builds a deck from them.'],
+/** Draft and Sealed, in the shape the server gives a format, so the menu's card reads the same for them. */
+const LIMITED: (Format & { kind: 'draft' | 'sealed' })[] = [
+  { id: 'Draft', kind: 'draft', name: 'Draft', group: 'Limited', desc: 'Players pass packs around the table, taking one card at a time, then build a deck from their picks.',
+    facts: ['40 cards from your picks', 'Life 20'], play: 'Computers fill the empty seats in the draft; only the people at the table play the matches.' },
+  { id: 'Sealed', kind: 'sealed', name: 'Sealed', group: 'Limited', desc: 'Everyone opens six packs and builds a deck from what they opened.',
+    facts: ['40 cards from your pool', 'Life 20'], play: 'Each player plays the deck they built from their own pool.' },
 ];
 
-/** What is played: the formats, then the kinds of event, each explained beside the list while it is pointed at. */
+/** A game's deck size in a few characters, read from its first fact: "60+", "100", or a dash when the deck is dealt. */
+export function deckMark(format: Format): string {
+  const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
+  return size ?? '–';
+}
+
+/**
+ * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
+ * pointed at. A click on a name chooses it; a tap only shows its card, which then offers to choose it, so a touch never
+ * changes the game by accident.
+ */
 function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
-  const current = lim ? (lim.kind === 'draft' ? 'Draft' : 'Sealed') : lobby.formats.find(f => f.id === lobby.format)?.name ?? lobby.format;
-  const [pointed, setPointed] = useState<Format | string | null>(null);
+  const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
+  const [pointed, setPointed] = useState<Format | null>(null);
+  const touch = useRef(false);
   // A new kind of event waits until the one begun is over; a format waits out a draft
   const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
-  const shown = pointed ?? lobby.formats.find(f => f.id === lobby.format) ?? null;
+  const limitedOffered = lobby.shareable || !!lim;
+  const shown = pointed ?? chosen ?? null;
+  const pick = (f: Format, close: () => void) => {
+    const kind = LIMITED.find(l => l.id === f.id)?.kind;
+    if (kind) {
+      actions.setLimited(kind);
+    } else {
+      if (lim) actions.setLimited(null);
+      actions.setFormat(f.id);
+    }
+    setPointed(null);
+    close();
+  };
+  const blocked = (f: Format) => (LIMITED.some(l => l.id === f.id) ? !!lim?.started : drafting);
+  const groups: [string, Format[]][] = [...groupsOf(lobby.formats), ...(limitedOffered ? [['Limited', LIMITED] as [string, Format[]]] : [])];
   return (
-    <Popup label={current} disabled={!lobby.host} wide>
+    <Popup label={chosen?.name ?? lobby.format} disabled={!lobby.host} wide>
       {close => (
         <div class="game-menu-list">
-          <div class="game-choices" onPointerLeave={() => setPointed(null)}>
-            {groupsOf(lobby.formats).map(([group, formats]) => (
+          <div class="game-choices" onPointerLeave={() => { if (!touch.current) setPointed(null); }}>
+            {groups.map(([group, formats]) => (
               <div key={group} class="game-group">
                 <span class="game-group-name">{group}</span>
                 {formats.map(f => (
-                  <button key={f.id} class="game-choice" aria-pressed={!lim && f.id === lobby.format} disabled={drafting}
-                    onPointerEnter={() => setPointed(f)} onFocus={() => setPointed(f)}
-                    onClick={() => {
-                      if (lim) actions.setLimited(null);
-                      actions.setFormat(f.id);
-                      close();
-                    }}>{f.name}</button>
+                  <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
+                    onPointerDown={e => { touch.current = e.pointerType === 'touch'; }}
+                    onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
+                    onClick={() => (touch.current ? setPointed(f) : pick(f, close))}>
+                    <i class="game-mark">{deckMark(f)}</i><span class="game-name">{f.name}</span>
+                  </button>
                 ))}
               </div>
             ))}
-            {(lobby.shareable || lim) && (
-              <div class="game-group">
-                <span class="game-group-name">Limited</span>
-                {LIMITED.map(([name, kind, desc]) => (
-                  <button key={kind} class="game-choice" aria-pressed={lim?.kind === kind} disabled={!!lim?.started}
-                    onPointerEnter={() => setPointed(desc)} onFocus={() => setPointed(desc)}
-                    onClick={() => { actions.setLimited(kind); close(); }}>{name}</button>
-                ))}
-              </div>
-            )}
           </div>
-          <div class="game-card">
-            {typeof shown === 'string' ? <p class="desc">{shown}</p> : shown && <>
+          {shown && (
+            <div class="game-card">
               <h5>{shown.name}</h5>
               <p class="desc">{shown.desc}</p>
-              <div class="facts">{shown.facts.map(f => <span key={f} class="fact">{f}</span>)}</div>
+              <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
               <p class="format-play"><b>In a match:</b> {shown.play}</p>
-            </>}
-          </div>
+              {shown !== chosen && !blocked(shown) && <button class="primary game-choose" onClick={() => pick(shown, close)}>Choose {shown.name}</button>}
+            </div>
+          )}
         </div>
       )}
     </Popup>

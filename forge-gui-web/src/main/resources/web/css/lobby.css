@@ -625,16 +625,21 @@ html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced
 .popup { position: absolute; z-index: 30; top: calc(100% + 10px); left: -14px; padding: 12px; background: var(--surface); border: 1px solid var(--line-bright);
   border-radius: 10px; box-shadow: 0 12px 32px #000a; min-width: 240px; }
 .lobby-head .popup { left: auto; right: 0; }
-.game-menu-list { display: grid; grid-template-columns: 180px minmax(0, 300px); gap: 14px; }
+.game-menu-list { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; min-height: 300px; }
 .game-choices { display: grid; gap: 10px; align-content: start; }
 .game-group { display: grid; gap: 2px; }
 .game-group-name { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); margin-bottom: 2px; }
-.game-choice { text-align: left; background: none; border: 0; padding: 4px 8px; border-radius: 6px; color: var(--text); font: inherit; font-size: 13px; }
+.game-choice { display: flex; align-items: center; gap: 9px; text-align: left; background: none; border: 0; padding: 5px 8px; border-radius: 7px; color: var(--text); font: inherit; font-size: 13px; }
+.game-mark { width: 24px; height: 18px; border-radius: 5px; background: var(--surface-3); display: grid; place-items: center; font-style: normal; font-size: 10px; color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+.game-choice[aria-pressed="true"] .game-mark { background: var(--accent-soft); color: var(--accent-2); }
 .game-choice:hover:not(:disabled), .game-choice:focus-visible { background: var(--surface-2); }
 .game-choice[aria-pressed="true"] { color: var(--accent-2); font-weight: 700; }
-.game-card { display: grid; gap: 8px; align-content: start; border-left: 1px solid var(--line); padding-left: 14px; }
-.game-card h5 { margin: 0; font-size: 14px; }
-.game-card .desc { margin: 0; font-size: 12.5px; line-height: 1.45; }
+.game-card { display: grid; gap: 10px; align-content: start; border-left: 1px solid var(--line); padding: 4px 0 4px 16px; }
+.game-card h5 { margin: 0; font-size: 17px; }
+.game-card .desc { margin: 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.game-card .fact { font-size: 12px; padding: 2px 9px; }
+.game-card .format-play { border-top: 1px solid var(--line); padding-top: 10px; }
+.game-choose { justify-self: start; }
 .variant-list { display: grid; gap: 8px; width: min(340px, calc(100vw - 32px)); }
 .variant { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; }
 .variant span { display: grid; gap: 1px; }

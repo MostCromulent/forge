@@ -34,7 +34,7 @@ export async function openGameMenu(page: Page): Promise<void> {
 /** Chooses what is played from the Game field: a format, Draft or Sealed. */
 export async function chooseGame(page: Page, name: string): Promise<void> {
   await openGameMenu(page);
-  await page.locator('.game-choice', { hasText: new RegExp(`^${name}$`) }).click();
+  await page.locator('.game-choice').filter({ has: page.locator('.game-name', { hasText: new RegExp(`^${name}$`) }) }).click();
   await expect(page.locator('.match-bar .field', { hasText: 'Game' }).locator('.menu-button')).toHaveText(name);
 }
 
