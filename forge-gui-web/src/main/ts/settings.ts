@@ -23,7 +23,7 @@ interface SettingBase {
   /** Only the host has it: a guest's browser leaves it out of the options. */
   hostOnly?: boolean;
   /** Set in a dialog opened from the game menu rather than in the options dialog. */
-  menu?: 'stops' | 'decisions' | 'keys';
+  menu?: 'stops' | 'decisions';
 }
 
 export type SettingDef = SettingBase & (
@@ -46,35 +46,33 @@ export const SETTINGS: SettingDef[] = [
     options: [['ability', 'Per ability'], ['card', 'Per card']], def: 'ability',
   },
   {
-    section: 'Priority', key: 'autoPassDelay', label: 'Auto-pass countdown',
-    hint: 'How long the pass button fills before priority passes by itself, so you can stop it. Zero passes at once.',
+    section: 'Gameplay', key: 'autoPassDelay', label: 'Auto-pass countdown',
+    hint: 'Time to stop a pass before it happens. Zero passes at once.',
     type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1500,
   },
   {
-    section: 'Game log', key: 'logDetail', label: 'Detail', type: 'choice', server: true,
+    section: 'Gameplay', key: 'autoTapPreview', label: 'Highlight lands Auto would tap', type: 'toggle', server: true, def: false,
+  },
+  {
+    section: 'Gameplay', key: 'arrows', label: 'Target and combat arrows', type: 'choice', server: true,
+    options: [['0', 'Off'], ['1', 'Hover'], ['2', 'Always']], def: '2',
+  },
+  {
+    section: 'Gameplay', key: 'logDetail', label: 'Game log detail', type: 'choice', server: true,
     options: [['LOW', 'Low'], ['MEDIUM', 'Medium'], ['HIGH', 'High']], def: 'MEDIUM',
   },
   {
-    section: 'Cards', key: 'autoTapPreview', label: 'Highlight the lands Auto would tap', type: 'toggle', server: true, def: false,
-  },
-  {
-    section: 'Cards', key: 'boardLayout', label: 'Three or four players', type: 'choice',
-    hint: 'Columns lines the opponents up across the top; quadrants gives every player a quarter of the table.',
+    section: 'Display', key: 'boardLayout', label: 'Table layout', hint: 'With three or four players.', type: 'choice',
     options: [['columns', 'Columns'], ['quadrants', 'Quadrants']], def: 'columns',
   },
   {
-    section: 'Cards', key: 'handSort', label: 'Sort hand', type: 'choice',
-    options: [['mana', 'By mana value'], ['draw', 'As drawn']], def: 'mana',
+    section: 'Display', key: 'handSort', label: 'Hand order', type: 'choice',
+    options: [['mana', 'Mana value'], ['draw', 'Drawn']], def: 'mana',
   },
-  { section: 'Cards', key: 'handSize', label: 'Hand size', type: 'slider', min: 70, max: 130, def: 100 },
+  { section: 'Display', key: 'handSize', label: 'Hand size', type: 'slider', min: 70, max: 130, def: 100 },
   {
-    section: 'Arrows', key: 'arrows', label: 'Target and combat arrows', type: 'choice', server: true,
-    options: [['0', 'Off'], ['1', 'On hover'], ['2', 'Always']], def: '2',
-  },
-  {
-    section: 'Motion', key: 'motion', label: 'Animations', type: 'choice',
-    hint: 'Reduced stills the shattering portraits, the drifting motes and other flourishes. Following the system reduces them when the computer is set to reduce motion.',
-    options: [['full', 'All animations'], ['system', 'Follow the system'], ['reduced', 'Reduced']], def: 'full',
+    section: 'Display', key: 'motion', label: 'Animations', hint: 'System follows the computer\'s reduce-motion setting.', type: 'choice',
+    options: [['full', 'Full'], ['system', 'System'], ['reduced', 'Reduced']], def: 'full',
   },
   {
     section: 'Sound', key: 'soundVolume', label: 'Effects', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
@@ -82,18 +80,17 @@ export const SETTINGS: SettingDef[] = [
   {
     section: 'Sound', key: 'musicVolume', label: 'Music', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
-  { section: 'Keys', key: 'keyOk', label: 'OK', action: 'ok', type: 'key', menu: 'keys', def: ' ' },
-  { section: 'Keys', key: 'keyEndTurn', label: 'End turn', action: 'endTurn', type: 'key', menu: 'keys', def: 'e' },
-  { section: 'Keys', key: 'keyUndo', label: 'Undo', action: 'undo', type: 'key', menu: 'keys', def: 'z' },
-  { section: 'Keys', key: 'keyNextFace', label: 'Turn the card under the pointer over', action: 'nextFace', type: 'key', menu: 'keys', def: 'f' },
-  { section: 'Keys', key: 'keyCardText', label: 'Show the text of the card under the pointer', action: 'cardText', type: 'key', menu: 'keys', def: 't' },
+  { section: 'Keys', key: 'keyOk', label: 'OK', action: 'ok', type: 'key', def: ' ' },
+  { section: 'Keys', key: 'keyEndTurn', label: 'End turn', action: 'endTurn', type: 'key', def: 'e' },
+  { section: 'Keys', key: 'keyUndo', label: 'Undo', action: 'undo', type: 'key', def: 'z' },
+  { section: 'Keys', key: 'keyNextFace', label: 'Turn a card over', hint: 'The card under the pointer.', action: 'nextFace', type: 'key', def: 'f' },
+  { section: 'Keys', key: 'keyCardText', label: 'Show card text', hint: 'The card under the pointer.', action: 'cardText', type: 'key', def: 't' },
   {
-    section: 'Developer', key: 'devMode', label: 'Dev mode', type: 'toggle', server: true, hostOnly: true, def: false,
-    hint: 'Forge\'s cheats for testing: add cards, set life, set up a game state. In the ⋯ menu during a game.',
+    section: 'Advanced', key: 'devMode', label: 'Dev mode', type: 'toggle', server: true, hostOnly: true, def: false,
+    hint: 'Cheats for testing, in the ⋯ menu during a game.',
   },
   {
-    section: 'Theme', key: 'customCss', label: 'Custom CSS',
-    hint: 'Applied to every screen as you type, and kept in this browser.', type: 'css', def: '',
+    section: 'Advanced', key: 'customCss', label: 'Custom CSS', hint: 'Applies as you type. Kept in this browser.', type: 'css', def: '',
   },
 ];
 

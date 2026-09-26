@@ -142,13 +142,9 @@ test('a player chooses their own keys, and the buttons name them', async ({ page
   await page.keyboard.press('Enter');
   await expect(page.locator('#prompt .message')).not.toBeEmpty();
 
-  // The keys have a dialog of their own, and the options list does not carry them
+  // The keys are a section of the options
   await page.locator('#prompt .cog').click();
-  await expect(page.locator('#options .rows')).not.toContainText('End turn');
-  await page.keyboard.press('Escape');
-  await page.locator('#prompt .more').click();
-  await page.getByRole('menuitem', { name: 'Keys…' }).click();
-  const key = (action: string) => page.locator('.keys-table tr', { hasText: action }).locator('.key-bind');
+  const key = (action: string) => page.locator('#options .setting', { hasText: action }).locator('.key-bind');
   await expect(key('End turn')).toHaveText('E');
   await key('End turn').click();
   await expect(key('End turn')).toHaveText('Press a key');
@@ -160,19 +156,18 @@ test('a player chooses their own keys, and the buttons name them', async ({ page
   await page.keyboard.press('k');
   await expect(key('OK')).toHaveText('K');
   await page.screenshot({ path: test.info().outputPath('keys.png'), timeout: 10_000 }).catch(() => {});
-  // Escape while choosing leaves the key alone, and the dialog stays open
+  // Escape while choosing leaves the key alone, and the options stay open
   await key('OK').click();
   await page.keyboard.press('Escape');
   await expect(key('OK')).toHaveText('K');
-  await expect(page.locator('.keys-dialog')).toBeVisible();
+  await expect(page.locator('#options .options-dialog')).toBeVisible();
 
   await page.reload({ waitUntil: 'domcontentloaded' });
   await expect(page.locator('#prompt .end-turn')).toHaveAttribute('title', /\(Z\)$/);
   await expect(page.locator('#prompt .undo')).toHaveAttribute('title', /\(E\)$/);
   await expect(page.locator('#prompt .buttons .ok kbd')).toHaveText('K');
 
-  await page.locator('#prompt .more').click();
-  await page.getByRole('menuitem', { name: 'Keys…' }).click();
+  await page.locator('#prompt .cog').click();
   await page.getByRole('button', { name: 'Reset to defaults' }).click();
   await expect(key('End turn')).toHaveText('E');
   await expect(page.locator('#prompt .buttons .ok kbd')).toHaveText('Space');

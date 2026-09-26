@@ -86,7 +86,7 @@ test('a guest\'s phase stops outlive a server restart', async ({ page, browser }
 test('a guest\'s settings are its own, not the host\'s', async ({ page, browser }) => {
   const guest = await hostAndGuest(page, browser);
   await startMatch(page, guest);
-  const label = 'Highlight the lands Auto would tap';
+  const label = 'Highlight lands Auto would tap';
   const before = (await readOptions(page))[label];
   await flipOption(guest, label);
   expect((await readOptions(guest))[label]).not.toBe(before);

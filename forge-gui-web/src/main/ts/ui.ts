@@ -37,7 +37,7 @@ export interface UiState {
   /** The options dialog is open. */
   optionsOpen: boolean;
   /** The game menu behind the prompt's ⋯ button, or a dialog opened from it. */
-  gameMenu: 'menu' | 'stops' | 'decisions' | 'keys' | 'dev' | 'devSetup' | null;
+  gameMenu: 'menu' | 'stops' | 'decisions' | 'dev' | 'devSetup' | null;
   /** The volume control beside the options button is open. */
   volumeOpen: boolean;
   /** The menu is asking for a new name and face, as the dock's edit button asked. */

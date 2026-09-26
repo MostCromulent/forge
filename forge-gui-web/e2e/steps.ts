@@ -94,9 +94,7 @@ export async function readOptions(page: Page): Promise<Record<string, string>> {
   await expect(page.locator('#options .setting').first()).toBeVisible();
   const values = await page.locator('#options .setting').evaluateAll(rows => Object.fromEntries(rows.map(row => [
     (row as HTMLElement).innerText.split('\n')[0],
-    row.querySelector('.switch')?.classList.contains('on') ? 'on'
-      : row.querySelector('.switch') ? 'off'
-        : [...row.querySelectorAll('.choice button.on')].map(b => b.textContent).join(''),
+    [...row.querySelectorAll('.choice button.on')].map(b => b.textContent).join(''),
   ])));
   await page.keyboard.press('Escape');
   await expect(page.locator('#options')).toHaveCount(0);
@@ -105,7 +103,8 @@ export async function readOptions(page: Page): Promise<Record<string, string>> {
 
 export async function flipOption(page: Page, label: string): Promise<void> {
   await page.click('#prompt .cog');
-  await page.locator('#options .setting', { hasText: label }).locator('.switch').click();
+  // An on-or-off setting is two segments, so the one not chosen is the flip
+  await page.locator('#options .setting', { hasText: label }).locator('.choice button:not(.on)').click();
   await page.keyboard.press('Escape');
   await expect(page.locator('#options')).toHaveCount(0);
 }

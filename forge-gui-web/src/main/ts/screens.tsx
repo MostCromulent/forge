@@ -15,7 +15,6 @@ import { Requests } from './dialogs';
 import { HostChoice } from './hostchoice';
 import { Options } from './options';
 import { AutoDecisionsDialog, AutoPassStops, DrawOfferQuestion, GameMenu } from './gamemenu';
-import { KeysDialog } from './keysdialog';
 import { DevSetupDialog } from './devmenu';
 import { Volume } from './volume';
 import { Notices } from './notices';
@@ -51,7 +50,6 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
       <AutoDecisionsDialog model={model} actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />
     )}
     {page === 'match' && ui.gameMenu === 'stops' && <AutoPassStops close={() => changeUi(u => { u.gameMenu = null; })} />}
-    {page === 'match' && ui.gameMenu === 'keys' && <KeysDialog close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && ui.gameMenu === 'devSetup' && <DevSetupDialog actions={actions} close={() => changeUi(u => { u.gameMenu = null; })} />}
     {page === 'match' && <DrawOfferQuestion model={model} actions={actions} />}
     {page !== 'match' && ui.importer && (

@@ -2,7 +2,7 @@
 // and how priority passes by itself, which is changed often enough mid-game to sit one click from the prompt
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { CloseIcon, OptionsDialog, Row } from './options';
+import { CloseIcon, OnOff, OptionsDialog, Row } from './options';
 import { SETTINGS, setting, type SettingDef } from './settings';
 import { DevItems } from './devmenu';
 import type { Actions } from './actions';
@@ -10,7 +10,7 @@ import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 
 export function GameMenu({ model, actions, close, open }: {
-  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'keys' | 'devSetup') => void;
+  model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void;
 }) {
   const [armed, setArmed] = useState(false);
   const [dev, setDev] = useState(false);
@@ -37,7 +37,6 @@ export function GameMenu({ model, actions, close, open }: {
           actions.autoDecisions('list');
           open('decisions');
         }}>Auto-yields and triggers…</button>
-        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('keys')}>Keys…</button>
         {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
         {setting('devMode') && model.host && !model.spectating && (
           <button type="button" role="menuitem" class="card-menu-item" onClick={() => setDev(true)}>Dev mode ›</button>
@@ -108,13 +107,11 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
         <>
           <div class="setting">
             <div>Pause every auto-yield</div>
-            <button class={all.yieldsOff ? 'switch on' : 'switch'} role="switch" aria-checked={all.yieldsOff}
-              onClick={() => actions.autoDecisions('disableYields', undefined, !all.yieldsOff)} />
+            <OnOff on={all.yieldsOff} change={on => actions.autoDecisions('disableYields', undefined, on)} />
           </div>
           <div class="setting">
             <div>Pause every trigger answer</div>
-            <button class={all.triggersOff ? 'switch on' : 'switch'} role="switch" aria-checked={all.triggersOff}
-              onClick={() => actions.autoDecisions('disableTriggers', undefined, !all.triggersOff)} />
+            <OnOff on={all.triggersOff} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
           </div>
         </>
       )}

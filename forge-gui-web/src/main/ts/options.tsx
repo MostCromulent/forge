@@ -4,7 +4,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
 import { KeyControl } from './keysdialog';
-import { SETTINGS, isGuest, set, setting, type SettingDef } from './settings';
+import { SETTINGS, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 
 // Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
@@ -33,13 +33,23 @@ export function Options({ close }: { close: () => void }) {
     <OptionsDialog title="Options" close={close}
       head={<input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
-      footer={<span class="hint">Changes apply at once. Conceding, auto-pass stops and keys are in the ⋯ menu beside this button.</span>}>
+      footer={<span class="hint">Changes apply at once. Auto-pass stops and conceding are in the ⋯ menu beside this button.</span>}>
       {shown.flatMap((def, i) => [
-        ...(def.section !== shown[i - 1]?.section ? [<h4 key={`section ${def.section}`}>{def.section}</h4>] : []),
+        ...(def.section !== shown[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} />] : []),
         <Row key={def.key} def={def} />,
       ])}
       {!shown.length && <p class="hint">No setting matches that.</p>}
     </OptionsDialog>
+  );
+}
+
+/** A section's name; the keys carry the way back to their defaults beside it. */
+function SectionHeading({ name }: { name: string }) {
+  return (
+    <h4>
+      {name}
+      {name === 'Keys' && <button class="section-action" onClick={() => setKeys(defaultKeys())}>Reset to defaults</button>}
+    </h4>
   );
 }
 
@@ -68,15 +78,35 @@ export function OptionsDialog({ title, label, kind, head, footer, close, childre
   );
 }
 
-/** One setting with its control. onChange runs after the setting is changed, for a dialog that must follow it. */
+/**
+ * One setting: what it is on the left, its control filling the column on the right. onChange runs after the setting
+ * is changed, for a dialog that must follow it. The CSS editor is too big for the column, so it opens under the row.
+ */
 export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
+  const [editing, setEditing] = useState(false);
   return (
-    <div class={def.type === 'css' ? 'setting wide' : 'setting'}>
+    <div class="setting">
       <div>
         <div>{def.label}</div>
         {def.hint && <div class="hint">{def.hint}</div>}
       </div>
-      <Control def={def} onChange={onChange} />
+      {def.type === 'css'
+        ? <button class="edit" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? 'Done' : 'Edit…'}</button>
+        : <Control def={def} onChange={onChange} />}
+      {def.type === 'css' && editing && <CssEditor def={def} value={String(setting(def.key) ?? '')} />}
+    </div>
+  );
+}
+
+/**
+ * On and off as a pair of segments, drawn as every other choice is, so each control in a list reads the same way.
+ * Off is marked in grey rather than gold, so a glance down the list finds what is switched on.
+ */
+export function OnOff({ on, change }: { on: boolean; change: (on: boolean) => void }) {
+  return (
+    <div class="choice" role="radiogroup">
+      <button class={on ? '' : 'on off'} role="radio" aria-checked={!on} onClick={() => change(false)}>Off</button>
+      <button class={on ? 'on' : ''} role="radio" aria-checked={on} onClick={() => change(true)}>On</button>
     </div>
   );
 }
@@ -89,16 +119,16 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
   };
   switch (def.type) {
     case 'toggle':
-      return <button class={value ? 'switch on' : 'switch'} role="switch" aria-checked={!!value}
-        onClick={() => change(!setting(def.key))} />;
+      return <OnOff on={!!value} change={change} />;
     case 'choice':
       return (
-        <div class="choice">
-          {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} onClick={() => change(v)}>{label}</button>)}
+        <div class="choice" role="radiogroup">
+          {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} role="radio"
+            aria-checked={String(value) === v} onClick={() => change(v)}>{label}</button>)}
         </div>
       );
     case 'css':
-      return <CssEditor def={def} value={String(value ?? '')} />;
+      return null;
     case 'key':
       return <KeyControl action={def.action} value={String(value)} />;
     case 'slider':
