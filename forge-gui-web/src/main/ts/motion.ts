@@ -124,6 +124,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
  * never in place of it.
  */
 function shiftBoard(travelled: Set<string>): void {
+  // Only a change in what the rows hold moves a card along them. The same cards resized or pushed over (the stack
+  // opening, room kept for a chevron) settle where they are without sliding, or every card on the table would drift
+  if (boardShape() === lastShape) {
+    return;
+  }
   for (const el of document.querySelectorAll<HTMLElement>(BOARD_CARDS)) {
     const key = el.dataset.key as string;
     const was = lastSeen.get(key);
@@ -300,8 +305,18 @@ function pileSlots(): { keys: string[]; top: HTMLElement }[] {
   return out;
 }
 
+/** The battlefields' slots in order, each with the cards it holds, which changes only when a row's contents do. */
+function boardShape(): string {
+  return [...document.querySelectorAll<HTMLElement>('#me .battlefield .slot, #opponent .battlefield .slot')]
+    .map(slot => `${slot.dataset.members ?? ''}:${[...slot.querySelectorAll<HTMLElement>('.card')].map(c => c.dataset.key).join('+')}`)
+    .join('|');
+}
+
+let lastShape = '';
+
 /** Remembers where every card stands now, for the moves the next frame brings. */
 function note(): void {
+  lastShape = boardShape();
   lastSeen.clear();
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {

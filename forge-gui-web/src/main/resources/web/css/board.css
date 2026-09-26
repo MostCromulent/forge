@@ -92,6 +92,11 @@
    steps into it, and its chevron with it, without reaching the pill. Your rows already carry some of it above them. */
 #opponent .battlefield { padding-bottom: calc(var(--glow) + 20px); }
 #me .battlefield { padding-top: calc(var(--glow) + 6px); }
+/* An attacker at the lone opponent wears a chevron beyond its front edge (#charges). The side by the pill makes room
+   for it, a little over a third of a card's width past the card as it steps forward, rather than the chevron being
+   kept off the pill by landing on the card */
+#me .battlefield:has(.slot.charging) { padding-top: max(calc(var(--glow) + 6px), calc(var(--card-w) * var(--fit, 1) * .38 - 2px)); }
+#opponent .battlefield:has(.slot.charging) { padding-bottom: max(calc(var(--glow) + 20px), calc(var(--card-w) * var(--fit, 1) * .38 + 14px)); }
 /* A tapped card lies on its side at 90% size, so it is (0.9 × height − width) / 2 wider each side than its box,
    11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
    would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
