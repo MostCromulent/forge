@@ -105,7 +105,11 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   showBlocking(el, card);
   const badges: string[] = [];
   if (card.IsRingBearer) badges.push('Ring-bearer');
-  for (const [name, n] of Object.entries(card.Counters ?? {})) badges.push(`${n} ${name}`);
+  // The corner already gives a planeswalker's loyalty and a battle's defense, unless the card is a creature too
+  const inCorner = creature ? null : /Planeswalker/.test(type) ? 'Loyalty' : /Battle/.test(type) ? 'Defense' : null;
+  for (const [name, n] of Object.entries(card.Counters ?? {})) {
+    if (name !== inCorner) badges.push(`${n} ${name}`);
+  }
   q(el, '.badges').textContent = badges.join(' · ');
 }
 
