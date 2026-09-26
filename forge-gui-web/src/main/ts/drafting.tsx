@@ -242,8 +242,8 @@ function RankShield({ rank }: { rank: number }) {
 }
 
 function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
-  const [by, setBy] = useState<GroupBy>('colour');
-  const [cards, setCards] = useState(false);
+  const [by, setBy] = useState<GroupBy>('type');
+  const [cards, setCards] = useState(true);
   const held: Held[] = state.picks.map((card, index) => ({ card, index }));
   const main = held.filter(h => !h.card.sideboard);
   const side = held.filter(h => h.card.sideboard);
@@ -258,14 +258,14 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
       <div class="draft-panel-head">
         <b>Your picks <span class="muted">{state.picks.length}</span></b>
         <span class="seg" role="group" aria-label="Show picks as">
-          <button aria-pressed={!cards} onClick={() => setCards(false)}>List</button>
           <button aria-pressed={cards} onClick={() => setCards(true)}>Cards</button>
+          <button aria-pressed={!cards} onClick={() => setCards(false)}>List</button>
         </span>
       </div>
       <div class="draft-group-by">
         <span class="muted">Group by</span>
         <span class="seg" role="group" aria-label="Group picks by">
-          {(['colour', 'type', 'mv', 'pick'] as GroupBy[]).map(g => (
+          {(['type', 'colour', 'mv', 'pick'] as GroupBy[]).map(g => (
             <button key={g} aria-pressed={by === g} onClick={() => setBy(g)}>{GROUP_NAMES[g]}</button>
           ))}
         </span>
@@ -358,7 +358,7 @@ function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
 
 function typeHeading(type: string): string {
   for (const t of ['Creature', 'Planeswalker', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Land']) {
-    if (type.includes(t)) return `${t}s`;
+    if (type.includes(t)) return t === 'Sorcery' ? 'Sorceries' : `${t}s`;
   }
   return 'Other';
 }

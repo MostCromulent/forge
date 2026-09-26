@@ -41,7 +41,7 @@
 #drafting { height: 100%; }
 .drafting-page { position: relative; height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .drafting-wait { padding: 20px; }
-.drafting-shell { grid-row: 3; width: 100%; max-width: 1760px; justify-self: center; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(420px, 1fr); gap: 16px;
+.drafting-shell { grid-row: 3; width: 100%; max-width: 1760px; justify-self: center; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px;
   padding: 18px 22px 22px; min-height: 0; }
 .draft-panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; min-height: 0; }
 .draft-panel-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
@@ -55,7 +55,7 @@
   border-color: color-mix(in srgb, var(--accent-2) 50%, transparent); }
 .draft-panel-head .clock.low { color: var(--danger); border-color: var(--danger); }
 .draft-pack { grid-template-rows: auto minmax(0, 1fr); overflow: visible; }
-.draft-pack .cat-grid { border-radius: 0 0 12px 12px; }
+.draft-pack .cat-grid { border-radius: 0 0 12px 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 .draft-slot.chosen .tile img { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
 /* A card whose picture cannot be had is drawn as its text, in the card's shape */
 .text-face { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; border-radius: 6px; overflow: hidden;
@@ -107,8 +107,8 @@
 .pick-section .zone-body { padding: 0 4px; overflow: visible; }
 .pick-section .ed-line { cursor: grab; }
 .drop-hint { margin: 0 4px 4px; padding: 14px; border: 1px dashed var(--line-bright); border-radius: 8px; text-align: center; color: var(--faint); font-size: 12.5px; }
-.pick-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 10px 8px; padding: 0 4px; }
-.pick-cols h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; }
+.pick-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: 12px 10px; padding: 0 4px; }
+.pick-cols h4 { margin: 0 0 4px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; white-space: nowrap; }
 .pick-stack { display: grid; }
 .pick-stack img { width: 100%; aspect-ratio: 63 / 88; object-fit: cover; border-radius: 5px; box-shadow: 0 -2px 6px #0008; cursor: grab; }
 .pick-stack img + img { margin-top: -115%; }
