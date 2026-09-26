@@ -70,6 +70,8 @@ final class DeckSession {
     private int editorTable;
     /** The subfolder of its format's decks the open deck came from, "" for the top. */
     private String editorPath = "";
+    /** The open deck is an event's pool, which goes on its player's seat when the editor closes, built or not. */
+    private boolean eventPool;
 
     DeckSession(final Lobby lobby, final WebGuiBase ui, final BooleanSupplier host, final BooleanSupplier atTable,
             final Map<String, OnDevice> device) {
@@ -189,6 +191,7 @@ final class DeckSession {
             }
         }
         editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck);
+        eventPool = false;
         editorSeat = o.seat();
         editorTable = lobby.table();
     }
@@ -220,7 +223,9 @@ final class DeckSession {
             target = new DeckEditor.Stored(eventDecks);
         }
         editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck);
-        editorSeat = null;
+        eventPool = true;
+        editorSeat = lobby.mySeat();
+        editorTable = lobby.table();
         editorPath = "";
         if (channel != null) {
             channel.send(new EditorMessage(editor.state(false)));
@@ -261,7 +266,7 @@ final class DeckSession {
         channel.send(new EditorMessage(null));
         channel.send(lobby.decks());
         // A deck never saved (new and untouched, or a precon only looked at) has nothing to put on the seat
-        if (seat == null || !atTable.getAsBoolean() || !done.saved()) {
+        if (seat == null || seat < 0 || !atTable.getAsBoolean() || (!done.saved() && !eventPool)) {
             return null;
         }
         if (lobby.table() != editorTable) {
@@ -290,6 +295,10 @@ final class DeckSession {
     private String adopt(final DeckEditor done) {
         if (done.target() instanceof DeckEditor.Device d) {
             return lobby.adopt(DeckCatalog.DEVICE, d.id(), done.deck());
+        }
+        // The host's pool is kept among the event decks, which the finder lists under their own heading
+        if (eventPool) {
+            return lobby.adopt(DeckCatalog.EVENT, "", done.deck());
         }
         final boolean atRoot = done.target() instanceof DeckEditor.Stored s && s.storage() == storages.of(done.check().format());
         return lobby.adopt(DeckCatalog.MINE, atRoot ? "" : editorPath, done.deck());

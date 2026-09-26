@@ -50,7 +50,7 @@ final class DeckCatalog {
     /** A guest's decks, kept in the guest's browser and keyed by the id it keeps them under. */
     static final String DEVICE = "device";
     static final String LINKED = "linked";
-    private static final String EVENT = "event";
+    static final String EVENT = "event";
     private static final String PRECON = "precons";
     private static final String QUEST = "quest";
     /** Sources that make a deck when you pick one, rather than loading a saved deck. */

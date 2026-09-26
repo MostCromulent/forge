@@ -105,12 +105,12 @@ export interface SealedValue {
 
 /** The sealed products desktop offers, with a line each; LimitedPoolType's names are the ids. */
 const PRODUCTS: [string, string, string][] = [
-  ['Full', 'Full card pool', 'Booster packs drawn from every card in Forge.'],
-  ['Block', 'Block', 'Packs from a block or a set, in the mix desktop offers.'],
-  ['FantasyBlock', 'Fantasy block', 'A made-up block from Forge\'s list.'],
-  ['Prerelease', 'Prerelease', 'An edition\'s prerelease kit: its packs and a promo.'],
-  ['Custom', 'Custom pool', 'A sealed pool file saved in Forge.'],
-  ['Import', 'CubeCobra', 'Any cube by its CubeCobra link or ID.'],
+  ['Full', 'Full card pool', 'Packs from every card in Forge.'],
+  ['Block', 'Block', 'Packs from one block or set.'],
+  ['FantasyBlock', 'Fantasy block', 'A custom block that comes with Forge.'],
+  ['Prerelease', 'Prerelease', 'A set\'s prerelease kit, with its promo card.'],
+  ['Custom', 'Custom pool', 'A sealed pool saved in Forge.'],
+  ['Import', 'CubeCobra', 'Any CubeCobra cube, by link or ID.'],
 ];
 
 const productName = (id?: string) => PRODUCTS.find(p => p[0] === id)?.[1] ?? '';
@@ -131,7 +131,7 @@ export function sealedBlockChoice(options: LimitedOptions, product: string, name
 export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
   return [
     {
-      id: 'product', label: 'Product', hint: 'What the packs are', fields: ['product'],
+      id: 'product', label: 'Product', hint: 'Which packs', fields: ['product'],
       answer: v => v.product ? productName(v.product) : null,
       render: (_, set) => (
         <div class="tiles">
@@ -168,7 +168,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
       answer: v => v.template ?? null,
       render: (_, set) => options.templates.length
         ? <Pick items={options.templates.map(t => [t, t])} placeholder="Find a pool" pick={t => set({ template: t })} />
-        : <p class="hint">Forge has no custom sealed pools saved.</p>,
+        : <p class="hint">No sealed pools are saved.</p>,
     },
     {
       id: 'cubeId', label: 'Cube', hint: 'A CubeCobra link or ID', fields: ['cubeId'], applies: v => v.product === 'Import',
@@ -181,7 +181,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
       render: (v, set) => <PackCount extra={v.product === 'Import'} done={n => set({ packs: n })} />,
     },
     {
-      id: 'name', label: 'Pool name', hint: 'What to save it as', fields: ['name'],
+      id: 'name', label: 'Name', hint: 'What to call the pool', fields: ['name'],
       answer: v => v.name ?? null,
       render: (v, set) => <TextStep placeholder="Pool name" initial={defaultName(v)} done={name => set({ name })} />,
     },
@@ -195,10 +195,10 @@ function defaultName(v: SealedValue): string {
 
 export function sealedSentence(options: LimitedOptions, v: SealedValue): string {
   switch (v.product) {
-    case 'Full': return `${v.packs} booster packs from the full card pool.`;
-    case 'Prerelease': return `A ${options.prereleases.find(e => e.code === v.edition)?.name} prerelease pool.`;
+    case 'Full': return `${v.packs} packs from the full card pool.`;
+    case 'Prerelease': return `A ${options.prereleases.find(e => e.code === v.edition)?.name} prerelease kit.`;
     case 'Custom': return `${v.packs} packs of ${v.template}.`;
-    case 'Import': return `${(v.packs ?? 0) + 1} packs of the CubeCobra cube ${v.cubeId}.`;
+    case 'Import': return `${(v.packs ?? 0) + 1} packs of CubeCobra cube ${v.cubeId}.`;
     default: return `${v.block}: ${v.combo}.`;
   }
 }
@@ -244,19 +244,19 @@ function productPod(options: LimitedOptions, v: DraftValue): number {
   return (v.product === 'Block' || v.product === 'FantasyBlock') ? draftBlockOf(options, v)?.podSize ?? 8 : 8;
 }
 
-const PICK_RULES: [string, string][] = [['NEVER', 'One pick per pass'], ['FIRST_PICK', 'Two on the first pick'], ['ALWAYS', 'Two every pass']];
+const PICK_RULES: [string, string][] = [['NEVER', 'One card per pick'], ['FIRST_PICK', 'Two on the first pick of a pack'], ['ALWAYS', 'Two every pick']];
 const TIMERS = [0, 30, 45, 60, 90];
 const GRACES = [0, 60, 120, 300];
 const seconds = (n: number, none: string) => (n === 0 ? none : `${n} s`);
 
 /** The draft products desktop offers; LimitedPoolType's names are the ids. */
 const DRAFT_PRODUCTS: [string, string, string][] = [
-  ['Full', 'Full card pool', 'Three packs drawn from every card in Forge.'],
-  ['Block', 'Block', 'Packs from a block or a set.'],
-  ['FantasyBlock', 'Fantasy block', "A made-up block from Forge's list."],
+  ['Full', 'Full card pool', 'Three packs from every card in Forge.'],
+  ['Block', 'Block', 'Packs from one block or set.'],
+  ['FantasyBlock', 'Fantasy block', 'A custom block that comes with Forge.'],
   ['Custom', 'Cube', 'A cube saved in Forge.'],
-  ['Chaos', 'Chaos', 'Each pack from a random set, within a theme.'],
-  ['Import', 'CubeCobra', 'Any cube by its CubeCobra link or ID.'],
+  ['Chaos', 'Chaos', 'Each pack from a random set in a theme.'],
+  ['Import', 'CubeCobra', 'Any CubeCobra cube, by link or ID.'],
 ];
 
 const draftBlocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.draftFantasyBlocks : options.draftBlocks;
@@ -278,7 +278,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
   const isBlock = (v: DraftValue) => (v.product === 'Block' || v.product === 'FantasyBlock') && !!v.block;
   return [
     {
-      id: 'product', label: 'Product', hint: 'What the packs are', fields: ['product'],
+      id: 'product', label: 'Product', hint: 'Which packs', fields: ['product'],
       answer: v => DRAFT_PRODUCTS.find(p => p[0] === v.product)?.[1] ?? null,
       render: (_, set) => (
         <div class="tiles">
@@ -318,10 +318,10 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       answer: v => v.cube ?? null,
       render: (_, set) => options.cubes.length
         ? <Pick items={options.cubes.map(c => [c, c])} placeholder="Find a cube" pick={c => set({ cube: c })} />
-        : <p class="hint">Forge has no cubes saved.</p>,
+        : <p class="hint">No cubes are saved.</p>,
     },
     {
-      id: 'theme', label: 'Theme', hint: 'Which sets the packs come from', fields: ['theme'], applies: v => v.product === 'Chaos',
+      id: 'theme', label: 'Theme', hint: 'Which sets', fields: ['theme'], applies: v => v.product === 'Chaos',
       answer: v => v.theme ?? null,
       render: (_, set) => <Pick items={options.themes.map(t => [t, t])} placeholder="Find a theme" pick={t => set({ theme: t })} />,
     },
@@ -331,7 +331,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       render: (_, set) => <TextStep placeholder="CubeCobra link or ID" initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
     },
     {
-      id: 'rules', label: 'Table rules', hint: 'Seats, picks and the pick timer', fields: ['podSize', 'pickRule', 'timer', 'grace'],
+      id: 'rules', label: 'Table rules', hint: 'Seats, picks, timer', fields: ['podSize', 'pickRule', 'timer', 'grace'],
       applies: () => !!table,
       answer: v => v.timer === undefined ? null : rulesLine(v),
       render: (v, set) => <TableRules seated={table?.seated ?? 2} recommended={productPod(options, v)} done={set} />,
@@ -340,6 +340,11 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
 }
 
 /** The table rules as the folded step and the event panel say them. */
+/** A pick rule's name, as the form and the event panel say it. */
+export function pickRuleName(rule?: string): string {
+  return PICK_RULES.find(p => p[0] === rule)?.[1] ?? PICK_RULES[0][1];
+}
+
 export function rulesLine(v: DraftValue): string {
   const picks = PICK_RULES.find(p => p[0] === v.pickRule)?.[1] ?? PICK_RULES[0][1];
   return `${v.podSize} seats · ${picks.toLowerCase()} · ${v.timer ? `${v.timer} s to pick` : 'no pick timer'}`;
@@ -349,8 +354,8 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
   const pods = podChoices(seated);
   const [pod, setPod] = useState(() => podStart(recommended, seated));
   const [pickRule, setPickRule] = useState('NEVER');
-  const [timer, setTimer] = useState(0);
-  const [grace, setGrace] = useState(60);
+  const [timer, setTimer] = useState(60);
+  const [grace, setGrace] = useState(120);
   const at = pods.indexOf(pod);
   return (
     <div class="table-rules">
@@ -361,7 +366,7 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
           <span class="n">{pod}</span>
           <button class="step" disabled={at >= pods.length - 1} aria-label="More seats" onClick={() => setPod(pods[at + 1])}>+</button>
         </span>
-        <span class="hint">{pod === recommended ? 'As the product drafts. ' : ''}Empty seats draft as computers, which do not play the matches.</span>
+        <span class="hint">Computers fill empty seats. They draft but don't play.</span>
       </div>
       <label class="tr-label" for="tr-picks">Picks</label>
       <span class="pill-select"><select id="tr-picks" value={pickRule} onChange={e => setPickRule(e.currentTarget.value)}>
@@ -371,12 +376,12 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
       <span class="pill-select"><select id="tr-timer" value={timer} onChange={e => setTimer(Number(e.currentTarget.value))}>
         {TIMERS.map(n => <option key={n} value={n}>{seconds(n, 'None')}</option>)}
       </select></span>
-      <label class="tr-label" for="tr-grace">Time to come back</label>
+      <label class="tr-label" for="tr-grace">Time to rejoin</label>
       <div class="tr-field">
         <span class="pill-select"><select id="tr-grace" value={grace} onChange={e => setGrace(Number(e.currentTarget.value))}>
           {GRACES.map(n => <option key={n} value={n}>{n === 0 ? 'None' : `${n / 60} min`}</option>)}
         </select></span>
-        <span class="hint">How long a player who drops out has before the draft picks for them.</span>
+        <span class="hint">After this, the draft picks for a player who dropped out.</span>
       </div>
       <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>Continue</button>
     </div>
@@ -386,10 +391,10 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
 /** What the draft is. Online, the table rules say who drafts, so the computer drafters are not counted here. */
 export function draftSentence(v: DraftValue, online = false): string {
   switch (v.product) {
-    case 'Full': return online ? 'Three packs from the full card pool.' : 'Three packs from the full card pool, with seven computer drafters.';
+    case 'Full': return online ? 'Three packs from the full card pool.' : 'Three packs from the full card pool, against seven computers.';
     case 'Custom': return `A draft of ${v.cube}.`;
     case 'Chaos': return `A chaos draft: ${v.theme}.`;
-    case 'Import': return `A draft of the CubeCobra cube ${v.cubeId}.`;
+    case 'Import': return `A draft of CubeCobra cube ${v.cubeId}.`;
     default: return `${v.block}: ${draftCombo(v)}.`;
   }
 }
@@ -433,7 +438,7 @@ function PackCount({ extra, done }: { extra: boolean; done: (n: number) => void 
         <span class="n">{n}</span>
         <button class="step" disabled={n >= 12} aria-label="One more pack" onClick={() => setN(n + 1)}>+</button>
       </span>
-      <span class="hint">{extra ? 'You\'ll open one more pack than this, as Forge\'s desktop does.' : '3 to 12'}</span>
+      <span class="hint">{extra ? 'A CubeCobra pool adds one pack to this.' : '3 to 12'}</span>
       <button class="primary" onClick={() => done(n)}>Continue</button>
     </div>
   );

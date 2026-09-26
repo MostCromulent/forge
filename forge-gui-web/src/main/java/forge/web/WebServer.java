@@ -88,6 +88,11 @@ public final class WebServer implements AutoCloseable {
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For what never changes at its address, a card picture of one printing or a hashed script chunk: kept for good. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
+    /**
+     * For an avatar or sleeve, which changes only with the skin. Asked for again, it would queue behind card pictures
+     * that are still downloading, which can hold every connection the browser allows to one server.
+     */
+    private static final String KEEP_AN_HOUR = "private, max-age=3600";
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
@@ -446,7 +451,11 @@ public final class WebServer implements AutoCloseable {
                 final List<String> index = q.parameters().get("i");
                 final Integer i = index == null ? null : Ints.tryParse(index.get(0));
                 final byte[] png = i == null ? null : SkinSprites.png("/avatar".equals(path), i);
-                respondOrNotFound(ctx, png, "image/png");
+                if (png == null) {
+                    notFound(ctx);
+                } else {
+                    respond(ctx, HttpResponseStatus.OK, png, "image/png", null, KEEP_AN_HOUR);
+                }
                 return;
             }
             if ("/sleeveart".equals(path)) {

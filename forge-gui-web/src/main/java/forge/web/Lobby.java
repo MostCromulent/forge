@@ -137,6 +137,11 @@ final class Lobby {
         browseFormat = format;
     }
 
+    /** The seat this browser sits in, or -1 before it has one. */
+    int mySeat() {
+        return local.webSeat();
+    }
+
     /** Counts the tables this browser has sat at, so something begun at one table can tell it is now at another. */
     private volatile int table;
 

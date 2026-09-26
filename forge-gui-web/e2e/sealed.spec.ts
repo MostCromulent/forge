@@ -20,7 +20,7 @@ test('a sealed pool opened from the menu is played against the computer', async 
   await page.click('.tile-choice:has-text("Full card pool")');
   await page.click('.stp-open button:has-text("Continue")');
   await page.click('.stp-open button:has-text("Continue")');
-  await expect(page.locator('.wfoot .sentence')).toContainText('6 booster packs');
+  await expect(page.locator('.wfoot .sentence')).toContainText('6 packs from the full card pool');
   await page.click('.wfoot button:has-text("Open the packs")');
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });

@@ -68,7 +68,7 @@ function Pack({ state, actions }: { state: DraftState; actions: Actions }) {
   }, [selected, state.step]);
   return (
     <section class="draft-pack">
-      <div class="bar"><span class="band-lab">Pack {state.pack} · {state.cards.length} cards</span></div>
+      <div class="bar"><span class="band-lab">Pack {state.pack} · {state.cards.length} {state.cards.length === 1 ? 'card' : 'cards'}</span></div>
       <div class="cat-grid">
         {state.cards.map((card, i) => (
           <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name}>
@@ -119,8 +119,8 @@ function Picks({ state }: { state: DraftState }) {
             {cards.map((c, i) => (
               <div key={`${c.name}-${i}`} class="ed-line" data-card={c.name}>
                 <span class="nm">{c.name}</span>
-                <span class="muted pk">{c.pack}·{c.pick}</span>
                 <SymbolText text={c.cost} />
+                <span class="muted pk" title={`Pack ${c.pack}, pick ${c.pick}`}>{c.pack}·{c.pick}</span>
               </div>
             ))}
           </div>

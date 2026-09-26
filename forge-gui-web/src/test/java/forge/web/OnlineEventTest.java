@@ -616,4 +616,20 @@ public class OnlineEventTest {
         final JsonObject s = table.getAsJsonArray("seats").get(seat).getAsJsonObject();
         return s.has("benched") && s.get("benched").getAsBoolean();
     }
+
+    // Fails if a player who closes their pool's editor still has to find their deck in the finder to sit with it
+    @Test(timeOut = 300_000)
+    public void aPoolTakesItsPlayersSeat() throws Exception {
+        final Recorder[] both = startedEvent("sealed", eventSetup(LimitedPoolType.Full.name(), null, 6));
+        for (final Recorder browser : both) {
+            Assert.assertNotNull(browser.awaitMatching("editor", m -> m.has("state")), "the pool's editor never opened");
+            sessions.onMessage(browser, JsonCodec.message("editorClose"));
+        }
+        final JsonObject table = both[0].awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
+                .allMatch(s -> s.getAsJsonObject().has("deckName")));
+        Assert.assertNotNull(table, "a closed pool was not put on its player's seat: " + both[0].latestTable());
+        final JsonObject dealt = both[1].awaitMatching("deviceDeck", d -> d.get("id").getAsString().startsWith("event-"));
+        events.add(dealt.get("id").getAsString().substring("event-".length()));
+        sessions.onMessage(both[1], deviceDecks(dealt));
+    }
 }

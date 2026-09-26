@@ -2,7 +2,7 @@
 // event up one question at a time, and deals the packs once every seat is ready. Everyone else reads it as it goes.
 
 import { useState } from 'preact/hooks';
-import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
+import { StepForm, draftCombo, draftSentence, draftSteps, pickRuleName, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -50,21 +50,21 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
           <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
             <button class="dk-close" title="Close" onClick={close}>&times;</button>
             {lim.pastEvents.length > 0 && !lim.product && <PastEvents lim={lim} actions={actions} />}
-            {!model.limitedOptions ? <p class="muted">Reading what can be opened…</p>
+            {!model.limitedOptions ? <p class="muted">Loading…</p>
               : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={close} />
               : <SealedForm model={model} actions={actions} done={close} />}
           </div>
         </div>
       )}
       <h3>{draft ? 'Booster draft' : 'Sealed'}</h3>
-      <p class="event-product">{lim.product ?? (lobby.host ? 'Not set up yet.' : 'The host is setting the event up.')}</p>
+      <p class="event-product">{lim.product ?? (lobby.host ? 'Not set up yet.' : 'The host is setting it up.')}</p>
       {lobby.host && !lim.started && !lim.product && (
         <div class="event-actions"><button class="primary" onClick={() => setSetting(true)}>Set up the {draft ? 'draft' : 'event'}</button></div>
       )}
       {draft && lim.product && (
-        <p class="muted">{lim.podSize} seats · {pickName(lim.pickRule)} · {lim.timer ? `${lim.timer} s to pick` : 'no pick timer'}</p>
+        <p class="muted">{lim.podSize} seats · {pickRuleName(lim.pickRule).toLowerCase()} · {lim.timer ? `${lim.timer} s to pick` : 'no pick timer'}</p>
       )}
-      {lim.activeEventId && <p class="muted">The pools are out. Choose your deck from them, then play.</p>}
+      {lim.activeEventId && <p class="muted">Pools are out. Build your deck, then play.</p>}
       {!lim.activeEventId && lim.phase === 'DRAFTING' && <p class="muted">The draft is on.</p>}
       {model.drafting && ui.draftHidden && (
         <button class="primary" onClick={() => changeUi(u => { u.draftHidden = false; })}>Return to draft</button>
@@ -76,23 +76,19 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
         </div>
       )}
       {!lim.started && lim.product && (
-        <p class="hint">{unready.length ? `Waiting for ${unready.join(', ')} to press Ready.` : `Everyone is ready.${lobby.host ? '' : ' The host starts when they choose.'}`}</p>
+        <p class="hint">{unready.length ? `Waiting for ${unready.join(', ')} to press Ready.` : `Everyone is ready.${lobby.host ? '' : ' Waiting for the host.'}`}</p>
       )}
     </section>
   );
 }
 
-function pickName(rule?: string): string {
-  return rule === 'FIRST_PICK' ? 'two on the first pick' : rule === 'ALWAYS' ? 'two every pass' : 'one pick per pass';
-}
-
 function PastEvents({ lim, actions }: { lim: LimitedTable; actions: Actions }) {
   return (
     <div class="past-events">
-      <h4>Play an earlier event again</h4>
+      <h4>Earlier events</h4>
       {lim.pastEvents.slice(0, 5).map(p => (
         <button key={p.id} class="share-row" onClick={() => actions.eventHostAgain(p.id)}>
-          <span class="share-label">{p.label}</span><span class="share-copy">Host again</span>
+          <span class="share-label">{p.label}</span><span class="share-copy">Play again</span>
         </button>
       ))}
     </div>
@@ -105,8 +101,8 @@ function SealedForm({ model, actions, done }: { model: Model; actions: Actions; 
   // The pool is named after its event, as desktop names it, so there is no name to ask for
   const steps = sealedSteps(options).filter(s => s.id !== 'name');
   return (
-    <StepForm title="Set up the sealed event" steps={steps} value={value} onChange={setValue}
-      sentence={v => sealedSentence(options, v)} action="Save event" submit={() => {
+    <StepForm title="Set up sealed" steps={steps} value={value} onChange={setValue}
+      sentence={v => sealedSentence(options, v)} action="Save" submit={() => {
         actions.eventSetup({ product: value.product!, block: value.block, combo: value.combo, edition: value.edition,
           template: value.template, cubeId: value.cubeId, packs: value.packs ?? 0, podSize: 0, timer: 0, grace: 0 });
         done();
@@ -120,7 +116,7 @@ function DraftForm({ model, lobby, actions, done }: { model: Model; lobby: Lobby
   const seated = lobby.seats.filter(s => s.type !== 'OPEN').length;
   return (
     <StepForm title="Set up the draft" steps={draftSteps(options, { seated })} value={value} onChange={setValue}
-      sentence={v => draftSentence(v, true)} action="Save event" submit={() => {
+      sentence={v => draftSentence(v, true)} action="Save" submit={() => {
         actions.eventSetup({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
           theme: value.theme, cubeId: value.cubeId, packs: 3, podSize: value.podSize ?? 0, pickRule: value.pickRule,
           timer: value.timer ?? 0, grace: value.grace ?? 0 });

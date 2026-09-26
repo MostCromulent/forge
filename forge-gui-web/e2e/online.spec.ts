@@ -36,7 +36,7 @@ test('online sealed with a guest', async ({ page, browser }) => {
   await hostEvent(page, 'sealed');
   await page.click('.tile-choice:has-text("Full card pool")');
   await page.click('.stp-open button:has-text("Continue")');
-  await page.click('.wfoot button:has-text("Save event")');
+  await page.click('.wfoot button:has-text("Save")');
   await expect(page.locator('.event-panel .event-product')).toContainText('Full');
 
   const guest = await (await browser.newContext()).newPage();
@@ -68,7 +68,7 @@ test('online draft for one', async ({ page }) => {
   await page.selectOption('.table-rules select >> nth=0', 'NEVER');
   await page.selectOption('.table-rules select >> nth=1', '90');
   await page.click('.table-rules button:has-text("Continue")');
-  await page.click('.wfoot button:has-text("Save event")');
+  await page.click('.wfoot button:has-text("Save")');
   await expect(page.locator('.event-panel .event-product')).toContainText('Full');
   await ready(page);
   await page.click('.event-panel button:has-text("Start draft")');
