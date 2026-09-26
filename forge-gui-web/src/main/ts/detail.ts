@@ -198,6 +198,7 @@ function drawDetail(model: Model): void {
   q(zoom, '.detail').hidden = !face;
   setSource(q(zoom, '.from'), hover.from);
   setSource(q(zoom, '.from-tab'), hover.from);
+  q(zoom, '.hint').textContent = '';
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   setSymbolText(q(zoom, '.cost'), face.cost);
@@ -255,7 +256,7 @@ function setRulesText(el: HTMLElement, html: string): void {
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
@@ -311,6 +312,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   q(zoom, '.detail').hidden = !d;
   setSource(q(zoom, '.from'), undefined);
   setSource(q(zoom, '.from-tab'), undefined);
+  q(zoom, '.hint').textContent = '';
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cost').textContent = '';
@@ -319,5 +321,4 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   text.textContent = d.lines.join('\n');
   delete text.dataset.html;
   q(zoom, '.pt').textContent = '';
-  q(zoom, '.hint').textContent = '';
 }

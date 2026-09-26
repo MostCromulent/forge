@@ -496,10 +496,9 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
-/* The image alone, with under it only the lines the art cannot show: where the card is playable from, and the keys */
-#zoom.image-only { flex-direction: column; align-items: center; gap: 6px; }
-#zoom.image-only .detail { width: auto; padding: 0; background: none; border: 0; box-shadow: none; text-shadow: 0 1px 3px #000; }
-#zoom.image-only .detail > :not(.hint) { display: none; }
+/* Either side of a card, image or rules, is the card's own size, with the keys in a pill under it */
+#zoom.image-only, #zoom.text-card { flex-direction: column; align-items: center; gap: 6px; }
+#zoom.image-only .detail { display: none; }
 /* Where a card in hand is really played from, as a tab on the image's foot, clear of its cost and of the overlays at
    its top; the text view says it in a line instead */
 #zoom .shot { position: relative; display: block; line-height: 0; }
@@ -511,8 +510,10 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
   color: #15121c; font: 800 12px/1.25 system-ui, sans-serif; white-space: nowrap; box-shadow: 0 4px 14px #000a; }
 #zoom .from-tab:empty, #zoom.text-card .shot { display: none; }
 #zoom.image-only:has(.from-tab:not(:empty)) { gap: 20px; }
-/* Under the image the hint is a pill like the playable-from tab, so it stands clear of whatever is behind it */
-#zoom.image-only .detail .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 4px 14px #000a; }
+/* The hint is a pill like the playable-from tab, so it stands clear of whatever is behind it */
+#zoom > .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text);
+  font-size: 11px; font-weight: 600; text-shadow: 0 1px 3px #000; box-shadow: 0 4px 14px #000a; }
+#zoom > .hint:empty, #zoom:not(.image-only):not(.text-card) > .hint { display: none; }
 /* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
 #zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
   padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--line-bright); font-size: 14px; line-height: 1.45; }
@@ -528,8 +529,7 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom .detail .pt { font-weight: 700; text-align: right; }
 /* Lit in the same colour as the glow around the card, so the panel answers what the glow only hints at */
 #zoom .detail .from { color: var(--zone-glow); font-size: 12px; font-weight: 600; }
-#zoom .detail .pt:empty, #zoom .detail .hint:empty, #zoom .detail .from:empty { display: none; }
-#zoom .detail .hint { color: var(--muted); font-size: 11px; }
+#zoom .detail .pt:empty, #zoom .detail .from:empty { display: none; }
 /* The end of a game: the board recedes behind the breaking portrait, and the result is said over it */
 #match > :not(#game-over) { transition: filter .9s cubic-bezier(.3,.6,.3,1), --fit .6s cubic-bezier(.2,.7,.3,1); }
 #match.ending > :not(#game-over) { filter: grayscale(.75) brightness(.42) blur(3px); }
