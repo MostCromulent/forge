@@ -160,6 +160,9 @@ function placeZoom(zoom: HTMLElement, at: HTMLElement): void {
   zoom.style.top = `${Math.round(y)}px`;
 }
 
+/** The hovered card and the side the preview last showed it on, so turning the same card over can be seen. */
+let shown: { hover: object; text: boolean } | null = null;
+
 function drawDetail(model: Model): void {
   const zoom = byId('zoom');
   const hover = ui.hover;
@@ -179,6 +182,13 @@ function drawDetail(model: Model): void {
   const src = face?.imageKey ? imageUrl(face.imageKey) : hover.src;
   // A card the viewer may not see has no image, so its text is all there is to show
   const text = ui.cardText || !src;
+  // Turned to its other side, the same card plays a flip; moving to another card does not
+  if (shown?.hover === hover && shown.text !== text) {
+    zoom.classList.remove('flipping');
+    void zoom.offsetWidth;
+    zoom.classList.add('flipping');
+  }
+  shown = { hover, text };
   zoom.classList.toggle('image-only', !text);
   zoom.classList.toggle('text-card', text);
   img.hidden = text;
@@ -243,6 +253,10 @@ function ensureZoom(zoom: HTMLElement): void {
   zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div><div class="hint"></div></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
+  // Cleared once played, or the side a later card is shown on would match and flip without being turned
+  zoom.addEventListener('animationend', e => {
+    if (e.animationName === 'zoom-flip') zoom.classList.remove('flipping');
+  });
   // The preview is placed before its image arrives, and grows when it does, so it is placed again to stay on screen
   img.addEventListener('load', () => {
     const hover = ui.hover;
