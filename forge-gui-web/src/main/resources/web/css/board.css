@@ -307,14 +307,14 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .phase i { transition: background-color .18s ease; }
 #phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 2px; transition: gap .18s ease; }
 #phase-strip .pip { width: 4px; height: 4px; border-radius: 2px; background: var(--muted); transition: width .18s ease, background-color .18s ease; }
-/* Inside the brass step every pip is dark on light and told apart by shape, as a tint of the brass barely shows:
-   a ring for a step to come, a dot for one gone, a bar for this one, and a tall mark for a stop */
-#phase-strip .current .pip { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-brass) 70%, transparent); }
-#phase-strip .current .pip.past { background: color-mix(in srgb, var(--on-brass) 70%, transparent); box-shadow: none; }
 #phase-strip .pip.now { width: 9px; background: var(--on-brass); }
-#phase-strip .current .pip.now { box-shadow: none; }
-#phase-strip .current .pip.on { height: 9px; border-radius: 1px; background: var(--on-brass); box-shadow: none; }
 #phase-strip .pip.on { background: var(--select); }
+/* Inside the brass step every pip is dark on light, as a tint of the brass barely shows: a filled circle for a step
+   gone, an open one for a step to come, and a bar for this one. The stops are left to the grid under the pill. */
+#phase-strip .current .pip { width: 5px; height: 5px; border-radius: 50%; }
+#phase-strip .current .pip, #phase-strip .current .pip.on { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-brass) 75%, transparent); }
+#phase-strip .current .pip.past, #phase-strip .current .pip.past.on { background: color-mix(in srgb, var(--on-brass) 75%, transparent); box-shadow: none; }
+#phase-strip .current .pip.now, #phase-strip .current .pip.now.on { width: 10px; border-radius: 3px; background: var(--on-brass); box-shadow: none; }
 #phase-strip .pip.marked { box-shadow: 0 0 0 1.5px var(--select); }
 #phase-strip .current .pip.marked { box-shadow: 0 0 0 1.5px var(--on-brass); }
 /* Beside the pill, not in it, so the pill keeps its place as the chip comes and goes */
@@ -560,24 +560,25 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent); }
 .card.highlighted { box-shadow: 0 0 0 2px var(--accent-2), 0 0 6px color-mix(in srgb, var(--accent-2) 35%, transparent); }
-/* The whole slot steps forward, so anything attached to the attacker travels with it */
-.slot.attacking { transform: translateY(-14px); transition: transform .15s ease; }
+/* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
+   attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
+.slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); transition: transform .15s ease; }
+.slot.attacking:has(> .card.tapped:last-child) { --advance: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
+#opponent .slot.attacking { transform: translateY(var(--advance)); }
 .card.attacking { outline: 2px solid var(--attack); }
 /* An attacker that can only be attacking the lone opponent wears a chevron of light rather than an arrow to their
-   face: a red sheath round a white-hot core, in a slowly breathing halo. It hangs off the slot, which never turns,
-   so a tapped attacker's chevron stays upright, and it points at the defender: up from your side, down from theirs. */
-.slot.charging { --cw: calc(var(--card-w) * var(--fit, 1)); }
-.slot.charging:has(> .card.tapped:last-child) { --drop: calc((var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
-.slot.charging > .card.attacking { outline: none; }
-.slot.charging::before, .slot.charging::after { content: ''; position: absolute; left: 50%; z-index: 3; pointer-events: none; transform: translateX(-50%); }
-.slot.charging::before { width: calc(var(--cw) * .9); height: calc(var(--cw) * .44); bottom: calc(100% - var(--drop, 0px) + var(--cw) * .04); border-radius: 50%;
+   face: a red sheath round a white-hot core, in a slowly breathing halo, pointing at the defender. The marks sit in
+   a layer of their own over the board, since the battlefield scrolls and would clip the glow above its top row. */
+#charges { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
+.charge { position: absolute; aspect-ratio: 64 / 50; transform: translate(-50%, -100%); }
+.charge.down { transform: translate(-50%, 0) rotate(180deg); }
+.charge::before, .charge::after { content: ''; position: absolute; }
+.charge::before { left: 50%; top: 58%; width: 140%; height: 70%; transform: translate(-50%, -50%); border-radius: 50%;
   background: radial-gradient(closest-side, #ff3b2a40, transparent); animation: charge-breathe 3.2s ease-in-out infinite; }
-.slot.charging::after { width: calc(var(--cw) * .62); aspect-ratio: 60 / 44; bottom: calc(100% - var(--drop, 0px));
-  background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-10 -10 60 44'><filter id='b' x='-50%' y='-50%' width='200%' height='200%'><feGaussianBlur stdDeviation='5'/></filter><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
-#opponent .slot.charging::before { bottom: auto; top: calc(100% - var(--drop, 0px) + var(--cw) * .04); }
-#opponent .slot.charging::after { bottom: auto; top: calc(100% - var(--drop, 0px)); transform: translateX(-50%) rotate(180deg); }
+.charge::after { inset: 0; background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='-12 -14 64 50'><filter id='b' filterUnits='userSpaceOnUse' x='-12' y='-14' width='64' height='50'><feGaussianBlur stdDeviation='5'/></filter><path d='M2 19L20 2L38 19L20 8Z' fill='%23ff2a14' opacity='.6' filter='url(%23b)'/><path d='M2 19L20 2L38 19L20 8Z' fill='%23e8321f' stroke='%23ff5a3c' stroke-width='.6'/><path d='M6 18.3L20 3.7L34 18.3L20 6.2Z' fill='%23fff4ee'/></svg>") center / contain no-repeat; }
 @keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
-html[data-motion="reduced"] .slot.charging::before { animation: none; }
+html[data-motion="reduced"] .charge::before { animation: none; }
+.slot.charging > .card.attacking { outline: none; }
 .card.blocking { outline: 2px dashed var(--attack); }
 /* Damage on a creature: the card jolts and the amount is thrown off it */
 .card.struck { animation: card-struck .34s ease-out; }

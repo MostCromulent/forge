@@ -4,9 +4,9 @@
 /* With the log and chat folded away the column is only tabs, so the console keeps its corner by itself */
 #match.side-folded #prompt { position: fixed; right: 8px; bottom: 14px; width: var(--side-w); }
 #prompt.waiting { border-color: var(--accent-2); }
-#prompt .tools { display: flex; align-items: center; gap: 2px; }
+/* The tools keep a row of their own, so a long step name never pushes them out of the console */
+#prompt .tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin: -4px -6px -6px 0; }
 #prompt .step { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-#prompt .tools .spacer { flex: 1; }
 #prompt .tools button { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; border-radius: 6px; }
 #prompt .tools button:hover { background: var(--surface-2); }
 #prompt .tools svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -22,8 +22,9 @@
 /* The key sits beside its label as a keycap of its own, so it reads as the key to press rather than part of the answer */
 #prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; min-width: 0; height: 36px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 /* The answer first, taking two thirds; the way out after it, the other third */
-#prompt .ok { flex: 2 1 0; border-radius: 8px 4px 4px 8px; }
-#prompt .cancel { flex: 1 1 0; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+/* The secondary answer is as wide as its label, and the primary takes the rest */
+#prompt .ok { flex: 1 1 0; border-radius: 8px 4px 4px 8px; }
+#prompt .cancel { flex: 0 1 auto; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok:last-child, #prompt .cancel:first-child { border-radius: 8px; }
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); }

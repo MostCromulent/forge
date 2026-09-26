@@ -34,8 +34,6 @@ export function renderPrompt(model: Model, actions: Actions): void {
   if (!built) {
     root.innerHTML = `
       <div class="tools">
-        <p class="step"></p>
-        <span class="spacer"></span>
         <button class="end-turn">${icon('endTurn')}</button>
         <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
@@ -43,6 +41,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
         <button class="more" title="Game: offer a draw, auto-pass stops, concede">${icon('more')}</button>
         <button class="cog" title="Options">${icon('cog')}</button>
       </div>
+      <p class="step"></p>
       <div class="prompt-body">
         <img class="prompt-card" alt="" hidden>
         <p class="message"></p>

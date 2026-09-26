@@ -6,8 +6,9 @@ import { ui } from './ui';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
-// of the hovered stack item. Each is one solid shape, widest at its source and tapering into its head. Colour names
-// the kind, and width and head repeat it, so nothing rests on telling two hues apart.
+// of the hovered stack item. Each is one solid shape, widest at its source and tapering into its head. A block is
+// drawn as an attack is, in blue rather than orange, a pair that stays apart for red-green colour blindness; the
+// rest differ in width and head as well as colour.
 interface ArrowKind {
   color: string;
   band: number;
@@ -16,8 +17,8 @@ interface ArrowKind {
 
 const KINDS: Record<'attack' | 'block' | 'plannedBlock' | 'target' | 'mustBlock', ArrowKind> = {
   attack: { color: '#ff7a59', band: 16, head: 'spear' },
-  block: { color: '#5cc8ff', band: 13, head: 'chevron' },
-  plannedBlock: { color: '#8fb7cc', band: 10, head: 'chevron' },
+  block: { color: '#5cc8ff', band: 16, head: 'spear' },
+  plannedBlock: { color: '#8fb7cc', band: 12, head: 'spear' },
   target: { color: '#ffcc33', band: 9, head: 'reticle' },
   // An obligation rather than a choice, so it is drawn thinner than the block a player makes
   mustBlock: { color: '#f2c344', band: 7, head: 'chevron' },
@@ -69,11 +70,16 @@ function paint(model: Model): void {
   }
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
   const g = game(model);
-  if (!g || byId('match').hidden) return;
+  if (!g || byId('match').hidden) {
+    placeCharges(new Set());
+    return;
+  }
+  // A chevron marks the attacker's state, as tapping does, so it shows whatever the arrows setting
+  const charging = chargingAtPlayer(model);
+  placeCharges(charging);
   const mode = setting('arrows');
   if (mode === '0') return;
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
-  const charging = chargingAtPlayer(model);
   for (const band of mode === '1' ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
     attackers.forEach((attacker, i) => {
@@ -106,6 +112,47 @@ function paint(model: Model): void {
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
+
+/** The chevron over each charging attacker, kept between paints so its halo breathes on rather than restarting. */
+const charges = new Map<number, HTMLElement>();
+
+/**
+ * Puts a chevron over each attacker in keys, measured from the card as it stands on screen, so a tapped card's is
+ * over its turned edge. It points up from your side and down from the opponent's, towards the defender.
+ */
+function placeCharges(keys: Set<number>): void {
+  for (const [key, mark] of charges) {
+    if (!keys.has(key)) {
+      mark.remove();
+      charges.delete(key);
+    }
+  }
+  for (const key of keys) {
+    const card = elementFor(key);
+    let mark = charges.get(key);
+    if (!card) {
+      mark?.remove();
+      charges.delete(key);
+      continue;
+    }
+    if (!mark) {
+      mark = document.createElement('div');
+      mark.className = 'charge';
+      byId('charges').append(mark);
+      charges.set(key, mark);
+    }
+    const r = card.getBoundingClientRect();
+    const width = card.offsetWidth * .66;
+    // The drawing leaves 17 of its 50 units empty below the chevron, for the glow; the chevron itself stands a
+    // twentieth of the card's width clear of it
+    const sink = width * 50 / 64 * 17 / 50 - card.offsetWidth * .05;
+    const down = !!card.closest('#opponent');
+    mark.classList.toggle('down', down);
+    mark.style.width = `${width}px`;
+    mark.style.left = `${r.left + r.width / 2}px`;
+    mark.style.top = `${down ? r.bottom - sink : r.top + sink}px`;
+  }
+}
 
 /**
  * Attackers that can only be attacking the one opponent's face: in a two-player game, those attacking a player
