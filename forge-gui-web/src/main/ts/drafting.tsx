@@ -13,6 +13,7 @@ import { SymbolText } from './symbols';
 import { changeUi } from './ui';
 import { HeadControls, PageHeader } from './header';
 import { peekAt } from './deckfinder';
+import type { ComponentChildren } from 'preact';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DraftCard, DraftSeat, DraftState } from './protocol';
@@ -29,7 +30,6 @@ const CLOCK_LOW_MS = 15_000;
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
   const [leaving, setLeaving] = useState(false);
-  const [log, setLog] = useState(false);
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   // An online draft belongs to the table and goes on without this browser, so leaving only goes back to the table
   const online = model.inLobby;
@@ -41,7 +41,6 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
         <div class="head-right">
           <HeadControls />
-          {online && state && state.log.length > 0 && <button onClick={() => setLog(!log)}>Draft log</button>}
           {online
             ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>Back to the table</button>
             : <button onClick={() => setLeaving(true)}>Leave draft</button>}
@@ -52,12 +51,11 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {!state && <p class="muted drafting-wait">Opening the packs…</p>}
       {state && (
         <div class="drafting-shell">
-          <Pack state={state} faces={faces} actions={actions} />
+          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} />
           <Picks state={state} actions={actions} />
         </div>
       )}
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
-      {log && state && <DraftLog lines={state.log} close={() => setLog(false)} />}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
           <div class="dialog" role="alertdialog" aria-label="Leave the draft">
@@ -100,6 +98,20 @@ function hash(text: string): number {
 
 /** Show table: the seat feeding you, you and the seat you pass to on the button, and the whole table under it. */
 function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
+  const n = state.seats.length;
+  const direction = state.direction < 0 ? -1 : 1;
+  const shown = [(n - direction) % n, 0, (n + direction) % n];
+  return (
+    <Dropdown class="table-btn" label={<>
+      <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>Show table
+    </>}>
+      {() => <Dial state={state} faces={faces} />}
+    </Dropdown>
+  );
+}
+
+/** A button in the pack's head that opens a panel under it, closed again by Escape or a click elsewhere. */
+function Dropdown({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -110,16 +122,12 @@ function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
     addEventListener('keydown', key);
     return () => { removeEventListener('pointerdown', away); removeEventListener('keydown', key); };
   }, [open]);
-  const n = state.seats.length;
-  const direction = state.direction < 0 ? -1 : 1;
-  const shown = [(n - direction) % n, 0, (n + direction) % n];
   return (
     <span class="table-menu" ref={root}>
-      <button class={open ? 'table-btn open' : 'table-btn'} aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>
-        Show table <span class="caret" aria-hidden="true">{open ? '▴' : '▾'}</span>
+      <button class={[cls ?? '', 'drop-btn', open ? 'open' : ''].join(' ')} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {label} <span class="caret" aria-hidden="true">{open ? '▴' : '▾'}</span>
       </button>
-      {open && <div class="table-pop"><Dial state={state} faces={faces} /></div>}
+      {open && <div class="table-pop">{children(() => setOpen(false))}</div>}
     </span>
   );
 }
@@ -138,7 +146,7 @@ function useClock(state: DraftState): number {
   return state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
 }
 
-function Pack({ state, faces, actions }: { state: DraftState; faces: string[]; actions: Actions }) {
+function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
   const [selected, setSelected] = useState<number | null>(null);
   // A new state clears the selection, since its cards are not the ones selected
   useEffect(() => setSelected(null), [state.step]);
@@ -160,13 +168,18 @@ function Pack({ state, faces, actions }: { state: DraftState; faces: string[]; a
   const seat = (i: number) => <>{faces[i] && <img alt="" src={faces[i]} />}<strong>{state.seats[i].name}</strong></>;
   return (
     <section class="draft-panel draft-pack">
-      <div class="draft-panel-head">
-        <b>Pack {state.pack} · pick {state.pick} of {state.packSize}</b>
+      {/* The pick and its clock, which runs down a bar along the line's foot; under them, where the packs go */}
+      <div class="draft-panel-head pick-line">
+        <b class="pick-title">Pack {state.pack} · pick {state.pick} of {state.packSize}</b>
+        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock low' : 'clock'} title="Time left to pick">{clockText(left)}</span>}
+        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock-bar low' : 'clock-bar'} style={{ width: `${(left / (state.clockSeconds * 1000)) * 100}%` }} />}
+      </div>
+      <div class="draft-panel-head tool-line">
         <span class="chip">Passing {direction > 0 ? 'right' : 'left'} to {seat(to)}</span>
         {next !== null && <span class="chip">Next from {seat(next)}</span>}
         {depths[busiest] > 2 && <span class="chip">{busiest === 0 ? 'You are' : `${state.seats[busiest].name} is`} holding {depths[busiest]} packs</span>}
         <span class="head-end">
-          {left > 0 && <span class={left < CLOCK_LOW_MS ? 'chip clock low' : 'chip clock'}>{clockText(left)}</span>}
+          {log && <Dropdown label="Draft log">{() => <DraftLog lines={state.log} />}</Dropdown>}
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
@@ -324,7 +337,7 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
 }
 
 /** Other seats' picks are most of the log, so they are shown only when asked for; the newest line comes first. */
-function DraftLog({ lines, close }: { lines: string[]; close: () => void }) {
+function DraftLog({ lines }: { lines: string[] }) {
   const [everyone, setEveryone] = useState(false);
   const shown = lines.filter(l => everyone || !/ picked · \d+ waiting$/.test(l)).reverse();
   return (
@@ -332,7 +345,6 @@ function DraftLog({ lines, close }: { lines: string[]; close: () => void }) {
       <header>
         <b>Draft log</b>
         <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> Every seat's picks</label>
-        <button class="dk-close" title="Close" onClick={close}>&times;</button>
       </header>
       {shown.map((line, i) => <p key={shown.length - i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
     </aside>
