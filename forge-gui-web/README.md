@@ -55,6 +55,8 @@ window's Invite row to copy it.
 Links are made afresh each time Forge starts. A player who reloads or loses the connection returns to their seat,
 and a match carries on where it was.
 
+![The end of a game](docs/victory.webp)
+
 ## Decks and settings
 
 **Decks** builds, edits and imports decks. Import takes a pasted list, a deck file, or a link from Moxfield,
