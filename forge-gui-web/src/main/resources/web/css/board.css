@@ -157,6 +157,9 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .slot > .card:not(:last-child) { position: absolute; z-index: 0; top: calc(var(--under) * var(--card-h) * var(--fit, 1) * var(--fan));
   left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .slot > .card:not(:last-child):hover { z-index: 6; }
+/* A tapped card turns about its centre, which lifts its foot above the foot of what is attached to it; with an
+   attachment under it, it drops back to that foot so the two line up rather than one sticking out below */
+.slot > .card:not(:last-child) ~ .card.tapped:last-child { top: calc((var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 .player { display: grid; gap: 6px; justify-items: center; }
 /* The local player's zone tiles hang from the divider, clear of the prompt panel in the corner */
 #me .player { align-self: start; }
@@ -351,8 +354,8 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 @keyframes floating { 50% { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 25%, transparent); } }
 /* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
 #phase-strip { display: flex; justify-content: center; position: relative; }
-/* A hairline across the battlefield column separates the two halves of the board */
-#phase-strip::before { content: ''; position: absolute; left: 162px; right: 0; top: 50%; height: 1px; background: var(--line); }
+/* A hairline right across the table, over your portrait too, separates the two halves of the board */
+#phase-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
 #phase-strip .pill { position: relative; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 13px 0 4px; border-radius: 19px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; white-space: nowrap; cursor: pointer; }
 #phase-strip .pill.open { background: var(--surface-2); border-color: #4a5563; }
 /* The whole outline lights while you hold priority, whoever's turn it is */
