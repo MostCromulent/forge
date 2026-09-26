@@ -1,7 +1,7 @@
 /* The menu and match setup. Both sit on the same dark ground as the board, so starting a game is one
    continuous place rather than three unrelated screens. */
 
-.wordmark { font-weight: 700; letter-spacing: -.02em; font-size: 20px; }
+.wordmark { font-weight: 700; letter-spacing: .03em; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
 
 /* --- menu ------------------------------------------------------------- */
 
