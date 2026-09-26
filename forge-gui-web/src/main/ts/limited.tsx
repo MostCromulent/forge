@@ -49,7 +49,7 @@ function Pools({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boo
           : "Open sealed packs, build a forty-card deck from them, and play it against the computer's decks from the same packs."}</p>
       </div>
       <div class="pools-list">
-        <h4>Your sealed pools <span>{pools.length}</span></h4>
+        <h4>{draft ? 'Your drafts' : 'Your sealed pools'} <span>{pools.length}</span></h4>
         {pools.length === 0 && <p class="muted">No pools yet. New event opens one.</p>}
         {pools.map(p => (
           <div key={p.name} class="pool-row">

@@ -15,11 +15,16 @@
 .kind-main:focus-visible, .kind-resume:focus-visible { outline: 2px solid var(--accent-2); outline-offset: -2px; }
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 
-.limited-page { min-height: 100%; display: grid; grid-template-rows: auto auto 1fr; }
+#limited { min-height: 100%; display: grid; }
+.limited-page { display: grid; grid-template-rows: auto auto 1fr; }
 .limited-head .limited-title { font-size: 16px; font-weight: 650; }
 .limited-head .head-right { gap: 10px; }
 .limited-error { margin: 10px 20px 0; color: var(--select); }
 .limited-page .muted { color: var(--muted); font-size: 12.5px; }
+/* Whichever view is showing sits in the middle of the page, as the lobby's seats do, in a frame like theirs */
+.limited-page > :is(.pools, .setup, .opponents, .pools-wait) { grid-row: 3; align-self: center; justify-self: center; width: min(100% - 40px, 960px); margin: 28px 0; }
+.limited-page > .setup { width: min(100% - 40px, 760px); }
+.pools, .opponents { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 
 .pools { display: grid; grid-template-columns: 320px minmax(0, 1fr); align-items: start; }
 .pools-new { padding: 20px; display: grid; gap: 12px; border-right: 1px solid var(--line); }
@@ -27,7 +32,7 @@
 .pools-list { padding: 16px 20px; display: grid; gap: 6px; }
 .pools-list h4 { margin: 0 0 4px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); display: flex; justify-content: space-between; }
 .pool-row { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; gap: 12px; align-items: center; padding: 7px 10px; border-radius: 6px; }
-.pool-row:nth-child(odd) { background: var(--surface); }
+.pool-row:nth-child(odd) { background: var(--surface-2); }
 .pool-name b { font-weight: 600; display: block; }
 .pool-name span, .pool-state { color: var(--muted); font-size: 12px; }
 .pool-state.ok { color: var(--text); }
@@ -35,7 +40,7 @@
 .pools-wait { padding: 20px; }
 @media (max-width: 800px) { .pools { grid-template-columns: 1fr; } .pools-new { border-right: 0; border-bottom: 1px solid var(--line); } }
 
-.setup { padding: 20px; display: grid; gap: 8px; max-width: 760px; }
+.setup { display: grid; gap: 8px; }
 .setup-cancel { justify-self: start; }
 .wiz { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px 20px; display: grid; gap: 6px; }
 .wiz-title { margin: 0 0 8px; font-size: 17px; }
@@ -69,16 +74,16 @@
 .opponents { display: grid; grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
 .opps { padding: 16px 20px; display: grid; gap: 12px; }
 .opps h3 { margin: 0; display: flex; gap: 12px; align-items: baseline; }
-.opponents .radio { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.opponents .radio { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
 .opponents .radio.on { border-color: var(--accent-2); }
 .opponents .radio.off { opacity: .45; }
 .opponents .radio > i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-bright); margin-top: 2px; }
-.opponents .radio.on > i { border-color: var(--accent-2); box-shadow: inset 0 0 0 3px var(--surface), inset 0 0 0 8px var(--accent-2); }
+.opponents .radio.on > i { border-color: var(--accent-2); box-shadow: inset 0 0 0 3px var(--surface-2), inset 0 0 0 8px var(--accent-2); }
 .opponents .radio b { display: block; }
 .opponents .radio span { color: var(--muted); font-size: 12px; }
 .opp-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin-top: 8px; }
 .opp { display: flex; justify-content: space-between; align-items: center; gap: 6px; font-size: 12.5px; }
 .opp.on { border-color: var(--accent-2); background: var(--accent-soft); }
 .opp-colours { display: inline-flex; gap: 2px; }
-.opp-side { border-left: 1px solid var(--line); background: var(--surface); padding: 16px 18px; display: grid; gap: 10px; align-content: start; }
+.opp-side { border-left: 1px solid var(--line); background: var(--surface-2); padding: 16px 18px; display: grid; gap: 10px; align-content: start; align-self: stretch; }
 @media (max-width: 800px) { .opponents { grid-template-columns: 1fr; } .opp-side { border-left: 0; } }
