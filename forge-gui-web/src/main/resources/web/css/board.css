@@ -711,6 +711,14 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
 /* On every slot, not only an attacking one, so the step back at the end of combat eases as the step forward does */
 .battlefield .slot { transition: transform .15s ease; }
+/* While a card is on its way into a pile the pile keeps its old depth and room (motion.ts holdPile); when it arrives
+   the room widens and the new copy slides out from under the top card */
+.battlefield .slot.holding { padding-left: calc(var(--held-behind) * var(--card-w) * var(--fit, 1) * var(--fan)); }
+.battlefield .slot.opening { transition: transform .15s ease, padding-left .26s cubic-bezier(.2,.7,.3,1); }
+.card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
+.card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
+.card.pile.grown[data-depth="1"]::after, .card.pile.grown[data-depth="2"]::before, .card.pile.grown[data-depth="3"] .pile-edge { animation: pile-out .26s cubic-bezier(.2,.7,.3,1); }
+@keyframes pile-out { from { transform: none; } }
 .slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); }
 .slot.attacking:has(> .card.tapped:last-child) { --advance: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 #opponent .slot.attacking { transform: translateY(var(--advance)); }

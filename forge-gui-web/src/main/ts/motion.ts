@@ -156,6 +156,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       // of the card makes the trip instead, and the pile stays where it is
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
+        holdPile(el, FLIGHT_MS);
         sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1);
         holdCount(el, FLIGHT_MS);
         continue;
@@ -165,6 +166,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         else fly(el, start, FLIGHT_MS, 0);
       } else if (pile && (pile.dataset.members ?? '').split(',').length > 1) {
         // A token joining a pile of its kind: a copy grows onto the pile, which stays as it is
+        holdPile(el, POP_MS);
         const copy = place(el, restingRect(el), { w: el.offsetWidth, h: el.offsetHeight });
         pop(copy);
         copy.getAnimations()[0]?.finished.then(() => copy.remove(), () => copy.remove());
@@ -228,16 +230,20 @@ function shiftBoard(travelled: Set<string>): void {
   if (boardShape() === lastShape) {
     return;
   }
-  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), travelled);
-  // A card that had a place of its own and is now folded into a pile slides onto the pile's top card
+  // A card that had a place of its own and is now folded into a pile slides onto the pile's top card. The pile is
+  // held as it was before anything is measured, so the row slides to where it stands while the card is on its way
+  const joining: { was: Snapshot; top: HTMLElement }[] = [];
   for (const { keys, top } of pileSlots()) {
     for (const key of keys) {
       const was = lastSeen.get(key);
       if (was && ownPlace.has(key) && key !== top.dataset.key && !travelled.has(key) && !intoHint.has(key)) {
-        sendTo(was, top.getBoundingClientRect(), 1);
+        joining.push({ was, top });
       }
     }
   }
+  for (const { top } of joining) holdPile(top, FLIGHT_MS);
+  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), travelled);
+  for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1);
 }
 
 /** Cards left in an open zone, as one is picked from a search, slide into the gap rather than jumping. */
@@ -455,6 +461,30 @@ function cardBack(model: Model, key: string): HTMLElement {
   back.className = 'card back';
   back.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(owner)));
   return back;
+}
+
+/**
+ * Keeps a pile as deep and as wide as it was until the card joining it arrives, then lets it open out to take the
+ * card in: the room behind it widens and the new copy slides out from under the top card (board.css).
+ */
+function holdPile(top: HTMLElement, duration: number): void {
+  const slot = top.closest<HTMLElement>('.slot');
+  if (!slot) return;
+  const now = Math.min(3, Math.max(0, (slot.dataset.members ?? '').split(',').length - 1));
+  const was = Math.max(0, now - 1);
+  if (now === was) return;
+  top.dataset.heldDepth = String(was);
+  slot.style.setProperty('--held-behind', String(was));
+  slot.classList.add('holding');
+  setTimeout(() => {
+    delete top.dataset.heldDepth;
+    slot.classList.replace('holding', 'opening');
+    top.classList.add('grown');
+    setTimeout(() => {
+      slot.classList.remove('opening');
+      top.classList.remove('grown');
+    }, 300);
+  }, duration);
 }
 
 /** Keeps a pile's count at what it was until the copy joining it arrives, then shows the new one. */
