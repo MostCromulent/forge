@@ -148,7 +148,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
    the next, as Arena lays them: only to the left, so a row keeps one card's height however much is attached. The
    step is a share of the card's width, so a crowded board's smaller cards keep the same look. battlefield.ts counts
    the room the fan takes when it sizes the cards */
-.battlefield { --fan: .2; --support-indent: 28px; }
+.battlefield { --fan: .15; --support-indent: 28px; }
 /* The artifacts and enchantments at the end of the lands' row stand in from its edge, so they do not line up with
    the edge of the stack panel above them; battlefield.ts counts the room */
 .row > .group.support { margin-right: var(--support-indent); }
@@ -756,14 +756,19 @@ body.dragging-block #zoom { display: none; }
    drawn at .9, which the step undoes */
 .card.pile.tapped::after { transform: translateY(calc(var(--pile-step) / .9)); }
 .card.pile.tapped::before { transform: translateY(calc(2 * var(--pile-step) / .9)); }
+/* A third copy for a pile of four or more, beneath the other two */
+.card .pile-edge { position: absolute; inset: 0; z-index: -2; display: none; border-radius: var(--radius); background: var(--pile-img, none) center / cover, var(--surface-2);
+  box-shadow: 0 1px 4px #000a; filter: brightness(.45); transform: translateX(calc(-3 * var(--pile-step))); pointer-events: none; }
+.card.pile[data-depth="3"] .pile-edge { display: block; }
+.card.pile.tapped .pile-edge { transform: translateY(calc(3 * var(--pile-step) / .9)); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
-/* A pile's count is solid brass, so how many there are reads at a glance; laid out, it goes quiet as a way back */
-.card .count { display: none; position: absolute; right: 4px; top: 4px; z-index: 3; min-width: 26px; height: 22px; padding: 0 6px; place-items: center; background: var(--brass); color: var(--on-brass); border: 1px solid #0008; border-radius: 11px; box-shadow: 0 2px 6px #000b; font-size: 13px; font-weight: 800; cursor: pointer; }
+/* A pile's count is black with white figures in the top card's corner, so how many there are reads at a glance;
+   laid out, it goes quiet as a way back */
+.card .count { display: none; position: absolute; right: 2px; top: 2px; z-index: 3; min-width: 26px; height: 22px; padding: 0 6px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 11px; box-shadow: 0 2px 6px #000b; font-size: 13px; font-weight: 800; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
-.card .count:hover { border-color: var(--text); filter: brightness(1.12); }
-.card .count.opened:hover { background: var(--brass); color: var(--on-brass); filter: none; }
+.card .count:hover { background: var(--brass); color: var(--on-brass); border-color: #0008; }
 .card:hover { z-index: 5; }
 #stack-menu { position: fixed; z-index: 70; display: grid; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px #000c; }
 #stack-menu button { text-align: left; border: none; background: none; padding: 6px 10px; white-space: pre; }

@@ -18,7 +18,7 @@ const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen" title="Revealed to other players">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen" title="Revealed to other players">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
@@ -280,7 +280,7 @@ function showDamage(el: HTMLElement, damage: number): void {
 
 export function setPileCount(el: HTMLElement, count: number, opened: boolean): void {
   el.classList.toggle('pile', count > 1);
-  // One edge shows behind the top card of a pile of two, two behind a larger pile
+  // Up to three copies show behind the top card, so a pile of four or more shows four cards and the badge counts the rest
   el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';

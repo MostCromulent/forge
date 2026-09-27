@@ -17,8 +17,8 @@ interface Slot {
   sig: string | null;
 }
 
-/** The cards drawn behind a slot's top card: what is attached to it, or up to two edges of a pile. */
-const behind = (s: Slot): number => s.attached.length || Math.min(2, s.members.length - 1);
+/** The cards drawn behind a slot's top card: what is attached to it, or up to three copies of a pile's. */
+const behind = (s: Slot): number => s.attached.length || Math.min(3, s.members.length - 1);
 
 /**
  * Which of the four groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
