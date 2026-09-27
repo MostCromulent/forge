@@ -57,7 +57,8 @@
 /* A compact seat: the player's details in a row across the top, in their colour, and their cards below */
 .seat.compact { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 34px; }
-.seat.compact.turn { border-color: color-mix(in srgb, var(--tint) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--tint) 20%, transparent), 0 0 22px color-mix(in srgb, var(--tint) 14%, transparent); }
+/* Whose turn it is lights in gold, as it does everywhere else, rather than in the player's own colour */
+.seat.compact.turn { border-color: color-mix(in srgb, var(--accent-2) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 14%, transparent); }
 .seat.compact .player { display: flex; align-items: center; justify-items: start; gap: 10px; flex-wrap: wrap; }
 .seat.compact .avatar { width: 46px; height: 46px; flex: none; }
 .seat.compact .avatar .initial { font-size: 18px; }
