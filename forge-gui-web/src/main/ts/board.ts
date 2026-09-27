@@ -706,7 +706,7 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
     release();
     return;
   }
-  const centre = boardCentre();
+  const centre = pageCentre();
   seated.forEach(({ p, avatar }, i) => {
     const centreStage = final && i === 0;
     const run = shatter({
@@ -728,10 +728,12 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
   if (!final) release();
 }
 
-/** The middle of the two seats' boards, where a portrait breaks at the end of the game. */
-function boardCentre(): { x: number; y: number } {
-  const a = byId('opponent').getBoundingClientRect(), b = byId('me').getBoundingClientRect();
-  return { x: (Math.min(a.left, b.left) + Math.max(a.right, b.right)) / 2, y: (a.top + b.bottom) / 2 };
+/**
+ * The middle of the window, where a portrait breaks at the end of the game: the result is drawn there, over the whole
+ * page, so the portrait lands where the winner's face then shows rather than off to one side of the log.
+ */
+function pageCentre(): { x: number; y: number } {
+  return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
 /**
@@ -769,7 +771,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     : won ? 'Last one standing'
     : `${winner.Name} wins`;
   root.innerHTML = '<div class="panel"><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p><div class="actions"></div></div>'
-    + '<button class="to-result">Show result</button>';
+    + '<button class="to-result primary">Show result</button>';
   const view = (board: boolean) => {
     root.classList.toggle('viewing', board);
     byId('match').classList.toggle('ending', !board);
@@ -796,7 +798,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   if (!matchOver) add('Next game', true, () => actions.nextGame());
   add('View battlefield', false, () => view(true));
   if (limited) add('Restart round', false, () => actions.gauntletRestart());
-  add(limited ? 'Quit' : matchOver ? 'Back to start' : 'Quit match', matchOver && !limited?.nextRound, () => {
+  add(limited ? 'Quit' : matchOver ? 'Return to lobby' : 'Quit match', matchOver && !limited?.nextRound, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();
   });
