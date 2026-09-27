@@ -8,7 +8,8 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, ui } from './ui';
-import { avatarUrl } from './looks';
+import { avatarUrl, cssUrl } from './looks';
+import { artUrl } from './sleeves';
 import { HeadControls, PageHeader, Wordmark } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -42,13 +43,13 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
       <div class="menu-page">
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
         <div class="modes" hidden={!!choosing}>
-          <Mode id="play" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
+          <Mode id="play" art="c:Karn, Silver Golem" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
             status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
               model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
             onClick={() => setChoosing('play')} />
-          <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
+          <Mode id="multiplayer" art="c:Council's Judgment" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
             status="Gives you a link to share" onClick={() => setChoosing('friends')} />
-          <Mode id="editor" name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
+          <Mode id="editor" art="c:Library of Alexandria" fan={DECK_FAN} name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
             onClick={() => {
               changeUi(u => { u.browse = { format: 'Constructed' }; });
               actions.browseFormat('Constructed');
@@ -122,15 +123,31 @@ const MODE_ICONS: Record<string, ComponentChildren> = {
   editor: <><rect x="16" y="11" width="21" height="29" rx="3" /><path d="M12 15v21M8 19v13" /></>,
 };
 
-function Mode({ id, name, blurb, status, onClick }: { id: string; name: string; blurb: string; status: string; onClick?: () => void }) {
+/** A few well-known cards fanned on the Decks plaque, a deck's worth of variety at a glance. */
+const DECK_FAN = ['c:Lightning Bolt', 'c:Llanowar Elves', 'c:Counterspell', 'c:Swords to Plowshares'];
+
+/**
+ * A way in from the start page: a brass-framed plaque over a card's art, with its icon on a brass medallion. The art
+ * is the same art-only crop a card-art sleeve uses. Decks, given a fan of cards, runs the full width under the others.
+ */
+function Mode({ id, art, fan, name, blurb, status, onClick }: {
+  id: string; art: string; fan?: string[]; name: string; blurb: string; status: string; onClick?: () => void;
+}) {
   return (
-    <button class="mode" data-mode={id} disabled={!onClick} onClick={onClick}>
+    <button class={fan ? 'mode plaque wide' : 'mode plaque'} data-mode={id} disabled={!onClick} onClick={onClick}
+      style={{ '--art': cssUrl(artUrl(art)) }}>
+      <span class="plaque-rim" aria-hidden="true" />
       <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{MODE_ICONS[id]}</svg></span>
       <span class="mode-text">
         <span class="mode-name">{name}</span>
         <span class="mode-blurb">{blurb}</span>
         <span class="mode-status">{status}</span>
       </span>
+      {fan && (
+        <span class="plaque-fan" aria-hidden="true">
+          {fan.map((key, i) => <i key={key} style={{ '--art': cssUrl(artUrl(key)), '--turn': `${(i - (fan.length - 1) / 2) * 7}deg` }} />)}
+        </span>
+      )}
     </button>
   );
 }

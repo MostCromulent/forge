@@ -99,7 +99,38 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .menu-shell { min-height: 100%; display: flex; flex-direction: column; }
 .menu-shell .menu-page { flex: 1; min-height: 0; }
 
-.modes { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); max-width: 900px; width: 100%; align-content: start; }
+/* Two across: the two ways to play side by side, Decks the full width beneath */
+.modes { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; width: 100%; align-content: start; }
+.modes .mode.wide { grid-column: 1 / -1; }
+@media (max-width: 620px) { .modes { grid-template-columns: minmax(0, 1fr); } }
+
+/* A brass-framed plaque over a card's art, under a wash dark enough to read the words on */
+.modes .mode.plaque { position: relative; isolation: isolate; height: 210px; padding: 18px 20px; border: 0; border-radius: 14px; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: flex-end; text-align: left; background: #0b0e14;
+  box-shadow: 0 0 0 1px #9a7318, 0 0 0 2px #0008, 0 18px 40px #000b; transition: box-shadow .2s ease, transform .2s ease; }
+.modes .mode.plaque::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--art) center / cover; filter: saturate(.85);
+  transform: scale(1.04); transition: transform .4s ease, filter .3s ease; }
+.modes .mode.plaque::after { content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(180deg, #0b0e1433 0%, #0b0e14cc 55%, #0b0e14f2 100%); }
+.modes .mode.plaque .plaque-rim { position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent); border-radius: 10px; pointer-events: none; }
+.modes .mode.plaque .mode-art { position: absolute; top: 16px; left: 18px; width: 46px; height: 46px; border: 0; border-radius: 50%; display: grid; place-items: center;
+  background: radial-gradient(circle at 35% 30%, #f8dd8c, var(--accent-2) 55%, #9a7318); box-shadow: 0 3px 10px #000a; }
+.modes .mode.plaque .mode-art svg { width: 26px; height: 26px; stroke: #2a1d08; stroke-width: 2.6; }
+.modes .mode.plaque .mode-text { padding: 0; gap: 3px; }
+.modes .mode.plaque .mode-name { font-size: 20px; }
+.modes .mode.plaque .mode-blurb { color: #c9d0da; font-size: 13px; }
+.modes .mode.plaque .mode-status { color: var(--accent-2); font-size: 12px; font-weight: 600; }
+.modes .mode.plaque:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 2px #0008, 0 0 22px color-mix(in srgb, var(--accent-2) 30%, transparent), 0 18px 40px #000b; transform: translateY(-2px); }
+.modes .mode.plaque:hover:not(:disabled)::before { transform: scale(1.08); filter: saturate(1); }
+.modes .mode.plaque:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+/* The wide plaque lays out in a row: medallion, words, then a fan of cards */
+.modes .mode.plaque.wide { height: 112px; flex-direction: row; align-items: center; padding-left: 90px; }
+.modes .mode.plaque.wide .mode-art { top: 50%; transform: translateY(-50%); }
+.plaque-fan { margin-left: auto; display: flex; padding-right: 8px; }
+.plaque-fan i { width: 46px; height: 64px; margin-left: -18px; border-radius: 4px; border: 1px solid #0008; background: var(--art) center / cover;
+  box-shadow: 0 2px 8px #000c; rotate: var(--turn); transition: rotate .25s ease, translate .25s ease; }
+.modes .mode.plaque.wide:hover .plaque-fan i { rotate: calc(var(--turn) * 1.6); translate: 0 -3px; }
+html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque::before { transition: none; }
 
 .mode {
   display: flex;
