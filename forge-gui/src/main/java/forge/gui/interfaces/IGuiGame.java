@@ -25,7 +25,6 @@ import forge.interfaces.IGameController;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.player.PlayerZoneUpdate;
-import forge.player.PlayerZoneUpdates;
 import forge.trackable.TrackableCollection;
 import forge.util.FSerializableFunction;
 import forge.util.ITriggerEvent;
@@ -116,10 +115,6 @@ public interface IGuiGame {
             handleGameEvent(event);
         }
     }
-
-    Iterable<PlayerZoneUpdate> tempShowZones(PlayerView controller, Iterable<PlayerZoneUpdate> zonesToUpdate);
-
-    void hideZones(PlayerView controller, Iterable<PlayerZoneUpdate> zonesToUpdate);
 
     void updateZones(Iterable<PlayerZoneUpdate> zonesToUpdate);
 
@@ -259,16 +254,14 @@ public interface IGuiGame {
 
     void setPlayerAvatar(LobbyPlayer player, IHasIcon ihi);
 
-    PlayerZoneUpdates openZones(PlayerView controller, Collection<ZoneType> zones, Map<PlayerView, Object> players, boolean backupLastZones);
-
-    void restoreOldZones(PlayerView playerView, PlayerZoneUpdates playerZoneUpdates);
+    void openZones(PlayerView controller, Collection<ZoneType> zones, Map<PlayerView, Object> players);
 
     void setHighlighted(Iterable<GameEntityView> entities, boolean b);
 
     /**
      * Mark {@code cards} as selectable and publish the active selection's
      * minimum / maximum required count for client-side use (e.g.,
-     * select-min hotkeys). Callers without a known range pass {@code (0, 0)}.
+     * select-min hotkeys). A maximum of {@code 0} marks display-only highlighting, for which the GUI opens no zones.
      */
     void setSelectables(Iterable<CardView> cards, int min, int max);
     /**
@@ -281,6 +274,12 @@ public interface IGuiGame {
         setSelectablePlayers(() -> players);
     }
     void clearSelectables();
+    /**
+     * Cards revealed to the player for the current prompt, until {@link #hideRevealedCards()}; the GUI chooses how
+     * to display them. Unrelated to {@link #updateRevealedCards}, which records the match's reveal history.
+     */
+    void showRevealedCards(Iterable<CardView> cards);
+    void hideRevealedCards();
     boolean isSelecting();
 
     void setWeaklySelectable(final Iterable<CardView> cards);

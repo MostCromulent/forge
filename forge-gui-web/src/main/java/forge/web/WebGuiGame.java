@@ -36,7 +36,6 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.localinstance.skin.FSkinProp;
 import forge.player.AutoYieldStore.TriggerDecision;
 import forge.player.PlayerZoneUpdate;
-import forge.player.PlayerZoneUpdates;
 import forge.trackable.TrackableCollection;
 import forge.trackable.TrackableProperty;
 import forge.trackable.TrackableTypes;
@@ -83,7 +82,6 @@ import forge.web.ToBrowser.Zones;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -128,6 +126,9 @@ public class WebGuiGame extends NetworkGuiGame {
     // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
     private final Object zonesLock = new Object();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
+    /** Zones opened for the current choice, and for the cards revealed with the current prompt, closed with them. */
+    private final List<PlayerZoneUpdate> selectionZonesShown = new ArrayList<>();
+    private final List<PlayerZoneUpdate> revealZonesShown = new ArrayList<>();
     // Written on the dispatch thread, replayed to a reloading browser from the socket thread
     private final WebGameLog gameLog;
     private final BrowserSounds sounds = new BrowserSounds(this::getCurrentPlayer, this::isLocalPlayer);
@@ -519,6 +520,12 @@ public class WebGuiGame extends NetworkGuiGame {
             refs.add(cardRef(c));
         }
         prompt.selectable(refs, min);
+        // A choice among cards opens the zones holding them, as desktop does; a maximum of 0 only highlights
+        if (max > 0) {
+            synchronized (zonesLock) {
+                selectionZonesShown.addAll(showZones(getZonesHolding(cards)));
+            }
+        }
     }
 
     // Cards the engine says you can act on now, and, at strength two, the ones the Auto button would tap
@@ -559,6 +566,32 @@ public class WebGuiGame extends NetworkGuiGame {
     public void clearSelectables() {
         super.clearSelectables();
         prompt.clearSelectables();
+        synchronized (zonesLock) {
+            hideZones(selectionZonesShown);
+            selectionZonesShown.clear();
+        }
+    }
+
+    @Override
+    public void showRevealedCards(final Iterable<CardView> cards) {
+        // The host sends these only for a hand reveal, so another zone the cards came from stays closed
+        final List<PlayerZoneUpdate> hands = new ArrayList<>();
+        for (final PlayerZoneUpdate update : getZonesHolding(cards)) {
+            if (update.getZones().contains(ZoneType.Hand)) {
+                hands.add(new PlayerZoneUpdate(update.getPlayer(), ZoneType.Hand));
+            }
+        }
+        synchronized (zonesLock) {
+            revealZonesShown.addAll(showZones(hands));
+        }
+    }
+
+    @Override
+    public void hideRevealedCards() {
+        synchronized (zonesLock) {
+            hideZones(revealZonesShown);
+            revealZonesShown.clear();
+        }
     }
 
     @Override
@@ -595,56 +628,42 @@ public class WebGuiGame extends NetworkGuiGame {
         return player.getId() + "/" + zone.name();
     }
 
-    @Override
-    public Iterable<PlayerZoneUpdate> tempShowZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        synchronized (zonesLock) {
-            for (final PlayerZoneUpdate update : zonesToUpdate) {
-                for (final ZoneType zone : update.getZones()) {
-                    // The browser always shows the battlefield and the viewer's own hand
-                    if (zone == ZoneType.Battlefield || (zone == ZoneType.Hand && update.getPlayer().equals(controller))) {
-                        continue;
-                    }
-                    shownZones.put(zoneKey(update.getPlayer(), zone), new ShownZone(Ref.player(update.getPlayer().getId()), zone));
-                }
-            }
-            send(zonesMessage());
-        }
-        return zonesToUpdate;
-    }
-
-    @Override
-    public void hideZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        if (zonesToUpdate == null) {
-            return;
-        }
-        synchronized (zonesLock) {
-            for (final PlayerZoneUpdate update : zonesToUpdate) {
-                for (final ZoneType zone : update.getZones()) {
-                    shownZones.remove(zoneKey(update.getPlayer(), zone));
-                }
-            }
-            send(zonesMessage());
-        }
-    }
-
-    @Override
-    public PlayerZoneUpdates openZones(final PlayerView controller, final Collection<ZoneType> zones, final Map<PlayerView, Object> players, final boolean backupLastZones) {
-        final PlayerZoneUpdates updates = new PlayerZoneUpdates();
-        for (final PlayerView player : players.keySet()) {
-            for (final ZoneType zone : zones) {
-                if (zone == ZoneType.Battlefield || zone == ZoneType.Hand || zone == ZoneType.Stack) {
+    /**
+     * Opens the zones named, those the browser does not already show, and returns the ones it opened, so they can be
+     * closed again without closing a zone something else opened. Called holding zonesLock.
+     */
+    private List<PlayerZoneUpdate> showZones(final Iterable<PlayerZoneUpdate> zones) {
+        final List<PlayerZoneUpdate> opened = new ArrayList<>();
+        for (final PlayerZoneUpdate update : zones) {
+            for (final ZoneType zone : update.getZones()) {
+                // The browser always shows the battlefield and the viewer's own hand
+                if (zone == ZoneType.Battlefield || (zone == ZoneType.Hand && isLocalPlayer(update.getPlayer()))) {
                     continue;
                 }
-                updates.add(new PlayerZoneUpdate(player, zone));
+                final String key = zoneKey(update.getPlayer(), zone);
+                if (!shownZones.containsKey(key)) {
+                    shownZones.put(key, new ShownZone(Ref.player(update.getPlayer().getId()), zone));
+                    opened.add(new PlayerZoneUpdate(update.getPlayer(), zone));
+                }
             }
         }
-        tempShowZones(controller, updates);
-        return updates;
+        if (!opened.isEmpty()) {
+            send(zonesMessage());
+        }
+        return opened;
     }
 
-    @Override
-    public void restoreOldZones(final PlayerView playerView, final PlayerZoneUpdates playerZoneUpdates) {
-        hideZones(playerView, playerZoneUpdates);
+    /** Closes zones showZones opened. Called holding zonesLock. */
+    private void hideZones(final List<PlayerZoneUpdate> zones) {
+        if (zones.isEmpty()) {
+            return;
+        }
+        for (final PlayerZoneUpdate update : zones) {
+            for (final ZoneType zone : update.getZones()) {
+                shownZones.remove(zoneKey(update.getPlayer(), zone));
+            }
+        }
+        send(zonesMessage());
     }
 
     @Override public void showCombat() { }
