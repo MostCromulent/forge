@@ -26,7 +26,7 @@ export type PlayerView = View<'Name' | 'Life' | 'IsAI' | 'HasPriority' | 'Avatar
   | 'SleeveIndex' | 'Counters' | 'Commander' | 'CommanderDamage' | 'CommanderCast' | 'Mana' | 'HasLost' | PlayerZone>;
 
 export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack' | 'CombatView' | 'GameOver' | 'MatchOver'
-  | 'WinningPlayerName' | 'PlanarPlayer' | 'StormCount'>;
+  | 'WinningPlayerName' | 'NumGamesInMatch' | 'NumPlayedGamesInMatch' | 'PlanarPlayer' | 'StormCount'>;
 
 export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' | 'Description' | 'SubInstance'
   | 'TargetCards' | 'TargetPlayers'>;

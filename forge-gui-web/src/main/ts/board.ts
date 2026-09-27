@@ -736,6 +736,24 @@ function pageCentre(): { x: number; y: number } {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
 
+/** Each player's games won in the match: their portrait, their name and the count, the match's winner in gold. */
+function drawTally(root: HTMLElement, model: Model, everyone: PlayerView[], wins: (p: PlayerView) => number | undefined,
+  champion: PlayerView | undefined): void {
+  const counted = everyone.filter(p => wins(p) !== undefined);
+  root.hidden = counted.length === 0;
+  for (const p of counted) {
+    const row = document.createElement('div');
+    row.className = p === champion ? 'tally-player champion' : 'tally-player';
+    row.innerHTML = '<span class="tally-face"></span><span class="tally-name"></span><b class="tally-won"></b>';
+    q(row, '.tally-face').style.backgroundImage = cssUrl(playerAvatarUrl(p));
+    q(row, '.tally-name').textContent = isLocal(model, p) ? `${p.Name ?? ''} (you)` : p.Name ?? '';
+    const n = wins(p) ?? 0;
+    q(row, '.tally-won').textContent = String(n);
+    row.title = `${n} game${n === 1 ? '' : 's'} won`;
+    root.append(row);
+  }
+}
+
 /**
  * The end of a game: the board recedes, and once the losing portrait has broken the result is said over it.
  * Drawn once per ending, so what fades in does so once.
@@ -753,10 +771,11 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     }
     return;
   }
-  // A gauntlet's result follows the game's end, so a panel drawn before it arrives is drawn again
+  // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
   const limited = model.limitedResult;
-  if (!root.hidden && root.dataset.limited === String(!!limited)) return;
-  root.dataset.limited = String(!!limited);
+  const drawnFor = `${!!limited}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
+  if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
+  root.dataset.drawnFor = drawnFor;
   root.hidden = false;
   const matchOver = !!g.MatchOver;
   const everyone = players(model);
@@ -765,13 +784,32 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const seated = everyone.some(p => isLocal(model, p));
   const won = !!winner && isLocal(model, winner);
   const outcome = !winner ? 'draw' : !seated ? 'watched' : won ? 'win' : 'lose';
-  const word = { draw: 'Draw', watched: 'Game over', win: 'Victory', lose: 'Defeat' }[outcome];
+  // In a match of several games, a game is won or lost, and only the match is a victory or a defeat
+  const games = g.NumGamesInMatch ?? 1;
+  const inMatch = games > 1;
+  const midMatch = inMatch && !matchOver;
+  const word = midMatch
+    ? { draw: 'Draw', watched: 'Game over', win: 'Game won', lose: 'Game lost' }[outcome]
+    : { draw: 'Draw', watched: 'Game over', win: 'Victory', lose: 'Defeat' }[outcome];
+  const wins = (p: PlayerView) => model.matchScore.find(s => s.player.ref === p.$key)?.won;
+  // Two players' match score reads as the winner's wins to the other's, as it is said aloud
+  const tally = winner && everyone.length === 2 && wins(winner) !== undefined
+    ? ` ${wins(winner)}–${wins(everyone.find(p => p !== winner) as PlayerView) ?? 0}` : '';
+  // The count of games played is taken as the game starts, so it counts the ones before this
+  const gameNumber = (g.NumPlayedGamesInMatch ?? 0) + 1;
   const sub = !winner ? 'Nobody wins'
+    : midMatch ? `${won ? 'You win' : `${winner.Name} wins`} game ${gameNumber}`
+    : inMatch ? `${won ? 'You win' : `${winner.Name} wins`} the match${tally}`
     : won && everyone.length === 2 && losers.length === 1 ? `${losers[0].Name} has lost`
     : won ? 'Last one standing'
     : `${winner.Name} wins`;
-  root.innerHTML = '<div class="panel"><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p><div class="actions"></div></div>'
+  root.innerHTML = '<div class="panel"><p class="stage"></p><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p>'
+    + '<div class="tally"></div><div class="actions"></div></div>'
     + '<button class="to-result primary">Show result</button>';
+  const stage = q(root, '.stage');
+  stage.hidden = !inMatch;
+  stage.textContent = matchOver ? `Match over · Best of ${games}` : `Game ${gameNumber} · Best of ${games}`;
+  drawTally(q(root, '.tally'), model, inMatch ? everyone : [], wins, matchOver ? winner : undefined);
   const view = (board: boolean) => {
     root.classList.toggle('viewing', board);
     byId('match').classList.toggle('ending', !board);

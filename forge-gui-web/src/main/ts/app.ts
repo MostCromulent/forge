@@ -256,6 +256,7 @@ function apply(msg: ServerMessage): void {
       if (!msg.inMatch) {
         model.objects.clear();
         model.gameOver = false;
+        model.matchScore = [];
         // Nothing draws the match once it is left, so a card still waiting to be paid for would float over the menu
         resetTable();
         send({ t: 'decks' });
@@ -340,6 +341,7 @@ function apply(msg: ServerMessage): void {
       // The next game of a match reuses the card keys of the last one, so nothing keyed on them may survive
       if (msg.full) {
         model.gameOver = false;
+        model.matchScore = [];
         model.prompt = null;
         model.drawOffer = null;
         model.zones = [];
@@ -365,6 +367,7 @@ function apply(msg: ServerMessage): void {
     case 'autoDecisions': model.autoDecisions = msg; break;
     case 'gameOver':
       model.gameOver = true;
+      model.matchScore = msg.score;
       model.drawOffer = null;
       dropCountdown();
       break;

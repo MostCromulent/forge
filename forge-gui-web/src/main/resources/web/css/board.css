@@ -684,15 +684,27 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #game-over .panel { display: flex; flex-direction: column; align-items: center; gap: 14px; pointer-events: auto; --metal: linear-gradient(180deg, #fff4d2 0%, #f5d27a 40%, #e8b73c 62%, #a3781a 100%); --rule: rgba(242,195,68,.65); }
 #game-over .panel.lose, #game-over .panel.draw, #game-over .panel.watched { --metal: linear-gradient(180deg, #f2f5f9 0%, #c7d0db 45%, #8f9aa9 72%, #5e6979 100%); --rule: rgba(170,185,205,.55); }
 #game-over .panel > * { animation: ending-rise .9s cubic-bezier(.2,.8,.2,1) both; }
-#game-over .panel > :nth-child(2) { animation-delay: .12s; }
-#game-over .panel > :nth-child(3) { animation-delay: .3s; }
-#game-over .panel > :nth-child(4) { animation-delay: .45s; }
-#game-over .panel > :nth-child(5) { animation-delay: .7s; }
+#game-over .panel > .word { animation-delay: .12s; }
+#game-over .panel > .rule { animation-delay: .3s; }
+#game-over .panel > .sub { animation-delay: .45s; }
+#game-over .panel > .tally { animation-delay: .58s; }
+#game-over .panel > .actions { animation-delay: .7s; }
 #game-over .face { width: 88px; height: 88px; border-radius: 50%; background: var(--surface-2) center / cover; border: 2px solid rgba(242,195,68,.85); box-shadow: 0 0 0 4px #0a0d13, 0 14px 34px #000; }
 #game-over .word { margin: 0 -.2em 0 0; font-family: Georgia, "Times New Roman", serif; font-size: 60px; font-weight: 700; line-height: 1; letter-spacing: .2em; text-transform: uppercase;
   background: var(--metal); -webkit-background-clip: text; background-clip: text; color: transparent; }
 #game-over .rule { width: 240px; height: 1px; background: linear-gradient(90deg, transparent, var(--rule), transparent); }
 #game-over .sub { margin: 0; font-size: 13px; letter-spacing: .26em; text-transform: uppercase; color: #aeb8c6; }
+/* Where in the match this game falls, over the result */
+#game-over .stage { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase; color: #aeb8c6; }
+/* The match so far: each player's games won, the winner of a finished match in gold */
+#game-over .tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+#game-over .tally-player { display: flex; align-items: center; gap: 9px; padding: 5px 12px 5px 5px; border-radius: 999px;
+  background: #0d1016d9; border: 1px solid var(--line-bright); }
+#game-over .tally-face { width: 28px; height: 28px; border-radius: 50%; background: var(--surface-2) center / cover; box-shadow: 0 0 0 1px #000c; }
+#game-over .tally-name { font-size: 13px; font-weight: 600; color: #d6dde6; }
+#game-over .tally-won { min-width: 1.2em; text-align: center; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; color: #eef2f6; }
+#game-over .tally-player.champion { border-color: rgba(242,195,68,.7); }
+#game-over .tally-player.champion .tally-won { color: #f5d27a; }
 #game-over .actions { display: flex; gap: 10px; margin-top: 8px; }
 #game-over .actions button { padding: 9px 22px; }
 #game-over.viewing { place-items: end center; padding-bottom: 28px; }

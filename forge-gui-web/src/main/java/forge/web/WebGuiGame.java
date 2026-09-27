@@ -15,6 +15,7 @@ import forge.game.GameView;
 import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
+import forge.game.event.GameEventGameOutcome;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
@@ -64,6 +65,7 @@ import forge.web.ToBrowser.DistributeRequest;
 import forge.web.ToBrowser.Flash;
 import forge.web.ToBrowser.GameOver;
 import forge.web.ToBrowser.ManipulateRequest;
+import forge.web.ToBrowser.MatchScore;
 import forge.web.ToBrowser.Notice;
 import forge.web.ToBrowser.OptionRequest;
 import forge.web.ToBrowser.OrderAnswer;
@@ -136,6 +138,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PlayerSettings settings;
     private volatile BrowserChannel browser;
     private volatile boolean gameOver;
+    /** Each player's games won in the match, from the engine's outcome of the game just ended. */
+    private volatile List<MatchScore> score = List.of();
     /** Run once, when this seat's game ends. */
     private volatile Runnable onGameOver;
     /** What the game did since the last state message, in order. Filled and drained on the dispatch thread: a packet's
@@ -191,7 +195,7 @@ public class WebGuiGame extends NetworkGuiGame {
         channel.send(gameLog.all());
         requests.replay(channel::send);
         if (gameOver) {
-            channel.send(new GameOver());
+            channel.send(new GameOver(score));
         }
     }
 
@@ -277,6 +281,7 @@ public class WebGuiGame extends NetworkGuiGame {
             return;
         }
         gameOver = false;
+        score = List.of();
         // A whole new state has nothing to animate from, so what led up to it is dropped
         events.clear();
         model.reset(rootKey(gv));
@@ -305,7 +310,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (gv.isGameOver() && !gameOver) {
             // Replaces finishGame from FControlGameEventHandler, which does not run here
             gameOver = true;
-            send(new GameOver());
+            send(new GameOver(score));
             final Runnable listener = onGameOver;
             if (listener != null) {
                 listener.run();
@@ -371,6 +376,13 @@ public class WebGuiGame extends NetworkGuiGame {
         if (BrowserEvents.worthSeeing(event, this::isLocalPlayer)) {
             unseen = true;
         }
+        if (event instanceof GameEventGameOutcome outcome) {
+            score = matchScore(outcome.matchSummary());
+            // The outcome can come after the game is seen to be over, so the ending is told again with the score
+            if (gameOver) {
+                send(new GameOver(score));
+            }
+        }
         final Record forwarded = BrowserEvents.forwarded(event);
         if (forwarded != null) {
             events.add(forwarded);
@@ -391,6 +403,34 @@ public class WebGuiGame extends NetworkGuiGame {
                 send(sound);
             }
         }
+    }
+
+    /**
+     * Games won by each player, read from the engine's summary of the match ("Alice: 1 Bob: 0 "), which is all that
+     * reaches a guest. Each seated player's name is looked for in it, so a name with a colon or a space in it is read
+     * whole.
+     */
+    private List<MatchScore> matchScore(final String summary) {
+        final GameView gv = getGameView();
+        if (gv == null || summary == null) {
+            return List.of();
+        }
+        final List<MatchScore> out = new ArrayList<>();
+        for (final PlayerView p : gv.getPlayers()) {
+            final String name = p.getName() + ": ";
+            final int at = (" " + summary).indexOf(" " + name);
+            if (at < 0) {
+                continue;
+            }
+            int end = at + name.length();
+            while (end < summary.length() && Character.isDigit(summary.charAt(end))) {
+                end++;
+            }
+            if (end > at + name.length()) {
+                out.add(new MatchScore(Ref.player(p.getId()), Integer.parseInt(summary.substring(at + name.length(), end))));
+            }
+        }
+        return out;
     }
 
     // Phase stops are the desktop preferences: one row for the local player's turns, one for everyone else's

@@ -201,6 +201,7 @@ export interface Flash {
 
 export interface GameOver {
   t: 'gameOver';
+  score: MatchScore[];
 }
 
 export interface DrawOffer {
@@ -1109,6 +1110,11 @@ export interface CardFace {
 }
 
 export type TriggerDecision = 'ASK' | 'ACCEPT' | 'DECLINE';
+
+export interface MatchScore {
+  player: Ref;
+  won: number;
+}
 
 export interface AutoDecision {
   key: string;

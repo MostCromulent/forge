@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { CardPoolDetails, CardPoolGroup, DevState } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -20,6 +20,8 @@ export interface Model {
   zones: ShownZone[];
   requests: Map<number, Request>;
   gameOver: boolean;
+  /** Each player's games won in the match, told with the end of a game; empty until then. */
+  matchScore: MatchScore[];
   controls: Controls | null;
   playable: Playable | null;
   looks: Looks | null;
@@ -107,7 +109,7 @@ export interface Model {
 export function createModel(): Model {
   return {
     objects: new Map(), root: -1, visible: new Set(), localPlayers: [],
-    prompt: null, zones: [], requests: new Map(), gameOver: false, controls: null, playable: null,
+    prompt: null, zones: [], requests: new Map(), gameOver: false, matchScore: [], controls: null, playable: null,
     looks: null, spectating: false,
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],

@@ -429,8 +429,12 @@ final class ToBrowser {
     record Flash() {
     }
 
+    /** The game has ended. score is each player's games won in the match so far, once the engine has counted them. */
     @Message("gameOver")
-    record GameOver() {
+    record GameOver(List<MatchScore> score) {
+    }
+
+    record MatchScore(Ref player, int won) {
     }
 
     // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} -------------------------
