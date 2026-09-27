@@ -417,7 +417,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* A notch on the edge facing the pill, so the window reads as opened from it */
 #phase-strip .stops::before { content: ''; position: absolute; left: 50%; top: -6px; width: 10px; height: 10px; background: inherit; border: 1px solid var(--line-bright); border-right: 0; border-bottom: 0; transform: translateX(-50%) rotate(45deg); }
 #phase-strip .stops.above::before { top: auto; bottom: -6px; border: 1px solid var(--line-bright); border-left: 0; border-top: 0; }
-#phase-strip .stops .hint { margin-top: 6px; color: var(--muted); font-size: 10.5px; text-align: center; }
+#phase-strip .stops .hint { margin: 10px 0 4px; color: var(--muted); font-size: 10.5px; text-align: center; }
 #phase-strip .stops td.row-tools { padding: 0 4px 0 12px; white-space: nowrap; }
 #phase-strip .stops .row-tool { height: 20px; padding: 0 7px; border: 1px solid var(--line-bright); border-radius: 5px; background: none; color: var(--muted); font-size: 10.5px; }
 #phase-strip .stops .row-tool + .row-tool { margin-left: 4px; }
