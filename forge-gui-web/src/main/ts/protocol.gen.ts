@@ -1103,6 +1103,9 @@ export interface CardFace {
   pt?: string;
   text: string;
   imageKey?: string;
+  colors: number;
+  set?: string;
+  rarity?: CardRarity;
 }
 
 export type TriggerDecision = 'ASK' | 'ACCEPT' | 'DECLINE';
@@ -1376,6 +1379,8 @@ export interface LimitedTable {
 export type ZoneType = 'Hand' | 'Library' | 'Graveyard' | 'Battlefield' | 'Exile' | 'Flashback' | 'Command' | 'Stack' | 'Sideboard' | 'Ante' | 'Merged' | 'SchemeDeck' | 'PlanarDeck' | 'AttractionDeck' | 'Junkyard' | 'ContraptionDeck' | 'Subgame' | 'ExtraHand' | 'None';
 
 export type GameLogEntryType = 'GAME_OUTCOME' | 'MATCH_RESULTS' | 'TURN' | 'MULLIGAN' | 'ANTE' | 'DRAFT' | 'ZONE_CHANGE' | 'PLAYER_CONTROL' | 'DAMAGE' | 'LIFE' | 'LAND' | 'DISCARD' | 'COMBAT' | 'INFORMATION' | 'STACK_RESOLVE' | 'STACK_ADD' | 'EFFECT_REPLACED' | 'MANA' | 'PHASE';
+
+export type CardRarity = 'BasicLand' | 'Common' | 'Uncommon' | 'Rare' | 'MythicRare' | 'Special' | 'Token' | 'Unknown';
 
 export interface EditorLand {
   name: string;
@@ -1667,8 +1672,6 @@ export type GamePieceType = 'CARD' | 'TOKEN' | 'EFFECT' | 'COPIED_SPELL' | 'ATTR
 export type Direction = 'Left' | 'Right';
 
 export type EvenOdd = 'Even' | 'Odd';
-
-export type CardRarity = 'BasicLand' | 'Common' | 'Uncommon' | 'Rare' | 'MythicRare' | 'Special' | 'Token' | 'Unknown';
 
 export type GameType = 'Sealed' | 'Draft' | 'Winston' | 'Gauntlet' | 'Tournament' | 'CommanderGauntlet' | 'Quest' | 'QuestCommander' | 'QuestDraft' | 'PlanarConquest' | 'Adventure' | 'AdventureEvent' | 'Puzzle' | 'Constructed' | 'DeckManager' | 'Vanguard' | 'Commander' | 'Oathbreaker' | 'TinyLeaders' | 'Brawl' | 'Planeswalker' | 'Planechase' | 'Archenemy' | 'ArchenemyRumble' | 'MomirBasic' | 'MoJhoSto';
 

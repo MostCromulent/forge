@@ -1,12 +1,14 @@
 import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSymbolText } from './images';
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
+import { frameColour } from './cards';
+import { sortRulesText, type Block, type Line, type SortedText } from './rulestext';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
 import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
-import type { CardView, PlayerDetail, PlayerView } from './protocol';
+import type { CardFace, CardView, PlayerDetail, PlayerView } from './protocol';
 
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
 // it arrives in the model a moment after the pointer does
@@ -202,9 +204,16 @@ function drawDetail(model: Model): void {
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
   setSymbolText(q(zoom, '.cost'), face.cost);
-  q(zoom, '.type').textContent = face.type ?? '';
-  setRulesText(q(zoom, '.text'), face.text ?? '');
-  q(zoom, '.pt').textContent = face.pt ?? '';
+  const detail = q(zoom, '.detail');
+  // The frame is in the face's own colours, as a card with no picture is framed on the board
+  detail.dataset.frame = frameColour(face.colors, face.type ?? '');
+  q(zoom, '.type-line').textContent = face.type ?? '';
+  const set = q(zoom, '.set');
+  set.textContent = face.set ?? '';
+  set.dataset.rarity = face.rarity ?? '';
+  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '');
+  q(zoom, '.kind-chip').textContent = sorted.tag ?? '';
+  drawPt(q(zoom, '.pt'), model, hover.card, face, face === d.faces[0]);
   // The keys are the player's own, since either can be changed in the options
   const keys = boundKeys();
   const faces = d.faces.length > 1 ? `${keyName(keys.nextFace)}: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
@@ -234,41 +243,141 @@ function setSource(el: HTMLElement, zone: string | undefined): void {
 
 // CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other
 // tag is dropped and its text kept, so card text can never inject markup.
-function setRulesText(el: HTMLElement, html: string): void {
-  // The preview is redrawn every frame while a card is hovered, so the text is parsed again only when it changes
-  if (el.dataset.html === html) return;
-  el.dataset.html = html;
-  el.replaceChildren();
+function rulesLines(html: string): Line[] {
+  const lines: Line[] = [[]];
   const doc = new DOMParser().parseFromString(html, 'text/html');
   const walk = (node: Node, muted: boolean) => {
     for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
-        appendSymbolText(el, child.textContent ?? '', muted ? 'muted' : '');
+        (child.textContent ?? '').split(/\r?\n/).forEach((text, i) => {
+          if (i > 0) lines.push([]);
+          if (text) lines[lines.length - 1].push({ text, muted });
+        });
       } else if (child.nodeName === 'BR') {
-        el.append('\n');
+        lines.push([]);
       } else if (child instanceof Element) {
         walk(child, muted || /gray|grey/i.test(child.getAttribute('style') ?? ''));
       }
     }
   };
   walk(doc.body, false);
+  return lines;
+}
+
+/** The text last sorted, for the next frame to reuse. */
+let lastSorted: SortedText = { blocks: [], chips: [], notes: [] };
+
+/**
+ * Lays out a card's rules as its printed text box: keywords as chips, each ability on a row of its own with its cost
+ * beside it, then the rest. What the game has done to the card goes under the box: counters and damage as chips by the
+ * P/T, anything longer as notes at the foot of the box.
+ */
+function setRulesText(box: HTMLElement, foot: HTMLElement, html: string): SortedText {
+  // The preview is redrawn every frame while a card is hovered, so the text is sorted again only when it changes
+  if (box.dataset.html === html) return lastSorted;
+  box.dataset.html = html;
+  const sorted = lastSorted = sortRulesText(rulesLines(html));
+  box.replaceChildren(...sorted.blocks.map(drawBlock));
+  if (sorted.notes.length) {
+    const notes = document.createElement('div');
+    notes.className = 'notes';
+    for (const note of sorted.notes) notes.append(richLine(document.createElement('div'), note));
+    box.append(notes);
+  }
+  foot.replaceChildren(...sorted.chips.map(chip => {
+    const el = document.createElement('span');
+    el.className = `chip ${chip.kind}`;
+    el.textContent = chip.text;
+    return el;
+  }));
+  return sorted;
+}
+
+function element(tag: string, className: string): HTMLElement {
+  const el = document.createElement(tag);
+  el.className = className;
+  return el;
+}
+
+function drawBlock(block: Block): HTMLElement {
+  switch (block.kind) {
+    case 'keywords': {
+      const el = element('div', 'kws');
+      for (const item of block.items) el.append(richLine(element('span', 'kw'), item));
+      for (const reminder of block.reminders) el.append(richLine(element('span', 'kwrem'), reminder));
+      return el;
+    }
+    case 'ability': {
+      const el = element('div', 'ab');
+      el.append(richLine(element('span', block.loyalty ? `ac ${block.loyalty}` : 'ac'), block.cost));
+      const effect = element('span', 'ef');
+      if (block.label) effect.append(richLine(element('b', ''), block.label), ' ');
+      el.append(richLine(effect, block.effect));
+      return el;
+    }
+    case 'mode':
+      return richLine(element('div', 'mode-option'), block.text);
+    case 'text': {
+      const el = element('div', '');
+      if (block.label) el.append(richLine(element('b', ''), block.label), ' — ');
+      return richLine(el, block.text);
+    }
+  }
+}
+
+/** Appends a line's text with its symbols drawn, greying what does not apply and setting reminder text apart. */
+function richLine<E extends HTMLElement>(el: E, line: Line): E {
+  for (const run of line) {
+    run.text.split(/(\((?:[^()]|\([^()]*\))*\))/).forEach((part, i) => {
+      if (!part) return;
+      const span = document.createElement('span');
+      span.className = [run.muted ? 'muted' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' ');
+      appendSymbolText(span, part);
+      el.append(span);
+    });
+  }
+  return el;
+}
+
+/**
+ * The P/T, loyalty or defence in the card's corner. The face the card is showing now is counted as the board counts
+ * it: damage comes off the toughness, and a number above or below the printed one is coloured so.
+ */
+function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFace, current: boolean): void {
+  el.classList.toggle('shield', /Planeswalker/.test(face.type ?? ''));
+  const card = current && key !== null ? model.objects.get(key) as CardView | undefined : undefined;
+  const state = card ? stateOf(model, card) : undefined;
+  if (!card || !state || !/Creature/.test(face.type ?? '')) {
+    el.textContent = face.pt ?? '';
+    return;
+  }
+  const power = state.Power ?? 0;
+  const toughness = (state.Toughness ?? 0) - (card.Damage ?? 0);
+  const shift = (now: number, base: number | undefined) => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
+  const p = document.createElement('i');
+  p.textContent = String(power);
+  p.dataset.shift = shift(power, state.BasePower);
+  const t = document.createElement('i');
+  t.textContent = String(toughness);
+  t.dataset.shift = card.Damage ? 'down' : shift(toughness, state.BaseToughness);
+  el.replaceChildren(p, '/', t);
 }
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"></div><div class="from"></div><div class="text"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
   zoom.addEventListener('animationend', e => {
     if (e.animationName === 'zoom-flip') zoom.classList.remove('flipping');
   });
-  // The preview lets the pointer through, so rules text too long for it scrolls with the wheel over the card itself
-  const detail = q(zoom, '.detail');
+  // The preview lets the pointer through, so rules text too long for its box scrolls with the wheel over the card itself
+  const box = q(zoom, '.text');
   document.addEventListener('wheel', e => {
-    if (zoom.hidden || !zoom.classList.contains('text-card') || detail.scrollHeight <= detail.clientHeight) return;
+    if (zoom.hidden || !zoom.classList.contains('text-card') || box.scrollHeight <= box.clientHeight) return;
     e.preventDefault();
-    detail.scrollTop += e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 16 : e.deltaY;
+    box.scrollTop += e.deltaMode === WheelEvent.DOM_DELTA_LINE ? e.deltaY * 16 : e.deltaY;
   }, { passive: false });
   // The preview is placed before its image arrives, and grows when it does, so it is placed again to stay on screen
   img.addEventListener('load', () => {
@@ -316,9 +425,12 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
   q(zoom, '.cost').textContent = '';
-  q(zoom, '.type').textContent = '';
+  q(zoom, '.type-line').textContent = '';
+  q(zoom, '.kind-chip').textContent = '';
+  q(zoom, '.set').textContent = '';
   const text = q(zoom, '.text');
   text.textContent = d.lines.join('\n');
   delete text.dataset.html;
+  q(zoom, '.foot').replaceChildren();
   q(zoom, '.pt').textContent = '';
 }

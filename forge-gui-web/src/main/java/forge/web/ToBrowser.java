@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
+import forge.card.CardRarity;
 import forge.game.GameLogEntryType;
 import forge.game.GameLogVerbosity;
 import forge.game.phase.PhaseType;
@@ -406,8 +407,9 @@ final class ToBrowser {
     record Detail(int key, List<CardFace> faces) {
     }
 
+    /** One face of a card as the preview shows it. colors is the face's colour mask, as the Colors property carries it. */
     record CardFace(@Nullable String name, String cost, String type, @Nullable String pt, String text,
-            @Nullable String imageKey) {
+            @Nullable String imageKey, int colors, @Nullable String set, @Nullable CardRarity rarity) {
     }
 
     @Message("playerDetail")

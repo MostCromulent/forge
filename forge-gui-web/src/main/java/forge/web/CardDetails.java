@@ -10,6 +10,8 @@ import forge.web.ToBrowser.CardFace;
 import forge.web.ToBrowser.Detail;
 import forge.web.ToBrowser.PlayerDetail;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +66,9 @@ final class CardDetails {
                 : state.isBattle() ? state.getDefense() : null;
         return new CardFace(state.getName(), JsonCodec.manaCost(state.getManaCost()),
                 state.getType() == null ? "" : state.getType().toString(), pt,
-                CardDetailUtil.composeCardText(state, game, true).trim(), state.getImageKey());
+                CardDetailUtil.composeCardText(state, game, true).trim(), state.getImageKey(),
+                state.getColors() == null ? 0 : state.getColors().getColor(),
+                StringUtils.isEmpty(state.getSetCode()) ? null : state.getSetCode(),
+                state.getRarity());
     }
 }

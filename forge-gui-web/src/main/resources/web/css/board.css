@@ -590,11 +590,64 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 /* Held open while the card's details are fetched, so the preview does not grow and shift when the hint arrives */
 #zoom > .hint:empty { visibility: hidden; }
 #zoom > .hint:empty::before { content: '\00a0'; }
-/* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
-#zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
-  padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--line-bright); font-size: 14px; line-height: 1.45; }
-#zoom.text-card .detail .name { font-size: 16px; }
-#zoom.text-card .detail .pt { margin-top: auto; }
+/* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing. It is
+   laid out as the card is printed, in the frame the board gives a card with no picture: the name and cost in a bar, the
+   type in a bar with the set beside it, the text box, and the P/T in the corner. What the game has done to the card sits
+   along the foot of the frame, beside the P/T. */
+#zoom.text-card .detail { position: relative; width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; display: flex; flex-direction: column; gap: 5px;
+  padding: 6px; overflow: hidden; border: 7px solid #0b0d11; border-radius: 14px; font-size: 13px; line-height: 1.38;
+  background: linear-gradient(165deg, color-mix(in srgb, var(--frame) 40%, #1b2029), color-mix(in srgb, var(--frame) 16%, #0d1016));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 55%, transparent), 0 10px 40px #000a; }
+#zoom.text-card .detail > header, #zoom.text-card .detail > .type { flex: none; display: flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 6px;
+  background: color-mix(in srgb, var(--frame) 28%, #0d1016); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 45%, transparent); }
+#zoom.text-card .detail > header { justify-content: space-between; }
+#zoom.text-card .detail .name { font-size: 15.5px; line-height: 1.2; }
+#zoom.text-card .detail .cost { white-space: nowrap; }
+#zoom.text-card .detail > .type { color: #dfe4ea; font-size: 12.5px; font-weight: 600; line-height: 1.25; }
+#zoom.text-card .detail .type-line { flex: 1; }
+#zoom .detail .kind-chip, #zoom .detail .set { flex: none; font-size: 10px; font-weight: 700; line-height: 1; padding: 3px 5px; border-radius: 4px; }
+#zoom .detail .kind-chip { color: var(--accent-2); border: 1px solid var(--accent-2); }
+/* The set in the colour of its rarity symbol */
+#zoom .detail .set { letter-spacing: .06em; color: #0d1016; background: #d8dbe0; }
+#zoom .detail .set[data-rarity="Uncommon"] { background: linear-gradient(135deg, #e4ecf2, #8fa3b3); }
+#zoom .detail .set[data-rarity="Rare"] { background: linear-gradient(135deg, #f5dc8a, #b8902e); }
+#zoom .detail .set[data-rarity="MythicRare"] { background: linear-gradient(135deg, #ffb070, #d0461e); }
+#zoom .detail .set[data-rarity="Special"] { background: linear-gradient(135deg, #d9c2ff, #8a5cd6); }
+#zoom .detail .kind-chip:empty, #zoom .detail .set:empty, #zoom:not(.text-card) .detail .foot { display: none; }
+#zoom.text-card .detail .from { flex: none; padding: 3px 10px; border-radius: 5px; background: var(--zone-glow); color: #15121c; font-size: 11.5px; font-weight: 700; }
+/* The text box: each keyword line, ability and paragraph on a row of its own, ruled off from the next */
+#zoom.text-card .detail .text { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; display: flex; flex-direction: column; white-space: normal;
+  border-radius: 6px; background: #12161e; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 22%, transparent); }
+#zoom.text-card .text > * { padding: 7px 10px; }
+#zoom.text-card .text > * + * { border-top: 1px solid #262e3b; }
+#zoom.text-card .text .rem { font-style: italic; color: var(--muted); }
+/* A modal spell's modes hang under the line that offers them */
+#zoom.text-card .text > .mode-option { position: relative; padding-left: 22px; }
+#zoom.text-card .text > * + .mode-option { border-top: 0; padding-top: 0; }
+#zoom.text-card .text > .mode-option::before { content: '•'; position: absolute; left: 11px; }
+#zoom.text-card .text .kws { display: flex; flex-wrap: wrap; gap: 4px 5px; align-items: center; }
+#zoom.text-card .text .kw { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+  background: color-mix(in srgb, var(--frame) 18%, #1b212b); border: 1px solid color-mix(in srgb, var(--frame) 45%, transparent); }
+#zoom.text-card .text .kwrem { flex-basis: 100%; font-size: 11.5px; line-height: 1.35; color: var(--muted); font-style: italic; }
+#zoom.text-card .text .ab { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 9px; align-items: baseline; }
+#zoom.text-card .text .ac { font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: #1e2530; border: 1px solid var(--line-bright); white-space: nowrap; }
+/* Loyalty up in blue, down in orange-red, the same pair the P/T uses */
+#zoom.text-card .text .ac.plus { color: #7cc8ff; border-color: #7cc8ff73; }
+#zoom.text-card .text .ac.minus { color: #ff7a59; border-color: #ff7a5973; }
+#zoom.text-card .text .notes { margin-top: auto; display: grid; gap: 2px; font-size: 11.5px; color: #c5cdd8; background: #0d1016; }
+#zoom.text-card .detail .foot { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 30px; padding-right: 64px; }
+#zoom .detail .foot .chip { font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: #0d1016cc; border: 1px solid var(--line-bright); white-space: nowrap; }
+#zoom .detail .foot .counter { color: #7cc8ff; border-color: #7cc8ff66; }
+#zoom .detail .foot .damage { color: #ff7a59; border-color: #ff7a5966; }
+#zoom.text-card .detail .pt { position: absolute; right: 5px; bottom: 4px; font-size: 17px; font-weight: 800; line-height: 1; padding: 5px 10px; border-radius: 7px;
+  font-variant-numeric: tabular-nums; background: color-mix(in srgb, var(--frame) 30%, #0d1016);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 65%, transparent), 0 2px 6px #000a; }
+#zoom.text-card .detail .pt i { font-style: normal; }
+#zoom.text-card .detail .pt [data-shift="up"] { color: #7cc8ff; }
+#zoom.text-card .detail .pt [data-shift="down"] { color: #ff7a59; }
+/* A planeswalker's loyalty in the shield it is printed in */
+#zoom.text-card .detail .pt.shield { width: 40px; padding: 7px 0 10px; border-radius: 0; text-align: center; background: #1c1f26; color: #fff;
+  clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); box-shadow: inset 0 0 0 2px #cfd3da; }
 
 #zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
@@ -660,14 +713,14 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card.noimg img { display: none; }
 /* Without its image a card is drawn as a small printed card: a frame in its colour, the name and cost in a bar
    across the top, the type in a bar near the foot, and the space between where the art would be */
-.card { --frame: #9aa1ab; }
-.card[data-frame="W"] { --frame: #e8dfc0; }
-.card[data-frame="U"] { --frame: #5f9fd6; }
-.card[data-frame="B"] { --frame: #8a7d98; }
-.card[data-frame="R"] { --frame: #d9714f; }
-.card[data-frame="G"] { --frame: #5fa86a; }
-.card[data-frame="M"] { --frame: #d9b04e; }
-.card[data-frame="L"] { --frame: #a58d6b; }
+.card, #zoom .detail { --frame: #9aa1ab; }
+:is(.card, #zoom .detail)[data-frame="W"] { --frame: #e8dfc0; }
+:is(.card, #zoom .detail)[data-frame="U"] { --frame: #5f9fd6; }
+:is(.card, #zoom .detail)[data-frame="B"] { --frame: #8a7d98; }
+:is(.card, #zoom .detail)[data-frame="R"] { --frame: #d9714f; }
+:is(.card, #zoom .detail)[data-frame="G"] { --frame: #5fa86a; }
+:is(.card, #zoom .detail)[data-frame="M"] { --frame: #d9b04e; }
+:is(.card, #zoom .detail)[data-frame="L"] { --frame: #a58d6b; }
 .card.noimg .frame { --u: calc(var(--card-w) * var(--fit, 1) / 100); grid-template-rows: auto auto 1fr auto; gap: 0; padding: calc(var(--u) * 5);
   border: calc(var(--u) * 4) solid #0b0d11; background: linear-gradient(165deg, color-mix(in srgb, var(--frame) 42%, #1b2029), color-mix(in srgb, var(--frame) 18%, #0d1016));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame) 60%, transparent); font-size: calc(var(--u) * 10); color: #f2f4f7; }
