@@ -498,6 +498,11 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
 #zones.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > * { pointer-events: auto; }
+/* A zone opened while something is on the stack (a search, a scry) is usually that spell or ability asking, so the
+   stack stays in view above the scrim, and the zone moves over to sit beside it */
+#match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }
+#match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--side-gap) + var(--stack-w) + 40px); }
+#match:has(#stack:not([hidden])) #zones:not(.minimised) .zone-panel { width: min(860px, calc(100vw - var(--side-gap) - var(--stack-w) - 80px)); }
 /* A column, not a grid: a grid row grows to its content, so a long library pushed the footer and its OK off the screen */
 .zone-shelf { display: flex; flex-direction: column; gap: 12px; max-height: 88vh; }
 .zone-panel {
