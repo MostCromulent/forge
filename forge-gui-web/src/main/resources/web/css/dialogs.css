@@ -19,6 +19,17 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 .dialog .dist-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-end; }
 .dialog .dist-target { display: grid; justify-items: center; gap: 8px; }
+/* A player offered in a dialog, the size of a card beside the cards: their portrait with their life on it, and their name */
+.player-option { width: var(--card-w); min-height: var(--card-h); display: grid; align-content: center; justify-items: center; gap: 10px; padding: 8px 6px;
+  border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line-bright); }
+.player-option:hover { border-color: var(--accent-2); }
+.player-option .po-avatar { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-3);
+  border: 2px solid var(--line-bright); }
+.player-option .po-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+.player-option .po-initial { font-size: 24px; font-weight: 700; }
+.player-option .po-life { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 0 7px; border-radius: 10px; background: var(--bg);
+  border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.player-option .po-name { max-width: 100%; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dialog .dist-step { display: flex; align-items: center; gap: 8px; }
 .dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }

@@ -11,10 +11,11 @@ import { SymbolText } from './symbols';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
-import { cardMenu, oldestRequest, stackPick, type Model } from './model';
+import { playerAvatarUrl } from './looks';
+import { cardMenu, isLocal, oldestRequest, stackPick, type Model } from './model';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
-  SideboardRequest, TextRequest, TrackedObject,
+  PlayerView, SideboardRequest, TextRequest, TrackedObject,
 } from './protocol';
 
 type Answer = (value: unknown) => void;
@@ -129,12 +130,16 @@ export function RevealWindow({ model, title, cards, close }: { model: Model; tit
 }
 
 /** What an option can show: a card on the table, a card by image and name, or a line of text. */
-type OptionLike = Pick<RequestOption, 'card' | 'name' | 'imageKey'> & { label?: string };
+type OptionLike = Pick<RequestOption, 'card' | 'name' | 'imageKey' | 'player'> & { label?: string };
 
 function OptionView({ model, opt, picked, onClick }: { model: Model; opt: OptionLike; picked?: boolean; onClick?: () => void }) {
   const section = SECTION.exec(opt.label ?? '');
   if (section && !opt.card && !opt.imageKey) {
     return <div class="section">{section[1]}</div>;
+  }
+  const player = opt.player ? model.objects.get(opt.player.ref) as PlayerView | undefined : undefined;
+  if (player) {
+    return <PlayerOption model={model} player={player} picked={picked} onClick={onClick} />;
   }
   const card = opt.card ? model.objects.get(opt.card.ref) : null;
   if (card) {
@@ -145,6 +150,22 @@ function OptionView({ model, opt, picked, onClick }: { model: Model; opt: Option
       picked={picked} onClick={onClick} />;
   }
   return <button class={picked ? 'text-option picked' : 'text-option'} onClick={onClick}><SymbolText text={opt.label} /></button>;
+}
+
+/** A player as the board shows them: their portrait, or their initial without one, with their life and name. */
+function PlayerOption({ model, player, picked, onClick }: { model: Model; player: PlayerView; picked?: boolean; onClick?: () => void }) {
+  const [broken, setBroken] = useState(false);
+  const src = playerAvatarUrl(player);
+  const name = player.Name ?? '';
+  return (
+    <button class={`player-option${picked ? ' picked' : ''}${isLocal(model, player) ? ' own' : ''}`} onClick={onClick} title={name}>
+      <span class="po-avatar">
+        {src && !broken ? <img src={src} alt="" draggable={false} onError={() => setBroken(true)} /> : <span class="po-initial">{name.slice(0, 1).toUpperCase()}</span>}
+        <span class="po-life">{player.Life ?? 0}</span>
+      </span>
+      <span class="po-name">{name}</span>
+    </button>
+  );
 }
 
 /** A card on the table, drawn by the board's own card code so it looks and updates exactly as it does there. */
@@ -381,13 +402,20 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return next;
   });
   const left = req.amount - values.reduce((a, b) => a + b, 0);
+  // Players first, opponents before you, then the cards; each keeps its own place in the answer
+  const rank = (i: number) => {
+    const ref = req.options[i].player;
+    const player = ref ? model.objects.get(ref.ref) as PlayerView | undefined : undefined;
+    return !player ? 2 : isLocal(model, player) ? 1 : 0;
+  };
+  const order = req.options.map((_, i) => i).sort((a, b) => rank(a) - rank(b) || a - b);
   // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>
       <div class="dist-row">
-        {req.options.map((opt, i) => (
+        {order.map(i => (
           <div key={i} class="dist-target">
-            <OptionView model={model} opt={opt} />
+            <OptionView model={model} opt={req.options[i]} />
             <div class="dist-step">
               <Button onClick={() => step(i, -1)}>−</Button>
               <b>{values[i]}</b>
