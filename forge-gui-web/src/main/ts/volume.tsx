@@ -23,7 +23,7 @@ export function Volume({ close, anchor = '#prompt .volume' }: { close: () => voi
           return (
             <label key={def.key} class="volume-row">
               <span>{def.label}</span>
-              <input type="range" min={0} max={100} step={5} value={value}
+              <input type="range" min={0} max={100} step={5} value={value} class={value > 0 ? '' : 'off'}
                 onInput={e => set(def.key, Number(e.currentTarget.value))} />
               <span class="value">{value > 0 ? `${value}%` : 'Off'}</span>
             </label>
