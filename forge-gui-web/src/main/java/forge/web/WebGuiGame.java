@@ -1126,6 +1126,21 @@ public class WebGuiGame extends NetworkGuiGame {
                     // The yield is set on this side at once, so the chip beside the phase pill names it straight away
                     send(controlsMessage());
                 }
+                case "stopYield" -> {
+                    // Ends whichever pass is running: a second press of End Turn, or a click on the chip naming it
+                    final YieldController yields = controller.getYieldController();
+                    final PlayerView local = getCurrentPlayer();
+                    if (yields.getAutoPassUntilMarker() != null) {
+                        controller.sendYieldUpdate(new YieldUpdate.ClearMarker(local));
+                    }
+                    if (yields.autoPassUntilStackEmpty()) {
+                        controller.sendYieldUpdate(new YieldUpdate.StackYield(local, false, false));
+                    }
+                    if (yields.autoPassUntilEndOfTurn()) {
+                        controller.sendYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(local, false));
+                    }
+                    send(controlsMessage());
+                }
                 case "undo" -> controller.undoLastAction();
                 case "autoPass" -> {
                     WebSettings.set(settings, controller, "autoPassNoActions",

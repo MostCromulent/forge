@@ -410,7 +410,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 /* Who is being waited on hangs off the left of the pill, and where you are skipping to off the right */
 #phase-strip .waiting { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; height: 22px; padding: 0 9px 0 7px; border-radius: 11px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); font-size: 11px; white-space: nowrap; }
 #phase-strip .waiting b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
-#phase-strip .until { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; height: 22px; padding: 0 9px 0 7px; border-radius: 11px; background: var(--surface); border: 1px solid var(--select); color: var(--select); font-size: 11px; font-weight: 600; white-space: nowrap; }
+#phase-strip .until { cursor: pointer; position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; height: 22px; padding: 0 9px 0 7px; border-radius: 11px; background: var(--surface); border: 1px solid var(--select); color: var(--select); font-size: 11px; font-weight: 600; white-space: nowrap; }
 #phase-strip .caret { color: var(--muted); display: flex; transition: transform .18s ease; }
 /* The pill opens the stops grid, so hovering it lifts it a step and nudges the caret the way the grid will open */
 #phase-strip .pill:not(.open):hover { background: var(--surface-2); border-color: var(--line-bright); }

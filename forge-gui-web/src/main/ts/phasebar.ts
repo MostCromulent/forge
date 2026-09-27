@@ -82,6 +82,7 @@ const DEFAULT_STOPS: Record<'mine' | 'theirs', PhaseType[]> = {
 };
 
 let wired = false;
+let stopYield: (() => void) | null = null;
 
 export function renderPhaseBar(model: Model, g: GameView, actions: Actions): void {
   const open = ui.stopsOpen;
@@ -109,6 +110,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   slideTo(q(pill, '.track'), phase, step);
   drawWaiting(pill, model);
   drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
+  stopYield = actions.stopYield;
   const opens = myTurn ? 'up' : 'down';
   // Drawn every frame, so the markup is parsed again only when it changes
   if (pill.dataset.opens !== opens) {
@@ -145,6 +147,11 @@ function build(root: HTMLElement): void {
     + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
     + '<span class="caret"></span>';
   pill.onclick = () => changeUi(u => { u.stopsOpen = !u.stopsOpen; });
+  // The chip naming a pass under way stops it, rather than opening the stops grid
+  q(pill, '.until').onclick = e => {
+    e.stopPropagation();
+    stopYield?.();
+  };
   document.addEventListener('mousedown', e => {
     if (ui.stopsOpen && !(e.target instanceof Element && e.target.closest('#phase-strip'))) {
       changeUi(u => { u.stopsOpen = false; });
@@ -273,6 +280,7 @@ function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: { o
   }
   const until = q(pill, '.until');
   until.hidden = !text;
+  until.title = text ? `Passing priority ${text}. Click to stop` : '';
   q(until, '.text').textContent = text;
 }
 

@@ -117,7 +117,6 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
-    q(root, '.end-turn').onclick = () => actions.endTurn();
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
@@ -160,7 +159,9 @@ function drawPrompt(model: Model, actions: Actions): void {
   const endingTurn = !!model.controls?.untilEndOfTurn;
   const endTurnButton = q(root, '.end-turn');
   endTurnButton.classList.toggle('on', endingTurn);
-  endTurnButton.title = endingTurn ? 'Passing priority until the end of this turn'
+  // A second press stops the pass it started
+  endTurnButton.onclick = () => (endingTurn ? actions.stopYield() : actions.endTurn());
+  endTurnButton.title = endingTurn ? 'Passing priority until the end of this turn. Click to stop'
     : `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
   q(root, '.more').classList.toggle('open', !!ui.gameMenu);
   const ok = q<HTMLButtonElement>(root, '.ok');

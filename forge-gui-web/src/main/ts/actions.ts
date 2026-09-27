@@ -19,6 +19,8 @@ export interface Actions {
   ok(): void;
   cancel(): void;
   endTurn(): void;
+  /** Stops whichever pass is running: until end of turn, until the stack clears, or until a marked step. */
+  stopYield(): void;
   toggleAutoPass(): void;
   undo(): void;
   concede(): void;
@@ -148,6 +150,7 @@ export function createActions(send: Send): Actions {
     ok: () => send({ t: 'ok' }),
     cancel: () => send({ t: 'cancel' }),
     endTurn: () => send({ t: 'endTurn' }),
+    stopYield: () => send({ t: 'stopYield' }),
     toggleAutoPass: () => send({ t: 'autoPass' }),
     undo: () => send({ t: 'undo' }),
     concede: () => send({ t: 'concede' }),

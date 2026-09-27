@@ -474,7 +474,7 @@ export type ServerMessage =
 // ---- Browser to server ----
 
 export interface Bare {
-  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addresses' | 'cardPoolDetails' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'eventStart' | 'ok' | 'cancel' | 'endTurn' | 'autoPass' | 'undo' | 'concede';
+  t: 'decks' | 'claimHost' | 'join' | 'lobby' | 'invite' | 'leaveLobby' | 'addresses' | 'cardPoolDetails' | 'netDecks' | 'leave' | 'quit' | 'limitedLeave' | 'poolClose' | 'draftDiscard' | 'gauntletNext' | 'gauntletRestart' | 'eventStart' | 'ok' | 'cancel' | 'endTurn' | 'stopYield' | 'autoPass' | 'undo' | 'concede';
 }
 
 export interface SetName {

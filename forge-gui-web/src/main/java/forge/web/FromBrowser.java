@@ -23,7 +23,7 @@ final class FromBrowser {
 
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart,
-        ok, cancel, endTurn, autoPass, undo, concede }
+        ok, cancel, endTurn, stopYield, autoPass, undo, concede }
 
     @Command
     record Bare(Plain t) {
