@@ -15,12 +15,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -83,7 +87,9 @@ final class ServerConsole implements IProgressBar {
     private final StatsBox stats = new StatsBox();
     private volatile ServerTraffic traffic;
     private JFrame frame;
-    private JTextArea text;
+    private JTextPane text;
+    /** Whether the last line written was an error, so the stack trace under it is coloured with it. */
+    private boolean inError;
     private JButton browse;
     private JButton startStop;
     private WebService service;
@@ -336,12 +342,11 @@ final class ServerConsole implements IProgressBar {
         foot.add(quitWhenEmpty);
         foot.add(forwardRow);
 
-        text = new JTextArea();
+        // A styled pane rather than a plain area, so errors and warnings can stand out; it wraps long lines, as a stack
+        // trace is wider than any window worth opening
+        text = new JTextPane();
         text.setEditable(false);
         text.setFont(mono);
-        // A stack trace is wider than any window worth opening, so the log wraps rather than scrolling sideways
-        text.setLineWrap(true);
-        text.setWrapStyleWord(true);
         text.setBackground(new Color(0x10, 0x14, 0x1c));
         text.setForeground(new Color(0xc8, 0xd1, 0xdb));
         text.setMargin(new Insets(6, 8, 6, 8));
@@ -747,18 +752,60 @@ final class ServerConsole implements IProgressBar {
             chunk = pending.toString();
             pending.setLength(0);
         }
-        text.append(chunk);
+        final StyledDocument doc = text.getStyledDocument();
+        try {
+            for (final String line : chunk.split("(?<=\n)")) {
+                doc.insertString(doc.getLength(), line, styleOf(line));
+            }
+        } catch (final BadLocationException e) {
+            text.setText(chunk);
+        }
         trim();
-        text.setCaretPosition(text.getDocument().getLength());
+        text.setCaretPosition(doc.getLength());
+    }
+
+    // Red for errors and the stack traces under them, amber for warnings; the rest in the log's own colour
+    private static final SimpleAttributeSet PLAIN = new SimpleAttributeSet();
+    private static final SimpleAttributeSet ERROR = colour(new Color(0xff, 0x6b, 0x5c));
+    private static final SimpleAttributeSet WARNING = colour(new Color(0xf2, 0xc3, 0x44));
+
+    private static SimpleAttributeSet colour(final Color c) {
+        final SimpleAttributeSet set = new SimpleAttributeSet();
+        StyleConstants.setForeground(set, c);
+        return set;
+    }
+
+    /**
+     * How one line reads: tinylog marks its level as [ERROR] or [WARN ]. A line of a stack trace (indented, "Caused
+     * by", "... n more", or an exception's own name) carries on the colour of the error above it.
+     */
+    private SimpleAttributeSet styleOf(final String line) {
+        if (line.contains("[ERROR]")) {
+            inError = true;
+            return ERROR;
+        }
+        final String bare = line.strip();
+        final boolean trace = line.startsWith("\t") || line.startsWith(" ") || bare.startsWith("Caused by")
+                || bare.startsWith("at ") || bare.startsWith("...") || bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
+        if (inError && (trace || bare.isEmpty())) {
+            return ERROR;
+        }
+        inError = trace && bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
+        if (inError) {
+            return ERROR;
+        }
+        return line.contains("[WARN") ? WARNING : PLAIN;
     }
 
     private void trim() {
-        final int lines = text.getLineCount();
+        final StyledDocument doc = text.getStyledDocument();
+        final Element root = doc.getDefaultRootElement();
+        final int lines = root.getElementCount();
         if (lines <= MAX_LINES) {
             return;
         }
         try {
-            text.replaceRange("", 0, text.getLineEndOffset(lines - MAX_LINES - 1));
+            doc.remove(0, root.getElement(lines - MAX_LINES - 1).getEndOffset());
         } catch (final BadLocationException e) {
             text.setText("");
         }
