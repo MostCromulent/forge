@@ -60,7 +60,7 @@ function restingRect(el: HTMLElement): DOMRect {
 }
 
 /** Every card's trip from one place to another takes this long: a play, a draw, a discard, a paid spell's landing. */
-const FLIGHT_MS = 600;
+const FLIGHT_MS = 500;
 /** A card put onto the battlefield from the hand (a land, a permanent that resolves at once) travels this fast. */
 const PLAY_MS = 380;
 /**
