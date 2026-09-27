@@ -93,7 +93,7 @@ const actions: Actions = {
 
 const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
-initUi(schedule);
+initUi(schedule, render);
 initNotices((notice, view, label) => {
   notify(notice, view, NOTICE_MS, label);
   schedule();

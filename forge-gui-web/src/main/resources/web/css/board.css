@@ -23,7 +23,9 @@
 #opponent { grid-area: opp; }
 #me { grid-area: me; }
 #phase-strip { grid-area: phase; }
-#side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+#side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; view-transition-name: side-column; }
+/* A panel opening or shutting (side.ts) eases the column to its new size and the board to its new layout */
+::view-transition-group(side-column), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .26s; animation-timing-function: cubic-bezier(.2,.7,.3,1); }
 /* The log takes what the chat leaves; shut, each is only its own tab */
 .side-panel { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 #log-panel { flex: 1; }

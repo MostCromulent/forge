@@ -3,7 +3,7 @@
 // against the edge and the board takes the room.
 
 import { byId, q } from './dom';
-import { changeUi, rememberSidePanels, ui } from './ui';
+import { changeUi, changeUiNow, rememberSidePanels, ui, type UiState } from './ui';
 import type { Model } from './model';
 
 const PANELS = ['log'] as const;
@@ -33,11 +33,24 @@ export function renderSky(model: Model): void {
 export function initSide(): void {
   const side = byId('side');
   for (const panel of PANELS) {
-    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => changeUi(u => {
+    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => eased(u => {
       u.sidePanels[panel] = !u.sidePanels[panel];
       rememberSidePanels();
     });
   }
+}
+
+/**
+ * Opening or shutting a panel reflows the column and the board, which CSS cannot ease (grid areas do not animate), so
+ * the browser eases between the two layouts. The browser shows no frames while it waits for the new layout, so it is
+ * drawn at once rather than on the next frame.
+ */
+function eased(change: (state: UiState) => void): void {
+  if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
+    changeUi(change);
+    return;
+  }
+  document.startViewTransition(() => changeUiNow(change));
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */

@@ -89,9 +89,17 @@ export const ui: UiState = {
 };
 
 let redraw: () => void = () => {};
+let drawNow: () => void = () => {};
 
-export function initUi(schedule: () => void): void {
+export function initUi(schedule: () => void, now: () => void): void {
   redraw = schedule;
+  drawNow = now;
+}
+
+/** Changes the arrangement and draws it at once, for a view transition, which shows no frames until it is drawn. */
+export function changeUiNow(change: (state: UiState) => void): void {
+  change(ui);
+  drawNow();
 }
 
 /** Changes the arrangement and draws the table again. */
