@@ -275,7 +275,8 @@ function shiftBoard(travelled: Set<string>): void {
     // setting off from where that one card stood
     const topKey = top.dataset.key as string;
     const topWas = lastSeen.get(topKey);
-    const stayed = keys.filter(k => k !== topKey).map(k => lastSeen.get(k)).find(s => s);
+    // Compared with a card that was already in the pile, not one arriving this frame, which set off from elsewhere
+    const stayed = keys.filter(k => k !== topKey && !travelled.has(k)).map(k => lastSeen.get(k)).find(s => s);
     if (topWas && stayed && !travelled.has(topKey) && !intoHint.has(topKey) && apart(topWas.rect, stayed.rect)) {
       joining.push({ was: topWas, top });
       newcomers.add(topKey);

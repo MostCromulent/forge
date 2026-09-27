@@ -729,8 +729,6 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    the room widens and the new copy slides out from under the top card */
 .battlefield .slot.holding { padding-left: calc(var(--held-behind) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .battlefield .slot.opening { transition: transform .15s ease, padding-left .26s cubic-bezier(.2,.7,.3,1); }
-.card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
-.card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
 .card.pile.grown[data-depth="1"]::after, .card.pile.grown[data-depth="2"]::before, .card.pile.grown[data-depth="3"] .pile-edge { animation: pile-out .26s cubic-bezier(.2,.7,.3,1); }
 @keyframes pile-out { from { transform: none; } }
 .slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); }
@@ -791,6 +789,9 @@ body.dragging-block #zoom { display: none; }
 .card.pile.tapped .pile-edge { transform: translateY(calc(3 * var(--pile-step) / .9)); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
+/* Held back while a card is on its way into the pile (motion.ts holdPile); after the rules above, so they win */
+.card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
+.card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
 /* A pile's count is black with white figures, perched on the top card's corner, so how many there are reads at a glance;
    laid out, it goes quiet as a way back */
 .card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 28px; height: 24px; padding: 0 7px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 12px; box-shadow: 0 2px 6px #000b; font-size: 14.5px; font-weight: 800; cursor: pointer; }
