@@ -124,6 +124,13 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .row > .group:last-child { justify-content: flex-end; }
 .row:has(> .group:empty) > .group { justify-content: center; }
 .row > .group:empty { display: none; }
+/* With both of a row's kinds out (lands and other permanents, creatures and planeswalkers or battles), the first
+   stays in the middle and the second keeps to the end. Only when the first grows into the room the second needs does
+   it move over: the two side columns share what is left, and the one holding the second never shrinks below it.
+   Contained, so the grid's width never feeds back into the board's, which battlefield.ts measures to size the cards */
+.row:has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; contain: inline-size; }
+.row:has(> .group:last-child:not(:empty)) > .group:first-child { grid-column: 2; justify-content: center; }
+.row:has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 0; }
 /* Planeswalkers and battles hold the far end of the row an attack is aimed into. The group has no width of its
    own until something goes in it, so an ordinary board looks exactly as it did. */
 .row > .group.far { flex: 0 0 auto; margin-left: auto; }
