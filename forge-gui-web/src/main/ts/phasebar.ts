@@ -75,6 +75,11 @@ const gridName = (i: number): string =>
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
 export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
 const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
+/** Forge's own default stops (the PHASE_HUMAN_ and PHASE_AI_ preferences), which a row can be reset to. */
+const DEFAULT_STOPS: Record<'mine' | 'theirs', PhaseType[]> = {
+  mine: ['MAIN1', 'COMBAT_DECLARE_BLOCKERS', 'MAIN2'],
+  theirs: ['COMBAT_BEGIN', 'COMBAT_DECLARE_ATTACKERS', 'COMBAT_DECLARE_BLOCKERS', 'END_OF_TURN'],
+};
 
 let wired = false;
 
@@ -271,8 +276,10 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: { turns:
     const title = `${s[2]} · ${r.mine ? 'your turns' : theirs.turns}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
-  }).join('') + '</tr>').join('');
-  return `<div class="title">Phase stops</div><table>${groups}${head}${body}</table>`;
+  }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">Clear</button>`
+    + `<button class="row-tool" data-defaults data-mine="${r.mine}">Defaults</button></td></tr>`).join('');
+  return `<div class="title">Phase stops</div><table>${groups}${head}${body}</table>`
+    + '<div class="hint">Click: stop here · Right-click: pass priority until here</div>';
 }
 
 function wireGrid(panel: HTMLElement, actions: Actions): void {
@@ -285,6 +292,10 @@ function wireGrid(panel: HTMLElement, actions: Actions): void {
       e.preventDefault();
       actions.toggleMarker(phase, mine);
     };
+  }
+  for (const b of panel.querySelectorAll<HTMLElement>('.row-tool')) {
+    const mine = b.dataset.mine === 'true';
+    b.onclick = () => actions.setStops(mine, b.dataset.clear !== undefined ? [] : DEFAULT_STOPS[mine ? 'mine' : 'theirs']);
   }
 }
 

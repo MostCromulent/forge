@@ -412,17 +412,25 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .pill.open .caret { transform: rotate(180deg); }
 @keyframes caret-nudge { 40% { transform: translateY(var(--nudge)); } }
 html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
-#phase-strip .stops { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 35; background: rgba(22,27,34,.97); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px 8px; box-shadow: 0 10px 30px #000c; font-size: 11.5px; }
+#phase-strip .stops { position: absolute; top: calc(100% + 8px); left: 50%; transform: translateX(-50%); z-index: 35; background: rgba(22,27,34,.97); border: 1px solid var(--line-bright); border-radius: 10px; padding: 10px 12px 8px; box-shadow: 0 10px 30px #000c; font-size: 11.5px; }
 #phase-strip .stops.above { top: auto; bottom: calc(100% + 8px); }
+/* A notch on the edge facing the pill, so the window reads as opened from it */
+#phase-strip .stops::before { content: ''; position: absolute; left: 50%; top: -6px; width: 10px; height: 10px; background: inherit; border: 1px solid var(--line-bright); border-right: 0; border-bottom: 0; transform: translateX(-50%) rotate(45deg); }
+#phase-strip .stops.above::before { top: auto; bottom: -6px; border: 1px solid var(--line-bright); border-left: 0; border-top: 0; }
+#phase-strip .stops .hint { margin-top: 6px; color: var(--muted); font-size: 10.5px; text-align: center; }
+#phase-strip .stops td.row-tools { padding: 0 4px 0 12px; white-space: nowrap; }
+#phase-strip .stops .row-tool { height: 20px; padding: 0 7px; border: 1px solid var(--line-bright); border-radius: 5px; background: none; color: var(--muted); font-size: 10.5px; }
+#phase-strip .stops .row-tool + .row-tool { margin-left: 4px; }
+#phase-strip .stops .row-tool:hover { color: var(--text); border-color: var(--text); }
 #phase-strip .stops .title { margin-bottom: 4px; font-weight: 650; }
 #phase-strip .stops table { border-collapse: separate; border-spacing: 0; }
 #phase-strip .stops td, #phase-strip .stops th { padding: 0; height: 22px; text-align: center; font-weight: 400; }
-#phase-strip .stops th { width: 50px; vertical-align: top; padding: 0 3px 5px; }
-#phase-strip .stops th .name { display: block; margin-top: 4px; color: var(--muted); font-size: 9.5px; line-height: 1.25; }
+#phase-strip .stops th { width: 54px; vertical-align: top; padding: 0 3px 5px; }
+#phase-strip .stops th .name { display: block; margin-top: 4px; color: var(--muted); font-size: 10.5px; line-height: 1.25; }
 #phase-strip .stops th.now .name { color: var(--accent-2); font-weight: 650; }
 #phase-strip .stops td.who { text-align: left; padding: 0 10px 0 8px; white-space: nowrap; }
 /* Each phase heads its steps with a bracket, and a gap sets one phase apart from the next */
-#phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 9.5px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
+#phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
 #phase-strip .stops th.group span { display: block; white-space: nowrap; padding-bottom: 3px; border-bottom: 1px solid var(--line-bright); }
 #phase-strip .stops td.gap { width: 12px; }
 /* The row of the player whose turn it is is lit, as a band across it */

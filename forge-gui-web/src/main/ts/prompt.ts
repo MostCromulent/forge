@@ -75,6 +75,7 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="end-turn">${icon('endTurn')}</button>
         <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
+        <span class="tools-gap" aria-hidden="true"></span>
         <button class="volume" title="Volume">${icon('volume')}</button>
         <button class="more" title="Game: offer a draw, auto-pass interrupts, concede">${icon('more')}</button>
         <button class="cog" title="Options">${icon('cog')}</button>
@@ -103,7 +104,6 @@ function drawPrompt(model: Model, actions: Actions): void {
   }
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
-  q(root, '.end-turn').title = `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
   q(root, '.undo').title = `Undo your last undoable action, such as tapping a land for mana (${keyName(keys.undo)})`;
   q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
   if (model.prompt !== shown) {
@@ -128,6 +128,13 @@ function drawPrompt(model: Model, actions: Actions): void {
   const autoPassButton = q(root, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
   autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play`;
+  // Lit while the turn is being passed through, as auto-pass is while it is on
+  const endingTurn = !!model.controls?.untilEndOfTurn;
+  const endTurnButton = q(root, '.end-turn');
+  endTurnButton.classList.toggle('on', endingTurn);
+  endTurnButton.title = endingTurn ? 'Passing priority until the end of this turn'
+    : `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
+  q(root, '.more').classList.toggle('open', !!ui.gameMenu);
   const ok = q<HTMLButtonElement>(root, '.ok');
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   const passing = countdown();

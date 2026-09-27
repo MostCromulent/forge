@@ -12,8 +12,11 @@
 #prompt .tools button:hover { background: var(--surface-2); }
 #prompt .tools svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 #prompt .tools button:hover svg { stroke: var(--text); }
-#prompt .tools .auto-pass.on { background: var(--brass); }
-#prompt .tools .auto-pass.on svg { stroke: var(--on-brass); }
+/* A pass that is running is lit brass; the three game actions stand apart from the three menus by a rule */
+#prompt .tools .on, #prompt .tools .on:hover { background: var(--brass); }
+#prompt .tools .on svg, #prompt .tools .on:hover svg { stroke: var(--on-brass); }
+#prompt .tools .more.open { background: var(--surface-2); }
+#prompt .tools .tools-gap { width: 1px; height: 14px; margin: 0 4px; background: var(--line-bright); }
 #prompt .prompt-body { display: flex; gap: 10px; align-items: flex-start; }
 #prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
 #prompt .prompt-card { width: 44px; border-radius: 4px; flex: none; }
