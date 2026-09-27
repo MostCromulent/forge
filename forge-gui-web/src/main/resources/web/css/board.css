@@ -788,7 +788,7 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    already chosen */
 #match.picking .card.selectable { outline: none; }
 #match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
-#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.55) saturate(.7); }
+#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
