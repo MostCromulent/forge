@@ -144,22 +144,24 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .group > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
 /* Attachments sit behind their host, each showing a strip above the one in front of it */
 .slot > .card:last-child { z-index: 1; }
-/* What is attached to a card fans out behind it, each a step up and to the left of the next, as Forge desktop lays
-   it; the step is a share of the card, so a crowded board's smaller cards keep the same look. battlefield.ts counts
+/* What is attached to a card, and the cards under a pile's top one, fan out behind it, each a step to the left of
+   the next, as Arena lays them: only to the left, so a row keeps one card's height however much is attached. The
+   step is a share of the card's width, so a crowded board's smaller cards keep the same look. battlefield.ts counts
    the room the fan takes when it sizes the cards */
-.battlefield { --fan: .12; --support-indent: 28px; }
+.battlefield { --fan: .2; --support-indent: 28px; }
 /* The artifacts and enchantments at the end of the lands' row stand in from its edge, so they do not line up with
    the edge of the stack panel above them; battlefield.ts counts the room */
 .row > .group.support { margin-right: var(--support-indent); }
-.slot { position: relative; padding-top: calc(var(--attached, 0) * var(--card-h) * var(--fit, 1) * var(--fan));
-  padding-left: calc(var(--attached, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }
+.slot { position: relative; padding-left: calc(var(--behind, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 /* Each card behind the host is a layer of its own, so its P/T, badges and icons stay behind the host with it */
-.slot > .card:not(:last-child) { position: absolute; z-index: 0; top: calc(var(--under) * var(--card-h) * var(--fit, 1) * var(--fan));
-  left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan)); }
+.slot > .card:not(:last-child) { position: absolute; z-index: 0; top: 0; left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .slot > .card:not(:last-child):hover { z-index: 6; }
 /* A tapped card turns about its centre, which lifts its foot above the foot of what is attached to it; with an
-   attachment under it, it drops back to that foot so the two line up rather than one sticking out below */
+   attachment under it, it drops back to that foot so the two line up rather than one sticking out below. Turned, it
+   also reaches further left, over the strip of what is behind it, so that moves out by as much */
 .slot > .card:not(:last-child) ~ .card.tapped:last-child { top: calc((var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
+.slot:has(> .card.tapped:last-child) > .card:not(:last-child) {
+  left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan) - (var(--card-h) * .9 - var(--card-w)) / 2 * var(--fit, 1)); }
 .player { display: grid; gap: 6px; justify-items: center; }
 /* The local player's zone tiles hang from the divider, clear of the prompt panel in the corner */
 #me .player { align-self: start; }
@@ -737,13 +739,18 @@ body.dragging-block #zoom { display: none; }
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
-/* The cards under the top one are the same card, stepped out behind it and a little darker, so their own frames
-   show at the edges. Isolated, so they sit under the top card's image but above whatever the board paints. */
+/* The cards under the top one are the same card, stepped out to its left as attachments are, and a little darker, so
+   their own frames show at the edge. Isolated, so they sit under the top card's image but above whatever the board paints. */
 .card.pile { isolation: isolate; }
 .card.pile::before, .card.pile::after { content: ''; position: absolute; inset: 0; z-index: -1; display: none; border-radius: var(--radius);
   background: var(--pile-img, none) center / cover, var(--surface-2); box-shadow: 0 1px 4px #000a; }
-.card.pile::after { transform: translate(calc(-5px * var(--fit, 1)), calc(-4px * var(--fit, 1))); filter: brightness(.78); }
-.card.pile::before { transform: translate(calc(-10px * var(--fit, 1)), calc(-8px * var(--fit, 1))); filter: brightness(.58); }
+.card.pile { --pile-step: calc(var(--card-w) * var(--fit, 1) * var(--fan, .2)); }
+.card.pile::after { transform: translateX(calc(-1 * var(--pile-step))); filter: brightness(.78); }
+.card.pile::before { transform: translateX(calc(-2 * var(--pile-step))); filter: brightness(.58); }
+/* The layers turn with a tapped card, so they step along its length to land to its left on the board; the card is
+   drawn at .9, which the step undoes */
+.card.pile.tapped::after { transform: translateY(calc(var(--pile-step) / .9)); }
+.card.pile.tapped::before { transform: translateY(calc(2 * var(--pile-step) / .9)); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
 .card .count { display: none; position: absolute; right: 4px; top: 4px; z-index: 3; min-width: 22px; height: 20px; padding: 0 5px; place-items: center; background: #0e1116e6; color: var(--text); border: 1px solid var(--accent-2); border-radius: 11px; font-size: 11.5px; font-weight: 700; cursor: pointer; }

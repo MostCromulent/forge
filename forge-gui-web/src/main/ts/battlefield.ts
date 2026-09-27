@@ -17,6 +17,9 @@ interface Slot {
   sig: string | null;
 }
 
+/** The cards drawn behind a slot's top card: what is attached to it, or up to two edges of a pile. */
+const behind = (s: Slot): number => s.attached.length || Math.min(2, s.members.length - 1);
+
 /**
  * Which of the four groups a permanent belongs to. Lands and the rest of the non-creature permanents share the
  * row nearest the player's own edge; creatures and the tokens they make share the row nearest the middle.
@@ -55,8 +58,8 @@ export function renderBattlefield(root: HTMLElement, model: Model, cards: CardVi
     return {
       el: q(root, `.${name}`),
       slots: list.length,
-      steps: list.reduce((n, s) => n + s.attached.length, 0),
-      depth: list.reduce((n, s) => Math.max(n, s.attached.length), 0),
+      steps: list.reduce((n, s) => n + behind(s), 0),
+      depth: list.reduce((n, s) => Math.max(n, behind(s)), 0),
       battles: list.filter(s => /Battle/.test(stateOf(model, s.top).Type ?? '')).length,
     };
   };
@@ -79,9 +82,9 @@ const SMALLEST_SLACK = 0.06;
 interface GroupStats {
   el: HTMLElement;
   slots: number;
-  /** Attachments fanned behind the group's hosts, all told. */
+  /** Cards fanned behind the group's hosts and pile tops, all told. */
   steps: number;
-  /** The most attachments behind any one host. */
+  /** The most cards behind any one slot. */
   depth: number;
   /** Battles, which lie on their side and so are wider than a slot's usual room. */
   battles: number;
@@ -127,10 +130,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const rowGap = (r: number) => (r === 1 ? 52 : 20);
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
     live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
-  const zoneHeight = (z: Zone, s: Sized) => {
-    const depth = live(z).reduce((n, g) => Math.max(n, g.depth), 0);
-    return (s.lines + depth * fan) * h * s.fit + (s.lines - 1) * lineGap(s.fit);
-  };
+  // What is behind a card fans out to its left only, so it costs a row width and never height
+  const zoneHeight = (z: Zone, s: Sized) => s.lines * h * s.fit + (s.lines - 1) * lineGap(s.fit);
 
   // offsetWidth, so a scrollbar appearing does not shrink the room it measures and feed back into the size
   const width = field.offsetWidth - px(fieldStyle, 'padding-left') - px(fieldStyle, 'padding-right') - 2;
@@ -354,7 +355,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? 'Land creature' : '';
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
-  el.style.setProperty('--attached', String(slot.attached.length));
+  el.style.setProperty('--behind', String(behind(slot)));
   el.classList.toggle('attacking', !!slot.top.Attacking && combatShown(model));
   el.classList.toggle('charging', charging.has(slot.top.$key));
   const sig = slot.sig;

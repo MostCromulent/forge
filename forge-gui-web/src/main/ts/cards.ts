@@ -280,7 +280,7 @@ function showDamage(el: HTMLElement, damage: number): void {
 
 export function setPileCount(el: HTMLElement, count: number, opened: boolean): void {
   el.classList.toggle('pile', count > 1);
-  // Up to three edges show behind the top card, so a pile of two never looks like a pile of five
+  // One edge shows behind the top card of a pile of two, two behind a larger pile
   el.dataset.depth = String(Math.min(3, Math.max(0, count - 1)));
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';
