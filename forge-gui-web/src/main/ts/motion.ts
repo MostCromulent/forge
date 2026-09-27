@@ -634,19 +634,26 @@ const zonesShape = () => [...document.querySelectorAll<HTMLElement>(ZONE_CARDS)]
 
 /**
  * Where a card in hand rests. The pointer over it lifts and enlarges it, which is not where a trip from the hand should
- * start, so it is measured with its resting transform (hand.css) and put back without a transition.
+ * start, so it is worked out from its resting transform (hand.css) rather than read. Putting that transform on the card
+ * to measure it would cut short a rise under way, and the card would jump to full size while its cost still grew.
  */
 function unhovered(el: HTMLElement): DOMRect {
-  const style = el.style;
-  const transition = style.transition;
-  const transform = style.transform;
-  style.transition = 'none';
-  style.transform = 'translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg))';
+  const style = getComputedStyle(el);
+  const [ox, oy] = style.transformOrigin.split(' ').map(parseFloat);
+  const w = el.offsetWidth, h = el.offsetHeight;
+  // The box the card's corners reach under a transform, measured from its transform origin
+  const reach = (m: DOMMatrix) => {
+    const corners = [[0, 0], [w, 0], [0, h], [w, h]].map(([x, y]) => m.transformPoint(new DOMPoint(x - ox, y - oy)));
+    const xs = corners.map(p => p.x), ys = corners.map(p => p.y);
+    return { left: Math.min(...xs), top: Math.min(...ys), right: Math.max(...xs), bottom: Math.max(...ys) };
+  };
+  const now = reach(new DOMMatrix(style.transform === 'none' ? undefined : style.transform));
   const rect = el.getBoundingClientRect();
-  style.transform = transform;
-  void el.offsetWidth;
-  style.transition = transition;
-  return rect;
+  const drop = parseFloat(el.style.getPropertyValue('--drop')) || 0;
+  const tilt = parseFloat(el.style.getPropertyValue('--tilt')) || 0;
+  const rest = reach(new DOMMatrix().translate(0, drop).rotate(tilt));
+  const x = rect.left - now.left, y = rect.top - now.top;
+  return new DOMRect(x + rest.left, y + rest.top, rest.right - rest.left, rest.bottom - rest.top);
 }
 
 /** Remembers where every card stands now, for the moves the next frame brings. */
