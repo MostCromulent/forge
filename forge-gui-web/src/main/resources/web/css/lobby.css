@@ -120,7 +120,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .modes .mode.plaque .mode-name { font-size: 20px; }
 .modes .mode.plaque .mode-blurb { color: #c9d0da; font-size: 13px; }
 .modes .mode.plaque .mode-status { color: var(--accent-2); font-size: 12px; font-weight: 600; }
-.modes .mode.plaque:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 2px #0008, 0 0 22px color-mix(in srgb, var(--accent-2) 30%, transparent), 0 18px 40px #000b; transform: translateY(-2px); }
+.modes .mode.plaque:hover:not(:disabled) { box-shadow: 0 0 0 1px var(--accent-2), 0 0 0 2px #0008, 0 0 14px color-mix(in srgb, var(--accent-2) 14%, transparent), 0 18px 40px #000b; transform: translateY(-2px); }
 .modes .mode.plaque:hover:not(:disabled)::before { transform: scale(1.08); filter: saturate(1); }
 .modes .mode.plaque:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
 /* The wide plaque lays out in a row: medallion, words, then a fan of cards */
