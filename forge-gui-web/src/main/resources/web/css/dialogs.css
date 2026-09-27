@@ -18,7 +18,8 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .dialog .text-option.picked { background: var(--brass); color: var(--on-brass); }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 .dialog .dist-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-end; }
-.dialog .dist-target { display: grid; justify-items: center; gap: 8px; }
+/* Room under each card for a tab on its foot, such as Blocking, above its steppers */
+.dialog .dist-target { display: grid; justify-items: center; gap: 16px; }
 /* A player offered in a dialog, the size of a card beside the cards: their portrait with their life on it, and their name */
 .player-option { width: var(--card-w); min-height: var(--card-h); display: grid; align-content: center; justify-items: center; gap: 10px; padding: 8px 6px;
   border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line-bright); }
