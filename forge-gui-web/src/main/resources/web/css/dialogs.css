@@ -30,7 +30,9 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .player-option .po-life { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); padding: 0 7px; border-radius: 10px; background: var(--bg);
   border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .player-option .po-name { max-width: 100%; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dialog .dist-step { display: flex; align-items: center; gap: 8px; }
+/* The steppers span the card above them, edge to edge, so each count reads as that card's */
+.dialog .dist-step { width: var(--card-w); display: flex; align-items: center; justify-content: space-between; }
+.dialog .dist-step button { width: 30px; padding: 4px 0; }
 .dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
