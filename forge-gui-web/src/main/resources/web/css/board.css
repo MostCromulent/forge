@@ -186,6 +186,8 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .slot:has(> .card.tapped:last-child) > .card:not(:last-child) {
   left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan) - (var(--card-h) * .9 - var(--card-w)) / 2 * var(--fit, 1)); }
 .player { display: grid; gap: 6px; justify-items: center; }
+/* The name belongs to the portrait above it, so a little more room parts it from the zones below */
+.seat:not(.compact) .player > .name { margin-bottom: 6px; }
 /* The local player's zone tiles hang from the divider, clear of the prompt panel in the corner */
 #me .player { align-self: start; }
 /* The opponent's column keeps to the divider as yours does, so floating mana or a counter grows it away from the
