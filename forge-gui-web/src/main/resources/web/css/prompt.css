@@ -41,7 +41,9 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 /* The answer first, taking two thirds; the way out after it, the other third */
 /* The secondary answer is as wide as its label, and the primary takes the rest */
 #prompt .ok { flex: 1 1 0; border-radius: 8px 4px 4px 8px; }
-#prompt .cancel { flex: 0 1 auto; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+#prompt .cancel { flex: 0 1 auto; max-width: 45%; background: var(--surface-2); border-color: var(--line); color: var(--muted); border-radius: 4px 8px 8px 4px; }
+/* A long secondary label (Cancel auto-pass) goes onto two lines rather than outgrowing the primary */
+#prompt .cancel .label { white-space: normal; text-align: center; line-height: 1.1; }
 #prompt .cancel:hover:not(:disabled) { color: var(--text); }
 #prompt .ok:last-child, #prompt .cancel:first-child { border-radius: 8px; }
 #prompt .ok.focus:not(:disabled) { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); }
