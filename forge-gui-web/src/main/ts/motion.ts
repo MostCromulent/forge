@@ -239,10 +239,34 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>): void {
     if (Math.abs(dx) + Math.abs(dy) > 2) {
       // Measured mid-slide the card is still near where it came from, which a flight would set off from
       resting.set(key, restingRect(el));
-      el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+      // On translate, not transform: an animation of transform overrides the transition that turns a card as it taps,
+      // so a card tapped out of a pile would show already turned
+      el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }],
         { duration: FLIGHT_MS, easing: EASE, composite: 'add' });
     }
+    if (was.ghost && was.ghost !== el && el.closest('.battlefield')) {
+      morph(el, was.ghost, was.size);
+    }
   }
+}
+
+/** How long a redrawn card takes to turn or resize from how its old element looked; a little longer than a tap's turn. */
+const MORPH_MS = 300;
+
+/**
+ * A card redrawn as a new element (tapped out of a pile, untapped back into one, moved to a row of another size) has no
+ * earlier look for a transition to start from, so it would appear already turned and sized. It starts from how the old
+ * element looked instead: its turn and its size, the slide above having already carried its place. rotate and scale are
+ * properties of their own, so they add to the transform that turns a tapped card rather than replacing it.
+ */
+function morph(el: HTMLElement, old: HTMLElement, oldSize: { w: number; h: number } | undefined): void {
+  const wasTapped = old.classList.contains('tapped');
+  const isTapped = el.classList.contains('tapped');
+  const turn = (wasTapped ? 90 : 0) - (isTapped ? 90 : 0);
+  // A tapped card is also drawn at nine tenths its size
+  const size = (oldSize?.w && el.offsetWidth ? oldSize.w / el.offsetWidth : 1) * (wasTapped ? .9 : 1) / (isTapped ? .9 : 1);
+  if (!turn && Math.abs(size - 1) < 0.02) return;
+  el.animate([{ rotate: `${turn}deg`, scale: String(size) }, { rotate: '0deg', scale: '1' }], { duration: MORPH_MS, easing: EASE });
 }
 
 /**
