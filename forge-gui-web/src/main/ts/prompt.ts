@@ -33,6 +33,33 @@ let built = false;
 let shown: Model['prompt'] = null;
 let arrived = 0;
 
+/**
+ * Two glints that travel round the rim while you hold priority. They are dashes along an outline of the box, not a
+ * turning gradient, so they keep one speed along the long and short edges alike; the outline follows the box's size.
+ */
+const GLINT_LAYERS = ['halo', 'mid', 'core'];
+function buildGlints(root: HTMLElement): void {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('glints');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.innerHTML = GLINT_LAYERS.map(l => `<rect class="${l}" pathLength="1000"/>`).join('');
+  root.prepend(svg);
+  new ResizeObserver(() => {
+    const w = root.offsetWidth;
+    const h = root.offsetHeight;
+    svg.setAttribute('width', String(w));
+    svg.setAttribute('height', String(h));
+    // Centred on the 1px border, whose outer corners round at 12px
+    for (const r of svg.querySelectorAll('rect')) {
+      r.setAttribute('x', '0.5');
+      r.setAttribute('y', '0.5');
+      r.setAttribute('width', String(Math.max(0, w - 1)));
+      r.setAttribute('height', String(Math.max(0, h - 1)));
+      r.setAttribute('rx', '11.5');
+    }
+  }).observe(root);
+}
+
 /** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
 function showPressed(button: Element | null): void {
   if (!(button instanceof HTMLButtonElement) || button.disabled) return;
@@ -97,6 +124,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     q(root, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
     q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
+    buildGlints(root);
     const card = q<HTMLImageElement>(root, '.prompt-card');
     hideOnError(card);
     hoverable(card);
@@ -149,6 +177,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     cancel.onclick = () => finishCountdown(false);
     fill(ok, passing.id, passing.ms);
     root.classList.add('waiting');
+    root.classList.remove('priority');
     renderPlayerChoices(root, model, [], actions);
     return;
   }
@@ -169,7 +198,9 @@ function drawPrompt(model: Model, actions: Actions): void {
   setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
-  root.classList.toggle('waiting', !!p.ok?.enabled || !!p.cancel?.enabled);
+  const waiting = !!p.ok?.enabled || !!p.cancel?.enabled;
+  root.classList.toggle('waiting', waiting);
+  root.classList.toggle('priority', waiting && !!p.priority);
 }
 
 /**

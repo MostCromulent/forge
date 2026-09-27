@@ -5,6 +5,19 @@
 /* With the log and chat folded away the column is only tabs, so the console keeps its corner by itself */
 #match.side-folded #prompt { position: fixed; right: 8px; bottom: 14px; }
 #prompt.waiting { border-color: var(--accent-2); }
+/* Two glints run round the gold rim while you hold priority, opposite each other, a lap every 7 seconds. Each is three
+   dashes centred on one point: a faint halo, a brighter middle and a pale core, blurred a little so it reads as a soft sheen on the gold. */
+#prompt .glints { position: absolute; left: -1px; top: -1px; overflow: visible; pointer-events: none; filter: blur(.6px); opacity: 0; visibility: hidden; transition: opacity .45s ease, visibility 0s linear .45s; }
+#prompt.priority .glints { opacity: 1; visibility: visible; transition: opacity .45s ease; }
+#prompt .glints rect { fill: none; stroke-linecap: round; animation: 7s linear infinite; }
+/* Each layer starts half its dash length on, so all three centre on one point; var() does not animate here */
+#prompt .glints .halo { stroke: var(--accent-2); stroke-opacity: .2; stroke-width: 2.5; stroke-dasharray: 76 424; animation-name: glint-halo; }
+#prompt .glints .mid { stroke: #f7d77a; stroke-opacity: .35; stroke-width: 2; stroke-dasharray: 40 460; animation-name: glint-mid; }
+#prompt .glints .core { stroke: #fbe9b0; stroke-opacity: .6; stroke-width: 1.5; stroke-dasharray: 16 484; animation-name: glint-core; }
+@keyframes glint-halo { from { stroke-dashoffset: 38; } to { stroke-dashoffset: -962; } }
+@keyframes glint-mid { from { stroke-dashoffset: 20; } to { stroke-dashoffset: -980; } }
+@keyframes glint-core { from { stroke-dashoffset: 8; } to { stroke-dashoffset: -992; } }
+html[data-motion="reduced"] #prompt .glints { display: none; }
 /* The tools keep a row of their own, so a long step name never pushes them out of the console */
 #prompt .tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin: -4px -6px -6px 0; }
 #prompt .step { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
