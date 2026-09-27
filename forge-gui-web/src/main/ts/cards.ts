@@ -135,9 +135,10 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   if (card.IsRingBearer) badges.push('Ring-bearer');
   // The corner already gives a planeswalker's loyalty and a battle's defense, unless the card is a creature too
   const inCorner = creature ? null : /Planeswalker/.test(type) ? 'Loyalty' : /Battle/.test(type) ? 'Defense' : null;
-  // As desktop's counter tabs: each kind of counter by name, then how many
+  // As desktop's counter tabs: each kind of counter by name, then how many. The count is marked as one, so +1/+1 ×2 is
+  // never read as a change to the P/T, and matches the rules text in the preview
   for (const [name, n] of Object.entries(card.Counters ?? {})) {
-    if (name !== inCorner) badges.push(`${name} ${n}`);
+    if (name !== inCorner) badges.push(`${name} ×${n}`);
   }
   q(el, '.badges').textContent = badges.join(' · ');
 }
