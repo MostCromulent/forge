@@ -145,13 +145,11 @@ function build(root: HTMLElement): void {
 }
 
 function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number, myTurn: boolean, actions: Actions): void {
-  const stops = new Set((myTurn ? model.controls?.myStops : model.controls?.otherStops) ?? []);
   const marker = model.controls?.marker;
   pill.querySelectorAll<HTMLElement>('.track .phase').forEach((el, n) => {
     const p = PHASES[n];
     const current = n === phase;
     el.classList.toggle('current', current);
-    el.classList.toggle('stop', !current && p.steps.some(i => stops.has(STEPS[i][0])));
     el.classList.toggle('marked', !current && !!marker && marker.mine === myTurn && p.steps.some(i => STEPS[i][0] === marker.phase));
     // Desktop passes priority until a phase by right-clicking it, so the pill offers the same gesture and
     // not only the grid behind it. The marker lands on the first step the segment covers.
@@ -165,13 +163,13 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     const pips = q(el, '.pips');
     // A phase left keeps its last pips while they close
     if (current) {
-      drawPips(pips, p, step, stops, marker, myTurn);
+      drawPips(pips, p, step, marker, myTurn);
     }
   });
 }
 
-/** How far the turn has reached within the current phase, and which of its steps are set to stop. */
-function drawPips(root: HTMLElement, phase: Phase, step: number, stops: Set<string>, marker: TurnMarker | undefined, myTurn: boolean): void {
+/** How far the turn has reached within the current phase. */
+function drawPips(root: HTMLElement, phase: Phase, step: number, marker: TurnMarker | undefined, myTurn: boolean): void {
   reconcile(root, phase.steps, i => i,
     () => {
       const el = document.createElement('span');
@@ -181,7 +179,6 @@ function drawPips(root: HTMLElement, phase: Phase, step: number, stops: Set<stri
     (el, i) => {
       el.classList.toggle('past', i < step);
       el.classList.toggle('now', i === step);
-      el.classList.toggle('on', stops.has(STEPS[i][0]));
       el.classList.toggle('marked', !!marker && marker.mine === myTurn && marker.phase === STEPS[i][0]);
     });
 }
@@ -266,14 +263,14 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: { turns:
   // Steps sit under their phase, which a bracketed heading spans
   const groups = '<tr class="groups"><td></td>' + PHASES.map((p, g) =>
     `${g ? '<td class="gap"></td>' : ''}<th class="group" colspan="${p.steps.length}"><span>${p.group}</span></th>`).join('') + '</tr>';
-  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th title="${s[2]}"><span class="head ${i === step ? 'current' : ''}">${glyph(s[1], 13)}</span><span class="name">${gridName(i)}</span></th>`).join('') + '</tr>';
-  // Whose turn it is lights that player's row, rather than a word beside it
+  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th class="${i === step ? 'now' : ''}" title="${s[2]}"><span class="head">${glyph(s[1], 13)}</span><span class="name">${gridName(i)}</span></th>`).join('') + '</tr>';
+  // Whose turn it is lights that player's row, and the step the game is at lights its column the same way
   const body = rows.map(r => `<tr class="${r.now ? 'active' : ''}">` + `<td class="who">${r.label}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
     const title = `${s[2]} · ${r.mine ? 'your turns' : theirs.turns}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
-    return `${gap(i)}<td><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
+    return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + '</tr>').join('');
   return `<div class="title">Phase stops</div><table>${groups}${head}${body}</table>`;
 }
