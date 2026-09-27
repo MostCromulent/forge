@@ -765,7 +765,7 @@ body.dragging-block #zoom { display: none; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
 /* A pile's count is black with white figures, perched on the top card's corner, so how many there are reads at a glance;
    laid out, it goes quiet as a way back */
-.card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 28px; height: 24px; padding: 0 7px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 11px; box-shadow: 0 2px 6px #000b; font-size: 14.5px; font-weight: 800; cursor: pointer; }
+.card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 28px; height: 24px; padding: 0 7px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 12px; box-shadow: 0 2px 6px #000b; font-size: 14.5px; font-weight: 800; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
 .card:hover { z-index: 5; }
