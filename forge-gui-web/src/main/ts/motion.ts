@@ -7,6 +7,7 @@ import { hoverable } from './detail';
 import type { CardMoved, GameEvent, Place } from './protocol';
 import type { CardView, PlayerView } from './protocol';
 import { cssUrl, playerSleeveUrl } from './looks';
+import { echoSound } from './audio';
 import type { Model } from './model';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
@@ -233,6 +234,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   // Cards drawn together land from left to right, wherever the hand's sort puts each one
   dealt.sort((a, b) => restingRect(a.el).left - restingRect(b.el).left).forEach(({ el, start }, i) =>
     fly(el, start, FLIGHT_MS, i * STAGGER_MS));
+  // The host's draw sound is heard as the first card sets off; each card after it makes its own as it follows
+  echoSound('draw', dealt.slice(1).map((_, i) => (i + 1) * STAGGER_MS));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
   leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key }, i) => {
     if (tile) holdTile(key, i * STAGGER_MS);

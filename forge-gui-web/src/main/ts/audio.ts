@@ -6,23 +6,51 @@ import type { Sound } from './protocol';
 
 const clips = new Map<string, HTMLAudioElement>();
 let music: HTMLAudioElement | null = null;
+/** When each sound last started. The host sends a sound for every card of a deal at once, which is heard once. */
+const started = new Map<string, number>();
+const BURST_MS = 100;
+/** Until when the host's copies of a sound are not played, while the page plays it for each card of a deal itself. */
+const echoing = new Map<string, number>();
 
-export function playSound(msg: Sound): void {
+export function playSound(msg: Sound, echo = false): void {
   if (volume('soundVolume') <= 0) {
     return;
   }
+  const now = performance.now();
+  if (!echo && (now - (started.get(msg.name) ?? -Infinity) < BURST_MS || now < (echoing.get(msg.name) ?? 0))) {
+    return;
+  }
+  started.set(msg.name, now);
   let clip = clips.get(msg.name);
   if (!clip) {
     clip = new Audio(`sound?name=${encodeURIComponent(msg.name)}`);
     clips.set(msg.name, clip);
   }
+  const playing = !clip.paused && clip.currentTime > 0;
   // A synchronised effect never overlaps itself, as on desktop
-  if (msg.sync && !clip.paused && clip.currentTime > 0) {
+  if (msg.sync && playing) {
     return;
   }
-  clip.volume = volume('soundVolume');
-  clip.currentTime = 0;
-  clip.play().catch(() => {});
+  // Any other plays again over itself, so a run of them, such as a deal, is heard as a run
+  const voice = playing ? clip.cloneNode() as HTMLAudioElement : clip;
+  voice.volume = volume('soundVolume');
+  voice.currentTime = 0;
+  voice.play().catch(() => {});
+}
+
+/**
+ * Plays a sound the host has just played again after each delay, for the cards of a deal that follow the first as
+ * they set off. Only a sound the host sent a moment ago is echoed, so sounds turned off on the host stay off.
+ */
+export function echoSound(name: string, delays: number[]): void {
+  const now = performance.now();
+  if (!delays.length || now - (started.get(name) ?? -Infinity) > 1500) {
+    return;
+  }
+  echoing.set(name, now + Math.max(...delays) + BURST_MS);
+  for (const delay of delays) {
+    window.setTimeout(() => playSound({ t: 'sound', name, sync: false }, true), delay);
+  }
 }
 
 /** A sound the page ships itself rather than one from the host's sound set, played from `from` seconds in. */
