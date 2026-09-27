@@ -35,6 +35,11 @@ html[data-side="shut"]::view-transition-old(side-column) { animation: side-off .
 html[data-side="shut"]::view-transition-new(side-column) { animation: side-fade-in .2s .08s ease-out both; }
 html[data-side="open"]::view-transition-new(side-column) { animation: side-on .28s cubic-bezier(.2,.7,.3,1) both; }
 html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-out .12s ease-out both; }
+/* The prompt sits at the foot of the column but keeps its corner whether the column is open or folded, so it is
+   pictured apart from the column and stays put rather than sliding or fading with it */
+#prompt { view-transition-name: prompt; }
+::view-transition-group(prompt), ::view-transition-new(prompt) { animation: none; }
+::view-transition-old(prompt) { display: none; }
 @keyframes side-off { to { transform: translateX(calc(100% + 16px)); } }
 @keyframes side-on { from { transform: translateX(calc(100% + 16px)); } }
 @keyframes side-fade-in { from { opacity: 0; } }
