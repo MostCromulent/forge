@@ -103,9 +103,10 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   if (avatar) {
     portrait.src = avatar;
   }
-  q(pill, '.owner b').textContent = myTurn ? 'Your turn' : active?.Name ?? '';
+  swapOwner(q(pill, '.owner'), myTurn ? 'Your turn' : active?.Name ?? '');
   q(pill, '.owner .turn').textContent = `T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}`;
   drawTrack(pill, model, step, phase, myTurn, actions);
+  slideTo(q(pill, '.track'), phase, step);
   drawWaiting(pill, model);
   drawUntil(pill, model, myTurn, theirs, active?.Name ?? '');
   const opens = myTurn ? 'up' : 'down';
@@ -135,9 +136,11 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 function build(root: HTMLElement): void {
   root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
   const pill = q(root, '.pill');
-  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="code">${p.code}</span><span class="label"></span><span class="pips"></span></span>`).join('');
+  // Every segment is laid out alike, the icon over its code, then the step name and pips that only the current one
+  // opens, so a change of phase moves nothing by a jump
+  const track = PHASES.map(p => `<span class="phase"><span class="mark">${glyph(p.glyph, 12)}<span class="code">${p.code}</span></span><span class="label"></span><span class="pips"></span></span>`).join('');
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
-    + `<span class="track">${track}</span>`
+    + `<span class="track"><span class="slide" aria-hidden="true"></span>${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
     + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
     + '<span class="caret"></span>';
@@ -171,6 +174,63 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
       drawPips(pips, p, step, marker, myTurn);
     }
   });
+}
+
+/** The pill's motions last as long as its CSS transitions (--pill-ms in board.css), and ease out as they do. */
+const PILL_MS = 240;
+const easeOut = (t: number): number => 1 - (1 - t) ** 3;
+const reduced = (): boolean => document.documentElement.dataset.motion === 'reduced';
+
+/**
+ * The brass behind the current phase is one piece that glides from segment to segment, since a gradient cannot fade
+ * from one to the next. It eases from where it is to where the current segment is, read each frame, as that segment
+ * is still growing to fit its step's name; a change arriving mid-glide starts the next from where it has got to.
+ */
+let slideKey = '';
+let slideAt = { left: 0, width: 0 };
+let sliding = 0;
+function slideTo(track: HTMLElement, phase: number, step: number): void {
+  const key = `${phase}:${step}`;
+  if (key === slideKey) return;
+  const first = !slideKey;
+  slideKey = key;
+  const slide = q(track, '.slide');
+  const target = () => {
+    const r = track.querySelectorAll<HTMLElement>('.phase')[phase].getBoundingClientRect();
+    return { left: r.left - track.getBoundingClientRect().left, width: r.width };
+  };
+  const place = (r: { left: number; width: number }) => {
+    slideAt = r;
+    slide.style.transform = `translateX(${r.left}px)`;
+    slide.style.width = `${r.width}px`;
+  };
+  cancelAnimationFrame(sliding);
+  const start = performance.now();
+  const from = slideAt;
+  const frame = () => {
+    const elapsed = performance.now() - start;
+    const to = target();
+    // With nothing to glide from, the brass only follows the segment as it grows to fit its name
+    const k = first || reduced() ? 1 : easeOut(Math.min(1, elapsed / PILL_MS));
+    place({ left: from.left + (to.left - from.left) * k, width: from.width + (to.width - from.width) * k });
+    // A little past the glide, so the brass settles on the segment's final width
+    if (elapsed < PILL_MS + 60) sliding = requestAnimationFrame(frame);
+  };
+  frame();
+}
+
+/** A new turn's owner fades in as the chip eases to the new name's width, rather than the pill jumping sideways. */
+function swapOwner(owner: HTMLElement, name: string): void {
+  const b = q(owner, 'b');
+  if (b.textContent === name) return;
+  const before = owner.offsetWidth;
+  const had = !!b.textContent;
+  b.textContent = name;
+  if (!had || reduced()) return;
+  const after = owner.offsetWidth;
+  const timing = { duration: PILL_MS, easing: 'cubic-bezier(.2,.7,.2,1)' };
+  owner.animate([{ width: `${before}px` }, { width: `${after}px` }], timing);
+  for (const part of owner.children) part.animate([{ opacity: 0 }, { opacity: 1 }], timing);
 }
 
 /** How far the turn has reached within the current phase. */
