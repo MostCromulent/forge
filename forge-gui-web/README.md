@@ -4,7 +4,7 @@ This lets you play Forge in a web browser. One computer runs Forge as a small se
 browser, including the person running it. Friends don't need to install anything. You send them a link and they
 open it.
 
-The interface aims to be easy for new players to pick up. To keep it simple, it leaves out much of the detailed
+The interface aims to be smooth and modern, and easy for new players to pick up. To keep it simple, it leaves out much of the detailed
 customisation desktop Forge offers. The layout is designed for a computer screen with a mouse and keyboard. Phones
 and tablets aren't supported yet.
 
