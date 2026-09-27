@@ -7,7 +7,7 @@ import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
-  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
+  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'autoPassOff' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
   | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'autoDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
@@ -16,12 +16,13 @@ type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 export interface KeyBindings {
   ok: string;
   endTurn: string;
+  autoPass: string;
   undo: string;
   nextFace: string;
   cardText: string;
 }
 
-export const DEFAULT_KEYS: KeyBindings = { ok: ' ', endTurn: 'e', undo: 'z', nextFace: 'f', cardText: 't' };
+export const DEFAULT_KEYS: KeyBindings = { ok: ' ', endTurn: 'e', autoPass: 'p', undo: 'z', nextFace: 'f', cardText: 't' };
 
 // Escape closes and cancels everywhere, Enter confirms and starts a match, and the numbers pick from a card's menu
 const KEPT = new Set(['Escape', 'Enter', 'Tab', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
@@ -104,6 +105,8 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   // A pass on its way: its button takes the keys the prompt's would
   if (passing) {
     if (ok) return 'passNow';
+    // Desktop's key for auto-pass turns it off here, which also stops the pass under way
+    if (key === keys.autoPass) return 'autoPassOff';
     return escape ? 'stopAutoPass' : null;
   }
   // A card's menu of abilities: Escape closes it, and its items are numbered as desktop's are
@@ -128,6 +131,7 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   if (ok && prompt?.ok?.enabled) return 'ok';
   if (escape && prompt?.cancel?.enabled) return 'cancel';
   if (key === keys.endTurn) return 'endTurn';
+  if (key === keys.autoPass) return 'toggleAutoPass';
   if (key === keys.undo) return 'undo';
   return null;
 }

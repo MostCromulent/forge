@@ -602,6 +602,23 @@ let lastHand = '';
 let lastZones = '';
 const zonesShape = () => [...document.querySelectorAll<HTMLElement>(ZONE_CARDS)].map(c => c.dataset.key).join(',');
 
+/**
+ * Where a card in hand rests. The pointer over it lifts and enlarges it, which is not where a trip from the hand should
+ * start, so it is measured with its resting transform (hand.css) and put back without a transition.
+ */
+function unhovered(el: HTMLElement): DOMRect {
+  const style = el.style;
+  const transition = style.transition;
+  const transform = style.transform;
+  style.transition = 'none';
+  style.transform = 'translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg))';
+  const rect = el.getBoundingClientRect();
+  style.transform = transform;
+  void el.offsetWidth;
+  style.transition = transition;
+  return rect;
+}
+
 /** Remembers where every card stands now, for the moves the next frame brings. */
 function note(): void {
   lastShape = boardShape();
@@ -611,7 +628,7 @@ function note(): void {
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
     // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
-    const rest = restingRect(el);
+    const rest = el.matches('#hand .card:hover') ? unhovered(el) : restingRect(el);
     const now = el.getAnimations().length ? el.getBoundingClientRect() : rest;
     lastSeen.set(el.dataset.key as string, {
       rect: rest, ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight }, tapped: el.classList.contains('tapped'),

@@ -82,6 +82,7 @@ export const SETTINGS: SettingDef[] = [
   },
   { section: 'Keys', key: 'keyOk', label: 'OK', action: 'ok', type: 'key', def: ' ' },
   { section: 'Keys', key: 'keyEndTurn', label: 'End turn', action: 'endTurn', type: 'key', def: 'e' },
+  { section: 'Keys', key: 'keyAutoPass', label: 'Auto-pass on or off', hint: 'Passes priority for you when you have nothing to play.', action: 'autoPass', type: 'key', def: 'p' },
   { section: 'Keys', key: 'keyUndo', label: 'Undo', action: 'undo', type: 'key', def: 'z' },
   { section: 'Keys', key: 'keyNextFace', label: 'Turn a card over', hint: 'The card under the pointer.', action: 'nextFace', type: 'key', def: 'f' },
   { section: 'Keys', key: 'keyCardText', label: 'Show card text', hint: 'The card under the pointer.', action: 'cardText', type: 'key', def: 't' },

@@ -150,6 +150,8 @@ function runKey(command: KeyCommand): void {
     case 'cancel': pressPromptButton('cancel'); actions.cancel(); break;
     case 'passNow': pressPromptButton('ok'); finishCountdown(true); break;
     case 'stopAutoPass': pressPromptButton('cancel'); finishCountdown(false); break;
+    case 'autoPassOff': pressPromptButton('cancel'); finishCountdown(false); if (model.controls?.autoPass) actions.toggleAutoPass(); break;
+    case 'toggleAutoPass': pressPromptButton('auto-pass'); actions.toggleAutoPass(); break;
     case 'endTurn': pressPromptButton('end-turn'); if (model.controls?.untilEndOfTurn) actions.stopYield(); else actions.endTurn(); break;
     case 'undo': pressPromptButton('undo'); actions.undo(); break;
     case 'nextFace': nextFace(model); break;

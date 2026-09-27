@@ -30,11 +30,12 @@ describe('keys in a match', () => {
     ui = freshUi();
   });
 
-  it('answers the prompt: Space and Enter for OK, Escape for Cancel, E and Z for their buttons', () => {
+  it('answers the prompt: Space and Enter for OK, Escape for Cancel, E, P and Z for their buttons', () => {
     expect(keyCommand(press(' '), model, ui)).toBe('ok');
     expect(keyCommand(press('Enter'), model, ui)).toBe('ok');
     expect(keyCommand(press('Escape'), model, ui)).toBe('cancel');
     expect(keyCommand(press('E'), model, ui)).toBe('endTurn');
+    expect(keyCommand(press('p'), model, ui)).toBe('toggleAutoPass');
     expect(keyCommand(press('z'), model, ui)).toBe('undo');
   });
 
@@ -70,6 +71,7 @@ describe('keys in a match', () => {
   it('gives the pass button\'s keys to a pass on its way', () => {
     expect(keyCommand(press(' '), model, ui, true)).toBe('passNow');
     expect(keyCommand(press('Escape'), model, ui, true)).toBe('stopAutoPass');
+    expect(keyCommand(press('p'), model, ui, true)).toBe('autoPassOff');
     expect(keyCommand(press('e'), model, ui, true)).toBeNull();
   });
 

@@ -154,7 +154,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const autoPass = !!model.controls?.autoPass;
   const autoPassButton = q(root, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
-  autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play`;
+  autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play (${keyName(keys.autoPass)})`;
   // Lit while the turn is being passed through, as auto-pass is while it is on
   const endingTurn = !!model.controls?.untilEndOfTurn;
   const endTurnButton = q(root, '.end-turn');
@@ -173,9 +173,14 @@ function drawPrompt(model: Model, actions: Actions): void {
     q(root, '.message').textContent = 'Nothing to play.';
     renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
     setButton(ok, { label: 'Pass', enabled: true });
-    setButton(cancel, { label: 'Stop', enabled: true });
+    // Stopping means auto-pass is not wanted just now, so the button turns it off, under its own key
+    setButton(cancel, { label: 'Auto-pass off', enabled: true });
+    q(root, '.buttons .cancel kbd').textContent = keyName(keys.autoPass);
     ok.onclick = () => finishCountdown(true);
-    cancel.onclick = () => finishCountdown(false);
+    cancel.onclick = () => {
+      finishCountdown(false);
+      if (model.controls?.autoPass) actions.toggleAutoPass();
+    };
     fill(ok, passing.id, passing.ms);
     root.classList.add('waiting');
     root.classList.remove('priority');
@@ -183,6 +188,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     return;
   }
   fill(ok, null, 0);
+  q(root, '.buttons .cancel kbd').textContent = 'Esc';
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
   const p = model.prompt;
