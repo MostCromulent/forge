@@ -393,8 +393,20 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
   );
 }
 
+/** The split shown in the open distribute dialog, for the OK key to confirm; ready once every point is assigned. */
+let shownSplit: { id: number; values: number[]; ready: boolean } | null = null;
+
+/** The split the OK key confirms, or null when there is none or it is not all assigned yet. */
+export function readySplit(): { id: number; values: number[] } | null {
+  return shownSplit?.ready ? shownSplit : null;
+}
+
 function Distribute({ req, model, answer }: { req: DistributeRequest; model: Model; answer: Answer }) {
+  // It opens on desktop's Auto split, lethal damage to each in turn and the rest onward, for the player to change
   const [values, setValues] = useState(() => [...req.default]);
+  useEffect(() => () => {
+    if (shownSplit?.id === req.id) shownSplit = null;
+  }, []);
   const step = (i: number, delta: number) => setValues(v => {
     if (v[i] + delta < req.perMin) return v;
     const next = [...v];
@@ -402,6 +414,7 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return next;
   });
   const left = req.amount - values.reduce((a, b) => a + b, 0);
+  shownSplit = { id: req.id, values, ready: left === 0 };
   // Players first, opponents before you, then the cards; each keeps its own place in the answer
   const rank = (i: number) => {
     const ref = req.options[i].player;
@@ -427,10 +440,8 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
       <p class="hint">{`${left} left to assign`}</p>
       <ButtonRow>
         {req.maySkip && <Button onClick={() => answer(null)}>Skip</Button>}
-        <Button onClick={() => setValues(req.options.map(() => req.perMin))}>Reset</Button>
-        <Button disabled={left !== 0} onClick={() => answer(values)}>Confirm</Button>
-        {/* As desktop's Auto: lethal damage to each in turn, the rest onward, sent at once */}
-        <Button primary onClick={() => answer(req.default)}>Auto <kbd>{keyName(boundKeys().ok)}</kbd></Button>
+        <Button onClick={() => setValues([...req.default])}>Reset</Button>
+        <Button primary disabled={left !== 0} onClick={() => answer(values)}>Confirm <kbd>{keyName(boundKeys().ok)}</kbd></Button>
       </ButtonRow>
     </>
   );

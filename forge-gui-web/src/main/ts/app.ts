@@ -9,6 +9,7 @@ import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
+import { readySplit } from './dialogs';
 import { announceComing, renderMatch, resetTable } from './board';
 import { renderPrompt, flash, pressPromptButton } from './prompt';
 import { appendLog, initLog, logTints } from './log';
@@ -128,9 +129,9 @@ function runKey(command: KeyCommand): void {
   switch (command) {
     case 'closeOptions': changeUi(u => { u.optionsOpen = false; }); break;
     case 'closeGameMenu': changeUi(u => { u.gameMenu = null; }); break;
-    case 'autoDistribute': {
-      const split = oldestRequest(model);
-      if (split?.kind === 'distribute') actions.answer(split.id, split.default);
+    case 'confirmDistribute': {
+      const split = readySplit();
+      if (split && oldestRequest(model)?.id === split.id) actions.answer(split.id, split.values);
       break;
     }
     case 'closeReveal': {

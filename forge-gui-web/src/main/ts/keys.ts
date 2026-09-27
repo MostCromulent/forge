@@ -8,7 +8,7 @@ import type { UiState } from './ui';
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
   | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'autoPassOff' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
-  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'autoDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
+  | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
 
@@ -119,9 +119,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   if (request?.kind === 'reveal' && (escape || ok)) {
     return 'closeReveal';
   }
-  // Assigning damage, OK takes the Auto split, as its button says
+  // Assigning damage, OK confirms the split shown, as its button says
   if (request?.kind === 'distribute' && ok) {
-    return 'autoDistribute';
+    return 'confirmDistribute';
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
   if ((oldestRequest(model) && !stackPick(model)) || model.spectating) {
