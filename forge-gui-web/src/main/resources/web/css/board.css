@@ -763,12 +763,11 @@ body.dragging-block #zoom { display: none; }
 .card.pile.tapped .pile-edge { transform: translateY(calc(3 * var(--pile-step) / .9)); }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
-/* A pile's count is black with white figures in the top card's corner, so how many there are reads at a glance;
+/* A pile's count is black with white figures, perched on the top card's corner, so how many there are reads at a glance;
    laid out, it goes quiet as a way back */
-.card .count { display: none; position: absolute; right: 2px; top: 2px; z-index: 3; min-width: 26px; height: 22px; padding: 0 6px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 11px; box-shadow: 0 2px 6px #000b; font-size: 13px; font-weight: 800; cursor: pointer; }
+.card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 26px; height: 22px; padding: 0 6px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 11px; box-shadow: 0 2px 6px #000b; font-size: 13px; font-weight: 800; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
-.card .count:hover { background: var(--brass); color: var(--on-brass); border-color: #0008; }
 .card:hover { z-index: 5; }
 #stack-menu { position: fixed; z-index: 70; display: grid; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px #000c; }
 #stack-menu button { text-align: left; border: none; background: none; padding: 6px 10px; white-space: pre; }
