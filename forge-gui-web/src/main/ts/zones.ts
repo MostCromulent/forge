@@ -110,7 +110,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   // The dialog covers the prompt, so one the game put up carries the prompt's question and its OK. Not its other
   // button: that is the prompt's way out of priority, such as End turn, which means nothing about the cards shown.
   const prompt = p.forced ? model.prompt : null;
-  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : 'Click a card to pick it up.';
+  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : '';
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
