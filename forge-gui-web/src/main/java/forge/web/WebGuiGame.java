@@ -233,6 +233,31 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
+    /**
+     * The next game of a match has a game view of its own id, but the client applies it to the one game view it
+     * already holds (NetworkGuiGame), so the browser is given it under that view's key too. Otherwise the browser keeps
+     * the last game's turn and phase while the new game's updates pile up under a key nothing reads.
+     */
+    static Map<Integer, Map<TrackableProperty, Object>> asRootGame(final Map<Integer, Map<TrackableProperty, Object>> objects,
+            final int root) {
+        Map<Integer, Map<TrackableProperty, Object>> out = objects;
+        for (final Map.Entry<Integer, Map<TrackableProperty, Object>> e : objects.entrySet()) {
+            final int key = e.getKey();
+            if (key != root && DeltaPacket.getTypeFromDeltaKey(key) == DeltaPacket.TYPE_GAME_VIEW) {
+                if (out == objects) {
+                    out = new LinkedHashMap<>(objects);
+                }
+                out.remove(key);
+                out.merge(root, e.getValue(), (was, now) -> {
+                    final Map<TrackableProperty, Object> both = new HashMap<>(was);
+                    both.putAll(now);
+                    return both;
+                });
+            }
+        }
+        return out;
+    }
+
     private static int rootKey(final GameView gv) {
         return DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_GAME_VIEW, gv.getId());
     }
@@ -266,8 +291,9 @@ public class WebGuiGame extends NetworkGuiGame {
         if (packet == null || gv == null) {
             return;
         }
-        final Map<Integer, JsonObject> newObjects = encode(packet.getNewObjects());
-        final Map<Integer, JsonObject> deltas = encode(packet.getObjectDeltas());
+        final int root = rootKey(gv);
+        final Map<Integer, JsonObject> newObjects = encode(asRootGame(packet.getNewObjects(), root));
+        final Map<Integer, JsonObject> deltas = encode(asRootGame(packet.getObjectDeltas(), root));
         if (!newObjects.isEmpty() || !deltas.isEmpty() || !events.isEmpty()) {
             model.apply(newObjects, deltas);
             model.setVisible(visibleCardKeys());
