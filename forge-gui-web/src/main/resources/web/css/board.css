@@ -866,6 +866,12 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 .hit-flash { position: fixed; inset: 0; z-index: 80; pointer-events: none; animation: hit-wash .55s ease-out forwards;
   background: radial-gradient(ellipse at center, transparent 50%, rgba(255,122,89,.3) 100%); }
 @keyframes hit-wash { from { opacity: 0; } 25% { opacity: 1; } to { opacity: 0; } }
+/* Another player's hit: the same wash as a ring round their portrait, and the same shake, on the portrait alone */
+.avatar.hit { animation: hit-shake .32s ease-out; }
+.avatar.hit-hard { animation: hit-shake-hard .42s ease-out; }
+.avatar-hit { position: absolute; inset: -22px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, transparent 56%, rgba(255,122,89,.55) 64%, transparent 78%); animation: hit-wash .55s ease-out forwards; }
+html[data-motion="reduced"] .avatar.hit, html[data-motion="reduced"] .avatar.hit-hard { animation: none; }
 
 /* A spell that can be targeted is picked on the stack, where it stays bright while the rest dims */
 #stack .stack-item.targetable { cursor: pointer; }

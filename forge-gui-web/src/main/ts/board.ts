@@ -544,9 +544,24 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   float.textContent = `${hurt ? '' : '+'}${change}`;
   avatar.append(float);
   float.addEventListener('animationend', () => float.remove());
-  if (hurt && local) {
-    takeHit(-change);
+  if (hurt) {
+    if (local) takeHit(-change);
+    else hitAvatar(avatar, -change);
   }
+}
+
+// Damage to another player washes red round their portrait and shakes it, the board's own hit made small
+function hitAvatar(avatar: HTMLElement, amount: number): void {
+  avatar.classList.remove('hit', 'hit-hard');
+  void avatar.offsetWidth;
+  avatar.classList.add(amount >= 5 ? 'hit-hard' : 'hit');
+  avatar.addEventListener('animationend', e => {
+    if (e.target === avatar) avatar.classList.remove('hit', 'hit-hard');
+  });
+  const glow = document.createElement('span');
+  glow.className = 'avatar-hit';
+  avatar.append(glow);
+  glow.addEventListener('animationend', () => glow.remove());
 }
 
 // Damage to your own life shakes the board and washes the edges, so it cannot be missed
