@@ -19,6 +19,11 @@ interface Snapshot {
   size?: { w: number; h: number };
   /** How far a slide or flight still under way has it from where it will rest. */
   drift?: { x: number; y: number };
+  /**
+   * Whether it was tapped. The ghost is the live element, which a card that stays on the page carries on updating, so
+   * a copy of a card tapped since would set off already turned without this.
+   */
+  tapped?: boolean;
 }
 
 /** A spell waiting for its cost, and the trip it is making to where it waits. */
@@ -61,6 +66,8 @@ const STAGGER_MS = 110;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;
 const POP_MS = 220;
+/** A tapped card is drawn turned and at this size (board.css), so its outline is this much of the card's length. */
+const TAPPED_SCALE = 0.9;
 const EASE = 'cubic-bezier(.2,.7,.3,1)';
 /** Names a card's own trip among its animations, so a second trip replaces the first rather than stacking on it. */
 const FLIGHT = 'flight';
@@ -157,7 +164,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
         holdPile(el, FLIGHT_MS);
-        sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1);
+        sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1, 0, el);
         holdCount(el, FLIGHT_MS);
         continue;
       }
@@ -233,6 +240,7 @@ function shiftBoard(travelled: Set<string>): void {
   // A card that had a place of its own and is now folded into a pile slides onto the pile's top card. The pile is
   // held as it was before anything is measured, so the row slides to where it stands while the card is on its way
   const joining: { was: Snapshot; top: HTMLElement }[] = [];
+  const newcomers = new Set<string>();
   for (const { keys, top } of pileSlots()) {
     for (const key of keys) {
       const was = lastSeen.get(key);
@@ -240,10 +248,29 @@ function shiftBoard(travelled: Set<string>): void {
         joining.push({ was, top });
       }
     }
+    // The card drawn as the pile's top can be the one that has just joined it (a land tapped onto the tapped ones).
+    // The pile then stays where its other cards were and a copy of the newcomer flies in, rather than the whole pile
+    // setting off from where that one card stood
+    const topKey = top.dataset.key as string;
+    const topWas = lastSeen.get(topKey);
+    const stayed = keys.filter(k => k !== topKey).map(k => lastSeen.get(k)).find(s => s);
+    if (topWas && stayed && !travelled.has(topKey) && !intoHint.has(topKey) && apart(topWas.rect, stayed.rect)) {
+      joining.push({ was: topWas, top });
+      newcomers.add(topKey);
+      // Its own turn (a tap) would play at the pile while the copy is still on its way, so it is settled at once
+      for (const a of top.getAnimations()) {
+        if (a instanceof CSSTransition) a.finish();
+      }
+    }
   }
   for (const { top } of joining) holdPile(top, FLIGHT_MS);
-  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), travelled);
-  for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1);
+  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]));
+  for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1, 0, top);
+}
+
+/** Whether two places are more than a few pixels apart, centre to centre. */
+function apart(a: DOMRect, b: DOMRect): boolean {
+  return Math.hypot(a.left + a.width / 2 - b.left - b.width / 2, a.top + a.height / 2 - b.top - b.height / 2) > 4;
 }
 
 /** Cards left in an open zone, as one is picked from a search, slide into the gap rather than jumping. */
@@ -587,7 +614,7 @@ function note(): void {
     const rest = restingRect(el);
     const now = el.getAnimations().length ? el.getBoundingClientRect() : rest;
     lastSeen.set(el.dataset.key as string, {
-      rect: rest, ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight },
+      rect: rest, ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight }, tapped: el.classList.contains('tapped'),
       drift: { x: now.left + now.width / 2 - (rest.left + rest.width / 2), y: now.top + now.height / 2 - (rest.top + rest.height / 2) },
     });
     ownPlace.add(el.dataset.key as string);
@@ -714,14 +741,22 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
-function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0): void {
+function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement): void {
   if (!was.ghost) {
     return;
   }
   const ghost = place(was.ghost, was.rect, was.size);
-  const scale = target.width / ghost.getBoundingClientRect().width;
+  // One card makes the trip, looking as it did when it set off, even when it was the top of a pile
+  ghost.classList.remove('pile');
+  if (was.tapped !== undefined) ghost.classList.toggle('tapped', was.tapped);
+  // A copy joining a pile turned the other way (a card tapped onto the tapped ones) turns as it goes, so it lands as the
+  // pile lies. Its scale is then measured along the card, since its outline swaps width for height as it turns
+  const tapped = (el: HTMLElement) => el.classList.contains('tapped');
+  const turn = onto ? Number(tapped(onto)) - Number(tapped(ghost)) : 0;
+  const along = (el: HTMLElement) => el.offsetWidth * (tapped(el) ? TAPPED_SCALE : 1);
+  const scale = turn && onto ? along(onto) / along(ghost) : target.width / ghost.getBoundingClientRect().width;
   ghost.animate([
-    { translate: '0px 0px', scale: '1', opacity: 1 },
-    { translate: shiftTo(ghost, scale, target), scale: String(scale), opacity: endOpacity },
+    { translate: '0px 0px', scale: '1', rotate: '0deg', opacity: 1 },
+    { translate: shiftTo(ghost, scale, target), scale: String(scale), rotate: `${turn * 90}deg`, opacity: endOpacity },
   ], { duration: FLIGHT_MS, delay, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
 }
