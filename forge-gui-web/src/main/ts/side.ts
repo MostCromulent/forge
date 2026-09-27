@@ -50,7 +50,16 @@ function eased(change: (state: UiState) => void): void {
     changeUi(change);
     return;
   }
-  document.startViewTransition(() => changeUiNow(change));
+  const root = document.documentElement;
+  const match = byId('match');
+  const wasFolded = match.classList.contains('side-folded');
+  const transition = document.startViewTransition(() => {
+    changeUiNow(change);
+    // The column slides off the right edge as it folds, and back in as it opens (board.css)
+    const folded = match.classList.contains('side-folded');
+    if (folded !== wasFolded) root.dataset.side = folded ? 'shut' : 'open';
+  });
+  transition.finished.finally(() => delete root.dataset.side);
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */

@@ -26,6 +26,19 @@
 #side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; view-transition-name: side-column; }
 /* A panel opening or shutting (side.ts) eases the column to its new size and the board to its new layout */
 ::view-transition-group(side-column), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .26s; animation-timing-function: cubic-bezier(.2,.7,.3,1); }
+/* Folding or unfolding, the column slides off or on at the right edge rather than resizing: each picture keeps its own
+   size, held to the right, and the one leaving fades as the other comes */
+html[data-side]::view-transition-group(side-column) { animation: none; }
+html[data-side]::view-transition-old(side-column), html[data-side]::view-transition-new(side-column) {
+  inset-inline: auto 0; inline-size: auto; block-size: auto; mix-blend-mode: normal; }
+html[data-side="shut"]::view-transition-old(side-column) { animation: side-off .26s cubic-bezier(.4,0,.8,.4) both; }
+html[data-side="shut"]::view-transition-new(side-column) { animation: side-fade-in .2s .08s ease-out both; }
+html[data-side="open"]::view-transition-new(side-column) { animation: side-on .28s cubic-bezier(.2,.7,.3,1) both; }
+html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-out .12s ease-out both; }
+@keyframes side-off { to { transform: translateX(calc(100% + 16px)); } }
+@keyframes side-on { from { transform: translateX(calc(100% + 16px)); } }
+@keyframes side-fade-in { from { opacity: 0; } }
+@keyframes side-fade-out { to { opacity: 0; } }
 /* The log takes what the chat leaves; shut, each is only its own tab */
 .side-panel { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 #log-panel { flex: 1; }
