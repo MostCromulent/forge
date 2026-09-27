@@ -3,7 +3,7 @@
 // because a pick cannot be taken back and a timer can make a single click a slip. Dragging a card picks it into
 // whichever of the main deck and the sideboard it is dropped on, and a pick can be moved between them after.
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Dial } from './packdial';
 import { nextFrom } from './dial';
 import { imageUrl } from './images';
@@ -26,6 +26,48 @@ type Held = { card: DraftCard; index: number };
 const DRAG_TYPE = 'application/x-forge-draft';
 /** Under this much time the clock turns amber. */
 const CLOCK_LOW_MS = 15_000;
+const FLY_MS = 380;
+
+/** A card picked from the pack, lifted off it as it looked there, until its place among the picks is drawn. */
+let inFlight: { face: HTMLElement; from: DOMRect } | null = null;
+
+/** Lifts the pack card about to be picked, so it can fly to where the pick lands. A card showing only its text stays put. */
+function launch(index: number): void {
+  if (document.documentElement.dataset.motion === 'reduced') return;
+  const img = document.querySelectorAll('.draft-pack .draft-slot')[index]?.querySelector<HTMLImageElement>('.tile img:not(.sym)');
+  inFlight = img?.complete && img.naturalWidth ? { face: img.cloneNode() as HTMLElement, from: img.getBoundingClientRect() } : null;
+}
+
+/**
+ * Flies the lifted card onto the pick just drawn, which shows once it arrives. A pick out of sight in its scrolled
+ * section is flown to the section's heading instead, fading as it goes in.
+ */
+function land(pick: HTMLElement | null): void {
+  const flight = inFlight;
+  inFlight = null;
+  if (!flight || !pick) return;
+  const view = pick.closest('.draft-sections')?.getBoundingClientRect();
+  let to = pick.getBoundingClientRect();
+  const hidden = !view || to.bottom < view.top || to.top > view.bottom;
+  if (hidden) to = pick.closest('.pick-section')?.querySelector('h3')?.getBoundingClientRect() ?? to;
+  const { face, from } = flight;
+  Object.assign(face.style, { position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`,
+    height: `${from.height}px`, margin: '0', zIndex: '60', pointerEvents: 'none', transformOrigin: '0 0', borderRadius: '6px',
+    boxShadow: '0 12px 28px #000b' });
+  document.body.append(face);
+  // Scaled to fit the pick's place, so a card in the list view shrinks into its line
+  const scale = Math.min(to.width / from.width, to.height / from.height);
+  const dy = to.top - from.top + (to.height - from.height * scale) / 2;
+  if (!hidden) pick.style.visibility = 'hidden';
+  const glide = face.animate([
+    { transform: 'none', opacity: 1 },
+    { transform: `translate(${to.left - from.left}px, ${dy}px) scale(${scale})`, opacity: hidden ? 0 : 1 },
+  ], { duration: FLY_MS, easing: 'cubic-bezier(.3,.1,.2,1)' });
+  glide.onfinish = glide.oncancel = () => {
+    face.remove();
+    pick.style.visibility = '';
+  };
+}
 
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
   const state = model.draft;
@@ -150,7 +192,10 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   const [selected, setSelected] = useState<number | null>(null);
   // A new state clears the selection, since its cards are not the ones selected
   useEffect(() => setSelected(null), [state.step]);
-  const pick = (index: number) => actions.draftPick(state.step, index, false);
+  const pick = (index: number) => {
+    launch(index);
+    actions.draftPick(state.step, index, false);
+  };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && selected !== null && !(e.target instanceof HTMLInputElement)) pick(selected);
@@ -263,12 +308,23 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   const side = held.filter(h => h.card.sideboard);
   // A card dropped from the pack is picked there; a pick dropped on the other section moves to it
   const drop = (sideboard: boolean) => (drag: Drag) => {
+    // A dragged card has been carried here already, so nothing flies
+    inFlight = null;
     if (drag.from === 'pack') actions.draftPick(state.step, drag.index, sideboard);
     else if (state.picks[drag.index]?.sideboard !== sideboard) actions.draftMove(drag.index, sideboard);
   };
   const move = (h: Held) => actions.draftMove(h.index, !h.card.sideboard);
+  const panel = useRef<HTMLElement>(null);
+  const count = useRef(state.picks.length);
+  // A pick made by a click in the pack flies here once it is drawn; the newest pick is the last in pick order
+  useLayoutEffect(() => {
+    if (state.picks.length > count.current) {
+      land(panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null);
+    }
+    count.current = state.picks.length;
+  }, [state.picks.length]);
   return (
-    <section class="draft-panel draft-picks">
+    <section class="draft-panel draft-picks" ref={panel}>
       <div class="draft-panel-head">
         <b>Your picks <span class="muted">{state.picks.length}</span></b>
         <span class="seg" role="group" aria-label="Show picks as">
@@ -319,11 +375,11 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
             {cards
               ? <div class="pick-stack">{group.map(h => (
                   <img key={h.index} alt={h.card.name} title={`${h.card.name} · double-click to move`} src={imageUrl(h.card.image)}
-                    data-image={h.card.image} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
+                    data-image={h.card.image} data-pick={h.index} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
                     onDblClick={() => move(h)} />
                 ))}</div>
               : group.map(h => (
-                  <div key={h.index} class="ed-line" data-card={h.card.name} data-image={h.card.image} draggable
+                  <div key={h.index} class="ed-line" data-card={h.card.name} data-image={h.card.image} data-pick={h.index} draggable
                     title="Double-click to move" onDragStart={e => startDrag(e, { from: 'pick', index: h.index })} onDblClick={() => move(h)}>
                     <span class="nm">{h.card.name}</span>
                     <span class="cost"><SymbolText text={h.card.cost} /></span>
