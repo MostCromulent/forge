@@ -1,3 +1,20 @@
+/**
+ * Moves an element that is already on the page with moveBefore where the browser has it: insertBefore takes it out
+ * and puts it back, which ends any transition it was running (a card turning as it taps, a card in hand rising).
+ */
+function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): void {
+  const mover = parent as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void };
+  if (el.isConnected && mover.moveBefore) {
+    try {
+      mover.moveBefore(el, next);
+      return;
+    } catch {
+      // A move the browser will not do atomically falls back to the plain insert
+    }
+  }
+  parent.insertBefore(el, next);
+}
+
 // Reuses child elements by key, so a card keeps its element (and its CSS transitions) across renders
 export function reconcile<T, E extends HTMLElement = HTMLElement>(
   parent: HTMLElement,
@@ -18,7 +35,7 @@ export function reconcile<T, E extends HTMLElement = HTMLElement>(
     }
     update(el, item);
     const next: ChildNode | null = prev ? prev.nextSibling : parent.firstChild;
-    if (el !== next) parent.insertBefore(el, next);
+    if (el !== next) place(parent, el, next);
     prev = el;
   }
   for (const el of existing.values()) el.remove();

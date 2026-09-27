@@ -163,7 +163,7 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     q(el, '.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
     q(el, '.label').textContent = current ? (step < 0 ? 'Untap' : STEPS[step][3]) : '';
     const pips = q(el, '.pips');
-    pips.hidden = !current;
+    // A phase left keeps its last pips while they close
     if (current) {
       drawPips(pips, p, step, stops, marker, myTurn);
     }

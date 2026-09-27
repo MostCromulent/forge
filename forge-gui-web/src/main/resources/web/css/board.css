@@ -383,7 +383,11 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .phase .label { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .18s ease; }
 #phase-strip .phase.current .label { max-width: 90px; }
 #phase-strip .phase i { transition: background-color .18s ease; }
-#phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 2px; transition: gap .18s ease; }
+/* Every phase keeps its pips; only the current one's are open, and they open and close as the label does, so the
+   pill does not jump sideways at each change of phase */
+#phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 0; max-width: 0; opacity: 0; overflow: clip; overflow-clip-margin: 3px;
+  transition: gap .18s ease, max-width .18s ease, opacity .18s ease, margin-left .18s ease; }
+#phase-strip .phase.current .pips { margin-left: 2px; max-width: 90px; opacity: 1; }
 #phase-strip .pip { width: 4px; height: 4px; border-radius: 2px; background: var(--muted); transition: width .18s ease, background-color .18s ease; }
 #phase-strip .pip.now { width: 9px; background: var(--on-brass); }
 #phase-strip .pip.on { background: var(--select); }
@@ -437,6 +441,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops .skip { color: var(--select); display: flex; }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
 /* A panel of its own, so the stack never reads as loose cards over the board */
+#stack .pile { transition: height .15s ease; }
 #stack { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; width: calc(var(--stack-w) + 20px); display: grid; gap: 8px; padding: 8px 10px 10px; background: color-mix(in srgb, var(--surface) 93%, transparent); backdrop-filter: blur(4px); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px #0009; }
 /* With several opponents the top seats have a row of details, and the panel starts below it rather than over their piles */
 #match.many #stack, #match.many #storm { top: 80px; }
@@ -533,14 +538,17 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 /* The hint is a pill like the playable-from tab, so it stands clear of whatever is behind it */
 #zoom > .hint { padding: 4px 12px; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface); color: var(--text);
   font-size: 11px; font-weight: 600; text-shadow: 0 1px 3px #000; box-shadow: 0 4px 14px #000a; }
-#zoom > .hint:empty, #zoom:not(.image-only):not(.text-card) > .hint { display: none; }
+#zoom:not(.image-only):not(.text-card) > .hint { display: none; }
+/* Held open while the card's details are fetched, so the preview does not grow and shift when the hint arrives */
+#zoom > .hint:empty { visibility: hidden; }
+#zoom > .hint:empty::before { content: '\00a0'; }
 /* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
 #zoom.text-card .detail { width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; align-content: start; overflow-y: auto; scrollbar-width: thin;
   padding: 16px 16px 14px; border-radius: 14px; border: 1px solid var(--line-bright); font-size: 14px; line-height: 1.45; }
 #zoom.text-card .detail .name { font-size: 16px; }
 #zoom.text-card .detail .pt { margin-top: auto; }
 
-#zoom img { width: var(--zoom-w); border-radius: 14px; box-shadow: 0 10px 40px #000a; }
+#zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
 #zoom .detail .type { color: var(--muted); }
@@ -676,7 +684,9 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
-.slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); transition: transform .15s ease; }
+/* On every slot, not only an attacking one, so the step back at the end of combat eases as the step forward does */
+.battlefield .slot { transition: transform .15s ease; }
+.slot.attacking { --advance: 14px; transform: translateY(calc(-1 * var(--advance))); }
 .slot.attacking:has(> .card.tapped:last-child) { --advance: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 #opponent .slot.attacking { transform: translateY(var(--advance)); }
 .card.attacking { outline: 2px solid var(--attack); }

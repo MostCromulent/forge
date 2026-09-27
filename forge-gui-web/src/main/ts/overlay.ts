@@ -264,6 +264,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
       charges.delete(key);
       continue;
     }
+    const arriving = !mark;
     if (!mark) {
       mark = document.createElement('div');
       mark.className = 'charge';
@@ -285,8 +286,18 @@ function placeCharges(keys: Set<number>, landed = false): void {
     mark.style.top = `${down
       ? Math.min(r.bottom - sink, (field?.bottom ?? Infinity) - height * (MARK_H - MARK_TOP) / MARK_H)
       : Math.max(r.top + sink, (field?.top ?? -Infinity) + height * (MARK_H - MARK_TOP) / MARK_H)}px`;
+    if (arriving && document.documentElement.dataset.motion !== 'reduced') {
+      // Out from the attacker, growing and brightening: the retreat played forwards
+      const back = down ? -1 : 1;
+      mark.animate([
+        { opacity: 0, translate: `0 ${back * height * 0.7}px`, scale: '.55' },
+        { opacity: 1, translate: '0 0', scale: '1' },
+      ], { duration: ARRIVE_MS, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+    }
   }
 }
+
+const ARRIVE_MS = 220;
 
 /** After combat damage, long enough for the hit to read before the chevrons draw back. */
 const RETREAT_DELAY_MS = 250;

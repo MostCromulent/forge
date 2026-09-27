@@ -112,7 +112,7 @@ export function noteBoard(): void {
 /** Animates what happened since the last frame. Runs after the board is drawn, so both ends can be measured. */
 export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
-  const leavingHand: { was: Snapshot; target: DOMRect | null }[] = [];
+  const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string }[] = [];
   const trips = journeys(events);
   for (const [key, move] of trips) {
     const seen = lastSeen.get(key);
@@ -159,6 +159,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       if (start) {
         if (drawn) dealt.push({ el, start });
         else fly(el, start, FLIGHT_MS, 0);
+      } else if (pile && (pile.dataset.members ?? '').split(',').length > 1) {
+        // A token joining a pile of its kind: a copy grows onto the pile, which stays as it is
+        const copy = place(el, restingRect(el), { w: el.offsetWidth, h: el.offsetHeight });
+        pop(copy);
+        copy.getAnimations()[0]?.finished.then(() => copy.remove(), () => copy.remove());
       } else {
         // A token, or anything else that comes into being, grows into place rather than blinking on
         pop(el);
@@ -169,9 +174,14 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     const ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
     const was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
     if (ghost && start && was) {
-      const target = tileImageRect(key) ?? placeRect(move.to);
-      if (move.from?.zone === 'Hand') leavingHand.push({ was: { ...was, rect: start }, target });
-      else sendTo({ ...was, rect: start }, target ?? start, target ? 0.25 : 0);
+      const tile = tileImageRect(key);
+      const target = tile ?? placeRect(move.to);
+      if (move.from?.zone === 'Hand') leavingHand.push({ was: { ...was, rect: start }, target, tile: !!tile, key });
+      else {
+        // A card landing on a zone tile ends on the tile's picture, which is held back until it arrives
+        if (tile) holdTile(key, 0);
+        sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
+      }
     }
     land(key);
   }
@@ -179,8 +189,10 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   dealt.sort((a, b) => restingRect(a.el).left - restingRect(b.el).left).forEach(({ el, start }, i) =>
     fly(el, start, FLIGHT_MS, i * STAGGER_MS));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
-  leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target }, i) =>
-    sendTo(was, target ?? was.rect, target ? 0.25 : 0, i * STAGGER_MS));
+  leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key }, i) => {
+    if (tile) holdTile(key, i * STAGGER_MS);
+    sendTo(was, target ?? was.rect, tile ? 1 : target ? 0.25 : 0, i * STAGGER_MS);
+  });
   settleWaiting(!!model.prompt?.paying);
   const travelled = new Set(trips.keys());
   arriveElsewhere(travelled);
@@ -411,6 +423,12 @@ export function pileTopFor(key: string): HTMLElement | null {
 
 // The top card of a zone tile is drawn on it, which is where a card sent there lands. A face-down top is not
 // drawn, and its hidden picture measures nothing
+/** Keeps a zone tile's picture of a card hidden until the copy flying to it arrives, rather than showing it at once. */
+function holdTile(key: string | undefined, delay: number): void {
+  const img = key ? document.querySelector<HTMLElement>(`.zone-tile img[data-key="${key}"]`) : null;
+  img?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.92 }, { opacity: 1 }], { duration: FLIGHT_MS + delay, easing: 'linear' });
+}
+
 function tileImageRect(key: string): DOMRect | null {
   const img = document.querySelector(`.zone-tile img[data-key="${key}"]`);
   const rect = img?.getBoundingClientRect();
@@ -474,7 +492,9 @@ function pileSlots(): { keys: string[]; top: HTMLElement }[] {
 
 /** The battlefields' slots in order, each with the cards it holds, which changes only when a row's contents do. */
 function boardShape(): string {
-  return [...document.querySelectorAll<HTMLElement>('#me .battlefield .slot, #opponent .battlefield .slot')]
+  // A zone switching between one line and two moves its cards as much as a card coming or going
+  const lines = [...document.querySelectorAll<HTMLElement>('.battlefield .group')].map(g => g.dataset.lines ?? '').join('');
+  return lines + '#' + [...document.querySelectorAll<HTMLElement>('#me .battlefield .slot, #opponent .battlefield .slot')]
     .map(slot => `${slot.dataset.members ?? ''}:${[...slot.querySelectorAll<HTMLElement>('.card')].map(c => c.dataset.key).join('+')}`)
     .join('|');
 }

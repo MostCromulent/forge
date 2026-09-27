@@ -48,7 +48,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     ui.hoveredStackItem = null;
   }
   const collapsed = ui.stackCollapsed;
-  root.hidden = items.length + awaiting.size === 0;
+  showPanel(root, items.length + awaiting.size > 0);
   root.classList.toggle('collapsed', collapsed);
   q(root, '.count').textContent = String(items.length + awaiting.size);
   const collapse = q(root, '.collapse');
@@ -70,6 +70,41 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   renderStorm(root, game(model)?.StormCount ?? 0);
 }
 
+/** The panel fading out as its last item leaves, so a render meanwhile does not bring it back or hide it at once. */
+let closing: Animation | null = null;
+
+/**
+ * Shows or hides the panel with a fade rather than at once. Opacity only: a spell flying to its waiting slot is aimed at
+ * where the slot stands, which a scale or a slide would move.
+ */
+function showPanel(root: HTMLElement, shown: boolean): void {
+  const reduced = document.documentElement.dataset.motion === 'reduced';
+  if (shown) {
+    if (closing) {
+      closing.cancel();
+      closing = null;
+    } else if (root.hidden && !reduced) {
+      root.hidden = false;
+      root.animate([{ opacity: 0 }, { opacity: 1 }], { duration: PANEL_FADE_MS, easing: 'ease-out' });
+    }
+    root.hidden = false;
+    return;
+  }
+  if (root.hidden || closing) return;
+  if (reduced) {
+    root.hidden = true;
+    return;
+  }
+  closing = root.animate([{ opacity: 1 }, { opacity: 0 }], { duration: PANEL_FADE_MS, easing: 'ease-in', fill: 'forwards' });
+  closing.finished.then(() => {
+    root.hidden = true;
+    closing?.cancel();
+    closing = null;
+  }, () => { /* cancelled: an item came back */ });
+}
+
+const PANEL_FADE_MS = 150;
+
 /** How many spells have been cast this turn, under the stack where a storm spell will resolve, once there are any. */
 function renderStorm(stack: HTMLElement, count: number): void {
   let chip = document.getElementById('storm');
@@ -80,7 +115,11 @@ function renderStorm(stack: HTMLElement, count: number): void {
   chip.hidden = count <= 0;
   if (chip.hidden) return;
   chip.textContent = `Storm ${count}`;
-  chip.style.top = stack.hidden ? '' : `${stack.getBoundingClientRect().bottom + 8}px`;
+  // Measured to where the pile's height is going, not where its transition has got to
+  const pile = q(stack, '.pile');
+  const going = parseFloat(pile.style.height);
+  const easing = pile.offsetParent && Number.isFinite(going) ? going - pile.offsetHeight : 0;
+  chip.style.top = stack.hidden ? '' : `${stack.getBoundingClientRect().bottom + easing + 8}px`;
 }
 
 // The panel hangs from the top of the board and stops short of the hand
