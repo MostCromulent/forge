@@ -81,7 +81,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   place(root);
   layout(pile, entries.length);
   renderMenu(model);
-  renderStorm(root, game(model)?.StormCount ?? 0);
+  renderStorm(root, game(model)?.StormCount ?? 0, entries.length > 0);
 }
 
 /** The panel fading out as its last item leaves, so a render meanwhile does not bring it back or hide it at once. */
@@ -119,8 +119,11 @@ function showPanel(root: HTMLElement, shown: boolean): void {
 
 const PANEL_FADE_MS = 150;
 
-/** How many spells have been cast this turn, under the stack where a storm spell will resolve, once there are any. */
-function renderStorm(stack: HTMLElement, count: number): void {
+/**
+ * How many spells have been cast this turn, once there are any: under the stack while something is on it, where a
+ * storm spell will resolve, and otherwise beside the foot of the prompt.
+ */
+function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void {
   let chip = document.getElementById('storm');
   if (!chip) {
     chip = Object.assign(document.createElement('div'), { id: 'storm', title: 'Spells cast this turn, which a storm spell copies' });
@@ -133,6 +136,15 @@ function renderStorm(stack: HTMLElement, count: number): void {
   const pile = q(stack, '.pile');
   const going = parseFloat(pile.style.height);
   const easing = pile.offsetParent && Number.isFinite(going) ? going - pile.offsetHeight : 0;
+  // Read from what is on the stack, not whether the panel shows, since the panel is still fading as it empties
+  const prompt = document.getElementById('prompt');
+  if (!stacked && prompt) {
+    const at = prompt.getBoundingClientRect();
+    chip.style.top = `${at.bottom - chip.offsetHeight}px`;
+    chip.style.right = `${innerWidth - at.left + 8}px`;
+    return;
+  }
+  chip.style.right = '';
   chip.style.top = stack.hidden ? '' : `${stack.getBoundingClientRect().bottom + easing + 8}px`;
 }
 
