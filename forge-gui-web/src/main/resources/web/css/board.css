@@ -608,6 +608,11 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
+/* A card on the table casts a short, soft shadow, so it sits on the board rather than printed on it. The shadow turns
+   with a tapped card, so its offset turns the other way to keep falling downwards. States that draw their own glow
+   carry it too, through --lift */
+.battlefield .card { --lift: 0 2px 5px #0006; box-shadow: var(--lift); }
+.battlefield .card.tapped { --lift: 2px 0 5px #0006; }
 /* Summoning sickness greys the art, and wears off at your untap as a fade rather than a switch */
 .card > img, .card .frame { transition: filter .3s ease; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
@@ -639,7 +644,7 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card.back > img, .card.back .frame { display: none; }
 /* A card a permanent holds in exile sits under it like an attachment, as a faded ghost of itself edged in exile's
    colour; dimmed rather than brightened, so its frame stays as dark as its holder's */
-.card.ghost { box-shadow: 0 0 0 1px var(--zone-exile); }
+.card.ghost { box-shadow: 0 0 0 1px var(--zone-exile), var(--lift, 0 0 #0000); }
 .card.ghost > img { opacity: .55; filter: grayscale(.6); }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
 .card .pt.on { display: block; }
@@ -675,7 +680,7 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card .blocks { position: absolute; right: 3px; top: 3px; z-index: 3; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: #1a2433; border: 1px solid #3d5876; color: #bcd6f0; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
 .card .blocks:empty { display: none; }
 /* A creature under an obligation to block: lit, and the overlay ties it to what it has to block */
-.card.must-block { box-shadow: 0 0 0 2px var(--accent-2), 0 0 12px color-mix(in srgb, var(--accent-2) 22%, transparent); }
+.card.must-block { box-shadow: 0 0 0 2px var(--accent-2), 0 0 12px color-mix(in srgb, var(--accent-2) 22%, transparent), var(--lift, 0 0 #0000); }
 .card .kws img { display: block; width: calc(var(--card-w) * var(--fit, 1) * 0.19); height: auto; filter: drop-shadow(0 1px 2px #000c); }
 /* Past a certain shrink they are mush rather than information, and the detail panel still has them on hover */
 .group.cramped .card .corner { display: none; }
@@ -688,8 +693,8 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 /* A card you could act on now, and the stronger mark on what Auto would tap: paler and thinner than a card a
    prompt is asking for, so the two never read the same */
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
-.card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent); }
-.card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
+.card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent), var(--lift, 0 0 #0000); }
+.card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent), var(--lift, 0 0 #0000); }
 /* While a prompt offers a pick, what it offers is left as it is and everything else dims; the gold ring is for what is
    already chosen */
 #match.picking .card.selectable { outline: none; }
