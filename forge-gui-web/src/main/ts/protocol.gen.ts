@@ -255,6 +255,11 @@ export interface DeviceDeck {
   format: string;
 }
 
+export interface CardPools {
+  t: 'cardPools';
+  groups: CardPoolGroup[];
+}
+
 export interface CardPoolDetails {
   t: 'cardPoolDetails';
   lines: CardPoolLine[];
@@ -451,6 +456,7 @@ export type ServerMessage =
   | ImportResult
   | NameTaken
   | DeviceDeck
+  | CardPools
   | CardPoolDetails
   | LimitedOptions
   | LimitedPools
@@ -1036,7 +1042,6 @@ export interface LobbyTable {
   format: string;
   formats: Format[];
   cardPool?: string;
-  cardPools: CardPoolGroup[];
   casualVariants: Format[];
   variantsOn: string[];
   maxSeats: number;
@@ -1173,6 +1178,11 @@ export interface Fetched {
   url: string;
   text: string;
   format: string;
+}
+
+export interface CardPoolGroup {
+  name: string;
+  formats: string[];
 }
 
 export interface CardPoolLine {
@@ -1325,11 +1335,6 @@ export interface Format {
   desc: string;
   facts: string[];
   play: string;
-}
-
-export interface CardPoolGroup {
-  name: string;
-  formats: string[];
 }
 
 export interface Seat {

@@ -37,6 +37,7 @@ import forge.web.ToBrowser.DeckDetailsMessage;
 import forge.web.ToBrowser.Decks;
 import forge.web.ToBrowser.Format;
 import forge.web.ToBrowser.CardPoolGroup;
+import forge.web.ToBrowser.CardPools;
 import forge.web.ToBrowser.LobbyMessage;
 import forge.web.ToBrowser.LimitedTable;
 import forge.web.ToBrowser.LobbyTable;
@@ -220,7 +221,7 @@ final class Lobby {
     }
 
     /** The pools on offer, grouped as Forge's format files group them. */
-    private static List<CardPoolGroup> cardPools() {
+    static CardPools cardPools() {
         final var formats = FModel.getFormats();
         final List<CardPoolGroup> out = new ArrayList<>();
         out.add(new CardPoolGroup("Sanctioned", names(formats.getSanctionedList())));
@@ -229,7 +230,7 @@ final class Lobby {
         out.add(new CardPoolGroup("Block", names(formats.getBlockList())));
         // Which formats load depends on the install, so a heading can come up empty
         out.removeIf(g -> g.formats().isEmpty());
-        return out;
+        return new CardPools(out);
     }
 
     /** Where each format's cards come from, for the card pool picker. */
@@ -278,6 +279,27 @@ final class Lobby {
             out.add(f.getName());
         }
         return out;
+    }
+
+    /** Guards the record of the last deck list sent, so two threads cannot both decide to send the same one. */
+    private final Object sentLock = new Object();
+    private BrowserChannel decksSentTo;
+    private Decks decksSent;
+
+    /**
+     * Sends the deck list unless this browser already has exactly this one. The list is always rebuilt, as building it
+     * records what the lobby shows; only a send the browser would learn nothing from is skipped.
+     */
+    void sendDecks(final BrowserChannel to) {
+        synchronized (sentLock) {
+            final Decks out = decks();
+            if (to == decksSentTo && out.equals(decksSent)) {
+                return;
+            }
+            decksSentTo = to;
+            decksSent = out;
+            to.send(out);
+        }
     }
 
     /** Every deck this format can be played with, rebuilt because the pool differs per format. */
@@ -563,9 +585,9 @@ final class Lobby {
     }
 
     /** Downloads a net deck category and adds it to the catalogue. Core asks which one through the browser. */
-    Decks loadNetDecks() {
+    void loadNetDecks(final BrowserChannel to) {
         catalog.loadNetDecks(format());
-        return decks();
+        sendDecks(to);
     }
 
     DeckDetailsMessage deckDetails(final String key) {
@@ -591,7 +613,7 @@ final class Lobby {
             final GameFormat cardPool = cardPool();
             // Only the machine running the game can start it; everyone else waits on the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
-                    cardPool == null ? null : cardPool.getName(), cardPools(),
+                    cardPool == null ? null : cardPool.getName(),
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegalDecks(), FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),

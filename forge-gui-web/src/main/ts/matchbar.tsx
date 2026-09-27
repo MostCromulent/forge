@@ -218,7 +218,7 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
 function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const details = model.cardPoolDetails;
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
-  const group = (name: string) => lobby.cardPools.find(g => g.name === name)?.formats ?? [];
+  const group = (name: string) => model.cardPools.find(g => g.name === name)?.formats ?? [];
   return (
     <Popup label={lobby.cardPool ?? 'Any cards'} disabled={!lobby.host} wide
       onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>

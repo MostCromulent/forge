@@ -105,13 +105,11 @@ public class LobbyCardPoolTest {
     /** Fails if the card pool control offers a heading with nothing under it, as the Block group can be. */
     @Test(timeOut = 60_000)
     public void everyCardPoolHeadingHasFormats() throws Exception {
-        atTable(TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40), (local, lobby) -> {
-            final var groups = lobby.state().table().cardPools();
-            Assert.assertFalse(groups.isEmpty(), "no card pools offered");
-            for (final ToBrowser.CardPoolGroup g : groups) {
-                Assert.assertFalse(g.formats().isEmpty(), g.name() + " is offered with nothing in it");
-            }
-        });
+        final var groups = Lobby.cardPools().groups();
+        Assert.assertFalse(groups.isEmpty(), "no card pools offered");
+        for (final ToBrowser.CardPoolGroup g : groups) {
+            Assert.assertFalse(g.formats().isEmpty(), g.name() + " is offered with nothing in it");
+        }
     }
 
     /**

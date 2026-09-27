@@ -201,7 +201,7 @@ export function CheckControl({ model, state, actions }: { model: Model; state: E
 export function CheckSelect({ model, value, change }: {
   model: Model; value: string; change: (format: string, cardPool: string | null, unrestricted: boolean) => void;
 }) {
-  const pools = model.lobby?.cardPools ?? [{ name: 'Sanctioned', formats: model.cardFormats }];
+  const pools = model.cardPools.length ? model.cardPools : [{ name: 'Sanctioned', formats: model.cardFormats }];
   return (
     <label class="legality set">
       Check legality against

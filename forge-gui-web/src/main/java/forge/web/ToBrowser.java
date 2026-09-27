@@ -117,7 +117,7 @@ final class ToBrowser {
     }
 
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
-            @Nullable String cardPool, List<CardPoolGroup> cardPools, List<Format> casualVariants, List<String> variantsOn,
+            @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
             List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited) {
     }
@@ -137,7 +137,11 @@ final class ToBrowser {
     record PastEvent(String id, String label) {
     }
 
-    /** Card pools the card pool control offers, under the heading Forge files them by. */
+    /** Card pools the card pool control offers, under the heading Forge files them by. Sent once per browser. */
+    @Message("cardPools")
+    record CardPools(List<CardPoolGroup> groups) {
+    }
+
     /** What the card pool picker shows beyond the names: where each format's cards come from. */
     @Message("cardPoolDetails")
     record CardPoolDetails(List<CardPoolLine> lines) {
@@ -566,7 +570,7 @@ final class ToBrowser {
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, CataloguePage.class, EditorMessage.class,
-            ImportResult.class, NameTaken.class, DeviceDeck.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
+            ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
             DraftState.class, LimitedResult.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,

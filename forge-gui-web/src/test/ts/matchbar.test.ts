@@ -6,7 +6,7 @@ const seat = (type: string, more: Partial<Seat> = {}): Seat =>
   ({ type, mine: false, mayEdit: false, ready: false, avatar: 0, sleeve: 0, deckSize: 0, colors: '', sleeveOffset: 0, benched: false, ...more } as Seat);
 const table = (seats: Seat[]): LobbyTable => ({
   host: true, mySeat: 0, shareable: true, format: 'Constructed', maxSeats: 4, gamesPerMatch: 3, seats, problems: [], canStart: false, illegalDecks: [], legalityEnforced: true,
-  cardPools: [], casualVariants: [], variantsOn: [], formats: [],
+  casualVariants: [], variantsOn: [], formats: [],
 });
 const format = (facts: string[]): Format => ({ id: 'x', name: 'x', group: 'g', desc: '', facts, play: '' });
 

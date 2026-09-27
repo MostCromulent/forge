@@ -285,6 +285,8 @@ public final class WebSession {
             p.gui().detach(previous);
         }
         channel.send(hello());
+        // The same for the whole run, so a browser is sent them once rather than with every change to the table
+        channel.send(Lobby.cardPools());
         sessions.greet(this);
         if (isHost) {
             ui.hostRequests().replay(channel::send);
@@ -298,7 +300,7 @@ public final class WebSession {
             }
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
-            channel.send(lobby.decks());
+            lobby.sendDecks(channel);
             channel.send(lobby.state());
             if (isHost && lobby.settingUpEvent()) {
                 sendEventOptions(channel);
@@ -340,7 +342,7 @@ public final class WebSession {
 
     void onMessage(final BrowserChannel channel, final JsonObject msg) {
         switch (msg.get("t").getAsString()) {
-            case "decks" -> channel.send(lobby.decks());
+            case "decks" -> lobby.sendDecks(channel);
             case "setName" -> {
                 final SetName chosen = Wire.decode(msg, SetName.class);
                 rename(channel, chosen.name(), chosen.avatar());
@@ -406,7 +408,7 @@ public final class WebSession {
             // Core asks which category through a host question, and blocks on it, so not on the socket thread
             case "netDecks" -> {
                 if (isHost) {
-                    ui.runBackgroundTask("Net decks", () -> channel.send(lobby.loadNetDecks()));
+                    ui.runBackgroundTask("Net decks", () -> lobby.loadNetDecks(channel));
                 }
             }
             // The links are the host's to hand out. Finding the external address is a web request, so it cannot run on
@@ -680,7 +682,7 @@ public final class WebSession {
             return;
         }
         applyChosenAvatar();
-        channel.send(lobby.decks());
+        lobby.sendDecks(channel);
         channel.send(lobby.state());
         sessions.hostGameOpened();
     }
@@ -723,7 +725,7 @@ public final class WebSession {
             applyChosenAvatar();
             final BrowserChannel b = browser;
             if (b != null) {
-                b.send(lobby.decks());
+                lobby.sendDecks(b);
                 b.send(lobby.state());
             }
         });
@@ -863,7 +865,7 @@ public final class WebSession {
     /** A new format, card pool or variant can change which decks a seat may take, so the list goes out again. */
     private void relistDecks(final BrowserChannel to) {
         if (lobby.restrictionsChanged()) {
-            to.send(lobby.decks());
+            lobby.sendDecks(to);
         }
     }
 

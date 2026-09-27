@@ -103,13 +103,13 @@ final class DeckSession {
             case "browseFormat" -> {
                 if (host.getAsBoolean() && !atTable.getAsBoolean()) {
                     lobby.setBrowseFormat(gameType(Wire.decode(msg, BrowseFormat.class).format()));
-                    channel.send(lobby.decks());
+                    lobby.sendDecks(channel);
                 }
             }
             case "deviceDecks" -> {
                 if (!host.getAsBoolean()) {
                     keepDeviceDecks(Wire.decode(msg, DeviceDecks.class).decks());
-                    channel.send(lobby.decks());
+                    lobby.sendDecks(channel);
                 }
             }
             // Building the catalogue reads every card once, which is far too slow for the socket thread
@@ -264,7 +264,7 @@ final class DeckSession {
         final Integer seat = editorSeat;
         editor = null;
         channel.send(new EditorMessage(null));
-        channel.send(lobby.decks());
+        lobby.sendDecks(channel);
         // A deck never saved (new and untouched, or a precon only looked at) has nothing to put on the seat
         if (seat == null || seat < 0 || !atTable.getAsBoolean() || (!done.saved() && !eventPool)) {
             return null;
@@ -287,7 +287,7 @@ final class DeckSession {
         }
         editor = null;
         channel.send(new EditorMessage(null));
-        channel.send(lobby.decks());
+        lobby.sendDecks(channel);
         return null;
     }
 
@@ -368,7 +368,7 @@ final class DeckSession {
         }
         switch (c.action()) {
             case use -> {
-                channel.send(lobby.decks());
+                lobby.sendDecks(channel);
                 if (c.seat() == null || !atTable.getAsBoolean()) {
                     return;
                 }
@@ -381,13 +381,13 @@ final class DeckSession {
                 channel.send(lobby.state());
             }
             case edit -> {
-                channel.send(lobby.decks());
+                lobby.sendDecks(channel);
                 open(new EditorOpen(relisted(key, deck), null, c.seat(), false), check, channel);
                 if (editor != null) {
                     channel.send(new EditorMessage(editor.state(editorSeat != null)));
                 }
             }
-            default -> channel.send(lobby.decks());
+            default -> lobby.sendDecks(channel);
         }
     }
 
