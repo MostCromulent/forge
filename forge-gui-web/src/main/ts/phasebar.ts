@@ -130,7 +130,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 function build(root: HTMLElement): void {
   root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
   const pill = q(root, '.pill');
-  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="code">${p.code}</span><span class="label"></span><span class="pips"></span><i></i></span>`).join('');
+  const track = PHASES.map(p => `<span class="phase">${glyph(p.glyph, 12)}<span class="code">${p.code}</span><span class="label"></span><span class="pips"></span></span>`).join('');
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track">${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`

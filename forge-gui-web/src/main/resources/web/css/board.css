@@ -372,11 +372,9 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .owner .turn { color: var(--muted); font-size: 11.5px; }
 #phase-strip .track { display: flex; align-items: center; gap: 2px; }
 #phase-strip .phase { width: 24px; height: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--muted); transition: width .18s ease, background-color .18s ease, color .18s ease, padding .18s ease; }
-#phase-strip .phase i { width: 15px; height: 2px; border-radius: 1px; }
 #phase-strip .phase .code { font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: .06em; }
 #phase-strip .phase.current .code { display: none; }
 #phase-strip .phase:not(.current) { height: 32px; gap: 2px; }
-#phase-strip .phase:not(.current) i { width: 13px; }
 /* Where a pass-priority-until marker is set: a ring round that phase's icon */
 #phase-strip .phase.marked .glyph { border-radius: 50%; outline: 1.5px solid var(--select); outline-offset: 2px; }
 /* The one thing on screen that moves every turn, so it is lit rather than flat-filled */
@@ -384,7 +382,6 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 /* The name grows out of the icon as the step arrives, rather than appearing at full width */
 #phase-strip .phase .label { max-width: 0; overflow: hidden; white-space: nowrap; transition: max-width .18s ease; }
 #phase-strip .phase.current .label { max-width: 90px; }
-#phase-strip .phase i { transition: background-color .18s ease; }
 /* Every phase keeps its pips; only the current one's are open, and they open and close as the label does, so the
    pill does not jump sideways at each change of phase */
 #phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 0; max-width: 0; opacity: 0; overflow: clip; overflow-clip-margin: 3px;
