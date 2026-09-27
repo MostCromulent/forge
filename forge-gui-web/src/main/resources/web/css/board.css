@@ -377,6 +377,8 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .phase .code { font-size: 9px; font-weight: 700; line-height: 1; letter-spacing: .06em; }
 #phase-strip .phase.current .code { display: none; }
 #phase-strip .phase:not(.current) { height: 32px; gap: 2px; }
+/* The step name and pips only show in the current phase; elsewhere they are lifted out, so the icon and code centre */
+#phase-strip .phase:not(.current) .label, #phase-strip .phase:not(.current) .pips { position: absolute; }
 /* Where a pass-priority-until marker is set: a ring round that phase's icon */
 #phase-strip .phase.marked .glyph { border-radius: 50%; outline: 1.5px solid var(--select); outline-offset: 2px; }
 /* The one thing on screen that moves every turn, so it is lit rather than flat-filled */
