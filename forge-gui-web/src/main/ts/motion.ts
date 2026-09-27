@@ -61,6 +61,13 @@ function restingRect(el: HTMLElement): DOMRect {
 
 /** Every card's trip from one place to another takes this long: a play, a draw, a discard, a paid spell's landing. */
 const FLIGHT_MS = 600;
+/** A card put onto the battlefield from the hand (a land, a permanent that resolves at once) travels this fast. */
+const PLAY_MS = 380;
+/**
+ * Cards moving within the battlefield (a land tapped from one pile onto another, a row closing up round it) are short
+ * moves the player has usually just made, so they take this long.
+ */
+const SHIFT_MS = 340;
 /** Cards moving together (a deal, a mulligan, a discard) set off this far apart, so each can be followed. */
 const STAGGER_MS = 110;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
@@ -123,6 +130,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string }[] = [];
   const trips = journeys(events);
+  // Hand icons already swelling this frame, so several cards drawn at once swell it once
+  const swelled = new Set<HTMLElement>();
   let fromLibrary = 0;
   for (const [key, move] of trips) {
     const seen = lastSeen.get(key);
@@ -158,19 +167,21 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     }
     if (el) {
       const drawn = move.from?.zone === 'Library' && move.to?.zone === 'Hand';
+      // A card put straight down from the hand, such as a land, is a short trip and makes it quicker
+      const ms = move.from?.zone === 'Hand' && move.to?.zone === 'Battlefield' ? PLAY_MS : FLIGHT_MS;
       land(key);
       // A card joining a pile is drawn as the pile's top, so flying that element would carry the whole pile in; a copy
       // of the card makes the trip instead, and the pile stays where it is
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
-        holdPile(el, FLIGHT_MS);
-        sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1, 0, el);
-        holdCount(el, FLIGHT_MS);
+        holdPile(el, ms);
+        sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1, 0, el, ms);
+        holdCount(el, ms);
         continue;
       }
       if (start) {
         if (drawn) dealt.push({ el, start });
-        else fly(el, start, FLIGHT_MS, 0);
+        else fly(el, start, ms, 0);
       } else if (pile && (pile.dataset.members ?? '').split(',').length > 1) {
         // A token joining a pile of its kind: a copy grows onto the pile, which stays as it is
         holdPile(el, POP_MS);
@@ -187,6 +198,17 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
     const ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
     const was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
+    // Another player's hand is only an icon by their portrait, so a card drawn into it makes no trip: the icon swells
+    // once as its count goes up
+    const intoFan = move.from?.zone === 'Library' && move.to?.zone === 'Hand' ? handFanOf(move.to) : null;
+    if (!ghost && intoFan) {
+      if (!swelled.has(intoFan)) {
+        swelled.add(intoFan);
+        intoFan.animate([{ scale: '1' }, { scale: '1.28', offset: 0.35 }, { scale: '1' }], { duration: 480, easing: EASE });
+      }
+      land(key);
+      continue;
+    }
     if (!ghost && start && move.from?.zone === 'Library') {
       // An opponent's draw or anyone's mill: the library shows no card to copy, so a back in the owner's sleeve makes
       // the trip, one after another when several go together
@@ -263,9 +285,9 @@ function shiftBoard(travelled: Set<string>): void {
       }
     }
   }
-  for (const { top } of joining) holdPile(top, FLIGHT_MS);
-  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]));
-  for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1, 0, top);
+  for (const { top } of joining) holdPile(top, SHIFT_MS);
+  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]), SHIFT_MS);
+  for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1, 0, top, SHIFT_MS);
 }
 
 /** Whether two places are more than a few pixels apart, centre to centre. */
@@ -289,7 +311,7 @@ function shiftHand(travelled: Set<string>): void {
   slide(document.querySelectorAll<HTMLElement>(HAND_CARDS), travelled);
 }
 
-function slide(cards: Iterable<HTMLElement>, travelled: Set<string>): void {
+function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = FLIGHT_MS): void {
   for (const el of cards) {
     const key = el.dataset.key as string;
     const was = lastSeen.get(key);
@@ -310,7 +332,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>): void {
       // On translate, not transform: an animation of transform overrides the transition that turns a card as it taps,
       // so a card tapped out of a pile would show already turned
       el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }],
-        { duration: FLIGHT_MS, easing: EASE, composite: 'add' });
+        { duration, easing: EASE, composite: 'add' });
     }
     if (was.ghost && was.ghost !== el && el.closest('.battlefield')) {
       morph(el, was.ghost, was.size);
@@ -319,7 +341,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>): void {
 }
 
 /** How long a redrawn card takes to turn or resize from how its old element looked; a little longer than a tap's turn. */
-const MORPH_MS = 300;
+const MORPH_MS = 220;
 
 /**
  * A card redrawn as a new element (tapped out of a pile, untapped back into one, moved to a row of another size) has no
@@ -529,6 +551,13 @@ function tileImageRect(key: string): DOMRect | null {
   const img = document.querySelector(`.zone-tile img[data-key="${key}"]`);
   const rect = img?.getBoundingClientRect();
   return rect?.width ? rect : null;
+}
+
+/** The icon standing for another player's hand, if that is what the hand is drawn as. */
+function handFanOf(place: Place): HTMLElement | null {
+  const seat = place.player ? document.querySelector<HTMLElement>(`.seat[data-player="${place.player.ref}"]`) : null;
+  const fan = seat && seat.id !== 'me' ? seat.querySelector<HTMLElement>('.hand-fan') : null;
+  return fan && !fan.hidden ? fan : null;
 }
 
 /** Roughly where a zone is drawn, for a card with no element of its own at one end of its trip. */
@@ -758,7 +787,7 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
-function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement): void {
+function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, onto?: HTMLElement, duration = FLIGHT_MS): void {
   if (!was.ghost) {
     return;
   }
@@ -775,5 +804,5 @@ function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, o
   ghost.animate([
     { translate: '0px 0px', scale: '1', rotate: '0deg', opacity: 1 },
     { translate: shiftTo(ghost, scale, target), scale: String(scale), rotate: `${turn * 90}deg`, opacity: endOpacity },
-  ], { duration: FLIGHT_MS, delay, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
+  ], { duration, delay, easing: 'cubic-bezier(.4,0,.8,.4)', fill: 'backwards' }).finished.then(() => ghost.remove(), () => ghost.remove());
 }
