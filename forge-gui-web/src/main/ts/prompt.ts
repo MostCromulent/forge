@@ -174,7 +174,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
     setButton(ok, { label: 'Pass', enabled: true });
     // Stopping means auto-pass is not wanted just now, so the button turns it off, under its own key
-    setButton(cancel, { label: 'Cancel auto-pass', enabled: true });
+    setButton(cancel, { label: 'Cancel', enabled: true });
     q(root, '.buttons .cancel kbd').textContent = keyName(keys.autoPass);
     ok.onclick = () => finishCountdown(true);
     cancel.onclick = () => {
