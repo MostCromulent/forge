@@ -43,6 +43,9 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     window.addEventListener('resize', () => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
+  // Spells arrive by flying in, from their card or from their waiting slot; anything else, an ability or a trigger,
+  // has no card move and grows into place instead
+  const flown = new Set([...awaiting.keys(), ...[...journeys(events)].filter(([, m]) => m.to?.zone === 'Stack').map(([k]) => k)]);
   noteAwaiting(model, items, events);
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
     ui.hoveredStackItem = null;
@@ -59,9 +62,20 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
   const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
   reconcile(pile, entries, e => typeof e === 'string' ? `awaiting-${e}` : e.$key,
-    e => typeof e === 'string' ? createAwaiting(e) : createItem(model), (el, e) => {
+    e => {
+      if (typeof e === 'string') return createAwaiting(e);
+      const el = createItem(model);
+      el.dataset.fresh = '1';
+      return el;
+    }, (el, e) => {
       if (typeof e === 'string') return;
       updateItem(el, model, e);
+      if (el.dataset.fresh) {
+        delete el.dataset.fresh;
+        if (!flown.has(String(e.SourceCard?.ref)) && document.documentElement.dataset.motion !== 'reduced') {
+          el.animate([{ opacity: 0, scale: '.85' }, { opacity: 1, scale: '1' }], { duration: 200, easing: 'cubic-bezier(.2, .8, .3, 1)' });
+        }
+      }
       el.classList.toggle('targetable', (pick?.stackKeys ?? []).includes(e.$key));
     });
   place(root);

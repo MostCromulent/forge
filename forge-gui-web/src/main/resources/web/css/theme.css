@@ -75,7 +75,8 @@
 [data-from="Library"] { --zone-glow: var(--zone-library); }
 /* The ground is painted on the root, not on the body. The board's backdrop layers sit at a negative
    z-index, which puts them above the page canvas but behind any background the body paints itself. */
-html { background: var(--bg); }
+/* The menus sit on the table's lit-centre ground, a shade darker so their panels still stand off it */
+html { background: radial-gradient(120% 90% at 50% 38%, #151a24 0%, #0b0e14 100%) fixed, var(--bg); }
 html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
 [hidden] { display: none !important; }
 button { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; }

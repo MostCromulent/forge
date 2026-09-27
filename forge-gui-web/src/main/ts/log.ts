@@ -21,6 +21,8 @@ export function initLog(): void {
   log.addEventListener('scroll', () => {
     if (Date.now() - handled < 1000) stick = log.scrollHeight - log.scrollTop - log.clientHeight < 24;
   });
+  // The prompt growing under it shrinks the log without an entry arriving, which would leave the newest out of view
+  new ResizeObserver(() => toBottom(log)).observe(log);
 }
 
 // Told apart by lightness as well as hue, so they hold for red-green colour blindness

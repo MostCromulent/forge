@@ -163,6 +163,11 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .player { display: grid; gap: 6px; justify-items: center; }
 /* The local player's zone tiles hang from the divider, clear of the prompt panel in the corner */
 #me .player { align-self: start; }
+/* The opponent's column keeps to the divider as yours does, so floating mana or a counter grows it away from the
+   middle rather than shifting the portrait and tiles by half */
+#opponent > .seat:only-child .player { align-self: end; }
+.player .mana { transition: opacity .2s ease; }
+@starting-style { .player .mana { opacity: 0; } }
 .avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; position: relative; cursor: pointer; border: 2px solid var(--line); }
 .avatar .portrait { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .avatar .ai-badge { display: none; position: absolute; left: -6px; top: -6px; width: 26px; height: 26px; border-radius: 50%; background: var(--bg); border: 1px solid var(--accent-2); padding: 3px; }
@@ -595,7 +600,9 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 @keyframes ending-rise { from { opacity: 0; transform: translateY(10px); } }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
-.card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease; flex: none; }
+.card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
+/* Summoning sickness greys the art, and wears off at your untap as a fade rather than a switch */
+.card > img, .card .frame { transition: filter .3s ease; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
 .card > img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
 .card .cost-badge { display: none; }

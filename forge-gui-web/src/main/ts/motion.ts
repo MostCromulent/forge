@@ -5,6 +5,8 @@
 
 import { hoverable } from './detail';
 import type { CardMoved, GameEvent, Place } from './protocol';
+import type { CardView, PlayerView } from './protocol';
+import { cssUrl, playerSleeveUrl } from './looks';
 import type { Model } from './model';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
@@ -114,6 +116,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
   const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string }[] = [];
   const trips = journeys(events);
+  let fromLibrary = 0;
   for (const [key, move] of trips) {
     const seen = lastSeen.get(key);
     const start = waiting.get(key)?.rect ?? seen?.rect ?? placeRect(move.from);
@@ -154,6 +157,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
         sendTo({ ...(seen ?? { ghost: el, size: { w: el.offsetWidth, h: el.offsetHeight } }), rect: start }, restingRect(el), 1);
+        holdCount(el, FLIGHT_MS);
         continue;
       }
       if (start) {
@@ -164,6 +168,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         const copy = place(el, restingRect(el), { w: el.offsetWidth, h: el.offsetHeight });
         pop(copy);
         copy.getAnimations()[0]?.finished.then(() => copy.remove(), () => copy.remove());
+        holdCount(el, POP_MS);
       } else {
         // A token, or anything else that comes into being, grows into place rather than blinking on
         pop(el);
@@ -173,6 +178,15 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
     const ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
     const was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
+    if (!ghost && start && move.from?.zone === 'Library') {
+      // An opponent's draw or anyone's mill: the library shows no card to copy, so a back in the owner's sleeve makes
+      // the trip, one after another when several go together
+      const target = tileImageRect(key) ?? placeRect(move.to);
+      if (target) {
+        if (tileImageRect(key)) holdTile(key, fromLibrary * STAGGER_MS);
+        sendTo({ rect: start, ghost: cardBack(model, key) }, target, 1, fromLibrary++ * STAGGER_MS);
+      }
+    }
     if (ghost && start && was) {
       const tile = tileImageRect(key);
       const target = tile ?? placeRect(move.to);
@@ -198,6 +212,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   arriveElsewhere(travelled);
   shiftBoard(travelled);
   shiftHand(travelled);
+  shiftZones(travelled);
   layOutPiles();
 }
 
@@ -223,6 +238,14 @@ function shiftBoard(travelled: Set<string>): void {
       }
     }
   }
+}
+
+/** Cards left in an open zone, as one is picked from a search, slide into the gap rather than jumping. */
+function shiftZones(travelled: Set<string>): void {
+  if (zonesShape() === lastZones) {
+    return;
+  }
+  slide(document.querySelectorAll<HTMLElement>(ZONE_CARDS), travelled);
 }
 
 /** Cards staying in the hand slide to their new places when the hand's order changes around them. */
@@ -393,6 +416,7 @@ function layOutPiles(): void {
 const CARDS = '#me .card[data-key], #opponent .card[data-key], #hand .card[data-key], #zones .card[data-key]';
 const BOARD_CARDS = '#me .battlefield .card[data-key], #opponent .battlefield .card[data-key]';
 const HAND_CARDS = '#hand .card[data-key]';
+const ZONE_CARDS = '#zones .card[data-key]';
 const stackItems = () => [...document.querySelectorAll<HTMLElement>('#stack .stack-item:not(.awaiting)')];
 const awaitingSlot = (key: string) =>
   document.querySelector<HTMLElement>(`#stack .stack-item.awaiting img[data-key="${key}"]`)?.parentElement ?? null;
@@ -423,6 +447,21 @@ export function pileTopFor(key: string): HTMLElement | null {
 
 // The top card of a zone tile is drawn on it, which is where a card sent there lands. A face-down top is not
 // drawn, and its hidden picture measures nothing
+/** A face-down card in its owner's sleeve, to stand in for a card no one can see. */
+function cardBack(model: Model, key: string): HTMLElement {
+  const card = model.objects.get(Number(key)) as CardView | undefined;
+  const owner = card?.Owner ? model.objects.get(card.Owner.ref) as PlayerView | undefined : undefined;
+  const back = document.createElement('div');
+  back.className = 'card back';
+  back.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(owner)));
+  return back;
+}
+
+/** Keeps a pile's count at what it was until the copy joining it arrives, then shows the new one. */
+function holdCount(el: HTMLElement, duration: number): void {
+  el.querySelector<HTMLElement>('.count')?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.9 }, { opacity: 1 }], { duration, easing: 'linear' });
+}
+
 /** Keeps a zone tile's picture of a card hidden until the copy flying to it arrives, rather than showing it at once. */
 function holdTile(key: string | undefined, delay: number): void {
   const img = key ? document.querySelector<HTMLElement>(`.zone-tile img[data-key="${key}"]`) : null;
@@ -503,11 +542,14 @@ const handShape = () => [...document.querySelectorAll<HTMLElement>(HAND_CARDS)].
 
 let lastShape = '';
 let lastHand = '';
+let lastZones = '';
+const zonesShape = () => [...document.querySelectorAll<HTMLElement>(ZONE_CARDS)].map(c => c.dataset.key).join(',');
 
 /** Remembers where every card stands now, for the moves the next frame brings. */
 function note(): void {
   lastShape = boardShape();
   lastHand = handShape();
+  lastZones = zonesShape();
   lastSeen.clear();
   ownPlace.clear();
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {

@@ -1,3 +1,9 @@
+/* Dialogs and menus come in rather than appearing: the scrim fades, the box rises a few pixels as it does */
+@keyframes backdrop-in { from { opacity: 0; } }
+@keyframes box-in { from { opacity: 0; translate: 0 6px; } }
+.backdrop { animation: backdrop-in .15s ease-out; }
+.dialog, .card-menu, .host-choice, .zone-panel, .zone-bar { animation: box-in .16s ease-out; }
+html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .zone-panel, .zone-bar) { animation: none; }
 .backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
 .dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
 .dialog h3 { margin: 0; }

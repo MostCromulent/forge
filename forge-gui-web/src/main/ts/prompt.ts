@@ -46,7 +46,28 @@ export function pressPromptButton(name: string): void {
   showPressed(document.querySelector(`#prompt .${name}`));
 }
 
+/** How long the console takes to grow or shrink to a new prompt. */
+const RESIZE_MS = 160;
+
+/**
+ * The console changes height as prompts come and go (a card, a longer message, a row of players). It eases there
+ * rather than jumping, anchored at its foot where the buttons are, so any clipping while it does falls on the tools.
+ */
 export function renderPrompt(model: Model, actions: Actions): void {
+  const root = byId('prompt');
+  const before = built ? root.offsetHeight : 0;
+  drawPrompt(model, actions);
+  const after = root.offsetHeight;
+  if (!before || Math.abs(after - before) < 3 || document.documentElement.dataset.motion === 'reduced') return;
+  for (const a of root.getAnimations()) if (a.id === 'prompt-resize') a.cancel();
+  root.style.overflow = 'clip';
+  root.style.alignContent = 'end';
+  const run = root.animate([{ height: `${before}px` }, { height: `${after}px` }], { duration: RESIZE_MS, easing: 'ease-out' });
+  run.id = 'prompt-resize';
+  run.finished.then(() => { root.style.overflow = ''; root.style.alignContent = ''; }, () => { /* replaced by a newer resize */ });
+}
+
+function drawPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   if (!built) {
     root.innerHTML = `

@@ -185,7 +185,8 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
       </div>
       <div class="cat-grid">
         {state.cards.map((card, i) => (
-          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}>
+          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}
+            style={{ '--i': i }}>
             <button class="tile" title={card.name} draggable
               onDragStart={e => startDrag(e, { from: 'pack', index: i })}
               onClick={() => (i === selected ? pick(i) : setSelected(i))}>

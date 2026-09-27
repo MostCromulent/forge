@@ -78,7 +78,7 @@ export function drawOverlay(model: Model): void {
   const settle = () => {
     if (drawn !== model) return;
     paint(model);
-    if (performance.now() - since < SETTLE_START_MS || boardMoving()) settleFrame = requestAnimationFrame(settle);
+    if (performance.now() - since < SETTLE_START_MS || boardMoving() || growing) settleFrame = requestAnimationFrame(settle);
   };
   settleFrame = requestAnimationFrame(settle);
 }
@@ -93,6 +93,13 @@ function boardMoving(): boolean {
 }
 
 function paint(model: Model): void {
+  growing = false;
+  drawnNow = new Map();
+  paintArrows(model);
+  born = drawnNow;
+}
+
+function paintArrows(model: Model): void {
   const canvas = byId<HTMLCanvasElement>('overlay');
   const ratio = window.devicePixelRatio || 1;
   const ctx = canvas.getContext('2d');
@@ -168,7 +175,7 @@ export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point |
 function drawDrag(ctx: CanvasRenderingContext2D): void {
   if (!drag) return;
   if (drag.to instanceof HTMLElement) {
-    ribbon(ctx, drag.from, drag.to, KINDS.block, 0, 1);
+    ribbon(ctx, drag.from, drag.to, KINDS.block, 0, 1, false);
   } else {
     arrow(ctx, edge(drag.from, drag.to, 2), drag.to, KINDS.block);
   }
@@ -393,18 +400,47 @@ function spread(a: Point, b: Point, index: number, count: number): Point {
   return { x: b.x + (-dy / len) * off, y: b.y + (dx / len) * off };
 }
 
-function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, index: number, count: number): void {
+function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, index: number, count: number,
+    grows = true): void {
   if (!fromEl || !toEl || fromEl === toEl) return;
   const target = spread(center(fromEl), center(toEl), index, count);
   const a = edge(fromEl, target, 2);
   const b = edge(toEl, a, 6);
-  arrow(ctx, a, spread(a, b, index, count), kind);
+  arrow(ctx, a, spread(a, b, index, count), kind, grows ? growth(fromEl, toEl, kind) : 1);
 }
 
-function arrow(ctx: CanvasRenderingContext2D, a: Point, end: Point, kind: ArrowKind): void {
+/** How long an arrow takes to reach its target when it first appears. */
+const GROW_MS = 220;
+/** When each arrow drawn was first drawn, by its ends and kind; an arrow not drawn in a paint is forgotten. */
+let born = new Map<string, number>();
+let drawnNow = new Map<string, number>();
+/** Whether an arrow is still growing, so the overlay keeps painting until it has. */
+let growing = false;
+const ids = new WeakMap<Element, number>();
+let nextId = 0;
+const idOf = (el: Element) => ids.get(el) ?? (ids.set(el, ++nextId), nextId);
+
+/** How far along an arrow is, from 0 as it first appears to 1 once it has reached its target. */
+function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind): number {
+  if (document.documentElement.dataset.motion === 'reduced') return 1;
+  const key = `${idOf(from)}>${idOf(to)}>${kind.core}`;
+  const first = born.get(key) ?? performance.now();
+  drawnNow.set(key, first);
+  const t = Math.min(1, (performance.now() - first) / GROW_MS);
+  if (t < 1) growing = true;
+  return 1 - (1 - t) ** 3;
+}
+
+function arrow(ctx: CanvasRenderingContext2D, a: Point, full: Point, kind: ArrowKind, grown = 1): void {
   // A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line
   const bow = 0.34;
-  const bend = { x: (a.x + end.x) / 2 + (end.y - a.y) * bow, y: (a.y + end.y) / 2 - (end.x - a.x) * bow };
+  const whole = { x: (a.x + full.x) / 2 + (full.y - a.y) * bow, y: (a.y + full.y) / 2 - (full.x - a.x) * bow };
+  // A growing arrow is the same curve cut short at how far it has got, so it follows the path it will end on
+  const u = 1 - grown;
+  const end = grown < 1 ? { x: u * u * a.x + 2 * u * grown * whole.x + grown * grown * full.x, y: u * u * a.y + 2 * u * grown * whole.y + grown * grown * full.y } : full;
+  const bend = grown < 1 ? { x: a.x + (whole.x - a.x) * grown, y: a.y + (whole.y - a.y) * grown } : whole;
+  // Too short yet to carry a head
+  if (grown < 1 && Math.hypot(end.x - a.x, end.y - a.y) < NECK * SCALE * 1.5) return;
   // The body stops at the head's neck, so the head stands on it rather than covering its end
   const [bodyBend, bodyEnd] = trim(a, bend, end, NECK * SCALE);
   // Fine at the source, fullest a little past the middle, and narrow again at the neck
