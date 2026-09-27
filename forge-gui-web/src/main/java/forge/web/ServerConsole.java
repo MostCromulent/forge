@@ -88,8 +88,8 @@ final class ServerConsole implements IProgressBar {
     private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextPane text;
-    /** Whether the last line written was an error, so the stack trace under it is coloured with it. */
-    private boolean inError;
+    /** The colour of the last error or warning written, so the stack trace under it is coloured with it. */
+    private SimpleAttributeSet carried = PLAIN;
     private JButton browse;
     private JButton startStop;
     private WebService service;
@@ -777,24 +777,23 @@ final class ServerConsole implements IProgressBar {
 
     /**
      * How one line reads: tinylog marks its level as [ERROR] or [WARN ]. A line of a stack trace (indented, "Caused
-     * by", "... n more", or an exception's own name) carries on the colour of the error above it.
+     * by", "... n more", or an exception's own name) carries on the colour of the error or warning above it.
      */
     private SimpleAttributeSet styleOf(final String line) {
         if (line.contains("[ERROR]")) {
-            inError = true;
-            return ERROR;
+            return carried = ERROR;
+        }
+        if (line.contains("[WARN")) {
+            return carried = WARNING;
         }
         final String bare = line.strip();
-        final boolean trace = line.startsWith("\t") || line.startsWith(" ") || bare.startsWith("Caused by")
-                || bare.startsWith("at ") || bare.startsWith("...") || bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
-        if (inError && (trace || bare.isEmpty())) {
-            return ERROR;
+        final boolean thrown = bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
+        final boolean trace = thrown || line.startsWith("\t") || line.startsWith(" ") || bare.startsWith("Caused by")
+                || bare.startsWith("at ") || bare.startsWith("...");
+        if (carried != PLAIN && (trace || bare.isEmpty())) {
+            return carried;
         }
-        inError = trace && bare.matches("^[\\w.$]+(Exception|Error)(:.*)?$");
-        if (inError) {
-            return ERROR;
-        }
-        return line.contains("[WARN") ? WARNING : PLAIN;
+        return carried = thrown ? ERROR : PLAIN;
     }
 
     private void trim() {
