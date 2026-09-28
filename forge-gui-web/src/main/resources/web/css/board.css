@@ -391,9 +391,6 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 @keyframes floating { 50% { box-shadow: 0 0 6px color-mix(in srgb, var(--accent-2) 25%, transparent); } }
 /* Phase bar: a pill on the divider (whose turn, the five phases, the current step), opening a grid of stops */
 #phase-strip { display: flex; justify-content: center; position: relative; --pill-ms: 240ms; --pill-ease: cubic-bezier(.2,.7,.2,1); interpolate-size: allow-keywords; }
-/* The pill centres over the cards, not the whole row: your seat gives its left column to your avatar, so the strip
-   starts where your battlefield does. Quarters of the table have no such column, so the pill stays in the middle there. */
-#match:not(.quads) #phase-strip { padding-left: calc(var(--seat-w) + 12px); }
 /* A hairline right across the table, over your portrait too, separates the two halves of the board */
 #phase-strip::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--line); }
 #phase-strip .pill { position: relative; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 13px 0 4px; border-radius: 19px; background: var(--surface); border: 1px solid var(--line); font-size: 13px; white-space: nowrap; cursor: pointer; }
