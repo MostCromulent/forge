@@ -100,7 +100,8 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .menu-shell .menu-page { flex: 1; min-height: 0; }
 
 /* Game setup's trail and question, over whichever page of it is showing (header.tsx SetupHead) */
-.setup-head { display: grid; gap: 6px; }
+/* Room between the trail and the question, and below the question before the page's own content */
+.setup-head { display: grid; gap: 8px; margin-bottom: 12px; }
 .setup-head .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .setup-head .crumb [aria-current] { color: var(--text); }
 .setup-head h2 { margin: 0; font-size: 22px; text-wrap: balance; }
