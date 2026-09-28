@@ -29,7 +29,7 @@ export async function startServer(onPort?: number): Promise<Server> {
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
     `-Dforge.web.port=${port}`,
-    // FORGE_PAGE_DIR serves another build of the page, so a measurement can compare two against the same server
+    // FORGE_PAGE_DIR serves another build of the page, so two builds can be compared against the same server
     `-Dforge.web.pageDir=${process.env.FORGE_PAGE_DIR ?? join(module, 'src/main/resources/web')}`,
     `-Duser.home=${home}`,
     '-jar', join(module, 'target/forge-gui-web.jar'),

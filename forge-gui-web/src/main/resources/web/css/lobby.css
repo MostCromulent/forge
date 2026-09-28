@@ -221,8 +221,6 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .format-play { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
 .format-play b { color: var(--text); font-weight: 600; }
 
-.format-pool:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-
 .seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
 /* Three or four seats read as a grid rather than a row that wraps unevenly */
 .seats[data-count="3"], .seats[data-count="4"] { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
@@ -738,8 +736,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .menu-button::after { content: ' \25BE'; font-size: 10px; color: var(--muted); font-weight: 400; }
 .menu-button:disabled { opacity: 1; cursor: default; }
 .menu-button:disabled::after { content: none; }
-.match-bar .format-pool { appearance: auto; font: inherit; font-size: 13.5px; font-weight: 600; background: none; border: 0; padding: 0; color: var(--text); cursor: pointer; }
-.match-bar .format-pool option, .match-bar .format-pool optgroup { color: var(--text); background: var(--surface); }
 .count { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; width: max-content; }
 .count button { font: inherit; font-size: 12.5px; padding: 1px 9px; border: 0; border-radius: 0; background: none; color: var(--muted); font-variant-numeric: tabular-nums; }
 .count button + button { border-left: 1px solid var(--line); }

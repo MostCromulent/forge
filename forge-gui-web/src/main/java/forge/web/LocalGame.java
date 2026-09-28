@@ -13,7 +13,6 @@ import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
-import forge.gamemodes.net.event.MessageEvent;
 import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
@@ -225,12 +224,6 @@ public final class LocalGame {
     public void updateOwnSeat(final UpdateLobbyPlayerEvent event) {
         if (client != null) {
             client.send(event);
-        }
-    }
-
-    public void sendChat(final String message) {
-        if (client != null) {
-            client.send(new MessageEvent(message));
         }
     }
 
