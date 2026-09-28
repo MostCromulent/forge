@@ -456,11 +456,12 @@ public class OnlineEventTest {
         sessions.onMessage(host, hostAgain(mine));
         Assert.assertNotNull(host.awaitLobby(l -> mine.equals(l.getAsJsonObject("limited").has("activeEventId")
                 ? l.getAsJsonObject("limited").get("activeEventId").getAsString() : null)), "the past event was never hosted again");
-        host.forget();
+        // The server sends a list only when it differs from the one this browser has, so the filtered list may already be
+        // here; any list since, asked for or not, must be the filtered one
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final JsonObject only = host.awaitMatching("decks", d -> true);
-        Assert.assertTrue(deckNames(only).stream().anyMatch(n -> n.startsWith("Web test ours")), "the event's deck was not listed");
-        Assert.assertTrue(deckNames(only).stream().noneMatch(n -> n.startsWith("Web test theirs")), "another event's deck was listed");
+        final JsonObject only = host.awaitMatching("decks", d -> deckNames(d).stream().anyMatch(n -> n.startsWith("Web test ours"))
+                && deckNames(d).stream().noneMatch(n -> n.startsWith("Web test theirs")));
+        Assert.assertNotNull(only, "the finder never listed only the event's decks");
         host.forget();
         sessions.onMessage(host, decksOnly(false));
         sessions.onMessage(host, JsonCodec.message("decks"));
@@ -615,6 +616,40 @@ public class OnlineEventTest {
     private static boolean benched(final JsonObject table, final int seat) {
         final JsonObject s = table.getAsJsonArray("seats").get(seat).getAsJsonObject();
         return s.has("benched") && s.get("benched").getAsBoolean();
+    }
+
+    // Fails if an event's new decks keep the sleeves their seats sat down in, so two seats can wear the same one
+    @Test(timeOut = 300_000)
+    public void anEventDeckIsSleevedAfresh() throws Exception {
+        final Recorder host = hostAt("invite", "sealed");
+        final Recorder guest = connect("guest");
+        sessions.onMessage(guest, named("Guest"));
+        Assert.assertNotNull(host.awaitLobby(l -> seatNames(l).contains("Guest")), "the guest never sat down");
+        sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), null, 6));
+        // Both seats in the same sleeve, so a sleeve dealt to either is one nobody wore
+        sessions.onMessage(host, sleeve(0, 0));
+        sessions.onMessage(guest, sleeve(1, 0));
+        Assert.assertNotNull(host.awaitLobby(l -> sleeves(l).equals(List.of(0, 0))), "the seats never wore the same sleeve");
+        sessions.onMessage(host, ready(true));
+        sessions.onMessage(guest, ready(true));
+        Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
+                .allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean())), "the seats never showed as ready");
+        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        final JsonObject dealt = host.awaitLobby(l -> !sleeves(l).contains(0) && !sleeves(l).get(0).equals(sleeves(l).get(1)));
+        Assert.assertNotNull(dealt, "the pools' decks were not each given a sleeve of their own: " + host.latestTable());
+        final JsonObject table = host.awaitLobby(l -> l.getAsJsonObject("limited").has("activeEventId"));
+        events.add(table.getAsJsonObject("limited").get("activeEventId").getAsString());
+    }
+
+    private static JsonObject sleeve(final int seat, final int sleeve) {
+        final JsonObject m = JsonCodec.message("setSeat");
+        m.addProperty("index", seat);
+        m.addProperty("sleeve", sleeve);
+        return m;
+    }
+
+    private static List<Integer> sleeves(final JsonObject table) {
+        return table.getAsJsonArray("seats").asList().stream().map(s -> s.getAsJsonObject().get("sleeve").getAsInt()).toList();
     }
 
     // Fails if a player who closes their pool's editor still has to find their deck in the finder to sit with it

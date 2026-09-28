@@ -151,7 +151,8 @@ public class OfflineDraftTest {
         final DeckGroup group = FModel.getDecks().getDraft().get(name);
         Assert.assertNotNull(group);
         Assert.assertEquals(group.getAiDecks().size(), seats - 1);
-        Assert.assertEquals(group.getHumanDeck().get(DeckSection.Sideboard).countAll(), 45);
+        // A pick goes into the main deck, as a click on a card does, so the deck opens holding every pick
+        Assert.assertEquals(group.getHumanDeck().get(DeckSection.Main).countAll(), 45);
     }
 
     // Fails if a double click, sent twice for the same pack, drafts two cards
@@ -220,7 +221,7 @@ public class OfflineDraftTest {
         Assert.assertSame(FModel.getDecks().getDraft().get(name), existing);
         sessions.onMessage(host, message("draftSave", "name", name, "replace", true));
         Assert.assertNotNull(host.await("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString())));
-        Assert.assertEquals(FModel.getDecks().getDraft().get(name).getHumanDeck().get(DeckSection.Sideboard).countAll(), 45);
+        Assert.assertEquals(FModel.getDecks().getDraft().get(name).getHumanDeck().get(DeckSection.Main).countAll(), 45);
     }
 
     // Fails if a second draft can start over the first, whose state then changes under the player

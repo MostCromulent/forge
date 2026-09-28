@@ -27,6 +27,7 @@ import forge.gamemodes.net.server.ServerGameLobby;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
+import forge.util.MyRandom;
 import forge.util.NameGenerator;
 import org.apache.commons.lang3.Range;
 import forge.web.FromBrowser.DraftStart;
@@ -1237,6 +1238,31 @@ final class Lobby {
             host().getSlot(index).setSleeveIndex(value);
             local.pushLobby();
         }
+    }
+
+    /** Deals a seat a sleeve at random: one no seat wears yet while there are enough to go round, and never its own. */
+    void dealSleeve(final int index) {
+        final GameLobby lobby = view();
+        final int count = SkinSprites.sleeveCount();
+        if (lobby == null || index < 0 || index >= lobby.getNumberOfSlots() || count < 2) {
+            return;
+        }
+        final List<Integer> free = new ArrayList<>();
+        final List<Integer> notMine = new ArrayList<>();
+        for (int n = 0; n < count; n++) {
+            boolean worn = false;
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                worn |= lobby.getSlot(i).getSleeveIndex() == n;
+            }
+            if (!worn) {
+                free.add(n);
+            }
+            if (n != lobby.getSlot(index).getSleeveIndex()) {
+                notMine.add(n);
+            }
+        }
+        final List<Integer> from = free.isEmpty() ? notMine : free;
+        setSleeve(index, from.get(MyRandom.getRandom().nextInt(from.size())));
     }
 
     void setReady(final boolean ready) {

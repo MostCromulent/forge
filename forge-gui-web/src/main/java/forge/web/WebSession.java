@@ -821,6 +821,8 @@ public final class WebSession {
         } else {
             decks.openEventPool(pool, type, null, "event-" + eventId, b);
         }
+        // An event's deck is new, so it is sleeved afresh rather than every seat wearing the sleeve it sat down in
+        lobby.dealSleeve(lobby.mySeat());
         tell(hello());
     }
 
