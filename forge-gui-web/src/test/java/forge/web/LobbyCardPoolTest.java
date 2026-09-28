@@ -3,49 +3,14 @@ package forge.web;
 import forge.deck.Deck;
 import forge.game.GameFormat;
 import forge.game.GameType;
-import forge.gui.GuiBase;
 import forge.model.FModel;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Map;
 
 /** The card pool a host chooses for Constructed, checked against every seat. No match is played. */
-public class LobbyCardPoolTest {
-    @BeforeClass
-    public void setUp() {
-        WebTestSupport.initModel();
-    }
-
-    private static void onUi(final Runnable r) {
-        GuiBase.getInterface().invokeInEdtAndWait(r);
-    }
-
-    private interface TableTest {
-        void run(LocalGame local, Lobby lobby) throws Exception;
-    }
-
-    /** A hosted table with the computer's seat holding the given deck. */
-    private static void atTable(final Deck computerDeck, final TableTest body) throws Exception {
-        final LocalGame local = new LocalGame();
-        final WebGuiGame gui = new WebGuiGame();
-        try {
-            onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
-            final Lobby lobby = new Lobby(local, () -> false, Map.of());
-            final int computer = local.webSeat() == 0 ? 1 : 0;
-            onUi(() -> {
-                local.hostedLobby().getSlot(computer).setDeck(computerDeck);
-                local.pushLobby();
-            });
-            body.run(local, lobby);
-        } finally {
-            gui.close();
-            onUi(local::shutdown);
-        }
-    }
-
+public class LobbyCardPoolTest extends TablesTest {
     /** Fails if only the deck-size check runs, so a Pauper table does not name a banned card in a deck as illegal. */
     @Test(timeOut = 60_000)
     public void aBannedCardMakesTheDeckIllegal() throws Exception {
@@ -155,24 +120,17 @@ public class LobbyCardPoolTest {
     /** Fails if a Commander table is ever announced still holding a Constructed card pool. */
     @Test(timeOut = 60_000)
     public void noUpdateCarriesAPoolIntoCommander() throws Exception {
-        final LocalGame local = new LocalGame();
-        final WebGuiGame gui = new WebGuiGame();
         final java.util.concurrent.atomic.AtomicBoolean leaked = new java.util.concurrent.atomic.AtomicBoolean();
-        try {
-            onUi(() -> local.openHost("Host", gui, () -> {
-                final var hosted = local.hostedLobby();
-                if (hosted != null && hosted.hasVariant(GameType.Commander) && hosted.getCardPool() != null) {
-                    leaked.set(true);
-                }
-            }, (from, text) -> { }));
-            final Lobby lobby = new Lobby(local, () -> false, Map.of());
+        atTable(lobby -> {
+            final var hosted = local.hostedLobby();
+            if (hosted != null && hosted.hasVariant(GameType.Commander) && hosted.getCardPool() != null) {
+                leaked.set(true);
+            }
+        }, (local, lobby) -> {
             onUi(() -> lobby.setCardPool("Pauper"));
             onUi(() -> lobby.setFormat(GameType.Commander.name()));
             Assert.assertFalse(leaked.get(), "an update showed Commander with the Pauper pool");
-        } finally {
-            gui.close();
-            onUi(local::shutdown);
-        }
+        });
     }
 
     /**
@@ -181,6 +139,8 @@ public class LobbyCardPoolTest {
      */
     @Test(timeOut = 300_000)
     public void everyPauperArchetypeBuildsLegal() {
+        // Every archetype is built, which takes most of a minute
+        WebTestSupport.skipUnlessStress();
         Assert.assertTrue(FModel.isdeckGenMatrixLoaded(), "no archetype data loaded, so this test proves nothing");
         final GameFormat pauper = FModel.getFormats().getFormat("Pauper");
         final List<String> illegal = new java.util.ArrayList<>();

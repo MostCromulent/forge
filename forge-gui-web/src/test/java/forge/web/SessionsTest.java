@@ -1,11 +1,11 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -20,8 +20,16 @@ abstract class SessionsTest {
 
     @BeforeClass
     public void startSessions() {
+        if (slow()) {
+            WebTestSupport.skipUnlessStress();
+        }
         WebTestSupport.initModel();
         sessions = new WebSessions(gui(), 120_000, () -> { });
+    }
+
+    /** Whether the class plays whole sessions over netplay, which is slow enough to run only when asked for. */
+    boolean slow() {
+        return false;
     }
 
     /** The GUI the sessions run on: their own, unless a test needs the browser asked what core asks. */
@@ -66,14 +74,20 @@ abstract class SessionsTest {
         host.forget();
         sessions.onMessage(host, JsonCodec.message(open));
         // The table an earlier test left can still speak until the new one is open, and only then is a command taken
-        final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean());
-        Assert.assertNotNull(opening, "the host's table never started opening");
+        final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean(), "the host's table never started opening");
         final JsonObject opened = host.awaitMatching("hello", h -> host.got.indexOf(h) > host.got.indexOf(opening)
-                && h.get("inLobby").getAsBoolean());
-        Assert.assertNotNull(opened, "the host's table never opened");
-        Assert.assertNotNull(host.awaitMatching("lobby", l -> host.got.indexOf(l) > host.got.indexOf(opened) && l.has("table")
-                && l.getAsJsonObject("table").get("mySeat").getAsInt() >= 0), "the host never sat at its table");
+                && h.get("inLobby").getAsBoolean(), "the host's table never opened");
+        host.awaitMatching("lobby", l -> host.got.indexOf(l) > host.got.indexOf(opened) && l.has("table")
+                && l.getAsJsonObject("table").get("mySeat").getAsInt() >= 0, "the host never sat at its table");
         return host;
+    }
+
+    /** The names at a table's seats, null for a seat nobody has named. */
+    static List<String> seatNames(final JsonObject table) {
+        final List<String> out = new ArrayList<>();
+        table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().has("name")
+                ? s.getAsJsonObject().get("name").getAsString() : null));
+        return out;
     }
 
     /** A message of a type with its fields given as name, value pairs; a null value is left out. */

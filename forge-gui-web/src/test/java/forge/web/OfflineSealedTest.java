@@ -42,7 +42,7 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
         sessions.onMessage(host, message("setName", "name", "Host"));
         sessions.onMessage(host, message("limitedOpen", "kind", "sealed"));
-        Assert.assertNotNull(host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean()), "the Limited page never opened");
+        host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "the Limited page never opened");
         return host;
     }
 
@@ -86,7 +86,7 @@ public class OfflineSealedTest extends SessionsTest {
         final Deck first = FModel.getDecks().getSealed().get(name).getHumanDeck();
         host.got.clear();
         sessions.onMessage(host, full(name, false));
-        Assert.assertNotNull(host.awaitMatching("nameTaken", m -> name.equals(m.get("name").getAsString())), "the taken name was not reported");
+        host.awaitMatching("nameTaken", m -> name.equals(m.get("name").getAsString()), "the taken name was not reported");
         Assert.assertSame(FModel.getDecks().getSealed().get(name).getHumanDeck(), first, "the pool was replaced without asking");
         sessions.onMessage(host, full(name, true));
         Assert.assertNotNull(editorOn(host, name));
@@ -103,8 +103,7 @@ public class OfflineSealedTest extends SessionsTest {
                 .filter(c -> c.contains("Guild")).findFirst().orElseThrow();
         sessions.onMessage(host, message("sealedCreate", "product", "Block", "block", block, "combo", combo,
                 "packs", 0, "name", name, "replace", false));
-        final JsonObject ask = host.awaitMatching("hostChoice", m -> true);
-        Assert.assertNotNull(ask, "the player was never asked which booster");
+        final JsonObject ask = host.awaitMatching("hostChoice", m -> true, "the player was never asked which booster");
         final JsonObject answer = message("hostChoice", "id", ask.get("id").getAsInt());
         final JsonArray first = new JsonArray();
         first.add(0);
@@ -122,7 +121,7 @@ public class OfflineSealedTest extends SessionsTest {
         sessions.onMessage(host, full(name, false));
         sessions.onMessage(host, full(name, false));
         Assert.assertNotNull(editorOn(host, name));
-        Assert.assertNotNull(host.awaitMatching("error", m -> true), "the second request was not refused");
+        host.awaitMatching("error", m -> true, "the second request was not refused");
         Thread.sleep(2_000);
         final long editors = host.got.stream().filter(m -> "editor".equals(m.get("t").getAsString()) && m.has("state")
                 && name.equals(m.getAsJsonObject("state").get("name").getAsString())).count();
@@ -142,15 +141,14 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(host.awaitMatching("hostChoice", m -> true));
         sessions.disconnected(host);
         final Recorder again = connect("host");
-        final JsonObject ask = again.awaitMatching("hostChoice", m -> true);
-        Assert.assertNotNull(ask, "the question was not asked again after the reload");
+        final JsonObject ask = again.awaitMatching("hostChoice", m -> true, "the question was not asked again after the reload");
         final JsonObject answer = message("hostChoice", "id", ask.get("id").getAsInt());
         final JsonArray first = new JsonArray();
         first.add(0);
         answer.add("value", first);
         sessions.onMessage(again, answer);
         Assert.assertNotNull(editorOn(again, name), "the new tab never got the pool's deck");
-        Assert.assertNotNull(again.awaitMatching("limitedPools", m -> m.toString().contains(name)), "the new tab's pools list is stale");
+        again.awaitMatching("limitedPools", m -> m.toString().contains(name), "the new tab's pools list is stale");
     }
 
     // Fails if a reload on the opponents screen falls back to the menu
@@ -167,7 +165,7 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(hello);
         Assert.assertTrue(hello.get("inEvent").getAsBoolean());
         Assert.assertEquals(hello.get("eventPool").getAsString(), name);
-        Assert.assertNotNull(again.awaitMatching("limitedPools", m -> m.toString().contains(name)), "the pools were not sent again");
+        again.awaitMatching("limitedPools", m -> m.toString().contains(name), "the pools were not sent again");
     }
 
     // Fails if the pool whose deck is open in the editor can be deleted from under it
@@ -178,7 +176,7 @@ public class OfflineSealedTest extends SessionsTest {
         sessions.onMessage(host, full(name, false));
         Assert.assertNotNull(editorOn(host, name));
         sessions.onMessage(host, message("poolDelete", "name", name));
-        Assert.assertNotNull(host.awaitMatching("error", m -> true), "deleting an open pool was not refused");
+        host.awaitMatching("error", m -> true, "deleting an open pool was not refused");
         Assert.assertTrue(FModel.getDecks().getSealed().contains(name));
         sessions.onMessage(host, JsonCodec.message("editorClose"));
         sessions.onMessage(host, message("poolDelete", "name", name));
@@ -198,13 +196,12 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(editorOn(host, name));
         sessions.onMessage(host, JsonCodec.message("editorClose"));
         sessions.onMessage(host, message("poolPlay", "name", name, "opponent", 0, "games", 1));
-        Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean()), "the match never started");
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the match never started");
         // The lobby path used to type every limited match as Draft
-        Assert.assertNotNull(host.awaitMatching("state", m -> m.toString().contains("\"GameType\":\"Sealed\"")), "the match is not typed Sealed");
+        host.awaitMatching("state", m -> m.toString().contains("\"GameType\":\"Sealed\""), "the match is not typed Sealed");
         host.got.clear();
         sessions.onMessage(host, JsonCodec.message("leave"));
-        final JsonObject back = host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean());
-        Assert.assertNotNull(back, "leaving the match did not return to the pool");
+        final JsonObject back = host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "leaving the match did not return to the pool");
         Assert.assertEquals(back.get("eventPool").getAsString(), name);
         Assert.assertFalse(back.get("inLobby").getAsBoolean());
     }

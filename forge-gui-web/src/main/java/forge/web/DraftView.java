@@ -50,12 +50,13 @@ final class DraftView {
 
     static DraftCard card(final PaperCard card, final int packNumber, final int pickNumber, final boolean sideboard) {
         final CardRules rules = card.getRules();
-        // Desktop's draft ranking overlay: a score to 99, higher is better, and none for a card nobody ranked
+        // Desktop's draft ranking overlay: a score to 99, higher is better, and none for a card nobody ranked. A ranked
+        // card scores at least 1, where desktop's rounding can show 0
         final double score = CardRanker.getRawScore(card);
         return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),
                 rules.getOracleText().replace("\\n", "\n").replace("\r\n", "\n"), CardCatalog.pt(rules),
-                card.getRarity().toString(), score <= 0 ? null : (int) Math.round(Math.min(99, score)), packNumber, pickNumber, sideboard);
+                card.getRarity().toString(), score <= 0 ? null : (int) Math.max(1, Math.round(Math.min(99, score))), packNumber, pickNumber, sideboard);
     }
 
     /** Builds and remembers the next state from its step, which goes up only when newPack says the pack in hand changed. */

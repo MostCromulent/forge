@@ -12,6 +12,11 @@ import java.util.UUID;
 
 /** The deck editor as a browser drives it: opened, changed and closed through the session's messages. */
 public class DeckEditorSessionTest extends SessionsTest {
+    @Override
+    boolean slow() {
+        return true;
+    }
+
 
     // Fails if a guest's edit reaches the host's deck folders instead of the guest's browser
     @Test(timeOut = 120_000)
@@ -19,15 +24,15 @@ public class DeckEditorSessionTest extends SessionsTest {
         hostAt("invite");
         final Recorder guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
-        Assert.assertNotNull(guest.awaitLobby(l -> l.get("mySeat").getAsInt() >= 0), "the guest never sat down");
+        guest.awaitLobby(l -> l.get("mySeat").getAsInt() >= 0, "the guest never sat down");
         final IStorage<Deck> constructed = FModel.getDecks().getConstructed();
         final long before = constructed.getItemNames().stream().filter(n -> n.startsWith(DeckEditor.NEW_DECK)).count();
 
         sessions.onMessage(guest, message("editorOpen", "newFormat", "Constructed", "copy", false));
-        Assert.assertNotNull(guest.awaitMatching("editor", m -> m.has("state")), "the guest's editor never opened");
+        guest.awaitMatching("editor", m -> m.has("state"), "the guest's editor never opened");
         sessions.onMessage(guest, message("editorEdit", "op", "add", "name", "Forest", "count", 1));
 
-        Assert.assertNotNull(guest.awaitMatching("deviceDeck", m -> m.has("text") && m.get("text").getAsString().contains("Forest")),
+        guest.awaitMatching("deviceDeck", m -> m.has("text") && m.get("text").getAsString().contains("Forest"),
                 "the guest's browser was never sent its deck");
         Assert.assertEquals(constructed.getItemNames().stream().filter(n -> n.startsWith(DeckEditor.NEW_DECK)).count(), before,
                 "a guest's deck was written to the host's deck folder");
@@ -45,8 +50,8 @@ public class DeckEditorSessionTest extends SessionsTest {
             final JsonObject commit = message("importCommit", "text", "Commander\n1 Meren of Clan Nel Toth\nDeck\n1 Sol Ring",
                     "name", name, "format", "Commander", "unrestricted", false, "action", "edit");
             sessions.onMessage(host, commit);
-            Assert.assertNotNull(host.awaitMatching("editor", m -> m.has("state")
-                    && "Commander".equals(m.getAsJsonObject("state").get("format").getAsString())), "the editor did not open on a Commander deck");
+            host.awaitMatching("editor", m -> m.has("state")
+                    && "Commander".equals(m.getAsJsonObject("state").get("format").getAsString()), "the editor did not open on a Commander deck");
             sessions.onMessage(host, message("editorEdit", "op", "add", "name", "Swamp", "count", 1));
             Assert.assertNotNull(host.awaitMatching("editor", m -> m.has("state") && m.toString().contains("Swamp")));
             Assert.assertTrue(FModel.getDecks().getCommander().contains(name), "the deck is not among the Commander decks");
@@ -69,7 +74,7 @@ public class DeckEditorSessionTest extends SessionsTest {
         try {
             sessions.onMessage(host, message("importCommit", "text", "Commander\n1 Meren of Clan Nel Toth\nDeck\n1 Sol Ring",
                     "name", name, "format", "Commander", "unrestricted", false, "action", "use", "seat", seat));
-            Assert.assertNotNull(host.awaitMatching("notice", m -> m.toString().contains("Commander")), "no notice said why");
+            host.awaitMatching("notice", m -> m.toString().contains("Commander"), "no notice said why");
             final JsonObject table = host.awaitLobby(l -> true);
             final JsonObject mine = table.getAsJsonArray("seats").get(seat).getAsJsonObject();
             Assert.assertFalse(mine.has("deckName") && name.equals(mine.get("deckName").getAsString()),
@@ -89,18 +94,17 @@ public class DeckEditorSessionTest extends SessionsTest {
         final String name = "Editor session test " + UUID.randomUUID().toString().substring(0, 8);
         try {
             sessions.onMessage(host, message("editorOpen", "newFormat", "Constructed", "seat", seat, "copy", false));
-            Assert.assertNotNull(host.awaitMatching("editor", m -> m.has("state")), "the editor never opened");
+            host.awaitMatching("editor", m -> m.has("state"), "the editor never opened");
             sessions.onMessage(host, message("editorEdit", "op", "add", "name", "Forest", "count", 60));
             sessions.onMessage(host, message("editorRename", "name", name));
-            Assert.assertNotNull(host.awaitMatching("editor", m -> m.has("state")
-                    && name.equals(m.getAsJsonObject("state").get("name").getAsString())), "the rename never landed");
+            host.awaitMatching("editor", m -> m.has("state")
+                    && name.equals(m.getAsJsonObject("state").get("name").getAsString()), "the rename never landed");
             sessions.onMessage(host, JsonCodec.message("editorClose"));
 
             final JsonObject table = host.awaitLobby(l -> {
                 final JsonObject s = l.getAsJsonArray("seats").get(seat).getAsJsonObject();
                 return s.has("deckName") && name.equals(s.get("deckName").getAsString());
-            });
-            Assert.assertNotNull(table, "the edited deck never reached the seat");
+            }, "the edited deck never reached the seat");
             Assert.assertEquals(table.getAsJsonArray("seats").get(seat).getAsJsonObject().get("deckSize").getAsInt(), 60);
         } finally {
             if (FModel.getDecks().getConstructed().contains(name)) {

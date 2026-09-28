@@ -52,15 +52,10 @@ public class WideBoardTest {
     @Test(timeOut = 600000)
     public void incrementalMatchesFullOnAWideBoard() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 40);
         final Deck islands = TestDecks.of("Islands", "Island", 60);
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            // Holds at its own first main phase, so the board is placed into a game that is not moving
-            final ScriptedBrowser browser = new ScriptedBrowser(gui, 50);
-            gui.attach(browser);
-            GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", bears, "AI", islands, gui));
+        // Holds at its own first main phase, so the board is placed into a game that is not moving
+        TestMatch.play(bears, islands, gui -> new ScriptedBrowser(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
             final Game game = local.hostedMatch().getGame();
             GuiBase.getInterface().invokeInEdtAndWait(() -> giveWideBoard(game));
@@ -81,8 +76,6 @@ public class WideBoardTest {
             }
             LoopbackGameTest.assertSameIgnoringZone(both.getKey(), both.getValue());
             Assert.assertEquals(gui.skippedProperties(), 0, "properties with no JSON form");
-        } finally {
-            GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);
-        }
+        });
     }
 }

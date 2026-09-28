@@ -3,7 +3,6 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
 import forge.gamemodes.match.HostedMatch;
-import forge.gui.GuiBase;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -18,15 +17,10 @@ public class SpectateGameTest {
     @Test(timeOut = 360000)
     public void spectatedGameRunsWithNoBrowserAnswers() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            // Neither passes priority nor answers a request: only the AI takeover can move the game on
-            final FakeBrowser browser = new FakeBrowser(gui, false);
-            gui.attach(browser);
-            GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", islands, "AI", bears, gui));
+        // Neither passes priority nor answers a request: only the AI takeover can move the game on
+        TestMatch.play(islands, bears, gui -> new FakeBrowser(gui, false), (local, gui, browser) -> {
             local.spectate();
 
             for (int i = 0; i < 1200 && turn(browser) < 4; i++) {
@@ -37,9 +31,7 @@ public class SpectateGameTest {
             Assert.assertNotNull(match);
             Assert.assertTrue(match.getGame().getPlayers().stream().allMatch(p -> p.getController().isAI()),
                     "a seat is still played by a person");
-        } finally {
-            GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);
-        }
+        });
     }
 
     private static int turn(final FakeBrowser browser) {

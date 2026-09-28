@@ -99,9 +99,8 @@ public class GauntletTest {
         try {
             final Recorder host = hostWithPool(sessions, "draft");
             sessions.onMessage(host, message("poolPlay", "name", pool, "mode", "several", "opponent", 0, "count", 5, "games", 1));
-            Assert.assertNotNull(host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean()), "the match never started");
-            final JsonObject typed = host.awaitNewest("state", m -> m.toString().contains("\"GameType\":\"Draft\""));
-            Assert.assertNotNull(typed, "the match is not a draft match");
+            host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean(), "the match never started");
+            final JsonObject typed = host.awaitNewest("state", m -> m.toString().contains("\"GameType\":\"Draft\""), "the match is not a draft match");
             final Matcher players = Pattern.compile("\"Players\":\\[([^\\]]*)]").matcher(typed.toString());
             Assert.assertTrue(players.find());
             Assert.assertEquals(players.group(1).split("\"ref\"").length - 1, 4, "not four players at the table");
@@ -118,8 +117,8 @@ public class GauntletTest {
         try {
             final Recorder host = hostWithPool(sessions, "draft");
             sessions.onMessage(host, message("poolPlay", "name", pool, "mode", "gauntlet", "opponent", 0, "count", 0, "games", 1));
-            Assert.assertNotNull(host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean()), "the draft gauntlet never started");
-            Assert.assertNotNull(host.awaitNewest("state", m -> m.toString().contains("\"GameType\":\"Draft\"")), "the match is not a draft match");
+            host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean(), "the draft gauntlet never started");
+            host.awaitNewest("state", m -> m.toString().contains("\"GameType\":\"Draft\""), "the match is not a draft match");
         } finally {
             sessions.shutdown();
         }
@@ -133,7 +132,7 @@ public class GauntletTest {
         try {
             final Recorder host = hostWithPool(sessions, "sealed");
             sessions.onMessage(host, message("poolPlay", "name", pool, "mode", "gauntlet", "opponent", 0, "count", 0, "games", 1));
-            Assert.assertNotNull(host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean()), "the gauntlet never started");
+            host.awaitNewest("hello", h -> h.get("inMatch").getAsBoolean(), "the gauntlet never started");
             // A concede sent before the seat has its game controller is dropped, so it is sent until the game ends
             JsonObject over = null;
             for (int i = 0; i < 60 && over == null; i++) {
@@ -142,13 +141,14 @@ public class GauntletTest {
                 over = host.got.stream().filter(m -> "gameOver".equals(m.get("t").getAsString())).findFirst().orElse(null);
             }
             Assert.assertNotNull(over, "conceding never ended the game");
-            final JsonObject result = host.awaitNewest("limitedResult", m -> true);
-            Assert.assertNotNull(result, "the lost game was not recorded");
+            final JsonObject result = host.awaitNewest("limitedResult", m -> true, "the lost game was not recorded");
             Assert.assertEquals(result.get("losses").getAsInt(), 1);
             Assert.assertTrue(result.get("matchOver").getAsBoolean());
             Assert.assertFalse(result.get("nextRound").getAsBoolean(), "a lost match offered the next round");
+            // Only a greeting sent after leaving says so: the pool page's own from before the match says the same
+            final int left = host.got.size();
             sessions.onMessage(host, JsonCodec.message("leave"));
-            Assert.assertNotNull(host.awaitNewest("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean()), "leaving did not return to the pool");
+            host.awaitAfter(left, "hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "leaving did not return to the pool");
             Assert.assertEquals(FModel.getGauntletMini().getCurrentRound(), 1);
             Assert.assertEquals(FModel.getGauntletMini().getLosses(), 0, "quitting kept the record");
         } finally {

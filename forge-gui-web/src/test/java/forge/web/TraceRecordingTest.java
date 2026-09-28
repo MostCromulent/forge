@@ -4,7 +4,6 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
-import forge.gui.GuiBase;
 import org.testng.Assert;
 import org.testng.SkipException;
 import org.testng.annotations.BeforeClass;
@@ -35,14 +34,9 @@ public class TraceRecordingTest {
         if (!Boolean.getBoolean("forge.web.writeTraces")) {
             throw new SkipException("Records a trace only with -Dforge.web.writeTraces=true");
         }
-        final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, true);
-            gui.attach(browser);
-            GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", islands, "AI", bears, gui));
+        TestMatch.play(islands, bears, gui -> new FakeBrowser(gui, true), (local, gui, browser) -> {
             Assert.assertTrue(browser.gameOver.await(300, TimeUnit.SECONDS), "the game did not finish");
             final List<JsonObject> states = browser.all("state");
             final BrowserModel model = new BrowserModel();
@@ -65,8 +59,6 @@ public class TraceRecordingTest {
             Files.createDirectories(file.getParent());
             // A null in a delta is a property going back to its default, so it is written like any other value
             Files.writeString(file, new GsonBuilder().serializeNulls().create().toJson(trace) + "\n", StandardCharsets.UTF_8);
-        } finally {
-            GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);
-        }
+        });
     }
 }

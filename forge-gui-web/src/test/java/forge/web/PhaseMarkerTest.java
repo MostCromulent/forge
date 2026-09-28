@@ -71,12 +71,7 @@ public class PhaseMarkerTest {
     @Test(timeOut = 180_000)
     public void passingUntilAPhaseSetsTheMarker() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, true);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+        TestMatch.play(plains(), forests(), gui -> new FakeBrowser(gui, true), (local, gui, browser) -> {
             awaitStarted(local);
             // The client learns which seat is its own a moment after the game object exists
             Assert.assertNotNull(browser.awaitLast("state", WAIT_MILLIS), "the board never reached the browser");
@@ -101,9 +96,7 @@ public class PhaseMarkerTest {
                 Thread.sleep(50);
             }
             Assert.assertTrue(cleared, "asking a second time did not clear the marker");
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 
     /** One look, with no waiting: used to show nothing is set before the test asks for anything. */

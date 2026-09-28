@@ -41,9 +41,13 @@ final class WebTestSupport {
         throw new AssertionError("no remote human seat");
     }
 
+    /**
+     * Skips a slow test unless -Drun.stress.tests=true: whole games, sessions played over netplay, sweeps of the card
+     * data. Forge's other network tests use the same switch, so a normal CI build runs none of them.
+     */
     static void skipUnlessStress() {
         if (!"true".equalsIgnoreCase(System.getProperty("run.stress.tests"))) {
-            throw new SkipException("Game-playing test skipped. Use -Drun.stress.tests=true to run.");
+            throw new SkipException("Slow test skipped. Use -Drun.stress.tests=true to run.");
         }
     }
 }

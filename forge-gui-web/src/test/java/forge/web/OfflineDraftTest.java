@@ -52,7 +52,7 @@ public class OfflineDraftTest extends SessionsTest {
         Assert.assertNotNull(host.awaitNewest("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean()));
         host.got.clear();
         sessions.onMessage(host, message("draftStart", "product", "Full"));
-        Assert.assertNotNull(host.awaitNewest("draft", d -> d.get("pick").getAsInt() == 1), "the draft never showed its first pack");
+        host.awaitNewest("draft", d -> d.get("pick").getAsInt() == 1, "the draft never showed its first pack");
         return host;
     }
 
@@ -62,8 +62,7 @@ public class OfflineDraftTest extends SessionsTest {
         final int step = now.get("step").getAsInt();
         final int from = host.got.size();
         sessions.onMessage(host, message("draftPick", "step", step, "index", 0));
-        final JsonObject next = host.awaitAfter(from, "draft", d -> d.get("step").getAsInt() > step);
-        Assert.assertNotNull(next, "the pick at step " + step + " never moved the draft on");
+        final JsonObject next = host.awaitAfter(from, "draft", d -> d.get("step").getAsInt() > step, "the pick at step " + step + " never moved the draft on");
         return next;
     }
 
@@ -85,8 +84,8 @@ public class OfflineDraftTest extends SessionsTest {
         Assert.assertEquals(state.getAsJsonArray("picks").size(), 45);
         final String name = name();
         sessions.onMessage(host, message("draftSave", "name", name, "replace", false));
-        Assert.assertNotNull(host.awaitNewest("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString())
-                && m.getAsJsonObject("state").get("limited").getAsBoolean()), "the editor never opened on the draft");
+        host.awaitNewest("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString())
+                && m.getAsJsonObject("state").get("limited").getAsBoolean(), "the editor never opened on the draft");
         final DeckGroup group = FModel.getDecks().getDraft().get(name);
         Assert.assertNotNull(group);
         Assert.assertEquals(group.getAiDecks().size(), seats - 1);
@@ -137,8 +136,7 @@ public class OfflineDraftTest extends SessionsTest {
         final Recorder again = connect("host");
         final JsonObject hello = again.awaitNewest("hello", h -> h.has("drafting"));
         Assert.assertTrue(hello.get("drafting").getAsBoolean());
-        final JsonObject replayed = again.awaitNewest("draft", d -> true);
-        Assert.assertNotNull(replayed, "the draft was not sent again");
+        final JsonObject replayed = again.awaitNewest("draft", d -> true, "the draft was not sent again");
         Assert.assertEquals(replayed.get("pick").getAsInt(), before.get("pick").getAsInt());
         Assert.assertEquals(replayed.getAsJsonArray("picks").size(), 3);
     }
@@ -156,7 +154,7 @@ public class OfflineDraftTest extends SessionsTest {
         existing.setHumanDeck(new forge.deck.Deck(name));
         FModel.getDecks().getDraft().add(existing);
         sessions.onMessage(host, message("draftSave", "name", name, "replace", false));
-        Assert.assertNotNull(host.awaitNewest("nameTaken", m -> name.equals(m.get("name").getAsString())), "the taken name was not reported");
+        host.awaitNewest("nameTaken", m -> name.equals(m.get("name").getAsString()), "the taken name was not reported");
         Assert.assertSame(FModel.getDecks().getDraft().get(name), existing);
         sessions.onMessage(host, message("draftSave", "name", name, "replace", true));
         Assert.assertNotNull(host.awaitNewest("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString())));
@@ -170,7 +168,7 @@ public class OfflineDraftTest extends SessionsTest {
         final JsonObject first = host.awaitNewest("draft", d -> true);
         host.got.clear();
         sessions.onMessage(host, message("draftStart", "product", "Full"));
-        Assert.assertNotNull(host.awaitNewest("error", m -> true), "a second draft was not refused");
+        host.awaitNewest("error", m -> true, "a second draft was not refused");
         Thread.sleep(1_000);
         Assert.assertTrue(host.got.stream().noneMatch(m -> "draft".equals(m.get("t").getAsString())
                 && m.get("pick").getAsInt() != first.get("pick").getAsInt()), "the running draft changed");

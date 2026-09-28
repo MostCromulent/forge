@@ -55,14 +55,9 @@ public class LoopbackGameTest {
     @Test(timeOut = 360000)
     public void passiveGameCompletesAndIncrementalMatchesFull() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, true);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", islands, "AI", bears, gui));
+        TestMatch.play(islands, bears, gui -> new FakeBrowser(gui, true), (local, gui, browser) -> {
             awaitGameStarted(local, browser);
 
             // The host UI thread blocks on a client reply; the client must answer without that thread
@@ -95,9 +90,7 @@ public class LoopbackGameTest {
             second.attach(secondBrowser);
             onUi(() -> local.startMatch("Web Player", islands, "AI", bears, second));
             awaitGameStarted(local, secondBrowser);
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 
     /**
@@ -106,6 +99,7 @@ public class LoopbackGameTest {
      */
     @Test(timeOut = 120000)
     public void aGameLeftUnfinishedEndsWithItsTable() throws Exception {
+        WebTestSupport.skipUnlessStress();
         final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
@@ -113,39 +107,47 @@ public class LoopbackGameTest {
         try {
             final FakeBrowser browser = new FakeBrowser(gui, false);
             gui.attach(browser);
+            // A game an earlier test left waiting is not this one's to answer for
+            final java.util.Set<Thread> before = gamesThreads();
             onUi(() -> local.startMatch("Web Player", islands, "AI", bears, gui));
             // Nobody answers, so the game waits on the web player from its first question
             awaitGameStarted(local, browser);
-            Assert.assertTrue(threadsInAGame() > 0, "the game never started a thread of its own");
+            final java.util.Set<Thread> mine = gamesThreads();
+            mine.removeAll(before);
+            Assert.assertFalse(mine.isEmpty(), "the game never started a thread of its own");
 
             onUi(local::endMatch);
-            for (int i = 0; i < 100 && threadsInAGame() > 0; i++) {
+            for (int i = 0; i < 100 && gamesThreads().stream().anyMatch(mine::contains); i++) {
                 Thread.sleep(100);
             }
-            Assert.assertEquals(threadsInAGame(), 0, "the game's thread outlived its table:" + gameStacks());
+            mine.retainAll(gamesThreads());
+            Assert.assertTrue(mine.isEmpty(), "the game's thread outlived its table:" + stacks(mine));
         } finally {
             gui.close();
             onUi(local::shutdown);
         }
     }
 
-    private static String gameStacks() {
+    private static String stacks(final java.util.Set<Thread> threads) {
         final StringBuilder out = new StringBuilder();
-        Thread.getAllStackTraces().forEach((t, stack) -> {
-            if (java.util.Arrays.stream(stack).anyMatch(f -> "forge.game.Match".equals(f.getClassName()))) {
-                out.append("\n").append(t.getName());
-                for (int i = 0; i < Math.min(stack.length, 16); i++) {
-                    out.append("\n    ").append(stack[i]);
-                }
+        for (final Thread t : threads) {
+            out.append("\n").append(t.getName());
+            final StackTraceElement[] stack = t.getStackTrace();
+            for (int i = 0; i < Math.min(stack.length, 16); i++) {
+                out.append("\n    ").append(stack[i]);
             }
-        });
+        }
         return out.toString();
     }
 
     /** Threads running a game, which a game's pool thread is not while it waits for the next one. */
-    private static long threadsInAGame() {
-        return Thread.getAllStackTraces().values().stream()
-                .filter(stack -> java.util.Arrays.stream(stack).anyMatch(f -> "forge.game.Match".equals(f.getClassName())))
-                .count();
+    private static java.util.Set<Thread> gamesThreads() {
+        final java.util.Set<Thread> out = new java.util.HashSet<>();
+        Thread.getAllStackTraces().forEach((t, stack) -> {
+            if (java.util.Arrays.stream(stack).anyMatch(f -> "forge.game.Match".equals(f.getClassName()))) {
+                out.add(t);
+            }
+        });
+        return out;
     }
 }

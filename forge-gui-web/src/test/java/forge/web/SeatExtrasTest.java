@@ -6,51 +6,13 @@ import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import forge.gui.GuiBase;
 import org.testng.Assert;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.Map;
 
 /** What a seat brings beyond its main deck, and seats that need no deck at all. No match is played. */
-public class SeatExtrasTest {
-    @BeforeClass
-    public void setUp() {
-        WebTestSupport.initModel();
-    }
-
-    static void onUi(final Runnable r) {
-        GuiBase.getInterface().invokeInEdtAndWait(r);
-    }
-
-    interface TableTest {
-        void run(LocalGame local, Lobby lobby) throws Exception;
-    }
-
-    /** A hosted table: the browser's seat and one computer seat, neither holding a deck. */
-    static void atTable(final TableTest body) throws Exception {
-        final LocalGame local = new LocalGame();
-        final WebGuiGame gui = new WebGuiGame();
-        try {
-            onUi(() -> local.openHost("Host", gui, () -> { }, (from, text) -> { }));
-            awaitSeat(local);
-            body.run(local, new Lobby(local, () -> false, Map.of()));
-        } finally {
-            gui.close();
-            onUi(local::shutdown);
-        }
-    }
-
-    /** Waits for the browser's client to take its seat, which it does over the loopback after the table opens. */
-    static void awaitSeat(final LocalGame local) throws InterruptedException {
-        for (int i = 0; i < 100 && local.webSeat() < 0; i++) {
-            Thread.sleep(100);
-        }
-        Assert.assertTrue(local.webSeat() >= 0, "the browser never took its seat");
-    }
-
+public class SeatExtrasTest extends TablesTest {
     /** Waits for the lobby to report no problems, and returns the last list it gave. */
     static List<String> awaitNoProblems(final Lobby lobby) throws InterruptedException {
         List<String> problems = lobby.problems();
@@ -59,11 +21,6 @@ public class SeatExtrasTest {
             problems = lobby.problems();
         }
         return problems;
-    }
-
-    /** The seat that is not the browser's own: the computer's. */
-    static int computer(final LocalGame local) {
-        return local.webSeat() == 0 ? 1 : 0;
     }
 
     /** The first deck in the catalogue that is built and has no problem. */
@@ -164,30 +121,6 @@ public class SeatExtrasTest {
                 Assert.assertFalse(card.getRules().getAiHints().getRemAIDecks(), card.getName() + " is not for the computer");
             }
         });
-    }
-
-    /**
-     * A hosted table whose lobby answers its own updates as a browser's session does, rebuilding the deck list when
-     * the rules change. Updates arrive while a change is still being made, which the plain table does not show.
-     */
-    static void atLiveTable(final TableTest body) throws Exception {
-        final LocalGame local = new LocalGame();
-        final WebGuiGame gui = new WebGuiGame();
-        final java.util.concurrent.atomic.AtomicReference<Lobby> ref = new java.util.concurrent.atomic.AtomicReference<>();
-        try {
-            onUi(() -> local.openHost("Host", gui, () -> {
-                final Lobby lobby = ref.get();
-                if (lobby != null && lobby.restrictionsChanged()) {
-                    lobby.decks();
-                }
-            }, (from, text) -> { }));
-            ref.set(new Lobby(local, () -> false, Map.of()));
-            awaitSeat(local);
-            body.run(local, ref.get());
-        } finally {
-            gui.close();
-            onUi(local::shutdown);
-        }
     }
 
     /** Fails if switching to Momir Basic wipes the planes the computer's seat was just dealt. */

@@ -67,12 +67,7 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void actingSeatReachesScryAndLibrarySearch() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final ScriptedBrowser browser = new ScriptedBrowser(gui, 300);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 300), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
 
             // Temple's enter trigger scrys; Evolving Wilds searches the library
@@ -95,9 +90,7 @@ public class ActiveClientTest {
             Assert.assertTrue(browser.reloaded, "no reload happened mid-request; requests seen: " + browser.requestKinds);
             Assert.assertEquals(gui.skippedProperties(), 0);
             gui.onBrowserMessage(FakeBrowser.action("concede"));
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 
     private static int turn(final FakeBrowser browser) {
@@ -135,13 +128,8 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void endTurnPassesTheTurnWithoutPressingOk() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            // Holds at its own first main phase and never passes priority, so only End Turn can move the game on
-            final ScriptedBrowser browser = new ScriptedBrowser(gui, 50);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+        // Holds at its own first main phase and never passes priority, so only End Turn can move the game on
+        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
             final int held = browser.turn();
             Thread.sleep(2000);
@@ -153,9 +141,7 @@ public class ActiveClientTest {
             }
             Assert.assertTrue(browser.turn() > held, "End Turn did not pass the turn");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 
     private static int cardKey(final Game game, final ZoneType zone, final boolean webSeat, final String name, final boolean faceDown) {
@@ -190,12 +176,7 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void cardDetailShowsOtherFacesOnlyToThoseWhoMaySeeThem() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, false, true);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+        TestMatch.play(plains(), forests(), gui -> new FakeBrowser(gui, false, true), (local, gui, browser) -> {
             keepAndHoldPriority(gui, browser);
             final Game game = local.hostedMatch().getGame();
             giveWebSeat(game, "Fire // Ice", "Delver of Secrets;Grizzly Bears|FaceDown", "Plains;Plains;Plains", "Grizzly Bears|FaceDown");
@@ -216,9 +197,7 @@ public class ActiveClientTest {
             Assert.assertEquals(hidden.size(), 1, "an opponent's face-down card offers another face");
             Assert.assertFalse(hidden.toString().contains("Grizzly"), "an opponent's face-down card revealed its name: " + hidden);
             gui.onBrowserMessage(FakeBrowser.action("concede"));
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 
     // Jötun Grunt's upkeep asks the web seat to choose a player (whose graveyard); the browser must be told which
@@ -226,13 +205,8 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final LocalGame local = new LocalGame();
-        try {
-            final WebGuiGame gui = new WebGuiGame();
-            // Passes priority, takes the first option of optional choices and presses OK to pay costs
-            final ScriptedBrowser browser = new ScriptedBrowser(gui, 50);
-            gui.attach(browser);
-            onUi(() -> local.startMatch("Web Player", plains(), "AI", forests(), gui));
+        // Passes priority, takes the first option of optional choices and presses OK to pay costs
+        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
             final Game game = local.hostedMatch().getGame();
             final boolean webFirst = game.getPlayers().get(0).getController() instanceof PlayerControllerHuman;
@@ -271,8 +245,6 @@ public class ActiveClientTest {
             Assert.assertTrue(gruntSurvived, "the cumulative upkeep went unpaid and the Grunt was sacrificed");
             Assert.assertEquals(seat.getCardsIn(ZoneType.Graveyard).size(), 1, "two cards should have left the graveyard");
             gui.onBrowserMessage(FakeBrowser.action("concede"));
-        } finally {
-            onUi(local::shutdown);
-        }
+        });
     }
 }

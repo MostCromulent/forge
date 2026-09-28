@@ -2,7 +2,6 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
-import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.sound.SoundSystem;
@@ -25,27 +24,22 @@ public class SoundTest {
         final String saved = FModel.getPreferences().getPref(FPref.UI_ENABLE_SOUNDS);
         // In memory only: the player may have sound switched off and their file must not change
         FModel.getPreferences().setPref(FPref.UI_ENABLE_SOUNDS, true);
-        final LocalGame local = new LocalGame();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck forests = TestDecks.of("Forests", "Forest", 40);
         try {
-            final WebGuiGame gui = new WebGuiGame();
-            final FakeBrowser browser = new FakeBrowser(gui, true);
-            gui.attach(browser);
-            GuiBase.getInterface().invokeInEdtAndWait(() -> local.startMatch("Web Player", bears, "AI", forests, gui));
-
-            JsonObject sound = null;
-            for (int i = 0; i < 1200 && sound == null; i++) {
-                sound = browser.last("sound");
-                Thread.sleep(100);
-            }
-            Assert.assertNotNull(sound, "no sound reached the browser");
-            final String name = sound.get("name").getAsString();
-            final File file = SoundSystem.instance.getSoundResource(name);
-            Assert.assertTrue(file != null && file.isFile(), "no sound file for " + name);
+            TestMatch.play(bears, forests, gui -> new FakeBrowser(gui, true), (local, gui, browser) -> {
+                JsonObject sound = null;
+                for (int i = 0; i < 1200 && sound == null; i++) {
+                    sound = browser.last("sound");
+                    Thread.sleep(100);
+                }
+                Assert.assertNotNull(sound, "no sound reached the browser");
+                final String name = sound.get("name").getAsString();
+                final File file = SoundSystem.instance.getSoundResource(name);
+                Assert.assertTrue(file != null && file.isFile(), "no sound file for " + name);
+            });
         } finally {
             FModel.getPreferences().setPref(FPref.UI_ENABLE_SOUNDS, saved);
-            GuiBase.getInterface().invokeInEdtAndWait(local::shutdown);
         }
     }
 }

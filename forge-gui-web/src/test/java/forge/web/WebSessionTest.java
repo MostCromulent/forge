@@ -6,45 +6,12 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import static forge.web.SessionsTest.message;
+
 public class WebSessionTest {
-    private static final class Recorder implements BrowserChannel {
-        final List<JsonObject> got = new CopyOnWriteArrayList<>();
-        volatile boolean closed;
-        @Override public void send(final JsonObject message) { got.add(message); }
-        @Override public void close() { closed = true; }
-        /** The most recent message of a type, which is what matters when hello is sent more than once. */
-        JsonObject awaitLast(final String type) throws InterruptedException {
-            JsonObject found = null;
-            for (int i = 0; i < 200 && found == null; i++) {
-                for (final JsonObject m : got) {
-                    if (type.equals(m.get("t").getAsString())) {
-                        found = m;
-                    }
-                }
-                if (found == null) {
-                    Thread.sleep(10);
-                }
-            }
-            return found;
-        }
-
-        JsonObject await(final String type) throws InterruptedException {
-            for (int i = 0; i < 200; i++) {
-                for (final JsonObject m : got) {
-                    if (type.equals(m.get("t").getAsString())) {
-                        return m;
-                    }
-                }
-                Thread.sleep(10);
-            }
-            return null;
-        }
-    }
-
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
@@ -65,7 +32,7 @@ public class WebSessionTest {
         final WebSessions sessions = opened();
         final Recorder r = new Recorder();
         connectAsHost(sessions, r, "host");
-        final JsonObject hello = r.awaitLast("hello");
+        final JsonObject hello = r.awaitNewest("hello");
         Assert.assertFalse(hello.get("inMatch").getAsBoolean());
         Assert.assertTrue(hello.get("host").getAsBoolean());
     }
@@ -76,7 +43,7 @@ public class WebSessionTest {
         final Recorder r = new Recorder();
         sessions.connected(r, "host", true);
         sessions.onMessage(r, JsonCodec.message("decks"));
-        Assert.assertTrue(r.await("decks").get("decks").isJsonArray());
+        Assert.assertTrue(r.awaitMatching("decks", m -> true).get("decks").isJsonArray());
     }
 
     /** Fails if the host's seat is handed out by arriving, or if two browsers can both end up holding it. */
@@ -87,15 +54,15 @@ public class WebSessionTest {
         final Recorder second = new Recorder();
         sessions.connected(first, "first", true);
         sessions.connected(second, "second", true);
-        Assert.assertFalse(first.awaitLast("hello").get("host").getAsBoolean(), "a browser hosted by arriving");
-        Assert.assertTrue(first.awaitLast("hello").get("canClaimHost").getAsBoolean(), "the seat was not offered");
+        Assert.assertFalse(first.awaitNewest("hello").get("host").getAsBoolean(), "a browser hosted by arriving");
+        Assert.assertTrue(first.awaitNewest("hello").get("canClaimHost").getAsBoolean(), "the seat was not offered");
 
         sessions.onMessage(first, JsonCodec.message("claimHost"));
-        Assert.assertTrue(first.awaitLast("hello").get("host").getAsBoolean(), "asking did not take the seat");
+        Assert.assertTrue(first.awaitNewest("hello").get("host").getAsBoolean(), "asking did not take the seat");
 
         sessions.onMessage(second, JsonCodec.message("claimHost"));
-        Assert.assertFalse(second.awaitLast("hello").get("host").getAsBoolean(), "two browsers took the same seat");
-        Assert.assertNotNull(second.await("error"), "the second browser was not told why");
+        Assert.assertFalse(second.awaitNewest("hello").get("host").getAsBoolean(), "two browsers took the same seat");
+        Assert.assertNotNull(second.awaitMatching("error", m -> true), "the second browser was not told why");
     }
 
     @Test
@@ -103,12 +70,8 @@ public class WebSessionTest {
         final WebSessions sessions = opened();
         final Recorder r = new Recorder();
         connectAsHost(sessions, r, "host");
-        final JsonObject start = JsonCodec.message("start");
-        start.addProperty("playerName", "Tester");
-        start.addProperty("playerDeck", "nope");
-        start.addProperty("aiDeck", "nope");
-        sessions.onMessage(r, start);
-        Assert.assertNotNull(r.await("error"));
+        sessions.onMessage(r, message("start", "playerName", "Tester", "playerDeck", "nope", "aiDeck", "nope"));
+        Assert.assertNotNull(r.awaitMatching("error", m -> true));
     }
 
     @Test
@@ -156,15 +119,15 @@ public class WebSessionTest {
         final WebSessions sessions = opened();
         final Recorder guest = new Recorder();
         sessions.connected(guest, "guest", false);
-        Assert.assertFalse(guest.awaitLast("hello").get("canClaimHost").getAsBoolean(), "a guest was offered the host's seat");
+        Assert.assertFalse(guest.awaitNewest("hello").get("canClaimHost").getAsBoolean(), "a guest was offered the host's seat");
         sessions.onMessage(guest, JsonCodec.message("claimHost"));
-        Assert.assertNotNull(guest.await("error"), "a guest asking for the host's seat was not told no");
-        Assert.assertFalse(guest.awaitLast("hello").get("host").getAsBoolean(), "a guest took the host's seat");
+        Assert.assertNotNull(guest.awaitMatching("error", m -> true), "a guest asking for the host's seat was not told no");
+        Assert.assertFalse(guest.awaitNewest("hello").get("host").getAsBoolean(), "a guest took the host's seat");
 
         // The same browser id on the host's link is a different browser, and may still take the seat
         final Recorder host = new Recorder();
         connectAsHost(sessions, host, "guest");
-        Assert.assertTrue(host.awaitLast("hello").get("host").getAsBoolean());
+        Assert.assertTrue(host.awaitNewest("hello").get("host").getAsBoolean());
     }
 
     /** Fails if anyone with a link can make the server keep track of browsers without end. */

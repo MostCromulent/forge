@@ -106,7 +106,11 @@ locally before pushing.
 ### Tests
 
 - `mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests; `npm test` runs only Vitest.
-  Whole-game tests need `-Drun.stress.tests=true`.
+  By default that is the table's rules, tried at a table through `Lobby` (the `TablesTest` classes), the sessions that
+  run in one process, and one netplay check that the host's changes reach a guest (`GuestTableTest`).
+- The slow tests need `-Drun.stress.tests=true`, the switch Forge's other network tests use: whole games, events and
+  guests played over netplay (`OnlineEventTest`, `GuestSeatTest`, `DeckEditorSessionTest`), and the Pauper archetype
+  sweep. Run them before pushing a change to sessions or netplay.
 - `SharedTraceTest` and `model.test.ts` replay one recorded game through the Java and TypeScript models to keep them
   in step. After changing the model or messages, record it again:
 

@@ -3,6 +3,9 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.ImageKeys;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences;
+import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.model.FModel;
 import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import org.testng.Assert;
@@ -124,7 +127,15 @@ public class WebServerTest {
 
     @Test
     public void missingImageAndPathTraversalAre404() throws Exception {
-        Assert.assertEquals(get("/img?key=c:NoSuchCard%7CXXX&token=secret", null).statusCode(), 404);
+        // Asked online, a missing image is answered only once the fetcher gives up, which is its own matter
+        final ForgePreferences prefs = FModel.getPreferences();
+        final boolean online = prefs.getPrefBoolean(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER);
+        prefs.setPref(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER, false);
+        try {
+            Assert.assertEquals(get("/img?key=c:NoSuchCard%7CXXX&token=secret", null).statusCode(), 404);
+        } finally {
+            prefs.setPref(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER, online);
+        }
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
     }
 
