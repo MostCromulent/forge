@@ -99,6 +99,13 @@ and from Forge's `TrackableProperty`; after changing a record, regenerate it and
 
 `ProtocolTypesTest` fails when the file is out of date. A field may be null only if marked `@Nullable`.
 
+### Keeping up with Forge
+
+The module relies on changes to Forge's shared modules (`forge-game`, `forge-gui`, `forge-core`) and the root
+`pom.xml`, so merging upstream Forge can conflict there. After a merge, run the tests: `ProtocolTypesTest` catches a
+game property renamed or retyped upstream. CI doesn't build with `-Pweb`, so run the module's tests and the e2e suite
+locally before pushing.
+
 ### Tests
 
 - `mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests; `npm test` runs only Vitest.
