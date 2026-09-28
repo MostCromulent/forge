@@ -24,7 +24,7 @@ interface Timing {
 }
 
 // Tuned on a 1440 by 900 board; a seat's portrait runs the same beats, shorter and without the slow motion
-const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 2.2, burst: 2.32, title: 3.25, end: 5.8 };
+const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 2.0, burst: 2.12, title: 3.05, end: 5.6 };
 const SEAT: Timing = { fly: 0.35, crack: 0.45, brk: 0.95, burst: 1.02, title: Infinity, end: 3.4 };
 const GRAVITY = 1500;
 // The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
@@ -229,8 +229,9 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     const d = Math.hypot(dx, dy) || 1;
     const near = Math.max(0, 1 - d / (R * 1.1));
     const dir = new THREE.Vector3(dx / d, dy / d, 0);
-    const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1 : 0.55);
-    const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1 : 0.5);
+    // The end of the game throws its pieces harder than a seat breaking mid-game
+    const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1.35 : 0.55);
+    const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1.25 : 0.5);
     return {
       mesh, base: new THREE.Vector3(cx, cy, 0), dir,
       reach: d / R, hair: (0.5 + rng()) * k, jit: rng(), sep: (1.2 + rng() * 2.4) * k, zj: (rng() - 0.5) * 5 * k, rj: (rng() - 0.5) * 0.02,
@@ -245,7 +246,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 1.5, bevelEnabled: false }), debrisMat);
     mesh.visible = false;
     scene.add(mesh);
-    const a = rng() * Math.PI * 2, spd = (460 + rng() * 980) * (o.final ? 1 : 0.5);
+    const a = rng() * Math.PI * 2, spd = (460 + rng() * 980) * (o.final ? 1.35 : 0.5);
     return { mesh, vel: new THREE.Vector3(Math.cos(a) * spd, Math.sin(a) * spd * 0.8 + 140, rng() * 900 - 200), spin: new THREE.Vector3(rng() * 20, rng() * 20, rng() * 20) };
   });
   scene.add(medal);

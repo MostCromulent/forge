@@ -522,7 +522,11 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 #log { overflow-anchor: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
 .log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }
-.log-entry.turn { color: var(--text); font-weight: 600; padding-top: 6px; }
+/* A new turn is a divider across the log: the line in brass between two rules, with room above it */
+.log-entry.turn { align-items: center; gap: 8px; margin-top: 10px; padding: 3px 0; border-bottom: 0; color: var(--accent-2);
+  font-size: 11px; font-weight: 700; letter-spacing: .06em; }
+.log-entry.turn::before, .log-entry.turn::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--accent-2) 35%, transparent); }
+.log-entry.turn:first-child { margin-top: 2px; }
 .log-entry.game_outcome, .log-entry.match_results { color: var(--text); }
 /* A zone worth reading is worth the whole screen: the board has nothing to say while you look through a
    library of thirty, so it is dimmed rather than left to compete. Folded, the scrim goes and only the bar stays. */
