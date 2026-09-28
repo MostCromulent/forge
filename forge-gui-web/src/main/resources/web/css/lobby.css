@@ -99,6 +99,15 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .menu-shell { min-height: 100%; display: flex; flex-direction: column; }
 .menu-shell .menu-page { flex: 1; min-height: 0; }
 
+/* Game setup's trail and question, over whichever page of it is showing (header.tsx SetupHead) */
+.setup-head { display: grid; gap: 6px; }
+.setup-head .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
+.setup-head .crumb [aria-current] { color: var(--text); }
+.setup-head h2 { margin: 0; font-size: 22px; text-wrap: balance; }
+/* The start page's trail and question sit over its plaques, at their width */
+.start-step { display: grid; gap: 14px; width: min(100%, 698px); }
+.lobby-main > .setup-head { width: min(100%, 960px); }
+
 /* Two across: the two ways to play side by side, Decks the full width beneath */
 .modes { display: grid; gap: 18px; grid-template-columns: repeat(2, minmax(0, 340px)); justify-content: center; width: 100%; align-content: start; }
 .modes .mode.wide { grid-column: 1 / -1; }

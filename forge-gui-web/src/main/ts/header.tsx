@@ -18,6 +18,35 @@ export function PageHeader({ class: extra, children }: { class?: string; childre
   return <header class={extra ? `page-head ${extra}` : 'page-head'}><Wordmark />{children}</header>;
 }
 
+/** A step of game setup in the trail: a way back to it, or none for the step you are on. */
+export interface SetupStep {
+  label: string;
+  go?: () => void;
+}
+
+/**
+ * The trail through game setup and the question the page asks, in the same place on every setup page: the start page,
+ * the kinds of game, and the table. Each earlier step in the trail goes back to it.
+ */
+export function SetupHead({ trail, title }: { trail: SetupStep[]; title: string }) {
+  return (
+    <div class="setup-head">
+      <nav class="crumb" aria-label="Game setup">
+        {trail.map((step, i) => (
+          <>
+            {i > 0 && <span aria-hidden="true">›</span>}
+            {step.go ? <button class="link" onClick={step.go}>{step.label}</button> : <span aria-current={i === trail.length - 1 ? 'step' : undefined}>{step.label}</span>}
+          </>
+        ))}
+      </nav>
+      <h2>{title}</h2>
+    </div>
+  );
+}
+
+/** What each way to play is called in the trail. */
+export const WAY_NAMES = { play: 'Versus AI', friends: 'With friends' } as const;
+
 /** The volume and options buttons, placed by each page just before its way out. */
 export function HeadControls() {
   return (

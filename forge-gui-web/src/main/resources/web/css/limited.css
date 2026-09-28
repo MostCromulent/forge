@@ -1,8 +1,6 @@
 /* The Limited pages: the kind-of-play chooser on the start page, the saved pools, the setup form and the opponents. */
 
 .chooser { max-width: 920px; margin: 0 auto; display: grid; gap: 14px; }
-.chooser .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
-.chooser h2 { margin: 0; font-size: 22px; }
 .chooser-kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 /* A chooser card is two buttons in the mode card's frame: the card itself, and a resume strip along its foot */
 .kind-card { height: 100%; }
@@ -16,13 +14,15 @@
 @media (max-width: 700px) { .chooser-kinds { grid-template-columns: 1fr; } }
 
 #limited { min-height: 100%; display: grid; }
-.limited-page { display: grid; grid-template-rows: auto auto 1fr; }
-.limited-head .limited-title { font-size: 16px; font-weight: 650; }
+.limited-page { display: grid; grid-template-rows: auto auto 1fr auto auto 1fr; }
+.limited-page > .page-head { grid-row: 1; }
 .limited-head .head-right { gap: 10px; }
-.limited-error { margin: 10px 20px 0; color: var(--select); }
+.limited-error { grid-row: 2; margin: 10px 20px 0; color: var(--select); }
 .limited-page .muted { color: var(--muted); font-size: 12.5px; }
-/* Whichever view is showing sits in the middle of the page, as the lobby's seats do, in a frame like theirs */
-.limited-page > :is(.pools, .setup, .opponents, .pools-wait) { grid-row: 3; align-self: center; justify-self: center; width: min(100% - 40px, 960px); margin: 28px 0; }
+/* Whichever view is showing sits in the middle of the page under the setup trail, as the lobby's seats do, in a frame
+   like theirs; the empty rows either side keep the pair in the middle */
+.limited-page > .setup-head { grid-row: 4; justify-self: center; width: min(100% - 40px, 960px); margin-top: 28px; }
+.limited-page > :is(.pools, .setup, .opponents, .pools-wait) { grid-row: 5; justify-self: center; width: min(100% - 40px, 960px); margin: 14px 0 28px; }
 .limited-page > .setup { width: min(100% - 40px, 760px); }
 .pools, .opponents { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
 

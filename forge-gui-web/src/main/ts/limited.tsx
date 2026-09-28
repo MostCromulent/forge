@@ -3,7 +3,8 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
-import { HeadControls, PageHeader } from './header';
+import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
+import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { PoolRow } from './protocol';
@@ -20,13 +21,16 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
   return (
     <div class="limited-page">
       <PageHeader class="limited-head">
-        <span class="limited-title">{draft ? 'Booster draft' : 'Sealed'}</span>
-        <span class="muted">Against the computer</span>
         <div class="head-right">
           <HeadControls />
           <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>Back</button>
         </div>
       </PageHeader>
+      {/* Setting up an event against the AI is the last step, as a table is; Back also steps out of an open pool */}
+      <SetupHead trail={[
+        { label: 'Start', go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
+        { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
+        { label: draft ? 'Draft' : 'Sealed' }]} title="Set up the game" />
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
         ? <Opponents pool={pool} draft={draft} actions={actions} />

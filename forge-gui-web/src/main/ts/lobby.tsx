@@ -17,6 +17,7 @@ import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
 import { EventPanel, eventStatus } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
+import { SetupHead, WAY_NAMES } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from './protocol';
@@ -35,11 +36,21 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const close = () => changeUi(u => { u.picker = null; });
   const lim = lobby.limited;
   const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
+  // The table is the last step of setting up: how you are playing, and what. The host steps back by leaving the table,
+  // to the start page or to its kinds of game; a guest joined the host's choices and has no steps of its own to go to
+  const way = lobby.shareable ? 'friends' : 'play';
+  const back = (to: 'play' | 'friends' | null) => lobby.host ? () => {
+    changeUi(u => { u.menuChoice = to; });
+    actions.leaveLobby();
+  } : undefined;
+  const kind = lim ? (lim.kind === 'draft' ? 'Draft' : 'Sealed') : 'Constructed';
   return (
     <>
       <TableHeader model={model} lobby={lobby} actions={actions} />
       <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
+        <SetupHead trail={[{ label: 'Start', go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
+          title={lobby.host ? 'Set up the game' : 'The host is setting up the game'} />
         {/* A new kind of event is set up afresh, so its dialog opens again */}
         <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview}
           event={lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />} />

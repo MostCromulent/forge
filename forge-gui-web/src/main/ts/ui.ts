@@ -42,6 +42,8 @@ export interface UiState {
   volumeOpen: boolean;
   /** The menu is asking for a new name and face, as the dock's edit button asked. */
   renaming: boolean;
+  /** Which way to play the start page is showing the kinds of game for, kept so a step back from a table lands there. */
+  menuChoice: 'play' | 'friends' | null;
   /** Match setup's picker for a seat's deck, sleeve or avatar. */
   picker: Picker | null;
   /** The deck finder opened from the start page, with no seat, and the format it lists. A hello does not close it. */
@@ -77,6 +79,7 @@ export const ui: UiState = {
   gameMenu: null,
   volumeOpen: false,
   renaming: false,
+  menuChoice: null,
   picker: null,
   browse: null,
   importer: null,

@@ -9,7 +9,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, ui } from './ui';
 import { avatarUrl } from './looks';
-import { HeadControls, PageHeader, Wordmark } from './header';
+import { HeadControls, PageHeader, SetupHead, WAY_NAMES, Wordmark } from './header';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import { store, stored } from './storage';
@@ -18,7 +18,8 @@ import { store, stored } from './storage';
 const MAX_NAME_LENGTH = 24;
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
-  const [choosing, setChoosing] = useState<'play' | 'friends' | null>(null);
+  const choosing = ui.menuChoice;
+  const setChoosing = (way: 'play' | 'friends' | null) => changeUi(u => { u.menuChoice = way; });
   // A new name arriving means the change went through
   useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
   if (ui.renaming) {
@@ -41,18 +42,21 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
       </PageHeader>
       <div class="menu-page">
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
-        <div class="modes" hidden={!!choosing}>
-          <Mode id="play" name="Play the computer" blurb="Constructed, draft or sealed, against Forge's AI."
-            status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
-              model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
-            onClick={() => setChoosing('play')} />
-          <Mode id="multiplayer" name="Play with friends" blurb="Open a table and send a link. Up to four seats."
-            status="Gives you a link to share" onClick={() => setChoosing('friends')} />
-          <Mode id="editor" fan={DECK_FAN} name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
-            onClick={() => {
-              changeUi(u => { u.browse = { format: 'Constructed' }; });
-              actions.browseFormat('Constructed');
-            }} />
+        <div class="start-step" hidden={!!choosing}>
+          <SetupHead trail={[{ label: 'Start' }]} title="How do you want to play?" />
+          <div class="modes">
+            <Mode id="play" name="Play versus AI" blurb="Constructed, draft or sealed, against Forge's AI."
+              status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
+                model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
+              onClick={() => setChoosing('play')} />
+            <Mode id="multiplayer" name="Play with friends" blurb="Online multiplayer: open a table and send your friends a link. Up to four seats."
+              status="Gives you a link to share" onClick={() => setChoosing('friends')} />
+            <Mode id="editor" fan={DECK_FAN} name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
+              onClick={() => {
+                changeUi(u => { u.browse = { format: 'Constructed' }; });
+                actions.browseFormat('Constructed');
+              }} />
+          </div>
         </div>
         <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
       </div>
@@ -65,9 +69,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   const computer = who === 'play';
   return (
     <div class="chooser">
-      <nav class="crumb"><button class="link" onClick={back}>Start</button><span aria-hidden="true">›</span>
-        <span>{computer ? 'Play the computer' : 'Play with friends'}</span></nav>
-      <h2>What do you want to play?</h2>
+      <SetupHead trail={[{ label: 'Start', go: back }, { label: WAY_NAMES[who] }]} title="What mode do you want to play?" />
       <div class="chooser-kinds">
         <Kind id="constructed" name="Constructed" onClick={() => actions.openLobby(!computer)}
           blurb={computer ? 'Bring a deck you have built, or a precon, and play the computer.' : 'Everyone brings a deck they have built.'} />

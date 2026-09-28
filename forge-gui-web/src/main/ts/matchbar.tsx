@@ -298,9 +298,8 @@ export function TableHeader({ model, lobby, actions }: { model: Model; lobby: Lo
             )}
           </Popup>
         )}
+        {/* The way out is the trail over the table (lobby.tsx), which also says where it leads */}
         <HeadControls />
-        {/* The table belongs to the host, so a joined client has no menu to go back to */}
-        <button hidden={!lobby.host} onClick={() => actions.leaveLobby()}>Leave table</button>
       </div>
     </PageHeader>
   );
