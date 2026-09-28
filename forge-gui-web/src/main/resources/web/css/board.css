@@ -465,21 +465,23 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops td, #phase-strip .stops th { padding: 0; height: 22px; text-align: center; font-weight: 400; }
 #phase-strip .stops th { width: 54px; vertical-align: top; padding: 0 3px 5px; }
 #phase-strip .stops th .name { display: block; margin-top: 4px; color: var(--muted); font-size: 10.5px; line-height: 1.25; }
-#phase-strip .stops th.now .name { color: var(--accent-2); font-weight: 650; }
+#phase-strip .stops th.now .name { color: var(--col); font-weight: 650; }
 #phase-strip .stops td.who { text-align: left; padding: 0 10px 0 8px; white-space: nowrap; }
 /* Each phase heads its steps with a bracket, and a gap sets one phase apart from the next */
 #phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
 #phase-strip .stops th.group span { display: block; white-space: nowrap; padding-bottom: 3px; border-bottom: 1px solid var(--line-bright); }
 #phase-strip .stops td.gap { width: 12px; }
-/* The row of the player whose turn it is is lit, as a band across it */
-#phase-strip .stops tr.active td { background: var(--accent-soft); }
+/* The row of the player whose turn it is is lit gold, as a band across it; the current step's column a warmer amber,
+   as a band down it. Where they cross, both lie on the one cell, so the step the game is at reads strongest */
+#phase-strip .stops { --row-lit: color-mix(in srgb, var(--accent-2) 12%, transparent); --col: #ffa94d; --col-lit: color-mix(in srgb, var(--col) 13%, transparent); }
+#phase-strip .stops tr.active td { background: var(--row-lit); }
 #phase-strip .stops tr.active td:first-child { border-radius: 6px 0 0 6px; box-shadow: inset 2px 0 0 var(--accent-2); color: var(--accent-2); font-weight: 650; }
 #phase-strip .stops tr.active td:last-child { border-radius: 0 6px 6px 0; }
 #phase-strip .stops .head { width: 22px; height: 20px; margin: 0 auto; border-radius: 5px; display: flex; align-items: center; justify-content: center; color: var(--muted); }
-/* The current step's column is lit as a band down it, as the row of the player whose turn it is is lit across */
-#phase-strip .stops th.now, #phase-strip .stops td.now { background: var(--accent-soft); }
-#phase-strip .stops th.now { border-radius: 6px 6px 0 0; box-shadow: inset 0 2px 0 var(--accent-2); }
-#phase-strip .stops th.now .head { color: var(--accent-2); }
+#phase-strip .stops th.now, #phase-strip .stops td.now { background: var(--col-lit); }
+#phase-strip .stops tr.active td.now { background: linear-gradient(var(--col-lit), var(--col-lit)), var(--row-lit); }
+#phase-strip .stops th.now { border-radius: 6px 6px 0 0; box-shadow: inset 0 2px 0 var(--col); }
+#phase-strip .stops th.now .head { color: var(--col); }
 #phase-strip .stops tr:last-child td.now { border-radius: 0 0 6px 6px; }
 #phase-strip .stops .cell { width: 100%; height: 22px; padding: 0; border: none; background: none; display: flex; align-items: center; justify-content: center; }
 #phase-strip .stops .square { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px #4a5563; }
