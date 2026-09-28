@@ -299,14 +299,15 @@ function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, act
 
 const MANA_NAMES: Record<string, string> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green', C: 'colourless' };
 
-// An opponent's hand is cards held, not a pile, so it is drawn as a few backs fanned in the hand with the count.
-// Your own hand is laid out along the bottom.
+// A hand is cards held, not a pile, so it is drawn as a few backs fanned beside the portrait with the count, and opens
+// in a window when clicked: every player's, your own included, though yours is also laid out along the bottom.
 function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void {
   const count = zone(model, player, 'Hand').length;
-  el.hidden = isLocal(model, player);
+  el.hidden = false;
   el.dataset.count = String(Math.min(count, 3));
   q(el, '.hand-count').textContent = String(count);
-  el.title = `${count} ${count === 1 ? 'card' : 'cards'} in hand`;
+  // Your own hand is laid out along the bottom too, but a big one reads more easily laid out in a window
+  el.title = `${count} ${count === 1 ? 'card' : 'cards'} in hand${isLocal(model, player) ? '. Click to lay them out in a window' : ''}`;
 }
 
 // Cards drift down into a graveyard and circle in exile, so the two piles read as places at a glance
