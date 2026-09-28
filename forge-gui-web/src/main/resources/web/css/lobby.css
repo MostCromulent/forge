@@ -104,12 +104,28 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .modes .mode.wide { grid-column: 1 / -1; }
 @media (max-width: 620px) { .modes { grid-template-columns: minmax(0, 1fr); } }
 
-/* A brass-framed plaque over a card's art, under a wash dark enough to read the words on */
+/* A brass-framed plaque over a ground of its own, under a wash dark enough to read the words on */
 .modes .mode.plaque { position: relative; isolation: isolate; height: 210px; padding: 18px 20px; border: 0; border-radius: 14px; overflow: hidden;
   display: flex; flex-direction: column; justify-content: flex-end; text-align: left; background: #0b0e14;
   box-shadow: 0 0 0 1px #9a7318, 0 0 0 2px #0008, 0 18px 40px #000b; transition: box-shadow .2s ease, transform .2s ease; }
-.modes .mode.plaque::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--art) center / cover; filter: saturate(.85);
+.modes .mode.plaque::before { content: ''; position: absolute; inset: 0; z-index: -2; background: var(--ground); filter: saturate(.85);
   transform: scale(1.04); transition: transform .4s ease, filter .3s ease; }
+/* Each ground says what the plaque opens. The computer: a fine grid, cool as a machine. Friends: rings spreading from
+   one point, as a link goes out. Decks: a warm leather ground, cross-hatched. */
+.modes .mode.plaque[data-mode="play"] { --ground: radial-gradient(90% 90% at 85% 12%, #2d4466 0%, transparent 62%),
+  repeating-linear-gradient(0deg, #ffffff09 0 1px, transparent 1px 22px), repeating-linear-gradient(90deg, #ffffff09 0 1px, transparent 1px 22px),
+  linear-gradient(160deg, #182333, #0c1119); }
+.modes .mode.plaque[data-mode="multiplayer"] { --ground: radial-gradient(80% 90% at 82% 18%, #1e5552 0%, transparent 60%),
+  repeating-radial-gradient(circle at 82% 22%, #ffffff0b 0 1px, transparent 1px 20px), linear-gradient(160deg, #132624, #0b1213); }
+.modes .mode.plaque[data-mode="editor"] { --ground: radial-gradient(70% 140% at 88% 50%, #4a3a1e 0%, transparent 65%),
+  repeating-linear-gradient(45deg, #ffffff06 0 1px, transparent 1px 12px), repeating-linear-gradient(-45deg, #ffffff06 0 1px, transparent 1px 12px),
+  linear-gradient(160deg, #241d12, #110e09); }
+/* The plaque's icon again, large and faint in the top corner, as a watermark in the ground */
+.modes .mode.plaque .plaque-mark { position: absolute; z-index: -1; right: -14px; top: -18px; width: 170px; height: 170px; opacity: .1; pointer-events: none;
+  transition: transform .4s ease, opacity .3s ease; }
+.modes .mode.plaque .plaque-mark svg { width: 100%; height: 100%; fill: none; stroke: #fff; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.modes .mode.plaque:hover:not(:disabled) .plaque-mark { opacity: .16; transform: scale(1.05); }
+.modes .mode.plaque.wide .plaque-mark { display: none; }
 .modes .mode.plaque::after { content: ''; position: absolute; inset: 0; z-index: -1;
   background: linear-gradient(180deg, #0b0e1433 0%, #0b0e14cc 55%, #0b0e14f2 100%); }
 .modes .mode.plaque .plaque-rim { position: absolute; inset: 6px; border: 1px solid color-mix(in srgb, var(--accent-2) 25%, transparent); border-radius: 10px; pointer-events: none; }
@@ -127,7 +143,9 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .modes .mode.plaque.wide { height: 112px; flex-direction: row; align-items: center; padding-left: 90px; }
 .modes .mode.plaque.wide .mode-art { top: 50%; transform: translateY(-50%); }
 .plaque-fan { margin-left: auto; display: flex; padding-right: 8px; }
-.plaque-fan i { width: 46px; height: 64px; margin-left: -18px; border-radius: 4px; border: 1px solid #0008; background: var(--art) center / cover;
+.plaque-fan i { width: 46px; height: 64px; margin-left: -18px; border-radius: 4px; border: 1px solid #0008;
+  background: linear-gradient(#0d1016b3, #0d1016b3) 4px 5px / calc(100% - 8px) 7px no-repeat, linear-gradient(#0d101699, #0d101699) 4px 16px / calc(100% - 8px) 22px no-repeat,
+    linear-gradient(165deg, color-mix(in srgb, var(--frame) 70%, #1b2029), color-mix(in srgb, var(--frame) 30%, #0d1016));
   box-shadow: 0 2px 8px #000c; rotate: var(--turn); transition: rotate .25s ease, translate .25s ease; }
 .modes .mode.plaque.wide:hover .plaque-fan i { rotate: calc(var(--turn) * 1.6); translate: 0 -3px; }
 html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque::before { transition: none; }
