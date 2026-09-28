@@ -400,6 +400,9 @@ let queued: { from: HTMLElement; to: HTMLElement; kind: ArrowKind; grows: boolea
 
 function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
   if (!fromEl || !toEl || fromEl === toEl) return;
+  // One arrow between two things: a block the engine lists as both declared and planned is drawn once, as declared,
+  // which is queued first
+  if (queued.some(q => q.from === fromEl && q.to === toEl)) return;
   queued.push({ from: fromEl, to: toEl, kind, grows });
 }
 
