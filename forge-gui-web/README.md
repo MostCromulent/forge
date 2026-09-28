@@ -71,7 +71,8 @@ The cog opens **Options**, and the **⋯** button in a game offers a draw, auto-
 ## For developers
 
 The Java side (`src/main/java`) runs the engine and serves the page. The browser side (`src/main/ts`) is TypeScript
-and Preact, bundled into `src/main/resources/web/js/`, which is build output and not committed.
+and Preact. The build bundles it into `src/main/resources/web/js/`, which git ignores, so a fresh checkout has no
+page to serve until it is built.
 
 ### Building
 
@@ -113,3 +114,7 @@ and from Forge's `TrackableProperty`; after changing a record, regenerate it and
       npm ci
       npx playwright install chromium   # first time only
       npx playwright test
+
+---
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
