@@ -7,7 +7,7 @@ The interface aims to be modern and easy to pick up, and leaves out much of desk
 It is built for a computer with a mouse and keyboard; phones and tablets aren't supported yet.
 
 <p>
-  <img src="docs/table.webp" width="49%" alt="A table with a guest seated">
+  <img src="docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">
   <img src="docs/target.webp" width="49%" alt="A spell's targets while it is paid for">
 </p>
 <p>
