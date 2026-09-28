@@ -10,85 +10,19 @@ import forge.StaticData;
 import java.util.UUID;
 import forge.model.FModel;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Predicate;
 
 /** Draft and sealed events at a web table, set up and started by the host with guests seated, as desktop's lobby runs them. */
-public class OnlineEventTest {
-    private static final int WAIT_MILLIS = 60_000;
-
-    static final class Recorder implements BrowserChannel {
-        final List<JsonObject> got = new CopyOnWriteArrayList<>();
-
-        @Override
-        public void send(final JsonObject message) {
-            got.add(message);
-        }
-
-        JsonObject awaitMatching(final String type, final Predicate<JsonObject> wanted) throws InterruptedException {
-            for (int i = 0; i < WAIT_MILLIS / 20; i++) {
-                for (final JsonObject m : got) {
-                    if (type.equals(m.get("t").getAsString()) && wanted.test(m)) {
-                        return m;
-                    }
-                }
-                Thread.sleep(20);
-            }
-            return null;
-        }
-
-        /** Waits until the latest table is the one wanted; an earlier one can describe a table that has moved on. */
-        JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
-            for (int i = 0; i < WAIT_MILLIS / 20; i++) {
-                final JsonObject latest = latestTable();
-                if (latest != null && wanted.test(latest)) {
-                    return latest;
-                }
-                Thread.sleep(20);
-            }
-            return null;
-        }
-
-        JsonObject latestTable() {
-            JsonObject latest = null;
-            for (final JsonObject m : got) {
-                if ("lobby".equals(m.get("t").getAsString()) && m.has("table")) {
-                    latest = m.getAsJsonObject("table");
-                }
-            }
-            return latest;
-        }
-
-        void forget() {
-            got.clear();
-        }
-    }
-
-    private WebSessions sessions;
-    private final List<Recorder> browsers = new CopyOnWriteArrayList<>();
-
-    @BeforeClass
-    public void setUp() {
-        WebTestSupport.initModel();
-        sessions = new WebSessions(new WebGuiBase(), 120_000, () -> { });
-    }
-
+public class OnlineEventTest extends SessionsTest {
     /** The events a test started, whose pools went into the player's network event decks and come out again after it. */
     private final List<String> events = new CopyOnWriteArrayList<>();
 
-    @AfterMethod(alwaysRun = true)
-    public void disconnectBrowsers() {
-        for (final Recorder browser : browsers) {
-            sessions.disconnected(browser);
-        }
-        browsers.clear();
+    @Override
+    void afterDisconnecting() {
         final var stored = FModel.getDecks().getNetworkEventDecks();
         for (final Deck d : stored.stream().toList()) {
             if (events.contains(eventIdOf(d))) {
@@ -103,39 +37,9 @@ public class OnlineEventTest {
                 .findFirst().orElse(null);
     }
 
-    @AfterClass
-    public void tearDown() {
-        if (sessions != null) {
-            sessions.shutdown();
-            sessions = null;
-        }
-    }
-
-    private Recorder connect(final String id) {
-        final Recorder browser = new Recorder();
-        browsers.add(browser);
-        sessions.connected(browser, id, "host".equals(id));
-        return browser;
-    }
-
-    private static JsonObject named(final String name) {
-        final JsonObject m = JsonCodec.message("setName");
-        m.addProperty("name", name);
-        return m;
-    }
-
     /** The host at a fresh table of its own, invited or not, with the Limited switch set to kind. */
     private Recorder hostAt(final String open, final String kind) throws InterruptedException {
-        final Recorder host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
-        sessions.onMessage(host, named("Host"));
-        host.forget();
-        sessions.onMessage(host, JsonCodec.message(open));
-        // The table an earlier test left can still speak until the new one starts opening
-        final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean());
-        Assert.assertNotNull(opening, "the host's table never started opening");
-        Assert.assertNotNull(host.awaitMatching("lobby", l -> host.got.indexOf(l) > host.got.indexOf(opening) && l.has("table")
-                && l.getAsJsonObject("table").get("mySeat").getAsInt() >= 0), "the host never sat at its table");
+        final Recorder host = hostAt(open);
         sessions.onMessage(host, setLimited(kind));
         Assert.assertNotNull(host.awaitLobby(l -> l.has("limited") && kind.equals(l.getAsJsonObject("limited").get("kind").getAsString())),
                 "the table never became a " + kind + " table");
@@ -193,14 +97,24 @@ public class OnlineEventTest {
         return m;
     }
 
+    /**
+     * Waits for a browser to be shown the table's event, as one must be before it can ready: a seat's copy of the table
+     * learning of the event deals the seat afresh, which unreadies a seat readied before it arrived.
+     */
+    private static void seeEvent(final Recorder browser) throws InterruptedException {
+        Assert.assertNotNull(browser.awaitLobby(l -> l.has("limited") && l.getAsJsonObject("limited").has("product")),
+                "the event never reached this browser's table");
+    }
+
     /** A host and a guest at a Limited table of kind, both ready, with the event setup describes set up and started. */
     private Recorder[] startedEvent(final String kind, final JsonObject setup) throws InterruptedException {
         final Recorder host = hostAt("invite", kind);
         final Recorder guest = connect("guest");
-        sessions.onMessage(guest, named("Guest"));
+        sessions.onMessage(guest, message("setName", "name", "Guest"));
         Assert.assertNotNull(host.awaitLobby(l -> seatNames(l).contains("Guest")), "the guest never sat down");
         sessions.onMessage(host, setup);
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("product")), "the event was never set up");
+        seeEvent(guest);
         sessions.onMessage(host, ready(true));
         sessions.onMessage(guest, ready(true));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()
@@ -311,7 +225,7 @@ public class OnlineEventTest {
     public void startWaitsForReady() throws Exception {
         final Recorder host = hostAt("invite", "sealed");
         final Recorder guest = connect("guest");
-        sessions.onMessage(guest, named("Guest"));
+        sessions.onMessage(guest, message("setName", "name", "Guest"));
         Assert.assertNotNull(host.awaitLobby(l -> seatNames(l).contains("Guest")), "the guest never sat down");
         sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), null, 6));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("product")), "the sealed event was never set up");
@@ -325,6 +239,7 @@ public class OnlineEventTest {
         Assert.assertNotNull(host.awaitMatching("error", e -> e.get("message").getAsString().contains("Guest")),
                 "the event started with the guest not ready");
 
+        seeEvent(guest);
         sessions.onMessage(guest, ready(true));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream().allMatch(s -> s.getAsJsonObject().get("ready").getAsBoolean())),
                 "the guest never showed as ready");
@@ -623,13 +538,15 @@ public class OnlineEventTest {
     public void anEventDeckIsSleevedAfresh() throws Exception {
         final Recorder host = hostAt("invite", "sealed");
         final Recorder guest = connect("guest");
-        sessions.onMessage(guest, named("Guest"));
+        sessions.onMessage(guest, message("setName", "name", "Guest"));
         Assert.assertNotNull(host.awaitLobby(l -> seatNames(l).contains("Guest")), "the guest never sat down");
         sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), null, 6));
         // Both seats in the same sleeve, so a sleeve dealt to either is one nobody wore
         sessions.onMessage(host, sleeve(0, 0));
         sessions.onMessage(guest, sleeve(1, 0));
         Assert.assertNotNull(host.awaitLobby(l -> sleeves(l).equals(List.of(0, 0))), "the seats never wore the same sleeve");
+        seeEvent(host);
+        seeEvent(guest);
         sessions.onMessage(host, ready(true));
         sessions.onMessage(guest, ready(true));
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonArray("seats").asList().stream()

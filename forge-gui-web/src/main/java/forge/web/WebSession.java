@@ -798,6 +798,10 @@ public final class WebSession {
      * host does; a guest's is kept in its browser. Either way it opens in the limited editor.
      */
     private void poolArrived(final String eventId, final Deck pool) {
+        // A pool dealt as this seat leaves its table belongs to a table that is going, and nothing here shows it
+        if (!(stage instanceof Setup)) {
+            return;
+        }
         final NetworkEventView event = eventView();
         final GameType type = event != null && event.getFormat() == EventFormat.SEALED ? GameType.Sealed : GameType.Draft;
         final BrowserChannel b = browser;

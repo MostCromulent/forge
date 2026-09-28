@@ -1,74 +1,14 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.web.OnlineEventTest.Recorder;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /** The table's player count: seats added and taken away at the end, and never a seat a person holds. */
-public class TableSizeTest {
-    private WebSessions sessions;
-    private final List<Recorder> browsers = new CopyOnWriteArrayList<>();
-
-    @BeforeClass
-    public void setUp() {
-        WebTestSupport.initModel();
-        sessions = new WebSessions(new WebGuiBase(), 120_000, () -> { });
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void disconnectBrowsers() {
-        for (final Recorder browser : browsers) {
-            sessions.disconnected(browser);
-        }
-        browsers.clear();
-    }
-
-    @AfterClass
-    public void tearDown() {
-        if (sessions != null) {
-            sessions.shutdown();
-            sessions = null;
-        }
-    }
-
-    private Recorder connect(final String id) {
-        final Recorder browser = new Recorder();
-        browsers.add(browser);
-        sessions.connected(browser, id, "host".equals(id));
-        return browser;
-    }
-
-    private static JsonObject message(final String type, final String key, final Object value) {
-        final JsonObject m = JsonCodec.message(type);
-        if (value instanceof Number n) {
-            m.addProperty(key, n);
-        } else {
-            m.addProperty(key, (String) value);
-        }
-        return m;
-    }
-
-    private Recorder hostAt(final String open) throws InterruptedException {
-        final Recorder host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
-        sessions.onMessage(host, message("setName", "name", "Host"));
-        host.forget();
-        sessions.onMessage(host, JsonCodec.message(open));
-        final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean());
-        Assert.assertNotNull(opening, "the host's table never started opening");
-        Assert.assertNotNull(host.awaitMatching("lobby", l -> host.got.indexOf(l) > host.got.indexOf(opening) && l.has("table")
-                && l.getAsJsonObject("table").get("mySeat").getAsInt() >= 0), "the host never sat at its table");
-        return host;
-    }
-
+public class TableSizeTest extends SessionsTest {
     private static List<String> kinds(final JsonObject table) {
         final List<String> out = new ArrayList<>();
         table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("type").getAsString()));

@@ -5,116 +5,18 @@ import forge.deck.Deck;
 import forge.model.FModel;
 import forge.util.storage.IStorage;
 import org.testng.Assert;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Predicate;
 
 /** The deck editor as a browser drives it: opened, changed and closed through the session's messages. */
-public class DeckEditorSessionTest {
-    private static final int WAIT_MILLIS = 20_000;
-
-    private static final class Recorder implements BrowserChannel {
-        final List<JsonObject> got = new CopyOnWriteArrayList<>();
-
-        @Override
-        public void send(final JsonObject message) {
-            got.add(message);
-        }
-
-        JsonObject awaitMatching(final String type, final Predicate<JsonObject> wanted) throws InterruptedException {
-            for (int i = 0; i < WAIT_MILLIS / 20; i++) {
-                for (final JsonObject m : got) {
-                    if (type.equals(m.get("t").getAsString()) && wanted.test(m)) {
-                        return m;
-                    }
-                }
-                Thread.sleep(20);
-            }
-            return null;
-        }
-
-        JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
-            for (int i = 0; i < WAIT_MILLIS / 20; i++) {
-                JsonObject latest = null;
-                for (final JsonObject m : got) {
-                    if ("lobby".equals(m.get("t").getAsString()) && m.has("table")) {
-                        latest = m.getAsJsonObject("table");
-                    }
-                }
-                if (latest != null && wanted.test(latest)) {
-                    return latest;
-                }
-                Thread.sleep(20);
-            }
-            return null;
-        }
-    }
-
-    private WebSessions sessions;
-    private final List<Recorder> browsers = new CopyOnWriteArrayList<>();
-
-    @BeforeClass
-    public void setUp() {
-        WebTestSupport.initModel();
-        sessions = new WebSessions(new WebGuiBase(), 120_000, () -> { });
-    }
-
-    @AfterMethod(alwaysRun = true)
-    public void disconnectBrowsers() {
-        for (final Recorder browser : browsers) {
-            sessions.disconnected(browser);
-        }
-        browsers.clear();
-    }
-
-    @AfterClass
-    public void tearDown() {
-        sessions.shutdown();
-    }
-
-    private Recorder connect(final String id) {
-        final Recorder browser = new Recorder();
-        browsers.add(browser);
-        sessions.connected(browser, id, "host".equals(id));
-        return browser;
-    }
-
-    private static JsonObject message(final String type, final Object... fields) {
-        final JsonObject m = JsonCodec.message(type);
-        for (int i = 0; i < fields.length; i += 2) {
-            final Object value = fields[i + 1];
-            if (value instanceof Number n) {
-                m.addProperty((String) fields[i], n);
-            } else if (value instanceof Boolean b) {
-                m.addProperty((String) fields[i], b);
-            } else {
-                m.addProperty((String) fields[i], (String) value);
-            }
-        }
-        return m;
-    }
-
-    private Recorder host(final boolean invite) throws InterruptedException {
-        final Recorder host = connect("host");
-        sessions.onMessage(host, JsonCodec.message("claimHost"));
-        Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
-        host.got.clear();
-        sessions.onMessage(host, message("setName", "name", "Host"));
-        sessions.onMessage(host, JsonCodec.message(invite ? "invite" : "lobby"));
-        Assert.assertNotNull(host.awaitLobby(l -> l.get("mySeat").getAsInt() >= 0), "the host never sat down");
-        return host;
-    }
+public class DeckEditorSessionTest extends SessionsTest {
 
     // Fails if a guest's edit reaches the host's deck folders instead of the guest's browser
     @Test(timeOut = 120_000)
     public void guestEditorNeverWritesStorage() throws Exception {
-        host(true);
+        hostAt("invite");
         final Recorder guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
         Assert.assertNotNull(guest.awaitLobby(l -> l.get("mySeat").getAsInt() >= 0), "the guest never sat down");
@@ -161,7 +63,7 @@ public class DeckEditorSessionTest {
     // Fails if Import and use puts a deck of another format on the seat
     @Test(timeOut = 120_000)
     public void importAndUseKeepsToTheTablesFormat() throws Exception {
-        final Recorder host = host(false);
+        final Recorder host = hostAt("lobby");
         final int seat = host.awaitLobby(l -> true).get("mySeat").getAsInt();
         final String name = "Import seat test " + UUID.randomUUID().toString().substring(0, 8);
         try {
@@ -182,7 +84,7 @@ public class DeckEditorSessionTest {
     // Fails if Done puts the deck cached before the edits on the seat, rather than the edited one
     @Test(timeOut = 120_000)
     public void doneSeatsEditedDeck() throws Exception {
-        final Recorder host = host(false);
+        final Recorder host = hostAt("lobby");
         final int seat = host.awaitLobby(l -> true).get("mySeat").getAsInt();
         final String name = "Editor session test " + UUID.randomUUID().toString().substring(0, 8);
         try {
