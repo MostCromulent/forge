@@ -317,6 +317,28 @@ const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6
 const EXTRA_ZONES: [ZoneType, string][] = [['PlanarDeck', 'Planes'], ['SchemeDeck', 'Schemes'],
   ['AttractionDeck', 'Attractions'], ['ContraptionDeck', 'Contraptions'], ['Junkyard', 'Junkyard']];
 
+/** The card types rule 205.2a names, in its order. Delirium and the like count how many a graveyard holds. */
+const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery'];
+
+/** The card types among these type lines, in the rules' order, as desktop's graveyard label counts them. */
+export function cardTypes(typeLines: readonly string[]): string[] {
+  const found = new Set<string>();
+  for (const line of typeLines) {
+    // Only the words before the dash are types; subtypes such as "Forest" follow it
+    for (const word of line.split(/\s[-—]\s/)[0].split(/\s+/)) {
+      if (CORE_TYPES.includes(word)) found.add(word);
+    }
+  }
+  return CORE_TYPES.filter(t => found.has(t));
+}
+
+/** A graveyard tile's tooltip: how many cards, and how many card types among them. */
+export function graveyardTitle(count: number, types: string[]): string {
+  const cards = `${count} ${count === 1 ? 'card' : 'cards'}`;
+  if (!types.length) return `Graveyard: ${cards}`;
+  return `Graveyard: ${cards}, ${types.length} ${types.length === 1 ? 'card type' : 'card types'} (${types.join(', ')})`;
+}
+
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, select: CardClick): void {
   // A player with a commander has a Command tile for the whole game, empty while the commander is elsewhere
   const commanded = (player.Commander ?? []).some(r => r);
@@ -360,6 +382,10 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       el.classList.toggle('back', zoneName === 'Library' && cards.length > 0);
       el.classList.toggle('empty', cards.length === 0);
       q(el, '.zone-count').textContent = String(cards.length);
+      // The types a graveyard holds matter to delirium and cards like it, so hovering it says them
+      if (zoneName === 'Graveyard') {
+        el.title = graveyardTitle(cards.length, cardTypes(cards.map(c => stateOf(model, c).Type ?? '')));
+      }
     });
 }
 
