@@ -35,6 +35,29 @@
     <build>
         <finalName>forge-gui-web</finalName>
         <plugins>
+            <!-- Writes src/main/ts/protocol.gen.ts from the protocol's Java records once they compile, for the
+                 TypeScript type check below. It is declared first so it runs before that check in the same phase. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.4.1</version>
+                <executions>
+                    <execution>
+                        <id>protocol-types</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>forge.web.ProtocolTypes</mainClass>
+                            <arguments>
+                                <argument>${project.basedir}/src/main/ts/protocol.gen.ts</argument>
+                                <argument>${project.basedir}/../forge-gui/res/languages/</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Compiles the browser client (src/main/ts) into web/js/app.js. Node is downloaded into ./node, so a
                  build needs nothing installed beyond Maven. -Dskip.npm -Dskip.installnodenpm leaves the last
                  bundle in place. -->
@@ -71,6 +94,16 @@
                         </goals>
                         <configuration>
                             <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm-typecheck</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run typecheck</arguments>
                         </configuration>
                     </execution>
                     <!-- The browser client's own tests, alongside the Java ones; -DskipTests skips both -->

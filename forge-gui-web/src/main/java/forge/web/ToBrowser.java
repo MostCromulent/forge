@@ -22,7 +22,7 @@ import java.util.Map;
 
 /**
  * Every message the server sends the browser, and the shapes inside them. src/main/ts/protocol.gen.ts is
- * generated from this file: change a record here and regenerate (see ProtocolTypesTest).
+ * generated from this file when the module builds, so a record changed here fails the build where the browser reads it.
  */
 final class ToBrowser {
     private ToBrowser() {

@@ -92,18 +92,15 @@ installed (`node/`) or any Node 22.
 
 ### The protocol
 
-Messages are Java records in `ToBrowser` and `FromBrowser`. `src/main/ts/protocol.gen.ts` is generated from them
-and from Forge's `TrackableProperty`; after changing a record, regenerate it and let the compiler show what to fix:
-
-    mvn -Pweb -pl forge-gui-web -am test -Dtest=ProtocolTypesTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeProtocol=true
-
-`ProtocolTypesTest` fails when the file is out of date. A field may be null only if marked `@Nullable`.
+Messages are Java records in `ToBrowser` and `FromBrowser`. Each build writes `src/main/ts/protocol.gen.ts` from them
+and from Forge's `TrackableProperty`, then type-checks the TypeScript against it, so a changed record fails the build
+where the browser uses it. A field may be null only if marked `@Nullable`.
 
 ### Keeping up with Forge
 
 The module relies on changes to Forge's shared modules (`forge-game`, `forge-gui`, `forge-core`) and the root
-`pom.xml`, so merging upstream Forge can conflict there. After a merge, run the tests: `ProtocolTypesTest` catches a
-game property renamed or retyped upstream. CI doesn't build with `-Pweb`, so run the module's tests and the e2e suite
+`pom.xml`, so merging upstream Forge can conflict there. After a merge, build the module: the type check catches a game
+property renamed or retyped upstream. CI doesn't build with `-Pweb`, so run the module's tests and the e2e suite
 locally before pushing.
 
 ### Tests
@@ -117,10 +114,9 @@ locally before pushing.
 
 - `e2e/` drives the page in a real browser against a real server. Build the jar, then:
 
-      cd forge-gui-web/e2e
-      npm ci
+      cd forge-gui-web
       npx playwright install chromium   # first time only
-      npx playwright test
+      npm run e2e
 
 ---
 

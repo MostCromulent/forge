@@ -4,3 +4,9 @@ node/
 
 # Built from src/main/ts by `npm run build` (Maven runs it)
 src/main/resources/web/js/
+
+# What a Playwright run leaves behind
+test-results/
+
+# Written from the Java records by forge.web.ProtocolTypes (Maven runs it)
+src/main/ts/protocol.gen.ts
