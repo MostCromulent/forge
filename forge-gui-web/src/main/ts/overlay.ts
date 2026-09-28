@@ -127,19 +127,25 @@ function paintArrows(model: Model): void {
   drawDrag(ctx);
   drawAim(ctx, model);
   const mode = setting('arrows');
-  if (mode === '0') return;
+  if (mode === '0') {
+    drawQueued(ctx);
+    return;
+  }
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
   for (const band of mode === '1' || !combatShown(model) ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
-    attackers.forEach((attacker, i) => {
-      if (!atFace.has(attacker.ref)) {
-        ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack, i, attackers.length);
+    // A blocked attacker's block arrow is what matters now, so it loses its arrow at the defender, as one charging a
+    // lone opponent loses its chevron
+    const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
+    attackers.forEach(attacker => {
+      if (!atFace.has(attacker.ref) && !blocked) {
+        ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack);
       }
       for (const blocker of present(band.blockers)) {
-        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block, 0, 1);
+        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block);
       }
       for (const blocker of present(band.plannedBlockers)) {
-        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock, 0, 1);
+        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock);
       }
     });
   }
@@ -148,16 +154,16 @@ function paintArrows(model: Model): void {
   if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
     for (const obj of model.objects.values()) {
       const forced = present((obj as CardView).MustBlockCards);
-      forced.forEach((attacker, i) =>
-        ribbon(ctx, elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock, i, forced.length));
+      forced.forEach(attacker => ribbon(ctx, elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
   const item = ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
   if (item) {
     const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
     const targets = stackTargets(model, item);
-    targets.forEach((target, i) => ribbon(ctx, from, elementFor(target.$key), KINDS.target, i, targets.length));
+    targets.forEach(target => ribbon(ctx, from, elementFor(target.$key), KINDS.target));
   }
+  drawQueued(ctx);
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
@@ -175,7 +181,7 @@ export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point |
 function drawDrag(ctx: CanvasRenderingContext2D): void {
   if (!drag) return;
   if (drag.to instanceof HTMLElement) {
-    ribbon(ctx, drag.from, drag.to, KINDS.block, 0, 1, false);
+    ribbon(ctx, drag.from, drag.to, KINDS.block, false);
   } else {
     arrow(ctx, edge(drag.from, drag.to, 2), drag.to, KINDS.block);
   }
@@ -223,20 +229,19 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
     const waiting = p?.paying && lastAim ? onStack(lastAim.key) : null;
     if (waiting && lastAim) {
       const targets = lastAim.targets;
-      targets.forEach((k, i) => ribbon(ctx, waiting, elementFor(k) ?? onStack(String(k)), KINDS.target, i, targets.length));
+      targets.forEach(k => ribbon(ctx, waiting, elementFor(k) ?? onStack(String(k)), KINDS.target));
     } else {
       lastAim = null;
     }
   }
   if (!from || !p) return;
-  p.highlighted.forEach((k, i) =>
-    ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target, i, p.highlighted.length));
+  p.highlighted.forEach(k => ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target));
   if (!pointer) return;
   const r = from.getBoundingClientRect();
   if (pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom) return;
   const over = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>('.selectable, .targetable');
   if (over) {
-    ribbon(ctx, from, over, KINDS.target, 0, 1);
+    ribbon(ctx, from, over, KINDS.target);
   } else {
     arrow(ctx, edge(from, pointer, 2), pointer, KINDS.target);
   }
@@ -390,23 +395,33 @@ const rgba = (hex: string, a: number) => {
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 };
 
-// Several arrivals on one defender land on separate points, so six attackers stay countable
-function spread(a: Point, b: Point, index: number, count: number): Point {
-  if (count < 2) return b;
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const len = Math.hypot(dx, dy) || 1;
-  const off = (index - (count - 1) / 2) * Math.min(22, 90 / count);
-  return { x: b.x + (-dy / len) * off, y: b.y + (dx / len) * off };
+/** The arrows of this paint, drawn together at its end so the ones sharing a target can share where they land. */
+let queued: { from: HTMLElement; to: HTMLElement; kind: ArrowKind; grows: boolean }[] = [];
+
+function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
+  if (!fromEl || !toEl || fromEl === toEl) return;
+  queued.push({ from: fromEl, to: toEl, kind, grows });
 }
 
-function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, index: number, count: number,
-    grows = true): void {
-  if (!fromEl || !toEl || fromEl === toEl) return;
-  const target = spread(center(fromEl), center(toEl), index, count);
-  const a = edge(fromEl, target, 2);
-  const b = edge(toEl, a, 6);
-  arrow(ctx, a, spread(a, b, index, count), kind, grows ? growth(fromEl, toEl, kind) : 1);
+/**
+ * Draws the arrows queued this paint. Every arrow at one target lands on one point, on the target's edge facing the
+ * middle of where they come from, so two attackers at one player read as two blows at one place, not a spray.
+ */
+function drawQueued(ctx: CanvasRenderingContext2D): void {
+  const sources = new Map<HTMLElement, Point[]>();
+  for (const q of queued) sources.set(q.to, [...sources.get(q.to) ?? [], center(q.from)]);
+  const landing = new Map<HTMLElement, Point>();
+  for (const [to, from] of sources) {
+    const middle = { x: from.reduce((n, p) => n + p.x, 0) / from.length, y: from.reduce((n, p) => n + p.y, 0) / from.length };
+    const c = center(to);
+    // Sources on opposite sides can average out onto the target itself, which has no edge facing it
+    landing.set(to, edge(to, Math.hypot(middle.x - c.x, middle.y - c.y) < 1 ? from[0] : middle, 6));
+  }
+  for (const q of queued) {
+    const b = landing.get(q.to) as Point;
+    arrow(ctx, edge(q.from, b, 2), b, q.kind, q.grows ? growth(q.from, q.to, q.kind) : 1);
+  }
+  queued = [];
 }
 
 /** How long an arrow takes to reach its target when it first appears. */
