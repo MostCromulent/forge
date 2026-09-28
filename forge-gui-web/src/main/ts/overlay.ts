@@ -404,7 +404,7 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
 }
 
 /** How far apart the heads of arrows at one target sit, at most, so each can still be told from the others. */
-const HEAD_GAP = 9;
+const HEAD_GAP = 6;
 
 /**
  * Draws the arrows queued this paint. The arrows at one target gather round one point, on the target's edge facing
@@ -426,7 +426,7 @@ function drawQueued(ctx: CanvasRenderingContext2D): void {
     const across = { x: -(land.y - middle.y) / len, y: (land.x - middle.x) / len };
     const order = arrows.map((_, i) => i)
       .sort((i, j) => (from[i].x - from[j].x) * across.x + (from[i].y - from[j].y) * across.y);
-    const gap = Math.min(HEAD_GAP, 40 / arrows.length);
+    const gap = Math.min(HEAD_GAP, 28 / arrows.length);
     order.forEach((i, rank) => {
       const q = arrows[i];
       const off = (rank - (arrows.length - 1) / 2) * gap;
