@@ -101,7 +101,7 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 
 /* Game setup's trail and question, over whichever page of it is showing (header.tsx SetupHead) */
 /* Room between the trail and the question, and below the question before the page's own content */
-.setup-head { display: grid; gap: 8px; margin-bottom: 12px; }
+.setup-head { display: grid; gap: 8px; margin-bottom: 26px; }
 .setup-head .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .setup-head .crumb [aria-current] { color: var(--text); }
 .setup-head h2 { margin: 0; font-size: 22px; text-wrap: balance; }
@@ -192,7 +192,8 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 
 #lobby { min-height: 100%; display: grid; grid-template-rows: auto 1fr; }
 /* Seats, Add a seat and Play sit together as one block rather than being pushed to opposite edges */
-.lobby-main { position: relative; display: grid; align-content: center; justify-items: center; gap: 14px; padding: 16px 20px 28px; }
+/* From the top, as the start page is, so the setup trail and question stand in the same place on every setup page */
+.lobby-main { position: relative; display: grid; align-content: start; justify-items: center; gap: 14px; padding: 40px 20px 28px; }
 /* Every page's top bar: the wordmark, the page's own middle, and its buttons on the right */
 .page-head { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 20px; border-bottom: 1px solid var(--line); }
 .head-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
