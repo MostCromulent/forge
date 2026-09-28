@@ -286,7 +286,7 @@ final class WebSessions implements WebServer.Endpoint {
         if (who == null) {
             return;
         }
-        final ChatLine line = new ChatLine(who, text);
+        final ChatLine line = new ChatLine(who, text, false);
         said.addLast(line);
         while (said.size() > CHAT_KEPT) {
             said.removeFirst();
@@ -300,7 +300,7 @@ final class WebSessions implements WebServer.Endpoint {
     synchronized void greet(final WebSession session) {
         session.tell(presence());
         for (final ChatLine line : said) {
-            session.tell(line);
+            session.tell(new ChatLine(line.from(), line.text(), true));
         }
     }
 

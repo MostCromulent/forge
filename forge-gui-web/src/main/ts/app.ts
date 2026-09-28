@@ -321,7 +321,7 @@ function apply(msg: ServerMessage): void {
       break;
     }
     case 'addresses': model.addresses = msg.list; break;
-    case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text }]; break;
+    case 'chat': model.chat = [...model.chat, { from: msg.from ?? '', text: msg.text, earlier: msg.earlier }]; break;
     // The server sends the whole list whenever it changes, so there is nothing to merge
     case 'presence': model.presence = msg.people; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;

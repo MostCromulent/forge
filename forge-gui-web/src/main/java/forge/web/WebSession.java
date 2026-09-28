@@ -883,7 +883,7 @@ public final class WebSession {
         // A player's line reaches every browser through the server's own chat, so only netplay's announcements
         // of who came and went are worth passing on from the game
         if (from == null) {
-            tell(new ChatLine(null, text));
+            tell(new ChatLine(null, text, false));
         }
     }
 

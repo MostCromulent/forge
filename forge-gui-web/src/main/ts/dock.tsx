@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { avatarUrl } from './looks';
 import type { Actions } from './actions';
-import type { Model } from './model';
+import type { ChatEntry, Model } from './model';
 import type { Person } from './protocol';
 
 /** What each person is doing, in the words the roster shows. A seat at a table is worth naming; waiting is not. */
@@ -33,6 +33,12 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [model.chat.length, open]);
+  // The last line you could have read, held by the line itself, so a chat the server replays after a reconnect
+  // (a new list of new lines) is counted from its start, where its replayed lines are passed over as history
+  const lastSeen = useRef<ChatEntry | undefined>(model.chat[model.chat.length - 1]);
+  if (open || model.inMatch) {
+    lastSeen.current = model.chat[model.chat.length - 1];
+  }
 
   const people = model.presence;
   if (!people.length) {
@@ -45,12 +51,15 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   const watching = people.filter(p => p.doing === 'watching').length;
   const seated = people.filter(p => p.doing !== 'watching');
   if (!inMatch && !open) {
+    const unread = unreadSince(model.chat, lastSeen.current, model.playerName);
     return (
-      <button class="dock folded" onClick={() => setOpen(true)}>
+      <button class={unread ? 'dock folded unread' : 'dock folded'} onClick={() => setOpen(true)}>
         <span class="faces" aria-hidden="true">
           {people.slice(0, 3).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
         </span>
         <span class="dock-count">{people.length} here</span>
+        {/* Keyed on the count, so each new line redraws it and it pulses again */}
+        {unread > 0 && <span key={unread} class="dock-new">{unread > 9 ? '9+' : unread} new</span>}
       </button>
     );
   }
@@ -101,7 +110,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
       )}
       <div class="dock-log" ref={log}>
         {model.chat.map((line, i) => (
-          line.from === null || line.from === undefined
+          !line.from
             ? <p key={i} class="said note">{line.text}</p>
             : <p key={i} class="said"><img class="face-small" alt="" src={avatarUrl(faceOf(people, line.from))} /><span><b>{line.from}</b> {line.text}</span></p>
         ))}
@@ -127,6 +136,13 @@ function Chevron({ up }: { up: boolean }) {
       <path d={up ? 'M6.5 14.5l5.5-5.5 5.5 5.5' : 'M6.5 9.5l5.5 5.5 5.5-5.5'} />
     </svg>
   );
+}
+
+/** Lines someone else said since the last one you could have read. What the server says itself is not news, and
+ *  nor is anything said before you arrived. */
+export function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
+  const from = lastSeen ? chat.lastIndexOf(lastSeen) + 1 : 0;
+  return chat.slice(from).filter(l => l.from && !l.earlier && l.from !== me).length;
 }
 
 /** The face a line was said under. Someone who has since left keeps the first avatar rather than none. */

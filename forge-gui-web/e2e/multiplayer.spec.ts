@@ -52,6 +52,28 @@ test('a guest joins by link under a name of its own and follows the host into th
   await expect(guest.locator('#match-chat .dock-log')).toContainText('good luck');
 });
 
+test('lines said while the dock is folded are counted on it until it is opened', async ({ page, browser }) => {
+  const guest = await hostAndGuest(page, browser);
+  await guest.click('#dock .dock.folded');
+  await say(guest, '#dock .dock-say input', 'hello');
+  await say(guest, '#dock .dock-say input', 'anyone up for sealed?');
+  await expect(page.locator('#dock .dock.folded .dock-new')).toHaveText('2 new');
+
+  // Opening it reads them, and folding it again starts the count afresh
+  await page.click('#dock .dock.folded');
+  await expect(page.locator('#dock .dock-log')).toContainText('anyone up for sealed?');
+  await page.click('#dock .dock-head');
+  await expect(page.locator('#dock .dock.folded')).toBeVisible();
+  await expect(page.locator('#dock .dock-new')).toHaveCount(0);
+
+  // What was said before a browser arrived is history, so a reload brings none of it back as news
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.locator('#dock .dock.folded')).toBeVisible();
+  await expect(page.locator('#dock .dock-new')).toHaveCount(0);
+  await say(guest, '#dock .dock-say input', 'gl hf');
+  await expect(page.locator('#dock .dock-new')).toHaveText('1 new');
+});
+
 // The server keeps a guest's settings only as long as it runs, so the guest's browser gives them back to a new one
 test('a guest\'s phase stops outlive a server restart', async ({ page, browser }) => {
   let guest = await hostAndGuest(page, browser);

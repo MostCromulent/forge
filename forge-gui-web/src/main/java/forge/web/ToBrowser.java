@@ -190,9 +190,12 @@ final class ToBrowser {
     record Address(String label, String url) {
     }
 
-    /** A line of lobby or match chat. Netplay's own announcements (a player joining) have no sender. */
+    /**
+     * A line of lobby or match chat. Netplay's own announcements (a player joining) have no sender. earlier marks
+     * a line said before this browser arrived, replayed so it can catch up, which is history rather than news.
+     */
     @Message("chat")
-    record ChatLine(@Nullable String from, String text) {
+    record ChatLine(@Nullable String from, String text, boolean earlier) {
     }
 
     /**

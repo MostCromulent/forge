@@ -77,6 +77,7 @@ export interface ChatLine {
   t: 'chat';
   from?: string;
   text: string;
+  earlier: boolean;
 }
 
 export interface CardSearch {

@@ -10,6 +10,10 @@ export interface Looks {
   sleeveCount: number;
 }
 
+/** A line of chat. from is empty for netplay announcing somebody coming or going; earlier marks a line said before
+ *  this browser arrived, replayed so it can catch up. */
+export interface ChatEntry { from: string; text: string; earlier: boolean }
+
 // Everything the browser knows. objects is its copy of the game's table, which forge.web.BrowserModel applies and prunes by the same rules
 export interface Model {
   objects: Map<number, TrackedObject>;
@@ -46,8 +50,7 @@ export interface Model {
   /** What a right-click on a stack item may do, as the server last answered it. */
   stackMenu: StackMenu | null;
   /** The conversation with the other players, in the lobby and beside the board. */
-  /** A line with no sender is netplay announcing somebody coming or going. */
-  chat: { from: string; text: string }[];
+  chat: ChatEntry[];
   /** Everyone on this server who has named themselves. */
   presence: Person[];
   /** Someone else is at the table, so there is someone to talk to. */

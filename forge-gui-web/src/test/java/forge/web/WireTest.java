@@ -15,7 +15,7 @@ import java.util.List;
 public class WireTest {
     @Test
     public void aMessageCarriesItsTypeAndFields() {
-        final JsonObject m = Wire.encode(new ChatLine("Ann", "hi"));
+        final JsonObject m = Wire.encode(new ChatLine("Ann", "hi", false));
         Assert.assertEquals(m.get("t").getAsString(), "chat");
         Assert.assertEquals(m.get("from").getAsString(), "Ann");
         Assert.assertEquals(m.get("text").getAsString(), "hi");
@@ -24,7 +24,7 @@ public class WireTest {
     @Test
     public void aNullableFieldThatIsNullIsLeftOut() {
         // Netplay's own announcements have no sender
-        final JsonObject m = Wire.encode(new ChatLine(null, "Ann joined"));
+        final JsonObject m = Wire.encode(new ChatLine(null, "Ann joined", false));
         Assert.assertFalse(m.has("from"));
     }
 
