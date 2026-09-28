@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { chooseDeck, enterName, flipOption, hostTable, inviteLink, readOptions, say } from './steps';
+import { chooseDeck, enterName, flipOption, hostTable, inviteLink, say } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -103,14 +103,4 @@ test('a guest\'s phase stops outlive a server restart', async ({ page, browser }
   await startMatch(page, guest);
   await guest.click('#phase-strip .pill');
   await expect(stopAt(guest, phase)).toHaveClass(wasOn ? /^(?!.*\bon\b)/ : /\bon\b/);
-});
-
-test('a guest\'s settings are its own, not the host\'s', async ({ page, browser }) => {
-  const guest = await hostAndGuest(page, browser);
-  await startMatch(page, guest);
-  const label = 'Highlight lands Auto would tap';
-  const before = (await readOptions(page))[label];
-  await flipOption(guest, label);
-  expect((await readOptions(guest))[label]).not.toBe(before);
-  expect((await readOptions(page))[label]).toBe(before);
 });

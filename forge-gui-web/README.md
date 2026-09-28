@@ -114,9 +114,10 @@ locally before pushing.
 
 - `e2e/` drives the page in a real browser against a real server. Build the jar, then:
 
-      cd forge-gui-web
+      cd forge-gui-web/e2e
+      npm ci
       npx playwright install chromium   # first time only
-      npm run e2e
+      npx playwright test
 
 ---
 

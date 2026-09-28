@@ -163,20 +163,6 @@ export async function say(page: Page, input: string, text: string): Promise<void
   await page.press(input, 'Enter');
 }
 
-/** The value each option in the options dialog shows, by its label. */
-export async function readOptions(page: Page): Promise<Record<string, string>> {
-  await page.click('#prompt .cog');
-  // The dialog is drawn on the next frame, so its rows are read once they are there
-  await expect(page.locator('#options .setting').first()).toBeVisible();
-  const values = await page.locator('#options .setting').evaluateAll(rows => Object.fromEntries(rows.map(row => [
-    (row as HTMLElement).innerText.split('\n')[0],
-    [...row.querySelectorAll('.choice button.on')].map(b => b.textContent).join(''),
-  ])));
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#options')).toHaveCount(0);
-  return values;
-}
-
 export async function flipOption(page: Page, label: string): Promise<void> {
   await page.click('#prompt .cog');
   // An on-or-off setting is two segments, so the one not chosen is the flip

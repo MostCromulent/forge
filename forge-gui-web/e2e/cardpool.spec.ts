@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { chooseGame, enterName, hostTable } from './steps';
+import { enterName, hostTable } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
 test.afterEach(async () => { await server.stop(); });
 
-// Fails if the host's card pool does not reach the deck finder, lets a computer seat be dealt an illegal deck,
-// or outlives the switch away from Constructed
-test('a Constructed table held to Pauper offers and deals only Pauper decks', async ({ page }) => {
+// Fails if the host's card pool is not offered from the Format control, or does not reach the deck finder. That the
+// computer is dealt only legal decks, and that the pool goes with Constructed, is LobbyCardPoolTest's
+test('a Constructed table held to Pauper offers only Pauper decks', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
   await hostTable(page, false);
@@ -29,17 +29,4 @@ test('a Constructed table held to Pauper offers and deals only Pauper decks', as
   await expect(page.locator('.dk-hit .legal.no').first()).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.locator('.finder')).toHaveCount(0);
-
-  // Every random deal to the computer is legal in Pauper
-  const computer = seats.nth(1);
-  for (let i = 0; i < 3; i++) {
-    await computer.locator('.random-row, .random-deck').click();
-    await expect(computer.locator('.deck-name')).not.toHaveText('');
-    await expect(computer.locator('.seat-problem')).toBeHidden();
-  }
-
-  // A card pool belongs to Constructed, so leaving it clears the pool
-  await chooseGame(page, 'Commander');
-  await chooseGame(page, 'Constructed');
-  await expect(cards).toHaveText('Any cards');
 });
