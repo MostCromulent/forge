@@ -205,6 +205,13 @@ export function notePick(key: number): void {
 }
 /** Whether the last paint drew the aim, so moving the mouse only repaints while there is one to follow it. */
 let aiming = false;
+/**
+ * The target the aim has landed on. It holds until the pointer leaves the target's box, so moving about on it (onto a
+ * badge, or a corner of a round avatar) never sends the arrow back to the pointer and out again.
+ */
+let aimedAt: HTMLElement | null = null;
+/** How far past that target's box the pointer can stray before the arrow lets go of it. */
+const LET_GO = 4;
 
 /**
  * While targets are chosen: from the card to each target already picked, and to the pointer, or to the target it is
@@ -234,12 +241,18 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
       lastAim = null;
     }
   }
-  if (!from || !p) return;
+  if (!from || !p) {
+    aimedAt = null;
+    return;
+  }
   p.highlighted.forEach(k => ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target));
   if (!pointer) return;
   const r = from.getBoundingClientRect();
-  if (pointer.x >= r.left && pointer.x <= r.right && pointer.y >= r.top && pointer.y <= r.bottom) return;
-  const over = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>('.selectable, .targetable');
+  if (within(r, pointer, 0)) return;
+  const hit = document.elementFromPoint(pointer.x, pointer.y)?.closest<HTMLElement>('.selectable, .targetable') ?? null;
+  const held = aimedAt?.isConnected && aimedAt.matches('.selectable, .targetable') && within(aimedAt.getBoundingClientRect(), pointer, LET_GO);
+  const over = hit ?? (held ? aimedAt : null);
+  aimedAt = over;
   if (over) {
     ribbon(ctx, from, over, KINDS.target);
   } else {
@@ -379,6 +392,11 @@ function center(el: HTMLElement): Point {
 }
 
 // Where the line from the element's middle towards `to` leaves its box
+/** Whether a point lies in a box, or within pad of it. */
+function within(r: DOMRect, at: Point, pad: number): boolean {
+  return at.x >= r.left - pad && at.x <= r.right + pad && at.y >= r.top - pad && at.y <= r.bottom + pad;
+}
+
 function edge(el: HTMLElement, to: Point, pad: number): Point {
   const r = el.getBoundingClientRect();
   const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
