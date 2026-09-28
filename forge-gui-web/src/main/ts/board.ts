@@ -737,7 +737,7 @@ function pageCentre(): { x: number; y: number } {
 }
 
 /** Each player's games won in the match: their portrait, their name and the count, the match's winner in gold. */
-function drawTally(root: HTMLElement, model: Model, everyone: PlayerView[], wins: (p: PlayerView) => number | undefined,
+function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerView) => number | undefined,
   champion: PlayerView | undefined): void {
   const counted = everyone.filter(p => wins(p) !== undefined);
   root.hidden = counted.length === 0;
@@ -746,7 +746,7 @@ function drawTally(root: HTMLElement, model: Model, everyone: PlayerView[], wins
     row.className = p === champion ? 'tally-player champion' : 'tally-player';
     row.innerHTML = '<span class="tally-face"></span><span class="tally-name"></span><b class="tally-won"></b>';
     q(row, '.tally-face').style.backgroundImage = cssUrl(playerAvatarUrl(p));
-    q(row, '.tally-name').textContent = isLocal(model, p) ? `${p.Name ?? ''} (you)` : p.Name ?? '';
+    q(row, '.tally-name').textContent = p.Name ?? '';
     const n = wins(p) ?? 0;
     q(row, '.tally-won').textContent = String(n);
     row.title = `${n} game${n === 1 ? '' : 's'} won`;
@@ -809,7 +809,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const stage = q(root, '.stage');
   stage.hidden = !inMatch;
   stage.textContent = matchOver ? `Match over · Best of ${games}` : `Game ${gameNumber} · Best of ${games}`;
-  drawTally(q(root, '.tally'), model, inMatch ? everyone : [], wins, matchOver ? winner : undefined);
+  drawTally(q(root, '.tally'), inMatch ? everyone : [], wins, matchOver ? winner : undefined);
   const view = (board: boolean) => {
     root.classList.toggle('viewing', board);
     byId('match').classList.toggle('ending', !board);
