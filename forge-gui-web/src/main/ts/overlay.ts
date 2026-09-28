@@ -403,23 +403,36 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
   queued.push({ from: fromEl, to: toEl, kind, grows });
 }
 
+/** How far apart the heads of arrows at one target sit, at most, so each can still be told from the others. */
+const HEAD_GAP = 9;
+
 /**
- * Draws the arrows queued this paint. Every arrow at one target lands on one point, on the target's edge facing the
- * middle of where they come from, so two attackers at one player read as two blows at one place, not a spray.
+ * Draws the arrows queued this paint. The arrows at one target gather round one point, on the target's edge facing
+ * the middle of where they come from, so two blows at one player read as two blows at one place rather than a spray.
+ * Their heads sit a little apart along that edge, in the order their sources stand, so they never cross and stay
+ * countable.
  */
 function drawQueued(ctx: CanvasRenderingContext2D): void {
-  const sources = new Map<HTMLElement, Point[]>();
-  for (const q of queued) sources.set(q.to, [...sources.get(q.to) ?? [], center(q.from)]);
-  const landing = new Map<HTMLElement, Point>();
-  for (const [to, from] of sources) {
+  const byTarget = new Map<HTMLElement, typeof queued>();
+  for (const q of queued) byTarget.set(q.to, [...byTarget.get(q.to) ?? [], q]);
+  for (const [to, arrows] of byTarget) {
+    const from = arrows.map(q => center(q.from));
     const middle = { x: from.reduce((n, p) => n + p.x, 0) / from.length, y: from.reduce((n, p) => n + p.y, 0) / from.length };
     const c = center(to);
     // Sources on opposite sides can average out onto the target itself, which has no edge facing it
-    landing.set(to, edge(to, Math.hypot(middle.x - c.x, middle.y - c.y) < 1 ? from[0] : middle, 6));
-  }
-  for (const q of queued) {
-    const b = landing.get(q.to) as Point;
-    arrow(ctx, edge(q.from, b, 2), b, q.kind, q.grows ? growth(q.from, q.to, q.kind) : 1);
+    const land = edge(to, Math.hypot(middle.x - c.x, middle.y - c.y) < 1 ? from[0] : middle, 6);
+    // Across the way the arrows come in: each is placed along it by where its source stands
+    const len = Math.hypot(land.x - middle.x, land.y - middle.y) || 1;
+    const across = { x: -(land.y - middle.y) / len, y: (land.x - middle.x) / len };
+    const order = arrows.map((_, i) => i)
+      .sort((i, j) => (from[i].x - from[j].x) * across.x + (from[i].y - from[j].y) * across.y);
+    const gap = Math.min(HEAD_GAP, 40 / arrows.length);
+    order.forEach((i, rank) => {
+      const q = arrows[i];
+      const off = (rank - (arrows.length - 1) / 2) * gap;
+      const b = { x: land.x + across.x * off, y: land.y + across.y * off };
+      arrow(ctx, edge(q.from, b, 2), b, q.kind, q.grows ? growth(q.from, q.to, q.kind) : 1);
+    });
   }
   queued = [];
 }
