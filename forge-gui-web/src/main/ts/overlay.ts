@@ -205,6 +205,11 @@ export function notePick(key: number): void {
 }
 /** Whether the last paint drew the aim, so moving the mouse only repaints while there is one to follow it. */
 let aiming = false;
+
+/** Whether a target is being chosen, with the arrow following the pointer. */
+export function isAiming(): boolean {
+  return aiming;
+}
 /**
  * The target the aim has landed on. It holds until the pointer leaves the target's box, so moving about on it (onto a
  * badge, or a corner of a round avatar) never sends the arrow back to the pointer and out again.

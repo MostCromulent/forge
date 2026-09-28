@@ -8,6 +8,7 @@ import { keyName } from './keys';
 import { boundKeys } from './settings';
 import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
+import { isAiming } from './overlay';
 import type { CardFace, CardView, PlayerDetail, PlayerView } from './protocol';
 
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
@@ -105,13 +106,15 @@ export function hoverPlayer(key: number | null): void {
     return;
   }
   afterRest(() => {
+    // A player's details follow the pointer, so while a target is chosen they would cover the arrow landing on them
+    if (isAiming()) return;
     changeUi(u => { u.hover = { player: key }; u.faceIndex = 0; });
     actions?.inspectPlayer(key);
   });
 }
 
 export function renderDetail(model: Model): void {
-  if (hoverGone()) {
+  if (hoverGone() || (ui.hover && 'player' in ui.hover && isAiming())) {
     ui.hover = null;
     byId('zoom').classList.remove('settling');
   }
