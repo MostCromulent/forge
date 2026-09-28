@@ -16,9 +16,9 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.chooser [data-kind=draft]');
   await expect(page.locator('#limited')).toBeVisible();
 
-  await page.click('text=New event');
+  await page.click('.ev.new');
   await page.click('.tile-choice:has-text("Full card pool")');
-  await page.click('.wfoot button:has-text("Start draft")');
+  await page.click('.ticket button:has-text("Start drafting")');
   await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.table-btn')).toBeVisible();
 
@@ -41,8 +41,9 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.editor-head button.primary');
 
   await expect(page.locator('.opponents')).toBeVisible();
-  await page.click('.opponents .radio[data-mode=gauntlet]');
-  await page.click('.opp-side button.primary:has-text("Start the gauntlet")');
+  // The deck saved in the editor is the one the opponents screen reads
+  await expect(page.locator('.your-deck')).toContainText('45 cards');
+  await page.click('.opp-foot button:has-text("Start the gauntlet")');
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
   await gameStarted(page);
 });

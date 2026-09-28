@@ -28,6 +28,9 @@ import forge.web.ToBrowser.PoolRow;
 import forge.web.ToBrowser.SealedBlock;
 
 import java.io.File;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -62,12 +65,7 @@ final class OfflineEvents {
         long newest = Long.MIN_VALUE;
         synchronized (DeckCatalog.DECKS) {
             for (final String name : storage(kind).getItemNames()) {
-                final File folder = new File(dir, name);
-                long time = folder.lastModified();
-                final File[] files = folder.listFiles();
-                for (final File f : files == null ? new File[0] : files) {
-                    time = Math.max(time, f.lastModified());
-                }
+                final long time = changed(new File(dir, name));
                 if (time > newest) {
                     newest = time;
                     latest = name;
@@ -77,11 +75,23 @@ final class OfflineEvents {
         return latest;
     }
 
-    static LimitedPools pools() {
-        return new LimitedPools(rows(sealed()), rows(storage("draft")));
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ISO_LOCAL_DATE.withZone(ZoneId.systemDefault());
+
+    /** When a pool's folder or any file in it last changed on disk, or 0 if it has no folder. */
+    private static long changed(final File folder) {
+        long time = folder.lastModified();
+        final File[] files = folder.listFiles();
+        for (final File f : files == null ? new File[0] : files) {
+            time = Math.max(time, f.lastModified());
+        }
+        return time;
     }
 
-    private static List<PoolRow> rows(final IStorage<DeckGroup> storage) {
+    static LimitedPools pools() {
+        return new LimitedPools(rows(sealed(), ForgeConstants.DECK_SEALED_DIR), rows(storage("draft"), ForgeConstants.DECK_DRAFT_DIR));
+    }
+
+    private static List<PoolRow> rows(final IStorage<DeckGroup> storage, final String dir) {
         final List<PoolRow> rows = new ArrayList<>();
         synchronized (DeckCatalog.DECKS) {
             for (final DeckGroup group : storage) {
@@ -91,7 +101,9 @@ final class OfflineEvents {
                 for (int i = 0; i < group.getAiDecks().size(); i++) {
                     opponents.add(new Opponent("Opponent " + (i + 1), colours(group.getAiDecks().get(i))));
                 }
-                rows.add(new PoolRow(group.getName(), size > 0, size, opponents));
+                final long changed = changed(new File(dir, group.getName()));
+                rows.add(new PoolRow(group.getName(), size > 0, size, size > 0 ? colours(human) : "",
+                        changed > 0 ? DAY.format(Instant.ofEpochMilli(changed)) : null, opponents));
             }
         }
         return rows;

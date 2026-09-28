@@ -532,8 +532,11 @@ final class ToBrowser {
     record LimitedPools(List<PoolRow> sealed, List<PoolRow> draft) {
     }
 
-    /** One saved pool: whether a deck has been built from it, and the opponents its match can be played against. */
-    record PoolRow(String name, boolean built, int deckSize, List<Opponent> opponents) {
+    /**
+     * One saved pool: whether a deck has been built from it, its colours, and the opponents its match can be played
+     * against. changed is the day the pool was last saved or played, as yyyy-MM-dd.
+     */
+    record PoolRow(String name, boolean built, int deckSize, String colors, @Nullable String changed, List<Opponent> opponents) {
     }
 
     record Opponent(String name, String colors) {

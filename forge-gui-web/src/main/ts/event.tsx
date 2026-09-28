@@ -7,12 +7,17 @@ import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { LimitedTable, LobbyTable } from './protocol';
+import { GameMenu, PlayerCount } from './matchbar';
 
 /**
- * The event's row of the match bar: what it is, where it has got to, and the next step. The host sets it up in a
- * dialog over the table, which opens by itself on a table with no event yet.
+ * The event as the head of the table: its mode, product and rules with the players who will play it, then the stages
+ * along a rail whose button is always the next thing to do. Once the packs are out the rules fold to one line, since
+ * nobody needs them then. The host sets the event up in a dialog over the table, which opens by itself on a table with
+ * no event yet.
  */
-export function EventPanel({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
+export function EventHead({ model, lobby, actions, preview, start }: {
+  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; start: () => void;
+}) {
   const lim = lobby.limited!;
   const [setting, setSetting] = useState(!lim.product);
   const draft = lim.kind === 'draft';
@@ -20,8 +25,32 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
   const close = () => setSetting(false);
   const stages = ['Ready up', draft ? 'Draft' : 'Open packs', 'Build', 'Play'];
   const at = eventStage(lobby);
+  const players = lobby.seats.length;
+  // Computers draft the seats the table's players do not fill; they draft but don't play
+  const ai = draft ? Math.max(0, lim.podSize - players) : 0;
+  const slim = lim.started;
+  let button = null;
+  let why = eventStatus(lobby);
+  if (!lim.started) {
+    if (lobby.host && lim.product) {
+      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>;
+    }
+  } else if (model.drafting && ui.draftHidden) {
+    button = <button class="primary big" onClick={() => changeUi(u => { u.draftHidden = false; })}>Return to draft</button>;
+  } else if (lim.activeEventId) {
+    const problem = lobby.problems?.[0];
+    if (lobby.host) {
+      button = <button id="play" class="primary big" disabled={!lobby.canStart} onClick={start} title="Enter starts the match">Play</button>;
+      why = lobby.canStart ? 'Everyone has a deck.' : problem ?? why;
+    } else {
+      why = problem ?? 'Waiting for the host to start the match.';
+    }
+  }
+  const facts = draft
+    ? `${players} players and ${ai} AI · ${pickRuleName(lim.pickRule).toLowerCase()} · ${lim.timer ? `${lim.timer} s a pick` : 'no pick timer'}`
+    : `${players} players · each opens their own pool`;
   return (
-    <div class="event-row">
+    <section class={slim ? 'event-head slim' : 'event-head'} aria-label={draft ? 'The draft' : 'The sealed event'}>
       {lobby.host && !lim.started && setting && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
           <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
@@ -33,34 +62,47 @@ export function EventPanel({ model, lobby, actions }: { model: Model; lobby: Lob
           </div>
         </div>
       )}
-      <span class="event-product">{lim.product ?? 'Not set up yet'}</span>
-      {draft && lim.product && <>
-        <span>{lim.podSize} seats</span>
-        <span>{pickRuleName(lim.pickRule)}</span>
-        <span>{lim.timer ? `${lim.timer} s to pick` : 'No pick timer'}</span>
-      </>}
-      {lobby.host && !lim.started && <button class="link" onClick={() => setSetting(true)}>{lim.product ? 'Edit' : 'Set up'}</button>}
-      <span class="sp" />
-      <ol class="event-trail" aria-label="Where the event is">
-        {stages.map((name, i) => <li key={name} class={i < at ? 'done' : i === at ? 'now' : ''}>{name}</li>)}
-      </ol>
-      {lobby.host && !lim.started && lim.product && (
-        <button class="primary" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>
-      )}
-      {model.drafting && ui.draftHidden && (
-        <button class="primary" onClick={() => changeUi(u => { u.draftHidden = false; })}>Return to draft</button>
-      )}
-    </div>
+      <div class="eh-main">
+        <div class="eh-mode"><GameMenu lobby={lobby} actions={actions} /></div>
+        <div class="eh-title">
+          <span class="event-product">{lim.product ?? 'Not set up yet'}</span>
+          {lobby.host && !lim.started && <button class="link" onClick={() => setSetting(true)}>{lim.product ? 'Edit' : 'Set up'}</button>}
+          {slim && <span class="eh-facts">{facts}</span>}
+        </div>
+        {!slim && (
+          <div class="eh-fields">
+            <div class="eh-field"><span class="field-name">Players</span><PlayerCount lobby={lobby} actions={actions} preview={preview} /></div>
+            {draft && lim.product && <>
+              <div class="eh-field"><span class="field-name">AI drafters</span>
+                <span>{ai ? <>{ai} <span class="muted">to make a pod of {lim.podSize}</span></> : 'None'}</span></div>
+              <div class="eh-field"><span class="field-name">Picks</span><span>{pickRuleName(lim.pickRule)}</span></div>
+              <div class="eh-field"><span class="field-name">Pick timer</span><span>{lim.timer ? `${lim.timer} s` : 'None'}</span></div>
+            </>}
+            {!draft && lim.product && <div class="eh-field"><span class="field-name">Pools</span><span>Each player opens their own</span></div>}
+          </div>
+        )}
+        {!slim && <div class="eh-art" aria-hidden="true"><i class="pk" /><i class="pk" /><i class="pk" /></div>}
+      </div>
+      <div class="eh-rail">
+        <ol class="eh-track" aria-label="Where the event is" style={{ '--at': at }}>
+          {stages.map((name, i) => <li key={name} class={i < at ? 'done' : i === at ? 'now' : ''}><i />{name}</li>)}
+        </ol>
+        <div class="eh-go">
+          {button}
+          <span class="eh-why">{why}</span>
+        </div>
+      </div>
+    </section>
   );
 }
 
-/** Where the event has got to: ready up, the draft or the opening, building, then playing once your deck is on your seat. */
-function eventStage(lobby: LobbyTable): number {
+/** Where the event has got to: ready up, the draft or the opening, building, then playing once every seat that plays has a deck. */
+export function eventStage(lobby: LobbyTable): number {
   const lim = lobby.limited!;
   if (!lim.started) return 0;
   if (!lim.activeEventId) return 1;
-  const mine = lobby.seats[lobby.mySeat];
-  return mine && (mine.deck != null || mine.deckName != null) ? 3 : 2;
+  const playing = lobby.seats.filter(s => s.type !== 'OPEN' && !s.benched);
+  return playing.every(s => s.deck != null || s.deckName != null) ? 3 : 2;
 }
 
 /** The line under the bar at a Draft or Sealed table: who or what the table is waiting on. */

@@ -72,7 +72,7 @@ const GROUP_ICONS: Record<string, ComponentChildren> = {
  * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
  * pointed at, and keeps showing that one while the pointer crosses over to read it. A click on a name chooses it.
  */
-function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
   const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
   const [pointed, setPointed] = useState<Format | null>(null);
@@ -181,7 +181,7 @@ export function fewestSeats(lobby: LobbyTable): number {
   return Math.max(2, lobby.seats.filter(s => s.mine || s.type === 'LOCAL' || s.type === 'REMOTE').length);
 }
 
-function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void }) {
+export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void }) {
   const fewest = fewestSeats(lobby);
   const counts = Array.from({ length: lobby.maxSeats - 1 }, (_, i) => i + 2);
   const drafting = lobby.limited?.phase === 'DRAFTING' && !lobby.limited.activeEventId;
@@ -262,23 +262,21 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
 }
 
 /**
- * Mode · format · players · match · variants, or at a Draft or Sealed table the mode and players only. The names are
- * the tournament rules' own: a format says which cards are allowed, and a match is the games played between decks.
+ * Mode · format · players · match · variants. The names are the tournament rules' own: a format says which cards are
+ * allowed, and a match is the games played between decks. A Draft or Sealed table shows its event instead (event.tsx).
  */
-export function MatchBar({ model, lobby, actions, preview, event }: {
-  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; event?: ComponentChildren;
+export function MatchBar({ model, lobby, actions, preview }: {
+  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
 }) {
-  const lim = lobby.limited;
   return (
     <div class="match-bar">
       <div class="fields">
         <Field name="Mode"><GameMenu lobby={lobby} actions={actions} /></Field>
-        {!lim && lobby.format === 'Constructed' && <Field name="Format"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
-        <Field name="Players" grow={!!lim}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
-        {!lim && <Field name="Match"><MatchLength lobby={lobby} actions={actions} /></Field>}
-        {!lim && <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>}
+        {lobby.format === 'Constructed' && <Field name="Format"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
+        <Field name="Players"><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        <Field name="Match"><MatchLength lobby={lobby} actions={actions} /></Field>
+        <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
       </div>
-      {event}
     </div>
   );
 }

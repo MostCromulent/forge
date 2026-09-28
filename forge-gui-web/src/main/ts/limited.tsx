@@ -1,9 +1,10 @@
-// The Limited pages, as desktop's Sealed screen lays them out: the saved pools with New event beside them, the setup
-// form, and the opponents a pool's deck can be played against. The deck itself is built in the deck editor.
+// The Limited pages against the computer: your saved events as a shelf of cards, the setup form with the event it
+// makes beside it, and the list of opponents a pool's deck plays. The deck itself is built in the deck editor.
 
 import { useEffect, useState } from 'preact/hooks';
-import { StepForm, draftCombo, draftSentence, draftSteps, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
+import { StepForm, draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from './setup';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
+import { Pips } from './symbols';
 import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -11,13 +12,21 @@ import type { PoolRow } from './protocol';
 
 /** Desktop's limited deck is at least forty cards. */
 const DECK_SIZE = 40;
-const GAMES = [1, 3, 5];
+const GAMES: [number, string][] = [[1, '1 game'], [3, 'Best of 3'], [5, 'Best of 5']];
 
 export function Limited({ model, actions }: { model: Model; actions: Actions }) {
   const [creating, setCreating] = useState(false);
   const draft = model.eventKind === 'draft';
   const pools = (draft ? model.limitedPools?.draft : model.limitedPools?.sealed) ?? [];
   const pool = model.eventPool ? pools.find(p => p.name === model.eventPool) : undefined;
+  const kind = draft ? 'Draft' : 'Sealed';
+  const toEvents = pool ? () => actions.poolClose() : creating ? () => setCreating(false) : undefined;
+  const trail = [
+    { label: 'Start', go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
+    { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
+    { label: kind, go: toEvents },
+    ...(pool ? [{ label: pool.name }] : creating ? [{ label: 'New event' }] : []),
+  ];
   return (
     <div class="limited-page">
       <PageHeader class="limited-head">
@@ -26,60 +35,93 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
           <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>Back</button>
         </div>
       </PageHeader>
-      {/* Setting up an event against the AI is the last step, as a table is; Back also steps out of an open pool */}
-      <SetupHead trail={[
-        { label: 'Start', go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
-        { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
-        { label: draft ? 'Draft' : 'Sealed' }]} title="Set up the game" />
+      {pool
+        ? <SetupHead trail={trail} title={pool.name} aside={<YourDeck pool={pool} actions={actions} />}
+            sub={`${draft ? 'Booster draft' : 'Sealed'} · ${pool.opponents.length} opponents built from the same ${draft ? 'draft' : 'packs'}`} />
+        : creating
+          ? <SetupHead trail={trail} title={draft ? 'New booster draft' : 'New sealed event'}
+              aside={<button class="ghost" onClick={() => setCreating(false)}>Back to your events</button>} />
+          : <SetupHead trail={trail} title={draft ? 'Your drafts' : 'Your sealed events'}
+              sub={draft ? 'Draft against seven AI drafters, build forty cards, and play the decks they drafted.'
+                : 'Open packs, build forty cards, and play the decks built from the same packs.'} />}
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
         ? <Opponents pool={pool} draft={draft} actions={actions} />
         : creating
-          ? (draft ? <DraftSetup model={model} actions={actions} cancel={() => setCreating(false)} />
-            : <SealedSetup model={model} actions={actions} cancel={() => setCreating(false)} />)
-          : <Pools pools={pools} draft={draft} actions={actions} create={() => setCreating(true)} />}
+          ? (draft ? <DraftSetup model={model} actions={actions} /> : <SealedSetup model={model} actions={actions} />)
+          : <Events pools={pools} draft={draft} actions={actions} create={() => setCreating(true)} />}
     </div>
   );
 }
 
-function Pools({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
+/** A day as the cards say it: 28 Sept. */
+export function shortDay(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+/** The saved pools as cards, each with the one thing to do next, after a card that starts a new event. */
+function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
+  const [menu, setMenu] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  // The menu closes on any press outside it, as the table's menus do
+  useEffect(() => {
+    if (menu === null) return;
+    const outside = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.ev-more')) setMenu(null); };
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [menu]);
   return (
-    <div class="pools">
-      <div class="pools-new">
-        <button class="primary big" onClick={create}>New event</button>
-        <p class="muted">{draft
-          ? "Draft three packs against seven computer drafters, build a forty-card deck from your picks, and play their decks."
-          : "Open sealed packs, build a forty-card deck from them, and play it against the computer's decks from the same packs."}</p>
-      </div>
-      <div class="pools-list">
-        <h4>{draft ? 'Your drafts' : 'Your sealed pools'} <span>{pools.length}</span></h4>
-        {pools.length === 0 && <p class="muted">No pools yet. New event opens one.</p>}
-        {pools.map(p => (
-          <div key={p.name} class="pool-row">
-            <span class="pool-name"><b>{p.name}</b><span>{p.opponents.length} opponents</span></span>
-            <span class={p.built ? 'pool-state ok' : 'pool-state'}>{p.built ? `Deck built · ${p.deckSize}` : 'No deck yet'}</span>
-            <span class="pool-acts">
-              {deleting === p.name
-                ? <>
-                    <span class="muted">Delete {p.name}?</span>
-                    <button onClick={() => setDeleting(null)}>Keep</button>
-                    <button class="danger" onClick={() => { setDeleting(null); actions.poolDelete(p.name); }}>Delete</button>
-                  </>
-                : <>
-                    <button onClick={() => actions.poolEdit(p.name)}>{p.built ? 'Edit deck' : 'Build deck'}</button>
-                    {p.built && <button class="primary" onClick={() => actions.poolOpen(p.name)}>Play</button>}
-                    <button class="link" onClick={() => setDeleting(p.name)}>Delete</button>
-                  </>}
-            </span>
+    <div class="event-shelf">
+      <button class="ev new" onClick={create}>
+        <span class="plus" aria-hidden="true">+</span>
+        <b>{draft ? 'New draft' : 'New sealed event'}</b>
+        <span>{draft ? 'Choose the packs and draft against seven AI drafters.' : 'Choose the packs, open them, and build your deck.'}</span>
+      </button>
+      {pools.map(p => (
+        <article key={p.name} class={p.built ? 'ev' : 'ev unbuilt'}>
+          <div class="ev-top">
+            <b>{p.name}</b>
+            {p.changed && <span class="sub">Saved {shortDay(p.changed)}</span>}
           </div>
-        ))}
-      </div>
+          <div class="ev-mid">
+            <span class="ev-line deck">
+              {p.built ? <><span class="pips"><Pips colors={p.colors} /></span>Deck built · {p.deckSize} cards</> : 'No deck yet'}
+            </span>
+            <span class="ev-line dim">{p.opponents.length} opponents from the same {draft ? 'draft' : 'packs'}</span>
+          </div>
+          <div class="ev-foot">
+            {deleting === p.name
+              ? <>
+                  <span class="ev-ask">Delete this pool?</span>
+                  <span class="sp" />
+                  <button onClick={() => setDeleting(null)}>Keep</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.poolDelete(p.name); }}>Delete</button>
+                </>
+              : <>
+                  {p.built
+                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>Play</button>
+                        <button onClick={() => actions.poolEdit(p.name)}>Edit deck</button></>
+                    : <button class="primary" onClick={() => actions.poolEdit(p.name)}>Build deck</button>}
+                  <span class="sp" />
+                  <span class="ev-more">
+                    <button class="more" title="More" aria-label={`More for ${p.name}`} aria-expanded={menu === p.name}
+                      onClick={() => setMenu(menu === p.name ? null : p.name)}>⋯</button>
+                    {menu === p.name && (
+                      <div class="ev-menu" role="menu">
+                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(p.name); }}>Delete pool</button>
+                      </div>
+                    )}
+                  </span>
+                </>}
+          </div>
+        </article>
+      ))}
     </div>
   );
 }
 
-function SealedSetup({ model, actions, cancel }: { model: Model; actions: Actions; cancel: () => void }) {
+function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<SealedValue>({});
   // Opening packs takes seconds; until the editor, an error or a taken name answers, a second click would open them again
   const [busy, setBusy] = useState(false);
@@ -97,20 +139,19 @@ function SealedSetup({ model, actions, cancel }: { model: Model; actions: Action
   const taken = model.nameTaken !== null && model.nameTaken === value.name;
   return (
     <div class="setup">
-      <StepForm title="New sealed event" steps={sealedSteps(options)} value={value} onChange={setValue}
-        sentence={v => sealedSentence(options, v)} action="Open the packs" submit={() => send(false)} busy={busy}
+      <StepForm steps={sealedSteps(options)} value={value} onChange={setValue} ticket={sealedTicket(options)}
+        action={sealedAction} submit={() => send(false)} busy={busy}
         problem={taken ? (
           <span class="sentence taken">
             You already have a pool called <b>{value.name}</b>.
             <button class="danger" onClick={() => send(true)}>Replace it</button>
           </span>
         ) : null} />
-      <button class="link setup-cancel" onClick={cancel}>Cancel</button>
     </div>
   );
 }
 
-function DraftSetup({ model, actions, cancel }: { model: Model; actions: Actions; cancel: () => void }) {
+function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<DraftValue>({});
   const [busy, setBusy] = useState(false);
   useEffect(() => setBusy(false), [model.error]);
@@ -118,13 +159,12 @@ function DraftSetup({ model, actions, cancel }: { model: Model; actions: Actions
   if (!options) return <p class="muted pools-wait">Reading what Forge can draft…</p>;
   return (
     <div class="setup">
-      <StepForm title="New booster draft" steps={draftSteps(options)} value={value} onChange={setValue}
-        sentence={draftSentence} action="Start draft" busy={busy} submit={() => {
+      <StepForm steps={draftSteps(options)} value={value} onChange={setValue} ticket={draftTicket()}
+        action="Start drafting" busy={busy} submit={() => {
           setBusy(true);
           actions.draftStart({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
             theme: value.theme, cubeId: value.cubeId });
         }} />
-      <button class="link setup-cancel" onClick={cancel}>Cancel</button>
     </div>
   );
 }
@@ -134,59 +174,73 @@ export function severalCap(opponents: number): number {
   return Math.min(3, opponents);
 }
 
-type Mode = 'one' | 'several' | 'gauntlet';
+const COLOUR_NAMES: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
 
-/** Desktop's ways to play a pool: one opponent, several at once (a draft only), or every one in turn. */
+/** A deck's colours in words: White–Green, or the count past three, or Colourless. */
+export function colourName(colors: string): string {
+  const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean);
+  if (!names.length) return 'Colourless';
+  if (names.length > 3) return names.length === 5 ? 'All five colours' : 'Four colours';
+  return names.join('–');
+}
+
+/** Your deck by the heading: its colours, its size, and the way back to the editor. */
+function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
+  return (
+    <span class="your-deck">
+      {pool.built && <span class="pips"><Pips colors={pool.colors} /></span>}
+      <span><b>Your deck</b> <span class="muted">· {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}</span></span>
+      <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
+    </span>
+  );
+}
+
+/**
+ * The opponents as one numbered list, each row playing that one. The numbers are the gauntlet's order, so the gauntlet
+ * is the list played through, and a draft's free-for-all is chosen at random from it.
+ */
 function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; actions: Actions }) {
-  const [mode, setMode] = useState<Mode>('one');
-  const [opponent, setOpponent] = useState(0);
   const cap = severalCap(pool.opponents.length);
   const [count, setCount] = useState(cap);
   const [games, setGames] = useState(3);
   const short = pool.deckSize < DECK_SIZE;
-  const chosen = pool.opponents[opponent];
   const several = draft && cap >= 2;
-  const play = mode === 'gauntlet' ? 'Start the gauntlet' : mode === 'several' ? `Play ${count} opponents` : `Play ${chosen?.name}`;
-  const row = (id: Mode, title: string, line: string, extra?: preact.ComponentChildren) => (
-    <div class={mode === id ? 'radio on' : 'radio'} data-mode={id} onClick={() => setMode(id)}>
-      <i />
-      <div><b>{title}</b><span>{line}</span>{extra}</div>
-    </div>
-  );
+  const play = (mode: 'one' | 'several' | 'gauntlet', opponent = 0) => actions.poolPlay(pool.name, mode, opponent, count, games);
   return (
     <div class="opponents">
-      <div class="opps">
-        <h3>{pool.name} <span class="muted">Your deck: {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}</span></h3>
-        {row('one', 'One opponent', 'A match against one of the decks built from the same packs.', (
-          <div class="opp-list">
-            {pool.opponents.map((o, i) => (
-              <button key={o.name} class={i === opponent ? 'opp on' : 'opp'} aria-pressed={i === opponent}
-                onClick={() => { setMode('one'); setOpponent(i); }}>
-                {o.name}<span class="opp-colours">{o.colors.split('').map(c => <i key={c} class={`pip sm pip-${c}`}>{c}</i>)}</span>
-              </button>
-            ))}
-          </div>
+      <div class="opp-head">
+        <span class="kicker">Opponents</span>
+        <span class="kicker">Games</span>
+        <span class="count" role="group" aria-label="Games in a match">
+          {GAMES.map(([n, label]) => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>{label}</button>)}
+        </span>
+      </div>
+      {short && <p class="opp-short">Your deck has {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</p>}
+      <ol class="opp-list">
+        {pool.opponents.map((o, i) => (
+          <li key={o.name} class="opp-row">
+            <span class="n">{i + 1}</span>
+            <span class="pips"><Pips colors={o.colors} /></span>
+            <span class="opp-name">{o.name} <span class="muted">· {colourName(o.colors)}</span></span>
+            <button class="opp-play" onClick={() => play('one', i)} aria-label={`Play ${o.name}`}>Play</button>
+          </li>
         ))}
-        {several && row('several', 'Several opponents', 'A free-for-all against decks chosen at random.', (
+      </ol>
+      <div class="opp-foot">
+        <span class="say"><b>Gauntlet:</b> all {pool.opponents.length} in this order, a match each. Lose one and it ends.</span>
+        <button class="outline" onClick={() => play('gauntlet')}>Start the gauntlet</button>
+      </div>
+      {several && (
+        <div class="opp-foot">
+          <span class="say"><b>Free-for-all:</b> you against several decks at once, chosen at random.</span>
           <span class="stepper">
             <button class="step" disabled={count <= 2} aria-label="One opponent fewer" onClick={() => setCount(count - 1)}>&minus;</button>
             <span class="n">{count}</span>
             <button class="step" disabled={count >= cap} aria-label="One opponent more" onClick={() => setCount(count + 1)}>+</button>
           </span>
-        ))}
-        {row('gauntlet', 'Gauntlet', `All ${pool.opponents.length} opponents, one match at a time. Win a match to meet the next.`)}
-      </div>
-      <div class="opp-side">
-        <span class="muted">Games in match</span>
-        <span class="seg" role="group" aria-label="Games in match">
-          {GAMES.map(n => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>{n === 1 ? '1' : `Best of ${n}`}</button>)}
-        </span>
-        <button class="primary" disabled={mode === 'one' && !chosen} onClick={() => actions.poolPlay(pool.name, mode, opponent, count, games)}>
-          {play}
-        </button>
-        {short && <span class="muted">Your deck has {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</span>}
-        <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
-      </div>
+          <button class="outline" onClick={() => play('several')}>Play {count} opponents</button>
+        </div>
+      )}
     </div>
   );
 }

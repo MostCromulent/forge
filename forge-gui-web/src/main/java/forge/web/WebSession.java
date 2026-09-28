@@ -430,6 +430,11 @@ public final class WebSession {
             case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
                     "editorDeck", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
                 if (!(stage instanceof Playing)) {
+                    // A pool's deck, saved with every edit, changes its row, which the opponents screen reads the deck
+                    // from; it goes first, since closing the editor lists every deck again before the page changes
+                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
+                        channel.send(OfflineEvents.pools());
+                    }
                     decks.onMessage(channel, msg);
                 }
             }

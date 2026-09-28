@@ -25,6 +25,7 @@ import forge.web.ToBrowser.LandSet;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.LinkedHashMap;
@@ -667,13 +668,28 @@ final class DeckEditor {
     }
 
     private static List<LandSet> landSets() {
-        final List<LandSet> out = new ArrayList<>();
-        for (final CardEdition e : StaticData.instance().getSortedEditions()) {
-            if (e.hasBasicLands()) {
-                out.add(new LandSet(e.getCode(), e.getName()));
+        return LandSets.ALL;
+    }
+
+    /**
+     * The sets with basic lands, newest first, built once from the editions themselves. StaticData's own sorted list is
+     * built lazily without a lock, and two editors opening at once (every player's event pool arrives together) read it
+     * while it is still being sorted.
+     */
+    private static final class LandSets {
+        static final List<LandSet> ALL = build();
+
+        private static List<LandSet> build() {
+            final List<CardEdition> editions = new ArrayList<>();
+            for (final CardEdition e : StaticData.instance().getEditions()) {
+                if (e.hasBasicLands()) {
+                    editions.add(e);
+                }
             }
+            Collections.sort(editions);
+            Collections.reverse(editions);
+            return editions.stream().map(e -> new LandSet(e.getCode(), e.getName())).toList();
         }
-        return out;
     }
 
     /** The printing a new copy takes: the one the deck already holds, if it holds only one, or the preferred art. */

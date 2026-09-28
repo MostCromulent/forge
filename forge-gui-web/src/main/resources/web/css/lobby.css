@@ -105,6 +105,12 @@ html[data-motion="reduced"] .wait-card.joining .wait-mark { animation: none; }
 .setup-head .crumb { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); }
 .setup-head .crumb [aria-current] { color: var(--text); }
 .setup-head h2 { margin: 0; font-size: 22px; text-wrap: balance; }
+.setup-title { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.setup-title h2 { flex: 1; min-width: 0; }
+.setup-aside { display: flex; align-items: center; gap: 10px; }
+.setup-sub { margin: -2px 0 0; font-size: 13px; color: var(--muted); }
+button.ghost { background: none; border-color: transparent; color: var(--muted); }
+button.ghost:hover { color: var(--text); background: var(--surface-2); }
 /* The start page's trail and question sit over its plaques, at their width */
 .start-step { display: grid; gap: 14px; width: min(100%, 698px); }
 .lobby-main > .setup-head { width: min(100%, 960px); }
@@ -674,16 +680,56 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 /* The match bar: labelled fields in one strip above the seats */
 .match-bar { margin-bottom: 14px; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
 .match-bar .fields { display: flex; flex-wrap: wrap; }
-/* A Draft or Sealed table's event: a second row of the bar */
-.event-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 9px 14px; border-top: 1px solid var(--line);
-  background: var(--bg); border-radius: 0 0 10px 10px; font-size: 12.5px; color: var(--muted); }
-.event-row .event-product { color: var(--text); font-weight: 600; }
-.event-row .sp { flex: 1; }
-.event-trail { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 11.5px; color: var(--faint); }
-.event-trail li + li::before { content: ''; display: inline-block; width: 14px; height: 1px; background: var(--line); margin-right: 6px; vertical-align: middle; }
-.event-trail li.done { color: var(--muted); }
-.event-trail li.now { color: var(--accent-2); font-weight: 600; }
-.event-status { margin: 0; font-size: 13px; color: var(--muted); }
+/* A Draft or Sealed table's event, at the head of the table in place of the bar: mode, product, players and rules,
+   a fan of packs, and the stages on a rail whose button is the next thing to do */
+.event-head { margin-bottom: 14px; width: min(100%, 960px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.eh-main { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 190px; gap: 10px 24px; padding: 16px 22px 16px;
+  border-radius: 12px 12px 0 0; background: radial-gradient(50% 120% at 88% 30%, color-mix(in srgb, var(--accent-2) 6%, transparent) 0%, transparent 70%), linear-gradient(180deg, var(--surface-2), var(--surface)); }
+.eh-mode .field-value { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-2); }
+.eh-title { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; min-width: 0; }
+.eh-title .event-product { font-size: 25px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.eh-title .link { font-size: 13px; }
+.eh-fields { display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: end; }
+.eh-field { display: grid; gap: 4px; font-size: 13px; }
+.eh-field .muted { color: var(--muted); }
+.eh-art { grid-column: 2; grid-row: 1 / 4; position: relative; height: 100px; align-self: center; filter: drop-shadow(0 8px 10px #0009); }
+/* A booster pack: crimped at both ends, a thin brass edge, a quiet sheen and a small mark */
+.eh-art .pk { position: absolute; width: 48px; height: 76px; background: color-mix(in srgb, var(--accent-2) 50%, #2a2010); clip-path: polygon(0.0% 3.5%, 5.0% 0%, 10.0% 3.5%, 15.0% 0%, 20.0% 3.5%, 25.0% 0%, 30.0% 3.5%, 35.0% 0%, 40.0% 3.5%, 45.0% 0%, 50.0% 3.5%, 55.0% 0%, 60.0% 3.5%, 65.0% 0%, 70.0% 3.5%, 75.0% 0%, 80.0% 3.5%, 85.0% 0%, 90.0% 3.5%, 95.0% 0%, 100.0% 3.5%, 100.0% 96.5%, 95.0% 100%, 90.0% 96.5%, 85.0% 100%, 80.0% 96.5%, 75.0% 100%, 70.0% 96.5%, 65.0% 100%, 60.0% 96.5%, 55.0% 100%, 50.0% 96.5%, 45.0% 100%, 40.0% 96.5%, 35.0% 100%, 30.0% 96.5%, 25.0% 100%, 20.0% 96.5%, 15.0% 100%, 10.0% 96.5%, 5.0% 100%, 0.0% 96.5%); }
+.eh-art .pk::before { content: ''; position: absolute; inset: 1.5px; clip-path: polygon(0.0% 3.5%, 5.0% 0%, 10.0% 3.5%, 15.0% 0%, 20.0% 3.5%, 25.0% 0%, 30.0% 3.5%, 35.0% 0%, 40.0% 3.5%, 45.0% 0%, 50.0% 3.5%, 55.0% 0%, 60.0% 3.5%, 65.0% 0%, 70.0% 3.5%, 75.0% 0%, 80.0% 3.5%, 85.0% 0%, 90.0% 3.5%, 95.0% 0%, 100.0% 3.5%, 100.0% 96.5%, 95.0% 100%, 90.0% 96.5%, 85.0% 100%, 80.0% 96.5%, 75.0% 100%, 70.0% 96.5%, 65.0% 100%, 60.0% 96.5%, 55.0% 100%, 50.0% 96.5%, 45.0% 100%, 40.0% 96.5%, 35.0% 100%, 30.0% 96.5%, 25.0% 100%, 20.0% 96.5%, 15.0% 100%, 10.0% 96.5%, 5.0% 100%, 0.0% 96.5%);
+  background: repeating-linear-gradient(90deg, #ffffff12 0 1.5px, transparent 1.5px 3.5px) top / 100% 7px no-repeat,
+              repeating-linear-gradient(90deg, #ffffff12 0 1.5px, transparent 1.5px 3.5px) bottom / 100% 7px no-repeat,
+              linear-gradient(155deg, #2b3343 0%, #202733 42%, #2d3546 56%, #1c222c 100%); }
+.eh-art .pk::after { content: ''; position: absolute; left: 50%; top: 44%; width: 10px; height: 10px; margin: -6px; transform: rotate(45deg);
+  border: 1.5px solid color-mix(in srgb, var(--accent-2) 55%, transparent); }
+.eh-art .pk:nth-child(1) { left: 30px; top: 14px; transform: rotate(-9deg); }
+.eh-art .pk:nth-child(2) { left: 70px; top: 4px; z-index: 1; }
+.eh-art .pk:nth-child(3) { left: 110px; top: 14px; transform: rotate(9deg); }
+/* Once the packs are out, the head is one line */
+.event-head.slim .eh-main { grid-template-columns: auto minmax(0, 1fr); align-items: center; padding: 12px 22px; }
+.event-head.slim .eh-title .event-product { font-size: 18px; }
+.eh-facts { font-size: 12.5px; color: var(--muted); }
+.eh-rail { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: center; padding: 14px 22px 16px; border-top: 1px solid var(--line); }
+/* Four stops on a line, brass up to where the event is */
+.eh-track { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); margin: 0; padding: 0; list-style: none; }
+.eh-track::before, .eh-track::after { content: ''; position: absolute; left: 12.5%; top: 10px; height: 3px; border-radius: 2px; }
+.eh-track::before { right: 12.5%; background: var(--line); }
+.eh-track::after { width: calc(var(--at) * 25%); background: var(--brass); }
+.eh-track li { position: relative; z-index: 1; display: grid; justify-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.eh-track li i { width: 22px; height: 22px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line-bright); box-sizing: border-box; }
+.eh-track li.done { color: var(--text); }
+.eh-track li.done i, .eh-track li.now i { border: 0; background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent-2) 55%, #fff), var(--accent-2) 55%, color-mix(in srgb, var(--accent-2) 62%, #000)); }
+.eh-track li.now { color: var(--accent-2); font-weight: 700; }
+.eh-track li.now i { box-shadow: 0 0 0 5px var(--accent-glow); }
+.eh-go { display: grid; justify-items: end; gap: 5px; min-width: 200px; }
+.eh-go .big { padding: 9px 26px; font-size: 14.5px; }
+.eh-why { font-size: 12.5px; color: var(--muted); text-align: right; max-width: 34ch; }
+@media (max-width: 760px) {
+  .eh-main { grid-template-columns: 1fr; }
+  .eh-art { display: none; }
+  .eh-rail { grid-template-columns: 1fr; }
+  .eh-go { justify-items: start; }
+  .eh-why { text-align: left; }
+}
 .field { display: grid; gap: 2px; padding: 7px 14px; border-right: 1px solid var(--line); min-width: 0; }
 .field:last-child { border-right: 0; }
 .field.grow { flex: 1; }

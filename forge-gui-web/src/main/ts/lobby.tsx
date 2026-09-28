@@ -15,7 +15,7 @@ import { imageUrl } from './images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
-import { EventPanel, eventStatus } from './event';
+import { EventHead } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { SetupHead, WAY_NAMES } from './header';
 import type { Actions } from './actions';
@@ -38,7 +38,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
   // The table is the last step of setting up: how you are playing, and what. The host steps back by leaving the table,
   // to the start page or to its kinds of game; a guest joined the host's choices and has no steps of its own to go to
-  const way = lobby.shareable ? 'friends' : 'play';
+  // A guest only ever reaches a table by a link, so its table is always one with friends
+  const way = lobby.shareable || !lobby.host ? 'friends' : 'play';
   const back = (to: 'play' | 'friends' | null) => lobby.host ? () => {
     changeUi(u => { u.menuChoice = to; });
     actions.leaveLobby();
@@ -50,18 +51,20 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
         <SetupHead trail={[{ label: 'Start', go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
-          title={lobby.host ? 'Set up the game' : 'The host is setting up the game'} />
-        {/* A new kind of event is set up afresh, so its dialog opens again */}
-        <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview}
-          event={lim && <EventPanel key={lim.kind} model={model} lobby={lobby} actions={actions} />} />
-        {lim && <p class="event-status">{eventStatus(lobby)}</p>}
+          title={lobby.host ? 'Set up the game' : lim?.activeEventId ? 'Build your deck, then play'
+            : lim?.started ? (lim.kind === 'draft' ? 'The draft is on' : 'Opening the packs') : 'The host is setting up the game'} />
+        {/* A Draft or Sealed table is its event, which carries the mode and players itself; a new kind of event is set up
+            afresh, so its dialog opens again */}
+        {lim
+          ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => actions.startMatch(ui.spectate)} />
+          : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
-        {/* Until the pools are out the event panel says what comes next; the match follows them */}
-        {(!lim || lim.activeEventId) && <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
+        {/* An event's Play is on its rail, which also says what the match waits on; only a warning about illegal decks is left */}
+        {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
       </div>
       {seat && picker?.kind === 'deck' && <DeckFinder model={model} actions={actions} seat={{ index: picker.seat, seat }} close={close} />}
       {seat && picker && (picker.kind === 'planes' || picker.kind === 'schemes' || picker.kind === 'vanguard') && (
@@ -261,16 +264,21 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
         <b>Not playable yet</b>
         <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
       </div>
-      {/* Illegal decks do not stop the match; as on desktop, Play asks whether to ignore them */}
-      {lobby.canStart && lobby.illegalDecks.length > 0 && (
-        <div class="not-yet warn">
-          <b>Not legal for this format</b>
-          <ul>{lobby.illegalDecks.map(p => <li key={p}>{p}</li>)}</ul>
-          <p class="hint">{lobby.legalityEnforced
-            ? 'Play will ask whether to ignore this and play anyway.'
-            : 'Deck legality is not enforced in the options, so these decks play as they are.'}</p>
-        </div>
-      )}
+      <IllegalDecks lobby={lobby} />
+    </div>
+  );
+}
+
+/** Illegal decks do not stop the match; as on desktop, Play asks whether to ignore them. */
+function IllegalDecks({ lobby }: { lobby: LobbyTable }) {
+  if (!lobby.canStart || !lobby.illegalDecks.length) return null;
+  return (
+    <div class="not-yet warn">
+      <b>Not legal for this format</b>
+      <ul>{lobby.illegalDecks.map(p => <li key={p}>{p}</li>)}</ul>
+      <p class="hint">{lobby.legalityEnforced
+        ? 'Play will ask whether to ignore this and play anyway.'
+        : 'Deck legality is not enforced in the options, so these decks play as they are.'}</p>
     </div>
   );
 }

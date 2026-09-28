@@ -1223,6 +1223,8 @@ export interface PoolRow {
   name: string;
   built: boolean;
   deckSize: number;
+  colors: string;
+  changed?: string;
   opponents: Opponent[];
 }
 

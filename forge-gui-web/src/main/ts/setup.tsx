@@ -45,16 +45,66 @@ function reopen<V>(steps: Step<V>[], v: V, id: string): V {
   return next;
 }
 
-export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy }: {
-  title: string; steps: Step<V>[]; value: V; onChange: (v: V) => void; sentence: (v: V) => string; action: string;
-  submit: () => void; problem?: JSX.Element | null; busy?: boolean;
+/**
+ * What the event will be, beside the questions: filled in as they are answered, with the button that starts it. A row
+ * with no value yet says so.
+ */
+export interface Ticket<V> {
+  title: string;
+  rows: (v: V) => [string, string | null][];
+  /** What the button does, under it. */
+  note: string;
+}
+
+export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy, ticket }: {
+  title?: string; steps: Step<V>[]; value: V; onChange: (v: V) => void; sentence?: (v: V) => string;
+  action: string | ((v: V) => string); submit: () => void; problem?: JSX.Element | null; busy?: boolean; ticket?: Ticket<V>;
 }) {
+  const open = openStep(steps, value);
+  const label = typeof action === 'string' ? action : action(value);
+  const button = <button class={ticket ? 'primary big' : 'primary'} disabled={busy || open !== null} onClick={submit}>{busy ? 'Opening…' : label}</button>;
+  const questions = <Questions steps={steps} value={value} onChange={onChange} title={title} />;
+  if (ticket) {
+    return (
+      <div class="wiz-ticket">
+        {questions}
+        <aside class="ticket" aria-label="Your event">
+          <div class="ticket-head"><span class="ticket-kicker">Your event</span><b>{ticket.title}</b></div>
+          <dl>
+            {ticket.rows(value).map(([name, v]) => <>
+              <dt key={name}>{name}</dt><dd class={v === null ? 'pending' : undefined}>{v ?? 'Not chosen yet'}</dd>
+            </>)}
+          </dl>
+          <div class="ticket-foot">
+            {problem}
+            {button}
+            <small>{ticket.note}</small>
+          </div>
+        </aside>
+      </div>
+    );
+  }
+  return (
+    <div class="wiz">
+      {questions}
+      {open === null && (
+        <div class="wfoot">
+          {problem ?? <span class="sentence">{sentence?.(value)}</span>}
+          {button}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The questions: answered ones folded to a line, the open one, then those still to come. */
+function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; value: V; onChange: (v: V) => void; title?: string }) {
   const open = openStep(steps, value);
   const shown = steps.filter(s => applies(s, value));
   const openAt = open === null ? shown.length : shown.findIndex(s => s.id === open);
   return (
-    <div class="wiz">
-      <h3 class="wiz-title">{title}</h3>
+    <div class="wiz-steps">
+      {title && <h3 class="wiz-title">{title}</h3>}
       {shown.map((step, i) => {
         if (i < openAt) {
           return (
@@ -80,12 +130,6 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
           </div>
         );
       })}
-      {open === null && (
-        <div class="wfoot">
-          {problem ?? <span class="sentence">{sentence(value)}</span>}
-          <button class="primary" disabled={busy} onClick={submit}>{busy ? 'Opening…' : action}</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -201,6 +245,48 @@ export function sealedSentence(options: LimitedOptions, v: SealedValue): string 
     case 'Import': return `${(v.packs ?? 0) + 1} packs of CubeCobra cube ${v.cubeId}.`;
     default: return `${v.block}: ${v.combo}.`;
   }
+}
+
+/** How many packs a sealed pool opens, where the form asks; a CubeCobra pool opens one more than it asks for. */
+function packCount(v: SealedValue): number | undefined {
+  return hasPackCount(v) && v.packs !== undefined ? v.packs + (v.product === 'Import' ? 1 : 0) : undefined;
+}
+
+function sealedProduct(options: LimitedOptions, v: SealedValue): string | null {
+  if (!v.product) return null;
+  if (isBlock(v)) return v.block ?? productName(v.product);
+  if (v.product === 'Prerelease') return options.prereleases.find(e => e.code === v.edition)?.name ?? productName(v.product);
+  if (v.product === 'Custom') return v.template ?? productName(v.product);
+  if (v.product === 'Import') return v.cubeId ? `CubeCobra ${v.cubeId}` : productName(v.product);
+  return productName(v.product);
+}
+
+function sealedPacks(v: SealedValue): string | null {
+  if (v.product === 'Prerelease') return v.edition ? 'A prerelease kit' : null;
+  if (isBlock(v)) return v.combo ?? null;
+  const n = packCount(v);
+  return n === undefined ? null : String(n);
+}
+
+/** The offline sealed event beside its questions. Desktop builds seven opponents from the same packs. */
+export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
+  return {
+    title: 'Sealed',
+    rows: v => [
+      ['Product', sealedProduct(options, v)],
+      ['Packs', sealedPacks(v)],
+      ['Name', v.name ?? null],
+      ['Your deck', '40 cards or more'],
+      ['Opponents', '7, from the same packs'],
+    ],
+    note: 'Opens the deck editor with your pool',
+  };
+}
+
+/** What opening the pool says it does: the number of packs when the form asked for it. */
+export function sealedAction(v: SealedValue): string {
+  const n = packCount(v);
+  return n ? `Open ${n} packs` : v.product === 'Prerelease' ? 'Open the kit' : 'Open the packs';
 }
 
 // ---- Draft -------------------------------------------------------------------------------------------------------
@@ -397,6 +483,35 @@ export function draftSentence(v: DraftValue, online = false): string {
     case 'Import': return `A draft of CubeCobra cube ${v.cubeId}.`;
     default: return `${v.block}: ${draftCombo(v)}.`;
   }
+}
+
+function draftProduct(v: DraftValue): string | null {
+  const name = DRAFT_PRODUCTS.find(p => p[0] === v.product)?.[1];
+  if (!name) return null;
+  switch (v.product) {
+    case 'Block': case 'FantasyBlock': {
+      const sets = draftCombo(v);
+      return v.block ? (sets ? `${v.block}: ${sets}` : v.block) : name;
+    }
+    case 'Custom': return v.cube ?? name;
+    case 'Chaos': return v.theme ? `Chaos: ${v.theme}` : name;
+    case 'Import': return v.cubeId ? `CubeCobra ${v.cubeId}` : name;
+    default: return name;
+  }
+}
+
+/** The offline draft beside its questions: seven computers draft beside you, and their decks are your opponents. */
+export function draftTicket(): Ticket<DraftValue> {
+  return {
+    title: 'Booster draft',
+    rows: v => [
+      ['Product', draftProduct(v)],
+      ['Drafters', 'You and 7 AI'],
+      ['Your deck', '40 cards or more'],
+      ['Opponents', 'The 7 decks drafted beside you'],
+    ],
+    note: 'Opens the first pack',
+  };
 }
 
 function PackSets({ sets, packs, done }: { sets: string[]; packs: number; done: (packs: string[]) => void }) {

@@ -28,7 +28,7 @@ export interface SetupStep {
  * The trail through game setup and the question the page asks, in the same place on every setup page: the start page,
  * the kinds of game, and the table. Each earlier step in the trail goes back to it.
  */
-export function SetupHead({ trail, title }: { trail: SetupStep[]; title: string }) {
+export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
   return (
     <div class="setup-head">
       <nav class="crumb" aria-label="Game setup">
@@ -39,7 +39,12 @@ export function SetupHead({ trail, title }: { trail: SetupStep[]; title: string 
           </>
         ))}
       </nav>
-      <h2>{title}</h2>
+      {/* What the page is about sits by the heading: your deck before a match, or the way back out of a form */}
+      <div class="setup-title">
+        <h2>{title}</h2>
+        {aside && <div class="setup-aside">{aside}</div>}
+      </div>
+      {sub && <p class="setup-sub">{sub}</p>}
     </div>
   );
 }

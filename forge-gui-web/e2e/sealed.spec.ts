@@ -16,12 +16,12 @@ test('a sealed pool opened from the menu is played against the computer', async 
   await page.click('.chooser [data-kind=sealed]');
   await expect(page.locator('#limited')).toBeVisible();
 
-  await page.click('text=New event');
+  await page.click('.ev.new');
   await page.click('.tile-choice:has-text("Full card pool")');
   await page.click('.stp-open button:has-text("Continue")');
   await page.click('.stp-open button:has-text("Continue")');
-  await expect(page.locator('.wfoot .sentence')).toContainText('6 packs from the full card pool');
-  await page.click('.wfoot button:has-text("Open the packs")');
+  await expect(page.locator('.ticket')).toContainText('Full card pool');
+  await page.click('.ticket button:has-text("Open 6 packs")');
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.check-fixed')).toHaveText('Limited · 40 cards');
@@ -29,9 +29,9 @@ test('a sealed pool opened from the menu is played against the computer', async 
   await page.click('.editor-head button.primary');
 
   await expect(page.locator('.opponents')).toBeVisible();
-  const play = page.locator('.opp-side button.primary');
-  await expect(play).toBeEnabled();
-  await play.click();
+  // The deck saved in the editor is the one the opponents screen reads
+  await expect(page.locator('.your-deck')).toContainText('40 cards');
+  await page.click('.opp-row .opp-play >> nth=0');
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
   await gameStarted(page);
 });

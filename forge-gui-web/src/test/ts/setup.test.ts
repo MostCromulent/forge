@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  choose, draftBlockChoice, draftCombo, draftSteps, openStep, podChoices, podStart, sealedBlockChoice, sealedSteps, type DraftValue, type SealedValue,
+  choose, draftBlockChoice, draftCombo, draftSteps, draftTicket, openStep, podChoices, podStart, sealedAction, sealedBlockChoice, sealedSteps,
+  sealedTicket, type DraftValue, type SealedValue,
 } from '../../main/ts/setup';
 import type { LimitedOptions } from '../../main/ts/protocol';
 
@@ -108,5 +109,29 @@ describe('the table rules of an online draft', () => {
     expect(podStart(4, 2)).toBe(4);
     expect(podStart(4, 6)).toBe(6);
     expect(podStart(8, 1)).toBe(8);
+  });
+});
+
+describe('the event beside the setup form', () => {
+  const ticket = sealedTicket(options);
+  const row = (v: SealedValue, name: string) => ticket.rows(v).find(([n]) => n === name)?.[1];
+  // Fails if the button stops saying how many packs it opens, or a CubeCobra pool loses the pack it adds
+  it('names the packs the button opens', () => {
+    expect(sealedAction({ product: 'Full', packs: 6 })).toBe('Open 6 packs');
+    expect(sealedAction({ product: 'Import', packs: 5, cubeId: 'x' })).toBe('Open 6 packs');
+    expect(sealedAction({ product: 'Prerelease', edition: 'DSK' })).toBe('Open the kit');
+  });
+  // Fails if an unanswered question fills its row, or an answered one is not shown
+  it('fills in as the questions are answered', () => {
+    expect(row({}, 'Product')).toBeNull();
+    expect(row({ product: 'Block', block: 'Innistrad', combo: '6 ISD' }, 'Product')).toBe('Innistrad');
+    expect(row({ product: 'Block', block: 'Innistrad', combo: '6 ISD' }, 'Packs')).toBe('6 ISD');
+    expect(row({ product: 'Prerelease', edition: 'DSK' }, 'Product')).toBe('Duskmourn');
+    expect(row({ product: 'Full', packs: 6, name: 'Friday' }, 'Name')).toBe('Friday');
+  });
+  it('says which sets a block draft is from', () => {
+    const product = (v: DraftValue) => draftTicket().rows(v).find(([n]) => n === 'Product')?.[1];
+    expect(product({ product: 'Block', block: 'Return to Ravnica', combo: 'RTR/RTR/RTR' })).toBe('Return to Ravnica: RTR/RTR/RTR');
+    expect(product({ product: 'Full' })).toBe('Full card pool');
   });
 });
