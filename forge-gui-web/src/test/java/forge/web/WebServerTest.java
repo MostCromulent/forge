@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.ImageKeys;
 import forge.localinstance.properties.ForgeConstants;
+import forge.sound.MusicPlaylist;
 import forge.sound.SoundSystem;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -154,6 +155,31 @@ public class WebServerTest {
         final HttpResponse<byte[]> past = http.send(HttpRequest.newBuilder(URI.create(url))
                 .header("Range", "bytes=" + whole.length + "-").build(), HttpResponse.BodyHandlers.ofByteArray());
         Assert.assertEquals(past.statusCode(), 416);
+    }
+
+    /** Fails if the rest of a track is sent whole, which a player moving on from it mostly throws away. */
+    @Test
+    public void aTrackIsSentASliceAtATime() throws Exception {
+        final File dir = SoundSystem.findMusicDirectory(MusicPlaylist.MENUS);
+        Assert.assertNotNull(dir, "no menu music");
+        final File[] tracks = dir.listFiles((d, name) -> name.endsWith(".mp3"));
+        Assert.assertNotNull(tracks);
+        final File track = Arrays.stream(tracks).max((a, b) -> Long.compare(a.length(), b.length())).orElseThrow();
+        final byte[] whole = Files.readAllBytes(track.toPath());
+        final int slice = 1 << 20;
+        Assert.assertTrue(whole.length > slice, "the longest menu track fits in one slice, so this shows nothing");
+        final String url = origin() + "/music?name=menu&track=" + URLEncoder.encode(track.getName(), StandardCharsets.UTF_8).replace("+", "%20")
+                + "&token=secret";
+
+        final HttpResponse<byte[]> first = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=0-").build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(first.statusCode(), 206);
+        Assert.assertEquals(first.headers().firstValue("content-range").orElse(""), "bytes 0-" + (slice - 1) + "/" + whole.length);
+        Assert.assertEquals(first.body(), Arrays.copyOfRange(whole, 0, slice));
+
+        final HttpResponse<byte[]> next = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=" + slice + "-").build(),
+                HttpResponse.BodyHandlers.ofByteArray());
+        Assert.assertEquals(next.body(), Arrays.copyOfRange(whole, slice, Math.min(whole.length, 2 * slice)));
     }
 
     // An image key is joined onto a folder, and some are also tried with no extension, so ".." in one reached any file

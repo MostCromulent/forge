@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import forge.ImageKeys;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
@@ -52,6 +53,7 @@ import org.tinylog.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.net.URLEncoder;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
@@ -97,6 +99,8 @@ public final class WebServer implements AutoCloseable {
      */
     private static final String KEEP_AN_HOUR = "private, max-age=3600";
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
+    /** The most one answer to a range of audio carries: about a minute of music at 128 kbps. */
+    private static final int AUDIO_SLICE = 1 << 20;
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
     /**
@@ -490,6 +494,11 @@ public final class WebServer implements AutoCloseable {
     /**
      * A browser asks for audio in byte ranges. Answered only in whole files, it cannot seek or reuse its cache, so it
      * downloads a track or sound again each time it plays it.
+     *
+     * A media player asks for the rest of a track from where it is ("bytes=0-"), and often lets the answer go: as it
+     * probes a file before playing it, and whenever the player reloads or moves to another screen and so another
+     * track. The rest of a track is several megabytes, so a range is answered a slice at a time; what the browser lets
+     * go costs at most a slice, and it asks for the next one as it plays. Only the slice is read from disk.
      */
     private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl)
             throws IOException {
@@ -497,35 +506,45 @@ public final class WebServer implements AutoCloseable {
             notFound(ctx);
             return;
         }
-        final byte[] body = Files.readAllBytes(file.toPath());
-        int from = 0;
-        int to = body.length - 1;
+        final long length = file.length();
+        long from = 0;
+        long to = length - 1;
         // Several ranges in one request, or a header this does not read, are answered with the whole file
         final Matcher m = range == null ? null : BYTE_RANGE.matcher(range.trim());
         final boolean partial = m != null && m.matches() && !(m.group(1).isEmpty() && m.group(2).isEmpty());
         if (partial) {
-            final Integer first = m.group(1).isEmpty() ? null : Ints.tryParse(m.group(1));
-            final Integer last = m.group(2).isEmpty() ? null : Ints.tryParse(m.group(2));
+            final Long first = m.group(1).isEmpty() ? null : Longs.tryParse(m.group(1));
+            final Long last = m.group(2).isEmpty() ? null : Longs.tryParse(m.group(2));
             if (m.group(1).isEmpty()) {
-                from = last == null ? body.length : Math.max(0, body.length - last);
+                from = last == null ? length : Math.max(0, length - last);
             } else {
-                from = first == null ? body.length : first;
+                from = first == null ? length : first;
                 if (last != null) {
                     to = Math.min(to, last);
                 }
+            }
+            to = Math.min(to, from + AUDIO_SLICE - 1);
+        }
+        final byte[] body;
+        if (partial && from > to) {
+            body = null;
+        } else {
+            body = new byte[(int) (to - from + 1)];
+            try (RandomAccessFile in = new RandomAccessFile(file, "r")) {
+                in.seek(from);
+                in.readFully(body);
             }
         }
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
         final FullHttpResponse resp;
         if (partial && from > to) {
             resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.REQUESTED_RANGE_NOT_SATISFIABLE);
-            resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes */" + body.length);
+            resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes */" + length);
         } else {
             resp = new DefaultFullHttpResponse(HttpVersion.HTTP_1_1,
-                    partial ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK,
-                    Unpooled.wrappedBuffer(body, from, to - from + 1));
+                    partial ? HttpResponseStatus.PARTIAL_CONTENT : HttpResponseStatus.OK, Unpooled.wrappedBuffer(body));
             if (partial) {
-                resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes " + from + "-" + to + "/" + body.length);
+                resp.headers().set(HttpHeaderNames.CONTENT_RANGE, "bytes " + from + "-" + to + "/" + length);
             }
         }
         resp.headers()
