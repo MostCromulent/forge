@@ -359,7 +359,7 @@ function Chosen({ details }: { details: DeckDetails }) {
     <>
       <div class="dk-chosen-head">
         <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
-        <p class="sizes">{s.main} cards{s.sideboard ? ` · ${s.sideboard} sideboard` : ''} · {s.lands} lands</p>
+        <p class="sizes">{s.total} cards{s.sideboard ? ` · ${s.sideboard} sideboard` : ''} · {s.lands} lands</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? 'Legal for this format.'}</p>
         <div class="stats">
           <Curve curve={s.curve} creatures={s.creatures} px={42} />

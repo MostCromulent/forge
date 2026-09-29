@@ -1314,6 +1314,7 @@ export interface Attack {
 export type GameLogVerbosity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CUSTOM';
 
 export interface DeckStats {
+  total: number;
   main: number;
   sideboard: number;
   lands: number;

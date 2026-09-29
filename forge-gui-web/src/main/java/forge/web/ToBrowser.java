@@ -104,8 +104,12 @@ final class ToBrowser {
             List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset) {
     }
 
-    /** curve counts the spells at each mana value, the last holding it and above; creatures counts the creatures among them. */
-    record DeckStats(int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
+    /**
+     * total is every card the deck plays with, its commanders included, which is what a Commander deck's 100 counts; main
+     * is the main deck alone. curve counts the spells at each mana value, the last holding it and above; creatures counts
+     * the creatures among them.
+     */
+    record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
             List<TypeCount> types) {
     }
 

@@ -1,5 +1,8 @@
 package forge.web;
 
+import forge.StaticData;
+import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.game.GameType;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -31,6 +34,17 @@ public class LobbyFormatsTest extends TablesTest {
         Assert.assertEquals(Lobby.explained(GameType.Brawl).facts().get(0), "60 cards, one of each");
         Assert.assertEquals(Lobby.explained(GameType.TinyLeaders).facts().get(0), "50 cards, one of each");
         Assert.assertEquals(Lobby.explained(GameType.MomirBasic).facts().get(0), "No deck to build: 60 basic lands");
+    }
+
+    /** Fails if a Commander deck's size leaves out its commander, which the seat and the deck finder then show as 99. */
+    @Test
+    public void aCommanderDeckCountsItsCommander() {
+        final Deck deck = new Deck("Meren");
+        deck.getOrCreate(DeckSection.Commander).add(StaticData.instance().getCommonCards().getCard("Meren of Clan Nel Toth"), 1);
+        deck.getMain().add(StaticData.instance().getCommonCards().getCard("Swamp"), 99);
+        Assert.assertEquals(DeckCatalog.played(deck), 100);
+        Assert.assertEquals(DeckCatalog.stats(deck).total(), 100);
+        Assert.assertEquals(DeckCatalog.stats(deck).main(), 99, "the main deck's own count took in the commander");
     }
 
     /** Fails if a format reaches the browser unexplained, or explained by a raw localisation key. */

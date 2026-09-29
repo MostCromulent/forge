@@ -8,7 +8,7 @@ const row = (name: string): CatalogueRow => ({ name, image: '', cost: '', mv: 1,
 const pool = (main: EditorCard[], side: EditorCard[]): EditorState => ({
   name: 'Pool', check: 'Sealed', format: 'Sealed', unrestricted: false, target: 'storage', commanders: [], commanderWanted: false,
   identity: '', main: [{ heading: 'Creatures', cards: main }], sideboard: side, lands: [],
-  stats: { main: 0, sideboard: 0, lands: 0, averageMana: 0, curve: [], creatures: [], types: [] }, problemCount: 0, canUndo: false, onSeat: false,
+  stats: { total: 0, main: 0, sideboard: 0, lands: 0, averageMana: 0, curve: [], creatures: [], types: [] }, problemCount: 0, canUndo: false, onSeat: false,
   limited: true, landSets: [],
 });
 

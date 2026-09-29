@@ -32,8 +32,8 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
         <div>
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
-            ? `${state.stats.main} cards · ${state.stats.lands} lands · ${state.stats.sideboard} left in the pool`
-            : `${state.stats.main} cards · ${state.stats.sideboard} sideboard · ${state.stats.lands} lands`}</p>
+            ? `${state.stats.total} cards · ${state.stats.lands} lands · ${state.stats.sideboard} left in the pool`
+            : `${state.stats.total} cards · ${state.stats.sideboard} sideboard · ${state.stats.lands} lands`}</p>
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>Show them</button></p>
             : <p class="verdict yes">Legal for {state.check}.</p>}

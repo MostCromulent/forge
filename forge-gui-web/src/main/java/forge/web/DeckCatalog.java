@@ -323,7 +323,7 @@ final class DeckCatalog {
         for (final Map.Entry<String, Integer> e : types.entrySet()) {
             typeCounts.add(new TypeCount(e.getKey(), e.getValue()));
         }
-        return new DeckStats(count(main), count(deck.get(DeckSection.Sideboard)), lands,
+        return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), lands,
                 spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, buckets, creatureBuckets, typeCounts);
     }
 
@@ -379,7 +379,7 @@ final class DeckCatalog {
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
             final boolean linked = LINKED.equals(tag);
-            out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, count(deck.get(DeckSection.Main)),
+            out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, played(deck),
                     count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), proxy.getFormatsString(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
@@ -390,7 +390,7 @@ final class DeckCatalog {
     private void addDevice(final List<DeckSummary> out, final GameType format, final String id, final Deck deck) {
         final String key = DEVICE + ":" + id;
         byKey.put(key, new Entry(null, false, deck));
-        out.add(new DeckSummary(key, deck.getName(), DEVICE, colors(deck), null, null, count(deck.get(DeckSection.Main)),
+        out.add(new DeckSummary(key, deck.getName(), DEVICE, colors(deck), null, null, played(deck),
                 count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), null,
                 deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null));
     }
@@ -474,6 +474,11 @@ final class DeckCatalog {
             return String.join(", ", shown) + " and " + more + " more";
         }
         return Lang.joinHomogenous(shown);
+    }
+
+    /** The cards a deck plays with: its main deck and its commanders, which a Commander deck's 100 counts together. */
+    static int played(final Deck deck) {
+        return count(deck.get(DeckSection.Main)) + count(deck.get(DeckSection.Commander));
     }
 
     private static int count(final CardPool pool) {
