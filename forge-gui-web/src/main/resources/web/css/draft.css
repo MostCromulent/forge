@@ -64,10 +64,11 @@ html[data-motion="reduced"] .pick-line .clock.low { animation: none; }
 .tool-line { padding: 8px 16px; }
 .draft-pack { grid-template-rows: auto auto minmax(0, 1fr); overflow: visible; }
 .draft-pack .cat-grid { border-radius: 0 0 12px 12px; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-/* A new pack is dealt out rather than appearing all at once */
-@keyframes draft-deal { from { opacity: 0; translate: 0 10px; } }
-.draft-pack .draft-slot { animation: draft-deal .24s ease-out backwards; animation-delay: calc(var(--i, 0) * 22ms); }
-html[data-motion="reduced"] .draft-pack .draft-slot { animation: none; }
+/* A pack slides across as it passes (drafting.tsx), so the grid clips it rather than scrolling to follow it */
+.draft-pack .cat-grid { overflow-x: hidden; }
+/* The rest of a pack leaving, lifted into a layer clipped to where the pack was */
+.pack-leaving { position: fixed; z-index: 40; overflow: hidden; pointer-events: none; }
+.pack-leaving .cat-grid { position: absolute; inset: 0; padding: 0; overflow: visible; display: block; }
 .draft-slot.chosen .tile img { outline: 3px solid var(--accent-2); outline-offset: 2px; box-shadow: 0 0 18px var(--accent-glow); transform: translateY(-4px); }
 /* A card whose picture cannot be had is drawn as its text, in the card's shape */
 .text-face { position: absolute; inset: 0; display: flex; flex-direction: column; gap: 4px; padding: 7px 8px; border-radius: 6px; overflow: hidden;

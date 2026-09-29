@@ -28,6 +28,76 @@ const DRAG_TYPE = 'application/x-forge-draft';
 const CLOCK_LOW_MS = 15_000;
 const FLY_MS = 380;
 
+/** How long the rest of a pack takes to slide off, and a new pack to slide in, and how far each column follows the last. */
+const PASS_MS = 300;
+const ARRIVE_MS = 400;
+const COLUMN_STAGGER_MS = 22;
+
+/** When the last pack started leaving, so the next one can follow it out rather than cross it. */
+let passedAt = 0;
+
+/** The side of the screen a pack passes to: -1 for left, 1 for right. */
+const passSide = (direction: number): -1 | 1 => (direction < 0 ? -1 : 1);
+
+/** Each pack card's column, counted from one side of the grid, so a pack moves across it a column at a time. */
+function columnsFrom(slots: HTMLElement[], edge: -1 | 1): number[] {
+  const xs = slots.map(s => s.offsetLeft);
+  const columns = [...new Set(xs)].sort((a, b) => edge * (b - a));
+  return xs.map(x => columns.indexOf(x));
+}
+
+/**
+ * Sends the rest of the pack on to the next player once a card is picked: each card is lifted off as it looks and
+ * slides off the side the pack passes to. The cards themselves stay hidden until the next pack replaces them, and show
+ * again if none comes, as when a pick is refused.
+ */
+function passPack(picked: number, side: -1 | 1): void {
+  const grid = document.querySelector<HTMLElement>('.draft-pack .cat-grid');
+  const slots = [...grid?.querySelectorAll<HTMLElement>('.draft-slot') ?? []].filter((_, i) => i !== picked);
+  if (!grid || !slots.length) return;
+  const reduced = document.documentElement.dataset.motion === 'reduced';
+  const box = grid.getBoundingClientRect();
+  // Clipped to the pack, and inside the same classes, so the copies are drawn as the cards are
+  const layer = document.createElement('div');
+  layer.className = 'draft-pack pack-leaving';
+  Object.assign(layer.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
+  const inner = document.createElement('div');
+  inner.className = 'cat-grid';
+  layer.append(inner);
+  const columns = columnsFrom(slots, side);
+  const slides = slots.map((slot, i) => {
+    const at = slot.getBoundingClientRect();
+    const copy = slot.cloneNode(true) as HTMLElement;
+    Object.assign(copy.style, { position: 'absolute', left: `${at.left - box.left}px`, top: `${at.top - box.top}px`,
+      width: `${at.width}px`, height: `${at.height}px`, margin: '0' });
+    inner.append(copy);
+    slot.style.visibility = 'hidden';
+    return copy.animate(reduced ? [{ opacity: 1 }, { opacity: 0 }]
+      : [{ transform: 'none', opacity: 1 }, { transform: `translateX(${side * box.width * 0.8}px)`, opacity: 0 }],
+    { duration: reduced ? 160 : PASS_MS, delay: reduced ? 0 : columns[i] * COLUMN_STAGGER_MS, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' });
+  });
+  document.body.append(layer);
+  passedAt = performance.now();
+  void Promise.all(slides.map(a => a.finished.catch(() => undefined))).then(() => layer.remove());
+  setTimeout(() => slots.forEach(s => { s.style.visibility = ''; }), 2000);
+}
+
+/** Slides a new pack in from the side it comes from, the column with furthest to go first. */
+function arrive(grid: HTMLElement, from: -1 | 1): void {
+  const slots = [...grid.querySelectorAll<HTMLElement>('.draft-slot')];
+  const reduced = document.documentElement.dataset.motion === 'reduced';
+  const columns = columnsFrom(slots, -from as -1 | 1);
+  // A pack the next player had waiting comes in behind the one leaving, once that one is mostly gone
+  const behind = Math.max(0, passedAt + PASS_MS * 0.6 - performance.now());
+  slots.forEach((slot, i) => {
+    // A card the new pack shares with the old, in the same place, is the same element, still hidden from the pass
+    slot.style.visibility = '';
+    slot.animate(reduced ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ transform: `translateX(${from * grid.clientWidth * 0.7}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }],
+    { duration: reduced ? 200 : ARRIVE_MS, delay: reduced ? behind : behind + columns[i] * COLUMN_STAGGER_MS, easing: 'cubic-bezier(.2,.7,.25,1)', fill: 'backwards' });
+  });
+}
+
 /** A card picked from the pack, lifted off it as it looked there, until its place among the picks is drawn. */
 let inFlight: { face: HTMLElement; from: DOMRect } | null = null;
 
@@ -194,8 +264,18 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
   useEffect(() => setSelected(null), [state.step]);
   const pick = (index: number) => {
     launch(index);
+    passPack(index, passSide(state.direction));
     actions.draftPick(state.step, index, false);
   };
+  // A new pack slides in from the player it came from, the side opposite the one packs pass to
+  const grid = useRef<HTMLDivElement>(null);
+  const shown = useRef('');
+  const cards = state.cards.map(c => c.image).join('|');
+  useLayoutEffect(() => {
+    if (cards === shown.current) return;
+    shown.current = cards;
+    if (grid.current && state.cards.length) arrive(grid.current, -passSide(state.direction) as -1 | 1);
+  }, [cards]);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Enter' && selected !== null && !(e.target instanceof HTMLInputElement)) pick(selected);
@@ -228,10 +308,9 @@ function Pack({ state, faces, actions, log }: { state: DraftState; faces: string
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
-      <div class="cat-grid">
+      <div class="cat-grid" ref={grid}>
         {state.cards.map((card, i) => (
-          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}
-            style={{ '--i': i }}>
+          <div key={`${card.image}-${i}`} class={i === selected ? 'slot draft-slot chosen' : 'slot draft-slot'} data-card={card.name} data-image={card.image}>
             <button class="tile" title={card.name} draggable
               onDragStart={e => startDrag(e, { from: 'pack', index: i })}
               onClick={() => (i === selected ? pick(i) : setSelected(i))}>
@@ -310,7 +389,10 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   const drop = (sideboard: boolean) => (drag: Drag) => {
     // A dragged card has been carried here already, so nothing flies
     inFlight = null;
-    if (drag.from === 'pack') actions.draftPick(state.step, drag.index, sideboard);
+    if (drag.from === 'pack') {
+      passPack(drag.index, passSide(state.direction));
+      actions.draftPick(state.step, drag.index, sideboard);
+    }
     else if (state.picks[drag.index]?.sideboard !== sideboard) actions.draftMove(drag.index, sideboard);
   };
   const move = (h: Held) => actions.draftMove(h.index, !h.card.sideboard);
