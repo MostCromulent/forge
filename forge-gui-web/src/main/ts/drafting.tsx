@@ -35,6 +35,9 @@ const COLUMN_STAGGER_MS = 22;
 
 /** When the last pack started leaving, so the next one can follow it out rather than cross it. */
 let passedAt = 0;
+/** When the pack stops moving. Until then a card sliding under the pointer shows no preview. */
+let packStillAt = 0;
+const packMoving = () => performance.now() < packStillAt;
 
 /** The side of the screen a pack passes to: -1 for left, 1 for right. */
 const passSide = (direction: number): -1 | 1 => (direction < 0 ? -1 : 1);
@@ -65,6 +68,7 @@ function passPack(picked: number, side: -1 | 1): void {
   inner.className = 'cat-grid';
   layer.append(inner);
   const columns = columnsFrom(slots, side);
+  packStillAt = Math.max(packStillAt, performance.now() + (reduced ? 160 : PASS_MS + Math.max(...columns) * COLUMN_STAGGER_MS));
   const slides = slots.map((slot, i) => {
     const at = slot.getBoundingClientRect();
     const copy = slot.cloneNode(true) as HTMLElement;
@@ -89,6 +93,7 @@ function arrive(grid: HTMLElement, from: -1 | 1): void {
   const columns = columnsFrom(slots, -from as -1 | 1);
   // A pack the next player had waiting comes in behind the one leaving, once that one is mostly gone
   const behind = Math.max(0, passedAt + PASS_MS * 0.6 - performance.now());
+  packStillAt = Math.max(packStillAt, performance.now() + behind + (reduced ? 200 : ARRIVE_MS + Math.max(0, ...columns) * COLUMN_STAGGER_MS));
   slots.forEach((slot, i) => {
     // A card the new pack shares with the old, in the same place, is the same element, still hidden from the pass
     slot.style.visibility = '';
@@ -147,7 +152,8 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   const online = model.inLobby;
   const faces = state ? seatFaces(model, state.seats) : [];
   return (
-    <div class="drafting-page" onPointerOver={e => setPeek(peekAt(e, '.drafting-page'))} onPointerLeave={() => setPeek(null)}>
+    <div class="drafting-page" onPointerLeave={() => setPeek(null)}
+      onPointerOver={e => setPeek(packMoving() && (e.target as Element).closest?.('.draft-pack') ? null : peekAt(e, '.drafting-page'))}>
       <PageHeader class="limited-head">
         <span class="limited-title">Booster draft</span>
         {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
@@ -163,7 +169,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {!state && <p class="muted drafting-wait">Opening the packs…</p>}
       {state && (
         <div class="drafting-shell">
-          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} />
+          <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} hidePeek={() => setPeek(null)} />
           <Picks state={state} actions={actions} />
         </div>
       )}
@@ -258,11 +264,14 @@ function useClock(state: DraftState): number {
   return state.clockSeconds ? Math.max(0, state.clockLeftMillis - (now - stamp.current)) : 0;
 }
 
-function Pack({ state, faces, actions, log }: { state: DraftState; faces: string[]; actions: Actions; log: boolean }) {
+function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; faces: string[]; actions: Actions; log: boolean;
+  hidePeek: () => void }) {
   const [selected, setSelected] = useState<number | null>(null);
   // A new state clears the selection, since its cards are not the ones selected
   useEffect(() => setSelected(null), [state.step]);
   const pick = (index: number) => {
+    // The card under the pointer is about to leave with the pack, so its preview goes now
+    hidePeek();
     launch(index);
     passPack(index, passSide(state.direction));
     actions.draftPick(state.step, index, false);
