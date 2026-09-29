@@ -116,4 +116,37 @@ public class EventTableTest extends TablesTest {
             Assert.assertFalse(table(lobby).seats().get(1).benched(), "a Constructed table benched a seat");
         });
     }
+
+    // Fails if a table playing an event, here one played again, cannot be left for a new one, or leaving loses its pools
+    @Test(timeOut = 60_000)
+    public void anEventPlayedAgainGivesWayToANewOne() throws Exception {
+        final String id = events.stored("Web test again");
+        atTable((local, lobby) -> {
+            Assert.assertNull(answer(() -> lobby.setLimited("sealed")));
+            Assert.assertNull(answer(() -> lobby.hostAgain(id)));
+            Assert.assertTrue(table(lobby).limited().started(), "the past event never took the table");
+            Assert.assertNotNull(table(lobby).limited().product(), "the event played again has no name");
+            Assert.assertNull(answer(lobby::newEvent));
+            final ToBrowser.LimitedTable after = table(lobby).limited();
+            Assert.assertFalse(after.started(), "the table is still playing the old event");
+            Assert.assertNull(after.product(), "the new event starts set up");
+            Assert.assertEquals(after.kind(), "sealed");
+            Assert.assertTrue(after.pastEvents().stream().anyMatch(p -> p.id().equals(id)), "the old event's pools were lost");
+        });
+    }
+
+    // Fails if a past event cannot be deleted, or the event the table is playing can be
+    @Test(timeOut = 60_000)
+    public void aPastEventIsDeletedButNotTheOnePlaying() throws Exception {
+        final String playing = events.stored("Web test playing");
+        final String old = events.stored("Web test old");
+        atTable((local, lobby) -> {
+            Assert.assertNull(answer(() -> lobby.setLimited("sealed")));
+            Assert.assertTrue(table(lobby).limited().pastEvents().stream().anyMatch(p -> p.id().equals(old)));
+            Assert.assertNull(answer(() -> lobby.forgetEvent(old)));
+            Assert.assertTrue(table(lobby).limited().pastEvents().stream().noneMatch(p -> p.id().equals(old)), "the deleted event is still listed");
+            Assert.assertNull(answer(() -> lobby.hostAgain(playing)));
+            Assert.assertNotNull(answer(() -> lobby.forgetEvent(playing)), "the event the table is playing was deleted");
+        });
+    }
 }

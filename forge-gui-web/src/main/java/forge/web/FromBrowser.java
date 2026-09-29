@@ -22,7 +22,7 @@ final class FromBrowser {
     // ---- Start page and lobby ----------------------------------------------------------------------------------
 
     /** Messages that are only their name. */
-    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart,
+    enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede }
 
     @Command
@@ -353,6 +353,11 @@ final class FromBrowser {
     record EventHostAgain(String eventId) {
     }
 
+    /** Deletes a past event's pools from the host's event decks. */
+    @Command("eventForget")
+    record EventForget(String eventId) {
+    }
+
     /** Whether the deck finder lists only the event's decks. */
     @Command("eventDecksOnly")
     record EventDecksOnly(boolean on) {
@@ -368,5 +373,5 @@ final class FromBrowser {
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
             DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,
-            EventDecksOnly.class, EventHostAgain.class);
+            EventDecksOnly.class, EventHostAgain.class, EventForget.class);
 }

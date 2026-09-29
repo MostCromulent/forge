@@ -86,6 +86,8 @@ export interface Actions {
   eventSetup(s: Omit<EventSetup, 't'>): void;
   eventStart(): void;
   eventHostAgain(eventId: string): void;
+  eventNew(): void;
+  eventForget(eventId: string): void;
   eventDecksOnly(on: boolean): void;
   benchSeat(index: number, benched: boolean): void;
   ready(on: boolean): void;
@@ -184,6 +186,8 @@ export function createActions(send: Send): Actions {
     eventSetup: s => send({ t: 'eventSetup', ...s }),
     eventStart: () => send({ t: 'eventStart' }),
     eventHostAgain: eventId => send({ t: 'eventHostAgain', eventId }),
+    eventNew: () => send({ t: 'eventNew' }),
+    eventForget: eventId => send({ t: 'eventForget', eventId }),
     eventDecksOnly: on => send({ t: 'eventDecksOnly', on }),
     benchSeat: (index, benched) => send({ t: 'benchSeat', index, benched }),
     ready: on => send({ t: 'ready', ready: on }),

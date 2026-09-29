@@ -649,9 +649,19 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 /* A Limited table: the switch above, the event beside the seats, and seats that ready up before any deck exists */
 .event-setup { position: relative; width: min(760px, 100%); padding: 0; }
 .event-setup .dk-close { position: absolute; right: 12px; top: 12px; z-index: 1; }
-.event-setup .past-events { padding: 16px 20px 0; }
-.past-events { display: grid; gap: 6px; margin-bottom: 14px; }
-.past-events h4 { margin: 0; color: var(--muted); font-weight: 600; }
+/* The setup dialog's first question, and the earlier events it can lead to */
+.setup-choice, .event-setup .past-events { display: grid; gap: 12px; padding: 22px 24px 24px; }
+.setup-choice h3, .past-events h3 { margin: 0; font-size: 18px; }
+.event-setup .setup-back { justify-self: start; font-size: 13px; }
+.event-setup > .setup-back { margin: 16px 24px 0; }
+.past-list { display: grid; gap: 6px; max-height: 52vh; overflow: auto; }
+.past-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.past-name { flex: 1; min-width: 0; display: grid; }
+.past-name b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.past-name .muted { font-size: 12px; }
+.past-ask { color: var(--muted); font-size: 13px; }
+.past-delete { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; font-size: 16px; color: var(--muted); }
+.past-delete:hover { color: var(--error); border-color: var(--error); }
 .table-rules { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 12px 16px; align-items: center; }
 .table-rules .tr-label { color: var(--muted); font-size: 13px; }
 .table-rules > .pill-select { justify-self: start; }

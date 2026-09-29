@@ -138,8 +138,8 @@ final class ToBrowser {
             List<PastEvent> pastEvents) {
     }
 
-    /** An earlier event whose pools the host keeps, as desktop's past events list names it. */
-    record PastEvent(String id, String label) {
+    /** An earlier event whose pools the host keeps: "draft" or "sealed", its product, and when it was played (yyyy-MM-dd HH:mm). */
+    record PastEvent(String id, String kind, String product, String date) {
     }
 
     /** Card pools the card pool control offers, under the heading Forge files them by. Sent once per browser. */

@@ -6,8 +6,12 @@ import { StepForm, draftCombo, draftSentence, draftSteps, pickRuleName, sealedSe
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { LimitedTable, LobbyTable } from './protocol';
+import type { LobbyTable, PastEvent } from './protocol';
 import { GameMenu, PlayerCount } from './matchbar';
+import { shortDay } from './limited';
+
+/** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
+type SetupView = 'choose' | 'new' | 'earlier';
 
 /**
  * The event as the head of the table: its mode, product and rules with the players who will play it, then the stages
@@ -20,6 +24,11 @@ export function EventHead({ model, lobby, actions, preview, start }: {
 }) {
   const lim = lobby.limited!;
   const [setting, setSetting] = useState(!lim.product);
+  // With earlier events kept, the host first says whether to set up a new one or play one of those again
+  const firstView = (): SetupView => (lim.pastEvents.length && !lim.product ? 'choose' : 'new');
+  const [view, setView] = useState<SetupView>(firstView);
+  const [leaving, setLeaving] = useState(false);
+  const openSetup = () => { setView(firstView()); setSetting(true); };
   const draft = lim.kind === 'draft';
   const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready);
   const close = () => setSetting(false);
@@ -55,10 +64,28 @@ export function EventHead({ model, lobby, actions, preview, start }: {
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
           <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
             <button class="dk-close" title="Close" onClick={close}>&times;</button>
-            {lim.pastEvents.length > 0 && !lim.product && <PastEvents lim={lim} actions={actions} />}
-            {!model.limitedOptions ? <p class="muted">Loading…</p>
-              : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={close} />
-              : <SealedForm model={model} actions={actions} done={close} />}
+            {view === 'choose' && lim.pastEvents.length > 0
+              ? <SetupChoice draft={draft} count={lim.pastEvents.length} choose={setView} />
+              : view === 'earlier'
+                ? <PastEvents events={lim.pastEvents} actions={actions} back={() => setView('choose')} />
+                : <>
+                    {lim.pastEvents.length > 0 && !lim.product && <button class="link setup-back" onClick={() => setView('choose')}>‹ Back</button>}
+                    {!model.limitedOptions ? <p class="muted">Loading…</p>
+                      : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={close} />
+                      : <SealedForm model={model} actions={actions} done={close} />}
+                  </>}
+          </div>
+        </div>
+      )}
+      {leaving && (
+        <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
+          <div class="dialog" role="alertdialog" aria-label="Start a new event">
+            <h3>Start a new event?</h3>
+            <p class="hint">This one ends for everyone at the table. Its pools stay saved, so it can be played again from the earlier events.</p>
+            <div class="actions">
+              <button onClick={() => setLeaving(false)}>Keep this event</button>
+              <button class="primary" onClick={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }}>New event</button>
+            </div>
           </div>
         </div>
       )}
@@ -66,7 +93,9 @@ export function EventHead({ model, lobby, actions, preview, start }: {
         <div class="eh-mode"><GameMenu lobby={lobby} actions={actions} /></div>
         <div class="eh-title">
           <span class="event-product">{lim.product ?? 'Not set up yet'}</span>
-          {lobby.host && !lim.started && <button class="link" onClick={() => setSetting(true)}>{lim.product ? 'Edit' : 'Set up'}</button>}
+          {lobby.host && !lim.started && <button class="link" onClick={openSetup}>{lim.product ? 'Edit' : 'Set up'}</button>}
+          {/* An event under way, or one played again, is left for a new one here; its pools stay among the earlier events */}
+          {lobby.host && lim.started && !model.drafting && <button class="link" onClick={() => setLeaving(true)}>New event</button>}
           {slim && <span class="eh-facts">{facts}</span>}
         </div>
         {!slim && (
@@ -118,15 +147,55 @@ export function eventStatus(lobby: LobbyTable): string {
   return 'Pools are out. Build your deck, then play.';
 }
 
-function PastEvents({ lim, actions }: { lim: LimitedTable; actions: Actions }) {
+/** The first question when earlier events are kept: set up a new one, or play one of those again. */
+function SetupChoice({ draft, count, choose }: { draft: boolean; count: number; choose: (view: SetupView) => void }) {
+  return (
+    <div class="setup-choice">
+      <h3>{draft ? 'Draft' : 'Sealed'} at this table</h3>
+      <div class="tiles">
+        <button class="tile-choice" onClick={() => choose('new')}>
+          <b>{draft ? 'New draft' : 'New sealed event'}</b><span>Choose the packs and the table's rules.</span>
+        </button>
+        <button class="tile-choice" onClick={() => choose('earlier')}>
+          <b>An earlier event</b><span>Play one of your {count} saved {count === 1 ? 'event' : 'events'} again, with the pools it dealt.</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** "26 Sept, 09:46" from the "yyyy-MM-dd HH:mm" an event is saved with. */
+function playedOn(date: string): string {
+  return date ? `${shortDay(date.slice(0, 10))}, ${date.slice(11, 16)}` : '';
+}
+
+/** The earlier events, newest first, each played again or deleted from here. Deleting asks first, in its row. */
+function PastEvents({ events, actions, back }: { events: PastEvent[]; actions: Actions; back: () => void }) {
+  const [deleting, setDeleting] = useState<string | null>(null);
   return (
     <div class="past-events">
-      <h4>Earlier events</h4>
-      {lim.pastEvents.slice(0, 5).map(p => (
-        <button key={p.id} class="share-row" onClick={() => actions.eventHostAgain(p.id)}>
-          <span class="share-label">{p.label}</span><span class="share-copy">Play again</span>
-        </button>
-      ))}
+      <button class="link setup-back" onClick={back}>‹ Back</button>
+      <h3>Earlier events</h3>
+      {events.length === 0 && <p class="muted">No earlier events are kept.</p>}
+      <div class="past-list">
+        {events.map(p => (
+          <div key={p.id} class="past-row">
+            <span class="past-name"><b>{p.product || (p.kind === 'draft' ? 'Draft' : 'Sealed')}</b>
+              <span class="muted">{p.kind === 'draft' ? 'Draft' : 'Sealed'} · {playedOn(p.date)}</span></span>
+            {deleting === p.id
+              ? <>
+                  <span class="past-ask">Delete its pools?</span>
+                  <button onClick={() => setDeleting(null)}>Keep</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.eventForget(p.id); }}>Delete</button>
+                </>
+              : <>
+                  <button class="outline" onClick={() => actions.eventHostAgain(p.id)}>Play again</button>
+                  <button class="past-delete" title="Delete this event's pools" aria-label={`Delete ${p.product}`}
+                    onClick={() => setDeleting(p.id)}>&times;</button>
+                </>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

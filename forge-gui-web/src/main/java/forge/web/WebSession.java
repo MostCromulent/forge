@@ -32,6 +32,7 @@ import forge.web.FromBrowser.PoolPlay;
 import forge.web.FromBrowser.SealedCreate;
 import forge.web.FromBrowser.BenchSeat;
 import forge.web.FromBrowser.EventDecksOnly;
+import forge.web.FromBrowser.EventForget;
 import forge.web.FromBrowser.EventHostAgain;
 import forge.web.FromBrowser.EventSetup;
 import forge.web.FromBrowser.SetLimited;
@@ -374,7 +375,7 @@ public final class WebSession {
                     onSetup(channel, msg);
                 }
             }
-            case "setLimited", "eventSetup", "eventStart", "benchSeat", "eventDecksOnly", "eventHostAgain" -> {
+            case "setLimited", "eventSetup", "eventStart", "eventNew", "benchSeat", "eventDecksOnly", "eventHostAgain", "eventForget" -> {
                 if (stage instanceof Setup) {
                     onEvent(channel, msg);
                 }
@@ -602,6 +603,19 @@ public final class WebSession {
             }
             case "eventHostAgain" -> {
                 reportProblem(channel, lobby.hostAgain(Wire.decode(msg, EventHostAgain.class).eventId()));
+                relistDecks(channel);
+            }
+            case "eventForget" -> {
+                reportProblem(channel, lobby.forgetEvent(Wire.decode(msg, EventForget.class).eventId()));
+                relistDecks(channel);
+            }
+            case "eventNew" -> {
+                final String problem = lobby.newEvent();
+                if (problem != null) {
+                    channel.send(error(problem));
+                } else {
+                    sendEventOptions(channel);
+                }
                 relistDecks(channel);
             }
             case "setLimited" -> {

@@ -875,8 +875,12 @@ final class Lobby {
         final NetworkEventView event = data.getEventView();
         final boolean draft = data.getLimitedType() != GameType.Sealed;
         // An event's product is blank until the event is set up
-        final String product = event == null || event.getProductDescription() == null || event.getProductDescription().isEmpty()
+        String product = event == null || event.getProductDescription() == null || event.getProductDescription().isEmpty()
                 ? null : event.getProductDescription();
+        // A past event played again has no product of its own, so its pools' tag names it
+        if (product == null && data.getActiveEventId() != null) {
+            product = playedAgain(data.getActiveEventId());
+        }
         return new LimitedTable(draft ? "draft" : "sealed", product,
                 event == null ? 0 : event.getPodSize(),
                 event == null || event.getDoublePick() == null ? null : event.getDoublePick().name(),
@@ -887,18 +891,37 @@ final class Lobby {
 
     /** The events whose pools the host keeps, newest first, as desktop's past events list orders them. */
     private static List<PastEvent> pastEvents() {
-        final Map<String, String> dates = new java.util.LinkedHashMap<>();
+        final Map<String, PastEvent> events = new java.util.LinkedHashMap<>();
         synchronized (DeckCatalog.DECKS) {
             for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
                 final String id = DeckProxy.getEventTag(d, "eventId");
                 if (id != null) {
-                    dates.putIfAbsent(id, Objects.toString(DeckProxy.getEventTag(d, "eventDate"), ""));
+                    events.putIfAbsent(id, pastEvent(id, d));
                 }
             }
         }
-        // eventDate is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
-        return dates.entrySet().stream().sorted(Map.Entry.<String, String>comparingByValue().reversed())
-                .map(en -> new PastEvent(en.getKey(), NetworkEvent.getEventDisplayLabel(en.getKey()))).toList();
+        // The date is "yyyy-MM-dd HH:mm", so reverse order of the text is newest first
+        return events.values().stream().sorted(java.util.Comparator.comparing(PastEvent::date).reversed()).toList();
+    }
+
+    /** The product of a past event, read from its pools; a pool saved without one still names an event rather than none. */
+    private static String playedAgain(final String eventId) {
+        synchronized (DeckCatalog.DECKS) {
+            for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
+                if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                    final String product = DeckProxy.getEventTag(d, "eventProduct");
+                    return product == null || product.isBlank() ? "An earlier event" : product;
+                }
+            }
+        }
+        return "An earlier event";
+    }
+
+    /** A past event as one of its pools' tags describe it. */
+    private static PastEvent pastEvent(final String id, final Deck pool) {
+        final boolean draft = EventFormat.BOOSTER_DRAFT.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
+        return new PastEvent(id, draft ? "draft" : "sealed", Objects.toString(DeckProxy.getEventTag(pool, "eventProduct"), ""),
+                Objects.toString(DeckProxy.getEventTag(pool, "eventDate"), ""));
     }
 
     /**
@@ -935,6 +958,47 @@ final class Lobby {
         }
         final boolean sealed = EventFormat.SEALED.name().equals(DeckProxy.getEventTag(pool, "eventFormat"));
         return playEvent(eventId, sealed ? GameType.Sealed : GameType.Draft, true);
+    }
+
+    /**
+     * Leaves the table's event for a new one of the same kind, set up afresh, as switching to Constructed and back does.
+     * The event's pools stay among the host's event decks, so it can be played again. Answers why not, or null.
+     */
+    String newEvent() {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || !limited(lobby)) {
+            return null;
+        }
+        if (drafting(lobby)) {
+            return "The draft is still on.";
+        }
+        final String kind = lobby.getData().getLimitedType() == GameType.Sealed ? "sealed" : "draft";
+        lobby.clearCurrentEvent();
+        lobby.selectEventForMatch(null, false);
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            lobby.getSlot(i).setBenched(false);
+        }
+        return setLimited(kind);
+    }
+
+    /** Deletes a past event's pools from the host's event decks. The event the table is playing stays. Answers why not, or null. */
+    String forgetEvent(final String eventId) {
+        final ServerGameLobby lobby = host();
+        if (lobby == null || eventId == null) {
+            return null;
+        }
+        if (eventId.equals(lobby.getData().getActiveEventId())) {
+            return "The table is playing that event.";
+        }
+        synchronized (DeckCatalog.DECKS) {
+            final var stored = FModel.getDecks().getNetworkEventDecks();
+            for (final Deck d : stored.stream().toList()) {
+                if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
+                    stored.delete(d.getName());
+                }
+            }
+        }
+        return null;
     }
 
     /**

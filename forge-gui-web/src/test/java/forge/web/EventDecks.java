@@ -20,6 +20,7 @@ final class EventDecks {
         deck.getTags().add("eventId:" + id);
         deck.getTags().add("eventFormat:SEALED");
         deck.getTags().add("eventDate:2026-09-26 10:00");
+        deck.getTags().add("eventProduct:Full Cardpool");
         FModel.getDecks().getNetworkEventDecks().add(deck);
         events.add(id);
         return id;
