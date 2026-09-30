@@ -443,7 +443,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .current .pip.marked { box-shadow: 0 0 0 1.5px var(--on-brass); }
 /* Beside the pill, not in it, so the pill keeps its place as the chip comes and goes */
 /* Who is being waited on hangs off the left of the pill, and where you are skipping to off the right */
-#phase-strip .waiting { position: absolute; right: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+#phase-strip .waiting { position: absolute; right: calc(100% + 16px); top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px 0 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); font-size: 11.5px; white-space: nowrap; }
 #phase-strip .waiting b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 26px; text-align: right; }
 /* Others waiting on you: brass, as your move is everywhere, with only "you" in heavy type */
 #phase-strip .waiting.you { background: var(--brass); border-color: color-mix(in srgb, var(--accent-2) 45%, #000); color: var(--on-brass); font-weight: 500;
