@@ -105,26 +105,56 @@ export async function finderWithOwnDeck(p: Probe): Promise<void> {
   await expect(p.page.locator('.dk-chosen-head')).toContainText(PROBE_DECK);
 }
 
+/** How a board's table is set up: the game from the Game menu (Constructed unless given), seats, and starting life. */
+export interface Table {
+  game?: string;
+  players?: number;
+  /** Each player's life unless the state says otherwise; 20, or 40 for Commander. */
+  life?: number;
+}
+
 /**
  * A match against the computer with the board set up from a dev-mode game state, in the format the dev menu's
- * "Set up a game state" takes (lines of key=value). activeplayer=human, activephase=MAIN1 and life of 20 each are
- * added unless given, since a state without a life total sets it to -1. Returns once the first card the state names is on the table, answering the coin toss and mulligan on the way.
+ * "Set up a game state" takes (lines of key=value). Players are human and ai in a two-player game, p0 (you) to p3
+ * with more. activeplayer=human, activephase=MAIN1 and each player's life are added unless given, since a state
+ * without a life total sets it to -1. Returns once the first card the state names is on the table, answering the coin
+ * toss and mulligan on the way.
  */
-export async function board(p: Probe, state: string): Promise<void> {
+export async function board(p: Probe, state: string, table: Table = {}): Promise<void> {
   const page = p.page;
   await lobby(p);
+  if (table.game) {
+    await page.locator('.popup-anchor .menu-button').first().click();
+    await page.locator('.game-choice', { has: page.locator('.game-name', { hasText: new RegExp(`^${table.game}$`) }) }).click();
+  }
+  const players = table.players ?? 2;
+  if (players !== 2) await page.locator('.count[aria-label="Players"] button', { hasText: String(players) }).click();
   const seats = page.locator('#seats .plate');
-  await chooseDeck(page, seats.nth(0));
-  await chooseDeck(page, seats.nth(1));
+  await expect(seats).toHaveCount(players);
+  for (let i = 0; i < players; i++) await chooseDeck(page, seats.nth(i));
   await page.click('#play');
   await gameStarted(page);
+  await setState(p, state, table);
+}
+
+/**
+ * Sets up a game state in the match already under way, with the same defaults as board: pass the table the match was
+ * set up with. Placing is known by the first card the state names showing, so a state set up again over one that
+ * already shows that card returns without waiting for it.
+ */
+export async function setState(p: Probe, state: string, table: Table = {}): Promise<void> {
+  const page = p.page;
+  const players = table.players ?? 2;
   const lines = state.trim().split('\n').map(l => l.trim()).filter(Boolean);
-  for (const [key, value] of [['activeplayer', 'human'], ['activephase', 'MAIN1'], ['humanlife', '20'], ['ailife', '20']]) {
+  const life = String(table.life ?? (table.game === 'Commander' ? 40 : 20));
+  const defaults = [['activeplayer', 'human'], ['activephase', 'MAIN1'],
+    ...Array.from({ length: players }, (_, i) => [players === 2 ? ['humanlife', 'ailife'][i] : `p${i}life`, life])];
+  for (const [key, value] of defaults) {
     if (!lines.some(l => l.startsWith(`${key}=`))) lines.unshift(`${key}=${value}`);
   }
-  const named = /^(?:human|ai)(?:battlefield|hand)=([^;|]+)/;
+  const named = /^(?:human|ai|p\d)(?:battlefield|hand)=([^;|]+)/;
   const first = lines.map(l => named.exec(l)?.[1]).find(Boolean);
-  const placed = first ? page.locator('#match .card', { hasText: first }).first() : null;
+  const placed = first ? page.locator('#match .card:visible', { hasText: first }).first() : null;
   // The game takes a state only while a player has priority, which comes after the coin toss and the mulligan
   for (let tries = 0; ; tries++) {
     // A state does not clear the stack, so whatever the computer has on it is passed through first
@@ -142,7 +172,7 @@ export async function board(p: Probe, state: string): Promise<void> {
       return;
     }
     try {
-      await expect(placed).toBeVisible({ timeout: 4000 });
+      await expect(placed).toBeVisible({ timeout: 8000 });
       // The board is sent after it is placed; answering a prompt before it lands answers the old one
       await page.waitForTimeout(1000);
       return;
