@@ -2,7 +2,7 @@
 // with a home folder of its own so the tests never touch the preferences of whoever runs them.
 
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,9 +21,28 @@ export interface Server {
   stop(): Promise<void>;
 }
 
+/** What the server's home folder holds before it starts. */
+export interface Seed {
+  /** Forge preferences, as the keys forge.preferences takes. */
+  prefs?: Record<string, string>;
+  /** Constructed decks saved as the player's own, by name, in .dck text. */
+  decks?: Record<string, string>;
+}
+
 /** Starts a server; on a given port, to stand in for the same server restarted, which a browser treats as the same site. */
-export async function startServer(onPort?: number): Promise<Server> {
+export async function startServer(onPort?: number, seed: Seed = {}): Promise<Server> {
   const home = mkdtempSync(join(tmpdir(), 'forge-e2e-'));
+  // Forge's user folder: under APPDATA on Windows (set to home below), a dot folder in the home folder elsewhere
+  const user = process.platform === 'win32' ? join(home, 'Forge') : join(home, '.forge');
+  if (seed.prefs) {
+    mkdirSync(join(user, 'preferences'), { recursive: true });
+    writeFileSync(join(user, 'preferences', 'forge.preferences'),
+      Object.entries(seed.prefs).map(([k, v]) => `${k}=${v}\n`).join(''));
+  }
+  for (const [name, text] of Object.entries(seed.decks ?? {})) {
+    mkdirSync(join(user, 'decks', 'constructed'), { recursive: true });
+    writeFileSync(join(user, 'decks', 'constructed', `${name}.dck`), text);
+  }
   const port = onPort ?? nextPort++;
   const java: ChildProcess = spawn('java', [
     '-Djava.awt.headless=true',

@@ -8,6 +8,9 @@ src/main/resources/web/js/
 # What a Playwright run leaves behind
 e2e/test-results/
 
+# Throwaway probes built on e2e/probe.ts
+e2e/zz-*.spec.ts
+
 # Written by forge.web.ProtocolTypes from the Java records and the language keys (Maven runs it)
 src/main/ts/protocol.gen.ts
 src/main/ts/text.gen.ts
