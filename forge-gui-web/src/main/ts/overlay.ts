@@ -168,11 +168,11 @@ function paintArrows(model: Model): void {
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);
 
-/** A block being dragged out: from the blocker to the attacker under the pointer, or to the pointer itself. */
-let drag: { from: HTMLElement; to: HTMLElement | Point } | null = null;
+/** A block or an attack being dragged out: from the creature to what it would block or attack, or to the pointer. */
+let drag: { from: HTMLElement; to: HTMLElement | Point; kind: 'block' | 'attack' } | null = null;
 
-export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point | null): void {
-  const next = from && to ? { from, to } : null;
+export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point | null, kind: 'block' | 'attack' = 'block'): void {
+  const next = from && to ? { from, to, kind } : null;
   if (!next && !drag) return;
   drag = next;
   if (drawn) paint(drawn);
@@ -180,10 +180,11 @@ export function setDragArrow(from: HTMLElement | null, to: HTMLElement | Point |
 
 function drawDrag(ctx: CanvasRenderingContext2D): void {
   if (!drag) return;
+  const kind = KINDS[drag.kind];
   if (drag.to instanceof HTMLElement) {
-    ribbon(ctx, drag.from, drag.to, KINDS.block, false);
+    ribbon(ctx, drag.from, drag.to, kind, false);
   } else {
-    arrow(ctx, edge(drag.from, drag.to, 2), drag.to, KINDS.block);
+    arrow(ctx, edge(drag.from, drag.to, 2), drag.to, kind);
   }
 }
 
