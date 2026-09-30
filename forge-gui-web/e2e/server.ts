@@ -77,6 +77,8 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
   }
   const port = onPort ?? await freePort();
   const java: ChildProcess = spawn('java', [
+    // FORGE_E2E_JVM adds JVM options, such as a flight recording to profile the server under a test
+    ...(process.env.FORGE_E2E_JVM ?? '').split(' ').filter(Boolean),
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
     `-Dforge.web.port=${port}`,
