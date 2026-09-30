@@ -5,5 +5,6 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     include: ['src/test/ts/**/*.test.ts'],
+    setupFiles: ['src/test/ts/text-setup.ts'],
   },
 });

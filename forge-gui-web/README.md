@@ -90,11 +90,80 @@ build. The jar finds Forge's `res` folder by searching up from where it runs; if
 With `pageDir` set, run `npm run watch` in this folder to rebuild the TypeScript on save. Use the Node Maven
 installed (`node/`) or any Node 22.
 
+### How it fits together
+
+One Java process runs Forge and serves the page on one port. Each browser is a player; the page draws what the server
+sends and sends back what the player does, over one WebSocket.
+
+```
+browser (src/main/ts)                server (src/main/java/forge/web)              Forge
+─────────────────────                ────────────────────────────────              ─────
+main.ts ◀── WebSocket /ws ──▶ WebServer ─▶ WebSessions ─▶ WebSession   (one per browser)
+  │                                                           │
+  ├─ model.ts   ◀─ state, prompt,  ── WebGuiGame (IGuiGame) ◀─┤─ LocalGame: a netplay client ◀─┐
+  ├─ board.ts      questions                                  │                                 │ loopback
+  ├─ screens.tsx                                              ├─ Lobby  (ServerGameLobby)       │ netplay
+  └─ actions.ts ── what the player did ──────────────────────▶└─ DeckSession, OnlineDraft …     │
+                                                                  FServerManager ◀── the game ──┘
+```
+
+**Starting up.** `WebMain` loads Forge through `WebGuiBase` (Forge's `IGuiBase` for the web: where files are, which
+thread is the interface thread), opens `ServerConsole` (the server window) and starts `WebServer`. `WebServer` is
+Netty: it serves the page, card images and sounds, `/text` (below) and the socket, and turns away any request without
+one of the two tokens in the links. The host's token can take the host's seat; the guests' cannot.
+
+**Every seat is a netplay client.** The host's `LocalGame` starts Forge's own netplay server (`FServerManager`) on
+loopback and joins it, and each guest's session joins the same server. So the web module reuses desktop netplay
+whole: the lobby is a `ServerGameLobby`, a draft is run by `BoosterDraftHost`, the game's state arrives as netplay's
+delta packets, and the game's questions arrive as `IGuiGame` calls. Only the web port is reachable from outside.
+
+**A browser's session.** `WebSessions` gives each browser (known by an id it keeps in `localStorage`) a
+`WebSession`, which knows which screen it is on (start page, table, deck editor, draft, match) and routes its
+messages: to `Lobby` for match setup, `DeckSession` for decks, `OnlineDraft`/`OfflineDraft` for drafts, and
+`WebGuiGame` in a match.
+
+**A match.** `WebGuiGame` is the web's `IGuiGame`, the interface desktop draws a match through. It keeps the game's
+objects in a `BrowserModel` and sends the browser what changed as JSON (`JsonCodec` writes each `TrackableProperty`),
+along with the prompt (`PromptState`), the zones on show, the log and sounds. A call that needs an answer (choose
+cards, order them, pick a number) becomes a request the browser answers with a `reply`; `PendingRequests` holds the
+game's thread until it arrives. A browser that reloads is sent the whole table and every open question again, so it
+carries on where it was.
+
+**The page.** `app.ts` fetches the page's text, then loads `main.ts`, the controller: the only module that talks to
+the server. Messages update `model.ts`; once a frame, the page is drawn from the model and `ui.ts` (what the player has
+opened or collapsed, which the server never sees). The board is drawn by hand (`board.ts` and the modules it places,
+with `motion.ts` animating cards between zones) because it is laid out by measuring; everything else is Preact
+(`screens.tsx` and the screens it picks). Nothing that draws sends anything: it calls `actions.ts`, which `main.ts`
+turns into messages.
+
 ### The protocol
 
 Messages are Java records in `ToBrowser` and `FromBrowser`. Each build writes `src/main/ts/protocol.gen.ts` from them
 and from Forge's `TrackableProperty`, then type-checks the TypeScript against it, so a changed record fails the build
 where the browser uses it. A field may be null only if marked `@Nullable`.
+
+- **A new question from the game** (an `IGuiGame` method that returns something): implement it in `WebGuiGame` with
+  `ask(request, check)`, add the request as a `@Request` record in `ToBrowser.REQUESTS`, and draw it in `dialogs.tsx`,
+  answering with `actions.answer`. `WebGuiGameTest` fails while any such method is left to Forge's default.
+- **A new message**: a `@Message` record in `ToBrowser.MESSAGES`, handled in `main.ts`; or a `@Command` record in
+  `FromBrowser.COMMANDS`, handled where `WebSession` routes it.
+- **A new game property** needs nothing: it travels with the rest of `TrackableProperty` and appears in
+  `protocol.gen.ts`.
+
+### Text and languages
+
+Everything a player reads comes from Forge's language files (`forge-gui/res/languages`), in the language Forge is set
+to, so the page and the game's own prompts read in one language; a key a translation lacks falls back to English. The
+page's keys are grouped at the end of `en-US.properties`, under `#forge-gui-web`.
+
+- In TypeScript, `t('lblWebSomething', arg…)` gives the text, and `tNodes` the same with elements inside a sentence
+  (`text.ts`). Before anything is drawn, the page fetches `/text` (`PageText`): the patterns of the keys it uses.
+- The build finds those keys by scanning the TypeScript and `index.html` for quoted keys (`PageTextKeys`), writes them
+  to `text.gen.ts` so `t()` accepts only real keys, and fails on a `lblWeb…` key that `en-US.properties` lacks.
+- Patterns follow `java.text.MessageFormat`, as all of Forge's do: `{0}` is an argument and an apostrophe is written
+  twice (`can''t`). Write whole sentences with arguments rather than joining pieces, and a key for one and a key for
+  many where a count changes the words.
+- In Java, text the server sends for display uses `Localizer`, as the rest of Forge does.
 
 ### Keeping up with Forge
 

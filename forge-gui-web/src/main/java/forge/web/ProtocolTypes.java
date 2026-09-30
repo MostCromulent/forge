@@ -10,8 +10,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.RecordComponent;
 import java.lang.reflect.Type;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,15 +32,16 @@ public final class ProtocolTypes {
     private ProtocolTypes() {
     }
 
-    /** Writes the file to args[0]. args[1] is Forge's languages folder: some enums name themselves as they load. */
+    /**
+     * Writes the file to args[0], and beside it text.gen.ts ({@link PageTextKeys}). args[1] is Forge's languages
+     * folder: some enums name themselves as they load, and the page's text is checked against it. args[2] is the
+     * compiled classes' folder, where the list of the page's keys goes.
+     */
     public static void main(final String[] args) throws IOException {
         Localizer.getInstance().initialize("en-US", args[1]);
         final Path file = Path.of(args[0]);
-        final String generated = new ProtocolTypes().write();
-        // Left alone when unchanged, so a watching build has nothing to rebuild
-        if (!Files.isRegularFile(file) || !Files.readString(file, StandardCharsets.UTF_8).equals(generated)) {
-            Files.writeString(file, generated, StandardCharsets.UTF_8);
-        }
+        PageTextKeys.writeIfChanged(file, new ProtocolTypes().write());
+        PageTextKeys.write(file.getParent(), Path.of(args[1]), Path.of(args[2]));
     }
 
     private String write() {

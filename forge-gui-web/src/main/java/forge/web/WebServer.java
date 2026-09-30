@@ -649,6 +649,10 @@ public final class WebServer implements AutoCloseable {
                 }
                 return;
             }
+            if ("/text".equals(path)) {
+                respond(ctx, HttpResponseStatus.OK, PageText.json(), "application/json; charset=utf-8", null, "no-cache");
+                return;
+            }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);
             final byte[] body = resource.contains("..") ? null : readResource(resource);
             final String type = contentType(resource);

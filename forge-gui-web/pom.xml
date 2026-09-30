@@ -35,8 +35,9 @@
     <build>
         <finalName>forge-gui-web</finalName>
         <plugins>
-            <!-- Writes src/main/ts/protocol.gen.ts from the protocol's Java records once they compile, for the
-                 TypeScript type check below. It is declared first so it runs before that check in the same phase. -->
+            <!-- Writes src/main/ts/protocol.gen.ts from the protocol's Java records once they compile, and
+                 src/main/ts/text.gen.ts from the language keys the TypeScript uses, for the TypeScript type check
+                 below. It is declared first so it runs before that check in the same phase. -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -53,6 +54,7 @@
                             <arguments>
                                 <argument>${project.basedir}/src/main/ts/protocol.gen.ts</argument>
                                 <argument>${project.basedir}/../forge-gui/res/languages/</argument>
+                                <argument>${project.build.outputDirectory}</argument>
                             </arguments>
                         </configuration>
                     </execution>

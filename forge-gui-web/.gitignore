@@ -8,5 +8,6 @@ src/main/resources/web/js/
 # What a Playwright run leaves behind
 e2e/test-results/
 
-# Written from the Java records by forge.web.ProtocolTypes (Maven runs it)
+# Written by forge.web.ProtocolTypes from the Java records and the language keys (Maven runs it)
 src/main/ts/protocol.gen.ts
+src/main/ts/text.gen.ts
