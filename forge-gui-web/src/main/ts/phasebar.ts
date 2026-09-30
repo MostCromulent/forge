@@ -1,9 +1,9 @@
 import { reconcile } from './render';
-import { deref, isLocal, me, opponents, players, type Model } from './model';
+import { deref, game, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
-import { t, type TextKey } from './text';
+import { t, tNodes, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { GameView, PhaseType, TurnMarker } from './protocol';
 
@@ -307,13 +307,18 @@ function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: The
   q(until, '.text').textContent = text;
 }
 
-// Who the game is waiting on, and for how long. Your own priority lights the whole pill instead
+// Who the game is waiting on, and for how long: another player, or you when another person is at the table
 let waitingFor: number | null = null;
 let waitingSince = 0;
 let waitingTimer = 0;
+let lastPulse = 0;
 
 /** How long another player must be deciding before the pill says who the game is waiting on. */
 const WAIT_SHOWN_AFTER_S = 2;
+/** How long you hold priority before the pill says others are waiting on you, so a quick pass never shows it. */
+const YOUR_WAIT_SHOWN_AFTER_S = 5;
+/** How often your wait pulses, as a nudge that never grows louder. */
+const PULSE_EVERY_S = 20;
 
 export function stopWaiting(): void {
   waitingFor = null;
@@ -322,9 +327,19 @@ export function stopWaiting(): void {
 }
 
 function drawWaiting(pill: HTMLElement, model: Model): void {
-  // Nobody is waited on while the game is waiting on you, whether that is priority or a declaration to make
-  const onMe = me(model)?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled;
-  const holder = onMe ? null : players(model).find(p => p.HasPriority && !isLocal(model, p));
+  const mine = me(model);
+  // The game is waiting on you, whether that is priority or a declaration to make
+  const onMe = !!(mine?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled);
+  // Only a person minds waiting; against the computer your own wait is nobody's business
+  const people = players(model).filter(p => !isLocal(model, p) && !p.IsAI && !p.HasLost);
+  // The engine marks who has priority only once priority has passed, so at the start of a step nobody has it yet.
+  // Then, as core's own "Waiting for" line does, it is whoever's turn it is, or before the first turn (the coin
+  // toss, the mulligan) the one other player
+  const turn = players(model).find(p => p.$key === game(model)?.PlayerTurn?.ref);
+  const left = opponents(model).filter(p => !p.HasLost);
+  const other = players(model).find(p => p.HasPriority && !isLocal(model, p))
+    ?? (turn ? (isLocal(model, turn) ? undefined : turn) : left.length === 1 ? left[0] : undefined);
+  const holder = onMe ? (people.length ? mine : undefined) : other;
   const chip = q(pill, '.waiting');
   chip.hidden = !holder;
   if (!holder) {
@@ -334,13 +349,29 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   if (waitingFor !== holder.$key) {
     waitingFor = holder.$key;
     waitingSince = Date.now();
+    lastPulse = 0;
   }
-  q(chip, '.who').textContent = holder.Name ?? '';
+  chip.classList.toggle('you', onMe);
+  // An element, which the sentence keeps whole where a string would be run into the words around it
+  const you = document.createElement('strong');
+  you.textContent = t('lblWebPhaseYou');
+  const words = onMe
+    ? (people.length === 1 ? tNodes('lblWebPhaseWaitingOnYou', people[0].Name ?? '', you) : tNodes('lblWebPhasePlayersWaitingOnYou', people.length, you))
+    : [t('lblWebPhaseWaitingOn', holder.Name ?? '')];
+  q(chip, '.who').replaceChildren(...words.map(w => (w instanceof Node ? w : String(w))));
   // A wait of a moment is not worth a chip, and one that appeared reading 0s looked stuck
   const show = () => {
     const seconds = Math.floor((Date.now() - waitingSince) / 1000);
-    chip.hidden = seconds < WAIT_SHOWN_AFTER_S;
+    const yours = chip.classList.contains('you');
+    chip.hidden = seconds < (yours ? YOUR_WAIT_SHOWN_AFTER_S : WAIT_SHOWN_AFTER_S);
     q(chip, 'b').textContent = t('lblWebPhaseWaitSeconds', seconds);
+    // Your wait pulses once every PULSE_EVERY_S, restarted by taking the class off and putting it back
+    if (yours && seconds >= PULSE_EVERY_S && seconds % PULSE_EVERY_S === 0 && lastPulse !== seconds) {
+      lastPulse = seconds;
+      chip.classList.remove('pulse');
+      void chip.offsetWidth;
+      chip.classList.add('pulse');
+    }
   };
   show();
   if (!waitingTimer) {
