@@ -92,6 +92,10 @@ const actions: Actions = {
   },
 };
 
+// The page's own actions and model, for the browser console and for e2e probes, which drive the game by what it is
+// asking rather than by which key or button answers it
+Object.assign(window, { forge: { actions, model } });
+
 const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule, render);

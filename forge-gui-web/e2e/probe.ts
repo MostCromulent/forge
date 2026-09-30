@@ -8,6 +8,9 @@
 //     await p.snap('board');
 //   });
 //
+// Inside a match a probe acts through the page's own actions and reads its model (act, asking, untilPriority, or
+// page.evaluate(() => window.forge.model...)), never through keys or buttons, which answer whatever happens to be asked.
+//
 // Name the file zz-<anything>.spec.ts (ignored by git) and run it with `npx playwright test zz-<anything>`. Screenshots
 // land in forge-gui-web/target/probe/<title>/, and the page's errors are printed as they happen.
 
@@ -15,6 +18,13 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { startServer, type Server } from './server';
 import { chooseDeck, enterName, gameStarted, hostTable, inviteLink } from './steps';
+import type { Actions } from '../src/main/ts/actions';
+import type { Model } from '../src/main/ts/model';
+
+// main.ts puts the page's own actions and model here, which is how a probe drives the game
+declare global {
+  interface Window { forge: { actions: Actions; model: Model } }
+}
 
 export interface Probe {
   page: Page;
@@ -139,8 +149,7 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
 
 /**
  * Sets up a game state in the match already under way, with the same defaults as board: pass the table the match was
- * set up with. Placing is known by the first card the state names showing, so a state set up again over one that
- * already shows that card returns without waiting for it.
+ * set up with, less any player who has lost. It waits for priority first, and then for the first card the state names.
  */
 export async function setState(p: Probe, state: string, table: Table = {}): Promise<void> {
   const page = p.page;
@@ -154,34 +163,47 @@ export async function setState(p: Probe, state: string, table: Table = {}): Prom
   }
   const named = /^(?:human|ai|p\d)(?:battlefield|hand)=([^;|]+)/;
   const first = lines.map(l => named.exec(l)?.[1]).find(Boolean);
-  const placed = first ? page.locator('#match .card:visible', { hasText: first }).first() : null;
-  // The game takes a state only while a player has priority, which comes after the coin toss and the mulligan
-  for (let tries = 0; ; tries++) {
-    // A state does not clear the stack, so whatever the computer has on it is passed through first
-    for (let i = 0; i < 6 && await page.locator('#stack').isVisible(); i++) {
-      await page.keyboard.press('Space');
-      await page.waitForTimeout(1000);
-    }
-    await page.click('#prompt .more');
-    await page.getByRole('menuitem', { name: /Dev mode/ }).click();
-    await page.getByRole('menuitem', { name: /Set up a game state/ }).click();
-    await page.fill('.dev-state', lines.join('\n'));
-    await page.getByRole('button', { name: 'Set up', exact: true }).click();
-    if (!placed) {
-      await page.waitForTimeout(3000);
-      return;
-    }
-    try {
-      await expect(placed).toBeVisible({ timeout: 8000 });
-      // The board is sent after it is placed; answering a prompt before it lands answers the old one
-      await page.waitForTimeout(1000);
-      return;
-    } catch (e) {
-      if (tries >= 8) throw e;
-      await page.keyboard.press('Space');
-      await page.waitForTimeout(1500);
+  await untilPriority(page);
+  await act(page, 'dev', 'setupGameState', lines.join('\n'));
+  if (!first) return;
+  // The board is sent after it is placed; answering a prompt before it lands answers the old one
+  await expect(page.locator('#match .card:visible', { hasText: first }).first(),
+    `the state was not placed: ${await page.locator('.notice').allInnerTexts()}`).toBeVisible({ timeout: 10_000 });
+}
+
+/** Calls one of the page's own actions, as its buttons and keys do, whichever key or button that is. */
+export async function act<K extends keyof Actions>(page: Page, name: K, ...args: Parameters<Actions[K]>): Promise<void> {
+  await page.evaluate(([n, a]) => (window.forge.actions[n] as (...x: unknown[]) => void)(...a), [name, args] as const);
+}
+
+/** What the prompt is asking you now, for a probe to wait on or to print when a wait runs out. */
+export function asking(page: Page): Promise<{ message: string; priority: boolean; stack: boolean } | null> {
+  return page.evaluate(() => {
+    const prompt = window.forge.model.prompt;
+    return prompt && { message: prompt.message, priority: prompt.priority, stack: !document.getElementById('stack')?.hidden };
+  });
+}
+
+/**
+ * Waits until you have priority with nothing on the stack, which is when the game takes a state. On the way it answers
+ * the questions before the first turn with their first choice (play first, keep the hand) and passes whatever is on
+ * the stack.
+ */
+export async function untilPriority(page: Page, timeout = 60_000): Promise<void> {
+  const end = Date.now() + timeout;
+  let last: Awaited<ReturnType<typeof asking>> = null;
+  while (Date.now() < end) {
+    last = await asking(page);
+    if (last?.priority && !last.stack) return;
+    if (last && (!last.priority || last.stack)) {
+      await act(page, 'ok');
+      // Answered once: the next look waits for the prompt to change, rather than answering the same one twice
+      await page.waitForFunction(m => window.forge.model.prompt?.message !== m, last.message, { timeout: 5000 }).catch(() => {});
+    } else {
+      await page.waitForTimeout(250);
     }
   }
+  throw new Error(`No priority within ${timeout} ms; the prompt says: ${JSON.stringify(last)}`);
 }
 
 /**
