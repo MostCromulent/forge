@@ -575,8 +575,9 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .zone-shut { width: 30px; padding: 0; color: var(--muted); background: none; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
-/* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view */
-#zoom { --zoom-w: 280px; position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+/* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view. It
+   grows with the window, up to three fifths of its height, between a readable least and a most that still leaves room */
+#zoom { --zoom-w: clamp(280px, 60vh * 63 / 88, 400px); position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
