@@ -1,6 +1,6 @@
-// Starting points for a probe: a throwaway spec that looks at one thing in the real page. A probe gets a server of its
-// own with dev mode on and a saved deck of the player's own, and each starting point returns with the page where the
-// looking starts, so a probe holds only what it looks at:
+// Starting points for a probe: a throwaway spec that looks at one thing in the real page. A probe gets a server with
+// dev mode on and a saved deck of the player's own, and each starting point returns with the page where the looking
+// starts, so a probe holds only what it looks at:
 //
 //   import { board, probe } from './probe';
 //   probe('haste', async p => {
@@ -8,15 +8,20 @@
 //     await p.snap('board');
 //   });
 //
-// Inside a match a probe acts through the page's own actions and reads its model (act, asking, untilPriority, or
-// page.evaluate(() => window.forge.model...)), never through keys or buttons, which answer whatever happens to be asked.
+// Inside a match a probe acts through the page's own actions and reads its model (act, asking, untilPriority,
+// passUntil, p.until), never through keys or buttons, which answer whatever happens to be asked. A wait that runs out
+// says what the page was asking, with a screenshot, rather than only that it timed out.
 //
 // Name the file zz-<anything>.spec.ts (ignored by git) and run it with `npx playwright test zz-<anything>`. Screenshots
 // land in forge-gui-web/target/probe/<title>/, and the page's errors are printed as they happen.
+//
+// The server serves the page from the source folder, so a TS or CSS change needs only `npm run build` before a probe.
+// Java and new language keys need the jar rebuilt, which cannot happen while any server is running from it.
 
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
-import { startServer, type Server } from './server';
+import { join } from 'node:path';
+import { PROBE_DECK, PROBE_SEED, startServer, type Server } from './server';
 import { chooseDeck, enterName, gameStarted, hostTable, inviteLink } from './steps';
 import type { Actions } from '../src/main/ts/actions';
 import type { Model } from '../src/main/ts/model';
@@ -26,53 +31,106 @@ declare global {
   interface Window { forge: { actions: Actions; model: Model } }
 }
 
+export { PROBE_DECK };
+
 export interface Probe {
   page: Page;
   browser: Browser;
   server: Server;
   /** Saves a screenshot of the page, or of another page such as a guest's, and prints where it went. */
   snap(name: string, on?: Page): Promise<void>;
+  /** Waits for a test run in the page; if it never holds, fails saying what the page was asking, with a screenshot. */
+  until<A>(what: string, test: (arg: A) => unknown, arg?: A, on?: Page, timeout?: number): Promise<void>;
+  /** Screenshots taken one after another, laid out as one image, to see something move. */
+  frames(name: string, count?: number, everyMs?: number, clip?: { x: number; y: number; width: number; height: number }, on?: Page): Promise<void>;
 }
 
-/** The player's own deck every probe server starts with: sixty basics, legal in Constructed. */
-export const PROBE_DECK = 'Probe deck';
+const VIEWPORT = { width: 1440, height: 900 };
+const SHOTS = join(import.meta.dirname, '..', 'target', 'probe');
+function listen(page: Page, who: string): void {
+  page.on('pageerror', e => console.log(`[${who} page error] ${e.message}`));
+  // A card image the test machine has not downloaded is a 404 every time, and says nothing about the page
+  page.on('console', m => {
+    if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) console.log(`[${who} console] ${m.text()}`);
+  });
+}
+
+/** What the page shows and asks, in one line, for a wait that ran out. */
+export function explain(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const m = window.forge?.model;
+    if (!m) return 'The page never loaded the game client.';
+    const prompt = m.prompt;
+    const text = (sel: string) => [...document.querySelectorAll<HTMLElement>(sel)].map(e => e.innerText.replace(/\s+/g, ' ').trim()).filter(Boolean);
+    return JSON.stringify({
+      where: m.inMatch ? 'match' : m.inLobby ? 'lobby' : 'elsewhere',
+      prompt: prompt && { message: prompt.message, priority: prompt.priority, ok: prompt.ok, cancel: prompt.cancel,
+        selectable: prompt.selectable.length, players: prompt.selectablePlayers.length },
+      problems: m.lobby?.problems,
+      notices: text('.notice'),
+      dialogs: text('#dialog-layer .dialog').map(t => t.slice(0, 160)),
+    });
+  });
+}
 
 export function probe(title: string, body: (p: Probe) => Promise<void>): void {
-  test(title, async ({ page, browser }) => {
+  test(title, async ({ browser }) => {
     test.setTimeout(600_000);
-    const server = await startServer(undefined, {
-      prefs: { DEV_MODE_ENABLED: 'true' },
-      decks: { [PROBE_DECK]: `[metadata]\nName=${PROBE_DECK}\n[Main]\n30 Mountain\n30 Forest\n` },
-    });
-    const dir = `../target/probe/${title.replace(/[^\w-]+/g, '-')}`;
-    mkdirSync(dir, { recursive: true });
-    const listen = (p: Page, who: string) => {
-      p.on('pageerror', e => console.log(`[${who} page error] ${e.message}`));
-      // A card image the test machine has not downloaded is a 404 every time, and says nothing about the page
-      p.on('console', m => {
-        if (m.type() === 'error' && !m.text().startsWith('Failed to load resource')) console.log(`[${who} console] ${m.text()}`);
-      });
-    };
+    const server = await startServer(undefined, PROBE_SEED);
+    const context = await browser.newContext({ viewport: VIEWPORT });
+    const page = await context.newPage();
     listen(page, 'host');
+    const dir = join(SHOTS, title.replace(/[^\w-]+/g, '-'));
+    mkdirSync(dir, { recursive: true });
+    const snap = async (name: string, on: Page = page) => {
+      await on.screenshot({ path: join(dir, `${name}.png`) });
+      console.log(`[snap] forge-gui-web/target/probe/${title.replace(/[^\w-]+/g, '-')}/${name}.png`);
+    };
+    const p: Probe = {
+      page, browser, server, snap,
+      async until(what, test, arg, on = page, timeout = 30_000) {
+        try {
+          await on.waitForFunction(test as (arg: unknown) => unknown, arg, { timeout });
+        } catch {
+          await snap(`timeout-${what.replace(/[^\w-]+/g, '-')}`, on).catch(() => {});
+          throw new Error(`Waited ${timeout / 1000} s for ${what}. The page: ${await explain(on)}`);
+        }
+      },
+      async frames(name, count = 8, everyMs = 100, clip, on = page) {
+        const shots: { at: number; png: string }[] = [];
+        const start = Date.now();
+        for (let i = 0; i < count; i++) {
+          shots.push({ at: Date.now() - start, png: (await on.screenshot({ clip })).toString('base64') });
+          await on.waitForTimeout(everyMs);
+        }
+        const columns = Math.max(1, Math.min(count, Math.floor(1800 / (clip?.width ?? VIEWPORT.width)))) || 1;
+        const sheet = await context.newPage();
+        await sheet.setContent(`<body style="margin:0;background:#000;display:grid;gap:4px;align-items:start;align-content:start;grid-template-columns:repeat(${columns},auto)">${
+          shots.map(s => `<div style="position:relative"><img style="display:block" src="data:image/png;base64,${s.png}"><b style="position:absolute;left:4px;top:2px;padding:0 4px;background:#000b;color:#fff;font:12px sans-serif">${s.at} ms</b></div>`).join('')}</body>`);
+        await sheet.screenshot({ path: join(dir, `${name}.png`), fullPage: true });
+        await sheet.close();
+        console.log(`[frames] forge-gui-web/target/probe/${title.replace(/[^\w-]+/g, '-')}/${name}.png`);
+      },
+    };
     try {
-      await body({
-        page, browser, server,
-        async snap(name, on = page) {
-          const path = `${dir}/${name}.png`;
-          await on.screenshot({ path });
-          console.log(`[snap] forge-gui-web/target/probe/${dir.split('/').pop()}/${name}.png`);
-        },
-      });
+      await body(p);
     } finally {
+      await context.close();
       await server.stop();
     }
   });
 }
 
+/** The start page, as the probe's player, named Alice. */
+async function home(p: Probe): Promise<void> {
+  await p.page.goto(p.server.url);
+  await enterName(p.page, 'Alice');
+}
+
 /** A second browser joining the host's table by its invite link, under the name Bea. */
 async function seatGuest(p: Probe): Promise<Page> {
-  const guest = await (await p.browser.newContext({ viewport: p.page.viewportSize() ?? undefined })).newPage();
-  guest.on('pageerror', e => console.log(`[guest page error] ${e.message}`));
+  const guest = await (await p.browser.newContext({ viewport: VIEWPORT })).newPage();
+  listen(guest, 'guest');
   await guest.goto(await inviteLink(p.page, p.server.url));
   await enterName(guest, 'Bea');
   await expect(p.page.locator('#seats')).toContainText('Bea');
@@ -81,15 +139,13 @@ async function seatGuest(p: Probe): Promise<Page> {
 
 /** Match setup against the computer, with no decks chosen. */
 export async function lobby(p: Probe): Promise<void> {
-  await p.page.goto(p.server.url);
-  await enterName(p.page, 'Alice');
+  await home(p);
   await hostTable(p.page, false);
 }
 
 /** Match setup with a guest seated; returns the guest's page. */
 export async function lobbyWithGuest(p: Probe): Promise<Page> {
-  await p.page.goto(p.server.url);
-  await enterName(p.page, 'Alice');
+  await home(p);
   await hostTable(p.page, true);
   return seatGuest(p);
 }
@@ -133,23 +189,45 @@ export interface Table {
 export async function board(p: Probe, state: string, table: Table = {}): Promise<void> {
   const page = p.page;
   await lobby(p);
-  if (table.game) {
-    await page.locator('.popup-anchor .menu-button').first().click();
-    await page.locator('.game-choice', { has: page.locator('.game-name', { hasText: new RegExp(`^${table.game}$`) }) }).click();
+  const want = { game: table.game ?? null, players: table.players ?? 2 };
+  // Set up through the lobby's own actions: the game, the seats, and each seat's deck, as the menus would
+  await page.evaluate(({ game, players }) => {
+    const { actions, model } = window.forge;
+    const format = game && model.lobby?.formats.find(f => f.name === game);
+    if (format) actions.setFormat(format.id);
+    if (players !== model.lobby?.seats.length) actions.setPlayerCount(players);
+  }, want);
+  await p.until(`${want.players} seats${want.game ? ` at ${want.game}` : ''}`, ({ game, players }) => {
+    const lobby = window.forge.model.lobby;
+    return lobby?.seats.length === players && (!game || lobby.formats.find(f => f.id === lobby.format)?.name === game);
+  }, want);
+  // Each seat without a legal deck is dealt the first legal one by name, as the finder lists them. The deck list for a
+  // new game arrives after it, so a seat dealt from the old list is dealt again until the table can start.
+  for (let tries = 0; ; tries++) {
+    const ready = await page.evaluate(() => {
+      const { actions, model } = window.forge;
+      const lobby = model.lobby!;
+      if (lobby.canStart) return true;
+      const legal = model.decks.filter(d => !d.generated && !d.problem).sort((a, b) => a.name.localeCompare(b.name));
+      lobby.seats.forEach((seat, i) => {
+        const deck = legal.find(d => d.key !== seat.deck);
+        if ((!seat.deckName || seat.problem) && deck) actions.setSeat(i, { deck: deck.key });
+      });
+      return false;
+    });
+    if (ready) break;
+    if (tries > 30) throw new Error(`The table never became ready. The page: ${await explain(page)}`);
+    await page.waitForTimeout(700);
   }
-  const players = table.players ?? 2;
-  if (players !== 2) await page.locator('.count[aria-label="Players"] button', { hasText: String(players) }).click();
-  const seats = page.locator('#seats .plate');
-  await expect(seats).toHaveCount(players);
-  for (let i = 0; i < players; i++) await chooseDeck(page, seats.nth(i));
-  await page.click('#play');
+  await act(page, 'startMatch', false);
   await gameStarted(page);
   await setState(p, state, table);
 }
 
 /**
  * Sets up a game state in the match already under way, with the same defaults as board: pass the table the match was
- * set up with, less any player who has lost. It waits for priority first, and then for the first card the state names.
+ * set up with, less any player who has lost, and the pages of any other people at the table. It waits for priority
+ * first, and then for the first card the state names.
  */
 export async function setState(p: Probe, state: string, table: Table = {}, others: Page[] = []): Promise<void> {
   const page = p.page;
@@ -167,8 +245,8 @@ export async function setState(p: Probe, state: string, table: Table = {}, other
   await act(page, 'dev', 'setupGameState', lines.join('\n'));
   if (!first) return;
   // The board is sent after it is placed; answering a prompt before it lands answers the old one
-  await expect(page.locator('#match .card:visible', { hasText: first }).first(),
-    `the state was not placed: ${await page.locator('.notice').allInnerTexts()}`).toBeVisible({ timeout: 10_000 });
+  await p.until(`${first} on the table`, name => [...document.querySelectorAll<HTMLElement>('#match .card')]
+    .some(c => c.offsetParent !== null && c.textContent?.includes(name)), first, page, 10_000);
 }
 
 /** Calls one of the page's own actions, as its buttons and keys do, whichever key or button that is. */
@@ -187,13 +265,12 @@ export function asking(page: Page): Promise<{ message: string; priority: boolean
 /**
  * Waits until you have priority with nothing on the stack, which is when the game takes a state. On the way it answers
  * the questions before the first turn with their first choice (play first, keep the hand) and passes whatever is on
- * the stack.
+ * the stack, for you and for the other pages given.
  */
 export async function untilPriority(page: Page, others: Page[] = [], timeout = 60_000): Promise<void> {
   const end = Date.now() + timeout;
-  let last: Awaited<ReturnType<typeof asking>> = null;
   while (Date.now() < end) {
-    last = await asking(page);
+    const last = await asking(page);
     if (last?.priority && !last.stack) return;
     // Another player's page holding priority or asking before the first turn is answered for them, or it waits forever
     for (const other of others) {
@@ -207,7 +284,25 @@ export async function untilPriority(page: Page, others: Page[] = [], timeout = 6
       await page.waitForTimeout(250);
     }
   }
-  throw new Error(`No priority within ${timeout} ms; the prompt says: ${JSON.stringify(last)}`);
+  throw new Error(`No priority within ${timeout / 1000} s. The page: ${await explain(page)}`);
+}
+
+/**
+ * Answers OK on every page given, yours first, until the test holds in yours: passing priority, keeping hands,
+ * letting a spell resolve. OK declares no attackers and no blockers too, so stop before a declaration you want to make.
+ */
+export async function passUntil<A>(p: Probe, what: string, test: (arg: A) => unknown, arg?: A, others: Page[] = [], timeout = 60_000): Promise<void> {
+  const end = Date.now() + timeout;
+  while (Date.now() < end) {
+    if (await p.page.evaluate(test, arg as A)) return;
+    for (const page of [p.page, ...others]) {
+      if (await page.evaluate(() => !!window.forge.model.prompt?.ok?.enabled)) await act(page, 'ok');
+    }
+    await p.page.waitForTimeout(400);
+  }
+  await p.snap(`timeout-${what.replace(/[^\w-]+/g, '-')}`).catch(() => {});
+  const pages = await Promise.all([p.page, ...others].map(async (page, i) => `${i ? `other ${i}` : 'yours'}: ${await explain(page)}`));
+  throw new Error(`Passed for ${timeout / 1000} s without ${what}. ${pages.join(' ')}`);
 }
 
 /**
@@ -216,8 +311,7 @@ export async function untilPriority(page: Page, others: Page[] = [], timeout = 6
  */
 export async function eventTable(p: Probe, kind: 'draft' | 'sealed'): Promise<Page> {
   const page = p.page;
-  await page.goto(p.server.url);
-  await enterName(page, 'Alice');
+  await home(p);
   await page.click('[data-mode=multiplayer]');
   await page.click(`.chooser [data-kind=${kind}]`);
   await expect(page.locator('.event-setup .wiz')).toBeVisible({ timeout: 30_000 });
@@ -237,8 +331,7 @@ export async function eventTable(p: Probe, kind: 'draft' | 'sealed'): Promise<Pa
 /** An offline draft at its first pick. */
 export async function drafting(p: Probe): Promise<void> {
   const page = p.page;
-  await page.goto(p.server.url);
-  await enterName(page, 'Alice');
+  await home(p);
   await page.click('[data-mode=play]');
   await page.click('.chooser [data-kind=draft]');
   await page.click('.ev.new');

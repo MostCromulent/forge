@@ -3,6 +3,7 @@
 
 import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { createServer, type AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,10 +11,6 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const module = resolve(here, '..');
 const repo = resolve(module, '..');
-
-// Tests run side by side in separate workers, each counting from a block of ports of its own. E2E_PORT_BASE moves
-// every block, so two runs on one machine do not take the same ports
-let nextPort = Number(process.env.E2E_PORT_BASE ?? 36900) + Number(process.env.TEST_WORKER_INDEX ?? 0) * 50;
 
 export interface Server {
   /** The page's address, with the token that lets a browser in. */
@@ -30,6 +27,37 @@ export interface Seed {
   decks?: Record<string, string>;
 }
 
+/** The player's own deck every probe server starts with: sixty basics, legal in Constructed. */
+export const PROBE_DECK = 'Probe deck';
+
+/** A probe server's home: dev mode on, and a deck of the player's own. */
+export const PROBE_SEED: Seed = {
+  prefs: { DEV_MODE_ENABLED: 'true' },
+  decks: { [PROBE_DECK]: `[metadata]\nName=${PROBE_DECK}\n[Main]\n30 Mountain\n30 Forest\n` },
+};
+
+/** A port nothing is listening on, from the system, so runs side by side, from any session, never take the same one. */
+function freePort(): Promise<number> {
+  return new Promise((done, fail) => {
+    const probe = createServer();
+    probe.once('error', fail);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address() as AddressInfo;
+      probe.close(() => done(port));
+    });
+  });
+}
+
+/** Ends the process and, on Windows, the JVM a `java` launcher starts under it, which would otherwise keep the port. */
+function killTree(pid: number): void {
+  try {
+    if (process.platform === 'win32') execFileSync('taskkill', ['/pid', String(pid), '/T', '/F'], { stdio: 'ignore' });
+    else process.kill(pid);
+  } catch {
+    // Already gone
+  }
+}
+
 /** Starts a server; on a given port, to stand in for the same server restarted, which a browser treats as the same site. */
 export async function startServer(onPort?: number, seed: Seed = {}): Promise<Server> {
   const home = mkdtempSync(join(tmpdir(), 'forge-e2e-'));
@@ -44,7 +72,7 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
     mkdirSync(join(user, 'decks', 'constructed'), { recursive: true });
     writeFileSync(join(user, 'decks', 'constructed', `${name}.dck`), text);
   }
-  const port = onPort ?? nextPort++;
+  const port = onPort ?? await freePort();
   const java: ChildProcess = spawn('java', [
     '-Djava.awt.headless=true',
     '-Dforge.web.noBrowser=true',
@@ -55,6 +83,10 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
     '-jar', join(module, 'target/forge-gui-web.jar'),
   // On Windows Forge keeps its preferences under APPDATA rather than the home folder
   ], { cwd: repo, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, APPDATA: home, LOCALAPPDATA: home } });
+  const running = () => java.exitCode === null && java.signalCode === null;
+  // A run stopped part way (a timeout, Ctrl+C) never reaches stop(), and the server would keep its port for good
+  const orphaned = () => { if (running()) killTree(java.pid!); };
+  process.once('exit', orphaned);
   let log = '';
   const url = await new Promise<string>((resolveUrl, reject) => {
     const timer = setTimeout(() => reject(new Error(`Forge did not start in time:\n${log.slice(-4000)}`)), 180_000);
@@ -74,19 +106,10 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
     url,
     port,
     async stop() {
-      // A server that has already exited has nothing left to stop, and taskkill fails on a process that is gone
-      if (java.exitCode === null && java.signalCode === null) {
+      process.off('exit', orphaned);
+      if (running()) {
         const exited = new Promise(done => java.once('exit', done));
-        // On Windows `java` can be a launcher that starts the real JVM as a child, which must go too or it keeps the port
-        if (process.platform === 'win32') {
-          try {
-            execFileSync('taskkill', ['/pid', String(java.pid), '/T', '/F'], { stdio: 'ignore' });
-          } catch {
-            // It exited between the check and the kill; the exit event still comes
-          }
-        } else {
-          java.kill();
-        }
+        killTree(java.pid!);
         await exited;
       }
       rmSync(home, { recursive: true, force: true });
