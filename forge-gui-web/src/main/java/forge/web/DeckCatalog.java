@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.collect.MapMaker;
 import forge.StaticData;
 import forge.deck.CardPool;
 import forge.deck.Deck;
@@ -39,6 +40,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -83,15 +85,46 @@ final class DeckCatalog {
         return out;
     }
 
-    /** Which of those formats this deck's cards are all legal in. */
-    private static List<String> legalIn(final Deck deck) {
+    /** Which of those formats a deck's cards are all legal in, from the formats core finds it legal in, which take in every sanctioned one. */
+    private static List<String> legalIn(final Set<GameFormat> formats) {
         final List<String> out = new ArrayList<>();
         for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
-            if (f.isDeckLegal(deck)) {
+            if (formats.contains(f)) {
                 out.add(f.getName());
             }
         }
         return out;
+    }
+
+    /** What a deck's summary says at any table. */
+    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats) {
+    }
+
+    /**
+     * Each deck's facts and its verdict at each table, kept between rebuilds: working out a deck's formats reads every
+     * printing of its cards, and the list is rebuilt whenever the table changes. A saved deck is replaced in storage
+     * rather than changed, so a deck's entries hold for as long as it does. Keyed by the deck itself, not its contents.
+     */
+    private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
+    private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
+
+    /** Forgets what the list knew of a deck that was changed where it is stored. */
+    static void changed(final Deck deck) {
+        FACTS.remove(deck);
+        VERDICTS.remove(deck);
+    }
+
+    private static Facts factsOf(final Deck deck, final DeckProxy proxy) {
+        return FACTS.computeIfAbsent(deck, d -> new Facts(colors(d), played(d), count(d.get(DeckSection.Sideboard)),
+                legalIn(proxy != null ? proxy.getFormats() : FModel.getFormats().getAllFormatsOfDeck(d)),
+                proxy == null ? null : proxy.getFormatsString()));
+    }
+
+    private static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
+        final String table = format.name() + "|" + (pool == null ? "" : pool.getName()) + "|"
+                + FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY);
+        return VERDICTS.computeIfAbsent(deck, d -> new ConcurrentHashMap<>())
+                .computeIfAbsent(table, t -> Optional.ofNullable(problem(deck, format, pool))).orElse(null);
     }
 
     /** Categories the browser has asked for and core has downloaded, kept so a refresh does not lose them. */
@@ -380,11 +413,12 @@ final class DeckCatalog {
             final String key = tag + ":" + proxy.getPath() + "/" + proxy.getName();
             byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
+            final Facts facts = factsOf(deck, proxy);
             // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
             // Its formats are the same wording the desktop chooser puts in its format column.
             final boolean linked = LINKED.equals(tag);
-            out.add(new DeckSummary(key, proxy.getName(), tag, colors(deck), null, null, played(deck),
-                    count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), proxy.getFormatsString(),
+            out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
+                    facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
                     linked ? linkedFile(deck).lastModified() : null));
@@ -394,8 +428,9 @@ final class DeckCatalog {
     private void addDevice(final List<DeckSummary> out, final GameType format, final String id, final Deck deck) {
         final String key = DEVICE + ":" + id;
         byKey.put(key, new Entry(null, false, deck));
-        out.add(new DeckSummary(key, deck.getName(), DEVICE, colors(deck), null, null, played(deck),
-                count(deck.get(DeckSection.Sideboard)), problem(deck, format, pool), legalIn(deck), null,
+        final Facts facts = factsOf(deck, null);
+        out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
+                facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
                 deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null));
     }
 

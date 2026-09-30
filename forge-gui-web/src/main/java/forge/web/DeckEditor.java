@@ -505,6 +505,8 @@ final class DeckEditor {
                     deck.setName(DeckStore.freeName(storage, deck.getName(), null));
                 }
                 storage.add(deck);
+                // Storage keeps this very deck, which goes on being edited, so what the list knew of it is out of date
+                DeckCatalog.changed(deck);
                 owned = deck.getName();
             }
             saved = true;
