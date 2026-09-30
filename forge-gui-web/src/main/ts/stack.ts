@@ -159,12 +159,15 @@ function place(root: HTMLElement): void {
 function noteAwaiting(model: Model, items: StackItemView[], events: readonly GameEvent[]): void {
   const onStack = new Set(items.map(i => String(i.SourceCard?.ref)));
   for (const [key, move] of journeys(events)) {
-    // Read before the zone it left is redrawn without it; a card cast from a hidden hand has no picture and is not shown
+    // As on desktop and mobile, another player's spell shows on the stack only once it is paid for. The card is not in
+    // the model while it is paid for, so the caster is taken to be whoever's zone it left
+    const mine = !!move.from?.player && model.localPlayers.includes(move.from.player.ref);
+    // Read before the zone it left is redrawn without it
     const img = document.querySelector<HTMLImageElement>(`.card[data-key="${key}"] img, .zone-tile img[data-key="${key}"]`);
     // The card may already be gone or hidden when its move is seen, so the picture it last had stands in
     const picture = img?.getAttribute('src') ? { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '' }
       : lastPicture(Number(key));
-    if (move.to?.zone === 'Stack' && !onStack.has(key) && picture) {
+    if (move.to?.zone === 'Stack' && mine && !onStack.has(key) && picture) {
       awaiting.set(key, { ...picture, since: Date.now() });
     } else {
       awaiting.delete(key);
