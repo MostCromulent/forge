@@ -5,8 +5,11 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { avatarUrl } from './looks';
+import { LookPicker } from './lookpicker';
+import { rememberAvatar } from './menu';
+import { logTints } from './log';
+import { players, type ChatEntry, type Model } from './model';
 import type { Actions } from './actions';
-import type { ChatEntry, Model } from './model';
 import type { Person } from './protocol';
 import { t, type TextKey } from './text';
 
@@ -24,12 +27,13 @@ function Crown() {
   );
 }
 
-/** rename, when given, puts an edit button on your own row: the name and face are changed from the menu only. */
+/** rename, when given, puts an edit button on your own row: the name is changed from the menu only. */
 export function Dock({ model, actions, rename }: { model: Model; actions: Actions; rename?: () => void }) {
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const [listed, setListed] = useState(false);
   const [text, setText] = useState('');
+  const [picking, setPicking] = useState(false);
   const log = useRef<HTMLDivElement>(null);
   // A new line is only worth reading if you can see it
   useEffect(() => {
@@ -52,6 +56,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   const host = people.find(p => p.host);
   const watching = people.filter(p => p.doing === 'watching').length;
   const seated = people.filter(p => p.doing !== 'watching');
+  const tints = chatTints(model);
   if (!inMatch && !open) {
     const unread = unreadSince(model.chat, lastSeen.current, model.playerName);
     return (
@@ -65,7 +70,18 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
       </button>
     );
   }
-  return (
+  // Before a match your own face in the roster changes it; in one, the seat's face is already fixed
+  const picker = picking && (
+    <LookPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
+      current={people.find(p => p.name === model.playerName)?.avatar ?? 0} close={chosen => {
+        setPicking(false);
+        if (chosen !== null) {
+          rememberAvatar(chosen);
+          actions.setName(model.playerName, chosen);
+        }
+      }} />
+  );
+  return (<>
     <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label={t('lblWebDockWhoIsHere')}
       onAnimationEnd={e => {
         // The panel folds once it has slid down, so the bar takes its place without a jump
@@ -96,7 +112,10 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
         <ul class="roster">
           {people.map(p => (
             <li key={p.name} class={p.doing === 'watching' ? 'watching' : ''}>
-              <img class="face-small" alt="" src={avatarUrl(p.avatar)} />
+              {!inMatch && p.name === model.playerName
+                ? <button class="face-change" title={t('lblWebMenuSelectAvatar')} aria-label={t('lblWebMenuSelectAvatar')} onClick={() => setPicking(true)}>
+                    <img class="face-small" alt="" src={avatarUrl(p.avatar)} /></button>
+                : <img class="face-small" alt="" src={avatarUrl(p.avatar)} />}
               <span class="who">{p.name}</span>
               {p.host && <Crown />}
               {rename && p.name === model.playerName && (
@@ -114,7 +133,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
         {model.chat.map((line, i) => (
           !line.from
             ? <p key={i} class="said note">{line.text}</p>
-            : <p key={i} class="said"><img class="face-small" alt="" src={avatarUrl(faceOf(people, line.from))} /><span><b>{line.from}</b> {line.text}</span></p>
+            : <p key={i} class="said"><img class="face-small" alt="" src={avatarUrl(faceOf(people, line.from))} /><span><b style={{ color: tints.get(line.from) }}>{line.from}</b> {line.text}</span></p>
         ))}
       </div>
       <form class="dock-say" onSubmit={e => {
@@ -129,7 +148,8 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           onInput={e => setText(e.currentTarget.value)} />
       </form>
     </section>
-  );
+    {picker}
+  </>);
 }
 
 function Chevron({ up }: { up: boolean }) {
@@ -145,6 +165,12 @@ function Chevron({ up }: { up: boolean }) {
 export function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
   const from = lastSeen ? chat.lastIndexOf(lastSeen) + 1 : 0;
   return chat.slice(from).filter(l => l.from && !l.earlier && l.from !== me).length;
+}
+
+/** Each name's colour: in a match the log's, taken in seat order, then everyone watching after them. */
+function chatTints(model: Model): Map<string, string> {
+  const names = new Set([...players(model).map(p => p.Name ?? ''), ...model.presence.map(p => p.name)]);
+  return new Map(logTints([...names].map(name => ({ name, local: name === model.playerName }))).map(n => [n.name, n.colour]));
 }
 
 /** The face a line was said under. Someone who has since left keeps the first avatar rather than none. */

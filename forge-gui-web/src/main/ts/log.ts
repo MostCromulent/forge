@@ -29,8 +29,8 @@ export function initLog(): void {
 const PLAYER_TINTS = ['#8fc3ff', '#f0a35e', '#c3a8ff', '#5fd0c0'];
 
 /**
- * Each player's name in a colour of its own, in games of three or more where a line is otherwise hard to place;
- * you keep the brass. Longer names first, so "Forge AI 2" is never read as "Forge AI".
+ * Each player's name in a colour of its own, so a line is placed at a glance; you keep the brass. Longer names
+ * first, so "Forge AI 2" is never read as "Forge AI".
  */
 function tintNames(el: HTMLElement, names: readonly { name: string; colour: string }[]): void {
   if (!names.length) return;
@@ -61,9 +61,8 @@ function tintNames(el: HTMLElement, names: readonly { name: string; colour: stri
   }
 }
 
-/** The colour each player's name takes in the log: none in a two-player game. */
+/** The colour each player's name takes in the log and the chat. */
 export function logTints(players: readonly { name: string; local: boolean }[]): { name: string; colour: string }[] {
-  if (players.length <= 2) return [];
   let next = 0;
   return players.filter(p => p.name).map(p => ({ name: p.name, colour: p.local ? 'var(--accent-2)' : PLAYER_TINTS[next++ % PLAYER_TINTS.length] }));
 }

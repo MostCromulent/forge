@@ -50,6 +50,7 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #chat-panel { flex: 0 1 40%; }
 #side[data-log="shut"] #log-panel, #side[data-chat="shut"] #chat-panel { flex: none; }
 #side[data-log="shut"] #log, #side[data-chat="shut"] #match-chat { display: none; }
+#side[data-log="shut"][data-chat="open"] #chat-panel { flex: 1; }
 .side-toggle { align-self: flex-end; font-size: 12px; padding: 2px 10px; }
 .side-toggle[aria-expanded="true"] { color: var(--muted); }
 /* Folded, the panels are tabs at the right edge and the board takes their column */

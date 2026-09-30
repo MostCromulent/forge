@@ -567,8 +567,15 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 @keyframes dock-sink { to { transform: translateY(calc(100% - 44px)); } }
 /* Still run, only instantly, because closing waits for the animation to end */
 html[data-motion="reduced"] .dock.open:not(.in-match), html[data-motion="reduced"] .dock.open.closing { animation-duration: 1ms; }
-/* In the side column it is a panel among panels, so it keeps that column's shape instead of its own */
-.dock.in-match { position: static; width: auto; border: none; border-radius: 0; box-shadow: none; max-height: none; flex: 1; min-height: 0; }
+/* In the side column it is a panel among panels, so it wears the log's frame and lines instead of its own */
+.dock.in-match { position: static; width: auto; max-height: none; flex: 1; min-height: 0; background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; box-shadow: inset 0 1px 0 #ffffff12; }
+.dock.in-match .dock-head { padding: 6px 8px; }
+.dock.in-match .dock-log { padding: 6px 8px; gap: 0; }
+.dock.in-match .said { padding: 2px 0; border-bottom: 1px solid var(--surface-2); color: var(--muted); align-items: center; gap: 6px; }
+.dock.in-match .said b { color: var(--text); }
+.dock.in-match .said .face-small { width: 18px; height: 18px; }
+.dock.in-match .dock-say { padding: 0 8px 8px; }
 
 .faces { display: flex; }
 .faces img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; border: 2px solid var(--surface); }
@@ -606,6 +613,8 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .roster .rename { width: 22px; height: 22px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; }
 .roster .rename:hover { background: var(--surface-2); }
 .roster .rename svg { width: 13px; height: 13px; fill: none; stroke: var(--muted); stroke-width: 1.8; stroke-linejoin: round; }
+.roster .face-change { padding: 0; border: none; border-radius: 50%; background: none; display: grid; }
+.roster .face-change:hover { box-shadow: 0 0 0 2px var(--accent-2); }
 .roster .doing { font-size: 11px; color: var(--muted); }
 /* The crown says who holds the host's seat; the label on it says so to a screen reader */
 .crown { width: 13px; height: 13px; flex: none; fill: none; stroke: var(--accent-2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }

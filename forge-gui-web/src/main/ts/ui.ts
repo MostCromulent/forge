@@ -58,7 +58,7 @@ export interface UiState {
   /** The zoom panel shows the hovered card's rules text instead of its image. T swaps them. */
   cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
-  sidePanels: { log: boolean };
+  sidePanels: { log: boolean; chat: boolean };
   /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
   draftHidden: boolean;
 }
@@ -87,7 +87,7 @@ export const ui: UiState = {
   hover: null,
   faceIndex: 0,
   cardText: false,
-  sidePanels: { log: true, ...storedSidePanels() },
+  sidePanels: { log: true, chat: true, ...storedSidePanels() },
   draftHidden: false,
 };
 
