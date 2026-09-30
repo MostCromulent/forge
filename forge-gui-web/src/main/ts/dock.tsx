@@ -8,15 +8,17 @@ import { avatarUrl } from './looks';
 import type { Actions } from './actions';
 import type { ChatEntry, Model } from './model';
 import type { Person } from './protocol';
+import { t, type TextKey } from './text';
 
 /** What each person is doing, in the words the roster shows. A seat at a table is worth naming; waiting is not. */
-const DOING: Record<string, string> = {
-  waiting: 'waiting', joining: 'joining', table: 'at the table', playing: 'playing', watching: 'watching',
+const DOING: Record<string, TextKey> = {
+  waiting: 'lblWebDockWaiting', joining: 'lblWebDockJoining', table: 'lblWebDockAtTheTable', playing: 'lblWebDockPlaying',
+  watching: 'lblWebDockWatching',
 };
 
 function Crown() {
   return (
-    <svg class="crown" role="img" aria-label="Host" viewBox="0 0 24 24">
+    <svg class="crown" role="img" aria-label={t('lblHost')} viewBox="0 0 24 24">
       <path d="M4.5 18h15M5 7.2l4.2 3.4L12 5.2l2.8 5.4L19 7.2l-1.1 8.3H6.1z" />
     </svg>
   );
@@ -57,14 +59,14 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
         <span class="faces" aria-hidden="true">
           {people.slice(0, 3).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
         </span>
-        <span class="dock-count">{people.length} here</span>
+        <span class="dock-count">{t('lblWebDockHere', people.length)}</span>
         {/* Keyed on the count, so each new line redraws it and it pulses again */}
-        {unread > 0 && <span key={unread} class="dock-new">{unread > 9 ? '9+' : unread} new</span>}
+        {unread > 0 && <span key={unread} class="dock-new">{t('lblWebDockNew', unread > 9 ? '9+' : unread)}</span>}
       </button>
     );
   }
   return (
-    <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label="Who is here"
+    <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label={t('lblWebDockWhoIsHere')}
       onAnimationEnd={e => {
         // The panel folds once it has slid down, so the bar takes its place without a jump
         if (e.animationName === 'dock-sink') {
@@ -78,14 +80,14 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
             {seated.slice(0, 4).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
           </span>
           <span class="dock-sum">
-            {host ? `${host.name} hosts` : 'At this table'}{watching ? ` · ${watching} watching` : ''}
+            {host ? t('lblWebDockHosts', host.name) : t('lblWebDockAtThisTable')}{watching ? ` · ${t('lblWebDockNumWatching', watching)}` : ''}
           </span>
           <Chevron up={!listed} />
         </button>
       ) : (
         <button class="dock-head" aria-expanded onClick={() => setClosing(true)}>
           <span class="live" aria-hidden="true" />
-          <b>On this server</b>
+          <b>{t('lblWebDockOnThisServer')}</b>
           <span class="dock-count">{people.length}</span>
           <Chevron up={false} />
         </button>
@@ -98,12 +100,12 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
               <span class="who">{p.name}</span>
               {p.host && <Crown />}
               {rename && p.name === model.playerName && (
-                <button class="rename" title="Change your name and avatar" aria-label="Change your name and avatar" onClick={rename}>
+                <button class="rename" title={t('lblWebDockRename')} aria-label={t('lblWebDockRename')} onClick={rename}>
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5h5L20 9a2.6 2.6 0 0 0-3.7-3.7L5.8 15.8z" /></svg>
                 </button>
               )}
               <span class="spacer" />
-              <span class="doing">{DOING[p.doing] ?? p.doing}</span>
+              <span class="doing">{DOING[p.doing] ? t(DOING[p.doing]) : p.doing}</span>
             </li>
           ))}
         </ul>
@@ -123,7 +125,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           setText('');
         }
       }}>
-        <input value={text} maxLength={240} placeholder="Say something" aria-label="Say something"
+        <input value={text} maxLength={240} placeholder={t('lblWebDockSay')} aria-label={t('lblWebDockSay')}
           onInput={e => setText(e.currentTarget.value)} />
       </form>
     </section>

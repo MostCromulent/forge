@@ -6,29 +6,30 @@ import { OptionsDialog } from './options';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DevAction } from './protocol';
+import { t, type TextKey } from './text';
 
 // Each group is listed alphabetically when drawn, so an entry can go anywhere in its group here
-const GROUPS: [string, [DevAction, string][]][] = [
-  ['Cards', [
-    ['addCardToHand', 'Add a card to hand'], ['addCardToBattlefield', 'Put a card onto the battlefield'],
-    ['addTokenToBattlefield', 'Create a token'], ['addCardToLibrary', 'Add a card to a library'],
-    ['addCardToGraveyard', 'Add a card to a graveyard'], ['addCardToExile', 'Add a card to exile'],
-    ['repeatLastAddition', 'Repeat the last addition'], ['castASpell', 'Cast a spell or play a land'],
-    ['tutorForCard', 'Tutor a card from the library'],
+const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
+  ['lblCards', [
+    ['addCardToHand', 'lblWebDevAddCardToHand'], ['addCardToBattlefield', 'lblWebDevAddCardToBattlefield'],
+    ['addTokenToBattlefield', 'lblWebDevAddToken'], ['addCardToLibrary', 'lblWebDevAddCardToLibrary'],
+    ['addCardToGraveyard', 'lblWebDevAddCardToGraveyard'], ['addCardToExile', 'lblWebDevAddCardToExile'],
+    ['repeatLastAddition', 'lblWebDevRepeatLastAddition'], ['castASpell', 'lblWebDevCastSpell'],
+    ['tutorForCard', 'lblWebDevTutor'],
   ]],
-  ['Remove', [
-    ['exileCardsFromHand', 'Exile cards from hand'], ['exileCardsFromBattlefield', 'Exile cards from the battlefield'],
-    ['removeCardsFromGame', 'Remove cards from the game'],
+  ['lblWebDevRemove', [
+    ['exileCardsFromHand', 'lblWebDevExileFromHand'], ['exileCardsFromBattlefield', 'lblWebDevExileFromBattlefield'],
+    ['removeCardsFromGame', 'lblWebDevRemoveFromGame'],
   ]],
-  ['Permanents', [
-    ['addCountersToPermanent', 'Add counters'], ['removeCountersFromPermanent', 'Remove counters'],
-    ['tapPermanents', 'Tap permanents'], ['untapPermanents', 'Untap permanents'],
+  ['lblPermanents', [
+    ['addCountersToPermanent', 'lblWebDevAddCounters'], ['removeCountersFromPermanent', 'lblWebDevRemoveCounters'],
+    ['tapPermanents', 'lblWebDevTap'], ['untapPermanents', 'lblWebDevUntap'],
   ]],
-  ['Game', [
-    ['generateMana', 'Add mana'], ['setPlayerLife', 'Set a player\'s life'], ['rollbackPhase', 'Go back to the start of the phase'],
-    ['winGame', 'Win the game'], ['dumpGameState', 'Save the game state'],
+  ['lblGame', [
+    ['generateMana', 'lblWebDevAddMana'], ['setPlayerLife', 'lblWebDevSetLife'], ['rollbackPhase', 'lblWebDevRollback'],
+    ['winGame', 'lblWebDevWinGame'], ['dumpGameState', 'lblWebDevDumpState'],
   ]],
-  ['Planechase', [['riggedPlanarRoll', 'Roll the planar die to a chosen face'], ['planeswalkTo', 'Planeswalk to a chosen plane']]],
+  ['lblPlanechase', [['riggedPlanarRoll', 'lblWebDevRiggedPlanarRoll'], ['planeswalkTo', 'lblWebDevPlaneswalkTo']]],
 ];
 
 /** The cheats, in place of the game menu's own items. */
@@ -49,17 +50,17 @@ export function DevItems({ model, actions, back, close, setUp }: {
   );
   return (
     <>
-      <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={back}>‹ Dev mode</button>
+      <button type="button" role="menuitem" class="card-menu-item dev-back" onClick={back}>‹ {t('lblWebDevMode')}</button>
       <div class="dev-top">
-        {toggle('unlimitedLands', 'Play any number of lands', model.devState?.unlimitedLands)}
-        {toggle('viewAll', 'See every card', model.devState?.viewAll)}
-        <button type="button" role="menuitem" class="card-menu-item" onClick={setUp}>Set up a game state…</button>
+        {toggle('unlimitedLands', t('lblWebDevUnlimitedLands'), model.devState?.unlimitedLands)}
+        {toggle('viewAll', t('lblWebDevViewAll'), model.devState?.viewAll)}
+        <button type="button" role="menuitem" class="card-menu-item" onClick={setUp}>{t('lblWebDevSetUpState')}</button>
       </div>
       <div class="dev-groups">
         {GROUPS.map(([heading, items]) => (
-          <div key={heading} class="dev-group" role="group" aria-label={heading}>
-            <h5>{heading}</h5>
-            {[...items].sort((a, b) => a[1].localeCompare(b[1])).map(([action, label]) => (
+          <div key={heading} class="dev-group" role="group" aria-label={t(heading)}>
+            <h5>{t(heading)}</h5>
+            {items.map(([action, key]): [DevAction, string] => [action, t(key)]).sort((x, y) => x[1].localeCompare(y[1])).map(([action, label]) => (
               <button key={action} type="button" role="menuitem" class="card-menu-item" onClick={() => run(action)}>{label}</button>
             ))}
           </div>
@@ -74,10 +75,10 @@ export function DevSetupDialog({ actions, close }: { actions: Actions; close: ()
   const [text, setText] = useState('');
   const file = useRef<HTMLInputElement>(null);
   return (
-    <OptionsDialog title="Set up a game state" kind="dev-setup" close={close} footer={<>
-      <span class="hint">The same text desktop Forge saves as a game state.</span>
-      <button onClick={() => file.current?.click()}>Load a file</button>
-      <button class="primary" disabled={!text.trim()} onClick={() => { actions.dev('setupGameState', text); close(); }}>Set up</button>
+    <OptionsDialog title={t('lblWebDevSetUpTitle')} kind="dev-setup" close={close} footer={<>
+      <span class="hint">{t('lblWebDevSetUpHint')}</span>
+      <button onClick={() => file.current?.click()}>{t('lblWebDevLoadFile')}</button>
+      <button class="primary" disabled={!text.trim()} onClick={() => { actions.dev('setupGameState', text); close(); }}>{t('lblWebDevSetUp')}</button>
     </>}>
       <textarea class="dev-state" spellcheck={false} rows={14} value={text} placeholder={'activeplayer=human\nactivephase=MAIN1\nhumanlife=20\nailife=20\nhumanbattlefield=Grizzly Bears;Forest'}
         onInput={e => setText(e.currentTarget.value)} />

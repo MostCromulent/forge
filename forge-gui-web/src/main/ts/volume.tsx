@@ -2,6 +2,7 @@
 // in a moment without opening the whole options list.
 
 import { SETTINGS, set, setting } from './settings';
+import { t } from './text';
 
 const VOLUMES = SETTINGS.filter(def => def.volume);
 
@@ -17,7 +18,7 @@ export function Volume({ close, anchor = '#prompt .volume' }: { close: () => voi
     : { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` };
   return (
     <div id="volume" class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div class="volume-panel" role="dialog" aria-label="Volume" style={at}>
+      <div class="volume-panel" role="dialog" aria-label={t('lblWebVolumeTitle')} style={at}>
         {VOLUMES.map(def => {
           const value = Number(setting(def.key));
           return (
@@ -25,7 +26,7 @@ export function Volume({ close, anchor = '#prompt .volume' }: { close: () => voi
               <span>{def.label}</span>
               <input type="range" min={0} max={100} step={5} value={value} class={value > 0 ? '' : 'off'}
                 onInput={e => set(def.key, Number(e.currentTarget.value))} />
-              <span class="value">{value > 0 ? `${value}%` : 'Off'}</span>
+              <span class="value">{value > 0 ? t('lblWebOptionsPercent', value) : t('lblOff')}</span>
             </label>
           );
         })}

@@ -4,6 +4,7 @@
 import type { KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
 import { storeJson, storedJson } from './storage';
+import { t } from './text';
 
 const LOCAL_KEY = 'forge.settings';
 /** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
@@ -35,63 +36,63 @@ export type SettingDef = SettingBase & (
 );
 
 export const SETTINGS: SettingDef[] = [
-  { section: 'Interrupts', key: 'interruptAttackers', label: 'Attackers are declared', type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: 'Interrupts', key: 'interruptOpponentSpell', label: 'An opponent casts a spell', type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: 'Interrupts', key: 'interruptTargeting', label: 'Something targets me', type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: 'Interrupts', key: 'interruptTriggers', label: 'An ability triggers', type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: 'Interrupts', key: 'interruptMassRemoval', label: 'A spell would destroy many permanents', type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptOpponentSpell', label: t('lblWebOptionsInterruptOpponentSpell'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptTargeting', label: t('lblWebOptionsInterruptTargeting'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
   {
-    section: 'Priority', key: 'autoYieldMode', label: 'Remember them', type: 'choice', server: true, menu: 'decisions',
-    hint: 'Per ability covers every card with the same ability; per card, only that card. Each mode keeps its own list.',
-    options: [['ability', 'Per ability'], ['card', 'Per card']], def: 'ability',
+    section: t('lblPriority'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
+    hint: t('lblWebOptionsAutoYieldModeHint'),
+    options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
   },
   {
-    section: 'Gameplay', key: 'autoPassDelay', label: 'Auto-pass countdown',
-    hint: 'Time to stop a pass before it happens. Zero passes at once.',
+    section: t('lblWebOptionsSectionGameplay'), key: 'autoPassDelay', label: t('lblWebOptionsAutoPassDelay'),
+    hint: t('lblWebOptionsAutoPassDelayHint'),
     type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1500,
   },
   {
-    section: 'Gameplay', key: 'autoTapPreview', label: 'Highlight lands Auto would tap', type: 'toggle', server: true, def: false,
+    section: t('lblWebOptionsSectionGameplay'), key: 'autoTapPreview', label: t('lblWebOptionsAutoTapPreview'), type: 'toggle', server: true, def: false,
   },
   {
-    section: 'Gameplay', key: 'arrows', label: 'Target and combat arrows', type: 'choice', server: true,
-    options: [['0', 'Off'], ['1', 'Hover'], ['2', 'Always']], def: '2',
+    section: t('lblWebOptionsSectionGameplay'), key: 'arrows', label: t('lblWebOptionsArrows'), type: 'choice', server: true,
+    options: [['0', t('lblOff')], ['1', t('lblWebOptionsHover')], ['2', t('lblAlways')]], def: '2',
   },
   {
-    section: 'Gameplay', key: 'logDetail', label: 'Game log detail', type: 'choice', server: true,
-    options: [['LOW', 'Low'], ['MEDIUM', 'Medium'], ['HIGH', 'High']], def: 'MEDIUM',
+    section: t('lblWebOptionsSectionGameplay'), key: 'logDetail', label: t('lblWebOptionsLogDetail'), type: 'choice', server: true,
+    options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblWebOptionsMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
   },
   {
-    section: 'Display', key: 'boardLayout', label: 'Table layout', hint: 'With three or four players.', type: 'choice',
-    options: [['columns', 'Columns'], ['quadrants', 'Quadrants']], def: 'columns',
+    section: t('lblWebOptionsSectionDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), hint: t('lblWebOptionsBoardLayoutHint'), type: 'choice',
+    options: [['columns', t('lblWebOptionsColumns')], ['quadrants', t('lblWebOptionsQuadrants')]], def: 'columns',
   },
   {
-    section: 'Display', key: 'handSort', label: 'Hand order', type: 'choice',
-    options: [['mana', 'Mana value'], ['color', 'Colour'], ['draw', 'Drawn']], def: 'mana',
+    section: t('lblWebOptionsSectionDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
+    options: [['mana', t('lblWebOptionsManaValue')], ['color', t('lblWebOptionsColour')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
-  { section: 'Display', key: 'handSize', label: 'Hand size', type: 'slider', min: 70, max: 130, def: 100 },
+  { section: t('lblWebOptionsSectionDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
   {
-    section: 'Display', key: 'motion', label: 'Animations', hint: 'System follows the computer\'s reduce-motion setting.', type: 'choice',
-    options: [['full', 'Full'], ['system', 'System'], ['reduced', 'Reduced']], def: 'full',
-  },
-  {
-    section: 'Sound', key: 'soundVolume', label: 'Effects', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
+    section: t('lblWebOptionsSectionDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
+    options: [['full', t('lblWebOptionsFull')], ['system', t('lblWebOptionsSystem')], ['reduced', t('lblWebOptionsReduced')]], def: 'full',
   },
   {
-    section: 'Sound', key: 'musicVolume', label: 'Music', type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
-  },
-  { section: 'Keys', key: 'keyOk', label: 'OK', action: 'ok', type: 'key', def: ' ' },
-  { section: 'Keys', key: 'keyEndTurn', label: 'End turn', action: 'endTurn', type: 'key', def: 'e' },
-  { section: 'Keys', key: 'keyAutoPass', label: 'Auto-pass on or off', hint: 'Passes priority for you when you have nothing to play.', action: 'autoPass', type: 'key', def: 'p' },
-  { section: 'Keys', key: 'keyUndo', label: 'Undo', action: 'undo', type: 'key', def: 'z' },
-  { section: 'Keys', key: 'keyNextFace', label: 'Turn a card over', hint: 'The card under the pointer.', action: 'nextFace', type: 'key', def: 'f' },
-  { section: 'Keys', key: 'keyCardText', label: 'Show card text', hint: 'The card under the pointer.', action: 'cardText', type: 'key', def: 't' },
-  {
-    section: 'Advanced', key: 'devMode', label: 'Dev mode', type: 'toggle', server: true, hostOnly: true, def: false,
-    hint: 'Cheats for testing, in the ⋯ menu during a game.',
+    section: t('lblWebOptionsSectionSound'), key: 'soundVolume', label: t('lblWebOptionsSoundVolume'), type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
   },
   {
-    section: 'Advanced', key: 'customCss', label: 'Custom CSS', hint: 'Applies as you type. Kept in this browser.', type: 'css', def: '',
+    section: t('lblWebOptionsSectionSound'), key: 'musicVolume', label: t('lblWebOptionsMusicVolume'), type: 'slider', server: true, volume: true, min: 0, max: 100, def: 100,
+  },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyOk', label: t('lblOK'), action: 'ok', type: 'key', def: ' ' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyEndTurn', label: t('lblWebOptionsKeyEndTurn'), action: 'endTurn', type: 'key', def: 'e' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyAutoPass', label: t('lblWebOptionsKeyAutoPass'), hint: t('lblWebOptionsKeyAutoPassHint'), action: 'autoPass', type: 'key', def: 'p' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyUndo', label: t('lblUndo'), action: 'undo', type: 'key', def: 'z' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
+  { section: t('lblWebOptionsSectionKeys'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
+  {
+    section: t('lblWebOptionsSectionAdvanced'), key: 'devMode', label: t('lblWebDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
+    hint: t('lblWebOptionsDevModeHint'),
+  },
+  {
+    section: t('lblWebOptionsSectionAdvanced'), key: 'customCss', label: t('lblWebOptionsCustomCss'), hint: t('lblWebOptionsCustomCssHint'), type: 'css', def: '',
   },
 ];
 

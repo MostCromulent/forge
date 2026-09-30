@@ -17,6 +17,7 @@ import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
   PlayerView, SideboardRequest, TextRequest, TrackedObject,
 } from './protocol';
+import { t } from './text';
 
 type Answer = (value: unknown) => void;
 
@@ -55,7 +56,7 @@ function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   return (
     <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) answer([]); }}
       onContextMenu={e => { e.preventDefault(); answer([]); }}>
-      <div ref={menu} class="card-menu" role="menu" aria-label={req.message ?? 'Abilities'} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
+      <div ref={menu} class="card-menu" role="menu" aria-label={req.message ?? t('lblAbilities')} style={{ left: `${at.x}px`, top: `${at.y}px` }}>
         {req.message && <p class="card-menu-title">{req.message}</p>}
         {req.options.map((o, i) => (
           <button key={i} type="button" role="menuitem" class="card-menu-item" onClick={() => answer([i])}>
@@ -82,7 +83,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       default: {
         // A kind this browser does not know yet still gets an answer, so the game is never left waiting
         const unknown = req as { default?: unknown };
-        return <ButtonRow><Button primary onClick={() => answer(unknown.default)}>OK</Button></ButtonRow>;
+        return <ButtonRow><Button primary onClick={() => answer(unknown.default)}>{t('lblOK')}</Button></ButtonRow>;
       }
     }
   })();
@@ -121,9 +122,9 @@ export function RevealWindow({ model, title, cards, close }: { model: Model; tit
   return (
     <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <section class="zone-panel reveal-panel" role="dialog" aria-label={title}>
-        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{`${count} ${count === 1 ? 'card' : 'cards'}`}</span></header>
+        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{t(count === 1 ? 'lblWebDialogOneCard' : 'lblWebDialogCards', count)}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
-        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">OK</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
+        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
       </section>
     </div>
   );
@@ -237,18 +238,18 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   };
   const matches = rankByName(req.options.map(o => String(o.label ?? o.name ?? '')), query);
   const shown = matches.slice(0, SHOW_AT_MOST);
-  const note = matches.length > SHOW_AT_MOST ? `Showing the first ${SHOW_AT_MOST} of ${req.options.length}. Type to narrow the list.`
-    : searchable && picked.size ? `${picked.size} selected` : '';
+  const note = matches.length > SHOW_AT_MOST ? t('lblWebDialogShowingFirst', SHOW_AT_MOST, req.options.length)
+    : searchable && picked.size ? t('lblWebDialogSelected', picked.size) : '';
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
   return (
     <>
-      {searchable && <input ref={search} class="choice-search" placeholder={`Search ${req.options.length} options`}
+      {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
         value={typed} onInput={e => setTyped(e.currentTarget.value)} />}
       <div class={reveal ? 'options grid' : 'options'}>
         {shown.map(i => <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
       </div>
       <p class="hint">{note}</p>
-      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? 'OK' : 'Confirm'}</Button></ButtonRow>
+      <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')}</Button></ButtonRow>
     </>
   );
 }
@@ -265,12 +266,12 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   });
   return (
     <>
-      <p class="hint">{req.top || 'Pick in order'}</p>
+      <p class="hint">{req.top || t('lblWebDialogPickInOrder')}</p>
       <div class="options">
         {req.options.map((o, i) => chosen.includes(i) ? null
           : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
       </div>
-      <p class="hint">Chosen, first to last. Drag to reorder.</p>
+      <p class="hint">{t('lblWebDialogChosenOrder')}</p>
       <div class="options ordered">
         {chosen.map((i, pos) => (
           <div key={i} class={dropAt === pos ? 'ordered-item drop-here' : 'ordered-item'} draggable
@@ -296,10 +297,10 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
           </div>
         ))}
       </div>
-      {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> Remember this order</label>}
+      {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>}
       <ButtonRow>
         <Button primary disabled={chosen.length < req.min || chosen.length > req.max}
-          onClick={() => answer({ indices: chosen, remember })}>Confirm</Button>
+          onClick={() => answer({ indices: chosen, remember })}>{t('lblWebDialogConfirm')}</Button>
       </ButtonRow>
     </>
   );
@@ -350,21 +351,21 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
             <span class="seq">{pos + 1}</span>
             <OptionView model={model} opt={req.options[i]} />
             {bothEnds && <button class="send" onClick={() => send(name, pos)}
-              title={name === 'top' ? 'Put on the bottom' : 'Put on top'}>
-              {name === 'top' ? 'To bottom' : 'To top'}</button>}
+              title={name === 'top' ? t('lblWebDialogPutOnBottom') : t('lblWebDialogPutOnTop')}>
+              {name === 'top' ? t('lblWebDialogToBottom') : t('lblWebDialogToTop')}</button>}
           </div>
         ))}
-        {piles[name].length === 0 && <p class="shelf-empty">nothing here</p>}
+        {piles[name].length === 0 && <p class="shelf-empty">{t('lblWebDialogNothingHere')}</p>}
       </div>
     </div>
   );
 
   return (
     <div class="manipulate">
-      {shelf('top', 'Top of library', 'drawn first →')}
-      <p class="between">{`${rest.length} other cards`}</p>
-      {bothEnds && shelf('bottom', 'Bottom of library', 'last is furthest down')}
-      <ButtonRow><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>Confirm</Button></ButtonRow>
+      {shelf('top', t('lblWebDialogTopOfLibrary'), t('lblWebDialogDrawnFirst'))}
+      <p class="between">{t('lblWebDialogOtherCards', rest.length)}</p>
+      {bothEnds && shelf('bottom', t('lblWebDialogBottomOfLibrary'), t('lblWebDialogLastFurthestDown'))}
+      <ButtonRow><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')}</Button></ButtonRow>
     </div>
   );
 }
@@ -388,7 +389,7 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
   return (
     <>
       <input ref={input} type={req.numeric ? 'number' : 'text'} value={value} onInput={e => setValue(e.currentTarget.value)} />
-      <ButtonRow><Button primary onClick={() => answer(value)}>OK</Button></ButtonRow>
+      <ButtonRow><Button primary onClick={() => answer(value)}>{t('lblOK')}</Button></ButtonRow>
     </>
   );
 }
@@ -437,11 +438,11 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
           </div>
         ))}
       </div>
-      <p class="hint">{`${left} left to assign`}</p>
+      <p class="hint">{t('lblWebDialogLeftToAssign', left)}</p>
       <ButtonRow>
-        {req.maySkip && <Button onClick={() => answer(null)}>Skip</Button>}
-        <Button onClick={() => setValues([...req.default])}>Reset</Button>
-        <Button primary disabled={left !== 0} onClick={() => answer(values)}>Confirm <kbd>{keyName(boundKeys().ok)}</kbd></Button>
+        {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
+        <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
+        <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <kbd>{keyName(boundKeys().ok)}</kbd></Button>
       </ButtonRow>
     </>
   );
@@ -463,20 +464,20 @@ function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model
   const sideTotal = req.entries.reduce((a, e, i) => a + e.total - inMain[i], 0);
   return (
     <>
-      <p class="hint">Click a card or its arrow to move one copy.</p>
+      <p class="hint">{t('lblWebDialogMoveOneCopy')}</p>
       <div class="sb-columns">
         <div>
-          <h4>{`Main deck (${mainTotal})`}</h4>
+          <h4>{t('lblWebDialogMainDeckCount', mainTotal)}</h4>
           <div class="sb-list">{req.entries.map((_, i) => (inMain[i] > 0 ? row(i, inMain[i], '→', -1) : null))}</div>
         </div>
         <div>
-          <h4>{`Sideboard (${sideTotal})`}</h4>
+          <h4>{t('lblWebDialogSideboardCount', sideTotal)}</h4>
           <div class="sb-list">{req.entries.map((e, i) => (e.total - inMain[i] > 0 ? row(i, e.total - inMain[i], '←', 1) : null))}</div>
         </div>
       </div>
       <ButtonRow>
-        <Button onClick={() => setInMain([...req.main])}>Reset</Button>
-        <Button primary onClick={() => answer(inMain)}>Done</Button>
+        <Button onClick={() => setInMain([...req.main])}>{t('lblReset')}</Button>
+        <Button primary onClick={() => answer(inMain)}>{t('lblDone')}</Button>
       </ButtonRow>
     </>
   );

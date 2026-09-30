@@ -8,6 +8,15 @@ import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckSection, EditorCard, EditorState } from './protocol';
 import type { Zone } from './drag';
+import { t, type TextKey } from './text';
+
+/** How many copies a section holds, as the printing picker says it. */
+const IN_SECTION: Record<DeckSection, TextKey> = {
+  Main: 'lblWebCardMenuInMain', Sideboard: 'lblWebCardMenuInSideboard', Commander: 'lblWebCardMenuInCommander',
+  Avatar: 'lblWebCardMenuInAvatar', Planes: 'lblWebCardMenuInPlanes', Schemes: 'lblWebCardMenuInSchemes',
+  Conspiracy: 'lblWebCardMenuInConspiracy', Dungeon: 'lblWebCardMenuInDungeon', Attractions: 'lblWebCardMenuInAttractions',
+  Contraptions: 'lblWebCardMenuInContraptions',
+};
 
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
 
@@ -47,12 +56,12 @@ export function CardMenu({ at, state, actions, close, printings }: {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
         <span class="menu-cap">{at.name}</span>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>Add one to the deck</button>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
         {zone !== null && <>
-          <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>Return one to the pool</button>
+          <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuReturnOne')}</button>
           {inDeck && inDeck.count > 1 && (
             <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: inDeck.count }))}>
-              Return all {inDeck.count}
+              {t('lblWebCardMenuReturnAll', inDeck.count)}
             </button>
           )}
         </>}
@@ -63,35 +72,35 @@ export function CardMenu({ at, state, actions, close, printings }: {
     <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
       <span class="menu-cap">{at.name}</span>
       {zone === null && <>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>Add one to the main deck</button>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Sideboard', count: 1 }))}>Add one to the sideboard</button>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToMain')}</button>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Sideboard', count: 1 }))}>{t('lblWebCardMenuAddToSideboard')}</button>
       </>}
       {zone !== null && zone !== 'Commander' && <>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: zone, count: 1 }))}>Add one more</button>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: zone, count: 1 }))}>{t('lblWebCardMenuAddOneMore')}</button>
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'move', name: at.name, from: zone, to: other, count: 1 }))}>
-          Move one to the {other === 'Main' ? 'main deck' : 'sideboard'}
+          {t(other === 'Main' ? 'lblWebCardMenuMoveOneToMain' : 'lblWebCardMenuMoveOneToSideboard')}
         </button>
         {inDeck && inDeck.count > 1 && (
           <button role="menuitem" onClick={act(() => actions.edit({ op: 'move', name: at.name, from: zone, to: other, count: inDeck.count }))}>
-            Move all {inDeck.count}
+            {t('lblWebCardMenuMoveAll', inDeck.count)}
           </button>
         )}
       </>}
       <hr />
       {zone !== 'Commander' && (
-        <button role="menuitem" disabled={!commanderFormat} title={commanderFormat ? undefined : 'Only commander formats have a commander'}
+        <button role="menuitem" disabled={!commanderFormat} title={commanderFormat ? undefined : t('lblWebCardMenuOnlyCommanderFormats')}
           onClick={act(() => actions.edit({ op: 'commander', name: at.name, from: zone ?? undefined, count: 1 }))}>
-          Make this the commander
+          {t('lblWebCardMenuMakeCommander')}
         </button>
       )}
-      <button role="menuitem" disabled={!anywhere} title={anywhere ? undefined : 'Add the card first'}
-        onClick={act(() => anywhere && printings(zone ?? anywhere))}>Change printing…</button>
+      <button role="menuitem" disabled={!anywhere} title={anywhere ? undefined : t('lblWebCardMenuAddFirst')}
+        onClick={act(() => anywhere && printings(zone ?? anywhere))}>{t('lblWebCardMenuChangePrinting')}</button>
       {zone !== null && <>
         <hr />
-        <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>Remove one</button>
+        <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuRemoveOne')}</button>
         {inDeck && inDeck.count > 1 && (
           <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: inDeck.count }))}>
-            Remove all {inDeck.count}
+            {t('lblWebCardMenuRemoveAll', inDeck.count)}
           </button>
         )}
       </>}
@@ -130,10 +139,10 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog picker">
-        <h3>Printings of {name}</h3>
-        <p class="hint">{card?.count ?? 0} in the {zone === 'Main' ? 'main deck' : zone.toLowerCase()}. Set how many of each printing.</p>
+        <h3>{t('lblWebCardMenuPrintingsOf', name)}</h3>
+        <p class="hint">{t(IN_SECTION[zone], card?.count ?? 0)}</p>
         <div class="print-rows">
-          {!list.length && <p class="hint">Reading the printings…</p>}
+          {!list.length && <p class="hint">{t('lblWebCardMenuReadingPrintings')}</p>}
           {list.map(p => {
             const n = counts.get(p.key) ?? 0;
             return (
@@ -149,7 +158,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
             );
           })}
         </div>
-        <div class="actions"><button class="primary" onClick={close}>Done</button></div>
+        <div class="actions"><button class="primary" onClick={close}>{t('lblDone')}</button></div>
       </div>
     </div>
   );

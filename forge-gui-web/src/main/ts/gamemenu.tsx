@@ -8,6 +8,7 @@ import { DevItems } from './devmenu';
 import type { Actions } from './actions';
 import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
+import { t, type TextKey } from './text';
 
 export function GameMenu({ model, actions, close, open }: {
   model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void;
@@ -26,20 +27,20 @@ export function GameMenu({ model, actions, close, open }: {
   const offer = model.drawOffer;
   return (
     <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? 'Dev mode' : 'Game'}>
+      <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblWebDevMode') : t('lblGame')}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
-          {offer?.mine ? 'Draw offered, waiting for an answer' : 'Offer a draw'}
+          {offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
         </button>
-        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>Auto-pass interrupts…</button>
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>{t('lblWebGameMenuInterrupts')}</button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
           actions.autoDecisions('list');
           open('decisions');
-        }}>Auto-yields and triggers…</button>
+        }}>{t('lblWebGameMenuDecisions')}</button>
         {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
         {setting('devMode') && model.host && !model.spectating && (
-          <button type="button" role="menuitem" class="card-menu-item" onClick={() => setDev(true)}>Dev mode ›</button>
+          <button type="button" role="menuitem" class="card-menu-item" onClick={() => setDev(true)}>{t('lblWebDevMode')} ›</button>
         )}
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
           disabled={model.spectating} onClick={() => {
@@ -50,7 +51,7 @@ export function GameMenu({ model, actions, close, open }: {
             actions.concede();
             close();
           }}>
-          {armed ? 'Click again to concede' : 'Concede'}
+          {armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
         </button>
         </>}
       </div>
@@ -61,8 +62,8 @@ export function GameMenu({ model, actions, close, open }: {
 /** Where auto-passing stops by itself, as the options dialog would list them. */
 export function AutoPassStops({ close }: { close: () => void }) {
   return (
-    <OptionsDialog title="Stop auto-passing when…" label="Auto-pass interrupts" kind="stops-dialog" close={close}
-      footer={<span class="hint">Auto-passing gives you priority back at these moments. Changes apply at once.</span>}>
+    <OptionsDialog title={t('lblWebGameMenuStopsTitle')} label={t('lblWebGameMenuStopsLabel')} kind="stops-dialog" close={close}
+      footer={<span class="hint">{t('lblWebGameMenuStopsHint')}</span>}>
       {SETTINGS.filter(def => def.menu === 'stops').map(def => <Row key={def.key} def={def} />)}
     </OptionsDialog>
   );
@@ -70,7 +71,9 @@ export function AutoPassStops({ close }: { close: () => void }) {
 
 const YIELD_MODE = SETTINGS.find(def => def.key === 'autoYieldMode') as SettingDef;
 
-const KIND_LABEL: Record<AutoDecision['kind'], string> = { yield: 'Always yield', accept: 'Always accept', decline: 'Always decline' };
+const KIND_LABEL: Record<AutoDecision['kind'], TextKey> = {
+  yield: 'lblWebGameMenuAlwaysYield', accept: 'lblWebGameMenuAlwaysAccept', decline: 'lblWebGameMenuAlwaysDecline',
+};
 
 /** The auto-yields and trigger answers set during play, each of which can be forgotten, as desktop's dialog lists them. */
 export function AutoDecisionsDialog({ model, actions, close }: { model: Model; actions: Actions; close: () => void }) {
@@ -78,8 +81,8 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
   const all = model.autoDecisions;
   const entries = all?.entries ?? [];
   return (
-    <OptionsDialog title="Auto-yields and triggers" kind="decisions-dialog" close={close} footer={<>
-      <span class="hint">Paused ones are kept, and work again once switched back.</span>
+    <OptionsDialog title={t('lblWebGameMenuDecisionsTitle')} kind="decisions-dialog" close={close} footer={<>
+      <span class="hint">{t('lblWebGameMenuDecisionsHint')}</span>
       <button class={armed ? 'clear-all armed' : 'clear-all'} disabled={!entries.length} onClick={() => {
         if (!armed) {
           setArmed(true);
@@ -87,17 +90,17 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
         }
         setArmed(false);
         actions.autoDecisions('clear');
-      }}>{armed ? 'Click again to forget all' : 'Forget all'}</button>
+      }}>{armed ? t('lblWebGameMenuForgetAllAgain') : t('lblWebGameMenuForgetAll')}</button>
     </>}>
       {/* Each mode keeps its own list, so the list is read again after a change */}
       <Row def={YIELD_MODE} onChange={() => actions.autoDecisions('list')} />
-      {!all ? <p class="hint">Reading them…</p>
-        : !entries.length ? <p class="hint">None set. Right-click an item on the stack to always yield to it, or answer a trigger with Always.</p>
+      {!all ? <p class="hint">{t('lblWebGameMenuReading')}</p>
+        : !entries.length ? <p class="hint">{t('lblWebGameMenuNoneSet')}</p>
           : entries.map(e => (
             <div key={`${e.kind} ${e.key}`} class="decision">
-              <span class={`decision-kind ${e.kind}`}>{KIND_LABEL[e.kind]}</span>
+              <span class={`decision-kind ${e.kind}`}>{t(KIND_LABEL[e.kind])}</span>
               <span class="decision-key" title={e.key}>{e.key}</span>
-              <button class="decision-forget" title="Forget this" aria-label={`Forget ${e.key}`}
+              <button class="decision-forget" title={t('lblWebGameMenuForgetThis')} aria-label={t('lblWebGameMenuForgetX', e.key)}
                 onClick={() => actions.autoDecisions('remove', e.key)}>
                 <CloseIcon />
               </button>
@@ -106,11 +109,11 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
       {all && (
         <>
           <div class="setting">
-            <div>Pause every auto-yield</div>
+            <div>{t('lblWebGameMenuPauseYields')}</div>
             <OnOff on={all.yieldsOff} change={on => actions.autoDecisions('disableYields', undefined, on)} />
           </div>
           <div class="setting">
-            <div>Pause every trigger answer</div>
+            <div>{t('lblWebGameMenuPauseTriggers')}</div>
             <OnOff on={all.triggersOff} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
           </div>
         </>
@@ -126,12 +129,12 @@ export function DrawOfferQuestion({ model, actions }: { model: Model; actions: A
   const who = deref(model, offer.offerer)?.Name;
   return (
     <div class="backdrop">
-      <div class="dialog" role="dialog" aria-label="Draw offer">
-        <h3>{`${who ?? 'An opponent'} offers a draw`}</h3>
-        <p class="hint">The game ends in a draw only if every player accepts.</p>
+      <div class="dialog" role="dialog" aria-label={t('lblWebGameMenuDrawOffer')}>
+        <h3>{who != null ? t('lblWebGameMenuOffersDraw', who) : t('lblWebGameMenuOpponentOffersDraw')}</h3>
+        <p class="hint">{t('lblWebGameMenuDrawOnlyIfAll')}</p>
         <div class="actions">
-          <button onClick={() => actions.drawOffer('DECLINE')}>Decline</button>
-          <button class="primary" onClick={() => actions.drawOffer('ACCEPT')}>Accept</button>
+          <button onClick={() => actions.drawOffer('DECLINE')}>{t('lblDecline')}</button>
+          <button class="primary" onClick={() => actions.drawOffer('ACCEPT')}>{t('lblAccept')}</button>
         </div>
       </div>
     </div>

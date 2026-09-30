@@ -12,6 +12,7 @@ import { keyName } from './keys';
 import { boundKeys } from './settings';
 import { notePick } from './overlay';
 import type { PlayerView, PromptButton, Ref } from './protocol';
+import { t } from './text';
 
 // The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
 // bottom. Its rim lights while the game waits on you.
@@ -100,12 +101,12 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.innerHTML = `
       <div class="tools">
         <button class="end-turn">${icon('endTurn')}</button>
-        <button class="auto-pass" title="Pass priority automatically when you have nothing to play">${icon('autoPass')}</button>
+        <button class="auto-pass">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
         <span class="tools-gap" aria-hidden="true"></span>
-        <button class="volume" title="Volume">${icon('volume')}</button>
-        <button class="more" title="Game: offer a draw, auto-pass interrupts, concede">${icon('more')}</button>
-        <button class="cog" title="Options">${icon('cog')}</button>
+        <button class="volume">${icon('volume')}</button>
+        <button class="more">${icon('more')}</button>
+        <button class="cog">${icon('cog')}</button>
       </div>
       <p class="step"></p>
       <div class="prompt-body">
@@ -117,6 +118,10 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
+    q(root, '.auto-pass').title = t('lblWebPromptAutoPassTip');
+    q(root, '.volume').title = t('lblWebPromptVolume');
+    q(root, '.more').title = t('lblWebPromptGameMenuTip');
+    q(root, '.cog').title = t('lblWebPromptOptions');
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
@@ -131,7 +136,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   }
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
-  q(root, '.undo').title = `Undo your last undoable action, such as tapping a land for mana (${keyName(keys.undo)})`;
+  q(root, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));
   q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
   if (model.prompt !== shown) {
     shown = model.prompt;
@@ -148,33 +153,33 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (model.spectating) {
     renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);
-    q(root, '.message').textContent = 'Two AI players. You are spectating.';
+    q(root, '.message').textContent = t('lblWebPromptSpectating');
     return;
   }
   const autoPass = !!model.controls?.autoPass;
   const autoPassButton = q(root, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
-  autoPassButton.title = `Auto-pass is ${autoPass ? 'on' : 'off'}: pass priority automatically when you have nothing to play (${keyName(keys.autoPass)})`;
+  autoPassButton.title = t(autoPass ? 'lblWebPromptAutoPassOnTip' : 'lblWebPromptAutoPassOffTip', keyName(keys.autoPass));
   // Lit while the turn is being passed through, as auto-pass is while it is on
   const endingTurn = !!model.controls?.untilEndOfTurn;
   const endTurnButton = q(root, '.end-turn');
   endTurnButton.classList.toggle('on', endingTurn);
   // A second press stops the pass it started
   endTurnButton.onclick = () => (endingTurn ? actions.stopYield() : actions.endTurn());
-  endTurnButton.title = endingTurn ? 'Passing priority until the end of this turn. Click to stop'
-    : `Pass priority until the end of this turn (${keyName(keys.endTurn)})`;
+  endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
+    : t('lblWebPromptEndTurnTip', keyName(keys.endTurn));
   q(root, '.more').classList.toggle('open', !!ui.gameMenu);
   const ok = q<HTMLButtonElement>(root, '.ok');
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   const passing = countdown();
   root.classList.toggle('auto-passing', !!passing);
   if (passing) {
-    q(root, '.step').textContent = 'Passing';
-    q(root, '.message').textContent = 'Nothing to play.';
+    q(root, '.step').textContent = t('lblWebPromptPassing');
+    q(root, '.message').textContent = t('lblWebPromptNothingToPlay');
     renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
-    setButton(ok, { label: 'Pass', enabled: true });
+    setButton(ok, { label: t('lblWebPromptPass'), enabled: true });
     // Stopping means auto-pass is not wanted just now, so the button turns it off, under its own key
-    setButton(cancel, { label: 'Cancel', enabled: true });
+    setButton(cancel, { label: t('lblCancel'), enabled: true });
     q(root, '.buttons .cancel kbd').textContent = keyName(keys.autoPass);
     ok.onclick = () => finishCountdown(true);
     cancel.onclick = () => {
@@ -198,7 +203,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   const lines = (p.message ?? '').trim().split('\n');
   // A heading, not a sentence: short, and with nothing that ends a sentence
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]);
-  q(root, '.step').textContent = heading ? lines[0] : p.priority ? 'Priority' : stepName(game(model)?.Phase);
+  q(root, '.step').textContent = heading ? lines[0] : p.priority ? t('lblPriority') : stepName(game(model)?.Phase);
   setSymbolText(q(root, '.message'), (heading ? lines.slice(1) : lines).join(' ').trim());
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
   renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);

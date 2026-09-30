@@ -6,6 +6,7 @@ import { saveText } from './dom';
 import { keyName, rebind, type KeyBindings } from './keys';
 import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
+import { t, textLanguage } from './text';
 
 // Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
 // Each section stays together and in its usual place, so its heading is drawn once.
@@ -30,25 +31,25 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu && !(def.hostOnly && isGuest())), query);
   return (
-    <OptionsDialog title="Options" close={close}
-      head={<input ref={search} class="search" type="search" placeholder="Search settings" aria-label="Search settings"
+    <OptionsDialog title={t('lblWebOptionsTitle')} close={close}
+      head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
-      footer={<span class="hint">Changes apply at once. Auto-pass interrupts and conceding are in the ⋯ menu beside this button.</span>}>
+      footer={<span class="hint">{t('lblWebOptionsFooter')}</span>}>
       {shown.flatMap((def, i) => [
-        ...(def.section !== shown[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} />] : []),
+        ...(def.section !== shown[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={def.type === 'key'} />] : []),
         <Row key={def.key} def={def} />,
       ])}
-      {!shown.length && <p class="hint">No setting matches that.</p>}
+      {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>
   );
 }
 
 /** A section's name; the keys carry the way back to their defaults beside it. */
-function SectionHeading({ name }: { name: string }) {
+function SectionHeading({ name, keys }: { name: string; keys: boolean }) {
   return (
     <h4>
       {name}
-      {name === 'Keys' && <button class="section-action" onClick={() => setKeys(defaultKeys())}>Reset to defaults</button>}
+      {keys && <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button>}
     </h4>
   );
 }
@@ -69,7 +70,7 @@ export function OptionsDialog({ title, label, kind, head, footer, close, childre
         <header>
           <b>{title}</b>
           {head ?? <span class="spacer" />}
-          <button class="close" title="Close (Esc)" onClick={close}><CloseIcon /></button>
+          <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={close}><CloseIcon /></button>
         </header>
         <div class="rows">{children}</div>
         <footer>{footer}</footer>
@@ -91,7 +92,7 @@ export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void 
         {def.hint && <div class="hint">{def.hint}</div>}
       </div>
       {def.type === 'css'
-        ? <button class="edit" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? 'Done' : 'Edit…'}</button>
+        ? <button class="edit" aria-expanded={editing} onClick={() => setEditing(!editing)}>{editing ? t('lblDone') : t('lblWebOptionsEdit')}</button>
         : <Control def={def} onChange={onChange} />}
       {def.type === 'css' && editing && <CssEditor def={def} value={String(setting(def.key) ?? '')} />}
     </div>
@@ -105,8 +106,8 @@ export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void 
 export function OnOff({ on, change }: { on: boolean; change: (on: boolean) => void }) {
   return (
     <div class="choice" role="radiogroup">
-      <button class={on ? '' : 'on off'} role="radio" aria-checked={!on} onClick={() => change(false)}>Off</button>
-      <button class={on ? 'on' : ''} role="radio" aria-checked={on} onClick={() => change(true)}>On</button>
+      <button class={on ? '' : 'on off'} role="radio" aria-checked={!on} onClick={() => change(false)}>{t('lblOff')}</button>
+      <button class={on ? 'on' : ''} role="radio" aria-checked={on} onClick={() => change(true)}>{t('lblWebOptionsOn')}</button>
     </div>
   );
 }
@@ -137,10 +138,15 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         <div class="slider">
           <input type="range" min={def.min} max={def.max} step={def.step ?? 5} value={Number(value)}
             onInput={e => change(Number(e.currentTarget.value))} />
-          <span>{def.unit === 'seconds' ? `${(Number(value) / 1000).toFixed(2).replace(/0$/, '')}s` : `${value}%`}</span>
+          <span>{def.unit === 'seconds' ? t('lblWebOptionsSeconds', seconds(Number(value))) : t('lblWebOptionsPercent', Number(value))}</span>
         </div>
       );
   }
+}
+
+/** A delay in milliseconds as seconds, to one or two decimal places: 1.5, 0.25, 0.0. */
+function seconds(ms: number): string {
+  return new Intl.NumberFormat(textLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(ms / 1000);
 }
 
 // A theme is a plain CSS file: load one, save the current one, or edit it here. Typed CSS lands at once.
@@ -151,9 +157,9 @@ function CssEditor({ def, value }: { def: SettingDef; value: string }) {
       <textarea class="css" spellcheck={false} rows={5} placeholder="#prompt { border-color: #dfa23c; }" value={value}
         onInput={e => set(def.key, e.currentTarget.value)} />
       <div class="css-buttons">
-        <button onClick={() => file.current?.click()}>Import</button>
-        <button onClick={() => saveText(value, 'forge-theme.css', 'text/css')}>Export</button>
-        <button onClick={() => set(def.key, '')}>Clear</button>
+        <button onClick={() => file.current?.click()}>{t('lblImport')}</button>
+        <button onClick={() => saveText(value, 'forge-theme.css', 'text/css')}>{t('lblWebOptionsExport')}</button>
+        <button onClick={() => set(def.key, '')}>{t('lblWebOptionsClear')}</button>
       </div>
       <input ref={file} type="file" accept=".css,text/css" hidden onChange={async e => {
         const input = e.currentTarget;
@@ -182,7 +188,7 @@ function KeyControl({ action, value }: { action: keyof KeyBindings; value: strin
         // Blurring stops a Space from also clicking the button when it is released, which would listen again
         e.currentTarget.blur();
       }}>
-      {listening ? 'Press a key' : keyName(value)}
+      {listening ? t('lblWebOptionsPressKey') : keyName(value)}
     </button>
   );
 }
