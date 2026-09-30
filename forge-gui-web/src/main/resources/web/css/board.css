@@ -497,7 +497,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 /* With several opponents the top seats have a row of details, and the panel starts below it rather than over their piles */
 #match.many #stack, #match.many #storm { top: 80px; }
 #stack .head { display: flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
-#stack .head .count { min-width: 18px; text-align: center; border-radius: 9px; background: var(--surface-2); color: var(--text); letter-spacing: 0; font-weight: 700; }
+#stack .head .count { display: inline-grid; place-items: center; box-sizing: border-box; min-width: 18px; height: 18px; padding: 0 5px; line-height: 1;
+  border-radius: 9px; background: var(--surface-2); color: var(--text); letter-spacing: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
 #stack .head .collapse { margin-left: auto; font-size: 11px; padding: 2px 8px; letter-spacing: 0; text-transform: none; }
 #stack .pile { position: relative; --stack-room: 400px; }
 #storm { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; padding: 3px 12px; border-radius: 999px; background: var(--surface);
@@ -522,7 +523,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 #log { overflow-anchor: none; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; overflow-y: auto; flex: 1; min-height: 0; font-size: 12px; color: var(--muted); scrollbar-width: thin; }
 .log-entry { padding: 2px 0; border-bottom: 1px solid var(--surface-2); display: flex; gap: 6px; align-items: flex-start; }
-.log-entry .thumb { width: 32px; border-radius: 3px; flex: none; }
+.log-entry .thumb { width: 32px; border-radius: 3px; flex: none; cursor: pointer; }
 /* A new turn is a divider across the log: the line in brass between two rules, with room above it */
 .log-entry.turn { align-items: center; gap: 8px; margin-top: 10px; padding: 3px 0; border-bottom: 0; color: var(--accent-2);
   font-size: 11px; font-weight: 700; letter-spacing: .06em; }
@@ -576,9 +577,8 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .zone-shut { width: 30px; padding: 0; color: var(--muted); background: none; }
 #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 /* Above a dialog: hovering a card in one is how you read it, so the card must not be covered */
-/* One size for every preview, image or rules text: large enough to read, small enough to leave the board in view. It
-   grows with the window, up to three fifths of its height, between a readable least and a most that still leaves room */
-#zoom { --zoom-w: clamp(280px, 60vh * 63 / 88, 400px); position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
+/* Image or rules text, a preview is the one size every page's previews share (theme.css) */
+#zoom { --zoom-w: var(--preview-w); position: fixed; right: var(--side-gap); top: 50%; transform: translateY(-50%); z-index: 70; pointer-events: none; display: flex; gap: 10px; align-items: flex-start; }
 /* Beside the card it shows, once placed there; the default, for a player, stays at the board's right */
 #zoom.placed { right: auto; transform: none; }
 #zoom.settling { visibility: hidden; }
@@ -917,7 +917,8 @@ body.dragging-block #zoom { display: none; }
   position: absolute;
   left: 50%;
   top: 50%;
-  z-index: 75;
+  /* Under a card's preview, which is looked at on purpose */
+  z-index: 65;
   pointer-events: none;
   transform: translate(-50%, -50%);
   overflow: hidden;

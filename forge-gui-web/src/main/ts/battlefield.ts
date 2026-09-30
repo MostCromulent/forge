@@ -331,9 +331,11 @@ function counters(all: Record<string, number> | null | undefined): string {
     .map(([name, n]) => `${name}:${n}`).join(',');
 }
 
-// Only a creature is held back by summoning sickness; the engine flags other cards too
+// Only a creature without haste is held back by summoning sickness. The engine's flag means only "came under your
+// control this turn", as CardView.hasSickness reads it, so haste is checked here as it is there.
 function isSick(model: Model, card: CardView): boolean {
-  return !!card.Sickness && /Creature/.test(stateOf(model, card).Type ?? '');
+  const state = stateOf(model, card);
+  return !!card.Sickness && /Creature/.test(state.Type ?? '') && !state.Keywords?.some(k => k.icon === 'IMG_ABILITY_HASTE');
 }
 
 function createSlot(): HTMLElement {
