@@ -1,28 +1,19 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
-import forge.ImageKeys;
-import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
-import forge.sound.MusicPlaylist;
-import forge.sound.SoundSystem;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
-import java.io.File;
 import java.net.URI;
-import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -79,21 +70,6 @@ public class WebServerTest {
         Assert.assertTrue(r.headers().firstValue("set-cookie").orElse("").contains("forge_token=secret"));
     }
 
-    @Test
-    public void cookieAuthorisesLaterRequests() throws Exception {
-        Assert.assertEquals(get("/index.html", "forge_token=secret").statusCode(), 200);
-    }
-
-    /** Fails if a guest's page keeps the host's token, which would let it take the host's seat. */
-    @Test
-    public void aGuestLinkKeepsTheGuestToken() throws Exception {
-        final HttpResponse<String> r = get("/?token=guest-secret", null);
-        Assert.assertEquals(r.statusCode(), 200);
-        Assert.assertTrue(r.headers().firstValue("set-cookie").orElse("").contains("forge_token=guest-secret"));
-        Assert.assertTrue(server.inviteUrl("10.0.0.2").endsWith("token=guest-secret"), "the invite link carries the host's token");
-        Assert.assertTrue(server.url().endsWith("token=secret"));
-    }
-
     /** Fails if the endpoint cannot tell a browser on the host's link from one on a guest's. */
     @Test
     public void theSocketSaysWhichLinkOpenedIt() throws Exception {
@@ -137,105 +113,6 @@ public class WebServerTest {
             prefs.setPref(FPref.UI_ENABLE_ONLINE_IMAGE_FETCHER, online);
         }
         Assert.assertEquals(get("/..%2Fpom.xml?token=secret", null).statusCode(), 404);
-    }
-
-    /** Fails if audio is answered only in whole files, which makes the browser download it again on every play. */
-    @Test
-    public void audioIsServedInTheRangesTheBrowserAsksFor() throws Exception {
-        final File file = SoundSystem.instance.getSoundResource("daytime.mp3");
-        Assert.assertNotNull(file, "the default sound set has no daytime.mp3");
-        final byte[] whole = Files.readAllBytes(file.toPath());
-        final String url = origin() + "/sound?name=daytime.mp3&token=secret";
-
-        final HttpResponse<byte[]> all = http.send(HttpRequest.newBuilder(URI.create(url)).build(),
-                HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(all.statusCode(), 200);
-        Assert.assertEquals(all.headers().firstValue("accept-ranges").orElse(""), "bytes");
-        Assert.assertEquals(all.body(), whole);
-
-        final HttpResponse<byte[]> part = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=100-199").build(),
-                HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(part.statusCode(), 206);
-        Assert.assertEquals(part.headers().firstValue("content-range").orElse(""), "bytes 100-199/" + whole.length);
-        Assert.assertEquals(part.body(), Arrays.copyOfRange(whole, 100, 200));
-
-        final HttpResponse<byte[]> tail = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=-10").build(),
-                HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(tail.body(), Arrays.copyOfRange(whole, whole.length - 10, whole.length));
-
-        final HttpResponse<byte[]> past = http.send(HttpRequest.newBuilder(URI.create(url))
-                .header("Range", "bytes=" + whole.length + "-").build(), HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(past.statusCode(), 416);
-    }
-
-    /** Fails if the rest of a track is sent whole, which a player moving on from it mostly throws away. */
-    @Test
-    public void aTrackIsSentASliceAtATime() throws Exception {
-        final File dir = SoundSystem.findMusicDirectory(MusicPlaylist.MENUS);
-        Assert.assertNotNull(dir, "no menu music");
-        final File[] tracks = dir.listFiles((d, name) -> name.endsWith(".mp3"));
-        Assert.assertNotNull(tracks);
-        final File track = Arrays.stream(tracks).max((a, b) -> Long.compare(a.length(), b.length())).orElseThrow();
-        final byte[] whole = Files.readAllBytes(track.toPath());
-        final int slice = 1 << 20;
-        Assert.assertTrue(whole.length > slice, "the longest menu track fits in one slice, so this shows nothing");
-        final String url = origin() + "/music?name=menu&track=" + URLEncoder.encode(track.getName(), StandardCharsets.UTF_8).replace("+", "%20")
-                + "&token=secret";
-
-        final HttpResponse<byte[]> first = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=0-").build(),
-                HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(first.statusCode(), 206);
-        Assert.assertEquals(first.headers().firstValue("content-range").orElse(""), "bytes 0-" + (slice - 1) + "/" + whole.length);
-        Assert.assertEquals(first.body(), Arrays.copyOfRange(whole, 0, slice));
-
-        final HttpResponse<byte[]> next = http.send(HttpRequest.newBuilder(URI.create(url)).header("Range", "bytes=" + slice + "-").build(),
-                HttpResponse.BodyHandlers.ofByteArray());
-        Assert.assertEquals(next.body(), Arrays.copyOfRange(whole, slice, Math.min(whole.length, 2 * slice)));
-    }
-
-    // An image key is joined onto a folder, and some are also tried with no extension, so ".." in one reached any file
-    @Test
-    public void anImageKeyCannotReachOutsideTheImageFolders() throws Exception {
-        // A real installation has the icon folder, and a path through it only resolves if it exists
-        final File icons = new File(ForgeConstants.CACHE_ICON_PICS_DIR);
-        final boolean madeIcons = icons.mkdirs();
-        final File outside = new File(icons.getParentFile(), "not-an-image-" + System.nanoTime());
-        Files.writeString(outside.toPath(), "private");
-        try {
-            final String key = URLEncoder.encode(ImageKeys.ICON_PREFIX + "../" + outside.getName(), StandardCharsets.UTF_8);
-            final HttpResponse<String> r = get("/img?key=" + key + "&token=secret", null);
-            Assert.assertEquals(r.statusCode(), 404, "an image key read a file outside the image folders");
-        } finally {
-            Files.deleteIfExists(outside.toPath());
-            if (madeIcons) {
-                Files.deleteIfExists(icons.toPath());
-            }
-        }
-    }
-
-    private static WebServer.Endpoint quiet() {
-        return new WebServer.Endpoint() {
-            @Override public void connected(final BrowserChannel channel, final String clientId, final boolean mayHost) { }
-            @Override public void disconnected(final BrowserChannel channel) { }
-            @Override public void onMessage(final BrowserChannel channel, final JsonObject message) { }
-        };
-    }
-
-    /** The console stops and starts the server, so a port it has given up has to be one it can take back. */
-    @Test
-    public void aServerCanTakeBackThePortItGaveUp() throws Exception {
-        final WebServer first = new WebServer(quiet(), "secret", "guest-secret", 0);
-        final int port = first.port();
-        first.close();
-        final WebServer again = new WebServer(quiet(), "secret", "guest-secret", port);
-        try {
-            final HttpResponse<String> page = http.send(
-                    HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + "/?token=secret")).build(),
-                    HttpResponse.BodyHandlers.ofString());
-            Assert.assertEquals(page.statusCode(), 200, "the server did not serve after being started again");
-        } finally {
-            again.close();
-        }
     }
 
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {

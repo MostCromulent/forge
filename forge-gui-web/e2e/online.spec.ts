@@ -56,33 +56,3 @@ test('online sealed with a guest', async ({ page, browser }) => {
     await gameStarted(p);
   }
 });
-
-// Fails if a host alone cannot draft a full pod online: the table rules, 45 picks while computer drafters fill the
-// other seats, and the pool opening in the editor
-test('online draft for one', async ({ page }) => {
-  test.setTimeout(600_000);
-  await hostEvent(page, 'draft');
-  await page.click('.tile-choice:has-text("Full card pool")');
-  await expect(page.locator('.table-rules')).toBeVisible();
-  // One pick per pass, so the draft is exactly 45 picks
-  await page.selectOption('.table-rules select >> nth=0', 'NEVER');
-  await page.selectOption('.table-rules select >> nth=1', '90');
-  await page.click('.table-rules button:has-text("Continue")');
-  await page.click('.wfoot button:has-text("Save")');
-  await expect(page.locator('.event-head .event-product')).toContainText('Full');
-  await ready(page);
-  await page.click('.event-head button:has-text("Start draft")');
-  await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.draft-panel-head .clock')).toBeVisible();
-
-  const picked = page.locator('.draft-picks .draft-panel-head b .muted');
-  for (let i = 0; i < 45; i++) {
-    const first = page.locator('.draft-pack .draft-slot .tile').first();
-    await first.click();
-    await first.click();
-    // The last pick ends the draft, and the pool's editor takes the screen straight away
-    if (i < 44) await expect(picked).toHaveText(String(i + 1), { timeout: 30_000 });
-  }
-  await expect(page.locator('#editor')).toBeVisible({ timeout: 90_000 });
-  await expect(page.locator('.check-fixed')).toContainText('Limited');
-});

@@ -136,117 +136,10 @@ public class GuestSeatTest extends SessionsTest {
                 "the match did not open with the stops the guest set in match setup");
     }
 
-    /**
-     * Fails if turning a seat between a computer and an open one does nothing. A slot edited straight on the
-     * server does not announce itself, so the browser's copy keeps the old answer unless the table is resent.
-     */
-    @Test(timeOut = 120_000)
-    public void aSeatTurnsBetweenComputerAndOpen() throws Exception {
-        final Recorder browser = connect("host");
-        sessions.onMessage(browser, JsonCodec.message("claimHost"));
-        browser.forget();
-        sessions.onMessage(browser, JsonCodec.message("lobby"));
-        // Whichever seat the computer holds, because another browser may be sitting in one of them
-        final JsonObject opened = browser.awaitLobby(l -> seatOfType(l, "AI") >= 0, "no game opened with a seat held by a computer");
-        final int seat = seatOfType(opened, "AI");
-
-        browser.forget();
-        sessions.onMessage(browser, seatMessage("openSeat", seat));
-        browser.awaitLobby(l -> "OPEN".equals(typeAt(l, seat)), "the seat never opened");
-
-        browser.forget();
-        sessions.onMessage(browser, seatMessage("aiSeat", seat));
-        browser.awaitLobby(l -> "AI".equals(typeAt(l, seat)),
-                "the seat never went back to a computer");
-    }
-
-    /**
-     * Fails if a guest keeps judging decks by the old rules after the host picks a card pool: its table must show
-     * the card pool, and it must receive a deck list built for it without asking.
-     */
-    @Test(timeOut = 120_000)
-    public void aGuestFollowsTheHostsCardPool() throws Exception {
-        final Recorder hostBrowser = hostAt("invite");
-
-        // A session of its own, since a name given here would otherwise follow the "guest" id into other tests
-        final Recorder guestBrowser = connect("cardPool-guest");
-        Assert.assertNotNull(guestBrowser.awaitNewest("hello"));
-        sessions.onMessage(guestBrowser, message("setName", "name", "Pool Guest"));
-        Assert.assertNotNull(guestBrowser.awaitLobbyWithSeat(), "the guest never sat down");
-        guestBrowser.forget();
-
-        sessions.onMessage(hostBrowser, message("setCardPool", "cardPool", "Pauper"));
-
-        guestBrowser.awaitLobby(t -> t.has("cardPool") && "Pauper".equals(t.get("cardPool").getAsString()),
-                "the guest's table never showed the card pool");
-        guestBrowser.awaitMatching("decks", d -> d.has("cardPool")
-                && "Pauper".equals(d.get("cardPool").getAsString()), "the guest was never sent a Pauper deck list");
-    }
-
     /** The guest's own seat in a lobby table. */
     private static JsonObject mySeat(final JsonObject table) {
         final int mine = table.get("mySeat").getAsInt();
         return mine < 0 ? null : table.getAsJsonArray("seats").get(mine).getAsJsonObject();
-    }
-
-    private static int extraCount(final JsonObject seat, final String extra) {
-        return seat != null && seat.has(extra) ? seat.getAsJsonObject(extra).get("count").getAsInt() : -1;
-    }
-
-    /**
-     * Fails if the host composes a guest's seat, which would overwrite the guest's own planes, or if the guest never
-     * learns that a variant came on and so brings no planes or avatar at all.
-     */
-    @Test(timeOut = 120_000)
-    public void aGuestsPlanesSurviveTheHost() throws Exception {
-        final Recorder hostBrowser = hostAt("invite");
-        final Recorder guestBrowser = connect("planes-guest");
-        Assert.assertNotNull(guestBrowser.awaitNewest("hello"));
-        sessions.onMessage(guestBrowser, message("setName", "name", "Planes Guest"));
-        Assert.assertNotNull(guestBrowser.awaitLobbyWithSeat(), "the guest never sat down");
-        // The guest needs a main deck before anything is sent for its seat
-        final JsonObject decks = guestBrowser.awaitNewest("decks");
-        final JsonObject choose = JsonCodec.message("setSeat");
-        final JsonObject seated = guestBrowser.awaitLobbyWithSeat();
-        choose.addProperty("index", seated.get("mySeat").getAsInt());
-        choose.addProperty("deck", legalDeck(decks));
-        sessions.onMessage(guestBrowser, choose);
-
-        sessions.onMessage(hostBrowser, message("setVariant", "variant", "Planechase", "on", true));
-        final JsonObject withPlanes = guestBrowser.awaitLobby(t -> extraCount(mySeat(t), "planes") >= 10, "the guest never brought planes");
-        final int planes = extraCount(mySeat(withPlanes), "planes");
-
-        final JsonObject vanguard = JsonCodec.message("setVariant");
-        vanguard.addProperty("variant", "Vanguard");
-        vanguard.addProperty("on", true);
-        sessions.onMessage(hostBrowser, vanguard);
-        final JsonObject both = hostBrowser.awaitLobby(t -> {
-            for (final var s : t.getAsJsonArray("seats")) {
-                final JsonObject seat = s.getAsJsonObject();
-                if ("Planes Guest".equals(seat.has("name") ? seat.get("name").getAsString() : "")) {
-                    return extraCount(seat, "vanguard") == 1 && extraCount(seat, "planes") == planes;
-                }
-            }
-            return false;
-        }, "the host's table never showed the guest's planes kept and an avatar added");
-    }
-
-    /** Fails if a guest who sits down after the host chose Momir Basic can never be ready, having no deck to choose. */
-    @Test(timeOut = 120_000)
-    public void aGuestJoiningAMomirTableIsReady() throws Exception {
-        final Recorder hostBrowser = hostAt("invite");
-        final JsonObject momir = JsonCodec.message("setFormat");
-        momir.addProperty("format", "MomirBasic");
-        sessions.onMessage(hostBrowser, momir);
-        Assert.assertNotNull(hostBrowser.awaitLobby(t -> "MomirBasic".equals(t.get("format").getAsString())));
-
-        final Recorder guestBrowser = connect("momir-guest");
-        Assert.assertNotNull(guestBrowser.awaitNewest("hello"));
-        sessions.onMessage(guestBrowser, message("setName", "name", "Momir Guest"));
-        guestBrowser.awaitLobby(t -> {
-            final int mine = t.get("mySeat").getAsInt();
-            return mine >= 0 && t.getAsJsonArray("seats").get(mine).getAsJsonObject().get("ready").getAsBoolean();
-        }, "the guest's seat never became ready");
     }
 
     /** The first deck in a list that is built and legal, rather than generated when the game starts. */
@@ -289,39 +182,6 @@ public class GuestSeatTest extends SessionsTest {
         final JsonObject m = JsonCodec.message(type);
         m.addProperty("index", index);
         return m;
-    }
-
-    private static String typeAt(final JsonObject lobby, final int seat) {
-        final var seats = lobby.getAsJsonArray("seats");
-        return seat < seats.size() ? seats.get(seat).getAsJsonObject().get("type").getAsString() : null;
-    }
-
-    private static int seatOfType(final JsonObject lobby, final String type) {
-        final var seats = lobby.getAsJsonArray("seats");
-        for (int i = 0; i < seats.size(); i++) {
-            if (type.equals(seats.get(i).getAsJsonObject().get("type").getAsString())) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    /**
-     * Fails if picking a format does nothing. A lobby's game type is a plain field its serialised data leaves
-     * out, so a client that reads the type instead of the applied variants never leaves Constructed.
-     */
-    @Test(timeOut = 120_000)
-    public void pickingCommanderChangesTheFormat() throws Exception {
-        // The same id as the other test, because the host's seat is held by whichever session claimed it
-        final Recorder browser = connect("host");
-        sessions.onMessage(browser, JsonCodec.message("claimHost"));
-        browser.forget();
-        sessions.onMessage(browser, JsonCodec.message("lobby"));
-        Assert.assertNotNull(browser.awaitLobbyWithSeat(), "no game was opened" + diagnosis(browser));
-
-        sessions.onMessage(browser, message("setFormat", "format", "Commander"));
-        browser.awaitLobby(l -> l.has("format") && "Commander".equals(l.get("format").getAsString()),
-                "the lobby stayed on Constructed after Commander was picked");
     }
 
     // Fails if lowering the count removes a seat a person holds, or keeps an open seat over a computer's

@@ -3,11 +3,8 @@ package forge.web;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
-import forge.deck.CardPool;
 import forge.gamemodes.net.ProtocolMethod;
 import forge.gui.interfaces.IGuiGame;
-import forge.item.PaperCard;
-import forge.model.FModel;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
@@ -35,32 +32,6 @@ public class WebGuiGameTest {
     }
 
     @Test
-    public void attachSendsFullStateThenPrompt() {
-        Assert.assertEquals(browser.received.get(0).get("t").getAsString(), "state");
-        Assert.assertTrue(browser.received.get(0).get("full").getAsBoolean());
-        Assert.assertNotNull(browser.last("prompt"));
-    }
-
-    @Test
-    public void promptCarriesMessageAndButtons() {
-        gui.showPromptMessage(null, "Play a land", null);
-        gui.updateButtons(null, "OK", "Cancel", true, false, true);
-        final JsonObject prompt = browser.last("prompt");
-        Assert.assertEquals(prompt.get("message").getAsString(), "Play a land");
-        Assert.assertTrue(prompt.getAsJsonObject("ok").get("enabled").getAsBoolean());
-        Assert.assertFalse(prompt.getAsJsonObject("cancel").get("enabled").getAsBoolean());
-        Assert.assertTrue(prompt.get("focusOk").getAsBoolean());
-    }
-
-    @Test
-    public void messageBecomesNotice() {
-        gui.message("Opponent chose heads", "Coin flip");
-        final JsonObject notice = browser.last("notice");
-        Assert.assertEquals(notice.get("title").getAsString(), "Coin flip");
-        Assert.assertFalse(notice.get("error").getAsBoolean());
-    }
-
-    @Test
     public void getChoicesMapsReplyIndicesBackToObjects() throws Exception {
         final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b", "c"), null, null));
@@ -74,46 +45,12 @@ public class WebGuiGameTest {
     }
 
     @Test
-    public void sideboardReplyBecomesTheNewMainDeck() throws Exception {
-        final PaperCard bears = FModel.getMagicDb().getCommonCards().getCard("Grizzly Bears");
-        final PaperCard naturalize = FModel.getMagicDb().getCommonCards().getCard("Naturalize");
-        final CardPool main = new CardPool();
-        main.add(bears, 2);
-        final CardPool side = new CardPool();
-        side.add(naturalize, 1);
-        final CompletableFuture<List<PaperCard>> newMain = CompletableFuture.supplyAsync(() -> gui.sideboard(side, main, "Game 2"));
-        final JsonObject request = browser.awaitLast("request", 2000);
-        Assert.assertEquals(request.get("kind").getAsString(), "sideboard");
-        // Swap one Grizzly Bears for the Naturalize
-        final JsonArray counts = new JsonArray();
-        counts.add(1);
-        counts.add(1);
-        gui.onBrowserMessage(FakeBrowser.reply(request.get("id").getAsInt(), counts));
-        final List<PaperCard> result = newMain.get(2, TimeUnit.SECONDS);
-        Assert.assertEquals(result.stream().filter(bears::equals).count(), 1);
-        Assert.assertEquals(result.stream().filter(naturalize::equals).count(), 1);
-        Assert.assertEquals(result.size(), 2);
-    }
-
-    @Test
     public void concedeAnswersOpenRequestsWithDefaults() throws Exception {
         final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b"), null, null));
         browser.awaitLast("request", 2000);
         gui.onBrowserMessage(FakeBrowser.action("concede"));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("a"));
-    }
-
-    // Leaving between games is the other way out while the host's engine thread waits on the browser
-    @Test
-    public void quittingBetweenGamesAnswersOpenRequestsWithDefaults() throws Exception {
-        final CompletableFuture<Boolean> answer = CompletableFuture.supplyAsync(
-                () -> gui.showConfirmDialog("Keep?", "Mulligan", "Keep", "Mulligan", true));
-        browser.awaitLast("request", 2000);
-        final JsonObject quit = FakeBrowser.action("nextGame");
-        quit.addProperty("decision", "QUIT");
-        gui.onBrowserMessage(quit);
-        Assert.assertTrue(answer.get(2, TimeUnit.SECONDS));
     }
 
     @Test

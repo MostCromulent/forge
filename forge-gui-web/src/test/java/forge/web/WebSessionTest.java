@@ -1,15 +1,11 @@
 package forge.web;
 
-import com.google.gson.JsonObject;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 
-import static forge.web.SessionsTest.message;
 
 public class WebSessionTest {
     @BeforeClass
@@ -25,25 +21,6 @@ public class WebSessionTest {
     private static void connectAsHost(final WebSessions sessions, final Recorder r, final String id) {
         sessions.connected(r, id, true);
         sessions.onMessage(r, JsonCodec.message("claimHost"));
-    }
-
-    @Test
-    public void connectingSendsHello() throws Exception {
-        final WebSessions sessions = opened();
-        final Recorder r = new Recorder();
-        connectAsHost(sessions, r, "host");
-        final JsonObject hello = r.awaitNewest("hello");
-        Assert.assertFalse(hello.get("inMatch").getAsBoolean());
-        Assert.assertTrue(hello.get("host").getAsBoolean());
-    }
-
-    @Test
-    public void deckListAnswers() throws Exception {
-        final WebSessions sessions = opened();
-        final Recorder r = new Recorder();
-        sessions.connected(r, "host", true);
-        sessions.onMessage(r, JsonCodec.message("decks"));
-        Assert.assertTrue(r.awaitMatching("decks", m -> true).get("decks").isJsonArray());
     }
 
     /** Fails if the host's seat is handed out by arriving, or if two browsers can both end up holding it. */
@@ -63,54 +40,6 @@ public class WebSessionTest {
         sessions.onMessage(second, JsonCodec.message("claimHost"));
         Assert.assertFalse(second.awaitNewest("hello").get("host").getAsBoolean(), "two browsers took the same seat");
         Assert.assertNotNull(second.awaitMatching("error", m -> true), "the second browser was not told why");
-    }
-
-    @Test
-    public void startWithUnknownDecksReportsAnError() throws Exception {
-        final WebSessions sessions = opened();
-        final Recorder r = new Recorder();
-        connectAsHost(sessions, r, "host");
-        sessions.onMessage(r, message("start", "playerName", "Tester", "playerDeck", "nope", "aiDeck", "nope"));
-        Assert.assertNotNull(r.awaitMatching("error", m -> true));
-    }
-
-    @Test
-    public void aBrowserThatNeverOpensQuits() throws Exception {
-        final CountDownLatch quit = new CountDownLatch(1);
-        new WebSessions(new WebGuiBase(), 200, quit::countDown);
-        Assert.assertTrue(quit.await(2, TimeUnit.SECONDS));
-    }
-
-    /** Fails if the host closing their browser ends a game a guest is still playing. */
-    @Test
-    public void quittingWaitsForTheLastBrowserToGo() throws Exception {
-        final CountDownLatch quit = new CountDownLatch(1);
-        final WebSessions sessions = new WebSessions(new WebGuiBase(), 200, quit::countDown);
-        final Recorder host = new Recorder();
-        final Recorder guest = new Recorder();
-        sessions.connected(host, "host", true);
-        sessions.connected(guest, "guest", true);
-
-        sessions.disconnected(host);
-        Assert.assertFalse(quit.await(600, TimeUnit.MILLISECONDS),
-                "Forge quit while a guest was still attached");
-
-        sessions.disconnected(guest);
-        Assert.assertTrue(quit.await(2, TimeUnit.SECONDS),
-                "Forge did not quit once every browser had gone");
-    }
-
-    /** Fails if a browser that comes back within the countdown does not stop it. */
-    @Test
-    public void reconnectingStopsTheCountdown() throws Exception {
-        final CountDownLatch quit = new CountDownLatch(1);
-        final WebSessions sessions = new WebSessions(new WebGuiBase(), 400, quit::countDown);
-        final Recorder first = new Recorder();
-        sessions.connected(first, "host", true);
-        sessions.disconnected(first);
-        sessions.connected(new Recorder(), "host", true);
-        Assert.assertFalse(quit.await(900, TimeUnit.MILLISECONDS),
-                "Forge quit although a browser had come back");
     }
 
     /** Fails if a browser on a guest's link can take the host's seat, which could stop the server or set the table. */

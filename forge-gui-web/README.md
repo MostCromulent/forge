@@ -105,17 +105,15 @@ locally before pushing.
 
 ### Tests
 
+The tests guard what a change elsewhere in Forge could break without the module noticing: the wire format of the game's
+views, `IGuiGame` calls the web seat does not answer, a web seat answering the engine's prompts, netplay between host
+and guest, the draft and sealed products, and the server's tokens and paths. The page's own behaviour is left to the
+e2e suite and to playing it.
+
 - `mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and the Vitest tests; `npm test` runs only Vitest.
-  By default that is the table's rules, tried at a table through `Lobby` (the `TablesTest` classes), the sessions that
-  run in one process, and one netplay check that the host's changes reach a guest (`GuestTableTest`).
-- The slow tests need `-Drun.stress.tests=true`, the switch Forge's other network tests use: whole games, events and
-  guests played over netplay (`OnlineEventTest`, `GuestSeatTest`, `DeckEditorSessionTest`), and the Pauper archetype
-  sweep. Run them before pushing a change to sessions or netplay.
-- `SharedTraceTest` and `model.test.ts` replay one recorded game through the Java and TypeScript models to keep them
-  in step. After changing the model or messages, record it again:
-
-      mvn -Pweb -pl forge-gui-web -am test -Dtest=TraceRecordingTest -Dsurefire.failIfNoSpecifiedTests=false -Dforge.web.writeTraces=true
-
+- The slow ones need `-Drun.stress.tests=true`, the switch Forge's other network tests use: whole games and events
+  played over netplay (`LoopbackGameTest`, `OnlineEventTest`, `GuestSeatTest`). Run them before pushing a change to
+  sessions or netplay.
 - `e2e/` drives the page in a real browser against a real server. Build the jar, then:
 
       cd forge-gui-web/e2e

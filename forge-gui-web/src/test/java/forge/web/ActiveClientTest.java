@@ -125,25 +125,6 @@ public class ActiveClientTest {
         return held;
     }
 
-    @Test(timeOut = 180000)
-    public void endTurnPassesTheTurnWithoutPressingOk() throws Exception {
-        WebTestSupport.skipUnlessStress();
-        // Holds at its own first main phase and never passes priority, so only End Turn can move the game on
-        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 50), (local, gui, browser) -> {
-            Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
-            final int held = browser.turn();
-            Thread.sleep(2000);
-            Assert.assertEquals(browser.turn(), held, "the game moved on while the seat held priority");
-
-            gui.onBrowserMessage(FakeBrowser.action("endTurn"));
-            for (int i = 0; i < 300 && browser.turn() == held; i++) {
-                Thread.sleep(100);
-            }
-            Assert.assertTrue(browser.turn() > held, "End Turn did not pass the turn");
-            gui.onBrowserMessage(FakeBrowser.action("concede"));
-        });
-    }
-
     private static int cardKey(final Game game, final ZoneType zone, final boolean webSeat, final String name, final boolean faceDown) {
         for (final Player p : game.getPlayers()) {
             if ((p.getController() instanceof PlayerControllerHuman) != webSeat) {

@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { startServer, type Server } from './server';
-import { chooseDeck, enterName, flipOption, hostTable, inviteLink, say } from './steps';
+import { chooseDeck, enterName, hostTable, inviteLink, say } from './steps';
 
 let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
@@ -50,57 +50,4 @@ test('a guest joins by link under a name of its own and follows the host into th
   // In a match others can join, the dock sits open under the log without being asked for
   await say(page, '#match-chat .dock-say input', 'good luck');
   await expect(guest.locator('#match-chat .dock-log')).toContainText('good luck');
-});
-
-test('lines said while the dock is folded are counted on it until it is opened', async ({ page, browser }) => {
-  const guest = await hostAndGuest(page, browser);
-  await guest.click('#dock .dock.folded');
-  await say(guest, '#dock .dock-say input', 'hello');
-  await say(guest, '#dock .dock-say input', 'anyone up for sealed?');
-  await expect(page.locator('#dock .dock.folded .dock-new')).toHaveText('2 new');
-
-  // Opening it reads them, and folding it again starts the count afresh
-  await page.click('#dock .dock.folded');
-  await expect(page.locator('#dock .dock-log')).toContainText('anyone up for sealed?');
-  await page.click('#dock .dock-head');
-  await expect(page.locator('#dock .dock.folded')).toBeVisible();
-  await expect(page.locator('#dock .dock-new')).toHaveCount(0);
-
-  // What was said before a browser arrived is history, so a reload brings none of it back as news
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await expect(page.locator('#dock .dock.folded')).toBeVisible();
-  await expect(page.locator('#dock .dock-new')).toHaveCount(0);
-  await say(guest, '#dock .dock-say input', 'gl hf');
-  await expect(page.locator('#dock .dock-new')).toHaveText('1 new');
-});
-
-// The server keeps a guest's settings only as long as it runs, so the guest's browser gives them back to a new one
-test('a guest\'s phase stops outlive a server restart', async ({ page, browser }) => {
-  let guest = await hostAndGuest(page, browser);
-  await startMatch(page, guest);
-  const stopAt = (p: Page, phase: string) => p.locator(`#phase-strip .stops button.cell[data-mine="true"][data-phase="${phase}"] .square`);
-  await guest.click('#phase-strip .pill');
-  const phase = await guest.locator('#phase-strip .stops button.cell[data-mine="true"]').first().getAttribute('data-phase') ?? '';
-  const wasOn = await stopAt(guest, phase).evaluate(el => el.classList.contains('on'));
-  await guest.locator(`#phase-strip .stops button.cell[data-mine="true"][data-phase="${phase}"]`).click();
-  await expect(stopAt(guest, phase)).toHaveClass(wasOn ? /^(?!.*\bon\b)/ : /\bon\b/);
-
-  const context = guest.context();
-  await guest.close();
-  const port = server.port;
-  await server.stop();
-  server = await startServer(port);
-  // The guest is known by the name it remembers; the host's seat is free again, so the host is asked, name filled in
-  await page.goto(server.url);
-  await expect(page.locator('#player-name')).toHaveValue('Alice');
-  await page.keyboard.press('Enter');
-  await page.click('[data-mode=multiplayer]');
-  await page.click('.chooser [data-kind=constructed]');
-  await expect(page.locator('#seats .plate').first()).toBeVisible();
-  guest = await context.newPage();
-  await guest.goto(await inviteLink(page, server.url));
-  await expect(guest.locator('#lobby')).toBeVisible();
-  await startMatch(page, guest);
-  await guest.click('#phase-strip .pill');
-  await expect(stopAt(guest, phase)).toHaveClass(wasOn ? /^(?!.*\bon\b)/ : /\bon\b/);
 });

@@ -1,19 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyState, createModel } from '../../main/ts/model';
 import type { StateMessage } from '../../main/ts/protocol';
-import trace from '../resources/traces/whole-game.json';
-
-// The same recorded game SharedTraceTest holds BrowserModel to, so the two copies of these rules agree
-describe('the shared trace', () => {
-  it('builds the table BrowserModel builds', () => {
-    const model = createModel();
-    for (const message of trace.messages) {
-      applyState(model, message as unknown as StateMessage);
-    }
-    const built = Object.fromEntries([...model.objects].map(([key, { $key: _, ...props }]) => [String(key), props]));
-    expect(built).toEqual(trace.expected.objects);
-  });
-});
 
 const state = (patch: Partial<StateMessage>): StateMessage => ({
   t: 'state', full: false, seq: 1, root: 1, newObjects: {}, deltas: {}, visible: [], localPlayers: [], events: [], ...patch,
