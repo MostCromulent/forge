@@ -430,7 +430,7 @@ public final class WebSession {
             }
             // A match takes the whole page, so nothing about decks is done during one
             case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
-                    "editorDeck", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
+                    "editorDeck", "deckDelete", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
                 if (!(stage instanceof Playing)) {
                     // A pool's deck, saved with every edit, changes its row, which the opponents screen reads the deck
                     // from; it goes first, since closing the editor lists every deck again before the page changes

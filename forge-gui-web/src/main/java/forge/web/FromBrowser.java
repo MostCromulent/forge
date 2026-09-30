@@ -160,6 +160,11 @@ final class FromBrowser {
     record EditorDeck(DeckOp op) {
     }
 
+    /** Deletes one of the player's own decks from the finder, without opening it. */
+    @Command("deckDelete")
+    record DeckDelete(String key) {
+    }
+
     /** A page of the catalogue; request is echoed back so a late answer to an old query is dropped. */
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String mv, String sort, int offset,
@@ -369,7 +374,7 @@ final class FromBrowser {
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class, Dev.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
-            EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, CatalogueQuery.class,
+            EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, DeckDelete.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
             DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,

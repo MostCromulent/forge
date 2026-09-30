@@ -133,6 +133,8 @@ export interface Actions {
   renameDeck(name: string): void;
   setCheck(format: string, cardPool: string | null, unrestricted: boolean): void;
   deckOp(op: DeckOp): void;
+  /** Deletes one of your own decks by its finder key. */
+  deleteDeck(key: string): void;
   /** A page of the catalogue. request numbers the query, so an answer to an older one can be told apart. */
   queryCatalogue(request: number, q: Omit<CatalogueQuery, 't' | 'request'>): void;
   readImport(request: number, text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
@@ -233,6 +235,7 @@ export function createActions(send: Send): Actions {
     renameDeck: name => send({ t: 'editorRename', name }),
     setCheck: (format, cardPool, unrestricted) => send(cardPool ? { t: 'editorCheck', format, cardPool, unrestricted } : { t: 'editorCheck', format, unrestricted }),
     deckOp: op => send({ t: 'editorDeck', op }),
+    deleteDeck: key => send({ t: 'deckDelete', key }),
     queryCatalogue: (request, q) => send({ t: 'catalogue', request, ...q }),
     readImport: (request, text, format, cardPool, unrestricted) =>
       send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted }),

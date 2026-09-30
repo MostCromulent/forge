@@ -17,8 +17,6 @@ import type { DeckDetails, DeckSummary, Seat } from './protocol';
 import { t, type TextKey } from './text';
 
 const SEARCH_DEBOUNCE_MS = 200;
-const PEEK_W = 240;
-const PEEK_H = 336;
 // Colour identity, in the order Magic writes it, plus colourless
 const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
   ['C', 'lblWebEditorColourless']];
@@ -88,6 +86,7 @@ export function DeckFinder({ model, actions, seat, close }: {
   const decks = model.decks ?? [];
   const [chosen, setChosen] = useState<string | null>(seat?.seat.deck ?? null);
   const [dropping, setDropping] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [typed, setTyped] = useState('');
   const [filter, setFilter] = useState<DeckFilter>({ ...FINDER_DEFAULTS, colours: new Set() });
   const change = (part: Partial<DeckFilter>) => setFilter(f => ({ ...f, ...part }));
@@ -105,6 +104,7 @@ export function DeckFinder({ model, actions, seat, close }: {
   // The chosen deck's card list is the server's to read
   useEffect(() => {
     if (chosen) actions.askDeckDetails(chosen);
+    setDeleting(false);
   }, [chosen]);
 
   const use = (key = chosen) => {
@@ -114,6 +114,8 @@ export function DeckFinder({ model, actions, seat, close }: {
     }
   };
   const summary = decks.find(d => d.key === chosen);
+  // Only your own saved decks can go; a precon, a generator or a net deck is only ever copied
+  const deletable = !!summary && !summary.readOnly && !summary.generated;
   const edit = () => {
     if (!chosen) return;
     actions.openEditor({ key: chosen, seat: seat?.index, copy: !!summary?.readOnly });
@@ -282,6 +284,17 @@ export function DeckFinder({ model, actions, seat, close }: {
               <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>{t('lblWebFinderSyncNow')}</button>
             </span>
           )}
+          {deleting && summary ? (
+            <span class="delete-line">
+              <b>{t('lblWebEditorDeleteDeck', summary.name)}</b> {t('lblWebEditorCannotUndo')}
+              <button onClick={() => setDeleting(false)}>{t('lblCancel')}</button>
+              <button class="danger" onClick={() => {
+                actions.deleteDeck(summary.key);
+                setChosen(null);
+                setDeleting(false);
+              }}>{t('lblDelete')}</button>
+            </span>
+          ) : deletable && <button class="delete-deck" onClick={() => setDeleting(true)}>{t('lblDelete')}</button>}
           <button class="cancel" onClick={close}>{t('lblCancel')}</button>
           {seat
             ? <>
@@ -348,12 +361,15 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
     return null;
   }
   const box = el.getBoundingClientRect();
-  const before = box.left - frame.left - PEEK_W - 16;
+  // The width every preview shares, which grows with the window (theme.css)
+  const peekW = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--preview-w')) || 280;
+  const peekH = peekW * 88 / 63;
+  const before = box.left - frame.left - peekW - 16;
   return {
     image: el.dataset.image ?? '',
     // With no room to its left, as for a card at the edge of a grid, it goes to the right instead
-    left: before >= 12 ? before : Math.min(frame.width - PEEK_W - 12, box.right - frame.left + 16),
-    top: Math.min(frame.height - PEEK_H - 12, Math.max(12, box.top - frame.top - PEEK_H / 2)),
+    left: before >= 12 ? before : Math.min(frame.width - peekW - 12, box.right - frame.left + 16),
+    top: Math.min(frame.height - peekH - 12, Math.max(12, box.top - frame.top - peekH / 2)),
   };
 }
 

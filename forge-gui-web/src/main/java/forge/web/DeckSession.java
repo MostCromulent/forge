@@ -19,6 +19,7 @@ import forge.web.DeckCatalog.OnDevice;
 import forge.web.FromBrowser.BrowseFormat;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.CountedName;
+import forge.web.FromBrowser.DeckDelete;
 import forge.web.FromBrowser.DeviceDeckText;
 import forge.web.FromBrowser.DeviceDecks;
 import forge.web.FromBrowser.EditorCheck;
@@ -130,6 +131,7 @@ final class DeckSession {
                 ui.runBackgroundTask("Import", () -> channel.send(fetched(fetch)));
             }
             case "importCommit" -> commit(channel, Wire.decode(msg, ImportCommit.class));
+            case "deckDelete" -> deleteDeck(channel, Wire.decode(msg, DeckDelete.class).key());
             default -> edit(channel, type, msg);
         }
     }
@@ -182,19 +184,43 @@ final class DeckSession {
                 return;
             }
             readOnly = o.copy() || DeckCatalog.readOnly(o.key(), guest);
-            if (o.key().startsWith(DeckCatalog.DEVICE + ":")) {
-                target = new DeckEditor.Device(o.key().substring(DeckCatalog.DEVICE.length() + 1));
-            } else {
-                editorPath = readOnly ? "" : DeckCatalog.pathOf(o.key());
-                final IStorage<Deck> root = storages.of(check.format());
-                final IStorage<Deck> folder = editorPath.isEmpty() ? null : root.tryGetFolder(editorPath.substring(1));
-                target = new DeckEditor.Stored(folder == null ? root : folder);
+            if (!readOnly) {
+                editorPath = DeckCatalog.pathOf(o.key());
             }
+            target = targetOf(o.key(), editorPath, check);
         }
         editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck);
         eventPool = false;
         editorSeat = o.seat();
         editorTable = lobby.table();
+    }
+
+    /** Where a deck is saved: the browser's own list, or a folder among its format's decks ("" for the top). */
+    private DeckEditor.Target targetOf(final String key, final String path, final Check check) {
+        if (key.startsWith(DeckCatalog.DEVICE + ":")) {
+            return new DeckEditor.Device(key.substring(DeckCatalog.DEVICE.length() + 1));
+        }
+        final IStorage<Deck> root = storages.of(check.format());
+        final IStorage<Deck> folder = path.isEmpty() ? null : root.tryGetFolder(path.substring(1));
+        return new DeckEditor.Stored(folder == null ? root : folder);
+    }
+
+    /** Deletes a deck as the editor's Delete does, without the editor, which may be open on another deck. */
+    private synchronized void deleteDeck(final BrowserChannel channel, final String key) {
+        final boolean guest = !host.getAsBoolean();
+        final Deck deck = lobby.deck(key);
+        final String problem;
+        if (deck == null || DeckCatalog.readOnly(key, guest)) {
+            problem = Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
+        } else {
+            final Check check = check(lobby.format().name(), null, false);
+            problem = new DeckEditor(deck, false, true, targetOf(key, DeckCatalog.pathOf(key), check), check, storages, guest,
+                    this::sendDeviceDeck).delete();
+        }
+        if (problem != null) {
+            channel.send(new Notice(problem, null, false));
+        }
+        lobby.sendDecks(channel);
     }
 
     /** Opens a sealed or draft pool's deck, which saves back into its pool as desktop's limited editor does. */

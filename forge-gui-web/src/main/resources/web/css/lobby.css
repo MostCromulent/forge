@@ -470,7 +470,7 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .dk-line .n { color: var(--muted); min-width: 16px; text-align: right; }
 
 /* The hovered card, shown beside the list as it is over the table */
-.deck-peek { position: absolute; width: 240px; pointer-events: none; z-index: 5; }
+.deck-peek { position: absolute; width: var(--preview-w); pointer-events: none; z-index: 5; }
 .deck-peek img { width: 100%; border-radius: 10px; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
 .finder { position: relative; }
 
@@ -648,6 +648,11 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 /* The finder's ways to a new deck, and a file dragged over it to import */
 .finder-head .head-tools { margin-left: auto; display: flex; gap: 8px; align-items: center; }
 .finder-head .legality { margin-left: 16px; }
+.finder-foot .delete-deck { margin-right: auto; color: var(--danger); }
+/* Deleting asks once, in the footer, since the finder is already a dialog */
+.finder-foot .delete-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
+.finder-foot .delete-line b { color: var(--text); }
+.finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .finder-foot .linked-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
 .finder.dropping { position: relative; }
 .drop-over-finder {
