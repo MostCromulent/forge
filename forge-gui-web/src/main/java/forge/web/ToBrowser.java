@@ -325,9 +325,12 @@ final class ToBrowser {
     record Place(ZoneType zone, @Nullable Ref player) {
     }
 
-    /** A card went from one zone to another. No from means it came into being there (a token, a copy). */
+    /**
+     * A card went from one zone to another. No from means it came into being there (a token, a copy). A card put on the
+     * stack names who is casting it, since the browser does not have the card until its costs are paid.
+     */
     @Event("cardMoved")
-    record CardMoved(Ref card, @Nullable Place from, @Nullable Place to) {
+    record CardMoved(Ref card, @Nullable Place from, @Nullable Place to, @Nullable Ref caster) {
     }
 
     @Event("cardDamaged")

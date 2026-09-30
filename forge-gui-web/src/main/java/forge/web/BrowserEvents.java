@@ -42,7 +42,9 @@ final class BrowserEvents {
     /** The events a renderer can show, as the browser names them; null for the rest, which the state covers. */
     static Record forwarded(final GameEvent event) {
         if (event instanceof GameEventCardChangeZone e && e.card() != null) {
-            return new CardMoved(Ref.card(e.card().getId()), place(e.from()), place(e.to()));
+            final PlayerView caster = e.to() != null && e.to().zoneType() == ZoneType.Stack ? e.card().getController() : null;
+            return new CardMoved(Ref.card(e.card().getId()), place(e.from()), place(e.to()),
+                    caster == null ? null : Ref.player(caster.getId()));
         }
         if (event instanceof GameEventCardDamaged e && e.card() != null) {
             return new CardDamaged(Ref.card(e.card().getId()), e.source() == null ? null : Ref.card(e.source().getId()), e.amount());
