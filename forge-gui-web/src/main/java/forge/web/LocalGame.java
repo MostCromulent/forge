@@ -25,6 +25,7 @@ import forge.interfaces.IUpdateable;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.player.PlayerControllerHuman;
 import forge.model.FModel;
+import forge.util.Localizer;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;
@@ -197,7 +198,7 @@ public final class LocalGame {
         client.connect();
         try {
             if (!ready.await(JOIN_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException("No seat was free in that game");
+                throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameNoFreeSeat"));
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -233,7 +234,7 @@ public final class LocalGame {
      */
     public Runnable prepare() {
         if (hosted == null) {
-            throw new IllegalStateException("Only the host can start the match");
+            throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameOnlyHostStarts"));
         }
         return hosted.startGame();
     }
@@ -289,7 +290,7 @@ public final class LocalGame {
         hosted.getSlot(webSeat).setIsReady(true);
         final Runnable begin = prepare();
         if (begin == null) {
-            throw new IllegalStateException("The lobby refused to start the match");
+            throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameLobbyRefused"));
         }
         begin.run();
     }

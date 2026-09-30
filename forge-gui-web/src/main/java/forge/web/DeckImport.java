@@ -10,6 +10,7 @@ import forge.deck.DeckRecognizer.TokenType;
 import forge.deck.DeckSection;
 import forge.deck.DeckUrlLoader;
 import forge.item.PaperCard;
+import forge.util.Localizer;
 import forge.web.ToBrowser.Fetched;
 import forge.web.ToBrowser.ImportFix;
 import forge.web.ToBrowser.ImportLine;
@@ -108,8 +109,9 @@ final class DeckImport {
             final Integer at = lineOf.get(card);
             if (at != null) {
                 kinds[at] = PROBLEM;
-                cardProblems.add(new ImportProblem(at, "Line " + (at + 1) + ": " + card, StringUtils.capitalize(flag) + ".",
-                        List.of(new ImportFix("leaveOut", "Leave out", null))));
+                cardProblems.add(new ImportProblem(at, Localizer.getInstance().getMessage("lblWebImportLineCard", at + 1, card),
+                        Localizer.getInstance().getMessage("lblWebLegalitySentence", StringUtils.capitalize(flag)),
+                        List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
             }
         });
         problems.addAll(cardProblems);
@@ -140,17 +142,17 @@ final class DeckImport {
 
     /** The known card name closest to an unknown one, or null when none is close enough to be the one meant. */
     private static ImportProblem unknown(final int line, final String text, final boolean unsupported) {
-        final String title = "Line " + (line + 1) + ": \"" + text + "\"";
+        final String title = Localizer.getInstance().getMessage("lblWebImportLineText", line + 1, text);
         if (unsupported) {
-            return new ImportProblem(line, title, "Forge can't play this card.", List.of(new ImportFix("leaveOut", "Leave out", null)));
+            return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportUnsupported"), List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null)));
         }
         final String closest = CardCatalog.get().closestName(text.replaceFirst("^\\s*\\d+x?\\s+", "").replaceFirst("\\s*[\\[(].*$", ""));
         final List<ImportFix> fixes = new ArrayList<>();
         if (closest != null) {
-            fixes.add(new ImportFix("use", "Use " + closest, closest));
+            fixes.add(new ImportFix("use", Localizer.getInstance().getMessage("lblWebImportUse", closest), closest));
         }
-        fixes.add(new ImportFix("leaveOut", "Leave out", null));
-        return new ImportProblem(line, title, "Not a card name.", fixes);
+        fixes.add(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null));
+        return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportNotACard"), fixes);
     }
 
     /**
@@ -181,10 +183,10 @@ final class DeckImport {
         for (final PaperCard c : candidates.subList(0, Math.min(MOST_COMMANDER_CHOICES, candidates.size()))) {
             fixes.add(new ImportFix("commander", c.getName(), c.getName()));
         }
-        fixes.add(new ImportFix("other", "Other…", null));
-        problems.add(new ImportProblem(-1, "No commander", candidates.isEmpty()
-                ? "The list has no card that can lead it. Choose one in the editor."
-                : "The list has no Commander section. Pick one of its legendary creatures.", fixes));
+        fixes.add(new ImportFix("other", Localizer.getInstance().getMessage("lblWebImportOther"), null));
+        problems.add(new ImportProblem(-1, Localizer.getInstance().getMessage("lblWebImportNoCommander"), candidates.isEmpty()
+                ? Localizer.getInstance().getMessage("lblWebImportNoLeader")
+                : Localizer.getInstance().getMessage("lblWebImportNoCommanderSection"), fixes));
         return null;
     }
 }

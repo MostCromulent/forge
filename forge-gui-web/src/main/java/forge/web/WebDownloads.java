@@ -7,6 +7,7 @@ import forge.gui.interfaces.IProgressBar;
 import forge.gui.interfaces.ITextField;
 import forge.localinstance.skin.FSkinProp;
 import forge.gui.UiCommand;
+import forge.util.Localizer;
 import org.tinylog.Logger;
 
 import java.util.function.Consumer;
@@ -29,7 +30,7 @@ final class WebDownloads {
             service.run();
         } catch (final RuntimeException e) {
             Logger.error(e, "Download failed");
-            progress.say("Could not download.");
+            progress.say(Localizer.getInstance().getMessage("lblWebDownloadFailed"));
             callback.accept(false);
             return;
         }
@@ -50,7 +51,7 @@ final class WebDownloads {
         }
 
         void finish() {
-            say(description == null ? "Finished" : description);
+            say(description == null ? Localizer.getInstance().getMessage("lblWebDownloadFinished") : description);
         }
 
         void say(final String text) {

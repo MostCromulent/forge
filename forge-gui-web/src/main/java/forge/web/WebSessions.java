@@ -4,6 +4,7 @@ import forge.gamemodes.net.server.ServerGameLobby;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
 import forge.gamemodes.net.server.FServerManager;
+import forge.util.Localizer;
 import forge.web.ToBrowser.Address;
 import forge.web.ToBrowser.ChatLine;
 import forge.web.ToBrowser.Person;
@@ -350,7 +351,8 @@ final class WebSessions implements WebServer.Endpoint {
     }
 
     static String internetCaption(final int port, final boolean forwarded) {
-        return forwarded ? "Over the internet" : "Over the internet (forward port " + port + " first)";
+        return forwarded ? Localizer.getInstance().getMessage("lblWebSessionsOverInternet")
+                : Localizer.getInstance().getMessage("lblWebSessionsOverInternetForward", port);
     }
 
     /** Every link that would reach this machine, most likely first. */

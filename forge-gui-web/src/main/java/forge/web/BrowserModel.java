@@ -20,8 +20,8 @@ import java.util.Set;
  * The game's objects as the browser holds them: every card, player and zone it has been sent, by key. There is
  * one for each player's view of a match, and it is what that player's browser is sent in full when it connects or reloads.
  *
- * <p>src/main/ts/model.ts applies changes to its own copy by the same rules, and the tests hold the two to the same
- * recorded game, so what the server believes the browser has cannot drift from what it does have.
+ * <p>src/main/ts/model.ts applies changes to its own copy by the same rules, so what the server believes the browser
+ * has is what it does have.
  */
 public final class BrowserModel {
     private final Map<Integer, JsonObject> objects = new LinkedHashMap<>();

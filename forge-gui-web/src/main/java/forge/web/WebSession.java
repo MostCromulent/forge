@@ -60,6 +60,7 @@ import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.util.storage.IStorage;
+import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
@@ -352,7 +353,7 @@ public final class WebSession {
             case "join" -> joinHostGame();
             case "claimHost" -> {
                 if (!sessions.claimHost(this)) {
-                    channel.send(error("Someone else is already hosting."));
+                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionAlreadyHosting")));
                 }
                 channel.send(hello());
             }
@@ -639,7 +640,7 @@ public final class WebSession {
             }
             case "eventStart" -> {
                 if (offlineDraft != null) {
-                    channel.send(error("Finish or discard the offline draft first."));
+                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionFinishDraft")));
                     return;
                 }
                 ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.startEvent()));
@@ -693,7 +694,7 @@ public final class WebSession {
             gui.close();
             move(opening, new Menu());
             // The move's hello clears the browser's last error, so the reason has to follow it
-            channel.send(error("Could not open the lobby: " + e.getMessage()));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionLobbyFailed", String.valueOf(e.getMessage()))));
             return;
         }
         if (!move(opening, new Setup(gui, invite))) {
@@ -946,13 +947,13 @@ public final class WebSession {
     private String nameProblem(final String wanted) {
         final String trimmed = wanted == null ? "" : wanted.trim();
         if (trimmed.isEmpty()) {
-            return "Choose a name to play under.";
+            return Localizer.getInstance().getMessage("lblWebSessionNameEmpty");
         }
         if (trimmed.length() > MAX_NAME_LENGTH) {
-            return "That name is too long; keep it to " + MAX_NAME_LENGTH + " characters.";
+            return Localizer.getInstance().getMessage("lblWebSessionNameTooLong", MAX_NAME_LENGTH);
         }
         if (sessions.nameTaken(trimmed, this)) {
-            return "Someone here is already called " + trimmed + ".";
+            return Localizer.getInstance().getMessage("lblWebSessionNameTaken", trimmed);
         }
         return null;
     }
@@ -963,7 +964,7 @@ public final class WebSession {
             final String problem = nameProblem(seat.name());
             if (problem != null) {
                 // Match setup has no line for errors, and the seat keeps its old name, so this only needs saying
-                channel.send(new Notice("Name not changed", problem, false));
+                channel.send(new Notice(Localizer.getInstance().getMessage("lblWebSessionNameNotChanged"), problem, false));
             } else {
                 name = seat.name().trim();
                 lobby.setName(seat.index(), name);
@@ -1018,7 +1019,7 @@ public final class WebSession {
         final Stage now = stage;
         final DeckGroup group = now instanceof Event e ? e.storage().get(name) : null;
         if (group == null) {
-            channel.send(error("There is no pool called " + name + "."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionNoPool", name)));
             return;
         }
         final Event e = (Event) now;
@@ -1031,7 +1032,7 @@ public final class WebSession {
             return;
         }
         if (name.equals(decks.openPoolName())) {
-            channel.send(error("Close the deck of " + name + " before deleting the pool."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionClosePoolDeck", name)));
             return;
         }
         synchronized (DeckCatalog.DECKS) {
@@ -1062,7 +1063,7 @@ public final class WebSession {
         }
         // A second request while the first is opening would pass the name check above and replace its pool
         if (!openingPacks.compareAndSet(false, true)) {
-            channel.send(error("Forge is already opening packs."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionOpeningPacks")));
             return;
         }
         // A block whose booster the player chooses asks through the host's browser, and waits for the answer. The
@@ -1099,7 +1100,7 @@ public final class WebSession {
             return;
         }
         if (offlineDraft != null) {
-            channel.send(error("A draft is already running."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionDraftRunning")));
             return;
         }
         final Supplier<BoosterDraft> make;
@@ -1153,7 +1154,7 @@ public final class WebSession {
         // Off the draft's own thread, which closing the draft interrupts
         draft.save(name).whenCompleteAsync((group, ex) -> {
             if (ex != null) {
-                tell(error("Could not save the draft: " + ex.getMessage()));
+                tell(error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
                 return;
             }
             OfflineEvents.store(drafts, group);
@@ -1183,7 +1184,7 @@ public final class WebSession {
         if (FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
             final String illegal = DeckFormat.Limited.getDeckConformanceProblem(human);
             if (illegal != null) {
-                channel.send(error("Your deck " + illegal + "."));
+                channel.send(error(Localizer.getInstance().getMessage("lblWebSessionYourDeck", illegal)));
                 return;
             }
         }
@@ -1208,7 +1209,7 @@ public final class WebSession {
                     gauntlet.launch(ai.size(), human, event.type());
                 } catch (final RuntimeException ex) {
                     Logger.error(ex, "Could not start the gauntlet");
-                    channel.send(error("Could not start the gauntlet: " + ex.getMessage()));
+                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionGauntletFailed", String.valueOf(ex.getMessage()))));
                 }
                 // A first round that did not start leaves the pool showing, and no gauntlet to carry on
                 if (!(stage instanceof Playing)) {
@@ -1218,7 +1219,7 @@ public final class WebSession {
             case "several" -> {
                 final int count = Math.min(Math.min(play.count(), MOST_OPPONENTS), ai.size());
                 if (event.type() != GameType.Draft || count < 2) {
-                    channel.send(error("Several opponents at once needs a draft with at least two opponents."));
+                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionSeveralNeedsDraft")));
                     return;
                 }
                 // Chosen at random, as desktop's draft screen chooses them
@@ -1235,7 +1236,7 @@ public final class WebSession {
             }
             default -> {
                 if (play.opponent() < 0 || play.opponent() >= ai.size()) {
-                    channel.send(error("There is no such opponent."));
+                    channel.send(error(Localizer.getInstance().getMessage("lblWebSessionNoSuchOpponent")));
                     return;
                 }
                 playLimited(back, event.type(), List.of(mySeat(human), opponentSeat(play.opponent() + 1, 1, ai.get(play.opponent()))));
@@ -1249,7 +1250,7 @@ public final class WebSession {
 
     /** An opponent named by its deck's place in the pool, as desktop numbers them, with the looks of seat. */
     private static LocalGame.Seat opponentSeat(final int number, final int seat, final Deck deck) {
-        return new LocalGame.Seat("Opponent " + number, true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
+        return new LocalGame.Seat(Localizer.getInstance().getMessage("lblWebSessionOpponent", number), true, LocalGame.storedIndex(FPref.UI_AVATARS, seat),
                 LocalGame.storedIndex(FPref.UI_SLEEVES, seat), deck);
     }
 
@@ -1275,7 +1276,7 @@ public final class WebSession {
             Logger.error(ex, "Could not start the match");
             local.endMatch();
             move(playing, back);
-            tell(error("Could not start the match: " + ex.getMessage()));
+            tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
             return null;
         }
     }
@@ -1328,12 +1329,12 @@ public final class WebSession {
 
     private void start(final BrowserChannel channel, final Start msg) {
         if (!isHost) {
-            channel.send(error("Only the host can start the match."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionHostStarts")));
             return;
         }
         final Stage from = stage;
         if (!(from instanceof Setup setup)) {
-            channel.send(error("No lobby is open."));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionNoLobby")));
             return;
         }
         final List<String> problems = lobby.problems();
@@ -1349,7 +1350,7 @@ public final class WebSession {
             begin = local.prepare();
         } catch (final RuntimeException e) {
             Logger.error(e, "Could not start the match");
-            channel.send(error("Could not start the match: " + e.getMessage()));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(e.getMessage()))));
             return;
         }
         if (begin == null) {
@@ -1372,7 +1373,7 @@ public final class WebSession {
             Logger.error(e, "Could not start the match");
             local.endMatch();
             move(playing, new Menu());
-            channel.send(error("Could not start the match: " + e.getMessage()));
+            channel.send(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(e.getMessage()))));
         }
     }
 

@@ -14,6 +14,7 @@ import forge.deck.io.DeckSerializer;
 import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.util.ImageUtil;
+import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.storage.IStorage;
 import forge.web.ToBrowser.EditorCard;
@@ -43,7 +44,8 @@ final class DeckEditor {
     /** The name a new deck starts with, until its commander names it or the player does. */
     static final String NEW_DECK = "New deck";
     private static final int MOST_UNDO = 100;
-    private static final String GROUP_OWNS_IT = "A pool's deck is renamed and deleted with its pool.";
+    /** The key of the answer to renaming, duplicating or deleting a pool's deck. */
+    private static final String GROUP_OWNS_IT = "lblWebEditorPoolOwnsDeck";
     /** The basics the land row offers, with the colour each needs; Wastes needs none. */
     private static final Map<String, String> BASICS = new LinkedHashMap<>();
 
@@ -166,7 +168,7 @@ final class DeckEditor {
         }
         final PaperCard card = printingFor(name);
         if (card == null) {
-            return "No card is called " + name + ".";
+            return Localizer.getInstance().getMessage("lblWebEditorNoSuchCard", String.valueOf(name));
         }
         final String limit = overLimit(card, count);
         if (limit != null) {
@@ -185,7 +187,7 @@ final class DeckEditor {
         final CardPool pool = deck.get(from);
         final int have = pool == null ? 0 : pool.countByName(name);
         if (have == 0) {
-            return "There is no " + name + " to remove.";
+            return Localizer.getInstance().getMessage("lblWebEditorNoneToRemove", String.valueOf(name));
         }
         return change(name, () -> {
             take(pool, name, Math.min(count, have));
@@ -200,7 +202,7 @@ final class DeckEditor {
         final CardPool pool = deck.get(from);
         final int have = pool == null ? 0 : pool.countByName(name);
         if (have == 0 || from == to) {
-            return "There is no " + name + " to move.";
+            return Localizer.getInstance().getMessage("lblWebEditorNoneToMove", String.valueOf(name));
         }
         return change(name, () -> {
             final CardPool moving = take(pool, name, Math.min(count, have));
@@ -213,20 +215,20 @@ final class DeckEditor {
     String makeCommander(final String name, final DeckSection from) {
         final DeckFormat df = check.deckFormat();
         if (!df.hasCommander()) {
-            return "Only commander formats have a commander.";
+            return Localizer.getInstance().getMessage("lblWebEditorNoCommanderFormat");
         }
         final CardPool source = from == null ? null : deck.get(from);
         final PaperCard card = source == null ? printingFor(name) : source.find(c -> c.getName().equals(name));
         if (card == null) {
-            return "No card is called " + name + ".";
+            return Localizer.getInstance().getMessage("lblWebEditorNoSuchCard", String.valueOf(name));
         }
         final CardRules rules = card.getRules();
         if (!df.isLegalCommander(rules) && !(df.hasSignatureSpell() && rules.canBeSignatureSpell())) {
-            return name + " can't be your commander.";
+            return Localizer.getInstance().getMessage("lblWebEditorCannotCommand", String.valueOf(name));
         }
         final CardPool commanders = deck.getOrCreate(DeckSection.Commander);
         if (commanders.countByName(name) > 0) {
-            return name + " is already your commander.";
+            return Localizer.getInstance().getMessage("lblWebEditorAlreadyCommander", String.valueOf(name));
         }
         if (source == null) {
             final String limit = overLimit(card, 1);
@@ -252,13 +254,13 @@ final class DeckEditor {
         final int have = pool == null ? 0 : pool.countByName(name);
         final int total = countsByImageKey.values().stream().mapToInt(Integer::intValue).sum();
         if (total != have) {
-            return "The total must stay at " + have + ".";
+            return Localizer.getInstance().getMessage("lblWebEditorTotalFixed", have);
         }
         final Map<PaperCard, Integer> wanted = new LinkedHashMap<>();
         for (final Map.Entry<String, Integer> e : countsByImageKey.entrySet()) {
             final PaperCard printing = ImageUtil.getPaperCardFromImageKey(e.getKey());
             if (printing == null || !printing.getName().equals(name)) {
-                return "That isn't a printing of " + name + ".";
+                return Localizer.getInstance().getMessage("lblWebEditorNotAPrinting", String.valueOf(name));
             }
             wanted.merge(printing, e.getValue(), Integer::sum);
         }
@@ -273,10 +275,10 @@ final class DeckEditor {
     String setLands(final Map<String, Integer> countsByLand) {
         for (final Map.Entry<String, Integer> e : countsByLand.entrySet()) {
             if (!BASICS.containsKey(e.getKey())) {
-                return e.getKey() + " is not a basic land.";
+                return Localizer.getInstance().getMessage("lblWebEditorNotBasic", String.valueOf(e.getKey()));
             }
             if (e.getValue() > deck.getMain().countByName(e.getKey()) && !landAllowed(e.getKey())) {
-                return e.getKey() + " is outside the commander's colours.";
+                return Localizer.getInstance().getMessage("lblWebEditorOutsideColours", e.getKey());
             }
         }
         return change(countsByLand.keySet().iterator().next(), () -> {
@@ -300,7 +302,7 @@ final class DeckEditor {
     String setLandSet(final String editionCode) {
         final CardEdition edition = StaticData.instance().getEditions().get(editionCode);
         if (!limited() || edition == null || !edition.hasBasicLands()) {
-            return "There are no basic lands from " + editionCode + ".";
+            return Localizer.getInstance().getMessage("lblWebEditorNoBasicsFrom", String.valueOf(editionCode));
         }
         landSet = edition.getCode();
         return null;
@@ -320,7 +322,7 @@ final class DeckEditor {
 
     String rename(final String wanted) {
         if (target instanceof Group) {
-            return GROUP_OWNS_IT;
+            return Localizer.getInstance().getMessage(GROUP_OWNS_IT);
         }
         final String problem = DeckStore.nameProblem(wanted);
         if (problem != null) {
@@ -330,7 +332,7 @@ final class DeckEditor {
         if (target instanceof Stored s && copyOf == null) {
             final String existing = DeckStore.taken(s.storage(), name);
             if (existing != null && (owned == null || !DeckStore.sameFile(existing, owned))) {
-                return "You already have a deck called " + existing + ".";
+                return Localizer.getInstance().getMessage("lblWebEditorNameTaken", existing);
             }
         }
         return change(null, () -> {
@@ -350,7 +352,7 @@ final class DeckEditor {
     String undo() {
         final Snapshot previous = undo.poll();
         if (previous == null) {
-            return "Nothing to undo.";
+            return Localizer.getInstance().getMessage("lblWebEditorNothingToUndo");
         }
         landed = null;
         moveTo(previous.check());
@@ -367,7 +369,7 @@ final class DeckEditor {
     /** Saves a copy under a free name, and carries on editing the copy. */
     String duplicate() {
         if (target instanceof Group) {
-            return GROUP_OWNS_IT;
+            return Localizer.getInstance().getMessage(GROUP_OWNS_IT);
         }
         if (copyOf != null) {
             becomeCopy();
@@ -389,11 +391,11 @@ final class DeckEditor {
 
     String delete() {
         if (target instanceof Group) {
-            return GROUP_OWNS_IT;
+            return Localizer.getInstance().getMessage(GROUP_OWNS_IT);
         }
         // A precon, or someone else's deck, being looked at: nothing of the player's is saved to delete
         if (copyOf != null) {
-            return "Only your own decks can be deleted.";
+            return Localizer.getInstance().getMessage("lblWebEditorOnlyOwnDelete");
         }
         try {
             if (target instanceof Device d) {
@@ -404,7 +406,7 @@ final class DeckEditor {
                 }
             }
         } catch (final RuntimeException e) {
-            return "Could not delete: " + e.getMessage();
+            return Localizer.getInstance().getMessage("lblWebEditorDeleteFailed", String.valueOf(e.getMessage()));
         }
         return null;
     }
@@ -488,7 +490,7 @@ final class DeckEditor {
                 synchronized (DeckCatalog.DECKS) {
                     final DeckGroup group = g.storage().get(deck.getName());
                     if (group == null) {
-                        return "The pool " + deck.getName() + " is gone.";
+                        return Localizer.getInstance().getMessage("lblWebEditorPoolGone", deck.getName());
                     }
                     group.setHumanDeck(new Deck(deck, deck.getName()));
                     g.storage().add(group);
@@ -508,7 +510,7 @@ final class DeckEditor {
             saved = true;
             return null;
         } catch (final RuntimeException e) {
-            return "Could not save: " + e.getMessage();
+            return Localizer.getInstance().getMessage("lblWebEditorSaveFailed", String.valueOf(e.getMessage()));
         }
     }
 
@@ -631,7 +633,7 @@ final class DeckEditor {
         final CardPool side = deck.get(DeckSection.Sideboard);
         final PaperCard card = side == null ? null : side.find(c -> c.getName().equals(name));
         if (card == null) {
-            return "No " + name + " left in the pool.";
+            return Localizer.getInstance().getMessage("lblWebEditorNoneInPool", String.valueOf(name));
         }
         // Attractions and Contraptions go to their own sections, as in desktop's limited editor
         return move(name, DeckSection.Sideboard, to == DeckSection.Main ? DeckSection.matchingSection(card) : to, count);
@@ -723,8 +725,8 @@ final class DeckEditor {
             return null;
         }
         final int most = check.deckFormat().getMaxCardCopies(card);
-        return most == 1 ? card.getName() + " is already in the deck, and this format allows one."
-                : (most - room) + " of " + most + " already, across all zones.";
+        return most == 1 ? Localizer.getInstance().getMessage("lblWebEditorOnlyOne", card.getName())
+                : Localizer.getInstance().getMessage("lblWebEditorCopiesAlready", most - room, most);
     }
 
     private boolean landAllowed(final String land) {

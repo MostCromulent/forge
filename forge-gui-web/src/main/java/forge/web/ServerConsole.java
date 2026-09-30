@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.gamemodes.net.server.FServerManager;
 import forge.gui.interfaces.IProgressBar;
+import forge.util.Localizer;
 import org.tinylog.Logger;
 
 import javax.swing.BorderFactory;
@@ -75,13 +76,13 @@ final class ServerConsole implements IProgressBar {
     private final Runnable onQuit;
     private final StringBuilder pending = new StringBuilder();
     private final Light light = new Light();
-    private final JLabel state = new JLabel("Starting");
+    private final JLabel state = new JLabel(Localizer.getInstance().getMessage("lblWebConsoleStarting"));
     private final JPanel links = new JPanel();
     private final JLabel copied = new JLabel();
     private final Timer copiedFade = new Timer(2000, e -> copied.setText(""));
     private final JProgressBar progress = new JProgressBar();
-    private final JCheckBox quitWhenEmpty = new JCheckBox("Quit when the last player leaves", true);
-    private final JCheckBox forwardPort = new JCheckBox("Open the port on the router, for players on the internet");
+    private final JCheckBox quitWhenEmpty = new JCheckBox(Localizer.getInstance().getMessage("lblWebConsoleQuitWhenEmpty"), true);
+    private final JCheckBox forwardPort = new JCheckBox(Localizer.getInstance().getMessage("lblWebConsoleForwardPort"));
     private final JLabel forwardState = new JLabel();
     private final TrafficGraph graph = new TrafficGraph();
     private final StatsBox stats = new StatsBox();
@@ -142,12 +143,12 @@ final class ServerConsole implements IProgressBar {
         traffic = service.traffic();
         SwingUtilities.invokeLater(() -> {
             light.lit(true);
-            state.setText("Running");
-            startStop.setText("Stop server");
+            state.setText(Localizer.getInstance().getMessage("lblWebConsoleRunning"));
+            startStop.setText(Localizer.getInstance().getMessage("lblWebConsoleStopServer"));
             browse.setEnabled(true);
             progress.setIndeterminate(false);
             progress.setValue(progress.getMaximum());
-            progress.setString("Ready");
+            progress.setString(Localizer.getInstance().getMessage("lblWebConsoleReady"));
         });
         inBackground("ForgeAddresses", this::findAddresses);
     }
@@ -165,10 +166,9 @@ final class ServerConsole implements IProgressBar {
             forwardState.setForeground(now == WebService.Forwarding.REFUSED ? DARK : UIManager.getColor("Label.foreground"));
             forwardState.setText(switch (now) {
                 case OFF -> "";
-                case ASKING -> "Asking the router…";
-                case FORWARDED -> "The router is forwarding port " + service.port() + ".";
-                case REFUSED -> "Refused. Turn on UPnP on the router, or forward port "
-                        + service.port() + " by hand.";
+                case ASKING -> Localizer.getInstance().getMessage("lblWebConsoleAskingRouter");
+                case FORWARDED -> Localizer.getInstance().getMessage("lblWebConsoleForwarded", service.port());
+                case REFUSED -> Localizer.getInstance().getMessage("lblWebConsoleRefused", service.port());
             });
         });
     }
@@ -178,12 +178,12 @@ final class ServerConsole implements IProgressBar {
         traffic = null;
         SwingUtilities.invokeLater(() -> {
             light.lit(false);
-            state.setText("Stopped");
-            startStop.setText("Start server");
+            state.setText(Localizer.getInstance().getMessage("lblWebConsoleStopped"));
+            startStop.setText(Localizer.getInstance().getMessage("lblWebConsoleStartServer"));
             browse.setEnabled(false);
             progress.setIndeterminate(false);
             progress.setValue(0);
-            progress.setString("Stopped");
+            progress.setString(Localizer.getInstance().getMessage("lblWebConsoleStopped"));
             showLinks(List.of());
         });
     }
@@ -192,7 +192,7 @@ final class ServerConsole implements IProgressBar {
     private void toggle() {
         final boolean up = service.running();
         startStop.setEnabled(false);
-        starting(up ? "Stopping the server" : "Starting the server");
+        starting(Localizer.getInstance().getMessage(up ? "lblWebConsoleStoppingServer" : "lblWebConsoleStartingServer"));
         inBackground("ForgeServerControl", () -> {
             try {
                 if (up) {
@@ -225,7 +225,7 @@ final class ServerConsole implements IProgressBar {
         }
         final String external = FServerManager.getExternalAddress();
         if (external != null) {
-            found.add(new Invite("Internet", external, service.inviteUrl(external)));
+            found.add(new Invite(Localizer.getInstance().getMessage("lblWebConsoleInternet"), external, service.inviteUrl(external)));
         }
         SwingUtilities.invokeLater(() -> showLinks(found));
     }
@@ -235,7 +235,7 @@ final class ServerConsole implements IProgressBar {
     /** Each address a guest could use, which copies that address's full link when clicked. */
     private void showLinks(final List<Invite> found) {
         links.removeAll();
-        final JLabel name = new JLabel("Invite");
+        final JLabel name = new JLabel(Localizer.getInstance().getMessage("lblWebConsoleInvite"));
         name.setPreferredSize(new Dimension(80, name.getPreferredSize().height));
         name.setMaximumSize(name.getPreferredSize());
         links.add(name);
@@ -263,10 +263,10 @@ final class ServerConsole implements IProgressBar {
         link.setMargin(new Insets(0, 0, 0, 0));
         link.setForeground(LINK);
         link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        link.setToolTipText("Copy " + invite.url());
+        link.setToolTipText(Localizer.getInstance().getMessage("lblWebConsoleCopyLink", invite.url()));
         link.addActionListener(e -> {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(invite.url()), null);
-            copied.setText(invite.caption() + " link copied");
+            copied.setText(Localizer.getInstance().getMessage("lblWebConsoleLinkCopied", invite.caption()));
             copiedFade.restart();
         });
         return link;
@@ -281,14 +281,14 @@ final class ServerConsole implements IProgressBar {
         showLinks(List.of());
 
         progress.setStringPainted(true);
-        progress.setString("Starting Forge");
+        progress.setString(Localizer.getInstance().getMessage("lblWebConsoleStartingForge"));
         progress.setIndeterminate(true);
         progress.setAlignmentX(0f);
         progress.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 
-        browse = button("Open browser", () -> WebMain.openBrowser(service.url(), ui));
+        browse = button(Localizer.getInstance().getMessage("lblWebConsoleOpenBrowser"), () -> WebMain.openBrowser(service.url(), ui));
         browse.setEnabled(false);
-        startStop = button("Stop server", this::toggle);
+        startStop = button(Localizer.getInstance().getMessage("lblWebConsoleStopServer"), this::toggle);
         startStop.setEnabled(false);
 
         // The lamp and the word say the same thing twice, because a lamp alone is a colour and not everyone reads it
@@ -351,7 +351,7 @@ final class ServerConsole implements IProgressBar {
         text.setForeground(new Color(0xc8, 0xd1, 0xdb));
         text.setMargin(new Insets(6, 8, 6, 8));
 
-        frame = new JFrame("Forge server");
+        frame = new JFrame(Localizer.getInstance().getMessage("lblWebConsoleTitle"));
         frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new WindowAdapter() {
             @Override
@@ -363,12 +363,13 @@ final class ServerConsole implements IProgressBar {
         final JPanel log = new JPanel(new BorderLayout());
         log.setBorder(BorderFactory.createEmptyBorder(0, 16, 0, 16));
         log.add(new JScrollPane(text));
-        final JButton copyLog = new JButton("Copy log");
-        final Timer copyLogReset = new Timer(2000, e -> copyLog.setText("Copy log"));
+        final String copyLogLabel = Localizer.getInstance().getMessage("lblWebConsoleCopyLog");
+        final JButton copyLog = new JButton(copyLogLabel);
+        final Timer copyLogReset = new Timer(2000, e -> copyLog.setText(copyLogLabel));
         copyLogReset.setRepeats(false);
         copyLog.addActionListener(e -> {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text.getText()), null);
-            copyLog.setText("Copied");
+            copyLog.setText(Localizer.getInstance().getMessage("lblWebConsoleCopied"));
             copyLogReset.restart();
         });
         final JPanel logActions = new JPanel();
@@ -440,7 +441,9 @@ final class ServerConsole implements IProgressBar {
         static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
         static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
         /** Indexed by {@link ServerTraffic.Kind}, and stacked in that order from the bottom. */
-        static final String[] KIND_NAMES = {"Game", "Card art", "Audio", "Page"};
+        static final String[] KIND_NAMES = {Localizer.getInstance().getMessage("lblWebConsoleKindGame"),
+                Localizer.getInstance().getMessage("lblWebConsoleKindCardArt"), Localizer.getInstance().getMessage("lblWebConsoleKindAudio"),
+                Localizer.getInstance().getMessage("lblWebConsoleKindPage")};
         static final Color[] KIND_COLOURS = {new Color(0xf5, 0xc4, 0x51), new Color(0x4f, 0x86, 0xe8),
                 new Color(0xa9, 0xc4, 0xff), new Color(0x4a, 0x52, 0x60)};
         private static final ServerTraffic.Kind[] KINDS = ServerTraffic.Kind.values();
@@ -528,8 +531,8 @@ final class ServerConsole implements IProgressBar {
 
             g2.setFont(getFont().deriveFont(11f));
             g2.setColor(LABEL);
-            g2.drawString("In " + rate(received[SAMPLES - 1]) + "     Out " + rate(stacked[KINDS.length - 1][SAMPLES - 1]), 8, 14);
-            final String scale = "top " + rate(top) + " · last 5 minutes";
+            g2.drawString(Localizer.getInstance().getMessage("lblWebConsoleInOut", rate(received[SAMPLES - 1]), rate(stacked[KINDS.length - 1][SAMPLES - 1])), 8, 14);
+            final String scale = Localizer.getInstance().getMessage("lblWebConsoleScale", rate(top));
             g2.drawString(scale, w - 8 - g2.getFontMetrics().stringWidth(scale), 14);
             int x = 8;
             for (int k = 0; k < KINDS.length; k++) {
@@ -539,7 +542,7 @@ final class ServerConsole implements IProgressBar {
             g2.setStroke(DASHED);
             g2.drawLine(x, 26, x + 16, 26);
             g2.setColor(LABEL);
-            g2.drawString("Received", x + 22, 30);
+            g2.drawString(Localizer.getInstance().getMessage("lblWebConsoleReceived"), x + 22, 30);
             g2.dispose();
         }
 
@@ -582,7 +585,8 @@ final class ServerConsole implements IProgressBar {
     /** Beside the graph, in its colours: how long the server has been up, who is on it, and every byte so far. */
     private static final class StatsBox extends JComponent {
         private static final int WIDTH = 210;
-        private static final String[] NAMES = {"Up", "Players", "Received"};
+        private static final String[] NAMES = {Localizer.getInstance().getMessage("lblWebConsoleUp"),
+                Localizer.getInstance().getMessage("lblPlayers"), Localizer.getInstance().getMessage("lblWebConsoleReceived")};
         /** Up, players and received, then what was sent of each kind, then everything sent. */
         private String[] values = new String[NAMES.length + TrafficGraph.KIND_NAMES.length + 1];
 
@@ -623,10 +627,10 @@ final class ServerConsole implements IProgressBar {
                 if (i < NAMES.length) {
                     g2.drawString(NAMES[i], 10, baseline);
                 } else if (i == values.length - 1) {
-                    g2.drawString("Sent · Total", 24, baseline);
+                    g2.drawString(Localizer.getInstance().getMessage("lblWebConsoleSentTotal"), 24, baseline);
                 } else {
                     final int k = i - NAMES.length;
-                    TrafficGraph.swatch(g2, 10, baseline, TrafficGraph.KIND_COLOURS[k], "Sent · " + TrafficGraph.KIND_NAMES[k]);
+                    TrafficGraph.swatch(g2, 10, baseline, TrafficGraph.KIND_COLOURS[k], Localizer.getInstance().getMessage("lblWebConsoleSentKind", TrafficGraph.KIND_NAMES[k]));
                 }
                 g2.drawString(values[i], getWidth() - 10 - g2.getFontMetrics().stringWidth(values[i]), baseline);
             }

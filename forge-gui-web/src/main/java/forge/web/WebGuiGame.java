@@ -999,13 +999,14 @@ public class WebGuiGame extends NetworkGuiGame {
             return;
         }
         if (update.result() == DrawOfferMessage.Result.ACCEPTED) {
-            send(new Notice("Draw agreed", "Every player accepted the draw.", false));
+            send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawAgreed"), Localizer.getInstance().getMessage("lblWebGameDrawAccepted"), false));
             return;
         }
         final List<String> declined = update.entries().stream()
                 .filter(e -> e.vote() == forge.game.DrawOffer.Vote.DECLINED && e.player() != null)
-                .map(e -> isLocalPlayer(e.player()) ? "You" : e.player().getName()).toList();
-        send(new Notice("Draw declined", declined.isEmpty() ? "The game goes on." : String.join(", ", declined) + " declined.", false));
+                .map(e -> isLocalPlayer(e.player()) ? Localizer.getInstance().getMessage("lblWebGameYou") : e.player().getName()).toList();
+        send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? Localizer.getInstance().getMessage("lblWebGameGoesOn")
+                : Localizer.getInstance().getMessage("lblWebGameDeclined", String.join(", ", declined)), false));
     }
 
     /** An ability as a menu item: its first line, as desktop's menu shows it. */

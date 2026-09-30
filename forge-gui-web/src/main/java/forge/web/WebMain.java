@@ -1,6 +1,9 @@
 package forge.web;
 
 import forge.gui.GuiBase;
+import forge.util.Localizer;
+import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
@@ -32,6 +35,8 @@ public final class WebMain {
         final WebGuiBase ui = new WebGuiBase();
         GuiBase.setInterface(ui);
         final CountDownLatch quit = new CountDownLatch(1);
+        // The console is worded in the player's language, which is known before FModel starts to load the rest
+        Localizer.getInstance().initialize(FModel.getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
         // Opened before the cards are read, because reading them takes long enough to look like a failure
         final ServerConsole console = ServerConsole.open(ui, quit::countDown);
         FModel.initialize(console, prefs -> null);
@@ -42,7 +47,7 @@ public final class WebMain {
         Runtime.getRuntime().addShutdownHook(new Thread(service::stop, "ForgeWebShutdown"));
         try {
             if (console != null) {
-                console.starting("Starting the server");
+                console.starting(Localizer.getInstance().getMessage("lblWebConsoleStartingServer"));
             }
             service.start();
             if (console != null) {

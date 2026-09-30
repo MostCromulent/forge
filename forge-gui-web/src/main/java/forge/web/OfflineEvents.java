@@ -16,6 +16,7 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.CardBlock;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.util.storage.IStorage;
 import forge.web.FromBrowser.DraftStart;
 import forge.web.FromBrowser.SealedCreate;
@@ -99,7 +100,7 @@ final class OfflineEvents {
                 final int size = human == null ? 0 : human.getMain().countAll();
                 final List<Opponent> opponents = new ArrayList<>();
                 for (int i = 0; i < group.getAiDecks().size(); i++) {
-                    opponents.add(new Opponent("Opponent " + (i + 1), colours(group.getAiDecks().get(i))));
+                    opponents.add(new Opponent(Localizer.getInstance().getMessage("lblWebSessionOpponent", i + 1), colours(group.getAiDecks().get(i))));
                 }
                 final long changed = changed(new File(dir, group.getName()));
                 rows.add(new PoolRow(group.getName(), size > 0, size, size > 0 ? colours(human) : "",
@@ -117,7 +118,7 @@ final class OfflineEvents {
     static DeckGroup create(final SealedCreate c, final String name) {
         final SealedCardPoolGenerator gen = generator(c);
         if (gen.isEmpty()) {
-            throw new IllegalArgumentException("That product has no packs to open.");
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoPacks"));
         }
         final CardPool pool = gen.getCardPool(true);
         return pool == null ? null : gen.buildGroup(name, pool);
@@ -132,44 +133,44 @@ final class OfflineEvents {
         try {
             type = LimitedPoolType.valueOf(d.product());
         } catch (final IllegalArgumentException | NullPointerException e) {
-            throw new IllegalArgumentException("There is no product called " + d.product() + ".");
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoProduct", String.valueOf(d.product())));
         }
         return switch (type) {
             case Full -> BoosterDraft::full;
             case Block, FantasyBlock -> {
                 final CardBlock block = d.block() == null ? null : DraftProducts.block(d.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || !BoosterDraft.isDraftableBlock(block)) {
-                    throw new IllegalArgumentException("That block can't be drafted.");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBlockNotDraftable"));
                 }
                 final List<String> sets = BoosterDraft.blockSets(block);
                 final String combo = sets.size() == 1 ? sets.get(0) : d.combo();
                 if (combo == null || (sets.size() > 1 && !validCombo(combo, sets, block.getCntBoostersDraft()))) {
-                    throw new IllegalArgumentException("Choose a set for each pack.");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsSetPerPack"));
                 }
                 yield () -> BoosterDraft.block(block, combo, type);
             }
             case Custom -> {
                 final CustomLimited cube = d.cube() == null ? null : DraftProducts.cube(d.cube());
                 if (cube == null) {
-                    throw new IllegalArgumentException("There is no cube called " + d.cube() + ".");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoCube", String.valueOf(d.cube())));
                 }
                 yield () -> BoosterDraft.cube(cube);
             }
             case Chaos -> {
                 final ThemedChaosDraft theme = d.theme() == null ? null : DraftProducts.theme(d.theme());
                 if (theme == null) {
-                    throw new IllegalArgumentException("There is no chaos theme called " + d.theme() + ".");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTheme", String.valueOf(d.theme())));
                 }
                 yield () -> BoosterDraft.chaos(theme);
             }
             case Import -> {
                 if (d.cubeId() == null || d.cubeId().isBlank()) {
-                    throw new IllegalArgumentException("Enter a CubeCobra link or ID.");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
                 final String id = d.cubeId().trim();
                 yield () -> BoosterDraft.cubeCobra(id);
             }
-            case Prerelease -> throw new IllegalArgumentException("A prerelease is opened, not drafted.");
+            case Prerelease -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsPrereleaseNotDrafted"));
         };
     }
 
@@ -193,45 +194,45 @@ final class OfflineEvents {
         try {
             type = LimitedPoolType.valueOf(c.product());
         } catch (final IllegalArgumentException | NullPointerException e) {
-            throw new IllegalArgumentException("There is no product called " + c.product() + ".");
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoProduct", String.valueOf(c.product())));
         }
         return switch (type) {
             case Full -> SealedCardPoolGenerator.full(packs(c.packs()));
             case Prerelease -> {
                 final CardEdition edition = c.edition() == null ? null : StaticData.instance().getEditions().get(c.edition());
                 if (edition == null || edition.getPrerelease() == null) {
-                    throw new IllegalArgumentException("There is no prerelease for " + c.edition() + ".");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoPrerelease", String.valueOf(c.edition())));
                 }
                 yield SealedCardPoolGenerator.prerelease(edition);
             }
             case Block, FantasyBlock -> {
                 final CardBlock block = c.block() == null ? null : DraftProducts.block(c.block(), type == LimitedPoolType.FantasyBlock);
                 if (block == null || c.combo() == null || !SealedCardPoolGenerator.blockCombos(block).contains(c.combo())) {
-                    throw new IllegalArgumentException("That block and set combination can't be opened.");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsBadCombo"));
                 }
                 yield SealedCardPoolGenerator.block(block, c.combo());
             }
             case Custom -> {
                 final CustomLimited template = c.template() == null ? null : DraftProducts.sealedTemplate(c.template());
                 if (template == null) {
-                    throw new IllegalArgumentException("There is no sealed pool called " + c.template() + ".");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoTemplate", String.valueOf(c.template())));
                 }
                 yield SealedCardPoolGenerator.custom(template, packs(c.packs()));
             }
             case Import -> {
                 if (c.cubeId() == null || c.cubeId().isBlank()) {
-                    throw new IllegalArgumentException("Enter a CubeCobra link or ID.");
+                    throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsEnterCube"));
                 }
                 yield SealedCardPoolGenerator.cubeCobra(c.cubeId().trim(), packs(c.packs()));
             }
-            case Chaos -> throw new IllegalArgumentException("Chaos has no sealed product.");
+            case Chaos -> throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsChaosNotSealed"));
         };
     }
 
     /** Desktop asks for between 3 and 12 packs. */
     private static int packs(final int wanted) {
         if (wanted < 3 || wanted > 12) {
-            throw new IllegalArgumentException("Choose between 3 and 12 packs.");
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsPackCount"));
         }
         return wanted;
     }

@@ -13,6 +13,7 @@ import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.model.FModel;
 import forge.util.FileSection;
+import forge.util.Localizer;
 import forge.util.storage.IStorage;
 import forge.web.DeckCatalog.OnDevice;
 import forge.web.FromBrowser.BrowseFormat;
@@ -177,7 +178,7 @@ final class DeckSession {
         } else {
             deck = o.key() == null ? null : lobby.deck(o.key());
             if (deck == null) {
-                channel.send(new Notice("That deck can't be opened.", null, true));
+                channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorCannotOpen"), null, true));
                 return;
             }
             readOnly = o.copy() || DeckCatalog.readOnly(o.key(), guest);
@@ -270,10 +271,10 @@ final class DeckSession {
             return null;
         }
         if (lobby.table() != editorTable) {
-            return "Not put on your seat: the table changed.";
+            return Localizer.getInstance().getMessage("lblWebEditorTableChanged");
         }
         if (DeckStore.family(done.check().format()) != DeckStore.family(lobby.format())) {
-            return "Not put on your seat: this is a " + done.check().format() + " deck.";
+            return Localizer.getInstance().getMessage("lblWebEditorWrongFormat", done.check().format());
         }
         lobby.setDeck(seat, adopt(done));
         channel.send(lobby.state());
@@ -334,7 +335,8 @@ final class DeckSession {
         } catch (final IOException | RuntimeException e) {
             Logger.warn(e, "Could not fetch a deck from " + fetch.url());
             return new ImportResult(fetch.request(), List.of(),
-                    List.of(new ImportProblem(-1, "Couldn't fetch the list", e.getMessage() == null ? "The site didn't answer." : e.getMessage(), List.of())),
+                    List.of(new ImportProblem(-1, Localizer.getInstance().getMessage("lblWebEditorFetchFailed"),
+                            e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebEditorSiteSilent") : e.getMessage(), List.of())),
                     new ImportSummary(0, 0, 0, null, false, "", null, List.of(), List.of()), null, null);
         }
     }
@@ -373,8 +375,7 @@ final class DeckSession {
                     return;
                 }
                 if (DeckStore.family(check.format()) != DeckStore.family(lobby.format())) {
-                    channel.send(new Notice("Not put on your seat", "It is a " + check.format() + " deck, and this table plays "
-                            + lobby.format() + ".", false));
+                    channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorNotSeated"), Localizer.getInstance().getMessage("lblWebEditorFormatMismatch", check.format(), lobby.format()), false));
                     return;
                 }
                 lobby.setDeck(c.seat(), relisted(key, deck));

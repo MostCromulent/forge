@@ -4,6 +4,7 @@ import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.game.GameType;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.util.storage.IStorage;
 
 import java.util.Collection;
@@ -58,14 +59,14 @@ final class DeckStore {
     /** Why a name can't be a deck's, or null when it can. */
     static String nameProblem(final String name) {
         if (name == null || name.isBlank()) {
-            return "Give the deck a name.";
+            return Localizer.getInstance().getMessage("lblWebDeckStoreNameEmpty");
         }
         if (name.trim().length() > MAX_NAME) {
-            return "Keep the name to " + MAX_NAME + " characters.";
+            return Localizer.getInstance().getMessage("lblWebDeckStoreNameTooLong", MAX_NAME);
         }
         for (final char c : FORBIDDEN.toCharArray()) {
             if (name.indexOf(c) >= 0) {
-                return "A deck's name can't contain \\ / : * ? \" < > |.";
+                return Localizer.getInstance().getMessage("lblWebDeckStoreNameBadChars");
             }
         }
         return null;

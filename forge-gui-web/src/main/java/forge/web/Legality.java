@@ -9,6 +9,7 @@ import forge.game.GameFormat;
 import forge.game.GameType;
 import forge.item.PaperCard;
 import forge.model.FModel;
+import forge.util.Localizer;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
 
@@ -37,7 +38,7 @@ record Check(GameType format, GameFormat pool, boolean unrestricted) {
 
     String label() {
         if (unrestricted) {
-            return "No restriction";
+            return Localizer.getInstance().getMessage("lblWebLegalityNoRestriction");
         }
         return pool == null ? format.toString() : format + " · " + pool.getName();
     }
@@ -53,8 +54,11 @@ final class Legality {
     private Legality() {
     }
 
-    /** Problems with the deck as a whole, and each card's problem by name. */
-    record Result(Map<String, String> flags, List<String> deckItems) {
+    /**
+     * Problems with the deck as a whole, and each card's problem by name. kinds holds, by name, how a card's problem is
+     * summed up in a verdict that names several: the copy limit, a ban, or the flag itself.
+     */
+    record Result(Map<String, String> flags, Map<String, String> kinds, List<String> deckItems) {
         int problemCount() {
             return deckItems.size() + flags.size();
         }
@@ -66,18 +70,18 @@ final class Legality {
             }
             if (problemCount() == 1) {
                 if (!deckItems.isEmpty()) {
-                    return StringUtils.capitalize(deckItems.get(0)) + ".";
+                    return Localizer.getInstance().getMessage("lblWebLegalitySentence", StringUtils.capitalize(deckItems.get(0)));
                 }
                 final Map.Entry<String, String> only = flags.entrySet().iterator().next();
-                return describe(only.getKey(), only.getValue()) + ".";
+                return Localizer.getInstance().getMessage("lblWebLegalitySentence", describe(only.getKey(), only.getValue(), kinds.get(only.getKey())));
             }
             final List<String> parts = new ArrayList<>(deckItems.subList(0, Math.min(2, deckItems.size())));
-            final Map<String, Integer> kinds = new LinkedHashMap<>();
-            for (final String flag : flags.values()) {
-                kinds.merge(kindOf(flag), 1, Integer::sum);
+            final Map<String, Integer> counted = new LinkedHashMap<>();
+            for (final String kind : kinds.values()) {
+                counted.merge(kind, 1, Integer::sum);
             }
-            kinds.forEach((kind, n) -> parts.add(n + (n == 1 ? " card " : " cards ") + kind));
-            return problemCount() + " problems: " + joined(parts) + ".";
+            counted.forEach((kind, n) -> parts.add(Localizer.getInstance().getMessage(n == 1 ? "lblWebLegalityOneCardKind" : "lblWebLegalityCardsKind", n, kind)));
+            return Localizer.getInstance().getMessage("lblWebLegalityProblems", problemCount(), joined(parts));
         }
     }
 
@@ -91,13 +95,15 @@ final class Legality {
         }
         final Function<PaperCard, String> problems = cardProblems(check, commanders);
         final Map<String, String> flags = new LinkedHashMap<>();
+        final Map<String, String> kinds = new LinkedHashMap<>();
         for (final Map.Entry<String, PaperCard> e : byName.entrySet()) {
-            final String problem = problemInDeck(e.getValue(), all.countByName(e.getKey()), check, problems);
+            final String[] problem = problemInDeck(e.getValue(), all.countByName(e.getKey()), check, problems);
             if (problem != null) {
-                flags.put(e.getKey(), problem);
+                flags.put(e.getKey(), problem[0]);
+                kinds.put(e.getKey(), problem[1]);
             }
         }
-        return new Result(flags, check.unrestricted() ? List.of() : deckItems(deck, df, commanders, flags.isEmpty()));
+        return new Result(flags, kinds, check.unrestricted() ? List.of() : deckItems(deck, df, commanders, flags.isEmpty()));
     }
 
     /** Why one card can't go in this deck, or null: a ban, the format, the card pool or the commander's colours. Counts are not considered. */
@@ -115,13 +121,14 @@ final class Legality {
         final Set<String> banned = banList == null ? Set.of() : new HashSet<>(banList.getBannedCardNames());
         final Predicate<PaperCard> inIdentity = commanders.isEmpty() ? card -> true : df.isLegalCardForCommanderPredicate(commanders);
         final String letters = identityLetters(commanders);
-        final String outside = letters.isEmpty() ? "outside a colourless identity" : "outside " + String.join(" ", letters.split(""));
+        final String outside = letters.isEmpty() ? Localizer.getInstance().getMessage("lblWebLegalityOutsideColourless")
+                : Localizer.getInstance().getMessage("lblWebLegalityOutside", String.join(" ", letters.split("")));
         return card -> {
             if (banned.contains(card.getName())) {
-                return "banned in " + formatName(check);
+                return bannedIn(check);
             }
             if (!df.isLegalCard(card) || (check.pool() != null && !check.pool().getFilterRules().test(card))) {
-                return "not legal in " + formatName(check);
+                return Localizer.getInstance().getMessage("lblWebLegalityNotLegalIn", formatName(check));
             }
             if (!commanders.contains(card) && !inIdentity.test(card)) {
                 return outside;
@@ -152,21 +159,27 @@ final class Legality {
         return deck.getCommanders();
     }
 
-    private static String problemInDeck(final PaperCard card, final int count, final Check check,
+    /** A card's problem in this deck and how a verdict naming several sums it up, or null when it has none. */
+    private static String[] problemInDeck(final PaperCard card, final int count, final Check check,
             final Function<PaperCard, String> problems) {
         final int most = check.deckFormat().getMaxCardCopies(card);
         if (count > most) {
-            return count + " of " + most;
+            return new String[] {Localizer.getInstance().getMessage("lblWebLegalityCopies", count, most), Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit")};
         }
         final String problem = problems.apply(card);
         if (problem != null) {
-            return problem;
+            // A ban is summed up without its format; being outside the identity or the format is summed up as it is
+            return new String[] {problem, problem.equals(bannedIn(check)) ? Localizer.getInstance().getMessage("lblWebLegalityBanned") : problem};
         }
         final GameFormat pool = check.pool();
         if (pool != null && count > 1 && pool.getRestrictedCards().contains(card.getName())) {
-            return pool.getName() + " allows one";
+            return new String[] {Localizer.getInstance().getMessage("lblWebLegalityAllowsOne", pool.getName()), Localizer.getInstance().getMessage("lblWebLegalityRestricted")};
         }
         return null;
+    }
+
+    private static String bannedIn(final Check check) {
+        return Localizer.getInstance().getMessage("lblWebLegalityBannedIn", formatName(check));
     }
 
     /** Problems with the deck as a whole, each worked out here because the engine reports only its first one. */
@@ -179,21 +192,21 @@ final class Legality {
         final int size = deck.getMain().countAll() + (slots > 0 && commanderSection != null ? commanderSection.countAll() : 0);
         final Range<Integer> main = df.getMainRange();
         if (size < main.getMinimum() + slots) {
-            items.add(size + " of " + (main.getMinimum() + slots) + " cards");
+            items.add(Localizer.getInstance().getMessage("lblWebLegalityTooFew", size, main.getMinimum() + slots));
         } else if (main.getMaximum() != Integer.MAX_VALUE && size > main.getMaximum() + slots) {
-            items.add(size + " cards, " + (main.getMaximum() + slots) + " at most");
+            items.add(Localizer.getInstance().getMessage("lblWebLegalityTooMany", size, main.getMaximum() + slots));
         }
         final Range<Integer> side = df.getSideRange();
         final CardPool sideboard = deck.get(DeckSection.Sideboard);
         final int sideCount = sideboard == null ? 0 : sideboard.countAll();
         if (side != null && sideCount > side.getMaximum()) {
-            items.add("sideboard of " + sideCount + ", " + side.getMaximum() + " at most");
+            items.add(Localizer.getInstance().getMessage("lblWebLegalitySideboard", sideCount, side.getMaximum()));
         }
         if (df.hasCommander() && commanders.isEmpty()) {
-            items.add("no commander");
+            items.add(Localizer.getInstance().getMessage("lblWebLegalityNoCommander"));
         }
         if (df.hasSignatureSpell() && deck.getSignatureSpell() == null) {
-            items.add("no signature spell");
+            items.add(Localizer.getInstance().getMessage("lblWebLegalityNoSignatureSpell"));
         }
         if (items.isEmpty() && noCardProblems) {
             final String engine = df.getDeckConformanceProblem(deck);
@@ -215,22 +228,10 @@ final class Legality {
         return check.pool() != null ? check.pool().getName() : check.format().toString();
     }
 
-    private static String describe(final String name, final String flag) {
-        return Character.isDigit(flag.charAt(0)) ? name + ": " + flag + " copies" : name + " is " + flag;
-    }
-
-    // How a group of cards is summed up in a verdict that names several problems
-    private static String kindOf(final String flag) {
-        if (flag.startsWith("outside ")) {
-            return flag;
-        }
-        if (flag.startsWith("banned")) {
-            return "banned";
-        }
-        if (flag.startsWith("not legal")) {
-            return flag;
-        }
-        return Character.isDigit(flag.charAt(0)) ? "over the copy limit" : "restricted";
+    /** One card's problem as the verdict states it: a count of copies, or what the card is. */
+    private static String describe(final String name, final String flag, final String kind) {
+        return Localizer.getInstance().getMessage("lblWebLegalityOverCopyLimit").equals(kind) ? Localizer.getInstance().getMessage("lblWebLegalityCardCopies", name, flag)
+                : Localizer.getInstance().getMessage("lblWebLegalityCardIs", name, flag);
     }
 
     /** "a", "a, and b", "a, b, and c". */
@@ -238,6 +239,6 @@ final class Legality {
         if (parts.size() == 1) {
             return parts.get(0);
         }
-        return String.join(", ", parts.subList(0, parts.size() - 1)) + ", and " + parts.get(parts.size() - 1);
+        return Localizer.getInstance().getMessage("lblWebLegalityAnd", String.join(", ", parts.subList(0, parts.size() - 1)), parts.get(parts.size() - 1));
     }
 }

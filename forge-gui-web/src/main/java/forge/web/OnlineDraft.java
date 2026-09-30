@@ -8,6 +8,7 @@ import forge.gamemodes.net.event.DraftPickEvent;
 import forge.gamemodes.net.event.NetEvent;
 import forge.gui.interfaces.IDraftEventHandler;
 import forge.item.PaperCard;
+import forge.util.Localizer;
 import forge.web.ToBrowser.DraftCard;
 import forge.web.ToBrowser.DraftSeat;
 import forge.web.ToBrowser.DraftState;
@@ -105,14 +106,14 @@ final class OnlineDraft implements IDraftEventHandler {
             if (mine) {
                 if (pending != null) {
                     picks.add(DraftView.card(pending, packNumber, pickNumber + 1, pendingSideboard));
-                    view.log("You picked " + pending.getName());
+                    view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftYouPicked", pending.getName()));
                     pending = null;
                 }
                 // The pack picked from has gone on; the next arrives as its own event
                 pack = List.of();
                 clockEnd = 0;
             } else {
-                view.log(nameOf(seatIndex) + " picked · " + depthOf(seatIndex) + " waiting");
+                view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftSeatPicked", nameOf(seatIndex), depthOf(seatIndex)));
             }
             if (view.latest() != null) {
                 send(mine, moved);
@@ -126,7 +127,7 @@ final class OnlineDraft implements IDraftEventHandler {
             // The timer took the pick, so a click that raced it is not counted as well
             pending = null;
             picks.add(DraftView.card(card, packNum, pickInPack));
-            view.log("Out of time: you were given " + card.getName());
+            view.log(Localizer.getInstance().getMessage("lblWebOnlineDraftOutOfTime", card.getName()));
         });
     }
 
@@ -220,7 +221,7 @@ final class OnlineDraft implements IDraftEventHandler {
 
     private String nameOf(final int seat) {
         final EventParticipant p = EventParticipant.findBySeat(participants(), seat);
-        return p == null || p.getName() == null ? "Seat " + (seat + 1) : p.getName();
+        return p == null || p.getName() == null ? Localizer.getInstance().getMessage("lblWebOfflineDraftSeat", seat + 1) : p.getName();
     }
 
     private int depthOf(final int seat) {

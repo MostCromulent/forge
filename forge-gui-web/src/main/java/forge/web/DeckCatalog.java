@@ -18,6 +18,7 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Lang;
+import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
 import forge.web.ToBrowser.DeckDetails;
@@ -60,7 +61,7 @@ final class DeckCatalog {
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
-    private static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), List.of());
+    private static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
     /** Mana values 0 to 5, then everything 6 and above in the last one. */
     private static final int CURVE_BUCKETS = 7;
 
@@ -332,22 +333,25 @@ final class DeckCatalog {
     private void addGenerators(final List<DeckSummary> out) {
         // The tokens the colour generator expects, shown under friendlier names
         final Map<String, String> colours = new LinkedHashMap<>();
-        colours.put("Random 1", "Random one colour");
-        colours.put("Random 2", "Random two colours");
-        colours.put("Random 3", "Random three colours");
-        for (final String c : List.of("White", "Blue", "Black", "Red", "Green")) {
-            colours.put(c, c);
-        }
+        final Localizer text = Localizer.getInstance();
+        colours.put("Random 1", text.getMessage("lblWebDeckCatalogRandomOne"));
+        colours.put("Random 2", text.getMessage("lblWebDeckCatalogRandomTwo"));
+        colours.put("Random 3", text.getMessage("lblWebDeckCatalogRandomThree"));
+        colours.put("White", text.getMessage("lblWhite"));
+        colours.put("Blue", text.getMessage("lblBlue"));
+        colours.put("Black", text.getMessage("lblBlack"));
+        colours.put("Red", text.getMessage("lblRed"));
+        colours.put("Green", text.getMessage("lblGreen"));
         for (final Map.Entry<String, String> c : colours.entrySet()) {
             final String key = "gen:color:" + c.getKey();
             byKey.put(key, new Entry(null, true, null));
-            generated(out, key, c.getValue(), "Built when you pick it", COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
+            generated(out, key, c.getValue(), text.getMessage("lblWebDeckCatalogBuiltOnPick"), COLOUR_LETTERS.getOrDefault(c.getKey(), ""));
         }
         // A theme deck is a fixed list and cannot be held to a card pool
         if (pool == null) {
             for (final DeckProxy theme : DeckProxy.getAllThemeDecks()) {
                 byKey.put("gen:theme:" + theme.getName(), new Entry(theme, true, null));
-                generated(out, "gen:theme:" + theme.getName(), theme.getName(), "Theme deck", "");
+                generated(out, "gen:theme:" + theme.getName(), theme.getName(), text.getMessage("lblWebDeckCatalogThemeDeck"), "");
             }
         }
         if (FModel.isdeckGenMatrixLoaded()) {
@@ -358,7 +362,7 @@ final class DeckCatalog {
                 for (final DeckProxy archetype : ArchetypeDeckGenerator.getMatrixDecks(f, false)) {
                     final String key = "gen:archetype:" + f.getName() + ":" + archetype.getName();
                     byKey.put(key, new Entry(archetype, true, null));
-                    generated(out, key, archetype.getName(), f.getName() + " archetype", "");
+                    generated(out, key, archetype.getName(), text.getMessage("lblWebDeckCatalogArchetype", f.getName()), "");
                 }
             }
         }
@@ -421,7 +425,7 @@ final class DeckCatalog {
         if (host.contains("tappedout.net")) {
             return "TappedOut";
         }
-        return host.contains("mtggoldfish.com") ? "MTGGoldfish" : "the link";
+        return host.contains("mtggoldfish.com") ? "MTGGoldfish" : Localizer.getInstance().getMessage("lblWebDeckCatalogTheLink");
     }
 
     // Loading a link again rewrites its file, so the file's time is when the deck was last synced
@@ -432,7 +436,7 @@ final class DeckCatalog {
     /** Why this deck cannot be played here, or null when it can. A chosen card pool is checked even with deck legality checks off. */
     static String problem(final Deck deck, final GameType format, final GameFormat pool) {
         if (deck == null) {
-            return "No deck chosen.";
+            return Localizer.getInstance().getMessage("lblWebDeckCatalogNoDeck");
         }
         final String outOfPool = pool == null ? null : poolProblem(pool, deck);
         if (outOfPool != null || !FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
@@ -461,9 +465,8 @@ final class DeckCatalog {
         final List<String> names = new ArrayList<>(unique);
         final String listed = listOf(names);
         return lines[0].contains("restricted")
-                ? pool.getName() + " allows one copy of " + listed + "."
-                : "Not legal in " + pool.getName() + ": " + names.size() + (names.size() == 1 ? " card. " : " cards. ")
-                        + listed + ".";
+                ? Localizer.getInstance().getMessage("lblWebDeckCatalogAllowsOneOf", pool.getName(), listed)
+                : Localizer.getInstance().getMessage(names.size() == 1 ? "lblWebDeckCatalogNotLegalOne" : "lblWebDeckCatalogNotLegal", pool.getName(), names.size(), listed);
     }
 
     /** "A", "A and B", "A, B and C", or "A, B, C and 4 more". */
@@ -471,7 +474,7 @@ final class DeckCatalog {
         final List<String> shown = names.subList(0, Math.min(NAMED_CARDS, names.size()));
         final int more = names.size() - shown.size();
         if (more > 0) {
-            return String.join(", ", shown) + " and " + more + " more";
+            return Localizer.getInstance().getMessage("lblWebDeckCatalogAndMore", String.join(", ", shown), more);
         }
         return Lang.joinHomogenous(shown);
     }
@@ -500,19 +503,19 @@ final class DeckCatalog {
         final List<ExtraChoice> out = new ArrayList<>();
         final CardPool own = main == null ? null : main.get(section);
         if (own != null && !own.isEmpty()) {
-            out.add(new ExtraChoice(OWN, section == DeckSection.Avatar ? "The deck's default" : "The deck's own",
+            out.add(new ExtraChoice(OWN, Localizer.getInstance().getMessage(section == DeckSection.Avatar ? "lblWebDeckCatalogDeckDefault" : "lblWebDeckCatalogDeckOwn"),
                     own.countAll(), sectionProblem(section, own), null, null, null));
         }
         if (section == DeckSection.Avatar) {
-            out.add(new ExtraChoice(RANDOM, "Random", null, null, null, null, null));
+            out.add(new ExtraChoice(RANDOM, randomLabel(), null, null, null, null, null));
             for (final PaperCard avatar : avatars(forComputer)) {
                 out.add(new ExtraChoice(AVATAR + avatar.getName(), avatar.getName(), null, null, avatar.getImageKey(false),
                         avatar.getRules().getHand(), avatar.getRules().getLife()));
             }
             return out;
         }
-        out.add(new ExtraChoice(GENERATE, "Generated", null, null, null, null, null));
-        out.add(new ExtraChoice(RANDOM, "Random saved deck", null, null, null, null, null));
+        out.add(new ExtraChoice(GENERATE, Localizer.getInstance().getMessage("lblWebDeckCatalogGenerated"), null, null, null, null, null));
+        out.add(new ExtraChoice(RANDOM, Localizer.getInstance().getMessage("lblWebDeckCatalogRandomSaved"), null, null, null, null, null));
         for (final DeckProxy proxy : savedDecks(section)) {
             final CardPool cards = proxy.getDeck().get(section);
             out.add(new ExtraChoice(SAVED + proxy.getPath() + "/" + proxy.getName(), proxy.getName(),
@@ -524,7 +527,7 @@ final class DeckCatalog {
     /** The cards a choice stands for. Generated and random choices are drawn now, so the seat shows what it got. */
     static Extra resolveExtra(final DeckSection section, final String choice, final boolean forComputer) {
         if (OWN.equals(choice)) {
-            return new Extra(section == DeckSection.Avatar ? "The deck's default" : "The deck's own", null);
+            return new Extra(Localizer.getInstance().getMessage(section == DeckSection.Avatar ? "lblWebDeckCatalogDeckDefault" : "lblWebDeckCatalogDeckOwn"), null);
         }
         if (section == DeckSection.Avatar) {
             final List<PaperCard> pool = avatars(forComputer);
@@ -542,13 +545,13 @@ final class DeckCatalog {
             }
             final CardPool one = new CardPool();
             one.add(avatar);
-            return new Extra(RANDOM.equals(choice) ? "Random" : avatar.getName(), one);
+            return new Extra(RANDOM.equals(choice) ? randomLabel() : avatar.getName(), one);
         }
         if (RANDOM.equals(choice)) {
             final List<DeckProxy> saved = savedDecks(section);
             if (!saved.isEmpty()) {
                 final DeckProxy pick = saved.get(MyRandom.getRandom().nextInt(saved.size()));
-                return new Extra("Random saved deck", pick.getDeck().get(section));
+                return new Extra(Localizer.getInstance().getMessage("lblWebDeckCatalogRandomSaved"), pick.getDeck().get(section));
             }
         } else if (choice != null && choice.startsWith(SAVED)) {
             final String key = choice.substring(SAVED.length());
@@ -559,8 +562,13 @@ final class DeckCatalog {
             }
             return null;
         }
-        return new Extra("Generated", section == DeckSection.Planes ? DeckgenUtil.generatePlanarPool()
+        return new Extra(Localizer.getInstance().getMessage("lblWebDeckCatalogGenerated"), section == DeckSection.Planes ? DeckgenUtil.generatePlanarPool()
                 : DeckgenUtil.generateSchemePool());
+    }
+
+    /** What a random avatar is called on its seat, which keeps the draw a surprise. */
+    static String randomLabel() {
+        return Localizer.getInstance().getMessage("lblRandom");
     }
 
     /** Why a planar or scheme deck cannot be played, or null. An avatar section has no size rule. */
@@ -652,7 +660,7 @@ final class DeckCatalog {
             }
             out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false),
                     edition == null ? card.getEdition() : edition.getName(), edition == null ? 0 : date.get(Calendar.YEAR),
-                    pool != null && !pool.getFilterPrinted().test(card) ? "not in " + pool.getName() : null));
+                    pool != null && !pool.getFilterPrinted().test(card) ? Localizer.getInstance().getMessage("lblWebDeckCatalogNotIn", pool.getName()) : null));
         }
         return out;
     }

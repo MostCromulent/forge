@@ -8,6 +8,7 @@ import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.LimitedPlayer;
 import forge.gamemodes.limited.LimitedPlayerAI;
 import forge.item.PaperCard;
+import forge.util.Localizer;
 import forge.web.ToBrowser.DraftCard;
 import forge.web.ToBrowser.DraftSeat;
 import forge.web.ToBrowser.DraftState;
@@ -56,11 +57,11 @@ final class OfflineDraft {
         thread.execute(() -> {
             try {
                 draft = make.get();
-                product = draft.getProductName() == null ? "Full card pool" : draft.getProductName();
+                product = draft.getProductName() == null ? Localizer.getInstance().getMessage("lblWebOfflineDraftFullPool") : draft.getProductName();
                 draft.initializeBoosters();
                 advance(false);
             } catch (final RuntimeException e) {
-                fail.accept(e.getMessage() == null ? "The draft could not be set up." : e.getMessage());
+                fail.accept(e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed") : e.getMessage());
             }
         });
     }
@@ -76,7 +77,7 @@ final class OfflineDraft {
             try {
                 pickOn(stepShown, index, sideboard);
             } catch (final RuntimeException e) {
-                fail.accept("The draft stopped: " + e.getMessage());
+                fail.accept(Localizer.getInstance().getMessage("lblWebOfflineDraftStopped", String.valueOf(e.getMessage())));
             }
         });
     }
@@ -168,7 +169,7 @@ final class OfflineDraft {
         final List<LimitedPlayer> players = draft.getAllPlayers();
         for (int i = 0; i < players.size(); i++) {
             final LimitedPlayer p = players.get(i);
-            final String name = i == 0 ? playerName : p.getName() == null || p.getName().isBlank() ? "Seat " + (i + 1) : p.getName();
+            final String name = i == 0 ? playerName : p.getName() == null || p.getName().isBlank() ? Localizer.getInstance().getMessage("lblWebOfflineDraftSeat", i + 1) : p.getName();
             seats.add(new DraftSeat(name, p instanceof LimitedPlayerAI, p.getPackQueueSize(), false));
         }
         final int pick = roundPicks + 1;
