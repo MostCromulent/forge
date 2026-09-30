@@ -11,6 +11,7 @@ import { ui } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { EditorCard, ImportAction, ImportFix, ImportProblem } from './protocol';
+import { t } from './text';
 
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
@@ -88,7 +89,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
     saveDraft(next);
   };
   const summary = result?.summary;
-  const name = typedName ?? result?.name ?? (summary?.commander ? `${summary.commander} deck` : 'Imported deck');
+  const name = typedName ?? result?.name ?? (summary?.commander ? t('lblWebImportCommanderDeck', summary.commander) : t('lblWebImportDefaultName'));
   const commit = (action: ImportAction, clash?: 'replace' | 'keep') => {
     const [format, pool] = check.split('|');
     setSent({ action, decks: model.decks, editor: model.editor });
@@ -112,38 +113,38 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const marks = result?.lines ?? [];
   const cards = (summary?.cards ?? 0) + (summary?.sideboard ?? 0);
   const [secondary, primary]: [[ImportAction, string], [ImportAction, string]] = from === 'editor'
-    ? [['replace', 'Replace deck'], ['add', 'Add to deck']]
-    : [['edit', 'Import and edit'], from === 'seat' ? ['use', 'Import and use'] : ['save', 'Import']];
+    ? [['replace', t('lblWebImportReplaceDeck')], ['add', t('lblWebImportAddToDeck')]]
+    : [['edit', t('lblWebImportAndEdit')], from === 'seat' ? ['use', t('lblWebImportAndUse')] : ['save', t('lblImport')]];
   return (
     <div class="backdrop importer-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="importer" onDragOver={e => e.preventDefault()} onDrop={e => {
         e.preventDefault();
-        void e.dataTransfer?.files[0]?.text().then(t => typed(t));
+        void e.dataTransfer?.files[0]?.text().then(dropped => typed(dropped));
       }}>
         <header class="imp-head">
-          <h2>Import a deck</h2>
-          <span class="muted">Give a link, paste a list, or drop a file</span>
-          <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          <h2>{t('lblWebImportTitle')}</h2>
+          <span class="muted">{t('lblWebImportSubtitle')}</span>
+          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="imp-sub">
-          <label class="namefield">Deck name
+          <label class="namefield">{t('lblWebEditorDeckName')}
             <input value={name} maxLength={60} onInput={e => setTypedName(e.currentTarget.value)} />
           </label>
           <CheckSelect model={model} value={check} change={(format, pool, none) => setCheck(none ? 'none' : `${format}|${pool ?? ''}`)} />
         </div>
         <div class="imp-body">
           <div class="paste">
-            <h4>From a link <span>{SITES}</span></h4>
+            <h4>{t('lblWebImportFromLink')} <span>{SITES}</span></h4>
             <div class="linkfield">
               <input class="find" placeholder="https://moxfield.com/decks/…" value={url}
                 onInput={e => setUrl(e.currentTarget.value)}
                 onPaste={e => { const pasted = e.clipboardData?.getData('text') ?? ''; setUrl(pasted); fetch(pasted); e.preventDefault(); }}
                 onKeyDown={e => { if (e.key === 'Enter') fetch(url); }} />
-              <button onClick={() => fetch(url)}>Fetch</button>
+              <button onClick={() => fetch(url)}>{t('lblWebImportFetch')}</button>
             </div>
-            <h4>{fetched ? `From ${fetched.site}` : 'Or paste a list'}</h4>
+            <h4>{fetched ? t('lblWebImportFromSite', fetched.site) : t('lblWebImportOrPaste')}</h4>
             {fetching
-              ? <div class="fetching"><span class="spinner" /> Fetching the list…</div>
+              ? <div class="fetching"><span class="spinner" /> {t('lblWebImportFetching')}</div>
               : (
                 <div class="text-box">
                   <div class="gutter" ref={gutter} aria-hidden="true">
@@ -177,19 +178,21 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
               )}
           </div>
           <div class="read">
-            <h4>Result</h4>
+            <h4>{t('lblWebImportResult')}</h4>
             {!summary || !text.trim()
               ? <Guide />
               : <>
                   <div class="summary">
-                    <span class="big"><span class="pips"><Pips colors={summary.colors} /></span> {summary.cards} cards</span>
-                    <span class="sub">{summary.sideboard} sideboard{summary.notImported ? ` · ${summary.notImported} not imported` : ''}</span>
+                    <span class="big"><span class="pips"><Pips colors={summary.colors} /></span> {t('lblWebImportCards', summary.cards)}</span>
+                    <span class="sub">{summary.notImported
+                      ? t('lblWebImportSideboardNotImported', summary.sideboard, summary.notImported)
+                      : t('lblWebImportSideboard', summary.sideboard)}</span>
                     {summary.verdict && <p class="verdict no">{summary.verdict}</p>}
-                    {summary.commanderChosen && summary.commander && <p class="verdict yes">{summary.commander} is the commander.</p>}
+                    {summary.commanderChosen && summary.commander && <p class="verdict yes">{t('lblWebImportIsCommander', summary.commander)}</p>}
                   </div>
                   {result.problems.length > 0 && (
                     <div class="attn">
-                      <h5>Problems <span>{result.problems.length}</span></h5>
+                      <h5>{t('lblWebImportProblems')} <span>{result.problems.length}</span></h5>
                       {result.problems.map((p, i) => (
                         <div key={i} class="issue">
                           <span class="g">!</span>
@@ -203,25 +206,25 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                   )}
                   <div class="readlist cols">
                     <div>{summary.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>
-                    <div>{summary.sideboardCards.length > 0 && <CardGroup heading="Sideboard" cards={summary.sideboardCards} />}</div>
+                    <div>{summary.sideboardCards.length > 0 && <CardGroup heading={t('lblSideboard')} cards={summary.sideboardCards} />}</div>
                   </div>
                 </>}
           </div>
         </div>
         <footer class="imp-foot">
           <span class="grow" />
-          <button onClick={close}>Cancel</button>
+          <button onClick={close}>{t('lblCancel')}</button>
           <button disabled={!cards || fetching} onClick={() => commit(secondary[0])}>{secondary[1]}</button>
           <button class="primary" disabled={!cards || fetching} onClick={() => commit(primary[0])}>{primary[1]}</button>
         </footer>
         {model.nameTaken && sent && (
           <div class="backdrop">
             <div class="dialog">
-              <h3>You already have a deck called {model.nameTaken}</h3>
+              <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
               <div class="actions">
-                <button onClick={() => setSent(null)}>Cancel</button>
-                <button onClick={() => commit(sent.action, 'replace')}>Replace it</button>
-                <button class="primary" onClick={() => commit(sent.action, 'keep')}>Keep both</button>
+                <button onClick={() => setSent(null)}>{t('lblCancel')}</button>
+                <button onClick={() => commit(sent.action, 'replace')}>{t('lblWebImportReplaceIt')}</button>
+                <button class="primary" onClick={() => commit(sent.action, 'keep')}>{t('lblWebImportKeepBoth')}</button>
               </div>
             </div>
           </div>
@@ -249,10 +252,10 @@ export function CardGroup({ heading, cards }: { heading: string; cards: EditorCa
 function Guide() {
   return (
     <div class="guide">
-      <p>Paste a list with one card per line:</p>
+      <p>{t('lblWebImportGuideOnePerLine')}</p>
       <pre>{'4 Lightning Bolt\n1 Sol Ring (C21) 263\n\nSideboard\n2 Duress'}</pre>
-      <p class="muted">A set code and number pick the printing. A line reading Sideboard or Commander starts that section.</p>
-      <p class="muted">Links from {SITES} are fetched for you.</p>
+      <p class="muted">{t('lblWebImportGuideSections')}</p>
+      <p class="muted">{t('lblWebImportGuideLinks', SITES)}</p>
     </div>
   );
 }

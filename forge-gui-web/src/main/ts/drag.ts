@@ -6,6 +6,7 @@
 import { copyLimit, countsInDeck } from './catalogue';
 import { imageUrl } from './images';
 import type { EditorState } from './protocol';
+import { t, type TextKey } from './text';
 
 export type Zone = 'Main' | 'Sideboard' | 'Commander' | 'catalogue';
 
@@ -26,38 +27,46 @@ export interface Verdict {
 const THRESHOLD_PX = 4;
 const LONG_PRESS_MS = 500;
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
+// A refusal's words follow this mark, which also tells the zone to show it as refusing
+const REFUSED = '⊘';
+const ADD: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragAddMain', Sideboard: 'lblWebEditorDragAddSideboard' };
+const MOVE: Record<'Main' | 'Sideboard', TextKey> = { Main: 'lblWebEditorDragMoveMain', Sideboard: 'lblWebEditorDragMoveSideboard' };
+const REMOVE: Record<Exclude<Zone, 'catalogue'>, TextKey> = {
+  Main: 'lblWebEditorDragRemoveMain', Sideboard: 'lblWebEditorDragRemoveSideboard', Commander: 'lblWebEditorDragRemoveCommander',
+};
+const refused = (key: TextKey, ...args: number[]) => `${REFUSED} ${t(key, ...args)}`;
 
 /** What releasing a carried card over a zone would do. commanderAllowed says whether the card could lead the deck. */
 export function verdictFor(carried: Carried, zone: Zone, state: EditorState, commanderAllowed: boolean): Verdict {
   const n = carried.count;
   if (zone === carried.from) {
-    return { zone, accepts: false, verb: carried.from === 'catalogue' ? 'drop on a section' : 'already here' };
+    return { zone, accepts: false, verb: carried.from === 'catalogue' ? t('lblWebEditorDragDropOnSection') : t('lblWebEditorDragAlreadyHere') };
   }
   if (zone === 'catalogue') {
-    return { zone, accepts: true, verb: `remove ${n} from ${carried.from}` };
+    return { zone, accepts: true, verb: carried.from === 'catalogue' ? '' : t(REMOVE[carried.from], n) };
   }
   if (zone === 'Commander') {
     if (state.unrestricted || !COMMANDER_FORMATS.has(state.format)) {
-      return { zone, accepts: false, verb: '⊘ only commander formats have a commander' };
+      return { zone, accepts: false, verb: refused('lblWebEditorDragOnlyCommanderFormats') };
     }
     if (!commanderAllowed) {
-      return { zone, accepts: false, verb: '⊘ not a legal commander' };
+      return { zone, accepts: false, verb: refused('lblWebEditorDragNotLegalCommander') };
     }
-    return { zone, accepts: true, verb: state.commanders.length ? 'replace the commander' : 'make the commander' };
+    return { zone, accepts: true, verb: state.commanders.length ? t('lblWebEditorDragReplaceCommander') : t('lblWebEditorDragMakeCommander') };
   }
   if (carried.from !== 'catalogue') {
-    return { zone, accepts: true, verb: `move ${n} to ${zone}` };
+    return { zone, accepts: true, verb: t(MOVE[zone], n) };
   }
   if (state.limited) {
     const left = state.sideboard.find(c => c.name === carried.name)?.count ?? 0;
-    return n > left ? { zone, accepts: false, verb: '⊘ none left in the pool' } : { zone, accepts: true, verb: `add ${n} to ${zone}` };
+    return n > left ? { zone, accepts: false, verb: refused('lblWebEditorDragNoneLeft') } : { zone, accepts: true, verb: t(ADD[zone], n) };
   }
   const have = countsInDeck(state).get(carried.name) ?? 0;
   const limit = copyLimit(state, carried.name);
   if (have + n > limit) {
-    return { zone, accepts: false, verb: limit === 1 ? '⊘ already in the deck, and this format allows one' : `⊘ ${have} of ${limit} already, across all zones` };
+    return { zone, accepts: false, verb: limit === 1 ? refused('lblWebEditorDragSingleton') : refused('lblWebEditorDragAtLimit', have, limit) };
   }
-  return { zone, accepts: true, verb: `add ${n} to ${zone}` };
+  return { zone, accepts: true, verb: t(ADD[zone], n) };
 }
 
 /**
@@ -90,7 +99,7 @@ export function startDrag(e: PointerEvent, carried: Carried, image: string, judg
     over = target ? judge(target.dataset.zone as Zone) : null;
     for (const z of zones) mark(z, judge(z.dataset.zone as Zone), z === target);
     const verb = chip.querySelector('.verb');
-    if (verb) verb.textContent = over ? over.verb : 'drop on a section';
+    if (verb) verb.textContent = over ? over.verb : t('lblWebEditorDragDropOnSection');
     chip.classList.toggle('no', !!over && !over.accepts);
     chip.classList.toggle('rm', !!over && over.accepts && over.zone === 'catalogue');
     scrollNearEdge(target, ev.clientY);
@@ -169,9 +178,9 @@ function makeChip(carried: Carried, image: string): HTMLElement {
 function mark(zone: HTMLElement, v: Verdict, under: boolean): void {
   zone.classList.toggle('drop-eligible', v.accepts && !under);
   zone.classList.toggle('drop-over', v.accepts && under);
-  zone.classList.toggle('drop-refuse', !v.accepts && v.verb.startsWith('⊘'));
+  zone.classList.toggle('drop-refuse', !v.accepts && v.verb.startsWith(REFUSED));
   zone.classList.toggle('drop-remove', v.accepts && v.zone === 'catalogue');
-  zone.dataset.dropHint = v.accepts ? (under ? v.verb : 'would accept') : v.verb;
+  zone.dataset.dropHint = v.accepts ? (under ? v.verb : t('lblWebEditorDragWouldAccept')) : v.verb;
 }
 
 function unmark(zone: HTMLElement): void {

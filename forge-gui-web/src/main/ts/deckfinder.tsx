@@ -14,18 +14,21 @@ import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckDetails, DeckSummary, Seat } from './protocol';
+import { t, type TextKey } from './text';
 
 const SEARCH_DEBOUNCE_MS = 200;
 const PEEK_W = 240;
 const PEEK_H = 336;
 // Colour identity, in the order Magic writes it, plus colourless
-const COLOURS: [string, string][] = [['W', 'White'], ['U', 'Blue'], ['B', 'Black'], ['R', 'Red'], ['G', 'Green'], ['C', 'Colourless']];
+const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
+  ['C', 'lblWebEditorColourless']];
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
 export const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
 const netName = (source: string) => source.slice(NET.length + 1);
 export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal';
-const SORTS: [SortKey, string][] = [['name', 'Name'], ['colors', 'Colour'], ['formats', 'Format'], ['size', 'Size'], ['legal', 'Legal first']];
+const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors', 'lblWebEditorSortColour'], ['formats', 'lblWebFinderSortFormat'],
+  ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst']];
 
 export interface DeckFilter {
   /** As typed. While there is one, it orders the list instead of the sort. */
@@ -156,16 +159,16 @@ export function DeckFinder({ model, actions, seat, close }: {
           void file.text().then(text => importer({ text }));
         }}>
         <header class="finder-head">
-          <h2>{seat ? 'Choose a deck' : 'Decks'}</h2>
+          <h2>{seat ? t('lblWebFinderChooseDeck') : t('lblWebFinderDecks')}</h2>
           {!seat && (
             <label class="legality set">
-              Format
+              {t('lblFormat')}
               <span class="pill-select"><select value={format} onChange={e => {
                 const next = e.currentTarget.value;
                 changeUi(u => { u.browse = { format: next }; });
                 actions.browseFormat(next);
               }}>
-                {DECK_FORMATS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+                {DECK_FORMATS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
               </select></span>
             </label>
           )}
@@ -173,19 +176,19 @@ export function DeckFinder({ model, actions, seat, close }: {
           {model.lobby?.limited?.activeEventId && (
             <label class="legality set">
               <input type="checkbox" checked={model.lobby.limited.eventDecksOnly} disabled={!model.lobby.host}
-                onChange={e => actions.eventDecksOnly(e.currentTarget.checked)} /> Only this event's decks
+                onChange={e => actions.eventDecksOnly(e.currentTarget.checked)} /> {t('lblWebFinderEventDecksOnly')}
             </label>
           )}
           <span class="head-tools">
-            <button onClick={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}>+ New deck</button>
-            <button onClick={() => importer()}>Import</button>
-            <button class="dk-close" title="Close" onClick={close}>&times;</button>
+            <button onClick={() => { actions.openEditor({ newFormat: format, seat: seat?.index }); close(); }}>{t('lblWebFinderNewDeck')}</button>
+            <button onClick={() => importer()}>{t('lblImport')}</button>
+            <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
           </span>
         </header>
         <div class="finder-body">
-          <nav class="rail" aria-label="Filters">
+          <nav class="rail" aria-label={t('lblWebFinderFilters')}>
             <section>
-              <h4>Source</h4>
+              <h4>{t('lblWebFinderSource')}</h4>
               {[...sources].map(([id, count]) => (
                 <button key={id} class="source" aria-pressed={id === NET ? inNet : id === filter.source}
                   onClick={() => change({ source: id })}>
@@ -196,7 +199,7 @@ export function DeckFinder({ model, actions, seat, close }: {
               {inNet && categories.size > 1 && (
                 <div class="net-cats">
                   <button class="source" aria-pressed={filter.source === NET} onClick={() => change({ source: NET })}>
-                    <span>Every category</span>
+                    <span>{t('lblWebFinderEveryCategory')}</span>
                   </button>
                   {[...categories].map(([id, count]) => (
                     <button key={id} class="source" aria-pressed={id === filter.source} onClick={() => change({ source: id })}>
@@ -206,14 +209,14 @@ export function DeckFinder({ model, actions, seat, close }: {
                 </div>
               )}
               {/* Core asks which category through a dialog on the host's screen, so only the host can answer it */}
-              <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>+ Download net decks</button>
+              <button class="get-net" hidden={!model.host} onClick={() => actions.fetchNetDecks()}>{t('lblWebFinderDownloadNetDecks')}</button>
             </section>
             <section>
-              <h4>Colours</h4>
-              <div class="colours" role="group" aria-label="Colours">
+              <h4>{t('lblWebEditorColours')}</h4>
+              <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
                 {COLOURS.map(([letter, name]) => (
-                  <button key={letter} class="colour" aria-label={name} aria-pressed={filter.colours.has(letter)}
-                    title={`${name}: ${decks.filter(d => (d.colors ?? '').includes(letter)).length} decks`} onClick={() => {
+                  <button key={letter} class="colour" aria-label={t(name)} aria-pressed={filter.colours.has(letter)}
+                    title={t('lblWebFinderColourDecks', t(name), decks.filter(d => (d.colors ?? '').includes(letter)).length)} onClick={() => {
                       const colours = new Set(filter.colours);
                       if (!colours.delete(letter)) colours.add(letter);
                       change({ colours });
@@ -222,82 +225,83 @@ export function DeckFinder({ model, actions, seat, close }: {
                   </button>
                 ))}
               </div>
-              <p class="rail-note">Decks with any ticked colour</p>
+              <p class="rail-note">{t('lblWebFinderAnyTickedColour')}</p>
             </section>
             <section>
-              <h4>Legal in</h4>
+              <h4>{t('lblWebFinderLegalIn')}</h4>
               {/* The lobby's card pool is the match's rule, so it is shown here but changed only there */}
               {model.deckCardPool
-                ? <p class="pinned">{model.deckCardPool}<span>set in the lobby</span></p>
+                ? <p class="pinned">{model.deckCardPool}<span>{t('lblWebFinderSetInLobby')}</span></p>
                 : <select class="format-by" value={filter.cardFormat} onChange={e => change({ cardFormat: e.currentTarget.value })}>
-                    <option value="any">Any format</option>
+                    <option value="any">{t('lblWebFinderAnyFormat')}</option>
                     {model.cardFormats.map(f => <option key={f} value={f}>{f}</option>)}
                   </select>}
             </section>
             <label class="legal-only">
               <input type="checkbox" role="switch" checked={!filter.legalOnly} onChange={e => change({ legalOnly: !e.currentTarget.checked })} />
-              Show illegal decks too
+              {t('lblWebFinderShowIllegal')}
             </label>
             <button class="clear" hidden={!narrowed} onClick={() => {
               setTyped('');
               setFilter(f => ({ ...FINDER_DEFAULTS, colours: new Set(), sort: f.sort }));
-            }}>Clear filters</button>
+            }}>{t('lblWebEditorClearFilters')}</button>
           </nav>
           <div class="results">
             <div class="find-row">
-              <input ref={find} class="find" type="search" placeholder="Search deck names" autocomplete="off"
+              <input ref={find} class="find" type="search" placeholder={t('lblWebFinderSearch')} autocomplete="off"
                 value={typed} onInput={e => setTyped(e.currentTarget.value)} />
               {/* A search orders the list by how well each name matches, so the sort waits until it is cleared */}
               {normalize(filter.query)
-                ? <select class="sort-by" aria-label="Sort" disabled><option>Sort: Best match</option></select>
-                : <select class="sort-by" aria-label="Sort" value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
-                    {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
+                ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
+                : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
+                    {SORTS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
                   </select>}
-              <button class="random" disabled={!list.length} title="Pick a deck from those shown" onClick={random}>
+              <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
-                Random
+                {t('lblRandom')}
               </button>
             </div>
-            <p class="shown">{list.length === decks.length ? `${decks.length} decks` : `${list.length} of ${decks.length} decks`}</p>
+            <p class="shown">{list.length === decks.length ? t('lblWebFinderDeckCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
                   use={() => use(d.key)} source={filter.source === 'all'} />)
-                : <p class="none">No deck matches. Clear a filter, or search a different name.</p>}
+                : <p class="none">{t('lblWebFinderNoMatch')}</p>}
             </div>
           </div>
           <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e, '.finder') ?? peek)} onPointerLeave={() => setPeek(null)}>
-            {!chosen ? <p class="none">Pick a deck on the left and its cards appear here.</p>
-              : !details ? <p class="none">Reading the deck…</p>
+            {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
+              : !details ? <p class="none">{t('lblWebFinderReading')}</p>
                 : <Chosen details={details} />}
           </aside>
         </div>
         <footer class="finder-foot">
           {summary?.linked && summary.sourceUrl && (
             <span class="linked-line">
-              From {summary.linked}{summary.synced ? `, synced ${ago(summary.synced)}` : ''}
-              <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>Sync now</button>
+              {summary.synced ? t('lblWebFinderFromSynced', summary.linked, ago(summary.synced)) : t('lblWebFinderFrom', summary.linked)}
+              <button class="small" onClick={() => importer({ url: summary.sourceUrl, sync: true })}>{t('lblWebFinderSyncNow')}</button>
             </span>
           )}
-          <button class="cancel" onClick={close}>Cancel</button>
+          <button class="cancel" onClick={close}>{t('lblCancel')}</button>
           {seat
             ? <>
-                <button disabled={!chosen} onClick={edit}>{summary?.readOnly ? 'Edit a copy' : 'Edit'}</button>
-                <button class="use primary" disabled={!chosen} onClick={() => use()}>Use this deck</button>
+                <button disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>
+                <button class="use primary" disabled={!chosen} onClick={() => use()}>{t('lblWebFinderUseDeck')}</button>
               </>
-            : <button class="primary" disabled={!chosen} onClick={edit}>{summary?.readOnly ? 'Edit a copy' : 'Edit'}</button>}
+            : <button class="primary" disabled={!chosen} onClick={edit}>{summary?.readOnly ? t('lblWebFinderEditCopy') : t('lblEdit')}</button>}
         </footer>
-        {dropping && <div class="drop-over-finder">Drop to import the file</div>}
+        {dropping && <div class="drop-over-finder">{t('lblWebFinderDropToImport')}</div>}
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
       </div>
     </div>
   );
 }
 
-const SOURCE_NAMES: Record<string, string> = {
-  all: 'All decks', [NET]: 'Net decks', yours: 'Your decks', device: 'On this device', linked: 'Linked', precons: 'Preconstructed', quest: 'Quest opponents', generated: 'Generated',
+const SOURCE_NAMES: Record<string, TextKey> = {
+  all: 'lblWebFinderSourceAll', [NET]: 'lblWebFinderSourceNet', yours: 'lblWebFinderSourceYours', device: 'lblWebFinderSourceDevice',
+  linked: 'lblWebFinderSourceLinked', precons: 'lblWebFinderSourcePrecons', quest: 'lblWebFinderSourceQuest', generated: 'lblWebFinderSourceGenerated',
 };
-const sourceName = (id: string) => SOURCE_NAMES[id] ?? id.charAt(0).toUpperCase() + id.slice(1);
+const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 
 // The source is only worth a column while every source is listed; with one picked, the rail already says it
 function Hit({ deck: d, chosen, choose, use, source }: {
@@ -320,7 +324,7 @@ function Hit({ deck: d, chosen, choose, use, source }: {
       <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
       <span class="deck-formats">{d.formats ?? ''}</span>
       {source && <span class="tag">{d.source}</span>}
-      <span class={`legal ${d.problem ? 'no' : 'yes'}`}>{d.problem ? 'Illegal' : 'Legal'}</span>
+      <span class={`legal ${d.problem ? 'no' : 'yes'}`}>{d.problem ? t('lblWebFinderIllegal') : t('lblWebFinderLegal')}</span>
     </button>
   );
 }
@@ -359,19 +363,19 @@ function Chosen({ details }: { details: DeckDetails }) {
     <>
       <div class="dk-chosen-head">
         <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
-        <p class="sizes">{s.total} cards{s.sideboard ? ` · ${s.sideboard} sideboard` : ''} · {s.lands} lands</p>
-        <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? 'Legal for this format.'}</p>
+        <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
+        <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
         <div class="stats">
           <Curve curve={s.curve} creatures={s.creatures} px={42} />
           <div class="types">
-            {s.types.map(t => <div key={t.name} class="type"><span>{t.name}</span><b>{t.count}</b></div>)}
-            <div class="type avg"><span>Average mana value</span><b>{s.averageMana}</b></div>
+            {s.types.map(ty => <div key={ty.name} class="type"><span>{ty.name}</span><b>{ty.count}</b></div>)}
+            <div class="type avg"><span>{t('lblWebFinderAverageManaValue')}</span><b>{s.averageMana}</b></div>
           </div>
         </div>
       </div>
       <div class="dk-cards">
         {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}
-        {details.sideboard.length > 0 && <CardGroup heading="Sideboard" cards={details.sideboard} />}
+        {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} />}
       </div>
     </>
   );
@@ -380,10 +384,10 @@ function Chosen({ details }: { details: DeckDetails }) {
 /** How long ago a time was, in the words a person uses: "just now", "3 days ago". */
 function ago(millis: number): string {
   const minutes = Math.round((Date.now() - millis) / 60000);
-  if (minutes < 2) return 'just now';
-  if (minutes < 60) return `${minutes} minutes ago`;
+  if (minutes < 2) return t('lblWebFinderJustNow');
+  if (minutes < 60) return t('lblWebFinderMinutesAgo', minutes);
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+  if (hours < 24) return t(hours === 1 ? 'lblWebFinderHourAgo' : 'lblWebFinderHoursAgo', hours);
   const days = Math.round(hours / 24);
-  return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+  return t(days === 1 ? 'lblWebFinderDayAgo' : 'lblWebFinderDaysAgo', days);
 }

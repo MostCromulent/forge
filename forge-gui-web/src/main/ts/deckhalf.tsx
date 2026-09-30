@@ -10,6 +10,7 @@ import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
 import type { DeckSection, EditorCard, EditorState } from './protocol';
 import { store, stored } from './storage';
+import { t, type TextKey } from './text';
 
 const GROUP_KEY = 'forge.groupBy';
 const VIEW_KEY = 'forge.deckView';
@@ -32,36 +33,36 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
         <div>
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
-            ? `${state.stats.total} cards · ${state.stats.lands} lands · ${state.stats.sideboard} left in the pool`
-            : `${state.stats.total} cards · ${state.stats.sideboard} sideboard · ${state.stats.lands} lands`}</p>
+            ? t('lblWebEditorSizesLimited', state.stats.total, state.stats.lands, state.stats.sideboard)
+            : t('lblWebEditorSizes', state.stats.total, state.stats.sideboard, state.stats.lands)}</p>
           {state.verdict
-            ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>Show them</button></p>
-            : <p class="verdict yes">Legal for {state.check}.</p>}
-          <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>Sample hand</button>
+            ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
+            : <p class="verdict yes">{t('lblWebEditorLegalFor', state.check)}</p>}
+          <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
         </div>
         <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />
       </div>
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
         <h4>
-          <span class="zn">Main deck</span>
+          <span class="zn">{t('lblWebEditorMainDeck')}</span>
           <span class="count">{state.stats.main}</span>
-          <span class="seg view-seg" role="group" aria-label="Show the deck as">
-            <button aria-pressed={cards} onClick={() => view(true)}>Cards</button>
-            <button aria-pressed={!cards} onClick={() => view(false)}>List</button>
+          <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
+            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblWebEditorViewCards')}</button>
+            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebEditorViewList')}</button>
           </span>
-          <select aria-label="Group by" value={by} onChange={e => {
+          <select aria-label={t('lblWebEditorGroupBy')} value={by} onChange={e => {
             const next = e.currentTarget.value as GroupBy;
             setBy(next);
             store(GROUP_KEY, next);
           }}>
-            <option value="type">Group: Type</option>
-            <option value="mv">Group: Mana value</option>
-            <option value="colour">Group: Colour</option>
+            <option value="type">{t('lblWebEditorGroupType')}</option>
+            <option value="mv">{t('lblWebEditorGroupManaValue')}</option>
+            <option value="colour">{t('lblWebEditorGroupColour')}</option>
           </select>
         </h4>
         <div class={cards ? 'zone-body deck-cols' : 'zone-body cols'}>
-          {state.main.length === 0 && <p class="none">{state.commanderWanted ? 'Choose a commander to start.' : 'Click a card to add it.'}</p>}
+          {state.main.length === 0 && <p class="none">{state.commanderWanted ? t('lblWebEditorChooseCommanderFirst') : t('lblWebEditorClickToAdd')}</p>}
           {groups.map(g => (
             <div key={g.heading} class="group">
               <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
@@ -73,28 +74,28 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
         </div>
       </div>
       <div class="land-row">
-        <span class="band-lab">Basic lands</span>
+        <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
         {state.lands.map(l => (
-          <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : `${l.name} is outside the commander's colours`}>
+          <span key={l.name} class={l.allowed ? 'land' : 'land off'} title={l.allowed ? l.name : t('lblWebEditorLandOutside', l.name)}>
             <Pip letter={l.letter} />
-            <button class="step" disabled={!l.count} aria-label={`One fewer ${l.name}`}
+            <button class="step" disabled={!l.count} aria-label={t('lblWebEditorOneFewer', l.name)}
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count - 1 }] })}>&minus;</button>
             <span class="n">{l.count}</span>
-            <button class="step" disabled={!l.allowed} aria-label={`One more ${l.name}`}
+            <button class="step" disabled={!l.allowed} aria-label={t('lblWebEditorOneMore', l.name)}
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count + 1 }] })}>+</button>
           </span>
         ))}
         {state.limited && <>
-          <select class="land-set" aria-label="Basic lands from" value={state.landSet ?? ''}
+          <select class="land-set" aria-label={t('lblWebEditorBasicLandsFrom')} value={state.landSet ?? ''}
             onChange={e => actions.edit({ op: 'landSet', name: e.currentTarget.value, count: 0 })}>
             {state.landSets.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
           </select>
-          <button class="small" title="Basic lands for the rest of the deck, as Forge suggests them"
-            onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>Suggest</button>
+          <button class="small" title={t('lblWebEditorSuggestLandsTip')}
+            onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>{t('lblWebEditorSuggestLands')}</button>
         </>}
       </div>
       {!state.limited && <div class="zone side-zone" data-zone="Sideboard">
-        <h4><span class="zn">Sideboard</span><span class="count">{state.stats.sideboard}</span></h4>
+        <h4><span class="zn">{t('lblSideboard')}</span><span class="count">{state.stats.sideboard}</span></h4>
         {cards
           ? (
             <div class="zone-body deck-cols">
@@ -118,14 +119,14 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
   return (
     <div class="zone commander-zone" data-zone="Commander">
-      <h4><span class="zn">Commander</span><span class="count">{state.commanders.length}</span></h4>
+      <h4><span class="zn">{t('lblCommander')}</span><span class="count">{state.commanders.length}</span></h4>
       {state.commanders.length === 0
         ? (
           <div class="commander-empty">
-            <span class="card-outline">Commander</span>
+            <span class="card-outline">{t('lblCommander')}</span>
             <div>
-              <b>Choose a commander to start</b>
-              <p>Its colours decide which cards the deck may hold. Click Make commander under a card, or drag one here.</p>
+              <b>{t('lblWebEditorChooseCommander')}</b>
+              <p>{t('lblWebEditorChooseCommanderHint')}</p>
             </div>
           </div>
         )
@@ -136,9 +137,11 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
             <div>
               <div class="cname">{c.name} <span class="cost"><SymbolText text={c.cost} /></span></div>
               {c.problem && <div class="flag">! {c.problem}</div>}
-              <p class="cnote">Colour identity {state.identity ? state.identity.split('').join(' ') : 'colourless'}. The catalogue follows it.</p>
+              <p class="cnote">{state.identity
+                ? t('lblWebEditorIdentityNote', state.identity.split('').join(' '))
+                : t('lblWebEditorIdentityColourlessNote')}</p>
             </div>
-            <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>Change…</button>
+            <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>
           </div>
         ))}
     </div>
@@ -166,13 +169,13 @@ function Line({ card, zone, landed, actions, handlers }: {
       {...handlers(card.name, zone, card.image, card.count)}>
       <span class="n">{card.count}</span>
       <span class="nm">{card.name}</span>
-      {card.printings > 1 && <span class="prints">{card.printings} printings</span>}
+      {card.printings > 1 && <span class="prints">{t('lblWebEditorPrintings', card.printings)}</span>}
       {card.problem && <span class="flag">! {card.problem}</span>}
       <span class="cost"><SymbolText text={card.cost} /></span>
       <span class="ra">
-        <button aria-label={`One fewer ${card.name}`} onClick={() => removeOne(actions, card.name, zone)}>&minus;</button>
-        <button aria-label={`One more ${card.name}`} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
-        <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? 'Main' : 'Side'}</button>
+        <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => removeOne(actions, card.name, zone)}>&minus;</button>
+        <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
+        <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblWebEditorToMain') : t('lblWebEditorToSide')}</button>
       </span>
     </div>
   );
@@ -181,8 +184,12 @@ function Line({ card, zone, landed, actions, handlers }: {
 /** Takes one copy out, and offers the removal back in a notice: a slip costs one click, so it needs no confirmation. */
 export function removeOne(actions: Actions, name: string, zone: DeckSection): void {
   actions.edit({ op: 'remove', name, from: zone, count: 1 });
-  showNotice({ t: 'notice', title: `Removed ${name} from ${zone === 'Main' ? 'the main deck' : zone.toLowerCase()}`, error: false },
-    () => actions.editorUndo(), 'Undo');
+  const removed: Partial<Record<DeckSection, TextKey>> = {
+    Main: 'lblWebEditorRemovedMain', Sideboard: 'lblWebEditorRemovedSideboard', Commander: 'lblWebEditorRemovedCommander',
+  };
+  const key = removed[zone];
+  const title = key ? t(key, name) : t('lblWebEditorRemovedFrom', name, zone.toLowerCase());
+  showNotice({ t: 'notice', title, error: false }, () => actions.editorUndo(), t('lblUndo'));
 }
 
 /** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
@@ -191,14 +198,14 @@ export function Curve({ curve, creatures, average, px }: { curve: number[]; crea
   const tallest = Math.max(1, ...curve);
   return (
     <div class="curve">
-      <h4>Mana curve{average !== undefined && <> <span>avg {average}</span></>}</h4>
+      <h4>{t('lblWebEditorManaCurve')}{average !== undefined && <> <span>{t('lblWebEditorAverage', average)}</span></>}</h4>
       <div class="bars">
         {curve.map((n, i) => {
           // The last bucket holds everything at that mana value and above
           const label = i === curve.length - 1 ? `${i}+` : `${i}`;
           const beasts = creatures[i] ?? 0;
           return (
-            <span key={i} class="bar" title={`${label}: ${beasts} ${beasts === 1 ? 'creature' : 'creatures'}, ${n - beasts} other`}>
+            <span key={i} class="bar" title={t(beasts === 1 ? 'lblWebEditorCurveBarOne' : 'lblWebEditorCurveBar', label, beasts, n - beasts)}>
               <span class={n ? 'stack' : 'stack empty'} style={{ height: `${n ? Math.max(3, Math.round((n / tallest) * px)) : 2}px` }}>
                 {n > beasts && <i class="other" style={{ flexGrow: n - beasts }} />}
                 {beasts > 0 && <i class="creature" style={{ flexGrow: beasts }} />}
@@ -208,7 +215,7 @@ export function Curve({ curve, creatures, average, px }: { curve: number[]; crea
           );
         })}
       </div>
-      <div class="curve-key"><span><i class="creature" />Creatures</span><span><i class="other" />Other spells</span></div>
+      <div class="curve-key"><span><i class="creature" />{t('lblCreatures')}</span><span><i class="other" />{t('lblWebEditorOtherSpells')}</span></div>
     </div>
   );
 }
@@ -217,13 +224,13 @@ function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: (
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog sample-hand">
-        <h3>Sample hand</h3>
-        <p class="hint">A shuffle of the main deck. Nothing is saved.</p>
+        <h3>{t('lblWebEditorSampleHand')}</h3>
+        <p class="hint">{t('lblWebEditorSampleHandHint')}</p>
         <div class="hand-cards">{hand.map((c, i) => <img key={i} alt={c.name} title={c.name} src={imageUrl(c.image)} />)}</div>
         <div class="actions">
-          <button onClick={more}>Draw one more</button>
-          <button onClick={again}>New hand</button>
-          <button class="primary" onClick={close}>Close</button>
+          <button onClick={more}>{t('lblWebEditorDrawOneMore')}</button>
+          <button onClick={again}>{t('lblWebEditorNewHand')}</button>
+          <button class="primary" onClick={close}>{t('lblClose')}</button>
         </div>
       </div>
     </div>

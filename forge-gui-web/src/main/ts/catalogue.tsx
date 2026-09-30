@@ -10,29 +10,32 @@ import type { CardHandlers } from './drag';
 import type { Model } from './model';
 import type { CatalogueRow, EditorState } from './protocol';
 import { store, stored } from './storage';
+import { t, type TextKey } from './text';
 
 const SEARCH_DEBOUNCE_MS = 200;
-const COLOURS: [string, string][] = [['W', 'White'], ['U', 'Blue'], ['B', 'Black'], ['R', 'Red'], ['G', 'Green'], ['C', 'Colourless']];
-const TYPES: [string, string][] = [['any', 'Any type'], ['creature', 'Creatures'], ['planeswalker', 'Planeswalkers'],
-  ['instant', 'Instants'], ['sorcery', 'Sorceries'], ['artifact', 'Artifacts'], ['enchantment', 'Enchantments'],
-  ['battle', 'Battles'], ['land', 'Lands']];
+const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
+  ['C', 'lblWebEditorColourless']];
+const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
+  ['instant', 'lblInstants'], ['sorcery', 'lblSorceries'], ['artifact', 'lblArtifacts'], ['enchantment', 'lblEnchantments'],
+  ['battle', 'lblBattles'], ['land', 'lblLands']];
 const MANA: string[] = ['any', '0', '1', '2', '3', '4', '5', '6', '7+'];
-const SORTS: [string, string][] = [['name', 'Name'], ['mv', 'Mana value'], ['colour', 'Colour'], ['type', 'Type']];
+const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
+  ['type', 'lblWebCatalogueSortType']];
 const VIEW_KEY = 'forge.catalogueView';
 // Forge's card search syntax, as desktop's card search reads it
-const SEARCH_TIPS: [string, string][] = [
-  ['bolt', 'Name contains bolt'],
-  ['c:bg', 'Black and green'],
-  ['c=bg', 'Only black and green'],
-  ['t:creature', 'Creature'],
-  ['o:"draw a card"', 'Rules text contains draw a card'],
-  ['mv<=3', 'Mana value 3 or less'],
-  ['kw:flying', 'Has flying'],
-  ['r:rare', 'Rare'],
-  ['s:mh2', 'From Modern Horizons 2'],
-  ['-t:land', 'Not a land'],
-  ['t:elf | t:goblin', 'Elf or goblin'],
-  ['Enter', 'Add the highlighted card'],
+const SEARCH_TIPS: [string, TextKey][] = [
+  ['bolt', 'lblWebCatalogueTipName'],
+  ['c:bg', 'lblWebCatalogueTipColours'],
+  ['c=bg', 'lblWebCatalogueTipOnlyColours'],
+  ['t:creature', 'lblWebCatalogueTipType'],
+  ['o:"draw a card"', 'lblWebCatalogueTipRulesText'],
+  ['mv<=3', 'lblWebCatalogueTipManaValue'],
+  ['kw:flying', 'lblWebCatalogueTipKeyword'],
+  ['r:rare', 'lblWebCatalogueTipRarity'],
+  ['s:mh2', 'lblWebCatalogueTipSet'],
+  ['-t:land', 'lblWebCatalogueTipNot'],
+  ['t:elf | t:goblin', 'lblWebCatalogueTipOr'],
+  ['Enter', 'lblWebCatalogueTipEnter'],
 ];
 const BASICS = new Set(['Plains', 'Island', 'Swamp', 'Mountain', 'Forest', 'Wastes']);
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
@@ -103,31 +106,31 @@ export function Catalogue({ model, actions, state, handlers }: {
     <section class="catalogue" data-zone="catalogue">
       <div class="find-row">
         <span class="search-wrap">
-          <input class="find" type="search" placeholder="Search card names" autocomplete="off" value={typed}
+          <input class="find" type="search" placeholder={t('lblWebCatalogueSearch')} autocomplete="off" value={typed}
             aria-describedby="search-tip"
             onInput={e => setTyped(e.currentTarget.value)}
             onKeyDown={e => { if (e.key === 'Enter' && top) (state.commanderWanted ? makeCommander : add)(top.name); }} />
           <table class="search-tip" id="search-tip" role="tooltip">
             <tbody>
-              {SEARCH_TIPS.map(([key, what]) => <tr key={key}><th>{key}</th><td>{what}</td></tr>)}
+              {SEARCH_TIPS.map(([key, what]) => <tr key={key}><th>{key}</th><td>{t(what)}</td></tr>)}
             </tbody>
           </table>
         </span>
         {text.trim() && page?.ranked !== false
-          ? <select class="sort-by" aria-label="Sort" disabled><option>Sort: Best match</option></select>
-          : <select class="sort-by" aria-label="Sort" value={sort} onChange={e => setSort(e.currentTarget.value)}>
-              {SORTS.map(([id, name]) => <option key={id} value={id}>{`Sort: ${name}`}</option>)}
+          ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
+          : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={sort} onChange={e => setSort(e.currentTarget.value)}>
+              {SORTS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
             </select>}
-        <span class="seg" role="group" aria-label="View">
-          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>Cards</button>
-          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>Table</button>
+        <span class="seg" role="group" aria-label={t('lblWebCatalogueView')}>
+          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>{t('lblWebEditorViewCards')}</button>
+          <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>{t('lblWebCatalogueViewTable')}</button>
         </span>
       </div>
       <div class="filter-band">
-        <span class="band-lab">Colours</span>
-        <div class="colours" role="group" aria-label="Colours">
+        <span class="band-lab">{t('lblWebEditorColours')}</span>
+        <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
           {COLOURS.map(([letter, name]) => (
-            <button key={letter} class="colour" aria-label={name} aria-pressed={colours.has(letter)} onClick={() => {
+            <button key={letter} class="colour" aria-label={t(name)} aria-pressed={colours.has(letter)} onClick={() => {
               const next = new Set(colours);
               if (!next.delete(letter)) next.add(letter);
               setColours(next);
@@ -135,19 +138,19 @@ export function Catalogue({ model, actions, state, handlers }: {
           ))}
         </div>
         {!state.commanderWanted && state.identity && <>
-          <span class="band-lab">Identity</span>
-          <p class="pinned">{state.identity.split('').join(' ')}<span>set by the commander</span></p>
+          <span class="band-lab">{t('lblWebCatalogueIdentity')}</span>
+          <p class="pinned">{state.identity.split('').join(' ')}<span>{t('lblWebCatalogueSetByCommander')}</span></p>
         </>}
-        <select aria-label="Card type" value={type} onChange={e => setType(e.currentTarget.value)}>
-          {TYPES.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        <select aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
+          {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
         </select>
-        <select aria-label="Mana value" value={mv} onChange={e => setMv(e.currentTarget.value)}>
-          {MANA.map(v => <option key={v} value={v}>{v === 'any' ? 'Any mana value' : `Mana value ${v}`}</option>)}
+        <select aria-label={t('lblWebCatalogueManaValue')} value={mv} onChange={e => setMv(e.currentTarget.value)}>
+          {MANA.map(v => <option key={v} value={v}>{v === 'any' ? t('lblWebCatalogueAnyManaValue') : t('lblWebCatalogueManaValueIs', v)}</option>)}
         </select>
         {!state.limited && (
           <label class="legal-only">
             <input type="checkbox" role="switch" checked={showAll} onChange={e => setShowAll(e.currentTarget.checked)} />
-            Show cards this deck can't use
+            {t('lblWebCatalogueShowUnusable')}
           </label>
         )}
         <button class="clear" hidden={!narrowed} onClick={() => {
@@ -156,7 +159,7 @@ export function Catalogue({ model, actions, state, handlers }: {
           setType('any');
           setMv('any');
           setShowAll(false);
-        }}>Clear filters</button>
+        }}>{t('lblWebEditorClearFilters')}</button>
       </div>
       <p class={state.commanderWanted ? 'shown commanders-only' : 'shown'}>{shownLine(page?.total, searched, state.commanderWanted)}</p>
       <div class={view === 'cards' ? 'cat-grid' : 'cat-table'} onScroll={more}>
@@ -181,7 +184,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, add, rem
   const full = room <= 0;
   return (
     <div class={`slot${count ? ' indeck' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
-      {top && <span class="enter">{commanderWanted ? 'Press Enter to choose' : 'Press Enter to add'}</span>}
+      {top && <span class="enter">{commanderWanted ? t('lblWebCataloguePressEnterChoose') : t('lblWebCataloguePressEnterAdd')}</span>}
       <button class="tile" title={row.name} {...handlers(row.name, 'catalogue', row.image, 1)}
         onClick={() => (commanderWanted ? makeCommander(row.name) : add(row.name))}>
         <span class="tile-name">{row.name}</span>
@@ -190,17 +193,17 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, add, rem
       </button>
       {row.problem && <span class="flag">! {row.problem}</span>}
       {commanderWanted
-        ? <div class="under centred"><button class="side" onClick={() => makeCommander(row.name)}>Make commander</button></div>
+        ? <div class="under centred"><button class="side" onClick={() => makeCommander(row.name)}>{t('lblWebCatalogueMakeCommander')}</button></div>
         : (
           <div class="under">
-            <button class="step" disabled={!count} aria-label={`Remove one ${row.name}`} onClick={() => remove(row.name)}>&minus;</button>
+            <button class="step" disabled={!count} aria-label={t('lblWebCatalogueRemoveOne', row.name)} onClick={() => remove(row.name)}>&minus;</button>
             <span class={count ? 'n' : 'n zero'}>{count}</span>
-            <button class="step" disabled={full || !!row.problem} aria-label={`Add one ${row.name}`} onClick={() => add(row.name)}>+</button>
+            <button class="step" disabled={full || !!row.problem} aria-label={t('lblWebCatalogueAddOne', row.name)} onClick={() => add(row.name)}>+</button>
             {limited
-              ? <span class="why">{room ? `${room} left` : 'none left'}</span>
+              ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
-                ? <span class="why">{limit === 1 ? '1 of 1, singleton' : `${count} of ${limit}`}</span>
-                : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>Side</button>}
+                ? <span class="why">{limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebCatalogueCountOfLimit', count, limit)}</span>
+                : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblWebEditorToSide')}</button>}
           </div>
         )}
     </div>
@@ -213,7 +216,8 @@ function Table({ rows, counts, state, add, remove, handlers }: {
 }) {
   return (
     <table>
-      <thead><tr><th>In deck</th><th>Name</th><th>Cost</th><th>Type</th><th>P/T</th><th>MV</th></tr></thead>
+      <thead><tr><th>{t('lblWebCatalogueInDeck')}</th><th>{t('lblName')}</th><th>{t('lblCost')}</th><th>{t('lblType')}</th>
+        <th>{t('lblWebCataloguePT')}</th><th>{t('lblWebCatalogueMV')}</th></tr></thead>
       <tbody>
         {rows.map(row => {
           const count = counts.get(row.name) ?? 0;
@@ -240,24 +244,33 @@ function Table({ rows, counts, state, add, remove, handlers }: {
 
 function Empty({ text, identity, hidden, showThem }: { text: string; identity: string; hidden: number; showThem: () => void }) {
   if (!hidden) {
-    return <p class="none-found">No card matches. Clear a filter, or search a different name.</p>;
+    return <p class="none-found">{t('lblWebCatalogueNoMatchHint')}</p>;
   }
-  const within = identity ? ` within ${identity.split('').join(' ')}` : '';
+  const within = identity.split('').join(' ');
+  const none = identity
+    ? (text ? t('lblWebCatalogueNoMatchWithinText', within, text) : t('lblWebCatalogueNoMatchWithin', within))
+    : (text ? t('lblWebCatalogueNoMatchText', text) : t('lblWebCatalogueNoMatch'));
   return (
     <div class="none-found">
-      <b>No card{within} matches{text ? ` "${text}"` : ''}.</b>
-      <span>{hidden} {hidden === 1 ? 'card matches' : 'cards match'} that this deck can't use.</span>
-      <button onClick={showThem}>Show them</button>
+      <b>{none}</b>
+      <span>{t(hidden === 1 ? 'lblWebCatalogueHiddenOne' : 'lblWebCatalogueHidden', hidden)}</span>
+      <button onClick={showThem}>{t('lblWebEditorShowThem')}</button>
     </div>
   );
 }
 
 // A deck without its commander lists only cards that could be one, and the count line is where that is said
 function shownLine(total: number | undefined, text: string, commandersOnly: boolean): string {
-  if (total === undefined) return 'Reading the cards…';
-  const named = text ? ` named with "${text}"` : '';
-  if (commandersOnly) return `${total} ${total === 1 ? 'card' : 'cards'}${named} that can be your commander. Choose one to see every card.`;
-  return `${total} ${total === 1 ? 'card' : 'cards'}${named}`;
+  if (total === undefined) return t('lblWebCatalogueReading');
+  const one = total === 1;
+  if (commandersOnly) {
+    return text
+      ? t(one ? 'lblWebCatalogueCommandersOneNamed' : 'lblWebCatalogueCommandersNamed', total, text)
+      : t(one ? 'lblWebCatalogueCommandersOne' : 'lblWebCatalogueCommanders', total);
+  }
+  return text
+    ? t(one ? 'lblWebCatalogueCardsOneNamed' : 'lblWebCatalogueCardsNamed', total, text)
+    : t(one ? 'lblWebCatalogueCardsOne' : 'lblWebCatalogueCards', total);
 }
 
 function storedView(): 'cards' | 'table' {
