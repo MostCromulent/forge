@@ -39,7 +39,14 @@ public final class WebMain {
         Localizer.getInstance().initialize(FModel.getPreferences().getPref(FPref.UI_LANGUAGE), ForgeConstants.LANG_DIR);
         // Opened before the cards are read, because reading them takes long enough to look like a failure
         final ServerConsole console = ServerConsole.open(ui, quit::countDown);
-        FModel.initialize(console, prefs -> null);
+        FModel.initialize(console, prefs -> null, false);
+        // Card-based deck generation's data takes seconds to load and serves only its archetype decks, which the deck
+        // list shows once it is in, so the server starts without waiting on it
+        if (!FModel.getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY)) {
+            final Thread deckGen = new Thread(FModel::loadDeckGenMatrix, "DeckGenData");
+            deckGen.setDaemon(true);
+            deckGen.start();
+        }
         // Two tokens: one for the host's own link, one for every link handed to another player
         final WebService service = new WebService(ui, IDLE_MILLIS, quit::countDown, console != null,
                 newToken(), newToken());
