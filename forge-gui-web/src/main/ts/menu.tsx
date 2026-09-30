@@ -13,6 +13,7 @@ import { HeadControls, PageHeader, SetupHead, WAY_NAMES, Wordmark } from './head
 import type { Actions } from './actions';
 import type { Model } from './model';
 import { store, stored } from './storage';
+import { t } from './text';
 
 /** Kept to the server's limit (WebSession.MAX_NAME_LENGTH), so the field stops where the server would refuse. */
 const MAX_NAME_LENGTH = 24;
@@ -37,21 +38,21 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
       <PageHeader>
         <div class="head-right">
           <HeadControls />
-          <button onClick={() => actions.quit()}>Quit Forge</button>
+          <button onClick={() => actions.quit()}>{t('lblWebMenuQuitForge')}</button>
         </div>
       </PageHeader>
       <div class="menu-page">
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
         <div class="start-step" hidden={!!choosing}>
-          <SetupHead trail={[{ label: 'Start' }]} title="How do you want to play?" />
+          <SetupHead trail={[{ label: t('lblWebHeadStart') }]} title={t('lblWebMenuHowToPlay')} />
           <div class="modes">
-            <Mode id="play" name="Play versus AI" blurb="Constructed, draft or sealed, against Forge's AI."
-              status={[decks ? `${decks} decks ready` : 'no decks yet — a precon will do',
-                model.sealedPools ? `${model.sealedPools} sealed ${model.sealedPools === 1 ? 'pool' : 'pools'}` : ''].filter(Boolean).join(' · ')}
+            <Mode id="play" name={t('lblWebMenuVersusAi')} blurb={t('lblWebMenuVersusAiBlurb')}
+              status={[decks ? t('lblWebMenuDecksReady', decks) : t('lblWebMenuNoDecksYet'),
+                model.sealedPools ? t(model.sealedPools === 1 ? 'lblWebMenuSealedPool' : 'lblWebMenuSealedPools', model.sealedPools) : ''].filter(Boolean).join(' · ')}
               onClick={() => setChoosing('play')} />
-            <Mode id="multiplayer" name="Play with friends" blurb="Online multiplayer: open a table and send your friends a link. Up to four seats."
-              status="Gives you a link to share" onClick={() => setChoosing('friends')} />
-            <Mode id="editor" fan={DECK_FAN} name="Decks" blurb="Build, import and change your decks." status={`${decks} decks`}
+            <Mode id="multiplayer" name={t('lblWebMenuWithFriends')} blurb={t('lblWebMenuWithFriendsBlurb')}
+              status={t('lblWebMenuGivesLink')} onClick={() => setChoosing('friends')} />
+            <Mode id="editor" fan={DECK_FAN} name={t('lblDecks')} blurb={t('lblWebMenuDecksBlurb')} status={t('lblWebMenuDecksCount', decks)}
               onClick={() => {
                 changeUi(u => { u.browse = { format: 'Constructed' }; });
                 actions.browseFormat('Constructed');
@@ -69,16 +70,15 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
   const computer = who === 'play';
   return (
     <div class="chooser">
-      <SetupHead trail={[{ label: 'Start', go: back }, { label: WAY_NAMES[who] }]} title="What mode do you want to play?" />
+      <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back }, { label: WAY_NAMES[who] }]} title={t('lblWebMenuWhatMode')} />
       <div class="chooser-kinds">
-        <Kind id="constructed" name="Constructed" onClick={() => actions.openLobby(!computer)}
-          blurb={computer ? 'Bring a deck you have built, or a precon, and play the computer.' : 'Everyone brings a deck they have built.'} />
-        <Kind id="draft" name="Draft" onClick={() => (computer ? actions.limitedOpen('draft', false) : actions.openLimitedTable('draft'))}
-          blurb={computer ? 'Pass packs around a table of seven computer drafters, then build from your picks.'
-            : 'Draft together, up to eight at the table. Computers fill the empty seats.'}
+        <Kind id="constructed" name={t('lblConstructed')} onClick={() => actions.openLobby(!computer)}
+          blurb={t(computer ? 'lblWebMenuConstructedVsAi' : 'lblWebMenuConstructedFriends')} />
+        <Kind id="draft" name={t('lblDraft')} onClick={() => (computer ? actions.limitedOpen('draft', false) : actions.openLimitedTable('draft'))}
+          blurb={t(computer ? 'lblWebMenuDraftVsAi' : 'lblWebMenuDraftFriends')}
           resume={computer && model.draftPools > 0 ? () => actions.limitedOpen('draft', true) : undefined} />
-        <Kind id="sealed" name="Sealed" onClick={() => (computer ? actions.limitedOpen('sealed', false) : actions.openLimitedTable('sealed'))}
-          blurb={computer ? 'Open six packs and build a deck from what you get.' : 'Everyone opens a pool and builds from it.'}
+        <Kind id="sealed" name={t('lblSealed')} onClick={() => (computer ? actions.limitedOpen('sealed', false) : actions.openLimitedTable('sealed'))}
+          blurb={t(computer ? 'lblWebMenuSealedVsAi' : 'lblWebMenuSealedFriends')}
           resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
       </div>
     </div>
@@ -110,7 +110,7 @@ function Kind({ id, name, blurb, resume, onClick }: { id: string; name: string; 
       {resume && (
         <button class="kind-resume" onClick={resume}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M10 9l5 3-5 3z" /></svg>
-          Resume last event
+          {t('lblWebMenuResumeLastEvent')}
         </button>
       )}
     </div>
@@ -194,9 +194,9 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
         actions.setName(name, avatar);
       }}>
         <div class="start-field">
-          <label for="player-name">What should we call you?</label>
+          <label for="player-name">{t('lblWebMenuCallYou')}</label>
           <div class="name-row">
-            <button type="button" class="face" title="Select avatar" aria-label="Select avatar" onClick={() => setPicking(true)}>
+            <button type="button" class="face" title={t('lblWebMenuSelectAvatar')} aria-label={t('lblWebMenuSelectAvatar')} onClick={() => setPicking(true)}>
               <img alt="" src={avatarUrl(avatar)} />
               <span class="face-edit" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><path d="M4.5 19.5h5L20 9a2.6 2.6 0 0 0-3.7-3.7L5.8 15.8z" /></svg>
@@ -210,19 +210,19 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
           <label class="host-box">
             <input type="checkbox" checked={takeHost} onChange={e => setTakeHost(e.currentTarget.checked)} />
             <span class="host-text">
-              <b>Host the game</b>
-              <span>You choose the format and start the match. Everyone else joins the table you open.</span>
+              <b>{t('lblWebMenuHostGame')}</b>
+              <span>{t('lblWebMenuHostGameBlurb')}</span>
             </span>
           </label>
         )}
         <div class="start-buttons">
-          {cancel && <button type="button" onClick={cancel}>Cancel</button>}
-          <button type="submit" class="primary" disabled={!value.trim()}>{cancel ? 'Change' : 'Continue'}</button>
+          {cancel && <button type="button" onClick={cancel}>{t('lblCancel')}</button>}
+          <button type="submit" class="primary" disabled={!value.trim()}>{t(cancel ? 'lblWebMenuChange' : 'lblContinue')}</button>
         </div>
       </form>
       <p class={model.error ? 'menu-note bad' : 'menu-note'}>{model.error ?? ''}</p>
       {picking && (
-        <LookPicker title="Choose your avatar" count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl} current={avatar}
+        <LookPicker title={t('lblWebMenuChooseYourAvatar')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl} current={avatar}
           close={chosen => {
             setPicking(false);
             if (chosen !== null) {
@@ -269,23 +269,22 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
       <Wordmark />
       <section class={`wait-card ${state}`}>
         <ol class="trail">
-          <Step name="Connected" done />
-          <Step name="Named" done={!!model.playerName} />
-          <Step name="Seated" state={state} />
+          <Step name={t('lblWebMenuStepConnected')} done />
+          <Step name={t('lblWebMenuStepNamed')} done={!!model.playerName} />
+          <Step name={t('lblWebMenuStepSeated')} state={state} />
         </ol>
         <div class="wait-head">
           <span class="wait-mark" aria-hidden="true" />
-          <b>{model.joining ? 'Taking your seat' : failed ? 'Could not take a seat' : 'No table open yet'}</b>
+          <b>{t(model.joining ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : 'lblWebMenuNoTableYet')}</b>
         </div>
         <p class="wait-body">
-          {model.joining ? 'A table is making room for you.'
+          {model.joining ? t('lblWebMenuMakingRoom')
             : failed ? model.error
-              : model.canClaimHost ? 'Nobody is hosting. Host the table yourself, or wait here to be seated when someone else opens one.'
-                : 'You are seated as soon as one opens.'}
+              : t(model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
         </p>
         <div class="wait-buttons">
-          {failed && <button onClick={() => actions.join()}>Try again</button>}
-          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>Host the table</button>}
+          {failed && <button onClick={() => actions.join()}>{t('lblWebMenuTryAgain')}</button>}
+          {model.canClaimHost && <button class="primary" onClick={() => actions.claimHost()}>{t('lblWebMenuHostTable')}</button>}
         </div>
       </section>
     </div>

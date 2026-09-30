@@ -2,6 +2,7 @@
 // waits for the answer, so this always replies — cancelling sends an empty choice rather than nothing.
 
 import { useEffect, useRef } from 'preact/hooks';
+import { t } from './text';
 import type { Actions } from './actions';
 import type { HostChoice as Question } from './protocol';
 
@@ -30,13 +31,13 @@ export function HostChoice({ question, actions }: { question: Question; actions:
   return (
     <div class="host-back">
       <div class="host-choice">
-        <h2>{question.message || 'Choose'}</h2>
+        <h2>{question.message || t('lblChoose')}</h2>
         <div class="host-options">
           {question.options.map((name, i) => (
             <button key={i} ref={i === 0 ? first : undefined} class="host-option" onClick={() => answer([i])}>{name}</button>
           ))}
         </div>
-        <footer><button class="host-cancel" onClick={() => answer([])}>Cancel</button></footer>
+        <footer><button class="host-cancel" onClick={() => answer([])}>{t('lblCancel')}</button></footer>
       </div>
     </div>
   );

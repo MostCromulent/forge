@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sleeveUrl } from './looks';
 import { imageUrl } from './images';
+import { t } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Printing, Seat } from './protocol';
@@ -29,25 +30,25 @@ export function SleevePicker({ model, actions, index, seat, close }: {
     <div class="sleeves-back">
       <div class={picking ? 'sleeves picking' : 'sleeves'}>
         <header class="sleeves-head">
-          <h2>{picking ? 'Choose a card' : 'Choose a sleeve'}</h2>
-          <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          <h2>{t(picking ? 'lblWebSleevesChooseCard' : 'lblWebSleevesChooseSleeve')}</h2>
+          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="sleeves-body">
           {/* Every card-art route writes to the seat's deck; with no deck the choice would be silently dropped */}
           <section class={seat.deck ? 'saved' : 'saved no-deck'}>
-            <h3>Card art</h3>
+            <h3>{t('lblWebSleevesCardArt')}</h3>
             <div class="art-grid">
               {model.savedSleeveArt.map(art => (
                 <button key={art.key} class="art-tile" aria-pressed={art.key === seat.sleeveArt} onClick={() => choose(art.key, art.offset)}>
                   <img alt="" src={artUrl(art.key)} style={{ objectPosition: objectPosition(art.offset) }} />
                 </button>
               ))}
-              <button class="art-tile add" title="Pick a card" onClick={() => setPicking(true)}>+</button>
+              <button class="art-tile add" title={t('lblWebSleevesPickCard')} onClick={() => setPicking(true)}>+</button>
             </div>
-            <p class="no-deck-why" hidden={!!seat.deck}>Card art is saved on the deck, so choose a deck for this seat first.</p>
+            <p class="no-deck-why" hidden={!!seat.deck}>{t('lblWebSleevesNeedDeck')}</p>
           </section>
           <section class="numbered">
-            <h3>Sleeves</h3>
+            <h3>{t('lblWebSleevesSleeves')}</h3>
             <div class="sleeve-grid">
               {Array.from({ length: model.looks?.sleeveCount ?? 0 }, (_, i) => (
                 <button key={i} class="sleeve-tile" aria-pressed={!seat.sleeveArt && i === seat.sleeve} onClick={() => {
@@ -94,9 +95,9 @@ function ArtPicker({ model, actions, back, use }: {
   }, [printings]);
   return (
     <section class="art-picker">
-      <button class="back-to-sleeves" onClick={back}>&larr; Back to sleeves</button>
+      <button class="back-to-sleeves" onClick={back}>&larr; {t('lblWebSleevesBackToSleeves')}</button>
       <div class="names">
-        <input ref={find} class="card-find" type="search" placeholder="Search a card by name" autocomplete="off"
+        <input ref={find} class="card-find" type="search" placeholder={t('lblWebSleevesSearchCard')} autocomplete="off"
           onInput={e => setTyped(e.currentTarget.value)} />
         <div class="name-list">
           {typed !== null && model.cardNames.map(n => (
@@ -116,10 +117,10 @@ function ArtPicker({ model, actions, back, use }: {
         ))}
       </div>
       <div class="preview">
-        <p class="preview-title">Sleeve preview</p>
+        <p class="preview-title">{t('lblSleevePreview')}</p>
         <Crop art={picked} offset={offset} setOffset={setOffset} />
-        <p class="dk-hint">Drag the art to move the crop</p>
-        <button class="primary use-art" disabled={!picked} onClick={() => picked && use(picked.key, offset)}>Use this art</button>
+        <p class="dk-hint">{t('lblWebSleevesDragCrop')}</p>
+        <button class="primary use-art" disabled={!picked} onClick={() => picked && use(picked.key, offset)}>{t('lblWebSleevesUseArt')}</button>
       </div>
     </section>
   );

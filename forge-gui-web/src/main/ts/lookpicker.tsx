@@ -1,5 +1,7 @@
 // A grid of every avatar the skin has. close is called with the chosen index, or null when dismissed.
 
+import { t } from './text';
+
 export function LookPicker({ title, count, urlOf, current, close }: {
   title: string; count: number; urlOf: (index: number) => string; current: number;
   close: (chosen: number | null) => void;
@@ -15,7 +17,7 @@ export function LookPicker({ title, count, urlOf, current, close }: {
             </button>
           ))}
         </div>
-        <button onClick={() => close(null)}>Cancel</button>
+        <button onClick={() => close(null)}>{t('lblCancel')}</button>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { HeadControls, PageHeader } from './header';
+import { t, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { Address, Format, LobbyTable } from './protocol';
@@ -46,17 +47,19 @@ function Field({ name, grow, children }: { name: string; grow?: boolean; childre
 }
 
 /** Draft and Sealed, in the shape the server gives a format, so the menu's card reads the same for them. */
-const LIMITED: (Format & { kind: 'draft' | 'sealed' })[] = [
-  { id: 'Draft', kind: 'draft', name: 'Draft', group: 'Limited', desc: 'Players open packs, take one card and pass the rest along until every card is taken. Then each builds a deck of at least 40 cards from their picks and basic lands.',
-    facts: ['40 cards from your picks', 'Life 20'], play: 'Computers fill the empty seats in the draft; only the people at the table play the matches.' },
-  { id: 'Sealed', kind: 'sealed', name: 'Sealed', group: 'Limited', desc: 'Each player opens six packs and builds a deck of at least 40 cards from what they opened, plus basic lands.',
-    facts: ['40 cards from your pool', 'Life 20'], play: 'Each player plays the deck they built from their own pool.' },
-];
+function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
+  return [
+    { id: 'Draft', kind: 'draft', name: t('lblDraft'), group: 'Limited', desc: t('lblWebMatchBarDescDraft'),
+      facts: [t('lblWebMatchBarFactPicks'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlayDraft') },
+    { id: 'Sealed', kind: 'sealed', name: t('lblSealed'), group: 'Limited', desc: t('lblWebMatchBarDescSealed'),
+      facts: [t('lblWebMatchBarFactPool'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlaySealed') },
+  ];
+}
 
 /** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
 export function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
-  return size ? `${size} cards` : 'no deck';
+  return size ? t('lblWebMatchBarDeckSize', size) : t('lblWebMatchBarNoDeck');
 }
 
 /** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
@@ -68,12 +71,18 @@ const GROUP_ICONS: Record<string, ComponentChildren> = {
   Limited: <svg viewBox="0 0 16 16"><path d="M4 2h8l1 3v9H3V5z" /><path d="M3 5h10" /></svg>,
 };
 
+/** What each family of games is called; the server names a format's family by these words. */
+const GROUP_NAMES: Record<string, TextKey> = {
+  Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblWebMatchBarGroupOther', Limited: 'lblLimited',
+};
+
 /**
  * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
  * pointed at, and keeps showing that one while the pointer crosses over to read it. A click on a name chooses it.
  */
 export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
+  const LIMITED = limitedFormats();
   const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
   const [pointed, setPointed] = useState<Format | null>(null);
   // A new kind of event waits until the one begun is over; a format waits out a draft
@@ -100,7 +109,7 @@ export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actio
           <div class="game-choices">
             {groups.map(([group, formats]) => (
               <div key={group} class="game-group">
-                <span class="game-group-name">{group}</span>
+                <span class="game-group-name">{GROUP_NAMES[group] ? t(GROUP_NAMES[group]) : group}</span>
                 {formats.map(f => (
                   <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
                     onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
@@ -117,7 +126,7 @@ export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actio
               <h5>{shown.name}</h5>
               <p class="desc">{shown.desc}</p>
               <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
-              <p class="format-play"><b>In a match:</b> {shown.play}</p>
+              <p class="format-play"><b>{t('lblWebMatchBarInMatch')}</b> {shown.play}</p>
             </div>
           )}
         </div>
@@ -136,13 +145,13 @@ function groupsOf(formats: Format[]): [string, Format[]][] {
 /** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
 export function variantBlocked(lobby: LobbyTable, id: string): string | null {
   const group = lobby.formats.find(f => f.id === lobby.format)?.group;
-  return id === 'Vanguard' && group === 'Other' ? 'Vanguard is off: this format brings its own avatar.' : null;
+  return id === 'Vanguard' && group === 'Other' ? t('lblWebMatchBarVanguardOff') : null;
 }
 
 function VariantsMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const on = lobby.casualVariants.filter(v => lobby.variantsOn.includes(v.id));
   return (
-    <Popup label={on.length ? on.map(v => v.name).join(', ') : <span class="muted">None</span>} disabled={!lobby.host}>
+    <Popup label={on.length ? on.map(v => v.name).join(', ') : <span class="muted">{t('lblNone')}</span>} disabled={!lobby.host}>
       {() => (
         <div class="variant-list">
           {lobby.casualVariants.map(v => {
@@ -186,10 +195,10 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
   const counts = Array.from({ length: lobby.maxSeats - 1 }, (_, i) => i + 2);
   const drafting = lobby.limited?.phase === 'DRAFTING' && !lobby.limited.activeEventId;
   return (
-    <span class="count" role="group" aria-label="Players" onPointerLeave={() => preview(null)}>
+    <span class="count" role="group" aria-label={t('lblPlayers')} onPointerLeave={() => preview(null)}>
       {counts.map(n => (
         <button key={n} aria-pressed={n === lobby.seats.length} disabled={!lobby.host || drafting || n < fewest}
-          title={n < fewest ? 'Fewer seats than the people seated' : ''}
+          title={n < fewest ? t('lblWebMatchBarFewerSeats') : ''}
           onPointerEnter={() => preview(n < lobby.seats.length ? n : null)}
           onClick={() => { preview(null); actions.setPlayerCount(n); }}>{n}</button>
       ))}
@@ -197,15 +206,15 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
   );
 }
 
-const MATCH_LENGTHS = [[1, 'One'], [3, 'Three'], [5, 'Five']] as const;
+const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOfThree'], [5, 'lblWebMatchBarBestOfFive']] as const;
 
 /** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
 function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
-    <span class="count" role="group" aria-label="Match">
-      {MATCH_LENGTHS.map(([n, word]) => (
-        <button key={n} aria-pressed={n === lobby.gamesPerMatch} disabled={!lobby.host} title={`Best-of-${word}`}
-          onClick={() => actions.setMatchLength(n)}>Bo{n}</button>
+    <span class="count" role="group" aria-label={t('lblWebMatchBarMatch')}>
+      {MATCH_LENGTHS.map(([n, name]) => (
+        <button key={n} aria-pressed={n === lobby.gamesPerMatch} disabled={!lobby.host} title={t(name)}
+          onClick={() => actions.setMatchLength(n)}>{t('lblWebMatchBarBestOfShort', n)}</button>
       ))}
     </span>
   );
@@ -220,15 +229,15 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
   const group = (name: string) => model.cardPools.find(g => g.name === name)?.formats ?? [];
   return (
-    <Popup label={lobby.cardPool ?? 'Any cards'} disabled={!lobby.host} wide
+    <Popup label={lobby.cardPool ?? t('lblWebMatchBarAnyCards')} disabled={!lobby.host} wide
       onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>
       {close => {
         const choose = (name: string | null) => { actions.setCardPool(name); close(); };
         return (
           <div class="pool-picker">
-            <span class="field-name">Any cards, or a format</span>
+            <span class="field-name">{t('lblWebMatchBarAnyOrFormat')}</span>
             <div class="pool-tiles">
-              <button class="pool-tile" aria-pressed={!lobby.cardPool} onClick={() => choose(null)}><b>Any cards</b><span>No limit</span></button>
+              <button class="pool-tile" aria-pressed={!lobby.cardPool} onClick={() => choose(null)}><b>{t('lblWebMatchBarAnyCards')}</b><span>{t('lblWebMatchBarNoLimit')}</span></button>
               {group('Sanctioned').map(name => (
                 <button key={name} class="pool-tile" aria-pressed={lobby.cardPool === name} onClick={() => choose(name)}>
                   <b>{name}</b><span>{lines.get(name) ?? ''}</span>
@@ -236,7 +245,7 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
               ))}
             </div>
             {group('Casual').length > 0 && <>
-              <span class="field-name">Casual</span>
+              <span class="field-name">{t('lblWebMatchBarCasual')}</span>
               <div class="pool-chips">
                 {group('Casual').map(name => (
                   <button key={name} class="pool-chip" aria-pressed={lobby.cardPool === name} title={lines.get(name)} onClick={() => choose(name)}>{name}</button>
@@ -245,10 +254,10 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
             </>}
             {group('Block').length > 0 && (
             <div class="pool-more">
-                <label>A block
+                <label>{t('lblWebMatchBarBlock')}
                   <span class="pill-select"><select value={group('Block').includes(lobby.cardPool ?? '') ? lobby.cardPool : ''}
                     onChange={e => choose(e.currentTarget.value)}>
-                    <option value="" disabled>Choose a block</option>
+                    <option value="" disabled>{t('lblWebMatchBarChooseBlock')}</option>
                     {group('Block').map(name => <option key={name} value={name}>{name}</option>)}
                   </select></span>
                 </label>
@@ -271,11 +280,11 @@ export function MatchBar({ model, lobby, actions, preview }: {
   return (
     <div class="match-bar">
       <div class="fields">
-        <Field name="Mode"><GameMenu lobby={lobby} actions={actions} /></Field>
-        {lobby.format === 'Constructed' && <Field name="Format"><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
-        <Field name="Players"><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
-        <Field name="Match"><MatchLength lobby={lobby} actions={actions} /></Field>
-        <Field name="Variants" grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
+        <Field name={t('lblWebMatchBarMode')}><GameMenu lobby={lobby} actions={actions} /></Field>
+        {lobby.format === 'Constructed' && <Field name={t('lblFormat')}><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
+        <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        <Field name={t('lblWebMatchBarMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
+        <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
       </div>
     </div>
   );
@@ -287,10 +296,10 @@ export function TableHeader({ model, lobby, actions }: { model: Model; lobby: Lo
     <PageHeader>
       <div class="head-right">
         {lobby.shareable && (
-          <Popup label="Invite">
+          <Popup label={t('lblWebMatchBarInvite')}>
             {() => (
               <div class="invite">
-                <b>Others join at</b>
+                <b>{t('lblWebMatchBarOthersJoinAt')}</b>
                 <Addresses list={model.addresses ?? []} />
               </div>
             )}
@@ -306,7 +315,7 @@ export function TableHeader({ model, lobby, actions }: { model: Model; lobby: Lo
 function Addresses({ list }: { list: Address[] }) {
   const [copied, setCopied] = useState<string | null>(null);
   if (!list.length) {
-    return <p class="muted">Working out your address…</p>;
+    return <p class="muted">{t('lblWebMatchBarWorkingOutAddress')}</p>;
   }
   return <>{list.map(a => (
     <button key={a.url} class="share-row" onClick={async () => {
@@ -314,7 +323,7 @@ function Addresses({ list }: { list: Address[] }) {
       setCopied(a.url);
     }}>
       <span class="share-label">{a.label}</span><code class="share-url">{a.url}</code>
-      <span class="share-copy">{copied === a.url ? 'Copied' : 'Copy'}</span>
+      <span class="share-copy">{t(copied === a.url ? 'lblWebMatchBarCopied' : 'lblCopy')}</span>
     </button>
   ))}</>;
 }

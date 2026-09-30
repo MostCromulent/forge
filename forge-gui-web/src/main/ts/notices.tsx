@@ -1,5 +1,6 @@
 // Messages from the server in the corner of the screen. An error stays until clicked; anything else goes by itself.
 
+import { t } from './text';
 import type { Model } from './model';
 import type { Notice } from './protocol';
 
@@ -19,7 +20,7 @@ export function Notices({ model, dismiss }: { model: Model; dismiss: (id: number
     <div key={id} class={notice.error ? 'notice error' : 'notice'} onClick={() => dismiss(id)}>
       <b>{notice.title ?? ''}</b>
       {notice.message && <div>{notice.message}</div>}
-      {view && <button class="notice-view" onClick={view}>{label ?? 'View cards'}</button>}
+      {view && <button class="notice-view" onClick={view}>{label ?? t('lblWebNoticesViewCards')}</button>}
     </div>
   ))}</>;
 }

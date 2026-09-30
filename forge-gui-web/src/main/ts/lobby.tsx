@@ -18,6 +18,7 @@ import { Pips } from './symbols';
 import { EventHead } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { SetupHead, WAY_NAMES } from './header';
+import { t, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from './protocol';
@@ -44,15 +45,15 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
     changeUi(u => { u.menuChoice = to; });
     actions.leaveLobby();
   } : undefined;
-  const kind = lim ? (lim.kind === 'draft' ? 'Draft' : 'Sealed') : 'Constructed';
+  const kind = t(lim ? (lim.kind === 'draft' ? 'lblDraft' : 'lblSealed') : 'lblConstructed');
   return (
     <>
       <TableHeader model={model} lobby={lobby} actions={actions} />
       <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
-        <SetupHead trail={[{ label: 'Start', go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
-          title={lobby.host ? 'Set up the game' : lim?.activeEventId ? 'Build your deck, then play'
-            : lim?.started ? (lim.kind === 'draft' ? 'The draft is on' : 'Opening the packs') : 'The host is setting up the game'} />
+        <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
+          title={t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
+            : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />
         {/* A Draft or Sealed table is its event, which carries the mode and players itself; a new kind of event is set up
             afresh, so its dialog opens again */}
         {lim
@@ -72,7 +73,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       )}
       {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
-        <LookPicker title={`Choose an avatar for ${seat.name}`} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
+        <LookPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
           current={seat.avatar} close={chosen => {
             if (chosen !== null) actions.setSeat(picker.seat, { avatar: chosen });
             close();
@@ -83,7 +84,10 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
 }
 
 // The seat kinds a netplay lobby can hold; offline shows only the first two
-const KIND: Record<string, string> = { LOCAL: 'You', AI: 'Computer', OPEN: 'Open seat', REMOTE: 'Another player' };
+const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblWebLobbyKindComputer', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
+
+/** What a seat of this type is called, or the type itself for one this page does not know. */
+const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
 
 /** A number below count other than current, at random; current itself when it is the only one. */
 function another(current: number, count: number): number {
@@ -138,8 +142,8 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
     <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
       <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
-        <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : 'Choose a deck'}
-          data-label={seat.mayEdit ? 'Choose a deck' : (waiting ? '' : 'No deck')}
+        <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}
+          data-label={seat.mayEdit ? t('lblWebLobbyChooseDeck') : (waiting ? '' : t('lblWebLobbyNoDeck'))}
           disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}
           // A new sleeve dealt under a commander would not be seen
           onContextMenu={e => { if (hasDeck && seat.mayEdit && !commander) { e.preventDefault(); randomSleeve(); } }}>
@@ -147,60 +151,60 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
             style={commander ? undefined : { objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
-        <button class="sleeve-style" title="Choose a sleeve" hidden={!hasDeck || !seat.mayEdit}
-          onClick={() => choose('sleeve')}>Change Sleeve</button>
+        <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
+          onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>
       <div class="plate-body">
         <div class="who">
           {/* A seat nobody has taken has no face to show */}
-          <button class="avatar" title="Choose an avatar" hidden={waiting} disabled={!seat.mayEdit}
+          <button class="avatar" title={t('lblWebLobbyChooseAvatar')} hidden={waiting} disabled={!seat.mayEdit}
             onClick={() => choose('avatar')} onContextMenu={e => { if (seat.mayEdit) { e.preventDefault(); randomAvatar(); } }}>
             <img alt="" src={avatarUrl(seat.avatar)} /></button>
           <SeatName seat={seat} rename={name => actions.setSeat(index, { name })} />
           {watchable
-            ? <button class="kind" title="Choose who plays this seat" aria-pressed={ui.spectate}
-                onClick={() => changeUi(u => { u.spectate = !u.spectate; })}>{ui.spectate ? 'Computer' : KIND.LOCAL}</button>
-            : <button class="kind" disabled={!swappable} title={swappable ? 'Swap between a computer and an open seat' : ''}
+            ? <button class="kind" title={t('lblWebLobbyWhoPlaysSeat')} aria-pressed={ui.spectate}
+                onClick={() => changeUi(u => { u.spectate = !u.spectate; })}>{t(ui.spectate ? 'lblWebLobbyKindComputer' : KIND.LOCAL)}</button>
+            : <button class="kind" disabled={!swappable} title={swappable ? t('lblWebLobbySwapSeat') : ''}
                 onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
-                {mine ? KIND.LOCAL : (KIND[seat.type] ?? seat.type)}
+                {mine ? t(KIND.LOCAL) : kindName(seat.type)}
               </button>}
-          {seat.role && <span class={`role ${seat.role}`}>{seat.role === 'archenemy' ? 'Archenemy' : 'Hero'}</span>}
+          {seat.role && <span class={`role ${seat.role}`}>{t(seat.role === 'archenemy' ? 'lblArchenemy' : 'lblWebLobbyHero')}</span>}
           {lobby.host && seat.role === 'hero' && (
-            <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>Make archenemy</button>
+            <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>{t('lblWebLobbyMakeArchenemy')}</button>
           )}
-          <button class="drop" title="Remove this seat" hidden={mine || !lobby.host || lobby.seats.length <= 2}
+          <button class="drop" title={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.seats.length <= 2}
             onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
-        {watchable && ui.spectate && <p class="seat-note">The computer plays this seat. You watch.</p>}
+        {watchable && ui.spectate && <p class="seat-note">{t('lblWebLobbyComputerPlaysSeat')}</p>}
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
         {beforePools && !waiting && (mine
           ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={lim.started}
-              aria-pressed={seat.ready} title={seat.ready ? 'Press again if you are not ready after all' : ''}
-              onClick={() => actions.ready(!seat.ready)}>{seat.ready ? '✓ Ready' : 'Press when ready'}</button>
-          : <p class="deck-row fixed">{seat.ready ? 'Ready' : 'Not ready yet'}</p>)}
+              aria-pressed={seat.ready} title={seat.ready ? t('lblWebLobbyNotReadyAfterAll') : ''}
+              onClick={() => actions.ready(!seat.ready)}>{t(seat.ready ? 'lblWebLobbyReadyTick' : 'lblWebLobbyPressWhenReady')}</button>
+          : <p class="deck-row fixed">{t(seat.ready ? 'lblReady' : 'lblWebLobbyNotReadyYet')}</p>)}
         {/* Sitting out matters only with a match to fill from more players than it needs */}
         {lim?.activeEventId && lobby.host && !waiting && lobby.seats.filter(s => s.type !== 'OPEN').length > 2 && (
           <label class="sits-out"><input type="checkbox" checked={seat.benched}
-            onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> Sits out the next match</label>
+            onChange={e => actions.benchSeat(index, e.currentTarget.checked)} /> {t('lblWebLobbySitsOut')}</label>
         )}
         {/* With no deck yet the row offers a random one; the sleeve beside it already offers to choose one */}
         {randomable && !hasDeck && (
-          <button class="deck-row random-row" onClick={random}><Dice />Random deck</button>
+          <button class="deck-row random-row" onClick={random}><Dice />{t('lblWebLobbyRandomDeck')}</button>
         )}
         <div class="deck-line" hidden={dealt || beforePools || (!hasDeck && !waiting)}>
           <button class={`deck-row${hasDeck ? '' : ' unset'}`} disabled={!seat.mayEdit} onClick={() => choose('deck')}>
             <span class="pips"><Pips colors={seat.colors} /></span>
-            <span class="deck-name" title={seat.deckName ?? ''}>{seat.deckName ?? (waiting ? 'Waiting for a player' : '')}</span>
+            <span class="deck-name" title={seat.deckName ?? ''}>{seat.deckName ?? (waiting ? t('lblWebLobbyWaitingForPlayer') : '')}</span>
             <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
           </button>
           {randomable && hasDeck && (
-            <button class="random-deck" title="Deal another random deck" aria-label="Random deck" onClick={random}><Dice /></button>
+            <button class="random-deck" title={t('lblWebLobbyDealAnotherDeck')} aria-label={t('lblWebLobbyRandomDeck')} onClick={random}><Dice /></button>
           )}
         </div>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
-        {seat.planes && <ExtraRow name="Planes" extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
-        {seat.schemes && <ExtraRow name="Schemes" extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
-        {seat.vanguard && <ExtraRow name="Avatar" extra={seat.vanguard} mayEdit={seat.mayEdit} open={() => choose('vanguard')} />}
+        {seat.planes && <ExtraRow name={t('lblPlanes')} extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
+        {seat.schemes && <ExtraRow name={t('lblSchemes')} extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
+        {seat.vanguard && <ExtraRow name={t('lblAvatar')} counted={false} extra={seat.vanguard} mayEdit={seat.mayEdit} open={() => choose('vanguard')} />}
       </div>
     </div>
   );
@@ -214,13 +218,15 @@ function Dice() {
 }
 
 /** A planar deck, scheme deck or avatar on a seat: a plain row that opens its picker, with its fault when it has one. */
-function ExtraRow({ name, extra, mayEdit, open }: { name: string; extra: SeatExtra; mayEdit: boolean; open: () => void }) {
+function ExtraRow({ name, counted = true, extra, mayEdit, open }: {
+  name: string; counted?: boolean; extra: SeatExtra; mayEdit: boolean; open: () => void;
+}) {
   return (
     <button class={`seat-extra${extra.problem ? ' warn' : ''}`} disabled={!mayEdit} onClick={open}>
       <span class="extra-kind">{name}</span>
       <span class="extra-label">{extra.label}</span>
       {extra.detail ? <span class="extra-detail">{extra.detail}</span>
-        : extra.count > 0 && name !== 'Avatar' && <span class="extra-count">{extra.count}</span>}
+        : extra.count > 0 && counted && <span class="extra-count">{extra.count}</span>}
       {extra.problem && <span class="extra-problem">{extra.problem}</span>}
     </button>
   );
@@ -232,7 +238,7 @@ function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void
   // Typing edits the page, not what Preact drew, so each edit ends by drawing the field afresh: it then shows
   // the name as the server has it, the new one if the server takes it and this one if not
   const [edits, setEdits] = useState(0);
-  const name = seat.name || KIND[seat.type] || seat.type;
+  const name = seat.name || kindName(seat.type);
   if (!seat.mine && !(seat.mayEdit && seat.type === 'AI')) {
     return <span class="who-name" hidden={!seat.name}>{name}</span>;
   }
@@ -253,15 +259,15 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   if (!lobby.host) {
     return (
       <div class="play-row">
-        <p class="match-line">{problems.length ? problems[0] : 'Waiting for the host to start the match.'}</p>
+        <p class="match-line">{problems.length ? problems[0] : t('lblWebLobbyWaitingForHost')}</p>
       </div>
     );
   }
   return (
     <div class="play-row">
-      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start} title="Enter starts the match">Play</button>
+      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start} title={t('lblWebLobbyEnterStarts')}>{t('lblWebLobbyPlay')}</button>
       <div class="not-yet" hidden={lobby.canStart}>
-        <b>Not playable yet</b>
+        <b>{t('lblWebLobbyNotPlayableYet')}</b>
         <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
       </div>
       <IllegalDecks lobby={lobby} />
@@ -274,11 +280,9 @@ function IllegalDecks({ lobby }: { lobby: LobbyTable }) {
   if (!lobby.canStart || !lobby.illegalDecks.length) return null;
   return (
     <div class="not-yet warn">
-      <b>Not legal for this format</b>
+      <b>{t('lblWebLobbyNotLegal')}</b>
       <ul>{lobby.illegalDecks.map(p => <li key={p}>{p}</li>)}</ul>
-      <p class="hint">{lobby.legalityEnforced
-        ? 'Play will ask whether to ignore this and play anyway.'
-        : 'Deck legality is not enforced in the options, so these decks play as they are.'}</p>
+      <p class="hint">{t(lobby.legalityEnforced ? 'lblWebLobbyAskIgnoreIllegal' : 'lblWebLobbyLegalityNotEnforced')}</p>
     </div>
   );
 }

@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { normalize } from './search';
+import { t, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ExtraChoice, Seat } from './protocol';
@@ -11,7 +12,7 @@ import type { ExtraChoice, Seat } from './protocol';
 export type ExtraKind = 'planes' | 'schemes' | 'vanguard';
 
 const SECTION: Record<ExtraKind, string> = { planes: 'Planes', schemes: 'Schemes', vanguard: 'Avatar' };
-const TITLE: Record<ExtraKind, string> = { planes: 'Choose a planar deck', schemes: 'Choose a scheme deck', vanguard: 'Choose an avatar' };
+const TITLE: Record<ExtraKind, TextKey> = { planes: 'lblWebLobbyChoosePlanarDeck', schemes: 'lblWebLobbyChooseSchemeDeck', vanguard: 'lblWebLobbyChooseVanguard' };
 
 /** "+1" or "−3", as the modifiers are printed. */
 export const signed = (n: number): string => (n < 0 ? `−${-n}` : `+${n}`);
@@ -32,18 +33,18 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
     <div class="finder-back" onClick={e => { if (e.target === e.currentTarget) close(); }}>
       <div class={`finder extra-picker ${kind}`}>
         <header class="finder-head">
-          <h2>{TITLE[kind]}</h2>
-          <span class="seat-note">for {seat.name}</span>
-          <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          <h2>{t(TITLE[kind])}</h2>
+          <span class="seat-note">{t('lblWebLobbyForSeat', seat.name ?? '')}</span>
+          <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="extra-body">
-          <input class="find" type="search" placeholder="Search by name" value={query} onInput={e => setQuery(e.currentTarget.value)} />
-          {!listed ? <p class="none">Reading the choices…</p>
+          <input class="find" type="search" placeholder={t('lblWebLobbySearchByName')} value={query} onInput={e => setQuery(e.currentTarget.value)} />
+          {!listed ? <p class="none">{t('lblWebLobbyReadingChoices')}</p>
             : kind === 'vanguard' ? <AvatarGrid choices={shown} use={use} />
               : <div class="extra-list">{shown.map(c => (
                 <button key={c.key} class={`extra-choice${c.problem ? ' illegal' : ''}`} title={c.problem ?? ''} onClick={() => use(c)}>
                   <span class="name">{c.label}</span>
-                  <span class="count">{c.count != null ? `${c.count} cards` : ''}</span>
+                  <span class="count">{c.count != null ? t('lblWebLobbyExtraCount', c.count) : ''}</span>
                   {c.problem && <span class="legal no">{c.problem}</span>}
                 </button>
               ))}</div>}
@@ -61,7 +62,7 @@ function AvatarGrid({ choices, use }: { choices: ExtraChoice[]; use: (c: ExtraCh
         <button key={c.key} class="avatar-choice" title={c.label} onClick={() => use(c)}>
           {c.image ? <img alt="" src={imageUrl(c.image)} loading="lazy" /> : <span class="plain">{c.label}</span>}
           <span class="avatar-name">{c.label}</span>
-          {c.hand != null && c.life != null && <span class="mods">hand {signed(c.hand)} · life {signed(c.life)}</span>}
+          {c.hand != null && c.life != null && <span class="mods">{t('lblWebLobbyAvatarMods', signed(c.hand), signed(c.life))}</span>}
         </button>
       ))}
     </div>
