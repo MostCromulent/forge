@@ -146,7 +146,8 @@ function Crop({ art, offset, setOffset }: { art: Printing | null; offset: number
         setOffset(Math.max(0, Math.min(1000, Math.round(from - (moved * 1000) / travel))));
       }}
       onPointerUp={e => e.currentTarget.releasePointerCapture(e.pointerId)}>
-      <img alt="" src={art ? artUrl(art.key) : undefined} style={{ objectPosition: objectPosition(offset) }} />
+      {/* Not draggable, or the browser's own image drag takes the pointer and the crop never moves */}
+      <img alt="" draggable={false} src={art ? artUrl(art.key) : undefined} style={{ objectPosition: objectPosition(offset) }} />
     </div>
   );
 }
