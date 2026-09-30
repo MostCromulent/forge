@@ -49,9 +49,10 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere .rim, #hand .card.elsewhere .halo {
   display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
 }
-#hand .card.elsewhere .rim { inset: -3px; border: 3px solid var(--zone-glow); border-radius: 9px; opacity: .92; }
+/* Thinner than the castable outline, so it reads as where the card is rather than as a card you can cast */
+#hand .card.elsewhere .rim { inset: -2px; border: 1.5px solid var(--zone-glow); border-radius: 8px; opacity: .92; }
 #hand .card.elsewhere .halo {
-  inset: -6px; border: 7px solid color-mix(in srgb, var(--zone-glow) 42%, transparent); border-radius: 15px;
+  inset: -5px; border: 5px solid color-mix(in srgb, var(--zone-glow) 42%, transparent); border-radius: 13px;
   filter: url(#zone-warp-a) blur(3px);
 }
 /* Three copies of the filter at different points in the loop, so neighbours in the hand are never in step */
@@ -59,8 +60,8 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.elsewhere:nth-child(3n) .halo { filter: url(#zone-warp-c) blur(3px); }
 /* The castable outline starts at the card's edge and paints over whatever is under it, so the rim moves out far
    enough that the two nest rather than one hiding the other */
-#hand .card.elsewhere.playable:not(.selectable) .rim { inset: -5px; border-radius: 11px; }
-#hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -6px; border-radius: 12px; }
+#hand .card.elsewhere.playable:not(.selectable) .rim { inset: -4px; border-radius: 10px; }
+#hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -5px; border-radius: 11px; }
 #hand .card.elsewhere:hover .rim { opacity: 1; }
 #hand .card.elsewhere:hover .halo { border-color: color-mix(in srgb, var(--zone-glow) 62%, transparent); }
 html[data-motion="reduced"] #hand .card.elsewhere .halo { filter: blur(6px); }
