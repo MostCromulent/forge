@@ -8,6 +8,7 @@ import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
 import type { CardView, PromptButton, ZoneType } from './protocol';
+import { t, type TextKey } from './text';
 
 // Looking through a zone: a dialog over a dimmed board, because the board has nothing to say while you are
 // reading a library of thirty. It folds to a bar instead of closing, so the board can be read without losing
@@ -21,7 +22,22 @@ interface Panel {
   forced: boolean;
 }
 
-const SORTS: [ZoneSort, string][] = [['order', 'Zone order'], ['name', 'By name'], ['type', 'By type']];
+const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType']];
+
+/** Each zone's name as the page shows it. */
+const ZONE_NAMES: Record<ZoneType, TextKey> = {
+  Hand: 'lblWebZoneHand', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblWebZoneBattlefield',
+  Exile: 'lblWebZoneExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',
+  Sideboard: 'lblWebZoneSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblWebZoneSchemeDeck',
+  PlanarDeck: 'lblWebZonePlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
+  ContraptionDeck: 'lblWebZoneContraptionDeck', Subgame: 'lblWebZoneSubgame', ExtraHand: 'lblWebZoneExtraHand',
+  None: 'lblWebZoneNone',
+};
+
+export function zoneTitle(zoneName: ZoneType): string {
+  const key = ZONE_NAMES[zoneName];
+  return key ? t(key) : zoneName;
+}
 
 export function togglePile(playerKey: number, zoneName: ZoneType): void {
   const k = `${playerKey}/${zoneName}`;
@@ -76,22 +92,28 @@ function createPanel(): HTMLElement {
   const el = document.createElement('section');
   el.className = 'zone-panel';
   el.innerHTML = '<header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
-    + '<input class="zone-find" type="search" placeholder="Search this zone" aria-label="Search this zone">'
-    + '<label class="zone-sort">Sort<select></select></label>'
-    + '<button class="zone-fold">Show board</button></header>'
+    + '<input class="zone-find" type="search">'
+    + '<label class="zone-sort"><select></select></label>'
+    + '<button class="zone-fold"></button></header>'
     + '<div class="cards"></div>'
-    + '<footer><span class="zone-hint"></span><button class="zone-done primary">Done</button>'
+    + '<footer><span class="zone-hint"></span><button class="zone-done primary"></button>'
     + '<button class="zone-answer ok primary"><span class="label"></span><kbd>Space</kbd></button></footer>';
+  const find = q<HTMLInputElement>(el, '.zone-find');
+  find.placeholder = t('lblWebZoneSearch');
+  find.setAttribute('aria-label', t('lblWebZoneSearch'));
+  q(el, '.zone-sort').prepend(t('lblSort'));
+  q(el, '.zone-fold').textContent = t('lblWebZoneShowBoard');
+  q(el, '.zone-done').textContent = t('lblDone');
   const sort = q<HTMLSelectElement>(el, '.zone-sort select');
-  sort.innerHTML = SORTS.map(([id, name]) => `<option value="${id}">${name}</option>`).join('');
+  for (const [id, name] of SORTS) sort.append(new Option(t(name), id));
   return el;
 }
 
 function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, select: CardClick): void {
   const player = model.objects.get(p.player);
   const cards = shown(model, zone(model, player, p.zone));
-  q(el, '.zone-who').textContent = `${player?.Name ?? ''} · ${p.zone}`;
-  q(el, '.zone-count').textContent = `${cards.length} ${cards.length === 1 ? 'card' : 'cards'}`;
+  q(el, '.zone-who').textContent = t('lblWebZonePlayersZone', player?.Name ?? '', zoneTitle(p.zone));
+  q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebZoneOneCard' : 'lblWebZoneCards', cards.length);
   const find = q<HTMLInputElement>(el, '.zone-find');
   if (find.value !== ui.zoneSearch) {
     find.value = ui.zoneSearch;
@@ -110,7 +132,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   // The dialog covers the prompt, so one the game put up carries the prompt's question and its OK. Not its other
   // button: that is the prompt's way out of priority, such as End turn, which means nothing about the cards shown.
   const prompt = p.forced ? model.prompt : null;
-  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || 'The game is waiting on your choice.' : '';
+  q(el, '.zone-hint').textContent = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());
   q(el, '.zone-answer.ok kbd').textContent = keyName(boundKeys().ok);
   reconcile(q(el, '.cards'), cards, c => c.$key, () => createCard(select), (c, card) => updateCard(c, model, card));
@@ -143,17 +165,19 @@ function shown(model: Model, cards: CardView[]): CardView[] {
 function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   const first = panels[0];
   const player = model.objects.get(first.player);
-  const count = panels.length > 1 ? `${panels.length} zones` : `${zone(model, player, first.zone).length} cards`;
+  const count = panels.length > 1 ? t('lblWebZoneNZones', panels.length) : t('lblWebZoneCards', zone(model, player, first.zone).length);
   // Kept across renders, so a click is not lost to a render between the press and the release
   let bar = root.querySelector<HTMLElement>(':scope > .zone-bar');
   if (!bar) {
     bar = document.createElement('section');
     bar.className = 'zone-bar';
     bar.innerHTML = '<span class="zone-dot" aria-hidden="true"></span><b></b><span class="zone-count"></span>'
-      + '<button class="zone-unfold primary">Show cards</button>'
-      + '<button class="zone-shut" aria-label="Close the zone">×</button>';
+      + '<button class="zone-unfold primary"></button>'
+      + '<button class="zone-shut">×</button>';
+    q(bar, '.zone-unfold').textContent = t('lblWebZoneShowCards');
+    q(bar, '.zone-shut').setAttribute('aria-label', t('lblWebZoneClose'));
   }
-  q(bar, 'b').textContent = panels.length > 1 ? 'Open zones' : `${player?.Name ?? ''} · ${first.zone}`;
+  q(bar, 'b').textContent = panels.length > 1 ? t('lblWebZoneOpenZones') : t('lblWebZonePlayersZone', player?.Name ?? '', zoneTitle(first.zone));
   q(bar, '.zone-count').textContent = count;
   q(bar, '.zone-unfold').onclick = () => changeUi(u => { u.zonesMinimised = false; });
   // Folding away is not closing, so the way out is still only offered for the ones the player opened

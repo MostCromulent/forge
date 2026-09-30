@@ -8,6 +8,7 @@ import { logTints } from './log';
 import { setting } from './settings';
 import { byId, q } from './dom';
 import type { CardView, PlayerView, ZoneType } from './protocol';
+import { t } from './text';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
 function manaValue(cost: string | undefined): number {
@@ -77,7 +78,7 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     const owner = deref(model, c.Owner);
     const foreign = !!owner && !!player && owner.$key !== player.$key;
     el.classList.toggle('foreign', foreign);
-    q(el, '.owned-by').textContent = foreign ? `${owner?.Name ?? ''}'s` : '';
+    q(el, '.owned-by').textContent = foreign ? t('lblWebHandOwnedBy', owner?.Name ?? '') : '';
     if (foreign) el.style.setProperty('--owner-tint', tints.find(t => t.name === owner?.Name)?.colour ?? 'var(--muted)');
     // A card another player may look at has been revealed to them
     el.classList.toggle('revealed', (c.PlayerMayLook ?? []).some(r => !!r && !model.localPlayers.includes(r.ref)));

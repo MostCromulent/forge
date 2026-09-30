@@ -5,7 +5,7 @@ import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
 import { commanderTax, game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';
 import { renderHand } from './hand';
-import { renderZones, togglePile } from './zones';
+import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
 import { followPointer, hoverPlayer, hoverable } from './detail';
 import { renderStack } from './stack';
@@ -25,6 +25,7 @@ import type { Actions } from './actions';
 import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 import { notePick } from './overlay';
+import { t, type TextKey } from './text';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
 const MANA: [number, string][] = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G'], [32, 'C']];
@@ -51,7 +52,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   if (choice && !choseStarter) {
     choseStarter = true;
     const mine = me(model);
-    if (choice === 'toss' && mine) revealFirst(model, mine.$key, 'You won the coin toss');
+    if (choice === 'toss' && mine) revealFirst(model, mine.$key, t('lblWebBoardWonCoinToss'));
   }
   noticeLosses(model, actions);
   // A prompt offering cards or players to pick dims everything else (board.css); paying a cost is not such a pick
@@ -152,11 +153,15 @@ function renderOut(model: Model, actions: Actions): void {
   banner = document.createElement('div');
   banner.id = 'out-banner';
   banner.setAttribute('role', 'status');
-  banner.innerHTML = `<span class="skull">${SKULL}</span><div><b>You're out</b><p>The game goes on between the others.</p></div>`
-    + '<button class="watch">Keep watching</button>' + (model.networked ? '' : '<button class="leave primary">Leave match</button>');
+  banner.innerHTML = `<span class="skull">${SKULL}</span><div><b></b><p></p></div>`
+    + '<button class="watch"></button>' + (model.networked ? '' : '<button class="leave primary"></button>');
+  q(banner, 'b').textContent = t('lblWebBoardYoureOut');
+  q(banner, 'p').textContent = t('lblWebBoardGameGoesOn');
+  q(banner, '.watch').textContent = t('lblWebBoardKeepWatching');
   q(banner, '.watch').onclick = () => banner?.remove();
   const leave = banner.querySelector<HTMLButtonElement>('.leave');
   if (leave) {
+    leave.textContent = t('lblWebBoardLeaveMatch');
     leave.onclick = () => {
       actions.quitMatch();
       actions.leave();
@@ -182,20 +187,26 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   if (!root.firstChild) {
     root.innerHTML = `
       <div class="player">
-        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark" title="Out of the game">${SKULL}</span><span class="ai-badge" title="Computer player">${ROBOT_ICON}</span><span class="cmdr-arc" hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48"/></svg></span><span class="cmdr-chip" hidden>${SWORDS}<b></b></span><span class="life"></span></div>
-        <div class="name"><span class="who"></span><span class="role-tag" hidden>Archenemy</span></div>
+        <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark">${SKULL}</span><span class="ai-badge">${ROBOT_ICON}</span><span class="cmdr-arc" hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48"/></svg></span><span class="cmdr-chip" hidden>${SWORDS}<b></b></span><span class="life"></span></div>
+        <div class="name"><span class="who"></span><span class="role-tag" hidden></span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         <div class="player-counters"></div>
         <div class="emblems"></div>
         <div class="schemes-ongoing"></div>
         <div class="zone-tiles"></div>
-        <div class="mana" hidden><span class="mana-label">Floating mana</span><div class="mana-chips"></div></div>
+        <div class="mana" hidden><span class="mana-label"></span><div class="mana-chips"></div></div>
       </div>
       <div class="battlefield">
         <div class="row"><div class="group lands"></div><div class="group support"></div></div>
         <div class="row together"><div class="group creatures"></div><div class="group far"></div></div>
       </div>`;
+    q(root, '.skull-mark').title = t('lblWebBoardOutOfGame');
+    q(root, '.ai-badge').title = t('lblWebBoardComputerPlayer');
+    q(root, '.role-tag').textContent = t('lblWebBoardArchenemy');
+    q(root, '.mana-label').textContent = t('lblWebBoardFloatingMana');
     const avatarEl = q(root, '.avatar');
+    // Said by the mark board.css draws on the portrait of whoever goes first
+    avatarEl.dataset.firstLabel = t('lblWebBoardFirst');
     avatarEl.onclick = () => {
       notePick(Number(root.dataset.player));
       actions.selectPlayer(Number(root.dataset.player));
@@ -267,8 +278,8 @@ function showCommanderDamage(avatar: HTMLElement, model: Model, player: PlayerVi
   circle.setAttribute('stroke-dasharray', `${around * Math.min(top.value, COMMANDER_LETHAL) / COMMANDER_LETHAL} ${around}`);
   q(chip, 'b').textContent = String(top.value);
   const commander = deref(model, top.card);
-  const name = (commander ? stateOf(model, commander).Name : undefined) ?? 'a commander';
-  chip.title = `${top.value} of ${COMMANDER_LETHAL} commander damage from ${name}`;
+  const name = (commander ? stateOf(model, commander).Name : undefined) ?? t('lblWebBoardACommander');
+  chip.title = t('lblWebBoardCommanderDamageFrom', top.value, COMMANDER_LETHAL, name);
 }
 
 // Mana in the pool is spent or lost when the step ends, so it is shown apart from everything that stays, under its
@@ -291,13 +302,15 @@ function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, act
       const amount = player.Mana?.[bit] ?? 0;
       q(el, '.amount').textContent = String(amount);
       el.disabled = !own;
-      const name = MANA_NAMES[sym];
-      el.title = own ? `${amount} ${name} mana floating. Click to pay with it; it empties when the step ends.`
-        : `${amount} ${name} mana floating`;
+      const name = t(MANA_NAMES[sym]);
+      el.title = own ? t('lblWebBoardManaFloatingOwn', amount, name) : t('lblWebBoardManaFloating', amount, name);
     });
 }
 
-const MANA_NAMES: Record<string, string> = { W: 'white', U: 'blue', B: 'black', R: 'red', G: 'green', C: 'colourless' };
+const MANA_NAMES: Record<string, TextKey> = {
+  W: 'lblWebBoardManaWhite', U: 'lblWebBoardManaBlue', B: 'lblWebBoardManaBlack', R: 'lblWebBoardManaRed',
+  G: 'lblWebBoardManaGreen', C: 'lblWebBoardManaColourless',
+};
 
 // A hand is cards held, not a pile, so it is drawn as a few backs fanned beside the portrait with the count, and opens
 // in a window when clicked: every player's, your own included, though yours is also laid out along the bottom.
@@ -307,15 +320,17 @@ function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void 
   el.dataset.count = String(Math.min(count, 3));
   q(el, '.hand-count').textContent = String(count);
   // Your own hand is laid out along the bottom too, but a big one reads more easily laid out in a window
-  el.title = `${count} ${count === 1 ? 'card' : 'cards'} in hand${isLocal(model, player) ? '. Click to lay them out in a window' : ''}`;
+  el.title = isLocal(model, player)
+    ? t(count === 1 ? 'lblWebBoardOwnHandOneCard' : 'lblWebBoardOwnHandCards', count)
+    : t(count === 1 ? 'lblWebBoardHandOneCard' : 'lblWebBoardHandCards', count);
 }
 
 // Cards drift down into a graveyard and circle in exile, so the two piles read as places at a glance
 const AMBIENT = '<span class="ambient" aria-hidden="true">' + '<i></i>'.repeat(6) + '</span>';
 
 /** Decks some variants and cards bring, shown only while they hold something. Only the junkyard is face up. */
-const EXTRA_ZONES: [ZoneType, string][] = [['PlanarDeck', 'Planes'], ['SchemeDeck', 'Schemes'],
-  ['AttractionDeck', 'Attractions'], ['ContraptionDeck', 'Contraptions'], ['Junkyard', 'Junkyard']];
+const EXTRA_ZONES: [ZoneType, TextKey][] = [['PlanarDeck', 'lblPlanes'], ['SchemeDeck', 'lblSchemes'],
+  ['AttractionDeck', 'lblAttractions'], ['ContraptionDeck', 'lblContraptions'], ['Junkyard', 'lblWebZoneJunkyard']];
 
 /** The card types rule 205.2a names, in its order. Delirium and the like count how many a graveyard holds. */
 const CORE_TYPES = ['Artifact', 'Battle', 'Creature', 'Enchantment', 'Instant', 'Kindred', 'Land', 'Planeswalker', 'Sorcery'];
@@ -334,9 +349,10 @@ export function cardTypes(typeLines: readonly string[]): string[] {
 
 /** A graveyard tile's tooltip: how many cards, and how many card types among them. */
 export function graveyardTitle(count: number, types: string[]): string {
-  const cards = `${count} ${count === 1 ? 'card' : 'cards'}`;
-  if (!types.length) return `Graveyard: ${cards}`;
-  return `Graveyard: ${cards}, ${types.length} ${types.length === 1 ? 'card type' : 'card types'} (${types.join(', ')})`;
+  const cards = t(count === 1 ? 'lblWebBoardOneCard' : 'lblWebBoardCards', count);
+  if (!types.length) return t('lblWebBoardGraveyardTitle', cards);
+  const kinds = t(types.length === 1 ? 'lblWebBoardOneCardType' : 'lblWebBoardCardTypes', types.length);
+  return t('lblWebBoardGraveyardTitleTypes', cards, kinds, types.join(', '));
 }
 
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, select: CardClick): void {
@@ -351,7 +367,8 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
       el.dataset.zone = zoneName;
       el.innerHTML = '<img alt="" draggable="false">' + (zoneName === 'Library' ? '' : AMBIENT)
         + '<span class="zone-name"></span><span class="zone-count"></span>';
-      q(el, '.zone-name').textContent = EXTRA_ZONES.find(([z]) => z === zoneName)?.[1] ?? zoneName;
+      const extra = EXTRA_ZONES.find(([z]) => z === zoneName)?.[1];
+      q(el, '.zone-name').textContent = extra ? t(extra) : zoneTitle(zoneName);
       // A planar, scheme, attraction or contraption deck is face down, so only its count is shown
       el.classList.toggle('hidden-deck', zoneName !== 'Junkyard' && EXTRA_ZONES.some(([z]) => z === zoneName));
       const img = q<HTMLImageElement>(el, 'img');
@@ -408,11 +425,11 @@ function updateCommandTile(el: HTMLElement, model: Model, player: PlayerView): v
   el.classList.toggle('empty', cards.length === 0);
   el.classList.toggle('selectable', cards.some(c => (model.prompt?.selectable ?? []).some(r => r.ref === c.$key)));
   const tax = top ? commanderTax(player, top) : 0;
-  q(el, '.zone-count').textContent = cards.length > 1 ? String(cards.length) : tax > 0 ? `Tax +${tax}` : '';
+  q(el, '.zone-count').textContent = cards.length > 1 ? String(cards.length) : tax > 0 ? t('lblWebBoardTax', tax) : '';
   el.title = cards.map(c => {
-    const t = commanderTax(player, c);
+    const more = commanderTax(player, c);
     const name = stateOf(model, c).Name ?? '';
-    return t > 0 ? `${name}: costs ${t} more to cast from here` : name;
+    return more > 0 ? t('lblWebBoardCostsMoreHere', name, more) : name;
   }).join('\n');
 }
 
@@ -487,7 +504,7 @@ function revealFirst(model: Model, first: number, said?: string): void {
     faces.append(face);
   }
   const line = document.createElement('p');
-  line.textContent = said ?? (isLocal(model, starter) ? 'You go first' : `${starter.Name} goes first`);
+  line.textContent = said ?? (isLocal(model, starter) ? t('lblWebBoardYouGoFirst') : t('lblWebBoardPlayerGoesFirst', starter.Name ?? ''));
   reveal.append(faces, line);
   byId('match').append(reveal);
   reveal.addEventListener('animationend', e => {
@@ -534,7 +551,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   }
   const banner = document.createElement('div');
   banner.className = `turn-banner${mine ? ' mine' : ''}`;
-  banner.textContent = mine ? 'Your turn' : `${active.Name}'s turn`;
+  banner.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
   // The banner takes the pill's place for as long as it shows, rather than covering it. The pill animates
   // its own width, so anything sized to cover it is measuring a number that is about to change.
   const strip = byId('phase-strip');
@@ -614,9 +631,10 @@ const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="
 
 /** What a command zone effect is called on its plaque: an emblem or a lasting designation by name, else an effect. */
 function effectKind(state: Partial<CardStateView>): { label: string; lasting: boolean } {
-  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: 'Emblem', lasting: true };
+  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: t('lblWebBoardEmblem'), lasting: true };
+  // The designation's name is the card's, as the host sends it
   const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
-  return named ? { label: named[1], lasting: true } : { label: 'Effect', lasting: false };
+  return named ? { label: named[1], lasting: true } : { label: t('lblWebBoardEffect'), lasting: false };
 }
 
 // The rest of the command zone: the monarch, the initiative and emblems as art plaques, and avatars as cards.
@@ -665,7 +683,7 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
         el.classList.toggle('noimg', !src);
       }
       const tax = commanderTax(player, card);
-      el.title = tax > 0 ? `${state.Name ?? ''} — costs ${tax} more to cast from here` : state.Name ?? '';
+      el.title = tax > 0 ? t('lblWebBoardEffectCostsMoreHere', state.Name ?? '', tax) : state.Name ?? '';
       el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
       if (el.classList.contains('cmd-tile')) {
         q(el, '.band').textContent = tileBand(commandKind(card, state), state, tax);
@@ -677,7 +695,7 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       q(el, '.band i').innerHTML = kind.lasting ? STAR_ICON : HOURGLASS_ICON;
       q(el, '.band b').textContent = kind.label;
       // An effect that keeps a number, such as a player's speed, carries it as the text desktop lays over the card
-      q(el, '.tax').textContent = tax > 0 ? `Tax +${tax}` : card.OverlayText ?? '';
+      q(el, '.tax').textContent = tax > 0 ? t('lblWebBoardTax', tax) : card.OverlayText ?? '';
     });
 }
 
@@ -686,10 +704,10 @@ function tileBand(kind: CommandKind, state: Partial<CardStateView>, tax: number)
   if (kind === 'avatar') {
     const mods = avatarModifiers(state.RulesText);
     const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
-    return mods ? `hand ${signed(mods[0])} · life ${signed(mods[1])}` : '';
+    return mods ? t('lblWebBoardAvatarModifiers', signed(mods[0]), signed(mods[1])) : '';
   }
-  if (kind === 'signature') return 'Signature';
-  return tax > 0 ? `Tax +${tax}` : '';
+  if (kind === 'signature') return t('lblWebBoardSignature');
+  return tax > 0 ? t('lblWebBoardTax', tax) : '';
 }
 
 /** Players whose portrait has broken this game, so each breaks once. Null until the table is first drawn. */
@@ -776,7 +794,7 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
     q(row, '.tally-name').textContent = p.Name ?? '';
     const n = wins(p) ?? 0;
     q(row, '.tally-won').textContent = String(n);
-    row.title = `${n} game${n === 1 ? '' : 's'} won`;
+    row.title = t(n === 1 ? 'lblWebBoardOneGameWon' : 'lblWebBoardGamesWon', n);
     root.append(row);
   }
 }
@@ -815,27 +833,30 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const games = g.NumGamesInMatch ?? 1;
   const inMatch = games > 1;
   const midMatch = inMatch && !matchOver;
-  const word = midMatch
-    ? { draw: 'Draw', watched: 'Game over', win: 'Game won', lose: 'Game lost' }[outcome]
-    : { draw: 'Draw', watched: 'Game over', win: 'Victory', lose: 'Defeat' }[outcome];
+  const word = t(midMatch
+    ? ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardGameWon', lose: 'lblWebBoardGameLost' } as const)[outcome]
+    : ({ draw: 'lblWebBoardDraw', watched: 'lblWebBoardGameOver', win: 'lblWebBoardVictory', lose: 'lblWebBoardDefeat' } as const)[outcome]);
   const wins = (p: PlayerView) => model.matchScore.find(s => s.player.ref === p.$key)?.won;
   // Two players' match score reads as the winner's wins to the other's, as it is said aloud
-  const tally = winner && everyone.length === 2 && wins(winner) !== undefined
-    ? ` ${wins(winner)}–${wins(everyone.find(p => p !== winner) as PlayerView) ?? 0}` : '';
+  const score = winner && everyone.length === 2 && wins(winner) !== undefined
+    ? [wins(winner) ?? 0, wins(everyone.find(p => p !== winner) as PlayerView) ?? 0] : null;
   // The count of games played is taken as the game starts, so it counts the ones before this
   const gameNumber = (g.NumPlayedGamesInMatch ?? 0) + 1;
-  const sub = !winner ? 'Nobody wins'
-    : midMatch ? `${won ? 'You win' : `${winner.Name} wins`} game ${gameNumber}`
-    : inMatch ? `${won ? 'You win' : `${winner.Name} wins`} the match${tally}`
-    : won && everyone.length === 2 && losers.length === 1 ? `${losers[0].Name} has lost`
-    : won ? 'Last one standing'
-    : `${winner.Name} wins`;
+  const sub = !winner ? t('lblWebBoardNobodyWins')
+    : midMatch ? (won ? t('lblWebBoardYouWinGame', gameNumber) : t('lblWebBoardPlayerWinsGame', winner.Name ?? '', gameNumber))
+    : inMatch && score ? (won ? t('lblWebBoardYouWinMatchScore', score[0], score[1])
+      : t('lblWebBoardPlayerWinsMatchScore', winner.Name ?? '', score[0], score[1]))
+    : inMatch ? (won ? t('lblWebBoardYouWinMatch') : t('lblWebBoardPlayerWinsMatch', winner.Name ?? ''))
+    : won && everyone.length === 2 && losers.length === 1 ? t('lblWebBoardPlayerHasLost', losers[0].Name ?? '')
+    : won ? t('lblWebBoardLastOneStanding')
+    : t('lblWebBoardPlayerWins', winner.Name ?? '');
   root.innerHTML = '<div class="panel"><p class="stage"></p><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p>'
     + '<div class="tally"></div><div class="actions"></div></div>'
-    + '<button class="to-result primary">Show result</button>';
+    + '<button class="to-result primary"></button>';
+  q(root, '.to-result').textContent = t('lblWebBoardShowResult');
   const stage = q(root, '.stage');
   stage.hidden = !inMatch;
-  stage.textContent = matchOver ? `Match over · Best of ${games}` : `Game ${gameNumber} · Best of ${games}`;
+  stage.textContent = matchOver ? t('lblWebBoardMatchOverBestOf', games) : t('lblWebBoardGameBestOf', gameNumber, games);
   drawTally(q(root, '.tally'), inMatch ? everyone : [], wins, matchOver ? winner : undefined);
   const view = (board: boolean) => {
     root.classList.toggle('viewing', board);
@@ -849,7 +870,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   face.hidden = !winner;
   q(root, '.word').textContent = word;
   q(root, '.sub').textContent = limited
-    ? `${sub} · round ${limited.round} of ${limited.rounds} · ${limited.wins} won, ${limited.losses} lost`
+    ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
     : sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
@@ -859,11 +880,11 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     b.onclick = onClick;
     buttons.append(b);
   };
-  if (limited?.nextRound) add(`Next round (${limited.round + 1}/${limited.rounds})`, true, () => actions.gauntletNext());
-  if (!matchOver) add('Next game', true, () => actions.nextGame());
-  add('View battlefield', false, () => view(true));
-  if (limited) add('Restart round', false, () => actions.gauntletRestart());
-  add(limited ? 'Quit' : matchOver ? 'Return to lobby' : 'Quit match', matchOver && !limited?.nextRound, () => {
+  if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());
+  if (!matchOver) add(t('lblWebBoardNextGame'), true, () => actions.nextGame());
+  add(t('lblWebBoardViewBattlefield'), false, () => view(true));
+  if (limited) add(t('lblWebBoardRestartRound'), false, () => actions.gauntletRestart());
+  add(t(limited ? 'lblWebBoardQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'lblWebBoardQuitMatch'), matchOver && !limited?.nextRound, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();
   });

@@ -8,6 +8,7 @@ import { stackTargets } from './overlay';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
+import { t } from './text';
 import type { CardView, GameEvent, StackItemView, YieldAction } from './protocol';
 
 // The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
@@ -38,7 +39,8 @@ export function initStack(actionsFor: Actions): void {
 export function renderStack(model: Model, events: readonly GameEvent[]): void {
   const root = byId('stack');
   if (!root.firstChild) {
-    root.innerHTML = '<div class="head"><b>Stack</b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
+    root.innerHTML = '<div class="head"><b></b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
+    q(root, '.head b').textContent = t('lblStack');
     q(root, '.collapse').onclick = () => changeUi(u => { u.stackCollapsed = !u.stackCollapsed; });
     window.addEventListener('resize', () => place(root));
   }
@@ -55,8 +57,8 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   root.classList.toggle('collapsed', collapsed);
   q(root, '.count').textContent = String(items.length + awaiting.size);
   const collapse = q(root, '.collapse');
-  collapse.textContent = collapsed ? 'Show' : 'Hide';
-  collapse.title = collapsed ? 'Show the stack' : 'Collapse the stack to its heading';
+  collapse.textContent = t(collapsed ? 'lblWebStackShow' : 'lblWebStackHide');
+  collapse.title = t(collapsed ? 'lblWebStackShowTitle' : 'lblWebStackHideTitle');
   const pile = q(root, '.pile');
   const pick = stackPick(model);
   // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
@@ -126,12 +128,12 @@ const PANEL_FADE_MS = 150;
 function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void {
   let chip = document.getElementById('storm');
   if (!chip) {
-    chip = Object.assign(document.createElement('div'), { id: 'storm', title: 'Spells cast this turn, which a storm spell copies' });
+    chip = Object.assign(document.createElement('div'), { id: 'storm', title: t('lblWebStackStormTitle') });
     stack.after(chip);
   }
   chip.hidden = count <= 0;
   if (chip.hidden) return;
-  chip.textContent = `Storm ${count}`;
+  chip.textContent = t('lblWebStackStorm', count);
   // Measured to where the pile's height is going, not where its transition has got to
   const pile = q(stack, '.pile');
   const going = parseFloat(pile.style.height);
@@ -182,7 +184,8 @@ function createAwaiting(key: string): HTMLElement {
   const spell = awaiting.get(key);
   const el = document.createElement('div');
   el.className = 'stack-item awaiting';
-  el.innerHTML = '<img alt="" draggable="false"><div class="await">Awaiting payment</div>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="await"></div>';
+  q(el, '.await').textContent = t('lblWebStackAwaitingPayment');
   const img = q<HTMLImageElement>(el, 'img');
   img.src = spell?.src ?? '';
   img.dataset.key = key;
@@ -295,12 +298,12 @@ function renderMenu(model: Model): void {
     };
     menu.append(b);
   };
-  if (answer.autoYield !== undefined) item('Auto-yield to this ability', 'autoYield', answer.autoYield);
+  if (answer.autoYield !== undefined) item(t('lblWebStackAutoYield'), 'autoYield', answer.autoYield);
   if (answer.trigger !== undefined) {
-    item('Always accept this trigger', 'alwaysYes', answer.trigger === 'ACCEPT');
-    item('Always decline this trigger', 'alwaysNo', answer.trigger === 'DECLINE');
+    item(t('lblWebStackAlwaysAccept'), 'alwaysYes', answer.trigger === 'ACCEPT');
+    item(t('lblWebStackAlwaysDecline'), 'alwaysNo', answer.trigger === 'DECLINE');
   }
-  item('Yield until this resolves', 'yieldToStack');
-  item('Yield until the stack is empty', 'yieldToEntireStack');
+  item(t('lblWebStackYieldUntilResolves'), 'yieldToStack');
+  item(t('lblWebStackYieldUntilEmpty'), 'yieldToEntireStack');
   document.body.append(menu);
 }

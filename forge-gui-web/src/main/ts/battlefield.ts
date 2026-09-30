@@ -8,6 +8,7 @@ import { chargingAtPlayer } from './overlay';
 import { q } from './dom';
 import { changeUi, ui } from './ui';
 import type { CardView } from './protocol';
+import { t } from './text';
 
 // A slot is one spot on the battlefield: a card with its attachments tucked under it, or a pile of identical permanents
 interface Slot {
@@ -352,7 +353,7 @@ function updateSlot(el: HTMLElement, model: Model, slot: Slot, select: CardClick
     c.classList.toggle('sickness', card.Zone !== 'Exile' && isSick(model, card));
     // A land standing among the creatures says why, since its art still reads as a land
     const type = stateOf(model, card).Type ?? '';
-    q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? 'Land creature' : '';
+    q(c, '.kind-tag').textContent = /Land/.test(type) && /Creature/.test(type) ? t('lblWebBoardLandCreature') : '';
   });
   [...el.children].forEach((c, i) => (c as HTMLElement).style.setProperty('--under', String(i)));
   el.style.setProperty('--behind', String(behind(slot)));

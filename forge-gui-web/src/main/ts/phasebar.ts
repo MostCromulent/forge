@@ -3,6 +3,7 @@ import { deref, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
+import { t, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { GameView, PhaseType, TurnMarker } from './protocol';
 
@@ -42,38 +43,48 @@ const glyph = (name: string, size: number): string => `<svg class="glyph" viewBo
 
 // Untap takes no stop, as on desktop
 // [PhaseType, glyph, full name, short name]
-const STEPS: [PhaseType, string, string, string][] = [
-  ['UPKEEP', 'upkeep', 'Upkeep', 'Upkeep'], ['DRAW', 'draw', 'Draw', 'Draw'], ['MAIN1', 'main1', 'Main 1', 'Main 1'],
-  ['COMBAT_BEGIN', 'boc', 'Beginning of combat', 'Combat'], ['COMBAT_DECLARE_ATTACKERS', 'atk', 'Declare attackers', 'Attackers'],
-  ['COMBAT_DECLARE_BLOCKERS', 'blk', 'Declare blockers', 'Blockers'], ['COMBAT_FIRST_STRIKE_DAMAGE', 'fs', 'First-strike damage', 'First strike'],
-  ['COMBAT_DAMAGE', 'dmg', 'Combat damage', 'Damage'], ['COMBAT_END', 'eoc', 'End of combat', 'End combat'],
-  ['MAIN2', 'main2', 'Main 2', 'Main 2'], ['END_OF_TURN', 'end', 'End step', 'End step'], ['CLEANUP', 'cleanup', 'Cleanup', 'Cleanup'],
+const STEPS: [PhaseType, string, TextKey, TextKey][] = [
+  ['UPKEEP', 'upkeep', 'lblWebPhaseUpkeep', 'lblWebPhaseUpkeep'], ['DRAW', 'draw', 'lblWebPhaseDraw', 'lblWebPhaseDraw'],
+  ['MAIN1', 'main1', 'lblWebPhaseMain1', 'lblWebPhaseMain1'],
+  ['COMBAT_BEGIN', 'boc', 'lblWebPhaseBeginCombat', 'lblWebPhaseCombat'],
+  ['COMBAT_DECLARE_ATTACKERS', 'atk', 'lblWebPhaseDeclareAttackers', 'lblWebPhaseAttackers'],
+  ['COMBAT_DECLARE_BLOCKERS', 'blk', 'lblWebPhaseDeclareBlockers', 'lblWebPhaseBlockers'],
+  ['COMBAT_FIRST_STRIKE_DAMAGE', 'fs', 'lblWebPhaseFirstStrikeDamage', 'lblWebPhaseFirstStrike'],
+  ['COMBAT_DAMAGE', 'dmg', 'lblWebPhaseCombatDamage', 'lblWebPhaseDamage'], ['COMBAT_END', 'eoc', 'lblWebPhaseEndOfCombat', 'lblWebPhaseEndCombat'],
+  ['MAIN2', 'main2', 'lblWebPhaseMain2', 'lblWebPhaseMain2'], ['END_OF_TURN', 'end', 'lblEndStep', 'lblEndStep'],
+  ['CLEANUP', 'cleanup', 'lblWebPhaseCleanup', 'lblWebPhaseCleanup'],
 ];
 // A segment covers more than the step its glyph is named for, so it is named for what it spans
 interface Phase {
   glyph: string;
   /** Under the icon when the phase is not the current one; desktop's step codes, and CB for combat as a whole. */
-  code: string;
-  name: string;
+  code: TextKey;
+  name: TextKey;
   /** The phase as the stop grid heads its group of steps. */
-  group: string;
+  group: TextKey;
   steps: number[];
 }
 const PHASES: Phase[] = [
-  { glyph: 'upkeep', code: 'UP', name: 'Upkeep and draw', group: 'Beginning', steps: [0, 1] },
-  { glyph: 'main1', code: 'M1', name: 'Main 1', group: 'Main 1', steps: [2] },
-  { glyph: 'boc', code: 'CB', name: 'Combat', group: 'Combat', steps: [3, 4, 5, 6, 7, 8] },
-  { glyph: 'main2', code: 'M2', name: 'Main 2', group: 'Main 2', steps: [9] },
-  { glyph: 'end', code: 'ET', name: 'End of turn', group: 'Ending', steps: [10, 11] },
+  { glyph: 'upkeep', code: 'lblWebPhaseCodeUpkeep', name: 'lblWebPhaseUpkeepAndDraw', group: 'lblWebPhaseBeginning', steps: [0, 1] },
+  { glyph: 'main1', code: 'lblWebPhaseCodeMain1', name: 'lblWebPhaseMain1', group: 'lblWebPhaseMain1', steps: [2] },
+  { glyph: 'boc', code: 'lblWebPhaseCodeCombat', name: 'lblWebPhaseCombat', group: 'lblWebPhaseCombat', steps: [3, 4, 5, 6, 7, 8] },
+  { glyph: 'main2', code: 'lblWebPhaseCodeMain2', name: 'lblWebPhaseMain2', group: 'lblWebPhaseMain2', steps: [9] },
+  { glyph: 'end', code: 'lblWebPhaseCodeEnd', name: 'lblWebPhaseEndOfTurn', group: 'lblWebPhaseEnding', steps: [10, 11] },
 ];
 /** Under its phase's heading a step needs less of a name: a lone step none, and combat's own steps no "combat". */
-const GRID_NAMES: Partial<Record<PhaseType, string>> = {
-  COMBAT_BEGIN: 'Begin', COMBAT_DECLARE_ATTACKERS: 'Attack', COMBAT_DECLARE_BLOCKERS: 'Block', COMBAT_END: 'End',
+const GRID_NAMES: Partial<Record<PhaseType, TextKey>> = {
+  COMBAT_BEGIN: 'lblWebPhaseGridBegin', COMBAT_DECLARE_ATTACKERS: 'lblWebPhaseGridAttack',
+  COMBAT_DECLARE_BLOCKERS: 'lblWebPhaseGridBlock', COMBAT_END: 'lblWebPhaseGridEnd',
 };
 const gridName = (i: number): string =>
-  PHASES[phaseOf(i)].steps.length === 1 ? '' : GRID_NAMES[STEPS[i][0]] ?? STEPS[i][3];
+  PHASES[phaseOf(i)].steps.length === 1 ? '' : t(GRID_NAMES[STEPS[i][0]] ?? STEPS[i][3]);
 const stepIndex = (phase: PhaseType | undefined): number => STEPS.findIndex(s => s[0] === phase);
-export const stepName = (phase: PhaseType | undefined): string => STEPS[stepIndex(phase)]?.[2] ?? 'Untap';
+export const stepName = (phase: PhaseType | undefined): string => t(STEPS[stepIndex(phase)]?.[2] ?? 'lblWebPhaseUntap');
+/** A step's full name, or nothing for a phase no step is named for. */
+const fullName = (phase: PhaseType): string => {
+  const s = STEPS[stepIndex(phase)];
+  return s ? t(s[2]) : '';
+};
 const phaseOf = (step: number): number => PHASES.findIndex(p => p.steps.includes(step));
 /** Forge's own default stops (the PHASE_HUMAN_ and PHASE_AI_ preferences), which a row can be reset to. */
 const DEFAULT_STOPS: Record<'mine' | 'theirs', PhaseType[]> = {
@@ -104,8 +115,11 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
   if (avatar) {
     portrait.src = avatar;
   }
-  swapOwner(q(pill, '.owner'), myTurn ? 'Your turn' : active?.Name ?? '');
-  q(pill, '.owner .turn').textContent = `T${g.Turn ?? 0}${model.controls?.dayTime ? ` · ${model.controls.dayTime}` : ''}`;
+  swapOwner(q(pill, '.owner'), myTurn ? t('lblWebPhaseYourTurn') : active?.Name ?? '');
+  // The host names the time of day as the engine does, in English
+  const dayTime = model.controls?.dayTime;
+  const time = dayTime === 'Day' ? t('lblDay') : dayTime === 'Night' ? t('lblNight') : dayTime;
+  q(pill, '.owner .turn').textContent = time ? t('lblWebPhaseTurnAndTime', g.Turn ?? 0, time) : t('lblWebPhaseTurnNumber', g.Turn ?? 0);
   drawTrack(pill, model, step, phase, myTurn, actions);
   slideTo(q(pill, '.track'), phase, step);
   drawWaiting(pill, model);
@@ -136,11 +150,11 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 
 // The pill is built once and updated in place, so the step can slide from one phase to the next
 function build(root: HTMLElement): void {
-  root.innerHTML = '<div class="pill" role="button" tabindex="0" title="Phase stops"></div><div class="stops" hidden></div>';
+  root.innerHTML = `<div class="pill" role="button" tabindex="0" title="${escapeHtml(t('lblWebPhaseStops'))}"></div><div class="stops" hidden></div>`;
   const pill = q(root, '.pill');
   // Every segment is laid out alike, the icon over its code, then the step name and pips that only the current one
   // opens, so a change of phase moves nothing by a jump
-  const track = PHASES.map(p => `<span class="phase"><span class="mark">${glyph(p.glyph, 12)}<span class="code">${p.code}</span></span><span class="label"></span><span class="pips"></span></span>`).join('');
+  const track = PHASES.map(p => `<span class="phase"><span class="mark">${glyph(p.glyph, 12)}<span class="code">${escapeHtml(t(p.code))}</span></span><span class="label"></span><span class="pips"></span></span>`).join('');
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track"><span class="slide" aria-hidden="true"></span>${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
@@ -168,13 +182,13 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     el.classList.toggle('marked', !current && !!marker && marker.mine === myTurn && p.steps.some(i => STEPS[i][0] === marker.phase));
     // Desktop passes priority until a phase by right-clicking it, so the pill offers the same gesture and
     // not only the grid behind it. The marker lands on the first step the segment covers.
-    el.title = `${p.name}. Right-click: pass priority until here.`;
+    el.title = t('lblWebPhaseSegmentTitle', t(p.name));
     el.oncontextmenu = e => {
       e.preventDefault();
       actions.toggleMarker(STEPS[p.steps[0]][0], myTurn);
     };
     q(el, '.glyph').outerHTML = glyph(current && step >= 0 ? STEPS[step][1] : p.glyph, 12);
-    q(el, '.label').textContent = current ? (step < 0 ? 'Untap' : STEPS[step][3]) : '';
+    q(el, '.label').textContent = current ? t(step < 0 ? 'lblWebPhaseUntap' : STEPS[step][3]) : '';
     const pips = q(el, '.pips');
     // A phase left keeps its last pips while they close
     if (current) {
@@ -255,32 +269,41 @@ function drawPips(root: HTMLElement, phase: Phase, step: number, marker: TurnMar
     });
 }
 
-/** Whose turns the opponents' row covers: one opponent by name, several together, in the grid and in a sentence. */
-function whoseTurns(model: Model): { turns: string; one: string } {
+/** Whose turns the opponents' row covers: one opponent by name, or several together. */
+interface Theirs {
+  turns: string;
+  /** The one opponent's name, when there is only one. */
+  one: string | null;
+}
+
+function whoseTurns(model: Model): Theirs {
   const opponent = opponents(model);
   if (opponent.length === 1) {
     const name = opponent[0].Name ?? '';
-    return { turns: `${name}'s turns`, one: `${name}'s` };
+    return { turns: t('lblWebPhasePlayersTurns', name), one: name };
   }
-  return { turns: "Opponents' turns", one: "an opponent's" };
+  return { turns: t('lblWebPhaseOpponentsTurns'), one: null };
 }
 
 // Only one yield runs at a time, so the chip names whichever it is and where it stops
-function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: { one: string }, activeName: string): void {
+function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: Theirs, activeName: string): void {
   const controls = model.controls;
   const marker = controls?.marker;
   let text = '';
   if (marker) {
-    const whose = marker.mine === myTurn ? '' : marker.mine ? 'your ' : `${theirs.one} `;
-    text = `until ${whose}${STEPS[stepIndex(marker.phase)]?.[2] ?? ''}`;
+    const name = fullName(marker.phase);
+    text = marker.mine === myTurn ? t('lblWebPhaseUntilStep', name)
+      : marker.mine ? t('lblWebPhaseUntilYourStep', name)
+      : theirs.one !== null ? t('lblWebPhaseUntilPlayersStep', theirs.one, name)
+      : t('lblWebPhaseUntilOpponentsStep', name);
   } else if (controls?.untilEndOfTurn) {
-    text = myTurn ? 'until end of your turn' : `until end of ${activeName}'s turn`;
+    text = myTurn ? t('lblWebPhaseUntilEndOfYourTurn') : t('lblWebPhaseUntilEndOfPlayersTurn', activeName);
   } else if (controls?.untilStackEmpty) {
-    text = 'until the stack clears';
+    text = t('lblWebPhaseUntilStackClears');
   }
   const until = q(pill, '.until');
   until.hidden = !text;
-  until.title = text ? `Passing priority ${text}. Click to stop` : '';
+  until.title = text ? t('lblWebPhasePassingPriority', text) : '';
   q(until, '.text').textContent = text;
 }
 
@@ -317,7 +340,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   const show = () => {
     const seconds = Math.floor((Date.now() - waitingSince) / 1000);
     chip.hidden = seconds < WAIT_SHOWN_AFTER_S;
-    q(chip, 'b').textContent = `${seconds}s`;
+    q(chip, 'b').textContent = t('lblWebPhaseWaitSeconds', seconds);
   };
   show();
   if (!waitingTimer) {
@@ -325,29 +348,29 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   }
 }
 
-function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: { turns: string }): string {
+function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: Theirs): string {
   const marker = model.controls?.marker;
   // Your own turns always head the grid, whoever's turn it is now
   const rows = [
-    { mine: true, label: 'Your turns', stops: new Set(model.controls?.myStops ?? []), now: myTurn },
+    { mine: true, label: escapeHtml(t('lblWebPhaseYourTurns')), stops: new Set(model.controls?.myStops ?? []), now: myTurn },
     { mine: false, label: escapeHtml(theirs.turns), stops: new Set(model.controls?.otherStops ?? []), now: !myTurn },
   ];
   const gap = (i: number) => (i > 0 && phaseOf(i) !== phaseOf(i - 1)) ? '<td class="gap"></td>' : '';
   // Steps sit under their phase, which a bracketed heading spans
   const groups = '<tr class="groups"><td></td>' + PHASES.map((p, g) =>
-    `${g ? '<td class="gap"></td>' : ''}<th class="group" colspan="${p.steps.length}"><span>${p.group}</span></th>`).join('') + '</tr>';
-  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th class="${i === step ? 'now' : ''}" title="${s[2]}"><span class="head">${glyph(s[1], 13)}</span><span class="name">${gridName(i)}</span></th>`).join('') + '</tr>';
+    `${g ? '<td class="gap"></td>' : ''}<th class="group" colspan="${p.steps.length}"><span>${escapeHtml(t(p.group))}</span></th>`).join('') + '</tr>';
+  const head = '<tr><td></td>' + STEPS.map((s, i) => `${gap(i)}<th class="${i === step ? 'now' : ''}" title="${escapeHtml(t(s[2]))}"><span class="head">${glyph(s[1], 13)}</span><span class="name">${escapeHtml(gridName(i))}</span></th>`).join('') + '</tr>';
   // Whose turn it is lights that player's row, and the step the game is at lights its column the same way
   const body = rows.map(r => `<tr class="${r.now ? 'active' : ''}">` + `<td class="who">${r.label}</td>` + STEPS.map((s, i) => {
     const marked = marker && marker.mine === r.mine && marker.phase === s[0];
     const on = r.stops.has(s[0]);
-    const title = `${s[2]} · ${r.mine ? 'your turns' : theirs.turns}. Click: ${on ? 'clear the stop' : 'stop here'}. Right-click: pass priority until here.`;
+    const title = t(on ? 'lblWebPhaseCellTitleClear' : 'lblWebPhaseCellTitleStop', t(s[2]), r.mine ? t('lblWebPhaseYourTurnsInSentence') : theirs.turns);
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
-  }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">Clear</button>`
-    + `<button class="row-tool" data-defaults data-mine="${r.mine}">Defaults</button></td></tr>`).join('');
-  return `<div class="title">Phase stops</div><table>${groups}${head}${body}</table>`
-    + '<div class="hint">Click: stop here · Right-click: pass priority until here</div>';
+  }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">${escapeHtml(t('lblWebPhaseClear'))}</button>`
+    + `<button class="row-tool" data-defaults data-mine="${r.mine}">${escapeHtml(t('lblWebPhaseDefaults'))}</button></td></tr>`).join('');
+  return `<div class="title">${escapeHtml(t('lblWebPhaseStops'))}</div><table>${groups}${head}${body}</table>`
+    + `<div class="hint">${escapeHtml(t('lblWebPhaseStopsHint'))}</div>`;
 }
 
 function wireGrid(panel: HTMLElement, actions: Actions): void {
