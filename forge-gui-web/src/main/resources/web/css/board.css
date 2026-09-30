@@ -75,9 +75,11 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #match.quads #opponent > .seat:nth-child(3) .battlefield { flex-direction: column-reverse; align-self: end; }
 /* A compact seat: the player's details in a row across the top, in their colour, and their cards below */
 .seat.compact { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 44px; }
+  background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 54px; }
 /* Whose turn it is lights in gold, as it does everywhere else, rather than in the player's own colour */
-.seat.compact.turn { border-color: color-mix(in srgb, var(--accent-2) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 14%, transparent); }
+/* Your seat has no panel of its own, so on your turn it takes the same frame and light as theirs */
+#match.many #me { border: 1px solid transparent; border-radius: 10px; }
+#match.many #me.turn, .seat.compact.turn { border-color: color-mix(in srgb, var(--accent-2) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 14%, transparent); }
 .seat.compact .player { display: flex; align-items: center; justify-items: start; gap: 10px; flex-wrap: wrap; }
 .seat.compact .avatar { width: 46px; height: 46px; flex: none; }
 .seat.compact .avatar .initial { font-size: 18px; }
@@ -87,7 +89,7 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 .seat.compact .name { color: var(--tint); font-weight: 700; font-size: 13px; }
 .seat.compact .hand-fan { position: static; }
 .seat.compact .zone-tiles { margin-left: auto; gap: 4px; }
-.seat.compact .zone-tile .zone-name { font-size: 8px; letter-spacing: 0; }
+.seat.compact .zone-tile .zone-name { font-size: 9px; letter-spacing: 0; }
 .seat.compact .zone-tile .zone-count { font-size: 11px; min-width: 18px; }
 .seat.compact .battlefield { max-height: none; }
 /* Out of the game: the seat keeps its place, greyed, with a skull by the name */
@@ -213,7 +215,8 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .avatar .cmdr-chip { position: absolute; left: -12px; bottom: 6px; z-index: 3; display: flex; align-items: center; gap: 3px; height: 20px; padding: 0 6px 0 4px;
   border-radius: 10px; background: var(--bg); border: 1px solid var(--line-bright); font-size: 11.5px; font-weight: 800; line-height: 1; color: var(--text); }
 .avatar .cmdr-chip svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.seat.compact .avatar .cmdr-chip { left: -14px; bottom: -2px; height: 17px; font-size: 10px; }
+/* On a small portrait the life badge takes the bottom, so the chip sits at the top right */
+.seat.compact .avatar .cmdr-chip { left: auto; right: -18px; top: -6px; bottom: auto; height: 17px; font-size: 10px; }
 /* From 15 both burn: the warning is carried by brightness and glow, not by hue alone */
 .avatar .cmdr-arc.near circle { stroke: #fff4ee; opacity: 1; filter: drop-shadow(0 0 2px #ff3b2a) drop-shadow(0 0 6px #ff2a14aa); }
 .avatar .cmdr-chip.near { border-color: #ff5a3c; color: #fff; box-shadow: 0 0 7px #ff3b2a99; }
@@ -241,6 +244,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 @keyframes lost-return { from { opacity: 0; } }
 .avatar.lost .initial { opacity: .3; }
 .avatar.lost .skull-mark { display: grid; }
+.avatar.lost :is(.life, .cmdr-arc, .cmdr-chip) { display: none; }
 .avatar .skull-mark { display: none; position: absolute; inset: 0; z-index: 2; place-items: center; color: #d8dde5; pointer-events: none; }
 .avatar .skull-mark svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px #000); }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
@@ -845,7 +849,7 @@ html[data-motion="reduced"] .charge::before { animation: none; }
 .slot.charging > .card.attacking { outline: none; }
 /* While blockers are declared a creature can be dragged onto an attacker, so a touch on one drags rather than
    scrolls, and the card preview stays out of the way of the drop */
-#match.declaring-blocks #me .battlefield .card { touch-action: none; }
+#match:is(.declaring-blocks, .declaring-attacks) #me .battlefield .card { touch-action: none; }
 body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
 body.dragging-block #zoom { display: none; }
 /* A blocker says so in a tab on its foot, in the block arrows' blue, with a small shield before the word. An outline
