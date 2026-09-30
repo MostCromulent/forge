@@ -16,6 +16,18 @@ describe('the preview sorts a card\'s text into the parts of a printed card', ()
     expect(words(block.reminders)).toEqual(['{W}, {T}: Put a +1/+1 counter on this creature. Outlast only as a sorcery.']);
   });
 
+  it('gives a keyword the host leaves bare the card\'s own reminder text, and a keyword with its own none extra', () => {
+    const keywords = [
+      { title: 'Menace', reminder: 'This creature can\'t be blocked except by two or more creatures.' },
+      { title: 'Outlast', reminder: 'Put a +1/+1 counter on this creature.' },
+    ];
+    const [block] = sortRulesText(lines('Flying, menace\nOutlast {W} ({W}, {T}: Put a +1/+1 counter on this creature.)'), keywords).blocks;
+    expect(block.kind === 'keywords' && words(block.reminders)).toEqual([
+      'This creature can\'t be blocked except by two or more creatures.',
+      '{W}, {T}: Put a +1/+1 counter on this creature.',
+    ]);
+  });
+
   it('gives an activated ability its cost apart from what it does, with an ability word as its label', () => {
     const s = sort('{2}{W}, {T}, Sacrifice CARDNAME: Draw a card.\nSacrifice a creature: Scry 1.\nChannel — {1}{G}, Discard this card: Destroy target artifact.');
     expect(s.blocks.map(b => b.kind === 'ability' ? [b.label ? plain(b.label) : '', plain(b.cost), plain(b.effect)] : b.kind)).toEqual([

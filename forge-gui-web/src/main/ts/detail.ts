@@ -9,7 +9,7 @@ import { boundKeys } from './settings';
 import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import { isAiming } from './overlay';
-import type { CardFace, CardView, PlayerDetail, PlayerView } from './protocol';
+import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
@@ -215,7 +215,8 @@ function drawDetail(model: Model): void {
   const set = q(zoom, '.set');
   set.textContent = face.set ?? '';
   set.dataset.rarity = face.rarity ?? '';
-  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '');
+  const card = face === d.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
+  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', card ? stateOf(model, card).Keywords ?? [] : []);
   q(zoom, '.kind-chip').textContent = sorted.tag ?? '';
   drawPt(q(zoom, '.pt'), model, hover.card, face, face === d.faces[0]);
   // The keys are the player's own, since either can be changed in the options
@@ -277,11 +278,12 @@ let lastSorted: SortedText = { blocks: [], chips: [], notes: [] };
  * beside it, then the rest. What the game has done to the card goes under the box: counters and damage as chips by the
  * P/T, anything longer as notes at the foot of the box.
  */
-function setRulesText(box: HTMLElement, foot: HTMLElement, html: string): SortedText {
+function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[]): SortedText {
   // The preview is redrawn every frame while a card is hovered, so the text is sorted again only when it changes
-  if (box.dataset.html === html) return lastSorted;
-  box.dataset.html = html;
-  const sorted = lastSorted = sortRulesText(rulesLines(html));
+  const drawn = html + JSON.stringify(keywords);
+  if (box.dataset.html === drawn) return lastSorted;
+  box.dataset.html = drawn;
+  const sorted = lastSorted = sortRulesText(rulesLines(html), keywords);
   box.replaceChildren(...sorted.blocks.map(drawBlock));
   if (sorted.notes.length) {
     const notes = document.createElement('div');

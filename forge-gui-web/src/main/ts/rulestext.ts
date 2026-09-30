@@ -4,6 +4,7 @@
 // recognise stays a line of text, so nothing the host sends is ever lost.
 
 import { t } from './text';
+import type { KeywordText } from './protocol';
 
 /** A stretch of text; muted is text that does not apply just now, which CardDetailUtil greys out. */
 export interface Run {
@@ -143,7 +144,11 @@ function reminderOf(line: Line, end: number): Line | null {
   return open < 0 ? null : slice(line, open + 1, text.endsWith(')') ? text.length - 1 : text.length);
 }
 
-export function sortRulesText(lines: Line[]): SortedText {
+/**
+ * keywords are the card's own, each with its reminder text. The host writes none for the evergreen ones ("Menace"), as
+ * printed Oracle text does, so a line of keywords without reminder text takes theirs from these.
+ */
+export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = []): SortedText {
   const sorted: SortedText = { blocks: [], chips: [], notes: [] };
   let first = true;
   for (const raw of lines) {
@@ -178,14 +183,22 @@ export function sortRulesText(lines: Line[]): SortedText {
         loyalty: cost.startsWith('+') ? 'plus' : cost === '0' ? 'zero' : 'minus' });
       continue;
     }
-    const keywords = keywordsEnd(text);
-    if (keywords >= 0) {
+    const names = keywordsEnd(text);
+    if (names >= 0) {
       const last = sorted.blocks[sorted.blocks.length - 1];
       const block = last?.kind === 'keywords' ? last : { kind: 'keywords' as const, items: [], reminders: [] };
       if (block !== last) sorted.blocks.push(block);
-      block.items.push(...keywordItems(line, keywords));
-      const reminder = reminderOf(line, keywords);
-      if (reminder) block.reminders.push(reminder);
+      const items = keywordItems(line, names);
+      block.items.push(...items);
+      const reminder = reminderOf(line, names);
+      if (reminder) {
+        block.reminders.push(reminder);
+        continue;
+      }
+      for (const item of items) {
+        const known = keywords.find(k => k.title.toLowerCase() === plain(item).toLowerCase())?.reminder;
+        if (known) block.reminders.push([{ text: known, muted: item.every(r => r.muted) }]);
+      }
       continue;
     }
     // The spell on the other half of the card (CardDetailUtil adds it as "Adventure — Stomp {1}{R}: …"), which has a
