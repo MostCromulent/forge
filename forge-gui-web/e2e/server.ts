@@ -30,9 +30,12 @@ export interface Seed {
 /** The player's own deck every probe server starts with: sixty basics, legal in Constructed. */
 export const PROBE_DECK = 'Probe deck';
 
-/** A probe server's home: dev mode on, and a deck of the player's own. */
+/**
+ * A probe server's home: dev mode on, and a deck of the player's own. Card-based deck generation is off: loading its
+ * data is over half of starting up, and a probe plays real decks.
+ */
 export const PROBE_SEED: Seed = {
-  prefs: { DEV_MODE_ENABLED: 'true' },
+  prefs: { DEV_MODE_ENABLED: 'true', DECKGEN_CARDBASED: 'false' },
   decks: { [PROBE_DECK]: `[metadata]\nName=${PROBE_DECK}\n[Main]\n30 Mountain\n30 Forest\n` },
 };
 

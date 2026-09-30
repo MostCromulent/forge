@@ -37,6 +37,8 @@ export interface Probe {
   page: Page;
   browser: Browser;
   server: Server;
+  /** Notes that a stage of setting up is done; the probe prints how long each took when it ends. */
+  mark(stage: string): void;
   /** Saves a screenshot of the page, or of another page such as a guest's, and prints where it went. */
   snap(name: string, on?: Page): Promise<void>;
   /** Waits for a test run in the page; if it never holds, fails saying what the page was asking, with a screenshot. */
@@ -76,7 +78,16 @@ export function explain(page: Page): Promise<string> {
 export function probe(title: string, body: (p: Probe) => Promise<void>): void {
   test(title, async ({ browser }) => {
     test.setTimeout(600_000);
+    const began = Date.now();
+    const stages: string[] = [];
+    let last = began;
+    const mark = (stage: string) => {
+      const now = Date.now();
+      stages.push(`${stage} ${((now - last) / 1000).toFixed(1)}`);
+      last = now;
+    };
     const server = await startServer(undefined, PROBE_SEED);
+    mark('server');
     const context = await browser.newContext({ viewport: VIEWPORT });
     const page = await context.newPage();
     listen(page, 'host');
@@ -87,7 +98,7 @@ export function probe(title: string, body: (p: Probe) => Promise<void>): void {
       console.log(`[snap] forge-gui-web/target/probe/${title.replace(/[^\w-]+/g, '-')}/${name}.png`);
     };
     const p: Probe = {
-      page, browser, server, snap,
+      page, browser, server, mark, snap,
       async until(what, test, arg, on = page, timeout = 30_000) {
         try {
           await on.waitForFunction(test as (arg: unknown) => unknown, arg, { timeout });
@@ -114,6 +125,8 @@ export function probe(title: string, body: (p: Probe) => Promise<void>): void {
     };
     try {
       await body(p);
+      mark('probe');
+      console.log(`[time] ${((Date.now() - began) / 1000).toFixed(1)} s: ${stages.join(', ')}`);
     } finally {
       await context.close();
       await server.stop();
@@ -141,6 +154,7 @@ async function seatGuest(p: Probe): Promise<Page> {
 export async function lobby(p: Probe): Promise<void> {
   await home(p);
   await hostTable(p.page, false);
+  p.mark('lobby');
 }
 
 /** Match setup with a guest seated; returns the guest's page. */
@@ -201,6 +215,7 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
     const lobby = window.forge.model.lobby;
     return lobby?.seats.length === players && (!game || lobby.formats.find(f => f.id === lobby.format)?.name === game);
   }, want);
+  p.mark('table');
   // Each seat without a legal deck is dealt the first legal one by name, as the finder lists them. The deck list for a
   // new game arrives after it, so a seat dealt from the old list is dealt again until the table can start.
   for (let tries = 0; ; tries++) {
@@ -215,12 +230,16 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
       });
       return false;
     });
-    if (ready) break;
+    if (ready) {
+      p.mark('decks');
+      break;
+    }
     if (tries > 30) throw new Error(`The table never became ready. The page: ${await explain(page)}`);
     await page.waitForTimeout(700);
   }
   await act(page, 'startMatch', false);
   await gameStarted(page);
+  p.mark('match start');
   await setState(p, state, table);
 }
 
@@ -242,11 +261,13 @@ export async function setState(p: Probe, state: string, table: Table = {}, other
   const named = /^(?:human|ai|p\d)(?:battlefield|hand)=([^;|]+)/;
   const first = lines.map(l => named.exec(l)?.[1]).find(Boolean);
   await untilPriority(page, others);
+  p.mark('priority');
   await act(page, 'dev', 'setupGameState', lines.join('\n'));
   if (!first) return;
   // The board is sent after it is placed; answering a prompt before it lands answers the old one
   await p.until(`${first} on the table`, name => [...document.querySelectorAll<HTMLElement>('#match .card')]
     .some(c => c.offsetParent !== null && c.textContent?.includes(name)), first, page, 10_000);
+  p.mark('placed');
 }
 
 /** Calls one of the page's own actions, as its buttons and keys do, whichever key or button that is. */
