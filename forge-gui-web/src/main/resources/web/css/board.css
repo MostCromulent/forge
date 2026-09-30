@@ -818,6 +818,9 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 #match.picking .card.selectable { outline: none; }
 #match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
 #match.picking #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
+/* What the aimed or dragged arrow lands on, in the arrow's colour (overlay.ts). Important, because the picking and
+   selectable outlines above are more specific and would hide it */
+#match .aimed { outline: 2px solid var(--aimed) !important; outline-offset: 1px; box-shadow: 0 0 16px 2px var(--aimed) !important; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
    attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */

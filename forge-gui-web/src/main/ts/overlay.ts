@@ -95,9 +95,25 @@ function boardMoving(): boolean {
 function paint(model: Model): void {
   growing = false;
   drawnNow = new Map();
+  glowNext = null;
   paintArrows(model);
   born = drawnNow;
+  // Set while the arrows were drawn, which the compiler cannot see from here
+  const next = glowNext as typeof glowing;
+  if (next?.el !== glowing?.el || next?.colour !== glowing?.colour) {
+    glowing?.el.classList.remove('aimed');
+    if (next) {
+      next.el.classList.add('aimed');
+      next.el.style.setProperty('--aimed', next.colour);
+    }
+    glowing = next;
+  }
 }
+
+/** What the arrow being aimed or dragged lands on glows in the arrow's colour, as the one a click or drop picks. */
+let glowing: { el: HTMLElement; colour: string } | null = null;
+let glowNext: { el: HTMLElement; colour: string } | null = null;
+const glow = (el: HTMLElement, kind: ArrowKind) => { glowNext = { el, colour: kind.glow }; };
 
 function paintArrows(model: Model): void {
   const canvas = byId<HTMLCanvasElement>('overlay');
@@ -183,6 +199,7 @@ function drawDrag(ctx: CanvasRenderingContext2D): void {
   const kind = KINDS[drag.kind];
   if (drag.to instanceof HTMLElement) {
     ribbon(ctx, drag.from, drag.to, kind, false);
+    glow(drag.to, kind);
   } else {
     arrow(ctx, edge(drag.from, drag.to, 2), drag.to, kind);
   }
@@ -260,7 +277,9 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const over = hit ?? (held ? aimedAt : null);
   aimedAt = over;
   if (over) {
-    ribbon(ctx, from, over, KINDS.target);
+    // Full grown at once: the arrow was already out to the pointer, so only its head moves onto the target
+    ribbon(ctx, from, over, KINDS.target, false);
+    glow(over, KINDS.target);
   } else {
     arrow(ctx, edge(from, pointer, 2), pointer, KINDS.target);
   }
