@@ -151,7 +151,7 @@ export async function board(p: Probe, state: string, table: Table = {}): Promise
  * Sets up a game state in the match already under way, with the same defaults as board: pass the table the match was
  * set up with, less any player who has lost. It waits for priority first, and then for the first card the state names.
  */
-export async function setState(p: Probe, state: string, table: Table = {}): Promise<void> {
+export async function setState(p: Probe, state: string, table: Table = {}, others: Page[] = []): Promise<void> {
   const page = p.page;
   const players = table.players ?? 2;
   const lines = state.trim().split('\n').map(l => l.trim()).filter(Boolean);
@@ -163,7 +163,7 @@ export async function setState(p: Probe, state: string, table: Table = {}): Prom
   }
   const named = /^(?:human|ai|p\d)(?:battlefield|hand)=([^;|]+)/;
   const first = lines.map(l => named.exec(l)?.[1]).find(Boolean);
-  await untilPriority(page);
+  await untilPriority(page, others);
   await act(page, 'dev', 'setupGameState', lines.join('\n'));
   if (!first) return;
   // The board is sent after it is placed; answering a prompt before it lands answers the old one
@@ -189,12 +189,16 @@ export function asking(page: Page): Promise<{ message: string; priority: boolean
  * the questions before the first turn with their first choice (play first, keep the hand) and passes whatever is on
  * the stack.
  */
-export async function untilPriority(page: Page, timeout = 60_000): Promise<void> {
+export async function untilPriority(page: Page, others: Page[] = [], timeout = 60_000): Promise<void> {
   const end = Date.now() + timeout;
   let last: Awaited<ReturnType<typeof asking>> = null;
   while (Date.now() < end) {
     last = await asking(page);
     if (last?.priority && !last.stack) return;
+    // Another player's page holding priority or asking before the first turn is answered for them, or it waits forever
+    for (const other of others) {
+      if (await other.evaluate(() => !!window.forge.model.prompt?.ok?.enabled)) await act(other, 'ok');
+    }
     if (last && (!last.priority || last.stack)) {
       await act(page, 'ok');
       // Answered once: the next look waits for the prompt to change, rather than answering the same one twice
