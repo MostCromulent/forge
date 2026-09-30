@@ -975,6 +975,14 @@ body.dragging-block #zoom { display: none; }
 @keyframes first-lit { to { transform: scale(1.14); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); } }
 @keyframes first-dim { to { opacity: .4; transform: scale(.9); } }
 @keyframes first-say { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+/* Choosing who starts: the faces are the choice, so it stays until one is clicked, and nobody steps back yet */
+#first-reveal.choosing { pointer-events: auto; animation: first-reveal-in .3s ease forwards; }
+@keyframes first-reveal-in { from { opacity: 0; } }
+#first-reveal.choosing .reveal-face { animation: none; padding: 0; background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; }
+#first-reveal.choosing .reveal-face > :first-child { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+#first-reveal.choosing .reveal-face:is(:hover, :focus-visible) > :first-child { transform: scale(1.08); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); }
+#first-reveal.choosing .reveal-face:focus-visible { outline: none; }
+#first-reveal.choosing p { animation-delay: .1s; }
 /* Still said, only without the movement */
 html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data-motion="reduced"] #first-reveal .reveal-face, html[data-motion="reduced"] #first-reveal p { animation-duration: 1ms; animation-delay: 0s; }
 /* The starter keeps a mark on their face until their first turn is over */

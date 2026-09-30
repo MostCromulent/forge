@@ -51,9 +51,10 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   const choice = model.prompt?.starterChoice;
   if (choice && !choseStarter) {
     choseStarter = true;
-    const mine = me(model);
-    if (choice === 'toss' && mine) revealFirst(model, mine.$key, t('lblWebBoardWonCoinToss'));
+    chooseFirst(model, actions, choice);
   }
+  // Answered from the prompt's own buttons instead, the faces have nothing left to ask
+  if (!choice) document.querySelector('#first-reveal.choosing')?.remove();
   noticeLosses(model, actions);
   // A prompt offering cards or players to pick dims everything else (board.css); paying a cost is not such a pick
   const p = model.prompt;
@@ -472,23 +473,41 @@ let firstPlayer: number | null = null;
 let choseStarter = false;
 
 /**
+ * Having won the toss or lost the last game, you choose who starts from the same faces the reveal shows. Two
+ * players are asked to play or draw, so your own face plays and the other draws; with more, a face is the player
+ * chosen. The choice then plays out as the reveal does.
+ */
+function chooseFirst(model: Model, actions: Actions, choice: string): void {
+  const mine = me(model)?.$key;
+  const two = players(model).length === 2;
+  revealFirst(model, null, t(choice === 'toss' ? 'lblWebBoardWonCoinToss' : 'lblWebBoardLostLastGame'), key => {
+    if (!two) actions.selectPlayer(key);
+    else if (key === mine) actions.ok();
+    else actions.cancel();
+    revealFirst(model, key);
+  });
+}
+
+/**
  * Who goes first, said over the board as the opening hands are dealt: every player's face, then the one who
  * starts lit in brass and the rest stepping back. The prompt says it too, but a sentence above a hand is easy to
- * read past.
+ * read past. With pick, it asks instead: the faces are buttons and it stays until one is chosen.
  */
-function revealFirst(model: Model, first: number, said?: string): void {
+function revealFirst(model: Model, first: number | null, said?: string, pick?: (key: number) => void): void {
   const everyone = players(model);
   const starter = everyone.find(p => p.$key === first);
-  if (!starter) return;
+  if (!starter && !pick) return;
   document.getElementById('first-reveal')?.remove();
   const reveal = document.createElement('div');
   reveal.id = 'first-reveal';
-  reveal.setAttribute('role', 'status');
+  reveal.setAttribute('role', pick ? 'dialog' : 'status');
+  reveal.classList.toggle('choosing', !!pick);
   const faces = document.createElement('div');
   faces.className = 'reveal-faces';
   for (const p of everyone) {
-    const face = document.createElement('div');
+    const face = document.createElement(pick ? 'button' : 'div');
     face.className = p.$key === first ? 'reveal-face first' : 'reveal-face';
+    if (pick) face.onclick = () => pick(p.$key);
     const url = playerAvatarUrl(p);
     const picture = document.createElement(url ? 'img' : 'span');
     if (picture instanceof HTMLImageElement) {
@@ -504,7 +523,7 @@ function revealFirst(model: Model, first: number, said?: string): void {
     faces.append(face);
   }
   const line = document.createElement('p');
-  line.textContent = said ?? (isLocal(model, starter) ? t('lblWebBoardYouGoFirst') : t('lblWebBoardPlayerGoesFirst', starter.Name ?? ''));
+  line.textContent = said ?? (starter && isLocal(model, starter) ? t('lblWebBoardYouGoFirst') : t('lblWebBoardPlayerGoesFirst', starter?.Name ?? ''));
   reveal.append(faces, line);
   byId('match').append(reveal);
   reveal.addEventListener('animationend', e => {
