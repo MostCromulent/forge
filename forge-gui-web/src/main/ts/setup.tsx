@@ -5,6 +5,7 @@
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
 import type { LimitedOptions, SealedBlock } from './protocol';
+import { t, type TextKey } from './text';
 
 export interface Step<V> {
   id: string;
@@ -62,17 +63,17 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
 }) {
   const open = openStep(steps, value);
   const label = typeof action === 'string' ? action : action(value);
-  const button = <button class={ticket ? 'primary big' : 'primary'} disabled={busy || open !== null} onClick={submit}>{busy ? 'Opening…' : label}</button>;
+  const button = <button class={ticket ? 'primary big' : 'primary'} disabled={busy || open !== null} onClick={submit}>{busy ? t('lblWebSetupOpening') : label}</button>;
   const questions = <Questions steps={steps} value={value} onChange={onChange} title={title} />;
   if (ticket) {
     return (
       <div class="wiz-ticket">
         {questions}
-        <aside class="ticket" aria-label="Your event">
-          <div class="ticket-head"><span class="ticket-kicker">Your event</span><b>{ticket.title}</b></div>
+        <aside class="ticket" aria-label={t('lblWebSetupYourEvent')}>
+          <div class="ticket-head"><span class="ticket-kicker">{t('lblWebSetupYourEvent')}</span><b>{ticket.title}</b></div>
           <dl>
             {ticket.rows(value).map(([name, v]) => <>
-              <dt key={name}>{name}</dt><dd class={v === null ? 'pending' : undefined}>{v ?? 'Not chosen yet'}</dd>
+              <dt key={name}>{name}</dt><dd class={v === null ? 'pending' : undefined}>{v ?? t('lblWebSetupNotChosenYet')}</dd>
             </>)}
           </dl>
           <div class="ticket-foot">
@@ -112,7 +113,7 @@ function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; val
               <span class="num" aria-hidden="true">✓</span>
               <span class="lab">{step.label}</span>
               <span class="val">{step.answer(value)}</span>
-              <button class="link" onClick={() => onChange(reopen(steps, value, step.id))}>Edit</button>
+              <button class="link" onClick={() => onChange(reopen(steps, value, step.id))}>{t('lblEdit')}</button>
             </div>
           );
         }
@@ -148,16 +149,19 @@ export interface SealedValue {
 }
 
 /** The sealed products desktop offers, with a line each; LimitedPoolType's names are the ids. */
-const PRODUCTS: [string, string, string][] = [
-  ['Full', 'Full card pool', 'Packs from every card in Forge.'],
-  ['Block', 'Block', 'Packs from one block or set.'],
-  ['FantasyBlock', 'Fantasy block', 'A custom block that comes with Forge.'],
-  ['Prerelease', 'Prerelease', 'A set\'s prerelease kit, with its promo card.'],
-  ['Custom', 'Custom pool', 'A sealed pool saved in Forge.'],
-  ['Import', 'CubeCobra', 'Any CubeCobra cube, by link or ID.'],
+const PRODUCTS: [string, TextKey, TextKey][] = [
+  ['Full', 'lblWebSetupProductFull', 'lblWebSetupProductFullLine'],
+  ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
+  ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
+  ['Prerelease', 'lblWebSetupProductPrerelease', 'lblWebSetupProductPrereleaseLine'],
+  ['Custom', 'lblWebSetupProductCustom', 'lblWebSetupProductCustomLine'],
+  ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
 ];
 
-const productName = (id?: string) => PRODUCTS.find(p => p[0] === id)?.[1] ?? '';
+const productName = (id?: string) => {
+  const key = PRODUCTS.find(p => p[0] === id)?.[1];
+  return key ? t(key) : '';
+};
 const isBlock = (v: SealedValue) => v.product === 'Block' || v.product === 'FantasyBlock';
 const blocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.fantasyBlocks : options.blocks;
 const hasPackCount = (v: SealedValue) => v.product === 'Full' || v.product === 'Custom' || v.product === 'Import';
@@ -175,24 +179,24 @@ export function sealedBlockChoice(options: LimitedOptions, product: string, name
 export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
   return [
     {
-      id: 'product', label: 'Product', hint: 'Which packs', fields: ['product'],
+      id: 'product', label: t('lblProduct'), hint: t('lblWebSetupHintWhichPacks'), fields: ['product'],
       answer: v => v.product ? productName(v.product) : null,
       render: (_, set) => (
         <div class="tiles">
           {PRODUCTS.map(([id, name, line]) => (
-            <button key={id} class="tile-choice" onClick={() => set({ product: id })}><b>{name}</b><span>{line}</span></button>
+            <button key={id} class="tile-choice" onClick={() => set({ product: id })}><b>{t(name)}</b><span>{t(line)}</span></button>
           ))}
         </div>
       ),
     },
     {
-      id: 'block', label: 'Block', hint: 'Which block', fields: ['block'], applies: isBlock,
+      id: 'block', label: t('lblBlock'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: isBlock,
       answer: v => v.block ?? null,
-      render: (v, set) => <Pick items={blocksFor(options, v.product).map(b => [b.name, b.name])} placeholder="Find a block"
+      render: (v, set) => <Pick items={blocksFor(options, v.product).map(b => [b.name, b.name])} placeholder={t('lblWebSetupFindBlock')}
         pick={name => set(sealedBlockChoice(options, v.product!, name))} />,
     },
     {
-      id: 'combo', label: 'Packs', hint: 'Which sets', fields: ['combo'],
+      id: 'combo', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
       applies: v => isBlock(v) && !!v.block && (blockOf(options, v)?.combos.length ?? 0) > 1,
       answer: v => v.combo ?? null,
       render: (v, set) => (
@@ -202,48 +206,48 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
       ),
     },
     {
-      id: 'edition', label: 'Edition', hint: 'Which prerelease', fields: ['edition'], applies: v => v.product === 'Prerelease',
+      id: 'edition', label: t('lblWebSetupEdition'), hint: t('lblWebSetupHintWhichPrerelease'), fields: ['edition'], applies: v => v.product === 'Prerelease',
       answer: v => options.prereleases.find(e => e.code === v.edition)?.name ?? null,
-      render: (_, set) => <Pick items={options.prereleases.map(e => [e.code, e.name])} placeholder="Find an edition"
+      render: (_, set) => <Pick items={options.prereleases.map(e => [e.code, e.name])} placeholder={t('lblWebSetupFindEdition')}
         pick={code => set({ edition: code })} />,
     },
     {
-      id: 'template', label: 'Pool', hint: 'Which saved pool', fields: ['template'], applies: v => v.product === 'Custom',
+      id: 'template', label: t('lblWebSetupPool'), hint: t('lblWebSetupHintWhichSavedPool'), fields: ['template'], applies: v => v.product === 'Custom',
       answer: v => v.template ?? null,
       render: (_, set) => options.templates.length
-        ? <Pick items={options.templates.map(t => [t, t])} placeholder="Find a pool" pick={t => set({ template: t })} />
-        : <p class="hint">No sealed pools are saved.</p>,
+        ? <Pick items={options.templates.map(p => [p, p])} placeholder={t('lblWebSetupFindPool')} pick={p => set({ template: p })} />
+        : <p class="hint">{t('lblWebSetupNoPools')}</p>,
     },
     {
-      id: 'cubeId', label: 'Cube', hint: 'A CubeCobra link or ID', fields: ['cubeId'], applies: v => v.product === 'Import',
+      id: 'cubeId', label: t('lblWebSetupCube'), hint: t('lblWebSetupHintCubeCobra'), fields: ['cubeId'], applies: v => v.product === 'Import',
       answer: v => v.cubeId ?? null,
-      render: (_, set) => <TextStep placeholder="CubeCobra link or ID" initial="" done={id => set({ cubeId: id })} />,
+      render: (_, set) => <TextStep placeholder={t('lblWebSetupCubeCobraField')} initial="" done={id => set({ cubeId: id })} />,
     },
     {
-      id: 'packs', label: 'Packs', hint: 'How many to open', fields: ['packs'], applies: hasPackCount,
-      answer: v => v.packs === undefined ? null : `${v.packs} packs`,
+      id: 'packs', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintHowMany'), fields: ['packs'], applies: hasPackCount,
+      answer: v => v.packs === undefined ? null : t('lblWebSetupNPacks', v.packs),
       render: (v, set) => <PackCount extra={v.product === 'Import'} done={n => set({ packs: n })} />,
     },
     {
-      id: 'name', label: 'Name', hint: 'What to call the pool', fields: ['name'],
+      id: 'name', label: t('lblName'), hint: t('lblWebSetupHintPoolName'), fields: ['name'],
       answer: v => v.name ?? null,
-      render: (v, set) => <TextStep placeholder="Pool name" initial={defaultName(v)} done={name => set({ name })} />,
+      render: (v, set) => <TextStep placeholder={t('lblWebSetupPoolName')} initial={defaultName(v)} done={name => set({ name })} />,
     },
   ];
 }
 
 function defaultName(v: SealedValue): string {
-  const what = v.product === 'Prerelease' ? 'Prerelease' : isBlock(v) ? v.block ?? '' : productName(v.product);
-  return `${what} ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+  const what = v.product === 'Prerelease' ? t('lblWebSetupProductPrerelease') : isBlock(v) ? v.block ?? '' : productName(v.product);
+  return t('lblWebSetupDefaultName', what, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
 }
 
 export function sealedSentence(options: LimitedOptions, v: SealedValue): string {
   switch (v.product) {
-    case 'Full': return `${v.packs} packs from the full card pool.`;
-    case 'Prerelease': return `A ${options.prereleases.find(e => e.code === v.edition)?.name} prerelease kit.`;
-    case 'Custom': return `${v.packs} packs of ${v.template}.`;
-    case 'Import': return `${(v.packs ?? 0) + 1} packs of CubeCobra cube ${v.cubeId}.`;
-    default: return `${v.block}: ${v.combo}.`;
+    case 'Full': return t('lblWebSetupSealedFullSentence', v.packs ?? 0);
+    case 'Prerelease': return t('lblWebSetupSealedPrereleaseSentence', options.prereleases.find(e => e.code === v.edition)?.name ?? '');
+    case 'Custom': return t('lblWebSetupSealedCustomSentence', v.packs ?? 0, v.template ?? '');
+    case 'Import': return t('lblWebSetupSealedImportSentence', (v.packs ?? 0) + 1, v.cubeId ?? '');
+    default: return t('lblWebSetupBlockSentence', v.block ?? '', v.combo ?? '');
   }
 }
 
@@ -257,12 +261,12 @@ function sealedProduct(options: LimitedOptions, v: SealedValue): string | null {
   if (isBlock(v)) return v.block ?? productName(v.product);
   if (v.product === 'Prerelease') return options.prereleases.find(e => e.code === v.edition)?.name ?? productName(v.product);
   if (v.product === 'Custom') return v.template ?? productName(v.product);
-  if (v.product === 'Import') return v.cubeId ? `CubeCobra ${v.cubeId}` : productName(v.product);
+  if (v.product === 'Import') return v.cubeId ? t('lblWebSetupCubeCobraId', v.cubeId) : productName(v.product);
   return productName(v.product);
 }
 
 function sealedPacks(v: SealedValue): string | null {
-  if (v.product === 'Prerelease') return v.edition ? 'A prerelease kit' : null;
+  if (v.product === 'Prerelease') return v.edition ? t('lblWebSetupPrereleaseKit') : null;
   if (isBlock(v)) return v.combo ?? null;
   const n = packCount(v);
   return n === undefined ? null : String(n);
@@ -271,22 +275,22 @@ function sealedPacks(v: SealedValue): string | null {
 /** The offline sealed event beside its questions. Desktop builds seven opponents from the same packs. */
 export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
   return {
-    title: 'Sealed',
+    title: t('lblSealed'),
     rows: v => [
-      ['Product', sealedProduct(options, v)],
-      ['Packs', sealedPacks(v)],
-      ['Name', v.name ?? null],
-      ['Your deck', '40 cards or more'],
-      ['Opponents', '7, from the same packs'],
+      [t('lblProduct'), sealedProduct(options, v)],
+      [t('lblWebSetupPacks'), sealedPacks(v)],
+      [t('lblName'), v.name ?? null],
+      [t('lblWebSetupYourDeck'), t('lblWebSetupFortyOrMore')],
+      [t('lblWebSetupOpponents'), t('lblWebSetupSevenSamePacks')],
     ],
-    note: 'Opens the deck editor with your pool',
+    note: t('lblWebSetupSealedNote'),
   };
 }
 
 /** What opening the pool says it does: the number of packs when the form asked for it. */
 export function sealedAction(v: SealedValue): string {
   const n = packCount(v);
-  return n ? `Open ${n} packs` : v.product === 'Prerelease' ? 'Open the kit' : 'Open the packs';
+  return n ? t('lblWebSetupOpenNPacks', n) : v.product === 'Prerelease' ? t('lblWebSetupOpenKit') : t('lblWebSetupOpenPacks');
 }
 
 // ---- Draft -------------------------------------------------------------------------------------------------------
@@ -330,20 +334,30 @@ function productPod(options: LimitedOptions, v: DraftValue): number {
   return (v.product === 'Block' || v.product === 'FantasyBlock') ? draftBlockOf(options, v)?.podSize ?? 8 : 8;
 }
 
-const PICK_RULES: [string, string][] = [['NEVER', 'One card per pick'], ['FIRST_PICK', 'Two on the first pick of a pack'], ['ALWAYS', 'Two every pick']];
+/** Each pick rule's name, and the same in the middle of a line. */
+const PICK_RULES: [string, TextKey, TextKey][] = [
+  ['NEVER', 'lblWebSetupPickOne', 'lblWebSetupPickOneInline'],
+  ['FIRST_PICK', 'lblWebSetupPickFirstTwo', 'lblWebSetupPickFirstTwoInline'],
+  ['ALWAYS', 'lblWebSetupPickAlwaysTwo', 'lblWebSetupPickAlwaysTwoInline'],
+];
 const TIMERS = [0, 30, 45, 60, 90];
 const GRACES = [0, 60, 120, 300];
-const seconds = (n: number, none: string) => (n === 0 ? none : `${n} s`);
+const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebSetupSeconds', n));
 
 /** The draft products desktop offers; LimitedPoolType's names are the ids. */
-const DRAFT_PRODUCTS: [string, string, string][] = [
-  ['Full', 'Full card pool', 'Three packs from every card in Forge.'],
-  ['Block', 'Block', 'Packs from one block or set.'],
-  ['FantasyBlock', 'Fantasy block', 'A custom block that comes with Forge.'],
-  ['Custom', 'Cube', 'A cube saved in Forge.'],
-  ['Chaos', 'Chaos', 'Each pack from a random set in a theme.'],
-  ['Import', 'CubeCobra', 'Any CubeCobra cube, by link or ID.'],
+const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
+  ['Full', 'lblWebSetupProductFull', 'lblWebSetupDraftFullLine'],
+  ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
+  ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
+  ['Custom', 'lblWebSetupCube', 'lblWebSetupDraftCubeLine'],
+  ['Chaos', 'lblWebSetupChaos', 'lblWebSetupDraftChaosLine'],
+  ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
 ];
+
+const draftProductName = (id?: string) => {
+  const key = DRAFT_PRODUCTS.find(p => p[0] === id)?.[1];
+  return key ? t(key) : undefined;
+};
 
 const draftBlocksFor = (options: LimitedOptions, product?: string) => product === 'FantasyBlock' ? options.draftFantasyBlocks : options.draftBlocks;
 const draftBlockOf = (options: LimitedOptions, v: DraftValue) => draftBlocksFor(options, v.product).find(b => b.name === v.block);
@@ -364,24 +378,24 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
   const isBlock = (v: DraftValue) => (v.product === 'Block' || v.product === 'FantasyBlock') && !!v.block;
   return [
     {
-      id: 'product', label: 'Product', hint: 'Which packs', fields: ['product'],
-      answer: v => DRAFT_PRODUCTS.find(p => p[0] === v.product)?.[1] ?? null,
+      id: 'product', label: t('lblProduct'), hint: t('lblWebSetupHintWhichPacks'), fields: ['product'],
+      answer: v => draftProductName(v.product) ?? null,
       render: (_, set) => (
         <div class="tiles">
           {DRAFT_PRODUCTS.map(([id, name, line]) => (
-            <button key={id} class="tile-choice" onClick={() => set({ product: id })}><b>{name}</b><span>{line}</span></button>
+            <button key={id} class="tile-choice" onClick={() => set({ product: id })}><b>{t(name)}</b><span>{t(line)}</span></button>
           ))}
         </div>
       ),
     },
     {
-      id: 'block', label: 'Block', hint: 'Which block', fields: ['block'], applies: v => v.product === 'Block' || v.product === 'FantasyBlock',
+      id: 'block', label: t('lblBlock'), hint: t('lblWebSetupHintWhichBlock'), fields: ['block'], applies: v => v.product === 'Block' || v.product === 'FantasyBlock',
       answer: v => v.block ?? null,
-      render: (v, set) => <Pick items={draftBlocksFor(options, v.product).map(b => [b.name, b.name])} placeholder="Find a block"
+      render: (v, set) => <Pick items={draftBlocksFor(options, v.product).map(b => [b.name, b.name])} placeholder={t('lblWebSetupFindBlock')}
         pick={name => set(draftBlockChoice(options, v.product!, name))} />,
     },
     {
-      id: 'combo', label: 'Packs', hint: 'Which sets', fields: ['combo'],
+      id: 'combo', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
       applies: v => isBlock(v) && (draftBlockOf(options, v)?.combos.length ?? 0) > 0,
       answer: v => v.combo ?? null,
       render: (v, set) => (
@@ -391,7 +405,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       ),
     },
     {
-      id: 'packs', label: 'Packs', hint: 'A set for each pack', fields: ['packs'],
+      id: 'packs', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintSetEachPack'), fields: ['packs'],
       applies: v => isBlock(v) && (draftBlockOf(options, v)?.sets.length ?? 0) > 1 && (draftBlockOf(options, v)?.combos.length ?? 0) === 0,
       answer: v => v.packs?.join(' / ') ?? null,
       render: (v, set) => {
@@ -400,24 +414,24 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       },
     },
     {
-      id: 'cube', label: 'Cube', hint: 'Which cube', fields: ['cube'], applies: v => v.product === 'Custom',
+      id: 'cube', label: t('lblWebSetupCube'), hint: t('lblWebSetupHintWhichCube'), fields: ['cube'], applies: v => v.product === 'Custom',
       answer: v => v.cube ?? null,
       render: (_, set) => options.cubes.length
-        ? <Pick items={options.cubes.map(c => [c, c])} placeholder="Find a cube" pick={c => set({ cube: c })} />
-        : <p class="hint">No cubes are saved.</p>,
+        ? <Pick items={options.cubes.map(c => [c, c])} placeholder={t('lblWebSetupFindCube')} pick={c => set({ cube: c })} />
+        : <p class="hint">{t('lblWebSetupNoCubes')}</p>,
     },
     {
-      id: 'theme', label: 'Theme', hint: 'Which sets', fields: ['theme'], applies: v => v.product === 'Chaos',
+      id: 'theme', label: t('lblWebSetupTheme'), hint: t('lblWebSetupHintWhichSets'), fields: ['theme'], applies: v => v.product === 'Chaos',
       answer: v => v.theme ?? null,
-      render: (_, set) => <Pick items={options.themes.map(t => [t, t])} placeholder="Find a theme" pick={t => set({ theme: t })} />,
+      render: (_, set) => <Pick items={options.themes.map(th => [th, th])} placeholder={t('lblWebSetupFindTheme')} pick={th => set({ theme: th })} />,
     },
     {
-      id: 'cubeId', label: 'Cube', hint: 'A CubeCobra link or ID', fields: ['cubeId'], applies: v => v.product === 'Import',
+      id: 'cubeId', label: t('lblWebSetupCube'), hint: t('lblWebSetupHintCubeCobra'), fields: ['cubeId'], applies: v => v.product === 'Import',
       answer: v => v.cubeId ?? null,
-      render: (_, set) => <TextStep placeholder="CubeCobra link or ID" initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
+      render: (_, set) => <TextStep placeholder={t('lblWebSetupCubeCobraField')} initial={options.lastCube ?? ''} done={id => set({ cubeId: id })} />,
     },
     {
-      id: 'rules', label: 'Table rules', hint: 'Seats, picks, timer', fields: ['podSize', 'pickRule', 'timer', 'grace'],
+      id: 'rules', label: t('lblWebSetupTableRules'), hint: t('lblWebSetupHintRules'), fields: ['podSize', 'pickRule', 'timer', 'grace'],
       applies: () => !!table,
       answer: v => v.timer === undefined ? null : rulesLine(v),
       render: (v, set) => <TableRules seated={table?.seated ?? 2} recommended={productPod(options, v)} done={set} />,
@@ -425,15 +439,16 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
   ];
 }
 
-/** The table rules as the folded step and the event panel say them. */
-/** A pick rule's name, as the form and the event panel say it. */
-export function pickRuleName(rule?: string): string {
-  return PICK_RULES.find(p => p[0] === rule)?.[1] ?? PICK_RULES[0][1];
+/** A pick rule's name, as the form and the event panel say it: on its own, or in the middle of a line. */
+export function pickRuleName(rule?: string, inline = false): string {
+  const names = PICK_RULES.find(p => p[0] === rule) ?? PICK_RULES[0];
+  return t(inline ? names[2] : names[1]);
 }
 
+/** The table rules as the folded step and the event panel say them. */
 export function rulesLine(v: DraftValue): string {
-  const picks = PICK_RULES.find(p => p[0] === v.pickRule)?.[1] ?? PICK_RULES[0][1];
-  return `${v.podSize} seats · ${picks.toLowerCase()} · ${v.timer ? `${v.timer} s to pick` : 'no pick timer'}`;
+  const picks = pickRuleName(v.pickRule, true);
+  return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebSetupNoPickTimer'));
 }
 
 function TableRules({ seated, recommended, done }: { seated: number; recommended: number; done: (v: Partial<DraftValue>) => void }) {
@@ -445,31 +460,31 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
   const at = pods.indexOf(pod);
   return (
     <div class="table-rules">
-      <span class="tr-label">Seats</span>
+      <span class="tr-label">{t('lblWebSetupSeats')}</span>
       <div class="tr-field">
         <span class="stepper">
-          <button class="step" disabled={at <= 0} aria-label="Fewer seats" onClick={() => setPod(pods[at - 1])}>&minus;</button>
+          <button class="step" disabled={at <= 0} aria-label={t('lblWebSetupFewerSeats')} onClick={() => setPod(pods[at - 1])}>&minus;</button>
           <span class="n">{pod}</span>
-          <button class="step" disabled={at >= pods.length - 1} aria-label="More seats" onClick={() => setPod(pods[at + 1])}>+</button>
+          <button class="step" disabled={at >= pods.length - 1} aria-label={t('lblWebSetupMoreSeats')} onClick={() => setPod(pods[at + 1])}>+</button>
         </span>
-        <span class="hint">Computers fill empty seats. They draft but don't play.</span>
+        <span class="hint">{t('lblWebSetupComputersFill')}</span>
       </div>
-      <label class="tr-label" for="tr-picks">Picks</label>
+      <label class="tr-label" for="tr-picks">{t('lblWebSetupPicks')}</label>
       <span class="pill-select"><select id="tr-picks" value={pickRule} onChange={e => setPickRule(e.currentTarget.value)}>
-        {PICK_RULES.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        {PICK_RULES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
       </select></span>
-      <label class="tr-label" for="tr-timer">Pick timer</label>
+      <label class="tr-label" for="tr-timer">{t('lblWebSetupPickTimer')}</label>
       <span class="pill-select"><select id="tr-timer" value={timer} onChange={e => setTimer(Number(e.currentTarget.value))}>
-        {TIMERS.map(n => <option key={n} value={n}>{seconds(n, 'None')}</option>)}
+        {TIMERS.map(n => <option key={n} value={n}>{seconds(n, t('lblNone'))}</option>)}
       </select></span>
-      <label class="tr-label" for="tr-grace">Time to rejoin</label>
+      <label class="tr-label" for="tr-grace">{t('lblWebSetupTimeToRejoin')}</label>
       <div class="tr-field">
         <span class="pill-select"><select id="tr-grace" value={grace} onChange={e => setGrace(Number(e.currentTarget.value))}>
-          {GRACES.map(n => <option key={n} value={n}>{n === 0 ? 'None' : `${n / 60} min`}</option>)}
+          {GRACES.map(n => <option key={n} value={n}>{n === 0 ? t('lblNone') : t('lblWebSetupMinutes', n / 60)}</option>)}
         </select></span>
-        <span class="hint">After this, the draft picks for a player who dropped out.</span>
+        <span class="hint">{t('lblWebSetupRejoinHint')}</span>
       </div>
-      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>Continue</button>
+      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>{t('lblWebSetupContinue')}</button>
     </div>
   );
 }
@@ -477,25 +492,25 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
 /** What the draft is. Online, the table rules say who drafts, so the computer drafters are not counted here. */
 export function draftSentence(v: DraftValue, online = false): string {
   switch (v.product) {
-    case 'Full': return online ? 'Three packs from the full card pool.' : 'Three packs from the full card pool, against seven computers.';
-    case 'Custom': return `A draft of ${v.cube}.`;
-    case 'Chaos': return `A chaos draft: ${v.theme}.`;
-    case 'Import': return `A draft of CubeCobra cube ${v.cubeId}.`;
-    default: return `${v.block}: ${draftCombo(v)}.`;
+    case 'Full': return online ? t('lblWebSetupDraftFullSentence') : t('lblWebSetupDraftFullSentenceAi');
+    case 'Custom': return t('lblWebSetupDraftOf', v.cube ?? '');
+    case 'Chaos': return t('lblWebSetupChaosSentence', v.theme ?? '');
+    case 'Import': return t('lblWebSetupDraftCubeCobraSentence', v.cubeId ?? '');
+    default: return t('lblWebSetupBlockSentence', v.block ?? '', draftCombo(v) ?? '');
   }
 }
 
 function draftProduct(v: DraftValue): string | null {
-  const name = DRAFT_PRODUCTS.find(p => p[0] === v.product)?.[1];
+  const name = draftProductName(v.product);
   if (!name) return null;
   switch (v.product) {
     case 'Block': case 'FantasyBlock': {
       const sets = draftCombo(v);
-      return v.block ? (sets ? `${v.block}: ${sets}` : v.block) : name;
+      return v.block ? (sets ? t('lblWebSetupBlockSets', v.block, sets) : v.block) : name;
     }
     case 'Custom': return v.cube ?? name;
-    case 'Chaos': return v.theme ? `Chaos: ${v.theme}` : name;
-    case 'Import': return v.cubeId ? `CubeCobra ${v.cubeId}` : name;
+    case 'Chaos': return v.theme ? t('lblWebSetupChaosTheme', v.theme) : name;
+    case 'Import': return v.cubeId ? t('lblWebSetupCubeCobraId', v.cubeId) : name;
     default: return name;
   }
 }
@@ -503,14 +518,14 @@ function draftProduct(v: DraftValue): string | null {
 /** The offline draft beside its questions: seven computers draft beside you, and their decks are your opponents. */
 export function draftTicket(): Ticket<DraftValue> {
   return {
-    title: 'Booster draft',
+    title: t('lblWebSetupBoosterDraft'),
     rows: v => [
-      ['Product', draftProduct(v)],
-      ['Drafters', 'You and 7 AI'],
-      ['Your deck', '40 cards or more'],
-      ['Opponents', 'The 7 decks drafted beside you'],
+      [t('lblProduct'), draftProduct(v)],
+      [t('lblWebSetupDrafters'), t('lblWebSetupYouAndSevenAi')],
+      [t('lblWebSetupYourDeck'), t('lblWebSetupFortyOrMore')],
+      [t('lblWebSetupOpponents'), t('lblWebSetupSevenDecksBeside')],
     ],
-    note: 'Opens the first pack',
+    note: t('lblWebSetupDraftNote'),
   };
 }
 
@@ -519,13 +534,13 @@ function PackSets({ sets, packs, done }: { sets: string[]; packs: number; done: 
   return (
     <div class="rows">
       {chosen.map((code, i) => (
-        <label key={i} class="pack-set">Pack {i + 1}
+        <label key={i} class="pack-set">{t('lblWebSetupPackN', i + 1)}
           <select value={code} onChange={e => setChosen(chosen.map((c, j) => (j === i ? e.currentTarget.value : c)))}>
             {sets.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
       ))}
-      <button class="primary" onClick={() => done(chosen)}>Continue</button>
+      <button class="primary" onClick={() => done(chosen)}>{t('lblWebSetupContinue')}</button>
     </div>
   );
 }
@@ -538,7 +553,7 @@ function Pick({ items, placeholder, pick }: { items: [string, string][]; placeho
       <input type="search" placeholder={placeholder} value={filter} onInput={e => setFilter(e.currentTarget.value)} />
       <div class="pick-list">
         {shown.map(([id, label]) => <button key={id} onClick={() => pick(id)}>{label}</button>)}
-        {shown.length === 0 && <p class="hint">Nothing matches.</p>}
+        {shown.length === 0 && <p class="hint">{t('lblWebSetupNothingMatches')}</p>}
       </div>
     </div>
   );
@@ -549,12 +564,12 @@ function PackCount({ extra, done }: { extra: boolean; done: (n: number) => void 
   return (
     <div class="rows">
       <span class="stepper">
-        <button class="step" disabled={n <= 3} aria-label="One fewer pack" onClick={() => setN(n - 1)}>&minus;</button>
+        <button class="step" disabled={n <= 3} aria-label={t('lblWebSetupOneFewerPack')} onClick={() => setN(n - 1)}>&minus;</button>
         <span class="n">{n}</span>
-        <button class="step" disabled={n >= 12} aria-label="One more pack" onClick={() => setN(n + 1)}>+</button>
+        <button class="step" disabled={n >= 12} aria-label={t('lblWebSetupOneMorePack')} onClick={() => setN(n + 1)}>+</button>
       </span>
-      <span class="hint">{extra ? 'A CubeCobra pool adds one pack to this.' : '3 to 12'}</span>
-      <button class="primary" onClick={() => done(n)}>Continue</button>
+      <span class="hint">{extra ? t('lblWebSetupCubeCobraExtra') : t('lblWebSetupRange', 3, 12)}</span>
+      <button class="primary" onClick={() => done(n)}>{t('lblWebSetupContinue')}</button>
     </div>
   );
 }
@@ -565,7 +580,7 @@ function TextStep({ placeholder, initial, done }: { placeholder: string; initial
   return (
     <form class="rows" onSubmit={e => { e.preventDefault(); if (ok) done(text.trim()); }}>
       <input type="text" placeholder={placeholder} value={text} onInput={e => setText(e.currentTarget.value)} />
-      <button class="primary" type="submit" disabled={!ok}>Continue</button>
+      <button class="primary" type="submit" disabled={!ok}>{t('lblWebSetupContinue')}</button>
     </form>
   );
 }

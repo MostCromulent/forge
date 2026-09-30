@@ -57,7 +57,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
     }
   }
   const facts = draft
-    ? t('lblWebEventDraftFacts', players, ai, pickRuleName(lim.pickRule).toLowerCase(),
+    ? t('lblWebEventDraftFacts', players, ai, pickRuleName(lim.pickRule, true),
       lim.timer ? t('lblWebEventSecondsAPick', lim.timer) : t('lblWebEventNoPickTimer'))
     : t('lblWebEventSealedFacts', players);
   return (

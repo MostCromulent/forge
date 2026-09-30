@@ -9,41 +9,41 @@ import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { PoolRow } from './protocol';
+import { t, tNodes, type TextKey } from './text';
 
 /** Desktop's limited deck is at least forty cards. */
 const DECK_SIZE = 40;
-const GAMES: [number, string][] = [[1, '1 game'], [3, 'Best of 3'], [5, 'Best of 5']];
+const GAMES = [1, 3, 5];
 
 export function Limited({ model, actions }: { model: Model; actions: Actions }) {
   const [creating, setCreating] = useState(false);
   const draft = model.eventKind === 'draft';
   const pools = (draft ? model.limitedPools?.draft : model.limitedPools?.sealed) ?? [];
   const pool = model.eventPool ? pools.find(p => p.name === model.eventPool) : undefined;
-  const kind = draft ? 'Draft' : 'Sealed';
+  const kind = draft ? t('lblDraft') : t('lblSealed');
   const toEvents = pool ? () => actions.poolClose() : creating ? () => setCreating(false) : undefined;
   const trail = [
-    { label: 'Start', go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
+    { label: t('lblWebLimitedStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
     { label: kind, go: toEvents },
-    ...(pool ? [{ label: pool.name }] : creating ? [{ label: 'New event' }] : []),
+    ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebLimitedNewEvent') }] : []),
   ];
   return (
     <div class="limited-page">
       <PageHeader class="limited-head">
         <div class="head-right">
           <HeadControls />
-          <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>Back</button>
+          <button onClick={() => (pool ? actions.poolClose() : actions.limitedLeave())}>{t('lblBack')}</button>
         </div>
       </PageHeader>
       {pool
         ? <SetupHead trail={trail} title={pool.name} aside={<YourDeck pool={pool} actions={actions} />}
-            sub={`${draft ? 'Booster draft' : 'Sealed'} · ${pool.opponents.length} opponents built from the same ${draft ? 'draft' : 'packs'}`} />
+            sub={draft ? t('lblWebLimitedDraftSub', pool.opponents.length) : t('lblWebLimitedSealedSub', pool.opponents.length)} />
         : creating
-          ? <SetupHead trail={trail} title={draft ? 'New booster draft' : 'New sealed event'}
-              aside={<button class="ghost" onClick={() => setCreating(false)}>Back to your events</button>} />
-          : <SetupHead trail={trail} title={draft ? 'Your drafts' : 'Your sealed events'}
-              sub={draft ? 'Draft against seven AI drafters, build forty cards, and play the decks they drafted.'
-                : 'Open packs, build forty cards, and play the decks built from the same packs.'} />}
+          ? <SetupHead trail={trail} title={draft ? t('lblWebLimitedNewBoosterDraft') : t('lblWebLimitedNewSealedEvent')}
+              aside={<button class="ghost" onClick={() => setCreating(false)}>{t('lblWebLimitedBackToEvents')}</button>} />
+          : <SetupHead trail={trail} title={draft ? t('lblWebLimitedYourDrafts') : t('lblWebLimitedYourSealedEvents')}
+              sub={draft ? t('lblWebLimitedDraftsIntro') : t('lblWebLimitedSealedIntro')} />}
       {model.error && <p class="limited-error">{model.error}</p>}
       {pool
         ? <Opponents pool={pool} draft={draft} actions={actions} />
@@ -75,41 +75,41 @@ function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: bo
     <div class="event-shelf">
       <button class="ev new" onClick={create}>
         <span class="plus" aria-hidden="true">+</span>
-        <b>{draft ? 'New draft' : 'New sealed event'}</b>
-        <span>{draft ? 'Choose the packs and draft against seven AI drafters.' : 'Choose the packs, open them, and build your deck.'}</span>
+        <b>{draft ? t('lblWebLimitedNewDraft') : t('lblWebLimitedNewSealedEvent')}</b>
+        <span>{draft ? t('lblWebLimitedNewDraftLine') : t('lblWebLimitedNewSealedLine')}</span>
       </button>
       {pools.map(p => (
         <article key={p.name} class={p.built ? 'ev' : 'ev unbuilt'}>
           <div class="ev-top">
             <b>{p.name}</b>
-            {p.changed && <span class="sub">Saved {shortDay(p.changed)}</span>}
+            {p.changed && <span class="sub">{t('lblWebLimitedSaved', shortDay(p.changed))}</span>}
           </div>
           <div class="ev-mid">
             <span class="ev-line deck">
-              {p.built ? <><span class="pips"><Pips colors={p.colors} /></span>Deck built · {p.deckSize} cards</> : 'No deck yet'}
+              {p.built ? <><span class="pips"><Pips colors={p.colors} /></span>{t('lblWebLimitedDeckBuilt', p.deckSize)}</> : t('lblWebLimitedNoDeckYet')}
             </span>
-            <span class="ev-line dim">{p.opponents.length} opponents from the same {draft ? 'draft' : 'packs'}</span>
+            <span class="ev-line dim">{t(draft ? 'lblWebLimitedOpponentsDraft' : 'lblWebLimitedOpponentsPacks', p.opponents.length)}</span>
           </div>
           <div class="ev-foot">
             {deleting === p.name
               ? <>
-                  <span class="ev-ask">Delete this pool?</span>
+                  <span class="ev-ask">{t('lblWebLimitedDeletePoolAsk')}</span>
                   <span class="sp" />
-                  <button onClick={() => setDeleting(null)}>Keep</button>
-                  <button class="danger" onClick={() => { setDeleting(null); actions.poolDelete(p.name); }}>Delete</button>
+                  <button onClick={() => setDeleting(null)}>{t('lblWebLimitedKeep')}</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.poolDelete(p.name); }}>{t('lblDelete')}</button>
                 </>
               : <>
                   {p.built
-                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>Play</button>
-                        <button onClick={() => actions.poolEdit(p.name)}>Edit deck</button></>
-                    : <button class="primary" onClick={() => actions.poolEdit(p.name)}>Build deck</button>}
+                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblWebLimitedPlay')}</button>
+                        <button onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedEditDeck')}</button></>
+                    : <button class="primary" onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedBuildDeck')}</button>}
                   <span class="sp" />
                   <span class="ev-more">
-                    <button class="more" title="More" aria-label={`More for ${p.name}`} aria-expanded={menu === p.name}
+                    <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', p.name)} aria-expanded={menu === p.name}
                       onClick={() => setMenu(menu === p.name ? null : p.name)}>⋯</button>
                     {menu === p.name && (
                       <div class="ev-menu" role="menu">
-                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(p.name); }}>Delete pool</button>
+                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(p.name); }}>{t('lblWebLimitedDeletePool')}</button>
                       </div>
                     )}
                   </span>
@@ -127,7 +127,7 @@ function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => setBusy(false), [model.error, model.nameTaken]);
   const options = model.limitedOptions;
-  if (!options) return <p class="muted pools-wait">Reading what Forge can open…</p>;
+  if (!options) return <p class="muted pools-wait">{t('lblWebLimitedReadingOpen')}</p>;
   const send = (replace: boolean) => {
     setBusy(true);
     actions.sealedCreate({
@@ -143,8 +143,8 @@ function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
         action={sealedAction} submit={() => send(false)} busy={busy}
         problem={taken ? (
           <span class="sentence taken">
-            You already have a pool called <b>{value.name}</b>.
-            <button class="danger" onClick={() => send(true)}>Replace it</button>
+            {tNodes('lblWebLimitedPoolTaken', <b>{value.name}</b>)}
+            <button class="danger" onClick={() => send(true)}>{t('lblWebLimitedReplaceIt')}</button>
           </span>
         ) : null} />
     </div>
@@ -156,11 +156,11 @@ function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
   const [busy, setBusy] = useState(false);
   useEffect(() => setBusy(false), [model.error]);
   const options = model.limitedOptions;
-  if (!options) return <p class="muted pools-wait">Reading what Forge can draft…</p>;
+  if (!options) return <p class="muted pools-wait">{t('lblWebLimitedReadingDraft')}</p>;
   return (
     <div class="setup">
       <StepForm steps={draftSteps(options)} value={value} onChange={setValue} ticket={draftTicket()}
-        action="Start drafting" busy={busy} submit={() => {
+        action={t('lblWebLimitedStartDrafting')} busy={busy} submit={() => {
           setBusy(true);
           actions.draftStart({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
             theme: value.theme, cubeId: value.cubeId });
@@ -174,13 +174,13 @@ export function severalCap(opponents: number): number {
   return Math.min(3, opponents);
 }
 
-const COLOUR_NAMES: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+const COLOUR_NAMES: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen' };
 
 /** A deck's colours in words: White–Green, or the count past three, or Colourless. */
 export function colourName(colors: string): string {
-  const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean);
-  if (!names.length) return 'Colourless';
-  if (names.length > 3) return names.length === 5 ? 'All five colours' : 'Four colours';
+  const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
+  if (!names.length) return t('lblWebLimitedColourless');
+  if (names.length > 3) return names.length === 5 ? t('lblWebLimitedAllFiveColours') : t('lblWebLimitedFourColours');
   return names.join('–');
 }
 
@@ -189,8 +189,8 @@ function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
   return (
     <span class="your-deck">
       {pool.built && <span class="pips"><Pips colors={pool.colors} /></span>}
-      <span><b>Your deck</b> <span class="muted">· {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}</span></span>
-      <button onClick={() => actions.poolEdit(pool.name)}>Edit deck</button>
+      <span><b>{t('lblWebSetupYourDeck')}</b> <span class="muted">{t(pool.deckSize === 1 ? 'lblWebLimitedDotOneCard' : 'lblWebLimitedDotCards', pool.deckSize)}</span></span>
+      <button onClick={() => actions.poolEdit(pool.name)}>{t('lblWebLimitedEditDeck')}</button>
     </span>
   );
 }
@@ -209,36 +209,37 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
   return (
     <div class="opponents">
       <div class="opp-head">
-        <span class="kicker">Opponents</span>
-        <span class="kicker">Games</span>
-        <span class="count" role="group" aria-label="Games in a match">
-          {GAMES.map(([n, label]) => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>{label}</button>)}
+        <span class="kicker">{t('lblWebSetupOpponents')}</span>
+        <span class="kicker">{t('lblWebLimitedGames')}</span>
+        <span class="count" role="group" aria-label={t('lblWebLimitedGamesInMatch')}>
+          {GAMES.map(n => <button key={n} aria-pressed={games === n} onClick={() => setGames(n)}>
+            {n === 1 ? t('lblWebLimitedOneGame') : t('lblWebLimitedBestOf', n)}</button>)}
         </span>
       </div>
-      {short && <p class="opp-short">Your deck has {pool.deckSize} {pool.deckSize === 1 ? 'card' : 'cards'}. Limited decks need {DECK_SIZE} when Forge enforces deck legality.</p>}
+      {short && <p class="opp-short">{t(pool.deckSize === 1 ? 'lblWebLimitedShortOne' : 'lblWebLimitedShortMany', pool.deckSize, DECK_SIZE)}</p>}
       <ol class="opp-list">
         {pool.opponents.map((o, i) => (
           <li key={o.name} class="opp-row">
             <span class="n">{i + 1}</span>
             <span class="pips"><Pips colors={o.colors} /></span>
             <span class="opp-name">{o.name} <span class="muted">· {colourName(o.colors)}</span></span>
-            <button class="opp-play" onClick={() => play('one', i)} aria-label={`Play ${o.name}`}>Play</button>
+            <button class="opp-play" onClick={() => play('one', i)} aria-label={t('lblWebLimitedPlayOpponent', o.name)}>{t('lblWebLimitedPlay')}</button>
           </li>
         ))}
       </ol>
       <div class="opp-foot">
-        <span class="say"><b>Gauntlet:</b> all {pool.opponents.length} in this order, a match each. Lose one and it ends.</span>
-        <button class="outline" onClick={() => play('gauntlet')}>Start the gauntlet</button>
+        <span class="say">{tNodes('lblWebLimitedGauntletSay', <b>{t('lblWebLimitedGauntlet')}</b>, pool.opponents.length)}</span>
+        <button class="outline" onClick={() => play('gauntlet')}>{t('lblWebLimitedStartGauntlet')}</button>
       </div>
       {several && (
         <div class="opp-foot">
-          <span class="say"><b>Free-for-all:</b> you against several decks at once, chosen at random.</span>
+          <span class="say">{tNodes('lblWebLimitedFreeForAllSay', <b>{t('lblWebLimitedFreeForAll')}</b>)}</span>
           <span class="stepper">
-            <button class="step" disabled={count <= 2} aria-label="One opponent fewer" onClick={() => setCount(count - 1)}>&minus;</button>
+            <button class="step" disabled={count <= 2} aria-label={t('lblWebLimitedOneOpponentFewer')} onClick={() => setCount(count - 1)}>&minus;</button>
             <span class="n">{count}</span>
-            <button class="step" disabled={count >= cap} aria-label="One opponent more" onClick={() => setCount(count + 1)}>+</button>
+            <button class="step" disabled={count >= cap} aria-label={t('lblWebLimitedOneOpponentMore')} onClick={() => setCount(count + 1)}>+</button>
           </span>
-          <button class="outline" onClick={() => play('several')}>Play {count} opponents</button>
+          <button class="outline" onClick={() => play('several')}>{t('lblWebLimitedPlayNOpponents', count)}</button>
         </div>
       )}
     </div>
