@@ -35,7 +35,7 @@ export interface DeckFilter {
   query: string;
   /** A source's name, or 'all'. */
   source: string;
-  /** Colour letters; a deck carrying any of them matches. None ticked matches every deck. */
+  /** Colour letters; a deck carrying all of them matches. None ticked matches every deck. */
   colours: ReadonlySet<string>;
   /** A card format the deck must be legal in, or 'any'. */
   cardFormat: string;
@@ -51,7 +51,7 @@ export const FINDER_DEFAULTS: DeckFilter = {
 /** The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): DeckSummary[] {
   const list = decks.filter(d => (f.source === 'all' || d.source === f.source || (f.source === NET && isNet(d.source)))
-    && (!f.colours.size || [...f.colours].some(c => (d.colors ?? '').includes(c)))
+    && (!f.colours.size || [...f.colours].every(c => (d.colors ?? '').includes(c)))
     && (d.generated || !f.legalOnly || !d.problem)
     && (d.generated || f.cardFormat === 'any' || (d.legalIn ?? []).includes(f.cardFormat)));
   const byName = (a: DeckSummary, b: DeckSummary) => a.name.localeCompare(b.name);
@@ -225,7 +225,7 @@ export function DeckFinder({ model, actions, seat, close }: {
                   </button>
                 ))}
               </div>
-              <p class="rail-note">{t('lblWebFinderAnyTickedColour')}</p>
+              <p class="rail-note">{t('lblWebFinderEveryTickedColour')}</p>
             </section>
             <section>
               <h4>{t('lblWebFinderLegalIn')}</h4>
