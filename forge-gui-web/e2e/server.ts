@@ -11,8 +11,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 const module = resolve(here, '..');
 const repo = resolve(module, '..');
 
-// Tests run side by side in separate workers, each counting from a block of ports of its own
-let nextPort = 36900 + Number(process.env.TEST_WORKER_INDEX ?? 0) * 50;
+// Tests run side by side in separate workers, each counting from a block of ports of its own. E2E_PORT_BASE moves
+// every block, so two runs on one machine do not take the same ports
+let nextPort = Number(process.env.E2E_PORT_BASE ?? 36900) + Number(process.env.TEST_WORKER_INDEX ?? 0) * 50;
 
 export interface Server {
   /** The page's address, with the token that lets a browser in. */
