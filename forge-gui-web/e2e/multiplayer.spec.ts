@@ -25,6 +25,16 @@ async function hostAndGuest(page: Page, browser: Browser): Promise<Page> {
 async function startMatch(page: Page, guest: Page): Promise<void> {
   await chooseDeck(page, page.locator('.plate.mine'));
   await chooseDeck(guest, guest.locator('.plate.mine'));
+  // With another player seated, a deck alone does not ready a seat: each player says so
+  await expect(page.locator('#play')).toBeDisabled();
+  await page.click('.plate.mine .ready-toggle');
+  await expect(page.locator('#play')).toBeDisabled();
+  await guest.click('.plate.mine .ready-toggle');
+  await expect(page.locator('#play')).toBeEnabled();
+  // A new deck takes a player's Ready back
+  await chooseDeck(guest, guest.locator('.plate.mine'));
+  await expect(page.locator('#play')).toBeDisabled();
+  await guest.click('.plate.mine .ready-toggle');
   await expect(page.locator('#play')).toBeEnabled();
   await page.click('#play');
   await expect(page.locator('#match')).toBeVisible();

@@ -122,6 +122,8 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
   // A Limited seat has no deck to choose until its pool is out; until then it says whether it is ready
   const lim = lobby.limited;
   const beforePools = !!lim && !lim.activeEventId;
+  // With another player seated, each player presses Ready once their deck is chosen; the computer is always ready
+  const pressReady = !lim && seat.type !== 'AI' && !waiting && lobby.seats.some(s => s.type !== 'AI' && s.type !== 'OPEN' && s.mine !== mine);
   // The host turns a seat between a computer and one someone can join; everyone else only reads it
   const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // The host may hand their own seat to the computer and watch; a match is only ever watched from the host's seat
@@ -177,11 +179,7 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
         </div>
         {watchable && ui.spectate && <p class="seat-note">{t('lblWebLobbyComputerPlaysSeat')}</p>}
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}
-        {beforePools && !waiting && (mine
-          ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={lim.started}
-              aria-pressed={seat.ready} title={seat.ready ? t('lblWebLobbyNotReadyAfterAll') : ''}
-              onClick={() => actions.ready(!seat.ready)}>{t(seat.ready ? 'lblWebLobbyReadyTick' : 'lblWebLobbyPressWhenReady')}</button>
-          : <p class="deck-row fixed">{t(seat.ready ? 'lblReady' : 'lblWebLobbyNotReadyYet')}</p>)}
+        {beforePools && !waiting && <Ready seat={seat} actions={actions} disabled={lim.started} />}
         {/* Sitting out matters only with a match to fill from more players than it needs */}
         {lim?.activeEventId && lobby.host && !waiting && lobby.seats.filter(s => s.type !== 'OPEN').length > 2 && (
           <label class="sits-out"><input type="checkbox" checked={seat.benched}
@@ -202,12 +200,22 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
           )}
         </div>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
+        {pressReady && <Ready seat={seat} actions={actions} disabled={!hasDeck && !dealt} />}
         {seat.planes && <ExtraRow name={t('lblPlanes')} extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
         {seat.schemes && <ExtraRow name={t('lblSchemes')} extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
         {seat.vanguard && <ExtraRow name={t('lblAvatar')} counted={false} extra={seat.vanguard} mayEdit={seat.mayEdit} open={() => choose('vanguard')} />}
       </div>
     </div>
   );
+}
+
+/** Your own seat's Ready, pressed again to take it back; anyone else's only says whether they are. */
+function Ready({ seat, actions, disabled }: { seat: Seat; actions: Actions; disabled: boolean }) {
+  return seat.mine
+    ? <button class={`deck-row ready-toggle${seat.ready ? '' : ' unset'}`} disabled={disabled}
+        aria-pressed={seat.ready} title={seat.ready ? t('lblWebLobbyNotReadyAfterAll') : ''}
+        onClick={() => actions.ready(!seat.ready)}>{t(seat.ready ? 'lblWebLobbyReadyTick' : 'lblWebLobbyPressWhenReady')}</button>
+    : <p class="deck-row fixed">{t(seat.ready ? 'lblReady' : 'lblWebLobbyNotReadyYet')}</p>;
 }
 
 function Dice() {
