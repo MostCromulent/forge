@@ -72,6 +72,10 @@ export const SETTINGS: SettingDef[] = [
   },
   { section: t('lblWebOptionsSectionDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
   {
+    section: t('lblWebOptionsSectionDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
+    options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblWebOptionsMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
+  },
+  {
     section: t('lblWebOptionsSectionDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
     options: [['full', t('lblWebOptionsFull')], ['system', t('lblWebOptionsSystem')], ['reduced', t('lblWebOptionsReduced')]], def: 'full',
   },
@@ -187,7 +191,7 @@ export function setKeys(keys: KeyBindings): void {
   redraw();
 }
 
-// Pushes the hand size, the highlight colour and the custom CSS into CSS; the rest is read where it is used
+// Pushes the hand and preview sizes, the highlight colour and the custom CSS into CSS; the rest is read where it is used
 function apply(): void {
   const root = document.documentElement;
   // Desktop keeps the highlight colour as a preference of its own, with no control in this dialog
@@ -195,6 +199,7 @@ function apply(): void {
   const hand = Number(setting('handSize')) / 100;
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
+  root.dataset.preview = String(setting('previewSize'));
   const motion = setting('motion');
   const reduced = motion === 'reduced' || (motion === 'system' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   root.dataset.motion = reduced ? 'reduced' : 'full';

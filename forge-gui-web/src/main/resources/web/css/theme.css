@@ -1,8 +1,10 @@
 /* One size for every card preview, over the table or beside a list: large enough to read, small enough to leave the
-   page in view. It grows with the window, up to three fifths of its height, between a readable least and a most that
-   still leaves room. Registered as a length, so script reads it in pixels. */
+   page in view. It grows with the window, up to three fifths of its height, between a readable least and a most the
+   player chooses (settings.ts). Registered as a length, so script reads it in pixels. */
 @property --preview-w { syntax: '<length>'; inherits: true; initial-value: 280px; }
-:root { --preview-w: clamp(280px, 60vh * 63 / 88, 400px); }
+:root { --preview-w: clamp(280px, 60vh * 63 / 88, 340px); }
+:root[data-preview="small"] { --preview-w: 280px; }
+:root[data-preview="large"] { --preview-w: clamp(280px, 60vh * 63 / 88, 400px); }
 
 :root {
   /* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle */
