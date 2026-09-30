@@ -221,6 +221,11 @@ public final class WebServer implements AutoCloseable {
             respondImage(ctx, cached);
             return;
         }
+        // Only a card has art to crop; the fetcher never answers for a token or an effect such as the Ring
+        if (!key.startsWith(ImageKeys.CARD_PREFIX)) {
+            notFound(ctx);
+            return;
+        }
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, () -> {
             if (answered.compareAndSet(false, true)) {
