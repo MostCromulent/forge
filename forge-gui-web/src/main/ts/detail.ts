@@ -10,6 +10,7 @@ import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import { isAiming } from './overlay';
 import type { CardFace, CardView, PlayerDetail, PlayerView } from './protocol';
+import { t, type TextKey } from './text';
 
 // Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
 // it arrives in the model a moment after the pointer does
@@ -219,24 +220,25 @@ function drawDetail(model: Model): void {
   drawPt(q(zoom, '.pt'), model, hover.card, face, face === d.faces[0]);
   // The keys are the player's own, since either can be changed in the options
   const keys = boundKeys();
-  const faces = d.faces.length > 1 ? `${keyName(keys.nextFace)}: next face (${ui.faceIndex + 1}/${d.faces.length})` : '';
-  const flip = src ? `${keyName(keys.cardText)}: flip to ${text ? 'card image' : 'rules'}` : '';
+  const faces = d.faces.length > 1 ? t('lblWebDetailNextFace', keyName(keys.nextFace), ui.faceIndex + 1, d.faces.length) : '';
+  const flip = src ? t(text ? 'lblWebDetailFlipToImage' : 'lblWebDetailFlipToRules', keyName(keys.cardText)) : '';
   q(zoom, '.hint').textContent = [faces, flip].filter(Boolean).join(' · ');
 }
 
 // "your graveyard" rather than "your exile": the zones a card is played out of do not all take a possessive
-const ZONE_PHRASE: Record<string, string> = {
-  Graveyard: 'your graveyard',
-  Exile: 'exile',
-  Command: 'your command zone',
-  Library: 'your library',
-  Sideboard: 'your sideboard',
+const PLAYABLE_FROM: Record<string, TextKey> = {
+  Graveyard: 'lblWebDetailPlayableFromGraveyard',
+  Exile: 'lblWebDetailPlayableFromExile',
+  Command: 'lblWebDetailPlayableFromCommand',
+  Library: 'lblWebDetailPlayableFromLibrary',
+  Sideboard: 'lblWebDetailPlayableFromSideboard',
 };
 
 /** Says a card in hand is not really in hand: a tab on the image's foot, or a line in the text. The glow around the card
  *  is in this same zone's colour. */
 function setSource(el: HTMLElement, zone: string | undefined): void {
-  el.textContent = zone ? `Playable from ${ZONE_PHRASE[zone] ?? zone.toLowerCase()}` : '';
+  const known = zone ? PLAYABLE_FROM[zone] : undefined;
+  el.textContent = known ? t(known) : zone ? t('lblWebDetailPlayableFrom', zone.toLowerCase()) : '';
   if (zone) {
     el.dataset.from = zone;
   } else {
@@ -360,10 +362,10 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
   const p = document.createElement('i');
   p.textContent = String(power);
   p.dataset.shift = shift(power, state.BasePower);
-  const t = document.createElement('i');
-  t.textContent = String(toughness);
-  t.dataset.shift = card.Damage ? 'down' : shift(toughness, state.BaseToughness);
-  el.replaceChildren(p, '/', t);
+  const tough = document.createElement('i');
+  tough.textContent = String(toughness);
+  tough.dataset.shift = card.Damage ? 'down' : shift(toughness, state.BaseToughness);
+  el.replaceChildren(p, '/', tough);
 }
 
 function ensureZoom(zoom: HTMLElement): void {
@@ -400,7 +402,7 @@ function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void
   root.replaceChildren();
   if (!hits.length) return;
   const title = document.createElement('h6');
-  title.textContent = 'Commander damage taken';
+  title.textContent = t('lblWebDetailCommanderDamageTaken');
   root.append(title);
   for (const { card, value } of hits) {
     const commander = deref(model, card) as CardView | undefined;
@@ -409,7 +411,7 @@ function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void
     row.innerHTML = '<span class="art"></span><span class="who"><span class="nm"></span><span class="bar"><i></i></span></span><span class="v"><b></b><small></small></span>';
     const src = cardImageSrc(model, commander);
     if (src) q(row, '.art').style.backgroundImage = `url("${src}")`;
-    q(row, '.nm').textContent = (commander ? stateOf(model, commander).Name : undefined) ?? 'Commander';
+    q(row, '.nm').textContent = (commander ? stateOf(model, commander).Name : undefined) ?? t('lblWebDetailCommander');
     q(row, '.bar i').style.width = `${Math.min(value, COMMANDER_LETHAL) / COMMANDER_LETHAL * 100}%`;
     q(row, '.v b').textContent = String(value);
     q(row, '.v small').textContent = ` / ${COMMANDER_LETHAL}`;

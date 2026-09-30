@@ -3,6 +3,8 @@
 // their own. This tells the two apart and sorts the rules into keywords, abilities and plain text. A line it does not
 // recognise stays a line of text, so nothing the host sends is ever lost.
 
+import { t } from './text';
+
 /** A stretch of text; muted is text that does not apply just now, which CardDetailUtil greys out. */
 export interface Run {
   text: string;
@@ -65,12 +67,12 @@ const CORNER_COUNTERS = /^(loyalty|defense)$/i;
 function chipFor(text: string): Chip | null | 'skip' {
   let m = /^(.+) counters: (-?\d+)$/.exec(text);
   if (m) return CORNER_COUNTERS.test(m[1]) ? 'skip' : { kind: 'counter', text: `${m[1]} ×${m[2]}` };
-  if ((m = /^Damage: (\d+)$/.exec(text))) return { kind: 'damage', text: `${m[1]} damage` };
-  if ((m = /^Assigned Damage: (\d+)$/.exec(text))) return { kind: 'damage', text: `${m[1]} assigned` };
-  if ((m = /^Regeneration Shields: (\d+)$/.exec(text))) return { kind: 'shield', text: `${m[1]} regen shield${m[1] === '1' ? '' : 's'}` };
-  if (text === 'Phased Out') return { kind: 'status', text: 'Phased out' };
-  if (text === '^Exerted^') return { kind: 'status', text: 'Exerted' };
-  if (text === '^Detained^') return { kind: 'status', text: 'Detained' };
+  if ((m = /^Damage: (\d+)$/.exec(text))) return { kind: 'damage', text: t('lblWebDetailDamageChip', m[1]) };
+  if ((m = /^Assigned Damage: (\d+)$/.exec(text))) return { kind: 'damage', text: t('lblWebDetailAssignedChip', m[1]) };
+  if ((m = /^Regeneration Shields: (\d+)$/.exec(text))) return { kind: 'shield', text: t(m[1] === '1' ? 'lblWebDetailRegenShield' : 'lblWebDetailRegenShields', m[1]) };
+  if (text === 'Phased Out') return { kind: 'status', text: t('lblWebDetailPhasedOut') };
+  if (text === '^Exerted^') return { kind: 'status', text: t('lblWebDetailExerted') };
+  if (text === '^Detained^') return { kind: 'status', text: t('lblWebDetailDetained') };
   return null;
 }
 

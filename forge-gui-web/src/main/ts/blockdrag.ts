@@ -9,6 +9,7 @@ import { game, me, stateOf, type Model } from './model';
 import { setDragArrow } from './overlay';
 import type { Actions } from './actions';
 import type { CardView, KeywordText, Ref } from './protocol';
+import { t } from './text';
 
 /** How far the pointer moves before a press on a creature is a drag rather than a click. */
 const DRAG_PX = 8;
@@ -168,12 +169,12 @@ function explainRefusal(blocker: number, attacker: number, at: Point): void {
   if (!model) return;
   const card = (key: number) => model.objects.get(key) as CardView | undefined;
   const state = (key: number) => { const c = card(key); return c ? stateOf(model, c) : undefined; };
-  const name = (key: number) => state(key)?.Name ?? 'That creature';
+  const name = (key: number) => state(key)?.Name ?? t('lblWebBlockThatCreature');
   const keywords = (key: number): KeywordText[] => state(key)?.Keywords ?? [];
   const answers = new Set(keywords(blocker).map(k => k.title));
   const evasion = keywords(attacker).find(k => /can't be blocked/i.test(k.reminder)
     && !answers.has(k.title) && !(k.title === 'Flying' && answers.has('Reach')));
-  showTip(at, `${name(blocker)} can't block ${name(attacker)}`, evasion ? `${evasion.title}: ${evasion.reminder}` : '');
+  showTip(at, t('lblWebBlockCantBlock', name(blocker), name(attacker)), evasion ? `${evasion.title}: ${evasion.reminder}` : '');
 }
 
 /** How long the reason stays by the pointer, unless the next press takes it away sooner. */

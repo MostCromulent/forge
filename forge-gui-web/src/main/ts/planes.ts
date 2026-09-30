@@ -10,6 +10,7 @@ import { byId, q } from './dom';
 import { commandKind } from './command';
 import type { Actions } from './actions';
 import type { CardView, GameView, PlayerView } from './protocol';
+import { t } from './text';
 
 /**
  * The planes and phenomena face up now. The engine moves them into the command zone of whoever's turn it is, while
@@ -35,7 +36,9 @@ export function renderPlanes(model: Model, actions: Actions): void {
     dock = document.createElement('section');
     dock.id = 'plane-dock';
     dock.innerHTML = '<div class="planes"></div><div class="plane-side"><p class="plane-from"></p>'
-      + '<button class="die-button" title="Roll the planar die" disabled>Roll the planar die</button></div>';
+      + '<button class="die-button" disabled></button></div>';
+    const roll = q(dock, '.die-button');
+    roll.title = roll.textContent = t('lblWebPlanesRollDie');
     match.append(dock);
   }
   const planes = faceUpPlanes(model);
@@ -61,7 +64,7 @@ export function renderPlanes(model: Model, actions: Actions): void {
   // The plane's art tints the table, as the mobile client does
   match.style.setProperty('--plane-art', cssUrl(cardImageSrc(model, planes[0])));
   const owner = deref(model, planes[0].Owner) as PlayerView | undefined;
-  q(dock, '.plane-from').textContent = owner?.Name ? `From ${owner.Name}'s planar deck` : '';
+  q(dock, '.plane-from').textContent = owner?.Name ? t('lblWebPlanesFromDeck', owner.Name) : '';
 
   const viewer = me(model);
   const dice = viewer ? zone(model, viewer, 'Command').find(c => commandKind(c, stateOf(model, c)) === 'dice') : undefined;

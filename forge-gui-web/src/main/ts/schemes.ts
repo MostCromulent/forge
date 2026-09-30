@@ -8,6 +8,7 @@ import { hoverable } from './detail';
 import { byId, q } from './dom';
 import { commandKind } from './command';
 import type { CardView, PlayerView } from './protocol';
+import { t } from './text';
 
 const REVEAL_MS = 3000;
 
@@ -63,7 +64,8 @@ export function revealSchemes(model: Model): void {
   reveal.innerHTML = '<div class="scheme big"><img alt=""><span class="scheme-name"></span></div><p></p>';
   setImage(q<HTMLImageElement>(reveal, 'img'), cardImageSrc(model, card));
   q(reveal, '.scheme-name').textContent = stateOf(model, card).Name ?? '';
-  q(reveal, 'p').textContent = `${owner.Name ?? 'The archenemy'} sets a scheme in motion`;
+  q(reveal, 'p').textContent = owner.Name != null
+    ? t('lblWebSchemesSetsInMotion', owner.Name) : t('lblWebSchemesArchenemySetsInMotion');
   byId('match').append(reveal);
   setTimeout(() => reveal.remove(), REVEAL_MS);
 }

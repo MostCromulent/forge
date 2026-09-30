@@ -13,6 +13,7 @@ import { SymbolText } from './symbols';
 import { changeUi } from './ui';
 import { HeadControls, PageHeader } from './header';
 import { peekAt } from './deckfinder';
+import { t, tNodes, type TextKey } from './text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -155,18 +156,18 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
     <div class="drafting-page" onPointerLeave={() => setPeek(null)}
       onPointerOver={e => setPeek(packMoving() && (e.target as Element).closest?.('.draft-pack') ? null : peekAt(e, '.drafting-page'))}>
       <PageHeader class="limited-head">
-        <span class="limited-title">Booster draft</span>
-        {state && <span class="muted">{state.product} · {state.seats.length} seats</span>}
+        <span class="limited-title">{t('lblWebDraftBoosterDraft')}</span>
+        {state && <span class="muted">{t('lblWebDraftProductSeats', state.product, state.seats.length)}</span>}
         <div class="head-right">
           <HeadControls />
           {online
-            ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>Back to the table</button>
-            : <button onClick={() => setLeaving(true)}>Leave draft</button>}
+            ? <button onClick={() => changeUi(u => { u.draftHidden = true; })}>{t('lblWebDraftBackToTable')}</button>
+            : <button onClick={() => setLeaving(true)}>{t('lblWebDraftLeaveDraft')}</button>}
         </div>
       </PageHeader>
       {model.error && <p class="limited-error">{model.error}</p>}
       {/* Opening packs can wait on a web site, so leaving stays possible while it does */}
-      {!state && <p class="muted drafting-wait">Opening the packs…</p>}
+      {!state && <p class="muted drafting-wait">{t('lblWebDraftOpeningPacks')}</p>}
       {state && (
         <div class="drafting-shell">
           <Pack state={state} faces={faces} actions={actions} log={online && state.log.length > 0} hidePeek={() => setPeek(null)} />
@@ -176,12 +177,12 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label="Leave the draft">
-            <h3>Leave the draft?</h3>
-            <p class="hint">Your picks so far will not be saved.</p>
+          <div class="dialog" role="alertdialog" aria-label={t('lblWebDraftLeaveTheDraft')}>
+            <h3>{t('lblWebDraftLeaveTheDraftQ')}</h3>
+            <p class="hint">{t('lblWebDraftPicksNotSaved')}</p>
             <div class="actions">
-              <button onClick={() => setLeaving(false)}>Keep drafting</button>
-              <button class="danger" onClick={() => actions.draftDiscard()}>Leave</button>
+              <button onClick={() => setLeaving(false)}>{t('lblWebDraftKeepDrafting')}</button>
+              <button class="danger" onClick={() => actions.draftDiscard()}>{t('lblLeave')}</button>
             </div>
           </div>
         </div>
@@ -221,7 +222,7 @@ function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
   const shown = [(n - direction) % n, 0, (n + direction) % n];
   return (
     <Dropdown class="table-btn" label={<>
-      <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>Show table
+      <span class="faces">{shown.map(i => faces[i] ? <img key={i} alt="" src={faces[i]} /> : null)}</span>{t('lblWebDraftShowTable')}
     </>}>
       {() => <Dial state={state} faces={faces} />}
     </Dropdown>
@@ -304,16 +305,16 @@ function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; fac
     <section class="draft-panel draft-pack">
       {/* The pick and its clock, which runs down a bar along the line's foot; under them, where the packs go */}
       <div class="draft-panel-head pick-line">
-        <b class="pick-title">Pack {state.pack} · pick {state.pick} of {state.packSize}</b>
-        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock low' : 'clock'} title="Time left to pick">{clockText(left)}</span>}
+        <b class="pick-title">{t('lblWebDraftPackPickOf', state.pack, state.pick, state.packSize)}</b>
+        {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock low' : 'clock'} title={t('ttWebDraftTimeLeft')}>{clockText(left)}</span>}
         {left > 0 && <span class={left < CLOCK_LOW_MS ? 'clock-bar low' : 'clock-bar'} style={{ width: `${(left / (state.clockSeconds * 1000)) * 100}%` }} />}
       </div>
       <div class="draft-panel-head tool-line">
-        <span class="chip">Passing {direction > 0 ? 'right' : 'left'} to {seat(to)}</span>
-        {next !== null && <span class="chip">Next from {seat(next)}</span>}
-        {depths[busiest] > 2 && <span class="chip">{busiest === 0 ? 'You are' : `${state.seats[busiest].name} is`} holding {depths[busiest]} packs</span>}
+        <span class="chip">{tNodes(direction > 0 ? 'lblWebDraftPassingRightTo' : 'lblWebDraftPassingLeftTo', seat(to))}</span>
+        {next !== null && <span class="chip">{tNodes('lblWebDraftNextFrom', seat(next))}</span>}
+        {depths[busiest] > 2 && <span class="chip">{busiest === 0 ? t('lblWebDraftYouHoldingPacks', depths[busiest]) : t('lblWebDraftSeatHoldingPacks', state.seats[busiest].name, depths[busiest])}</span>}
         <span class="head-end">
-          {log && <Dropdown label="Draft log">{() => <DraftLog lines={state.log} />}</Dropdown>}
+          {log && <Dropdown label={t('lblWebDraftLog')}>{() => <DraftLog lines={state.log} />}</Dropdown>}
           <TableMenu state={state} faces={faces} />
         </span>
       </div>
@@ -327,10 +328,10 @@ function Pack({ state, faces, actions, log, hidePeek }: { state: DraftState; fac
               <CardFace card={card} />
               {card.rank !== undefined && <RankShield rank={card.rank} />}
             </button>
-            {i === selected && <span class="confirm">Pick · click again or Enter</span>}
+            {i === selected && <span class="confirm">{t('lblWebDraftPickConfirm')}</span>}
           </div>
         ))}
-        {state.cards.length === 0 && !state.done && <p class="muted">Waiting for a pack…</p>}
+        {state.cards.length === 0 && !state.done && <p class="muted">{t('lblWebDraftWaitingForPack')}</p>}
       </div>
     </section>
   );
@@ -373,7 +374,7 @@ function startDrag(e: DragEvent, drag: Drag): void {
 function RankShield({ rank }: { rank: number }) {
   const tier = rank >= 90 ? 's' : rank >= 80 ? 'a' : rank >= 60 ? 'b' : rank >= 25 ? 'c' : 'd';
   return (
-    <span class={`rank tier-${tier}`} title="Draft ranking">
+    <span class={`rank tier-${tier}`} title={t('ttWebDraftRanking')}>
       <svg viewBox="0 0 34 42" aria-hidden="true">
         <defs>
           <linearGradient id={`rank-${tier}`} x1="0" y1="0" x2="0" y2="1">
@@ -417,29 +418,29 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   return (
     <section class="draft-panel draft-picks" ref={panel}>
       <div class="draft-panel-head">
-        <b>Your picks <span class="muted">{state.picks.length}</span></b>
-        <span class="seg" role="group" aria-label="Show picks as">
-          <button aria-pressed={cards} onClick={() => setCards(true)}>Cards</button>
-          <button aria-pressed={!cards} onClick={() => setCards(false)}>List</button>
+        <b>{tNodes('lblWebDraftYourPicks', <span class="muted">{state.picks.length}</span>)}</b>
+        <span class="seg" role="group" aria-label={t('lblWebDraftShowPicksAs')}>
+          <button aria-pressed={cards} onClick={() => setCards(true)}>{t('lblCards')}</button>
+          <button aria-pressed={!cards} onClick={() => setCards(false)}>{t('lblWebDraftList')}</button>
         </span>
       </div>
       <div class="draft-group-by">
-        <span class="muted">Group by</span>
-        <span class="seg" role="group" aria-label="Group picks by">
+        <span class="muted">{t('lblWebDraftGroupBy')}</span>
+        <span class="seg" role="group" aria-label={t('lblWebDraftGroupPicksBy')}>
           {(['type', 'colour', 'mv', 'pick'] as GroupBy[]).map(g => (
-            <button key={g} aria-pressed={by === g} onClick={() => setBy(g)}>{GROUP_NAMES[g]}</button>
+            <button key={g} aria-pressed={by === g} onClick={() => setBy(g)}>{t(GROUP_NAMES[g])}</button>
           ))}
         </span>
       </div>
       <div class="draft-sections">
-        <PickSection title="Main deck" held={main} by={by} cards={cards} onDrop={drop(false)} move={move} />
-        <PickSection title="Sideboard" held={side} by={by} cards={cards} onDrop={drop(true)} move={move} />
+        <PickSection title={t('lblWebDraftMainDeck')} held={main} by={by} cards={cards} onDrop={drop(false)} move={move} />
+        <PickSection title={t('lblSideboard')} held={side} by={by} cards={cards} onDrop={drop(true)} move={move} />
       </div>
     </section>
   );
 }
 
-const GROUP_NAMES: Record<GroupBy, string> = { colour: 'Colour', type: 'Type', mv: 'Mana value', pick: 'Pick order' };
+const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblWebDraftGroupColour', type: 'lblType', mv: 'lblWebDraftGroupManaValue', pick: 'lblWebDraftGroupPickOrder' };
 
 function PickSection({ title, held, by, cards, onDrop, move }: {
   title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void;
@@ -458,23 +459,23 @@ function PickSection({ title, held, by, cards, onDrop, move }: {
         onDrop(JSON.parse(raw) as Drag);
       }}>
       <h3>{title} <span class="muted">{held.length}</span></h3>
-      {held.length === 0 && <p class="drop-hint">Drag cards here</p>}
+      {held.length === 0 && <p class="drop-hint">{t('lblWebDraftDragCardsHere')}</p>}
       <div class={cards ? 'pick-cols' : 'zone-body cols'}>
         {grouped(held, by).map(([heading, group]) => (
           <div key={heading} class="group">
             <h4>{heading}<span>{group.length}</span></h4>
             {cards
               ? <div class="pick-stack">{group.map(h => (
-                  <img key={h.index} alt={h.card.name} title={`${h.card.name} · double-click to move`} src={imageUrl(h.card.image)}
+                  <img key={h.index} alt={h.card.name} title={t('ttWebDraftDoubleClickToMoveCard', h.card.name)} src={imageUrl(h.card.image)}
                     data-image={h.card.image} data-pick={h.index} draggable onDragStart={e => startDrag(e, { from: 'pick', index: h.index })}
                     onDblClick={() => move(h)} />
                 ))}</div>
               : group.map(h => (
                   <div key={h.index} class="ed-line" data-card={h.card.name} data-image={h.card.image} data-pick={h.index} draggable
-                    title="Double-click to move" onDragStart={e => startDrag(e, { from: 'pick', index: h.index })} onDblClick={() => move(h)}>
+                    title={t('ttWebDraftDoubleClickToMove')} onDragStart={e => startDrag(e, { from: 'pick', index: h.index })} onDblClick={() => move(h)}>
                     <span class="nm">{h.card.name}</span>
                     <span class="cost"><SymbolText text={h.card.cost} /></span>
-                    <span class="muted pk" title={`Pack ${h.card.pack}, pick ${h.card.pick}`}>{h.card.pack}·{h.card.pick}</span>
+                    <span class="muted pk" title={t('ttWebDraftPackPick', h.card.pack, h.card.pick)}>{h.card.pack}·{h.card.pick}</span>
                   </div>
                 ))}
           </div>
@@ -489,20 +490,20 @@ function DraftLog({ lines }: { lines: string[] }) {
   const [everyone, setEveryone] = useState(false);
   const shown = lines.filter(l => everyone || !/ picked · \d+ waiting$/.test(l)).reverse();
   return (
-    <aside class="draft-log" aria-label="Draft log">
+    <aside class="draft-log" aria-label={t('lblWebDraftLog')}>
       <header>
-        <b>Draft log</b>
-        <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> Every seat's picks</label>
+        <b>{t('lblWebDraftLog')}</b>
+        <label><input type="checkbox" checked={everyone} onChange={e => setEveryone(e.currentTarget.checked)} /> {t('lblWebDraftEverySeatsPicks')}</label>
       </header>
       {shown.map((line, i) => <p key={shown.length - i} class={line.startsWith('Pack ') ? 'head' : ''}>{line}</p>)}
     </aside>
   );
 }
 
-const COLOURS: Record<string, string> = { W: 'White', U: 'Blue', B: 'Black', R: 'Red', G: 'Green' };
+const COLOURS: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen' };
 
 function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
-  if (by === 'pick') return held.length ? [['In pick order', held]] : [];
+  if (by === 'pick') return held.length ? [[t('lblWebDraftInPickOrder'), held]] : [];
   const groups = new Map<string, Held[]>();
   // Mana value runs low to high; the other groupings keep the order their first card was picked in
   const ordered = by === 'mv' ? [...held].sort((a, b) => a.card.mv - b.card.mv) : held;
@@ -510,17 +511,23 @@ function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
     const c = h.card;
     const key = by === 'type' ? typeHeading(c.type)
       : by === 'mv' ? (c.mv >= 6 ? '6+' : String(c.mv))
-      : c.colors.length === 0 || c.colors === 'C' ? 'Colourless' : c.colors.length > 1 ? 'Multicolour' : COLOURS[c.colors] ?? c.colors;
+      : c.colors.length === 0 || c.colors === 'C' ? t('lblWebDraftColourless') : c.colors.length > 1 ? t('lblWebDraftMulticolour')
+      : COLOURS[c.colors] ? t(COLOURS[c.colors]) : c.colors;
     groups.set(key, [...(groups.get(key) ?? []), h]);
   }
   return [...groups.entries()];
 }
 
+/** The card types the picks are grouped under, matched in the type line the server sends, with each group's heading. */
+const TYPE_HEADINGS: [string, TextKey][] = [['Creature', 'lblCreatures'], ['Planeswalker', 'lblPlaneswalkers'],
+  ['Instant', 'lblInstants'], ['Sorcery', 'lblSorceries'], ['Artifact', 'lblArtifacts'], ['Enchantment', 'lblEnchantments'],
+  ['Land', 'lblLands']];
+
 function typeHeading(type: string): string {
-  for (const t of ['Creature', 'Planeswalker', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Land']) {
-    if (type.includes(t)) return t === 'Sorcery' ? 'Sorceries' : `${t}s`;
+  for (const [name, heading] of TYPE_HEADINGS) {
+    if (type.includes(name)) return t(heading);
   }
-  return 'Other';
+  return t('lblWebDraftGroupOther');
 }
 
 /** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */
@@ -531,24 +538,24 @@ function SaveDraft({ model, state, actions }: { model: Model; state: DraftState;
   return (
     <div class="backdrop">
       <div class="dialog draft-save">
-        <h3>Draft complete</h3>
-        <p class="hint">{state.picks.length} cards drafted. Save them to build a deck and play the computer's decks.</p>
+        <h3>{t('lblWebDraftComplete')}</h3>
+        <p class="hint">{t('lblWebDraftCardsDrafted', state.picks.length)}</p>
         <form onSubmit={e => { e.preventDefault(); if (name.trim()) actions.draftSave(name.trim(), false); }}>
-          <input type="text" value={name} aria-label="Draft name" onInput={e => setName(e.currentTarget.value)} />
+          <input type="text" value={name} aria-label={t('lblWebDraftName')} onInput={e => setName(e.currentTarget.value)} />
         </form>
-        {taken && <p class="hint">You already have a draft called <b>{name.trim()}</b>.</p>}
+        {taken && <p class="hint">{tNodes('lblWebDraftNameTaken', <b>{name.trim()}</b>)}</p>}
         <div class="actions">
           {discarding
             ? <>
-                <span class="muted">Throw these picks away?</span>
-                <button onClick={() => setDiscarding(false)}>Keep them</button>
-                <button class="danger" onClick={() => actions.draftDiscard()}>Discard</button>
+                <span class="muted">{t('lblWebDraftThrowAway')}</span>
+                <button onClick={() => setDiscarding(false)}>{t('lblWebDraftKeepThem')}</button>
+                <button class="danger" onClick={() => actions.draftDiscard()}>{t('lblWebDraftDiscard')}</button>
               </>
             : <>
-                <button onClick={() => setDiscarding(true)}>Discard</button>
+                <button onClick={() => setDiscarding(true)}>{t('lblWebDraftDiscard')}</button>
                 {taken
-                  ? <button class="danger" onClick={() => actions.draftSave(name.trim(), true)}>Replace it</button>
-                  : <button class="primary" disabled={!name.trim()} onClick={() => actions.draftSave(name.trim(), false)}>Save</button>}
+                  ? <button class="danger" onClick={() => actions.draftSave(name.trim(), true)}>{t('lblWebDraftReplaceIt')}</button>
+                  : <button class="primary" disabled={!name.trim()} onClick={() => actions.draftSave(name.trim(), false)}>{t('lblSave')}</button>}
               </>}
         </div>
       </div>

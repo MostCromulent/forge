@@ -8,6 +8,7 @@ import { playerSleeveUrl, cssUrl } from './looks';
 import { reconcile } from './render';
 import { q } from './dom';
 import type { CardView, KeywordText, PlayerView, Ref } from './protocol';
+import { t } from './text';
 
 /** What a card does when clicked: the board selects it, a dialog toggles an option. menu is a right-click. */
 export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void;
@@ -18,7 +19,10 @@ const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick" title="Summoning sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen" title="Revealed to other players">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab">Blocking</span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
+  q(el, '.sick').title = t('lblWebCardSummoningSick');
+  q(el, '.seen').title = t('lblWebCardRevealed');
+  q(el, '.block-tab').textContent = t('lblWebCardBlocking');
   noImageOnError(el, q<HTMLImageElement>(el, 'img'));
   el.addEventListener('click', e => onClick(el, false, e));
   // The right button asks what else the card can do, as it does on desktop
@@ -132,7 +136,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   }
   showBlocking(el, card);
   const badges: string[] = [];
-  if (card.IsRingBearer) badges.push('Ring-bearer');
+  if (card.IsRingBearer) badges.push(t('lblWebCardRingBearer'));
   // The corner already gives a planeswalker's loyalty and a battle's defense, unless the card is a creature too
   const inCorner = creature ? null : /Planeswalker/.test(type) ? 'Loyalty' : /Battle/.test(type) ? 'Defense' : null;
   // As desktop's counter tabs: each kind of counter by name, then how many. The count is marked as one, so +1/+1 ×2 is
@@ -170,7 +174,7 @@ function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, sh
   }
   const shield = had ?? root.appendChild(shieldBadge());
   q(shield as HTMLElement, '.n').textContent = String(shields);
-  (shield as HTMLElement).title = `${shields} shield counter${shields === 1 ? '' : 's'}`;
+  (shield as HTMLElement).title = t(shields === 1 ? 'lblWebCardShieldCounter' : 'lblWebCardShieldCounters', shields);
 }
 
 function shieldBadge(): HTMLElement {
@@ -220,10 +224,10 @@ function mechanic(card: CardView, type: string): Node[] {
     }
     return [pips, label(text)];
   };
-  if (card.ClassLevel && /\bClass\b/.test(type)) return track(card.ClassLevel, 3, `Level ${card.ClassLevel}`);
-  if (card.RingLevel) return track(card.RingLevel, 4, `Ring ${'I'.repeat(card.RingLevel).replace('IIII', 'IV')}`);
+  if (card.ClassLevel && /\bClass\b/.test(type)) return track(card.ClassLevel, 3, t('lblWebCardClassLevel', card.ClassLevel));
+  if (card.RingLevel) return track(card.RingLevel, 4, t('lblWebCardRingLevel', 'I'.repeat(card.RingLevel).replace('IIII', 'IV')));
   if (card.CurrentRoom) return [label(card.CurrentRoom)];
-  if (card.Sprocket) return track(card.Sprocket, 3, `Sprocket ${card.Sprocket}`);
+  if (card.Sprocket) return track(card.Sprocket, 3, t('lblWebCardSprocket', card.Sprocket));
   if (card.AttractionLights?.length) {
     const lit = new Set(card.AttractionLights);
     const pips = document.createElement('span');
@@ -236,7 +240,7 @@ function mechanic(card: CardView, type: string): Node[] {
     return [pips, label(card.AttractionLights.join(' '))];
   }
   // Intensity has no ceiling, so there is no track to draw — the number says it on its own
-  if (card.Intensity) return [label(`Intensity ${card.Intensity}`)];
+  if (card.Intensity) return [label(t('lblWebCardIntensity', card.Intensity))];
   return [];
 }
 
@@ -258,8 +262,8 @@ function showBlocking(el: HTMLElement, card: CardView): void {
   el.classList.toggle('must-block', must);
   const blocks = q(el, '.blocks');
   blocks.textContent = extra;
-  blocks.title = card.BlockAny ? 'May block any number of creatures'
-    : card.BlockAdditional ? `May block ${card.BlockAdditional + 1} creatures` : '';
+  blocks.title = card.BlockAny ? t('lblWebCardMayBlockAny')
+    : card.BlockAdditional ? t('lblWebCardMayBlockCount', card.BlockAdditional + 1) : '';
 }
 
 // New damage jolts the card and throws the number off it, so combat is legible without the log
@@ -286,5 +290,5 @@ export function setPileCount(el: HTMLElement, count: number, opened: boolean): v
   const badge = q(el, '.count');
   badge.textContent = opened ? '×' : count > 1 ? `×${count}` : '';
   badge.classList.toggle('opened', opened);
-  badge.title = opened ? 'Put the pile back together' : count > 1 ? 'Lay the pile out' : '';
+  badge.title = opened ? t('lblWebCardPileGather') : count > 1 ? t('lblWebCardPileSpread') : '';
 }

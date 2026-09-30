@@ -5,6 +5,7 @@
 import { byId, q } from './dom';
 import { changeUi, changeUiNow, rememberSidePanels, ui, type UiState } from './ui';
 import type { Model } from './model';
+import { t } from './text';
 
 const PANELS = ['log'] as const;
 
@@ -27,7 +28,7 @@ export function renderSky(model: Model): void {
     sky.innerHTML = '<i class="orb" aria-hidden="true"></i><span class="when"></span>';
   }
   sky.dataset.time = time;
-  q(sky, '.when').textContent = time;
+  q(sky, '.when').textContent = time === 'Night' ? t('lblNight') : t('lblDay');
 }
 
 export function initSide(): void {

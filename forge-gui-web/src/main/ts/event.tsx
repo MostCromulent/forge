@@ -9,6 +9,7 @@ import type { Model } from './model';
 import type { LobbyTable, PastEvent } from './protocol';
 import { GameMenu, PlayerCount } from './matchbar';
 import { shortDay } from './limited';
+import { t } from './text';
 
 /** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
 type SetupView = 'choose' | 'new' | 'earlier';
@@ -32,7 +33,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   const draft = lim.kind === 'draft';
   const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready);
   const close = () => setSetting(false);
-  const stages = ['Ready up', draft ? 'Draft' : 'Open packs', 'Build', 'Play'];
+  const stages = [t('lblWebEventStageReady'), draft ? t('lblWebEventStageDraft') : t('lblWebEventStageOpen'), t('lblWebEventStageBuild'), t('lblWebEventStagePlay')];
   const at = eventStage(lobby);
   const players = lobby.seats.length;
   // Computers draft the seats the table's players do not fill; they draft but don't play
@@ -42,35 +43,36 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   let why = eventStatus(lobby);
   if (!lim.started) {
     if (lobby.host && lim.product) {
-      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? 'Start draft' : 'Open packs'}</button>;
+      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? t('lblWebEventStartDraft') : t('lblWebEventOpenPacks')}</button>;
     }
   } else if (model.drafting && ui.draftHidden) {
-    button = <button class="primary big" onClick={() => changeUi(u => { u.draftHidden = false; })}>Return to draft</button>;
+    button = <button class="primary big" onClick={() => changeUi(u => { u.draftHidden = false; })}>{t('lblWebEventReturnToDraft')}</button>;
   } else if (lim.activeEventId) {
     const problem = lobby.problems?.[0];
     if (lobby.host) {
-      button = <button id="play" class="primary big" disabled={!lobby.canStart} onClick={start} title="Enter starts the match">Play</button>;
-      why = lobby.canStart ? 'Everyone has a deck.' : problem ?? why;
+      button = <button id="play" class="primary big" disabled={!lobby.canStart} onClick={start} title={t('ttWebEventEnterStarts')}>{t('lblWebEventPlay')}</button>;
+      why = lobby.canStart ? t('lblWebEventEveryoneHasDeck') : problem ?? why;
     } else {
-      why = problem ?? 'Waiting for the host to start the match.';
+      why = problem ?? t('lblWebEventWaitingHostStart');
     }
   }
   const facts = draft
-    ? `${players} players and ${ai} AI · ${pickRuleName(lim.pickRule).toLowerCase()} · ${lim.timer ? `${lim.timer} s a pick` : 'no pick timer'}`
-    : `${players} players · each opens their own pool`;
+    ? t('lblWebEventDraftFacts', players, ai, pickRuleName(lim.pickRule).toLowerCase(),
+      lim.timer ? t('lblWebEventSecondsAPick', lim.timer) : t('lblWebEventNoPickTimer'))
+    : t('lblWebEventSealedFacts', players);
   return (
-    <section class={slim ? 'event-head slim' : 'event-head'} aria-label={draft ? 'The draft' : 'The sealed event'}>
+    <section class={slim ? 'event-head slim' : 'event-head'} aria-label={draft ? t('lblWebEventTheDraft') : t('lblWebEventTheSealedEvent')}>
       {lobby.host && !lim.started && setting && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}>
-          <div class="dialog event-setup" role="dialog" aria-label={draft ? 'Set up the draft' : 'Set up the sealed event'}>
-            <button class="dk-close" title="Close" onClick={close}>&times;</button>
+          <div class="dialog event-setup" role="dialog" aria-label={draft ? t('lblWebEventSetUpTheDraft') : t('lblWebEventSetUpSealedEvent')}>
+            <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
             {view === 'choose' && lim.pastEvents.length > 0
               ? <SetupChoice draft={draft} count={lim.pastEvents.length} choose={setView} />
               : view === 'earlier'
                 ? <PastEvents events={lim.pastEvents} actions={actions} back={() => setView('choose')} />
                 : <>
-                    {lim.pastEvents.length > 0 && !lim.product && <button class="link setup-back" onClick={() => setView('choose')}>‹ Back</button>}
-                    {!model.limitedOptions ? <p class="muted">Loading…</p>
+                    {lim.pastEvents.length > 0 && !lim.product && <button class="link setup-back" onClick={() => setView('choose')}>{t('lblWebEventBack')}</button>}
+                    {!model.limitedOptions ? <p class="muted">{t('lblWebEventLoading')}</p>
                       : draft ? <DraftForm model={model} lobby={lobby} actions={actions} done={close} />
                       : <SealedForm model={model} actions={actions} done={close} />}
                   </>}
@@ -79,12 +81,12 @@ export function EventHead({ model, lobby, actions, preview, start }: {
       )}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label="Start a new event">
-            <h3>Start a new event?</h3>
-            <p class="hint">This one ends for everyone at the table. Its pools stay saved, so it can be played again from the earlier events.</p>
+          <div class="dialog" role="alertdialog" aria-label={t('lblWebEventStartNewEvent')}>
+            <h3>{t('lblWebEventStartNewEventQ')}</h3>
+            <p class="hint">{t('lblWebEventNewEventHint')}</p>
             <div class="actions">
-              <button onClick={() => setLeaving(false)}>Keep this event</button>
-              <button class="primary" onClick={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }}>New event</button>
+              <button onClick={() => setLeaving(false)}>{t('lblWebEventKeepThisEvent')}</button>
+              <button class="primary" onClick={() => { setLeaving(false); actions.eventNew(); setView('choose'); setSetting(true); }}>{t('lblWebEventNewEvent')}</button>
             </div>
           </div>
         </div>
@@ -92,28 +94,28 @@ export function EventHead({ model, lobby, actions, preview, start }: {
       <div class="eh-main">
         <div class="eh-mode"><GameMenu lobby={lobby} actions={actions} /></div>
         <div class="eh-title">
-          <span class="event-product">{lim.product ?? 'Not set up yet'}</span>
-          {lobby.host && !lim.started && <button class="link" onClick={openSetup}>{lim.product ? 'Edit' : 'Set up'}</button>}
+          <span class="event-product">{lim.product ?? t('lblWebEventNotSetUp')}</span>
+          {lobby.host && !lim.started && <button class="link" onClick={openSetup}>{lim.product ? t('lblEdit') : t('lblWebEventSetUp')}</button>}
           {/* An event under way, or one played again, is left for a new one here; its pools stay among the earlier events */}
-          {lobby.host && lim.started && !model.drafting && <button class="link" onClick={() => setLeaving(true)}>New event</button>}
+          {lobby.host && lim.started && !model.drafting && <button class="link" onClick={() => setLeaving(true)}>{t('lblWebEventNewEvent')}</button>}
           {slim && <span class="eh-facts">{facts}</span>}
         </div>
         {!slim && (
           <div class="eh-fields">
-            <div class="eh-field"><span class="field-name">Players</span><PlayerCount lobby={lobby} actions={actions} preview={preview} /></div>
+            <div class="eh-field"><span class="field-name">{t('lblPlayers')}</span><PlayerCount lobby={lobby} actions={actions} preview={preview} /></div>
             {draft && lim.product && <>
-              <div class="eh-field"><span class="field-name">AI drafters</span>
-                <span>{ai ? <>{ai} <span class="muted">to make a pod of {lim.podSize}</span></> : 'None'}</span></div>
-              <div class="eh-field"><span class="field-name">Picks</span><span>{pickRuleName(lim.pickRule)}</span></div>
-              <div class="eh-field"><span class="field-name">Pick timer</span><span>{lim.timer ? `${lim.timer} s` : 'None'}</span></div>
+              <div class="eh-field"><span class="field-name">{t('lblWebEventAiDrafters')}</span>
+                <span>{ai ? <>{ai} <span class="muted">{t('lblWebEventToMakePod', lim.podSize)}</span></> : t('lblWebEventNone')}</span></div>
+              <div class="eh-field"><span class="field-name">{t('lblWebEventPicks')}</span><span>{pickRuleName(lim.pickRule)}</span></div>
+              <div class="eh-field"><span class="field-name">{t('lblWebEventPickTimer')}</span><span>{lim.timer ? t('lblWebEventSeconds', lim.timer) : t('lblWebEventNone')}</span></div>
             </>}
-            {!draft && lim.product && <div class="eh-field"><span class="field-name">Pools</span><span>Each player opens their own</span></div>}
+            {!draft && lim.product && <div class="eh-field"><span class="field-name">{t('lblWebEventPools')}</span><span>{t('lblWebEventEachOpensOwn')}</span></div>}
           </div>
         )}
         {!slim && <div class="eh-art" aria-hidden="true"><i class="pk" /><i class="pk" /><i class="pk" /></div>}
       </div>
       <div class="eh-rail">
-        <ol class="eh-track" aria-label="Where the event is" style={{ '--at': at }}>
+        <ol class="eh-track" aria-label={t('lblWebEventWhereEventIs')} style={{ '--at': at }}>
           {stages.map((name, i) => <li key={name} class={i < at ? 'done' : i === at ? 'now' : ''}><i />{name}</li>)}
         </ol>
         <div class="eh-go">
@@ -137,27 +139,27 @@ export function eventStage(lobby: LobbyTable): number {
 /** The line under the bar at a Draft or Sealed table: who or what the table is waiting on. */
 export function eventStatus(lobby: LobbyTable): string {
   const lim = lobby.limited!;
-  if (!lim.product) return lobby.host ? 'Set the event up, then everyone presses Ready.' : 'The host is setting the event up.';
+  if (!lim.product) return lobby.host ? t('lblWebEventSetUpThenReady') : t('lblWebEventHostSettingUp');
   if (!lim.started) {
-    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? 'you' : s.name ?? 'a player'));
-    if (unready.length) return `Waiting for ${unready.join(', ')} to press Ready.`;
-    return lobby.host ? 'Everyone is ready.' : 'Everyone is ready. Waiting for the host.';
+    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? t('lblWebEventYou') : s.name ?? t('lblWebEventAPlayer')));
+    if (unready.length) return t('lblWebEventWaitingForReady', unready.join(', '));
+    return lobby.host ? t('lblWebEventEveryoneReady') : t('lblWebEventEveryoneReadyWaitHost');
   }
-  if (!lim.activeEventId) return lim.kind === 'draft' ? 'The draft is on.' : 'Opening the packs.';
-  return 'Pools are out. Build your deck, then play.';
+  if (!lim.activeEventId) return lim.kind === 'draft' ? t('lblWebEventDraftIsOn') : t('lblWebEventOpeningPacks');
+  return t('lblWebEventPoolsOut');
 }
 
 /** The first question when earlier events are kept: set up a new one, or play one of those again. */
 function SetupChoice({ draft, count, choose }: { draft: boolean; count: number; choose: (view: SetupView) => void }) {
   return (
     <div class="setup-choice">
-      <h3>{draft ? 'Draft' : 'Sealed'} at this table</h3>
+      <h3>{draft ? t('lblWebEventDraftAtTable') : t('lblWebEventSealedAtTable')}</h3>
       <div class="tiles">
         <button class="tile-choice" onClick={() => choose('new')}>
-          <b>{draft ? 'New draft' : 'New sealed event'}</b><span>Choose the packs and the table's rules.</span>
+          <b>{draft ? t('lblWebEventNewDraft') : t('lblWebEventNewSealedEvent')}</b><span>{t('lblWebEventChoosePacksRules')}</span>
         </button>
         <button class="tile-choice" onClick={() => choose('earlier')}>
-          <b>An earlier event</b><span>Play one of your {count} saved {count === 1 ? 'event' : 'events'} again, with the pools it dealt.</span>
+          <b>{t('lblWebEventAnEarlierEvent')}</b><span>{t(count === 1 ? 'lblWebEventPlayOneSavedAgain' : 'lblWebEventPlaySavedAgain', count)}</span>
         </button>
       </div>
     </div>
@@ -174,23 +176,23 @@ function PastEvents({ events, actions, back }: { events: PastEvent[]; actions: A
   const [deleting, setDeleting] = useState<string | null>(null);
   return (
     <div class="past-events">
-      <button class="link setup-back" onClick={back}>‹ Back</button>
-      <h3>Earlier events</h3>
-      {events.length === 0 && <p class="muted">No earlier events are kept.</p>}
+      <button class="link setup-back" onClick={back}>{t('lblWebEventBack')}</button>
+      <h3>{t('lblWebEventEarlierEvents')}</h3>
+      {events.length === 0 && <p class="muted">{t('lblWebEventNoEarlierEvents')}</p>}
       <div class="past-list">
         {events.map(p => (
           <div key={p.id} class="past-row">
-            <span class="past-name"><b>{p.product || (p.kind === 'draft' ? 'Draft' : 'Sealed')}</b>
-              <span class="muted">{p.kind === 'draft' ? 'Draft' : 'Sealed'} · {playedOn(p.date)}</span></span>
+            <span class="past-name"><b>{p.product || (p.kind === 'draft' ? t('lblDraft') : t('lblSealed'))}</b>
+              <span class="muted">{t(p.kind === 'draft' ? 'lblWebEventPlayedDraft' : 'lblWebEventPlayedSealed', playedOn(p.date))}</span></span>
             {deleting === p.id
               ? <>
-                  <span class="past-ask">Delete its pools?</span>
-                  <button onClick={() => setDeleting(null)}>Keep</button>
-                  <button class="danger" onClick={() => { setDeleting(null); actions.eventForget(p.id); }}>Delete</button>
+                  <span class="past-ask">{t('lblWebEventDeleteItsPools')}</span>
+                  <button onClick={() => setDeleting(null)}>{t('lblWebEventKeep')}</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.eventForget(p.id); }}>{t('lblDelete')}</button>
                 </>
               : <>
-                  <button class="outline" onClick={() => actions.eventHostAgain(p.id)}>Play again</button>
-                  <button class="past-delete" title="Delete this event's pools" aria-label={`Delete ${p.product}`}
+                  <button class="outline" onClick={() => actions.eventHostAgain(p.id)}>{t('lblWebEventPlayAgain')}</button>
+                  <button class="past-delete" title={t('ttWebEventDeletePools')} aria-label={t('lblWebEventDeleteNamed', p.product)}
                     onClick={() => setDeleting(p.id)}>&times;</button>
                 </>}
           </div>
@@ -206,8 +208,8 @@ function SealedForm({ model, actions, done }: { model: Model; actions: Actions; 
   // The pool is named after its event, as desktop names it, so there is no name to ask for
   const steps = sealedSteps(options).filter(s => s.id !== 'name');
   return (
-    <StepForm title="Set up sealed" steps={steps} value={value} onChange={setValue}
-      sentence={v => sealedSentence(options, v)} action="Save" submit={() => {
+    <StepForm title={t('lblWebEventSetUpSealed')} steps={steps} value={value} onChange={setValue}
+      sentence={v => sealedSentence(options, v)} action={t('lblSave')} submit={() => {
         actions.eventSetup({ product: value.product!, block: value.block, combo: value.combo, edition: value.edition,
           template: value.template, cubeId: value.cubeId, packs: value.packs ?? 0, podSize: 0, timer: 0, grace: 0 });
         done();
@@ -220,8 +222,8 @@ function DraftForm({ model, lobby, actions, done }: { model: Model; lobby: Lobby
   const [value, setValue] = useState<DraftValue>({});
   const seated = lobby.seats.filter(s => s.type !== 'OPEN').length;
   return (
-    <StepForm title="Set up the draft" steps={draftSteps(options, { seated })} value={value} onChange={setValue}
-      sentence={v => draftSentence(v, true)} action="Save" submit={() => {
+    <StepForm title={t('lblWebEventSetUpTheDraft')} steps={draftSteps(options, { seated })} value={value} onChange={setValue}
+      sentence={v => draftSentence(v, true)} action={t('lblSave')} submit={() => {
         actions.eventSetup({ product: value.product!, block: value.block, combo: draftCombo(value), cube: value.cube,
           theme: value.theme, cubeId: value.cubeId, packs: 3, podSize: value.podSize ?? 0, pickRule: value.pickRule,
           timer: value.timer ?? 0, grace: value.grace ?? 0 });
