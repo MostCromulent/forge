@@ -38,8 +38,9 @@ import forge.localinstance.properties.ForgeNetPreferences;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
+import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.logging.LogLevel;
@@ -142,6 +143,9 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         }, deadline, TimeUnit.SECONDS);
     }
 
+    /** Where a client in this process connects to a server started by {@link #startLoopbackServer()}. */
+    public static final LocalAddress LOOPBACK = new LocalAddress("forge");
+
     private volatile boolean isHosting = false;
     private volatile boolean loopbackOnly;
     // Created by startServer: an offline game reaches getInstance() but never needs the selectors
@@ -230,29 +234,28 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         } else {
             startUPnP = UPnPOption.equalsIgnoreCase("ALWAYS");
         }
-        bind(null, port, startUPnP);
+        bind(new InetSocketAddress(port), startUPnP);
     }
 
-    /** Hosts a game only this machine can join: 127.0.0.1, an ephemeral port, no UPnP, no AFK timeout. Returns the port. */
-    public int startLoopbackServer() {
+    /** Hosts a game only clients in this process can join, at {@link #LOOPBACK}: no socket, no UPnP, no AFK timeout. */
+    public void startLoopbackServer() {
         loopbackOnly = true;
-        bind(InetAddress.getLoopbackAddress(), 0, false);
-        return port;
+        bind(LOOPBACK, false);
     }
 
-    private void bind(final InetAddress address, final int requestedPort, final boolean startUPnP) {
+    private void bind(final SocketAddress address, final boolean startUPnP) {
         netLog.info("Starting Multiplayer Server");
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
+        final boolean inProcess = address instanceof LocalAddress;
+        bossGroup = inProcess ? new DefaultEventLoopGroup(1) : new NioEventLoopGroup(1);
+        workerGroup = inProcess ? new DefaultEventLoopGroup() : new NioEventLoopGroup();
         try {
             final ServerBootstrap b = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
-                    .channel(NioServerSocketChannel.class)
-                    .option(ChannelOption.SO_REUSEADDR, true)  // Allow quick port reuse after server shutdown
+                    .channel(inProcess ? LocalServerChannel.class : NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
-                    .childHandler(new ChannelInitializer<SocketChannel>() {
+                    .childHandler(new ChannelInitializer<Channel>() {
                         @Override
-                        public void initChannel(final SocketChannel ch) throws Exception {
+                        public void initChannel(final Channel ch) throws Exception {
                             ch.config().setWriteBufferWaterMark(
                                     new WriteBufferWaterMark(OUTBOUND_BUFFER_LOW_WATER, OUTBOUND_BUFFER_HIGH_WATER));
                             final ChannelPipeline p = ch.pipeline();
@@ -268,10 +271,12 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                         }
                     });
 
+            if (!inProcess) {
+                b.option(ChannelOption.SO_REUSEADDR, true);  // Allow quick port reuse after server shutdown
+            }
+
             // Bind and start to accept incoming connections.
-            final Channel serverChannel = (address == null ? b.bind(requestedPort) : b.bind(address, requestedPort)).sync().channel();
-            this.port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
-            final ChannelFuture ch = serverChannel.closeFuture();
+            final ChannelFuture ch = b.bind(address).sync().channel().closeFuture();
             new Thread(() -> {
                 try {
                     ch.sync();

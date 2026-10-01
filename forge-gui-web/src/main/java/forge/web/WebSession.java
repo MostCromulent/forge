@@ -273,9 +273,9 @@ public final class WebSession {
         }
     }
 
-    /** The loopback port guests take a seat on. */
-    int gamePort() {
-        return local.isHost() ? local.port() : -1;
+    /** Whether this session has a game open that guests can take a seat in. */
+    boolean hostsGame() {
+        return local.isHost();
     }
 
     /** A browser arrived, first or again. It is put back where its stage says it is. */
@@ -719,12 +719,11 @@ public final class WebSession {
 
     /** Takes a seat in the host's game. Runs off the host UI thread, because taking one waits on the server. */
     void joinHostGame() {
-        final int port = sessions.hostPort();
         final String seatName = name;
         final Opening joining = new Opening();
         final Stage from = stage;
         // Only one seat is taken at a time: the stage says a join is under way until it lands or fails
-        if (isHost || !(from instanceof Menu) || port < 0 || browser == null || seatName == null
+        if (isHost || !(from instanceof Menu) || !sessions.hostHasGame() || browser == null || seatName == null
                 || !move(from, joining)) {
             return;
         }
@@ -734,7 +733,7 @@ public final class WebSession {
             gui.whenOpened(() -> guestMatchOpened(gui));
             newOnlineDraft(gui);
             try {
-                local.openGuest(seatName, gui, port, this::lobbyChanged, this::chatted, this::gameGone);
+                local.openGuest(seatName, gui, this::lobbyChanged, this::chatted, this::gameGone);
             } catch (final RuntimeException e) {
                 Logger.error(e, "Could not take a seat");
                 gui.close();

@@ -25,8 +25,8 @@ import java.util.function.Consumer;
 
 /**
  * Every browser attached to this process. The first one on this machine hosts the game; anyone who opens the
- * invite link afterwards is a guest, gets a session of its own, and takes a seat in the host's game over the
- * loopback server. Only the web port is reachable from outside, so nothing else has to be forwarded.
+ * invite link afterwards is a guest, gets a session of its own, and takes a seat in the host's game inside this
+ * process. Only the web port is reachable from outside, so nothing else has to be forwarded.
  */
 final class WebSessions implements WebServer.Endpoint {
     private final WebGuiBase ui;
@@ -251,10 +251,9 @@ final class WebSessions implements WebServer.Endpoint {
         return (int) byId.values().stream().filter(WebSession::attached).count();
     }
 
-    /** The loopback port a guest takes its seat on, or -1 while the host has no game open. */
-    int hostPort() {
+    boolean hostHasGame() {
         final WebSession h = host;
-        return h == null ? -1 : h.gamePort();
+        return h != null && h.hostsGame();
     }
 
     /**

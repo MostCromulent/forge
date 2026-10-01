@@ -37,8 +37,8 @@ import java.util.function.IntConsumer;
 
 /**
  * The netplay seat one browser plays from, and the game behind it when that browser is the host. Every browser
- * is a client of the same loopback server: the host starts it and takes a seat, and each guest takes another.
- * Nothing is served to the network here, so only the web port is ever reachable from outside this machine.
+ * is a client of the same server inside this process: the host starts it and takes a seat, and each guest takes
+ * another. It opens no socket, so only the web port is ever reachable from outside this machine.
  *
  * <p>There is one of these per browser. The host's calls come on the host UI thread; a guest's join runs on a
  * background thread, because taking a seat waits on the server.
@@ -52,7 +52,6 @@ public final class LocalGame {
     private static final int SPECTATE_WAIT_MILLIS = 5000;
 
     private final FServerManager server = FServerManager.getInstance();
-    private int port = -1;
     /** The lobby this session owns, or null when another browser is hosting the game. */
     private ServerGameLobby hosted;
     /** Whether this session started the server. It outlives any one game, so the open lobby cannot say. */
@@ -102,8 +101,8 @@ public final class LocalGame {
         endMatch();
         awaitOldSeatsFreed();
         // The server costs nothing to leave running, so it outlives every game it serves
-        if (port < 0) {
-            port = server.startLoopbackServer();
+        if (!server.isHosting()) {
+            server.startLoopbackServer();
             startedServer = true;
         }
         openHosted(playerName, gui, onUpdate, onChat);
@@ -136,7 +135,7 @@ public final class LocalGame {
         server.setLobbyListener(new HostChat(onChat));
         // The host reads chat through its own listener, so the client one would only repeat it. Its own
         // connection ends only because the host ended it, which has already told the browser.
-        connect(playerName, gui, port, onUpdate, (from, text) -> { }, () -> { });
+        connect(playerName, gui, onUpdate, (from, text) -> { }, () -> { });
     }
 
     /**
@@ -145,7 +144,7 @@ public final class LocalGame {
      * first, a seat in it would be cleared under whoever had just taken it.
      */
     private void awaitOldSeatsFreed() {
-        if (port < 0) {
+        if (!server.isHosting()) {
             return;
         }
         final long giveUp = System.currentTimeMillis() + FREE_SEATS_TIMEOUT_MILLIS;
@@ -173,21 +172,20 @@ public final class LocalGame {
     }
 
     /** Takes a seat in a game another browser on this machine is hosting. Nothing is served from here. */
-    public void openGuest(final String playerName, final WebGuiGame gui, final int hostPort,
+    public void openGuest(final String playerName, final WebGuiGame gui,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
         close();
-        port = hostPort;
-        connect(playerName, gui, hostPort, onUpdate, onChat, onClosed);
+        connect(playerName, gui, onUpdate, onChat, onClosed);
     }
 
-    /** Every seat, the host's included, reaches the game over loopback. */
-    private void connect(final String playerName, final WebGuiGame gui, final int onPort,
+    /** Every seat, the host's included, reaches the game as a netplay client. */
+    private void connect(final String playerName, final WebGuiGame gui,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
         joined = new ClientGameLobby();
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
         gui.setClientLobby(joined);
         final CountDownLatch ready = new CountDownLatch(1);
-        client = new FGameClient(playerName, gui, "127.0.0.1", onPort);
+        client = new FGameClient(playerName, gui, FServerManager.LOOPBACK);
         client.setDispatchExecutor(gui.dispatchExecutor());
         client.setDraftHandler(draftHandler);
         client.addLobbyListener(new ClientListener(joined, ready, onChat, onClosed, seat -> {
@@ -203,11 +201,6 @@ public final class LocalGame {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Interrupted while joining", e);
         }
-    }
-
-    /** The loopback port this game is served on, which is where its other seats connect. */
-    public int port() {
-        return port;
     }
 
     /**
@@ -419,7 +412,6 @@ public final class LocalGame {
             server.stopServer();
             startedServer = false;
         }
-        port = -1;
     }
 
     private record ClientListener(ClientGameLobby clientLobby, CountDownLatch ready, BiConsumer<String, String> onChat,
