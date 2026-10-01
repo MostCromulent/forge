@@ -113,9 +113,10 @@ public class GuestSeatTest extends SessionsTest {
             final JsonObject choose = seatMessage("setSeat", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
             sessions.onMessage(browser, choose);
+            sessions.onMessage(browser, message("ready", "ready", true));
         }
         host.awaitLobby(l -> l.get("canStart").getAsBoolean(),
-                "the host could not start once both seats had a deck");
+                "the host could not start once both seats had a deck and were ready");
 
         // Stops set in match setup are the player's, and the match opens with them rather than correcting them later
         final JsonObject stops = JsonCodec.message("setStops");
