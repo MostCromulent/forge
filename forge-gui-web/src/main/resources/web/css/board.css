@@ -204,17 +204,18 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .seat.compact .player-id { gap: 3px; }
 /* In a full seat the portrait rides a row ahead of the tiles, on the side the player faces: above yours, below theirs */
 .seat:not(.compact) .player { flex-direction: column; align-items: flex-start; gap: 10px; }
-.seat:not(.compact) .player-id { grid-template-columns: auto auto; column-gap: 10px; row-gap: 2px; align-items: center; justify-items: start; }
-.seat:not(.compact) .player-id .avatar { grid-row: 1 / 3; }
-.seat:not(.compact) .player-id .name { align-self: end; }
-.seat:not(.compact) .player-id .hand-fan { align-self: start; }
+/* The name and hand sit together beside the portrait, centred on it */
+.seat:not(.compact) .player-id { grid-template-columns: auto auto; grid-template-rows: 1fr auto auto 1fr; column-gap: 12px; row-gap: 0; align-items: center; justify-items: start; }
+.seat:not(.compact) .player-id .avatar { grid-row: 1 / 5; }
+.seat:not(.compact) .player-id .name { grid-row: 2; font-weight: 700; font-size: 15px; }
+.seat:not(.compact) .player-id .hand-fan { grid-row: 3; margin-left: -4px; }
+#opponent.seat { position: relative; }
+#opponent.seat .player { position: absolute; left: 12px; top: 10px; z-index: 6; }
 #opponent.seat .player-id { order: 1; }
 #opponent.seat .player-extra { order: 2; }
-#me .player { position: absolute; left: 8px; bottom: 8px; z-index: 6; }
+#me .player { position: absolute; left: 20px; bottom: 18px; z-index: 6; }
 /* Above the line rather than beside it, so a floating mana pool never pushes the hand along */
 #me .player-extra { position: absolute; left: 0; bottom: calc(100% + 10px); }
-#opponent > .seat:only-child { grid-template-rows: auto minmax(0, 1fr); align-items: stretch; }
-#opponent > .seat:only-child .player { align-items: flex-start; }
 .player .mana { transition: opacity .2s ease; }
 @starting-style { .player .mana { opacity: 0; } }
 .avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; position: relative; cursor: pointer; border: 2px solid var(--line); }
@@ -345,6 +346,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .hand-fan .backs i { position: absolute; left: 10px; bottom: 0; width: 20px; height: 28px; border-radius: 3px; transform-origin: 50% 100%; background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 3px, var(--back-b) 3px 6px); border: 1px solid var(--back-edge); box-shadow: 0 1px 4px #000a; }
 .hand-fan .backs i:nth-child(1) { transform: rotate(-16deg); }
 .hand-fan .backs i:nth-child(3) { transform: rotate(16deg); }
+.hand-fan[data-count="0"] .backs { display: none; }
 .hand-fan[data-count="0"] .backs i, .hand-fan[data-count="1"] .backs i:not(:nth-child(2)), .hand-fan[data-count="2"] .backs i:nth-child(3) { display: none; }
 .hand-fan[data-count="2"] .backs i:nth-child(1) { transform: rotate(-8deg); }
 .hand-fan[data-count="2"] .backs i:nth-child(2) { transform: rotate(8deg); }

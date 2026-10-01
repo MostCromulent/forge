@@ -222,7 +222,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
     // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {
-      new ResizeObserver(() => byId('match').style.setProperty('--line-w', `${q(root, '.player').offsetWidth + 16}px`))
+      new ResizeObserver(() => byId('match').style.setProperty('--line-w', `${q(root, '.player').offsetWidth + 32}px`))
         .observe(q(root, '.player'));
     }
   }
