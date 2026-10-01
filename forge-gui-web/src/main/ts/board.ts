@@ -202,7 +202,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
         </div>
       </div>
       <div class="battlefield">
-        <div class="row"><div class="group lands"></div><div class="group support"></div></div>
+        <div class="row paired"><div class="group lands"></div><div class="group support"></div></div>
         <div class="row together"><div class="group creatures"></div><div class="group far"></div></div>
       </div>`;
     q(root, '.skull-mark').title = t('lblWebBoardOutOfGame');

@@ -128,7 +128,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // Between a group's two lines, room for an attacker on the back line to step forward into, with its chevron
   const lineGap = (fit: number) => 14 + (h - w * 0.9) / 2 * fit;
   const live = (z: Zone) => z.filter(g => g.slots > 0);
-  const rowGap = (r: number) => (r === 1 ? 52 : 20);
+  const rowGap = (r: number) => (r === 1 ? 52 : 40);
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
     live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
   // What is behind a card fans out to its left only, so it costs a row width and never height

@@ -145,8 +145,8 @@ html[data-motion="reduced"] .row > .group { transition: none; }
    11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
    would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
    two tapped cards side by side never overlap whatever size cards are set to, and keep a little air between. */
-/* Each row holds two groups that keep to their own ends: lands beside the other permanents, creatures beside
-   their tokens. A group with nothing in it gives up its half, so one kind alone still sits in the middle. */
+/* Each row holds two groups: lands and the other permanents, creatures and the planeswalkers or battles. A group
+   with nothing in it gives up its room, so one kind alone still sits in the middle. */
 .row { display: flex; gap: 20px; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; align-items: flex-end; }
 /* A group keeps to one line unless battlefield.ts splits it over two, which it sizes for; it never squeezes, since
    the sizing has already made the row fit */
@@ -158,13 +158,16 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .row > .group:last-child { justify-content: flex-end; }
 .row:has(> .group:empty) > .group { justify-content: center; }
 .row > .group:empty { display: none; }
-/* With both of a row's kinds out (lands and other permanents, creatures and planeswalkers or battles), the first
-   stays in the middle and the second keeps to the end. Only when the first grows into the room the second needs does
-   it move over: the two side columns share what is left, and the one holding the second never shrinks below it.
-   Contained, so the grid's width never feeds back into the board's, which battlefield.ts measures to size the cards */
-.row:has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; contain: inline-size; }
-.row:has(> .group:last-child:not(:empty)) > .group:first-child { grid-column: 2; justify-content: center; }
-.row:has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 0; }
+/* With both of a row's kinds out (creatures and planeswalkers or battles), the first stays in the middle and the
+   second keeps to the end. Only when the first grows into the room the second needs does it move over: the two side
+   columns share what is left, and the one holding the second never shrinks below it. Contained, so the grid's width
+   never feeds back into the board's, which battlefield.ts measures to size the cards */
+.row:not(.paired):has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; contain: inline-size; }
+.row:not(.paired):has(> .group:last-child:not(:empty)) > .group:first-child { grid-column: 2; justify-content: center; }
+.row:not(.paired):has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 0; }
+/* The other permanents stand just past the lands, the two centred together while the row has room */
+.row.paired { justify-content: safe center; gap: 40px; }
+.row.paired > .group { flex: 0 0 auto; justify-content: center; }
 /* Planeswalkers and battles hold the far end of the row an attack is aimed into. The group has no width of its
    own until something goes in it, so an ordinary board looks exactly as it did. */
 .row > .group.far { flex: 0 0 auto; margin-left: auto; }
