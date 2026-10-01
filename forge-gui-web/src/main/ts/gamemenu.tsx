@@ -3,7 +3,7 @@
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CloseIcon, OnOff, OptionsDialog, Row } from './options';
-import { SETTINGS, setting, type SettingDef } from './settings';
+import { PLAYMATS, SETTINGS, set, setting, type SettingDef } from './settings';
 import { DevItems } from './devmenu';
 import type { Actions } from './actions';
 import type { AutoDecision } from './protocol';
@@ -15,6 +15,7 @@ export function GameMenu({ model, actions, close, open }: {
 }) {
   const [armed, setArmed] = useState(false);
   const [dev, setDev] = useState(false);
+  const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   // Above the button that opened it, right edges aligned, since the prompt sits in the bottom-right corner
   useLayoutEffect(() => {
@@ -33,6 +34,8 @@ export function GameMenu({ model, actions, close, open }: {
           onClick={() => { actions.drawOffer('OFFER'); close(); }}>
           {offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
         </button>
+        <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}
+          onClick={() => setMats(!mats)}>{t('lblWebPlaymat')} ›</button>
         <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>{t('lblWebGameMenuInterrupts')}</button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
           actions.autoDecisions('list');
@@ -54,6 +57,47 @@ export function GameMenu({ model, actions, close, open }: {
           {armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
         </button>
         </>}
+      </div>
+      {mats && !dev && <PlaymatPicker beside={menu} />}
+    </div>
+  );
+}
+
+const BRIGHTNESS: [string, TextKey][] = [['dark', 'lblWebPlaymatDark'], ['dim', 'lblWebPlaymatDim'], ['light', 'lblWebPlaymatLight']];
+
+/** The playmats beside the game menu. A choice changes the table at once, so the board behind it is the preview. */
+function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } }) {
+  const panel = useRef<HTMLDivElement>(null);
+  // Placed from the button, as the menu is, since this runs before the menu has placed itself
+  useLayoutEffect(() => {
+    const button = document.querySelector('#prompt .more')?.getBoundingClientRect();
+    const el = panel.current;
+    if (!button || !el || !beside.current) return;
+    el.style.right = `${Math.max(8, innerWidth - button.right) + beside.current.offsetWidth + 8}px`;
+    el.style.bottom = `${innerHeight - button.top + 6}px`;
+  }, []);
+  const chosen = setting('playmat');
+  const brightness = setting('playmatBrightness');
+  return (
+    <div ref={panel} class="playmat-picker" role="dialog" aria-label={t('lblWebPlaymat')}>
+      <h3>{t('lblWebPlaymat')}</h3>
+      <div class="mats">
+        {PLAYMATS.map(m => (
+          <button key={m.id} type="button" class={m.id === chosen ? 'mat on' : 'mat'} aria-pressed={m.id === chosen}
+            onClick={() => set('playmat', m.id)}>
+            {m.thumb ? <img alt="" src={m.thumb} /> : <span class="plain" />}
+            <span class="nm">{t(m.name)}</span>
+          </button>
+        ))}
+      </div>
+      <div class="brightness">
+        <span>{t('lblWebPlaymatBrightness')}</span>
+        <span class="seg" role="group" aria-label={t('lblWebPlaymatBrightness')}>
+          {BRIGHTNESS.map(([id, name]) => (
+            <button key={id} type="button" aria-pressed={id === brightness} disabled={chosen === 'table'}
+              onClick={() => set('playmatBrightness', id)}>{t(name)}</button>
+          ))}
+        </span>
       </div>
     </div>
   );

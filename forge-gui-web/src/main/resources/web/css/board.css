@@ -6,6 +6,16 @@
   content: ''; position: fixed; inset: -16px; z-index: -3;
   background: radial-gradient(120% 90% at 50% 42%, var(--table) 0%, var(--table-deep) 100%);
 }
+/* A playmat lies under a dark wash, so a busy picture never fights the cards; the brightness setting thins or
+   thickens the wash, and the picture loses a little colour as it darkens */
+html[data-playmat="dim"] #match { --mat-wash: .58; --mat-saturate: .85; }
+html[data-playmat="dark"] #match { --mat-wash: .74; --mat-saturate: .7; }
+html[data-playmat="light"] #match { --mat-wash: .38; --mat-saturate: 1; }
+html:not([data-playmat=""]) #match::after {
+  background: radial-gradient(120% 90% at 50% 42%, rgb(10 13 19 / calc(var(--mat-wash) - .12)) 0%, rgb(8 10 15 / calc(var(--mat-wash) + .12)) 100%),
+    var(--playmat) center / cover no-repeat;
+  filter: saturate(var(--mat-saturate));
+}
 /* Your half of the table is lit a little from the bottom of the window, so whose side is whose reads without a
    label; the light runs on under the hand and the console rather than stopping at the edge of your seat */
 #match::before {
@@ -200,7 +210,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .player-extra { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .player-extra:not(:has(> :not(:empty):not([hidden]))) { display: none; }
 .seat.compact .player-extra { display: contents; }
-.player-id .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.player-id .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 8px #000c; }
 .seat.compact .player-id { gap: 3px; }
 /* In a full seat the portrait rides a row ahead of the tiles, on the side the player faces: above yours, below theirs */
 .seat:not(.compact) .player { flex-direction: column; align-items: flex-start; gap: 10px; }
@@ -278,7 +288,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .zone-tile { width: var(--tile-w); height: calc(var(--tile-w) * 1.4); padding: 0; position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
 .zone-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .zone-tile.back, .card.back { background: var(--sleeve, none) center / cover, repeating-linear-gradient(45deg, var(--back-a) 0 6px, var(--back-b) 6px 12px); border: 2px solid var(--back-edge); }
-.zone-tile.empty { background: none; border: 2px dotted var(--line); }
+.zone-tile.empty { background: color-mix(in srgb, var(--bg-deep) 78%, transparent); border: 2px dotted var(--line-bright); }
 /* The label rides a dark strip, so it stays readable over a sleeve or a card's art */
 .zone-tile .zone-name { position: absolute; left: 2px; right: 2px; top: 2px; z-index: 2; padding: 1px 2px; border-radius: 4px; background: #000000c4; color: var(--text); font-size: 10.5px; letter-spacing: .03em; text-align: center; }
 .zone-tile .zone-count { position: absolute; z-index: 2; right: 3px; bottom: 3px; min-width: 20px; background: var(--bg); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 5px; font-size: 12px; font-weight: 700; color: var(--text); }

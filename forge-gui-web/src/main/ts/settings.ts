@@ -4,13 +4,19 @@
 import type { KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
 import { storeJson, storedJson } from './storage';
-import { t } from './text';
+import { t, type TextKey } from './text';
 
 const LOCAL_KEY = 'forge.settings';
 /** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
  *  remembers them and gives them back whenever it connects. */
 const GUEST_KEY = 'forge.guestSettings';
 
+
+/** The playmats a player can lay under the board; the table is the plain one, with no picture. */
+export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
+  { id: 'table', name: 'lblWebPlaymatTable', image: null, thumb: null },
+  { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
+];
 export type SettingValue = string | number | boolean;
 
 interface SettingBase {
@@ -24,7 +30,7 @@ interface SettingBase {
   /** Only the host has it: a guest's browser leaves it out of the options. */
   hostOnly?: boolean;
   /** Set in a dialog opened from the game menu rather than in the options dialog. */
-  menu?: 'stops' | 'decisions';
+  menu?: 'stops' | 'decisions' | 'playmat';
 }
 
 export type SettingDef = SettingBase & (
@@ -74,6 +80,14 @@ export const SETTINGS: SettingDef[] = [
   {
     section: t('lblWebOptionsSectionDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
     options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblWebOptionsMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
+  },
+  {
+    section: t('lblWebOptionsSectionDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'choice', menu: 'playmat',
+    options: PLAYMATS.map(m => [m.id, t(m.name)]), def: 'table',
+  },
+  {
+    section: t('lblWebOptionsSectionDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat',
+    options: [['dark', t('lblWebPlaymatDark')], ['dim', t('lblWebPlaymatDim')], ['light', t('lblWebPlaymatLight')]], def: 'dim',
   },
   {
     section: t('lblWebOptionsSectionDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
@@ -200,6 +214,9 @@ function apply(): void {
   root.style.setProperty('--hand-w', `${Math.round(88 * hand)}px`);
   root.style.setProperty('--hand-h', `${Math.round(123 * hand)}px`);
   root.dataset.preview = String(setting('previewSize'));
+  const mat = PLAYMATS.find(m => m.id === setting('playmat'));
+  root.style.setProperty('--playmat', mat?.image ? `url("${mat.image}")` : 'none');
+  root.dataset.playmat = mat?.image ? String(setting('playmatBrightness')) : '';
   const motion = setting('motion');
   const reduced = motion === 'reduced' || (motion === 'system' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
   root.dataset.motion = reduced ? 'reduced' : 'full';
