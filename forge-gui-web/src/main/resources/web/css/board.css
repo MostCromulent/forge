@@ -834,8 +834,11 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .card .pt .hurt, .card .pt [data-shift="down"] { color: #ff7a59; }
 /* Blue above what the card is printed with, orange-red below: apart in lightness and on the blue-orange axis */
 .card .pt [data-shift="up"] { color: #7cc8ff; }
-.card .badges { position: absolute; left: 4px; top: 4px; font-size: 10px; background: #000c; border-radius: 4px; padding: 0 3px; }
+/* Where desktop draws its counter tabs: against the left edge, under the title bar */
+.card .badges { position: absolute; left: 0; top: 19%; font-size: 10px; background: #000c; border-radius: 0 4px 4px 0; padding: 0 3px; }
 .card .badges:empty, .card .pt:empty { display: none; }
+/* A land creature's tag sits on the same line, so its counters start under it */
+.battlefield .card:has(.kind-tag:not(:empty)) .badges { top: 27%; }
 /* The bottom-left corner holds everything a permanent is carrying: the keywords that decide a block, the shield
    counters that decide whether removal lands, and wherever it has got to in its set's own track. They stack
    upward from the corner, so the first icon is always in the same place and the card's name stays clear. */
