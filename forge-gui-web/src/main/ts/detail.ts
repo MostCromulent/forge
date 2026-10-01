@@ -207,6 +207,8 @@ function drawDetail(model: Model): void {
   q(zoom, '.hint').textContent = '';
   if (!d || !face) return;
   q(zoom, '.name').textContent = face.name ?? '';
+  // The log names a card by its id, as in "Floodpits Drowner (51)", so the same id here tells two copies apart
+  q(zoom, '.cid').textContent = hover.card !== null && model.objects.has(hover.card) ? `(${hover.card})` : '';
   setSymbolText(q(zoom, '.cost'), face.cost);
   const detail = q(zoom, '.detail');
   // The frame is in the face's own colours, as a card with no picture is framed on the board
@@ -399,7 +401,7 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
@@ -458,6 +460,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   q(zoom, '.hint').textContent = '';
   if (!d) return;
   q(zoom, '.name').textContent = d.name ?? '';
+  q(zoom, '.cid').textContent = '';
   q(zoom, '.cost').textContent = '';
   q(zoom, '.type-line').textContent = '';
   q(zoom, '.kind-chip').textContent = '';

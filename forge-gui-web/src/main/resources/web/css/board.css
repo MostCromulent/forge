@@ -712,6 +712,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
+#zoom .detail header .cid { margin-right: auto; align-self: center; color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#zoom .detail header .cid:empty { display: none; }
 #zoom .detail .type { color: var(--muted); }
 #zoom .detail .text { white-space: pre-line; }
 #zoom .detail .text .muted { color: var(--muted); }
