@@ -308,7 +308,9 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
   });
   const order = new Map(slots.map((slot, i) => [slot, i]));
   const rank = (slot: Slot) => firstOf.get(stateOf(model, slot.top).Name ?? '') ?? 0;
-  return slots.sort((a, b) => rank(a) - rank(b) || order.get(a)! - order.get(b)!);
+  // Within a name, the untapped stand first and the tapped to their right, so a land tapped out of its pile moves on
+  const tapped = (slot: Slot) => Number(!!slot.top.Tapped);
+  return slots.sort((a, b) => rank(a) - rank(b) || tapped(a) - tapped(b) || order.get(a)! - order.get(b)!);
 }
 
 // Everything a player can see or act on must match, so a pile never hides a difference. Nothing else may keep
