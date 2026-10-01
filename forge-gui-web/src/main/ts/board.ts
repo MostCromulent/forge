@@ -53,8 +53,8 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
     choseStarter = true;
     chooseFirst(model, actions, choice);
   }
-  // Answered from the prompt's own buttons instead, the faces have nothing left to ask
-  if (!choice) document.querySelector('#first-reveal.choosing')?.remove();
+  // Answered from the prompt's own buttons instead, or a game conceded before anyone chose, the faces have nothing left to ask
+  if (!choice || model.gameOver) document.querySelector('#first-reveal.choosing')?.remove();
   noticeLosses(model, actions);
   // A prompt offering cards or players to pick dims everything else (board.css); paying a cost is not such a pick
   const p = model.prompt;
