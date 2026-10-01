@@ -63,7 +63,8 @@ export function GameMenu({ model, actions, close, open }: {
   );
 }
 
-const BRIGHTNESS: [string, TextKey][] = [['dark', 'lblWebPlaymatDark'], ['dim', 'lblWebPlaymatDim'], ['light', 'lblWebPlaymatLight']];
+const BRIGHTNESS: [string, TextKey][] = [['dark', 'lblWebPlaymatDark'], ['dim', 'lblWebPlaymatDim'], ['light', 'lblWebPlaymatLight'],
+  ['bright', 'lblWebPlaymatBright']];
 
 /** The playmats beside the game menu. A choice changes the table at once, so the board behind it is the preview. */
 function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } }) {

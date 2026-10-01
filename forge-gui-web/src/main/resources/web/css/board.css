@@ -8,9 +8,10 @@
 }
 /* A playmat lies under a dark wash, so a busy picture never fights the cards; the brightness setting thins or
    thickens the wash, and the picture loses a little colour as it darkens */
-html[data-playmat="dim"] #match { --mat-wash: .58; --mat-saturate: .85; }
-html[data-playmat="dark"] #match { --mat-wash: .74; --mat-saturate: .7; }
-html[data-playmat="light"] #match { --mat-wash: .38; --mat-saturate: 1; }
+html[data-playmat="dark"] #match { --mat-wash: .62; --mat-saturate: .75; }
+html[data-playmat="dim"] #match { --mat-wash: .46; --mat-saturate: .9; }
+html[data-playmat="light"] #match { --mat-wash: .32; --mat-saturate: 1; }
+html[data-playmat="bright"] #match { --mat-wash: .2; --mat-saturate: 1; }
 html:not([data-playmat=""]) #match::after {
   background: radial-gradient(120% 90% at 50% 42%, rgb(10 13 19 / calc(var(--mat-wash) - .12)) 0%, rgb(8 10 15 / calc(var(--mat-wash) + .12)) 100%),
     var(--playmat) center / cover no-repeat;
