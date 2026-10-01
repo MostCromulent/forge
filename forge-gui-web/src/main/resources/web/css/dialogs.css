@@ -142,3 +142,12 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .playmat-picker .seg button + button { border-left: 1px solid var(--line); }
 .playmat-picker .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); font-weight: 600; }
 .game-menu .card-menu-item.on { background: var(--surface-3); }
+/* The game menu's rows shade only under the pointer, grouped by rules: the table, passing, the match, dev mode */
+.game-menu .card-menu-item { align-items: center; }
+.game-menu .card-menu-item:nth-of-type(even):not(:hover, :focus-visible, .on, .armed) { background: none; }
+.card-menu-sep { height: 1px; margin: 5px 4px; background: var(--line); }
+.menu-icon { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; color: var(--muted); }
+.menu-icon.end { margin-left: auto; color: var(--faint); }
+.game-menu .concede:not(.armed) { color: color-mix(in srgb, var(--red, #d4573f) 70%, #fff); }
+.game-menu .concede:not(.armed) .menu-icon { color: currentColor; }
+.game-menu .dev-entry { color: var(--muted); }

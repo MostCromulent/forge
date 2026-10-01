@@ -10,6 +10,21 @@ import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 import { t, type TextKey } from './text';
 
+// Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
+const ICONS = {
+  playmat: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
+  interrupts: '<circle cx="12" cy="12" r="10"/><path d="M10 15V9M14 15V9"/>',
+  yields: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
+  draw: '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>',
+  concede: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  dev: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+  more: '<path d="m9 18 6-6-6-6"/>',
+};
+
+function Icon({ d, end }: { d: string; end?: boolean }) {
+  return <svg class={end ? 'menu-icon end' : 'menu-icon'} viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: d }} />;
+}
+
 export function GameMenu({ model, actions, close, open }: {
   model: Model; actions: Actions; close: () => void; open: (dialog: 'stops' | 'decisions' | 'devSetup') => void;
 }) {
@@ -30,21 +45,21 @@ export function GameMenu({ model, actions, close, open }: {
     <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblWebDevMode') : t('lblGame')}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
-        <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
-          onClick={() => { actions.drawOffer('OFFER'); close(); }}>
-          {offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
-        </button>
         <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}
-          onClick={() => setMats(!mats)}>{t('lblWebPlaymat')} ›</button>
-        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>{t('lblWebGameMenuInterrupts')}</button>
+          onClick={() => setMats(!mats)}><Icon d={ICONS.playmat} />{t('lblWebPlaymat')}<Icon d={ICONS.more} end /></button>
+        <div class="card-menu-sep" role="separator" />
+        <button type="button" role="menuitem" class="card-menu-item" onClick={() => open('stops')}>
+          <Icon d={ICONS.interrupts} />{t('lblWebGameMenuInterrupts')}
+        </button>
         <button type="button" role="menuitem" class="card-menu-item" disabled={model.spectating} onClick={() => {
           actions.autoDecisions('list');
           open('decisions');
-        }}>{t('lblWebGameMenuDecisions')}</button>
-        {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
-        {setting('devMode') && model.host && !model.spectating && (
-          <button type="button" role="menuitem" class="card-menu-item" onClick={() => setDev(true)}>{t('lblWebDevMode')} ›</button>
-        )}
+        }}><Icon d={ICONS.yields} />{t('lblWebGameMenuDecisions')}</button>
+        <div class="card-menu-sep" role="separator" />
+        <button type="button" role="menuitem" class="card-menu-item" disabled={!!offer || model.spectating}
+          onClick={() => { actions.drawOffer('OFFER'); close(); }}>
+          <Icon d={ICONS.draw} />{offer?.mine ? t('lblWebGameMenuDrawOffered') : t('lblWebGameMenuOfferDraw')}
+        </button>
         <button type="button" role="menuitem" class={armed ? 'card-menu-item concede armed' : 'card-menu-item concede'}
           disabled={model.spectating} onClick={() => {
             if (!armed) {
@@ -54,8 +69,15 @@ export function GameMenu({ model, actions, close, open }: {
             actions.concede();
             close();
           }}>
-          {armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
+          {!armed && <Icon d={ICONS.concede} />}{armed ? t('lblWebGameMenuConcedeAgain') : t('lblConcede')}
         </button>
+        {/* The host's alone: its seat shares a process with the server, and a guest's does not */}
+        {setting('devMode') && model.host && !model.spectating && <>
+          <div class="card-menu-sep" role="separator" />
+          <button type="button" role="menuitem" class="card-menu-item dev-entry" onClick={() => setDev(true)}>
+            <Icon d={ICONS.dev} />{t('lblWebDevMode')}<Icon d={ICONS.more} end />
+          </button>
+        </>}
         </>}
       </div>
       {mats && !dev && <PlaymatPicker beside={menu} />}
