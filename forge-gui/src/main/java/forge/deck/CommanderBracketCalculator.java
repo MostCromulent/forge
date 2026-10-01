@@ -226,6 +226,30 @@ public final class CommanderBracketCalculator {
             return bracket;
         }
 
+        public List<String> getGamechangers() {
+            return gamechangers;
+        }
+
+        public List<String> getMassLandDenial() {
+            return massLandDenial;
+        }
+
+        public List<String> getExtraTurns() {
+            return extraTurns;
+        }
+
+        public List<String> getChainedExtraTurns() {
+            return chainedExtraTurns;
+        }
+
+        public List<Combo> getLateGameCombos() {
+            return lateGameCombos;
+        }
+
+        public List<Combo> getEarlyGameCombos() {
+            return earlyGameCombos;
+        }
+
         public String toExplanation() {
             final StringBuilder sb = new StringBuilder();
             sb.append(localizer.getMessage("lblCommanderBracketMinimum", bracket)).append("\n\n");
