@@ -937,6 +937,12 @@ body.dragging-block #zoom { display: none; }
   box-shadow: 0 1px 4px #000a; filter: brightness(.45); transform: translateX(calc(-3 * var(--pile-step))); pointer-events: none; }
 .card.pile[data-depth="3"] .pile-edge { display: block; }
 .card.pile.tapped .pile-edge { transform: translateY(calc(3 * var(--pile-step) / .9)); }
+/* A pile holds cards in the same state, so a sick pile greys every copy, not only the top one */
+.card.pile.sickness::after { filter: grayscale(1) brightness(.61); }
+.card.pile.sickness::before { filter: grayscale(1) brightness(.45); }
+.card.pile.sickness .pile-edge { filter: grayscale(1) brightness(.35); }
+/* The pile's count takes the corner, so the sleep mark sits just under it */
+.card.pile .sick { right: -3px; top: 21px; }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
 /* Held back while a card is on its way into the pile (motion.ts holdPile); after the rules above, so they win */
