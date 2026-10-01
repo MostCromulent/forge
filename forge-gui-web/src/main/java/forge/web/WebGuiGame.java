@@ -383,11 +383,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 send(new GameOver(score));
             }
         }
-        final Record forwarded = BrowserEvents.forwarded(event);
+        final GameView gv = getGameView();
+        final Record forwarded = BrowserEvents.forwarded(event, gv == null ? null : gv.getTracker());
         if (forwarded != null) {
             events.add(forwarded);
         }
-        final GameView gv = getGameView();
         final GameLog log = gv == null ? null : gv.getGameLog();
         if (log == null) {
             return;

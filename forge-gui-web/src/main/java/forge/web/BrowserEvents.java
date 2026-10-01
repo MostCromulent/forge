@@ -14,6 +14,8 @@ import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
 import forge.game.zone.ZoneView;
+import forge.trackable.TrackableTypes;
+import forge.trackable.Tracker;
 import forge.web.ToBrowser.Attack;
 import forge.web.ToBrowser.AttackersDeclared;
 import forge.web.ToBrowser.CardDamaged;
@@ -39,10 +41,19 @@ final class BrowserEvents {
     private BrowserEvents() {
     }
 
-    /** The events a renderer can show, as the browser names them; null for the rest, which the state covers. */
-    static Record forwarded(final GameEvent event) {
+    /**
+     * The events a renderer can show, as the browser names them; null for the rest, which the state covers. A card
+     * the game copied as it moved arrives as a snapshot holding only its name and picture, so its controller is read
+     * from the tracker's copy instead.
+     */
+    static Record forwarded(final GameEvent event, final Tracker tracker) {
         if (event instanceof GameEventCardChangeZone e && e.card() != null) {
-            final PlayerView caster = e.to() != null && e.to().zoneType() == ZoneType.Stack ? e.card().getController() : null;
+            PlayerView caster = null;
+            if (e.to() != null && e.to().zoneType() == ZoneType.Stack) {
+                caster = e.card().getController();
+                final CardView tracked = caster == null && tracker != null ? tracker.getObj(TrackableTypes.CardViewType, e.card().getId()) : null;
+                caster = tracked == null ? caster : tracked.getController();
+            }
             return new CardMoved(Ref.card(e.card().getId()), place(e.from()), place(e.to()),
                     caster == null ? null : Ref.player(caster.getId()));
         }
