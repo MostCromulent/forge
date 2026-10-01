@@ -6,10 +6,14 @@
 import { t } from './text';
 import type { KeywordText } from './protocol';
 
-/** A stretch of text; muted is text that does not apply just now, which CardDetailUtil greys out. */
+/**
+ * A stretch of text; muted is text that does not apply just now, which CardDetailUtil greys out, and struck is a word a
+ * text-changing effect replaced, which the host strikes through ahead of its replacement.
+ */
 export interface Run {
   text: string;
   muted: boolean;
+  struck?: boolean;
 }
 
 export type Line = Run[];
@@ -41,13 +45,13 @@ export interface SortedText {
 
 export const plain = (line: Line): string => line.map(r => r.text).join('');
 
-/** The characters from..to of a line, keeping each run's muting. */
+/** The characters from..to of a line, keeping how each run is marked. */
 export function slice(line: Line, from: number, to = Infinity): Line {
   const out: Line = [];
   let at = 0;
   for (const run of line) {
     const start = Math.max(from, at), end = Math.min(to, at + run.text.length);
-    if (end > start) out.push({ text: run.text.slice(start - at, end - at), muted: run.muted });
+    if (end > start) out.push({ ...run, text: run.text.slice(start - at, end - at) });
     at += run.text.length;
   }
   return out;
@@ -142,6 +146,52 @@ function reminderOf(line: Line, end: number): Line | null {
   const text = plain(line);
   const open = text.indexOf('(', end);
   return open < 0 ? null : slice(line, open + 1, text.endsWith(')') ? text.length - 1 : text.length);
+}
+
+/** How a card's rules differ from its printed text, for the preview to say. */
+export interface Changes {
+  /** Keywords the card has that are not printed on it, in lower case. */
+  gained: Set<string>;
+  /** Printed keywords the card no longer has. */
+  lostKeywords: string[];
+  /** Printed paragraphs that are no longer among the card's rules. */
+  lostText: string[];
+}
+
+// Rules text as compared: no reminder text, no tags, one space between words, no full stop at the end, in lower case
+const normal = (text: string) => text.replace(/<[^>]*>/g, '').replace(/\((?:[^()]|\([^()]*\))*\)/g, '')
+  .replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase();
+const paragraphs = (text: string) => text.split(/\r?\n/).map(normal).filter(Boolean);
+
+/**
+ * Compares a card's printed rules with its rules now. now is the host's ability text, which strikes out each word a
+ * text-changing effect replaced; swaps are those replacements (Elf to Goblin), made in the printed text too, so a
+ * rewritten paragraph is not taken for a lost one.
+ */
+export function changesOf(printed: string, now: string, swaps: Readonly<Record<string, string>>,
+  keywords: readonly KeywordText[]): Changes {
+  let swapped = printed;
+  for (const [from, to] of Object.entries(swaps)) {
+    swapped = swapped.replace(new RegExp(`\\b${from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi'), to);
+  }
+  const printedAll = paragraphs(printed).join(' ');
+  const nowParagraphs = paragraphs(now.replace(/<(strike|s|del)>.*?<\/\1>/gi, ''));
+  const nowAll = nowParagraphs.join(' ');
+  const titles = keywords.map(k => k.title.toLowerCase());
+  const changes: Changes = { gained: new Set(titles.filter(k => !printedAll.includes(k))), lostKeywords: [], lostText: [] };
+  for (const raw of swapped.split(/\r?\n/)) {
+    const p = normal(raw);
+    if (!p || nowAll.includes(p)) continue;
+    const head = raw.replace(/\((?:[^()]|\([^()]*\))*\)/g, '').trim().replace(/\.$/, '');
+    if (keywordsEnd(head) >= 0) {
+      for (const item of head.split(/,\s*/)) {
+        if (!titles.includes(item.toLowerCase()) && !nowParagraphs.includes(item.toLowerCase())) changes.lostKeywords.push(item.charAt(0).toUpperCase() + item.slice(1));
+      }
+    } else {
+      changes.lostText.push(raw.trim());
+    }
+  }
+  return changes;
 }
 
 /**

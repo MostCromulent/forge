@@ -1,7 +1,7 @@
 import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSymbolText } from './images';
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { frameColour } from './cards';
-import { sortRulesText, type Block, type Line, type SortedText } from './rulestext';
+import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './rulestext';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import { keyName } from './keys';
@@ -216,7 +216,12 @@ function drawDetail(model: Model): void {
   set.textContent = face.set ?? '';
   set.dataset.rarity = face.rarity ?? '';
   const card = face === d.faces[0] && hover.card !== null ? model.objects.get(hover.card) as CardView | undefined : undefined;
-  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', card ? stateOf(model, card).Keywords ?? [] : []);
+  const state = card ? stateOf(model, card) : undefined;
+  // A token or a face-down card has no printed text of its own to differ from
+  const changes = card && state && !card.Token && !card.Facedown
+    ? changesOf(state.OracleText ?? '', state.AbilityText ?? '', { ...card.ChangedTypes, ...card.ChangedColorWords }, state.Keywords ?? [])
+    : undefined;
+  const sorted = setRulesText(q(zoom, '.text'), q(zoom, '.foot'), face.text ?? '', state?.Keywords ?? [], changes);
   q(zoom, '.kind-chip').textContent = sorted.tag ?? '';
   drawPt(q(zoom, '.pt'), model, hover.card, face, face === d.faces[0]);
   // The keys are the player's own, since either can be changed in the options
@@ -247,26 +252,26 @@ function setSource(el: HTMLElement, zone: string | undefined): void {
   }
 }
 
-// CardDetailUtil marks text that does not currently apply with a grey span. Only that survives; every other
-// tag is dropped and its text kept, so card text can never inject markup.
+// CardDetailUtil marks text that does not currently apply with a grey span, and a word a text-changing effect replaced
+// with a strike. Only those survive; every other tag is dropped and its text kept, so card text can never inject markup.
 function rulesLines(html: string): Line[] {
   const lines: Line[] = [[]];
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  const walk = (node: Node, muted: boolean) => {
+  const walk = (node: Node, muted: boolean, struck: boolean) => {
     for (const child of node.childNodes) {
       if (child.nodeType === Node.TEXT_NODE) {
         (child.textContent ?? '').split(/\r?\n/).forEach((text, i) => {
           if (i > 0) lines.push([]);
-          if (text) lines[lines.length - 1].push({ text, muted });
+          if (text) lines[lines.length - 1].push(struck ? { text, muted, struck } : { text, muted });
         });
       } else if (child.nodeName === 'BR') {
         lines.push([]);
       } else if (child instanceof Element) {
-        walk(child, muted || /gray|grey/i.test(child.getAttribute('style') ?? ''));
+        walk(child, muted || /gray|grey/i.test(child.getAttribute('style') ?? ''), struck || /^(STRIKE|S|DEL)$/.test(child.nodeName));
       }
     }
   };
-  walk(doc.body, false);
+  walk(doc.body, false, false);
   return lines;
 }
 
@@ -278,13 +283,20 @@ let lastSorted: SortedText = { blocks: [], chips: [], notes: [] };
  * beside it, then the rest. What the game has done to the card goes under the box: counters and damage as chips by the
  * P/T, anything longer as notes at the foot of the box.
  */
-function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[]): SortedText {
+function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[], changes?: Changes): SortedText {
   // The preview is redrawn every frame while a card is hovered, so the text is sorted again only when it changes
-  const drawn = html + JSON.stringify(keywords);
+  const drawn = html + JSON.stringify(keywords) + JSON.stringify(changes, (_, v) => (v instanceof Set ? [...v] : v));
   if (box.dataset.html === drawn) return lastSorted;
   box.dataset.html = drawn;
   const sorted = lastSorted = sortRulesText(rulesLines(html), keywords);
-  box.replaceChildren(...sorted.blocks.map(drawBlock));
+  box.replaceChildren(...sorted.blocks.map(b => drawBlock(b, changes)));
+  // What the card has lost goes with its rules, struck through: the keywords with its keywords, the rest after
+  if (changes?.lostKeywords.length) {
+    const kws = box.querySelector('.kws') ?? box.insertBefore(element('div', 'kws'), box.firstChild);
+    const firstReminder = kws.querySelector('.kwrem');
+    for (const lost of changes.lostKeywords) kws.insertBefore(changed(richLine(element('span', 'kw lost'), [{ text: lost, muted: false }]), 'lost'), firstReminder);
+  }
+  for (const lost of changes?.lostText ?? []) box.append(changed(richLine(element('div', 'lost'), [{ text: lost, muted: false }]), 'lost'));
   if (sorted.notes.length) {
     const notes = document.createElement('div');
     notes.className = 'notes';
@@ -306,11 +318,22 @@ function element(tag: string, className: string): HTMLElement {
   return el;
 }
 
-function drawBlock(block: Block): HTMLElement {
+/** Labels a keyword or a line as gained or lost. */
+function changed(el: HTMLElement, how: 'gained' | 'lost'): HTMLElement {
+  const tag = element('i', 'change');
+  tag.textContent = how === 'gained' ? t('lblWebDetailGained') : t('lblWebDetailLost');
+  el.append(tag);
+  return el;
+}
+
+function drawBlock(block: Block, changes?: Changes): HTMLElement {
   switch (block.kind) {
     case 'keywords': {
       const el = element('div', 'kws');
-      for (const item of block.items) el.append(richLine(element('span', 'kw'), item));
+      for (const item of block.items) {
+        const kw = richLine(element('span', 'kw'), item);
+        el.append(changes?.gained.has(plain(item).toLowerCase()) ? changed(kw, 'gained') : kw);
+      }
       for (const reminder of block.reminders) el.append(richLine(element('span', 'kwrem'), reminder));
       return el;
     }
@@ -338,7 +361,7 @@ function richLine<E extends HTMLElement>(el: E, line: Line): E {
     run.text.split(/(\((?:[^()]|\([^()]*\))*\))/).forEach((part, i) => {
       if (!part) return;
       const span = document.createElement('span');
-      span.className = [run.muted ? 'muted' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' ');
+      span.className = [run.muted ? 'muted' : '', run.struck ? 'struck' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' ');
       appendSymbolText(span, part);
       el.append(span);
     });

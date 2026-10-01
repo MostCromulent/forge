@@ -657,6 +657,14 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom.text-card .text .kws { display: flex; flex-wrap: wrap; gap: 4px 5px; align-items: center; }
 #zoom.text-card .text .kw { font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
   background: color-mix(in srgb, var(--frame) 18%, #1b212b); border: 1px solid color-mix(in srgb, var(--frame) 45%, transparent); }
+/* What the game has changed about the card's printed rules: gained in gold, lost struck through and dimmed */
+#zoom.text-card .text .change { font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-left: 5px; color: var(--muted); }
+#zoom.text-card .text .kw:has(.change) { box-shadow: 0 0 0 1px var(--cost-changed); }
+#zoom.text-card .text .kw:has(.change) .change { color: var(--cost-changed); }
+#zoom.text-card .text .kw.lost { box-shadow: none; opacity: .6; }
+#zoom.text-card .text .kw.lost .change { color: var(--muted); }
+#zoom.text-card .text .lost > span:not(.change), #zoom .detail .text .struck { text-decoration: line-through; opacity: .6; }
+#zoom.text-card .text div.lost { color: var(--muted); }
 #zoom.text-card .text .kwrem { flex-basis: 100%; font-size: 11.5px; line-height: 1.35; color: var(--muted); font-style: italic; }
 #zoom.text-card .text .ab { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 9px; align-items: baseline; }
 #zoom.text-card .text .ac { font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: #1e2530; border: 1px solid var(--line-bright); white-space: nowrap; }

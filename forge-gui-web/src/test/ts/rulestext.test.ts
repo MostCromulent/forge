@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { plain, sortRulesText, type Line } from '../../main/ts/rulestext';
+import { changesOf, plain, sortRulesText, type Line } from '../../main/ts/rulestext';
 
 const lines = (text: string): Line[] => text.split('\n').map(t => [{ text: t, muted: false }]);
 const sort = (text: string) => sortRulesText(lines(text));
@@ -75,5 +75,49 @@ describe('the preview sorts a card\'s text into the parts of a printed card', ()
     const s = sortRulesText([[{ text: '{T}: Add {G}. ', muted: false }, { text: 'Activate only if you control a Forest.', muted: true }]]);
     const [block] = s.blocks;
     expect(block.kind === 'ability' && block.effect).toEqual([{ text: 'Add {G}. ', muted: false }, { text: 'Activate only if you control a Forest.', muted: true }]);
+  });
+});
+
+// Printed and current texts as the host sent them for real cards on a board
+describe('the preview tells what the game has changed from a card\'s printed rules', () => {
+  const flying = { title: 'Flying', reminder: '' };
+  const none = {};
+
+  it('names a keyword the card has but was not printed with as gained', () => {
+    const c = changesOf('', 'Flying', none, [flying]);
+    expect([...c.gained]).toEqual(['flying']);
+    expect(c.lostKeywords).toEqual([]);
+  });
+
+  it('names printed keywords the card no longer has as lost, and what replaced them as gained', () => {
+    const c = changesOf('Flying, vigilance', 'Indestructible', none, [{ title: 'Indestructible', reminder: '' }]);
+    expect(c.lostKeywords).toEqual(['Flying', 'Vigilance']);
+    expect([...c.gained]).toEqual(['indestructible']);
+    expect(c.lostText).toEqual([]);
+  });
+
+  it('takes nothing as lost when only the reminder text was left out', () => {
+    const c = changesOf('Haste (This creature can attack and {T} as soon as it comes under your control.)', 'Haste', none, [{ title: 'Haste', reminder: '' }]);
+    expect(c).toEqual({ gained: new Set(), lostKeywords: [], lostText: [] });
+  });
+
+  it('takes a rewritten paragraph as rewritten rather than lost', () => {
+    const c = changesOf('Other Elf creatures get +1/+1 and have forestwalk. (They can\'t be blocked as long as defending player controls a Forest.)',
+      'Flying\r\n\r\nOther <strike>Elf</strike> Goblin creatures get +1/+1 and have forestwalk.', { Elf: 'Goblin' }, [flying]);
+    expect(c.lostText).toEqual([]);
+    expect([...c.gained]).toEqual(['flying']);
+  });
+
+  it('names a printed ability that has gone as lost text', () => {
+    const c = changesOf('{T}: Add {G}.', '', none, []);
+    expect(c.lostText).toEqual(['{T}: Add {G}.']);
+  });
+});
+
+describe('the preview keeps a word a text-changing effect struck out', () => {
+  it('still strikes it once the line is sorted into a paragraph', () => {
+    const s = sortRulesText([[{ text: 'Other ', muted: false }, { text: 'Elf', muted: false, struck: true }, { text: ' Goblin creatures get +1/+1.', muted: false }]]);
+    const [block] = s.blocks;
+    expect(block.kind === 'text' && block.text.filter(r => r.struck).map(r => r.text)).toEqual(['Elf']);
   });
 });
