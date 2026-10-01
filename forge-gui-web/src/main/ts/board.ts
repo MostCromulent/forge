@@ -484,7 +484,7 @@ let choseStarter = false;
 /**
  * Having won the toss or lost the last game, you choose who starts from the same faces the reveal shows. Two
  * players are asked to play or draw, so your own face plays and the other draws; with more, a face is the player
- * chosen. The choice then plays out as the reveal does.
+ * chosen. Having chosen, you are not told again who starts.
  */
 function chooseFirst(model: Model, actions: Actions, choice: string): void {
   const mine = me(model)?.$key;
@@ -493,7 +493,7 @@ function chooseFirst(model: Model, actions: Actions, choice: string): void {
     if (!two) actions.selectPlayer(key);
     else if (key === mine) actions.ok();
     else actions.cancel();
-    revealFirst(model, key);
+    document.getElementById('first-reveal')?.remove();
   });
 }
 
