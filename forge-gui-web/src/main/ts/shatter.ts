@@ -24,7 +24,7 @@ interface Timing {
 }
 
 // Tuned on a 1440 by 900 board; a seat's portrait runs the same beats, shorter and without the slow motion
-const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 2.0, burst: 2.12, title: 3.05, end: 5.6 };
+const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 1.78, burst: 1.86, title: 2.79, end: 5.34 };
 const SEAT: Timing = { fly: 0.35, crack: 0.45, brk: 0.95, burst: 1.02, title: Infinity, end: 3.4 };
 const GRAVITY = 1500;
 // The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
@@ -230,8 +230,8 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     const near = Math.max(0, 1 - d / (R * 1.1));
     const dir = new THREE.Vector3(dx / d, dy / d, 0);
     // The end of the game throws its pieces harder than a seat breaking mid-game
-    const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1.35 : 0.55);
-    const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1.25 : 0.5);
+    const spd = (390 + near * 620 + rng() * 280) * (o.final ? 1.9 : 0.55);
+    const vz = (near > 0.5 || rng() > 0.8 ? 490 + rng() * 780 : rng() * 380 - 150) * (o.final ? 1.6 : 0.5);
     return {
       mesh, base: new THREE.Vector3(cx, cy, 0), dir,
       reach: d / R, hair: (0.5 + rng()) * k, jit: rng(), sep: (1.2 + rng() * 2.4) * k, zj: (rng() - 0.5) * 5 * k, rj: (rng() - 0.5) * 0.02,
@@ -240,13 +240,13 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       delay: (d / R) * 0.05, live: false,
     };
   });
-  const debris = Array.from({ length: o.final ? 70 : 24 }, () => {
+  const debris = Array.from({ length: o.final ? 100 : 24 }, () => {
     const s = (2.5 + rng() * 6) * Math.max(0.5, k);
     const tri = new THREE.Shape([new THREE.Vector2(0, s), new THREE.Vector2(s * 0.9, -s * 0.5), new THREE.Vector2(-s * 0.7, -s * 0.6)]);
     const mesh = new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: 1.5, bevelEnabled: false }), debrisMat);
     mesh.visible = false;
     scene.add(mesh);
-    const a = rng() * Math.PI * 2, spd = (460 + rng() * 980) * (o.final ? 1.35 : 0.5);
+    const a = rng() * Math.PI * 2, spd = (460 + rng() * 980) * (o.final ? 1.9 : 0.5);
     return { mesh, vel: new THREE.Vector3(Math.cos(a) * spd, Math.sin(a) * spd * 0.8 + 140, rng() * 900 - 200), spin: new THREE.Vector3(rng() * 20, rng() * 20, rng() * 20) };
   });
   scene.add(medal);
@@ -275,7 +275,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       let scale = 1;
       if (o.final && t >= T.burst) {
         const s = t - T.burst;
-        scale = s < 0.05 ? 0.3 : s < 0.22 ? 0.3 + 0.7 * ease((s - 0.05) / 0.17) : 1;
+        scale = s < 0.03 ? 0.4 : s < 0.14 ? 0.4 + 0.6 * ease((s - 0.03) / 0.11) : 1;
       }
       const dt = real * scale;
       t += dt;
@@ -350,7 +350,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
     }
     if (t >= T.burst) {
       const s = t - T.burst;
-      flare.intensity = 120 * Math.exp(-s * 9);
+      flare.intensity = (o.final ? 180 : 120) * Math.exp(-s * 9);
       for (const q of pieces) {
         if (!q.live && s >= q.delay) q.live = true;
         if (!q.live || !q.mesh.visible) continue;
@@ -377,15 +377,15 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       place(gCore, x, y, core, core, rise * Math.exp(-Math.max(0, s - 0.025) * 10));
       const bloom = (0.5 + 0.8 * ease(s / 0.6)) * k;
       place(gBloom, x, y, bloom, bloom, rise * 0.9 * Math.exp(-s * 4));
-      const ringK = Math.min(1, s / 0.55);
-      const ring = (0.2 + 3.2 * ease(ringK)) * k;
+      const ringK = Math.min(1, s / (o.final ? 0.42 : 0.55));
+      const ring = (0.2 + (o.final ? 4.2 : 3.2) * ease(ringK)) * k;
       place(gRing, x, y, ring, ring, rise * 0.7 * Math.pow(1 - ringK, 2.2));
       place(gStreak, x, y, (0.3 + 0.8 * ease(s / 0.3)) * k, 1, rise * 0.4 * Math.exp(-s * 10));
     }
     // The camera takes the hit by moving, never by rolling
     let amp = 0;
     if (t >= T.brk && t < T.burst) amp = 3 * k * Math.exp(-(t - T.brk) * 16);
-    if (t >= T.burst) amp = (o.final ? 13 : 4) * Math.exp(-(t - T.burst) * 6.5);
+    if (t >= T.burst) amp = (o.final ? 20 : 4) * Math.exp(-(t - T.burst) * 6.5);
     camera.position.set((rng() - 0.5) * amp, (rng() - 0.5) * amp, dist);
   }
 
