@@ -172,6 +172,18 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
       awaiting.delete(key);
     }
   }
+  // The card's move to the stack can come an update after the card itself has gone there, so while this player is
+  // paying, their own card in the stack zone with no item yet is awaiting payment whether or not its move was seen
+  if (model.prompt?.paying) {
+    for (const obj of model.objects.values()) {
+      const card = obj as CardView;
+      const key = String(card.$key);
+      if (card.Zone !== 'Stack' || onStack.has(key) || awaiting.has(key) || !card.Controller
+        || !model.localPlayers.includes(card.Controller.ref)) continue;
+      const picture = lastPicture(card.$key) ?? { src: cardImageSrc(model, card), zoom: cardImageSrc(model, card) };
+      if (picture.src) awaiting.set(key, { ...picture, since: Date.now() });
+    }
+  }
   for (const [key, spell] of awaiting) {
     // A cancelled cast is undone without an event, and the card is back in a zone the browser can see
     const back = model.objects.get(Number(key)) as CardView | undefined;
