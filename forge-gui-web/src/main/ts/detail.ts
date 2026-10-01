@@ -326,6 +326,9 @@ function changed(el: HTMLElement, how: 'gained' | 'lost'): HTMLElement {
   return el;
 }
 
+/** Characters past which an ability's cost no longer fits in a column beside what the ability does. */
+const LONG_COST = 22;
+
 function drawBlock(block: Block, changes?: Changes): HTMLElement {
   switch (block.kind) {
     case 'keywords': {
@@ -338,7 +341,8 @@ function drawBlock(block: Block, changes?: Changes): HTMLElement {
       return el;
     }
     case 'ability': {
-      const el = element('div', 'ab');
+      // A cost too long to sit beside its effect, such as one that returns a land, goes above it and wraps
+      const el = element('div', plain(block.cost).length > LONG_COST ? 'ab long' : 'ab');
       el.append(richLine(element('span', block.loyalty ? `ac ${block.loyalty}` : 'ac'), block.cost));
       const effect = element('span', 'ef');
       if (block.label) effect.append(richLine(element('b', ''), block.label), ' ');

@@ -668,6 +668,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #zoom.text-card .text .kwrem { flex-basis: 100%; font-size: 11.5px; line-height: 1.35; color: var(--muted); font-style: italic; }
 #zoom.text-card .text .ab { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0 9px; align-items: baseline; }
 #zoom.text-card .text .ac { font-size: 12px; font-weight: 700; padding: 1px 6px; border-radius: 5px; background: #1e2530; border: 1px solid var(--line-bright); white-space: nowrap; }
+#zoom.text-card .text .ab.long { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+#zoom.text-card .text .ab.long .ac { white-space: normal; justify-self: start; }
 /* Loyalty up in blue, down in orange-red, the same pair the P/T uses */
 #zoom.text-card .text .ac.plus { color: #7cc8ff; border-color: #7cc8ff73; }
 #zoom.text-card .text .ac.minus { color: #ff7a59; border-color: #ff7a5973; }
