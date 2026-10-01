@@ -188,14 +188,18 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   if (!root.firstChild) {
     root.innerHTML = `
       <div class="player">
+        <div class="player-id">
         <div class="avatar"><img class="portrait" alt="" draggable="false"><span class="initial"></span><span class="skull-mark">${SKULL}</span><span class="ai-badge">${ROBOT_ICON}</span><span class="cmdr-arc" hidden><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="48"/></svg></span><span class="cmdr-chip" hidden>${SWORDS}<b></b></span><span class="life"></span></div>
         <div class="name"><span class="who"></span><span class="role-tag" hidden></span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
+        </div>
+        <div class="zone-tiles"></div>
+        <div class="player-extra">
         <div class="player-counters"></div>
         <div class="emblems"></div>
         <div class="schemes-ongoing"></div>
-        <div class="zone-tiles"></div>
         <div class="mana" hidden><span class="mana-label"></span><div class="mana-chips"></div></div>
+        </div>
       </div>
       <div class="battlefield">
         <div class="row"><div class="group lands"></div><div class="group support"></div></div>
@@ -216,6 +220,11 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     avatarEl.addEventListener('mousemove', followPointer);
     avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
+    // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
+    if (root.id === 'me') {
+      new ResizeObserver(() => byId('match').style.setProperty('--line-w', `${q(root, '.player').offsetWidth + 16}px`))
+        .observe(q(root, '.player'));
+    }
   }
   root.dataset.player = String(player.$key);
   const avatar = q(root, '.avatar');

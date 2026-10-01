@@ -1,5 +1,5 @@
 /* The hand sits low with the bottom of each card below the screen edge; a hovered card rises clear */
-#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); padding-right: calc(var(--prompt-w) - var(--side-w)); }
+#hand { display: flex; justify-content: center; align-items: flex-start; align-self: end; height: calc(var(--hand-h) * .8); padding-right: calc(var(--prompt-w) - var(--side-w)); padding-left: var(--line-w, 0px); }
 /* With the log folded away the hand has the whole width, less the corner the console keeps */
 #match.side-folded #hand { padding-right: calc(var(--prompt-w) + 16px); }
 #hand .card { width: var(--hand-w); height: var(--hand-h); }
