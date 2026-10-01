@@ -86,6 +86,8 @@ final class ServerConsole implements IProgressBar {
     private final JLabel forwardState = new JLabel();
     private final TrafficGraph graph = new TrafficGraph();
     private final StatsBox stats = new StatsBox();
+    private final JButton imagesButton = new JButton(Localizer.getInstance().getMessage("lblWebImagesButton"));
+    private final CardImageDownloads images = new CardImageDownloads(label -> SwingUtilities.invokeLater(() -> imagesButton.setText(label)));
     private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextPane text;
@@ -134,6 +136,8 @@ final class ServerConsole implements IProgressBar {
             forwardPort.setSelected(driven.forwardPort());
             forwardPort.setEnabled(true);
         });
+        images.ready();
+        SwingUtilities.invokeLater(() -> imagesButton.setEnabled(true));
         driven.onForwarding(this::forwarding);
         running();
     }
@@ -299,6 +303,10 @@ final class ServerConsole implements IProgressBar {
         status.add(Box.createHorizontalStrut(8));
         status.add(state);
         status.add(Box.createHorizontalGlue());
+        imagesButton.addActionListener(e -> images.show(frame));
+        imagesButton.setEnabled(false);
+        status.add(imagesButton);
+        status.add(Box.createHorizontalStrut(8));
         status.add(browse);
         status.add(Box.createHorizontalStrut(8));
         status.add(startStop);
