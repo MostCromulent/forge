@@ -11,7 +11,7 @@ import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
 import { BracketMark, DeckFinder, peekAt } from './deckfinder';
-import { imageUrl } from './images';
+import { imageUrl, smallImage } from './images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
 import { Pips } from './symbols';
@@ -149,7 +149,7 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
           disabled={!seat.mayEdit || dealt} onClick={() => choose('deck')}
           // A new sleeve dealt under a commander would not be seen
           onContextMenu={e => { if (hasDeck && seat.mayEdit && !commander) { e.preventDefault(); randomSleeve(); } }}>
-          <img alt="" hidden={!hasDeck && !dealt} src={commander ? imageUrl(commander) : hasDeck || dealt ? sleeveSrc : undefined}
+          <img alt="" hidden={!hasDeck && !dealt} src={commander ? smallImage(imageUrl(commander)) : hasDeck || dealt ? sleeveSrc : undefined}
             style={commander ? undefined : { objectPosition: objectPosition(seat.sleeveOffset) }} />
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}

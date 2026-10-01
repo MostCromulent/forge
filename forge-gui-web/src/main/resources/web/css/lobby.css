@@ -361,17 +361,16 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .verdict.yes { color: var(--muted); }
 
 /* A Commander deck's bracket: a small mark in lists and on seats, 4 in gold, 3 rimmed in gold, 1 and 2 plain */
-.bracket-mark { display: inline-grid; place-items: center; min-width: 22px; height: 19px; padding: 0 5px; border-radius: 6px; flex: none;
-  font: 700 11.5px ui-monospace, Consolas, monospace; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-bright); }
-.bracket-mark.b1, .bracket-mark.b2 { color: var(--muted); }
-.bracket-mark.b3 { border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); }
-.bracket-mark.b4 { border-color: var(--accent-2); color: var(--accent-2); }
+/* A Commander bracket is struck in bronze, like a medal, so it never reads as a count or a deck size beside it */
+.bracket-mark, .bnum { --bronze: linear-gradient(180deg, #f0c493 0%, #c98a52 48%, #9a5f2f 100%);
+  background: var(--bronze); color: #2b1608; border: 1px solid #5c3416; box-shadow: inset 0 1px 0 #ffe3c288, 0 1px 2px #0008; }
+.bracket-mark { display: inline-grid; place-items: center; min-width: 21px; height: 19px; padding: 0 5px; border-radius: 6px; flex: none;
+  font: 800 11.5px ui-monospace, Consolas, monospace; }
 /* In the deck panel: one row, opened for the cards behind each reason */
 .bracket { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 7px 9px; display: grid; gap: 8px; }
 .bracket-sum { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; }
 .bracket-sum:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
-.bnum { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; font: 700 17px ui-monospace, Consolas, monospace;
-  background: var(--brass); color: var(--on-brass); }
+.bnum { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; font: 800 17px ui-monospace, Consolas, monospace; }
 .bmid { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .bline { display: flex; gap: 6px; align-items: baseline; }
 .bline b { font-size: 13px; }
