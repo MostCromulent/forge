@@ -136,6 +136,11 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
 
   // offsetWidth, so a scrollbar appearing does not shrink the room it measures and feed back into the size
   const width = field.offsetWidth - px(fieldStyle, 'padding-left') - px(fieldStyle, 'padding-right') - 2;
+  // A two-player seat's portrait and zones stand over the board's left edge (board.css), so the rows fit beside them
+  const player = q(root, '.player');
+  const block = getComputedStyle(player).position === 'absolute'
+    ? Math.max(0, player.getBoundingClientRect().right + 16 - field.getBoundingClientRect().left - px(fieldStyle, 'padding-left')) : 0;
+  const room = width - block;
   // A compact seat keeps its player's details in a row above the cards, and its own padding round both
   const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
@@ -176,10 +181,10 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const gaps = gap * Math.max(0, zones.length - 1) + indent;
     const used = (share: number) => need.reduce((n, x) => n + Math.min(x, share), 0) + gaps;
     let lo = 0;
-    let hi = width;
+    let hi = room;
     for (let i = 0; i < 30; i++) {
       const mid = (lo + hi) / 2;
-      if (used(mid) <= width) lo = mid;
+      if (used(mid) <= room) lo = mid;
       else hi = mid;
     }
     const sizes = zones.map((z, i) => sizeFor(z, Math.min(need[i], lo), cap, two, gap));
@@ -218,6 +223,15 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   field.classList.toggle('crowded', !best);
   root.style.setProperty('--fit', chosen.cap.toFixed(2));
   let shrinking = false;
+  // A row stays centred on the board while that keeps it clear of the portrait, and otherwise moves right just enough
+  rows.forEach((row, r) => {
+    const zones = row.filter(z => live(z).length);
+    const indent = r === 0 && live(row[1]).length ? supportIndent : 0;
+    const across = zones.reduce((n, z) => n + zoneWidth(z, chosen.sizes[r][row.indexOf(z)], rowGap(r)), 0)
+      + rowGap(r) * Math.max(0, zones.length - 1) + indent;
+    const shift = Math.max(0, 2 * block + across - width);
+    row[0][0].el.parentElement?.style.setProperty('padding-left', shift ? `${shift}px` : '');
+  });
   rows.forEach((row, r) => row.forEach((zone, z) => {
     const s = chosen.sizes[r][z];
     for (const g of zone) {
