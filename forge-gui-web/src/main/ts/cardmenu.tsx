@@ -15,7 +15,7 @@ const IN_SECTION: Record<DeckSection, TextKey> = {
   Main: 'lblWebCardMenuInMain', Sideboard: 'lblWebCardMenuInSideboard', Commander: 'lblWebCardMenuInCommander',
   Avatar: 'lblWebCardMenuInAvatar', Planes: 'lblWebCardMenuInPlanes', Schemes: 'lblWebCardMenuInSchemes',
   Conspiracy: 'lblWebCardMenuInConspiracy', Dungeon: 'lblWebCardMenuInDungeon', Attractions: 'lblWebCardMenuInAttractions',
-  Contraptions: 'lblWebCardMenuInContraptions',
+  Contraptions: 'lblWebCardMenuInContraptions', Stickers: 'lblWebCardMenuInStickers',
 };
 
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);

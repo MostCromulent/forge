@@ -31,7 +31,7 @@ const ZONE_NAMES: Record<ZoneType, TextKey> = {
   Sideboard: 'lblWebZoneSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblWebZoneSchemeDeck',
   PlanarDeck: 'lblWebZonePlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
   ContraptionDeck: 'lblWebZoneContraptionDeck', Subgame: 'lblWebZoneSubgame', ExtraHand: 'lblWebZoneExtraHand',
-  None: 'lblWebZoneNone',
+  StickerSheets: 'lblStickerSheets', None: 'lblWebZoneNone',
 };
 
 export function zoneTitle(zoneName: ZoneType): string {

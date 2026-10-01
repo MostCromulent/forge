@@ -12,6 +12,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.match.input.InputSynchronized;
+import forge.gamemodes.net.server.HostingServer.AfkTimeout;
 import forge.gamemodes.net.ChatMessage;
 import forge.gamemodes.net.CompatibleObjectDecoder;
 import forge.gamemodes.net.CompatibleObjectEncoder;
@@ -61,7 +62,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
-public final class FServerManager implements IHasForgeLog {
+public final class FServerManager implements IHasForgeLog, HostingServer.Server {
 
     static final int HEARTBEAT_TIMEOUT_SECONDS = Integer.getInteger("forge.net.heartbeatTimeout", 45);
 
@@ -143,8 +144,9 @@ public final class FServerManager implements IHasForgeLog {
 
     private volatile boolean isHosting = false;
     private volatile boolean loopbackOnly;
-    private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-    private EventLoopGroup workerGroup = new NioEventLoopGroup();
+    // Created by startServer: an offline game reaches getInstance() but never needs the selectors
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
     private PortForward portForward;
     private ServerGameLobby localLobby;
     private ILobbyListener lobbyListener;
@@ -240,6 +242,8 @@ public final class FServerManager implements IHasForgeLog {
 
     private void bind(final InetAddress address, final int requestedPort, final boolean startUPnP) {
         netLog.info("Starting Multiplayer Server");
+        bossGroup = new NioEventLoopGroup(1);
+        workerGroup = new NioEventLoopGroup();
         try {
             final ServerBootstrap b = new ServerBootstrap()
                     .group(bossGroup, workerGroup)
@@ -282,6 +286,7 @@ public final class FServerManager implements IHasForgeLog {
             }
             Runtime.getRuntime().addShutdownHook(shutdownHook);
             isHosting = true;
+            HostingServer.set(this);
         } catch (final InterruptedException e) {
             netLog.error(e, "Server start interrupted");
         }
@@ -329,8 +334,10 @@ public final class FServerManager implements IHasForgeLog {
         afkSlots.clear();
 
         try {
-            bossGroup.shutdownGracefully().sync();
-            workerGroup.shutdownGracefully().sync();
+            if (bossGroup != null) {
+                bossGroup.shutdownGracefully().sync();
+                workerGroup.shutdownGracefully().sync();
+            }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
         }
@@ -343,11 +350,9 @@ public final class FServerManager implements IHasForgeLog {
         }
         isHosting = false;
         loopbackOnly = false;
+        HostingServer.set(null);
         UPnPMapped = false;
         NetworkLogConfig.deactivateNetworkLogging();
-        // create new EventLoopGroups for potential restart
-        bossGroup = new NioEventLoopGroup(1);
-        workerGroup = new NioEventLoopGroup();
     }
 
     public boolean isHosting() {
@@ -410,12 +415,6 @@ public final class FServerManager implements IHasForgeLog {
 
     private final Set<Integer> afkSlots = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    @FunctionalInterface
-    public interface AfkTimeout {
-        AfkTimeout NOOP = () -> {};
-        void cancel();
-    }
-
     /**
      * {@code cancelAll()} is safe here only because this is armed exclusively from
      * {@code InputPassPriority}: the sole replies that can be pending on the channel
@@ -423,6 +422,7 @@ public final class FServerManager implements IHasForgeLog {
      * Extending to other server-side waits (assignCombatDamage, getChoices, order,
      * ...) is blocked on those methods not being null-safe.
      */
+    @Override
     public AfkTimeout armAfkTimeout(final PlayerControllerHuman controller, final InputSynchronized input) {
         if (!isHosting() || localLobby == null || loopbackOnly) {
             return AfkTimeout.NOOP;

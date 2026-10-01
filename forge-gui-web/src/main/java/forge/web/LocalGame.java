@@ -101,8 +101,7 @@ public final class LocalGame {
             final BiConsumer<String, String> onChat) {
         endMatch();
         awaitOldSeatsFreed();
-        // Stopping the server frees its event loops before it finishes recreating them, so a restart can find
-        // them terminated. It costs nothing to leave running, so it outlives every game it serves.
+        // The server costs nothing to leave running, so it outlives every game it serves
         if (port < 0) {
             port = server.startLoopbackServer();
             startedServer = true;
