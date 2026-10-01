@@ -8,6 +8,7 @@ import type { CardMoved, GameEvent, Place } from './protocol';
 import type { CardView, PlayerView } from './protocol';
 import { cssUrl, playerSleeveUrl } from './looks';
 import { echoSound } from './audio';
+import { unmake } from './leaving';
 import type { Model } from './model';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
@@ -134,6 +135,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   // Hand icons already swelling this frame, so several cards drawn at once swell it once
   const swelled = new Set<HTMLElement>();
   let fromLibrary = 0;
+  /** How long until the last permanent being unmade where it stood has gone, so the row does not close over it. */
+  let unmaking = 0;
   for (const [key, move] of trips) {
     const seen = lastSeen.get(key);
     const start = waiting.get(key)?.rect ?? seen?.rect ?? placeRect(move.from);
@@ -224,9 +227,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       const target = tile ?? placeRect(move.to);
       if (move.from?.zone === 'Hand') leavingHand.push({ was: { ...was, rect: start }, target, tile: !!tile, key });
       else {
+        // A permanent destroyed or exiled is unmade where it stood; the tile's picture of it waits until it has gone
+        const leaving = move.from?.zone === 'Battlefield' && (move.to?.zone === 'Graveyard' || move.to?.zone === 'Exile')
+          ? unmake(ghost, start, was.size, !!was.tapped, move.to.zone) : 0;
         // A card landing on a zone tile ends on the tile's picture, which is held back until it arrives
-        if (tile) holdTile(key, 0);
-        sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
+        if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : 0);
+        unmaking = Math.max(unmaking, leaving);
+        if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
       }
     }
     land(key);
@@ -244,7 +251,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   settleWaiting(!!model.prompt?.paying);
   const travelled = new Set(trips.keys());
   arriveElsewhere(travelled);
-  shiftBoard(travelled);
+  shiftBoard(travelled, unmaking);
   shiftHand(travelled);
   shiftZones(travelled);
   layOutPiles();
@@ -254,9 +261,9 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
  * A card that stays on the battlefield but stands somewhere else now slides there: out of a pile it has left, into
  * a pile it has joined, or along the row as its neighbours come and go. The game says nothing of these, so they are
  * read off where each card stood before the frame. The slide is added to whatever the card is doing (turning as it
- * taps), never in place of it.
+ * taps), never in place of it. wait holds the row where it was while a card that left it is still being unmade there.
  */
-function shiftBoard(travelled: Set<string>): void {
+function shiftBoard(travelled: Set<string>, wait: number): void {
   // Only a change in what the rows hold moves a card along them. The same cards resized or pushed over (room kept
   // for a chevron) settle where they are without sliding, or every card on the table would drift
   if (boardShape() === lastShape) {
@@ -290,7 +297,7 @@ function shiftBoard(travelled: Set<string>): void {
     }
   }
   for (const { top } of joining) holdPile(top, SHIFT_MS);
-  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]), SHIFT_MS);
+  slide(document.querySelectorAll<HTMLElement>(BOARD_CARDS), new Set([...travelled, ...newcomers]), SHIFT_MS, wait);
   for (const { was, top } of joining) sendTo(was, top.getBoundingClientRect(), 1, 0, top, SHIFT_MS);
 }
 
@@ -315,7 +322,7 @@ function shiftHand(travelled: Set<string>): void {
   slide(document.querySelectorAll<HTMLElement>(HAND_CARDS), travelled);
 }
 
-function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = FLIGHT_MS): void {
+function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = FLIGHT_MS, delay = 0): void {
   for (const el of cards) {
     const key = el.dataset.key as string;
     const was = lastSeen.get(key);
@@ -336,7 +343,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
       // On translate, not transform: an animation of transform overrides the transition that turns a card as it taps,
       // so a card tapped out of a pile would show already turned
       el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }],
-        { duration, easing: EASE, composite: 'add' });
+        { duration, delay, easing: EASE, composite: 'add', fill: 'backwards' });
     }
     if (was.ghost && was.ghost !== el && el.closest('.battlefield')) {
       morph(el, was.ghost, was.size);
