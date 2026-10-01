@@ -180,7 +180,9 @@ export async function matchWithGuest(p: Probe): Promise<Page> {
 export async function finderWithOwnDeck(p: Probe): Promise<void> {
   await lobby(p);
   await p.page.locator('.plate.mine .sleeve').click();
-  await p.page.locator('.finder input[role="switch"]').first().check();
+  await p.page.locator('.fbar .add').click();
+  await p.page.locator('.filter-menu .mi', { hasText: 'Illegal decks' }).click();
+  await p.page.locator('.fpanel .fopt', { hasText: 'shown' }).click();
   await p.page.locator('.dk-hit', { hasText: PROBE_DECK }).click();
   await expect(p.page.locator('.dk-chosen-head')).toContainText(PROBE_DECK);
 }

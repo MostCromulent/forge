@@ -615,6 +615,10 @@ final class Lobby {
         sendDecks(to);
     }
 
+    ToBrowser.DeckMatches deckMatches(final String kind, final String value) {
+        return new ToBrowser.DeckMatches(kind, value, catalog.matching(kind, value));
+    }
+
     DeckDetailsMessage deckDetails(final String key) {
         final DeckDetails details = catalog.details(key, format());
         return details == null ? null : new DeckDetailsMessage(details);

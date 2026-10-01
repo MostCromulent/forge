@@ -329,6 +329,7 @@ function apply(msg: ServerMessage): void {
     // The server sends the whole list whenever it changes, so there is nothing to merge
     case 'presence': model.presence = msg.people; break;
     case 'deckDetails': model.deckDetails = msg.deck; break;
+    case 'deckMatches': model.deckMatches = { ...model.deckMatches, [msg.kind]: msg }; break;
     case 'cardSearch': model.cardNames = msg.names ?? []; break;
     case 'printings': model.printings = { name: msg.name, list: msg.printings ?? [] }; break;
     case 'hostChoice': model.hostChoice = msg; break;

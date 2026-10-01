@@ -100,7 +100,7 @@ final class DeckCatalog {
     }
 
     /** What a deck's summary says at any table. */
-    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats) {
+    private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats, int averageMana) {
     }
 
     /**
@@ -182,7 +182,7 @@ final class DeckCatalog {
     private static Facts factsOf(final Deck deck, final DeckProxy proxy) {
         return FACTS.computeIfAbsent(deck, d -> new Facts(colors(d), played(d), count(d.get(DeckSection.Sideboard)),
                 legalIn(proxy != null ? proxy.getFormats() : FModel.getFormats().getAllFormatsOfDeck(d)),
-                proxy == null ? null : proxy.getFormatsString()));
+                proxy == null ? null : proxy.getFormatsString(), d.getAverageCMC()));
     }
 
     private static String problemAt(final Deck deck, final GameType format, final GameFormat pool) {
@@ -380,6 +380,46 @@ final class DeckCatalog {
         }
     }
 
+    /**
+     * The keys of the listed decks holding a card whose name contains the words (kind "card", outside the sideboard, or
+     * "sideboard"), or a card printed in a set given by code or name (kind "set"). Generators have no cards to search.
+     */
+    List<String> matching(final String kind, final String value) {
+        final String words = value.trim().toLowerCase();
+        final CardEdition set = "set".equals(kind) ? edition(value.trim()) : null;
+        final List<String> out = new ArrayList<>();
+        if (words.isEmpty() || "set".equals(kind) && set == null) {
+            return out;
+        }
+        synchronized (DECKS) {
+            byKey.forEach((key, e) -> {
+                final Deck deck = e.generated() ? null : e.built() != null ? e.built() : e.proxy() == null ? null : e.proxy().getDeck();
+                if (deck == null) {
+                    return;
+                }
+                for (final Map.Entry<DeckSection, CardPool> section : deck) {
+                    if ("sideboard".equals(kind) != (section.getKey() == DeckSection.Sideboard) && !"set".equals(kind)) {
+                        continue;
+                    }
+                    if (section.getValue().find(c -> set != null ? set.getCode().equals(c.getEdition())
+                            : c.getName().toLowerCase().contains(words)) != null) {
+                        out.add(key);
+                        return;
+                    }
+                }
+            });
+        }
+        return out;
+    }
+
+    /** A set by its code, any of its aliases, or its name. */
+    private static CardEdition edition(final String codeOrName) {
+        final CardEdition.Collection editions = StaticData.instance().getEditions();
+        final CardEdition byCode = editions.get(codeOrName.toUpperCase());
+        return byCode != null ? byCode
+                : editions.stream().filter(e -> e.getName().equalsIgnoreCase(codeOrName)).findFirst().orElse(null);
+    }
+
     /** The deck's colour identity as WUBRG letters, or "C" when it has none. */
     static String colors(final Deck deck) {
         return CardCatalog.letters(DeckProxy.getColorIdentity(deck));
@@ -471,7 +511,7 @@ final class DeckCatalog {
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
-                null, null, null, null));
+                null, null, null, null, null, null));
     }
 
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
@@ -487,7 +527,8 @@ final class DeckCatalog {
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
-                    linked ? linkedFile(deck).lastModified() : null, listedBracket(deck, format)));
+                    linked ? linkedFile(deck).lastModified() : null, listedBracket(deck, format), facts.averageMana(),
+                    proxy.isFavoriteDeck() ? true : null));
         }
     }
 
@@ -497,7 +538,8 @@ final class DeckCatalog {
         final Facts facts = factsOf(deck, null);
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
                 facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
-                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format)));
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format),
+                facts.averageMana(), null));
     }
 
     /** The decks loaded from links that belong to this format: each keeps its format, or is Commander when it has a commander. */

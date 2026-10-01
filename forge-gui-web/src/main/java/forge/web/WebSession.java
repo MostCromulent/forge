@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.web.FromBrowser.AskDeckDetails;
 import forge.web.FromBrowser.AskPrintings;
+import forge.web.FromBrowser.DeckQuery;
 import forge.web.FromBrowser.HostChoiceAnswer;
 import forge.web.FromBrowser.Ready;
 import forge.web.FromBrowser.Say;
@@ -393,6 +394,10 @@ public final class WebSession {
                 if (choices != null) {
                     channel.send(choices);
                 }
+            }
+            case "deckQuery" -> {
+                final DeckQuery query = Wire.decode(msg, DeckQuery.class);
+                channel.send(lobby.deckMatches(query.kind(), query.value()));
             }
             case "deckDetails" -> {
                 final ToBrowser.DeckDetailsMessage details = lobby.deckDetails(Wire.decode(msg, AskDeckDetails.class).key());

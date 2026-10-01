@@ -117,6 +117,8 @@ export interface Actions {
   startMatch(spectate: boolean): void;
   /** Asks for a deck's card list and statistics, which arrive later in the model. */
   askDeckDetails(key: string): void;
+  /** Asks which listed decks hold a card, in the sideboard or anywhere else, or cards from a set. */
+  deckQuery(kind: 'card' | 'sideboard' | 'set', value: string): void;
   fetchNetDecks(): void;
   /** Card names and their printings, for picking a card's art; both arrive later in the model. */
   searchCards(query: string): void;
@@ -227,6 +229,7 @@ export function createActions(send: Send): Actions {
     setSleeveArt: (index, key, offset) => send({ t: 'sleeveArt', index, key, offset }),
     startMatch: spectate => send({ t: 'start', spectate }),
     askDeckDetails: key => send({ t: 'deckDetails', key }),
+    deckQuery: (kind, value) => send({ t: 'deckQuery', kind, value }),
     fetchNetDecks: () => send({ t: 'netDecks' }),
     searchCards: query => send({ t: 'cardSearch', query }),
     askPrintings: (name, cardPool) => send(cardPool ? { t: 'printings', name, cardPool } : { t: 'printings', name }),

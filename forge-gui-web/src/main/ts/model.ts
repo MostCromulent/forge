@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { CardPoolDetails, CardPoolGroup, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -63,6 +63,8 @@ export interface Model {
   extraChoices: ExtraChoices | null;
   /** The deck last asked about, with its card list and statistics. */
   deckDetails: DeckDetails | null;
+  /** The decks the server last found for each kind of card or set filter, and for which words. */
+  deckMatches: Partial<Record<string, DeckMatches>>;
   /** Card names matching the last search, and the printings of the last name asked about, for picking sleeve art. */
   cardNames: string[];
   printings: { name: string; list: Printing[] } | null;
@@ -117,7 +119,7 @@ export function createModel(): Model {
     inMatch: false, inLobby: false, joining: false, playerName: '', decks: [], error: null,
     lobby: null, addresses: null, host: true, canClaimHost: false, events: [],
     cardDetails: new Map(), playerDetails: new Map(), stackMenu: null, chat: [], presence: [], networked: false,
-    cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
+    cardFormats: [], deckCardPool: null, extraChoices: null, deckDetails: null, deckMatches: {}, cardNames: [], printings: null, savedSleeveArt: [], hostChoice: null, nameSent: false, notices: [],
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,

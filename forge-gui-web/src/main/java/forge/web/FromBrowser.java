@@ -100,6 +100,11 @@ final class FromBrowser {
     record AskDeckDetails(String key) {
     }
 
+    /** Which listed decks hold a card (kind "card" or "sideboard") or cards from a set (kind "set"). */
+    @Command("deckQuery")
+    record DeckQuery(String kind, String value) {
+    }
+
     @Command("hostChoice")
     record HostChoiceAnswer(int id, List<Integer> value) {
     }
@@ -375,7 +380,7 @@ final class FromBrowser {
 
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
-            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, HostChoiceAnswer.class,
+            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, DeckQuery.class, HostChoiceAnswer.class,
             SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
             KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class, Dev.class,
             NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,

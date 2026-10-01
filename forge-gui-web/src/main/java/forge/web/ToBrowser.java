@@ -93,7 +93,12 @@ final class ToBrowser {
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
             @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
             @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
-            @Nullable Long synced, @Nullable Integer bracket) {
+            @Nullable Long synced, @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite) {
+    }
+
+    /** The keys of the listed decks a card or set filter lets through, for the query it answers. */
+    @Message("deckMatches")
+    record DeckMatches(String kind, String value, List<String> keys) {
     }
 
     @Message("deckDetails")
@@ -602,7 +607,7 @@ final class ToBrowser {
 
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
-            Decks.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
+            Decks.class, DeckMatches.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
             CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
             Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, CataloguePage.class, EditorMessage.class,
