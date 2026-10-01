@@ -234,14 +234,18 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   );
 }
 
-/** One heading of a deck list and its cards, each flagged when it has a problem. The deck finder lists a deck with it too. */
-export function CardGroup({ heading, cards }: { heading: string; cards: EditorCard[] }) {
+/**
+ * One heading of a deck list and its cards, each flagged when it has a problem. The deck finder lists a deck with it
+ * too, and marks there the cards that are Commander game changers.
+ */
+export function CardGroup({ heading, cards, marked }: { heading: string; cards: EditorCard[]; marked?: ReadonlySet<string> }) {
   return (
     <div class="group">
       <h4>{heading}<span>{cards.reduce((n, c) => n + c.count, 0)}</span></h4>
       {cards.map(c => (
-        <div key={c.name} class={`dk-line ed-line${c.problem ? ' bad' : ''}`} data-image={c.image}>
+        <div key={c.name} class={`dk-line ed-line${c.problem ? ' bad' : ''}${marked?.has(c.name) ? ' changer' : ''}`} data-image={c.image}>
           <span class="n">{c.count}</span><span class="nm">{c.name}</span>{c.problem && <span class="flag">! {c.problem}</span>}
+          {marked?.has(c.name) && <span class="gc" title={t('lblWebBracketGameChanger')}>GC</span>}
         </div>
       ))}
     </div>

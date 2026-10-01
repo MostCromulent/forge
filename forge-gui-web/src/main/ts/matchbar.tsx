@@ -206,6 +206,18 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
   );
 }
 
+/** The highest Commander bracket the table plays at, as the host's own Forge keeps it; 5 is any. Only the host may change it. */
+function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  return (
+    <span class="count" role="group" aria-label={t('lblWebMatchBarBracket')}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button key={n} aria-pressed={n === lobby.maxBracket} disabled={!lobby.host} title={n < 5 ? t('lblWebMatchBarBracketTip', n) : ''}
+          onClick={() => actions.setMaxBracket(n)}>{n < 5 ? n : t('lblWebMatchBarBracketAny')}</button>
+      ))}
+    </span>
+  );
+}
+
 const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOfThree'], [5, 'lblWebMatchBarBestOfFive']] as const;
 
 /** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
@@ -283,6 +295,7 @@ export function MatchBar({ model, lobby, actions, preview }: {
         <Field name={t('lblWebMatchBarMode')}><GameMenu lobby={lobby} actions={actions} /></Field>
         {lobby.format === 'Constructed' && <Field name={t('lblFormat')}><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        {lobby.format === 'Commander' && <Field name={t('lblWebMatchBarBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblWebMatchBarMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
         <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
       </div>

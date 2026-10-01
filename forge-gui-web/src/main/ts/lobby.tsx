@@ -10,7 +10,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from './ui';
 import { sleeveUrl, avatarUrl } from './looks';
 import { LookPicker } from './lookpicker';
-import { DeckFinder, peekAt } from './deckfinder';
+import { BracketMark, DeckFinder, peekAt } from './deckfinder';
 import { imageUrl } from './images';
 import { ExtraPicker } from './extrapicker';
 import { CENTRE, SleevePicker, artUrl, objectPosition } from './sleeves';
@@ -96,14 +96,14 @@ function another(current: number, count: number): number {
   return current >= 0 && pick >= current ? pick + 1 : pick;
 }
 
-/** Decks a computer seat may be dealt at random: any the lobby would accept, generators included. */
-export function randomPool(decks: readonly DeckSummary[]): DeckSummary[] {
-  return decks.filter(d => !d.problem);
+/** Decks a seat may be dealt at random: any the lobby would accept, generators included, up to the table's bracket. */
+export function randomPool(decks: readonly DeckSummary[], maxBracket = 5): DeckSummary[] {
+  return decks.filter(d => !d.problem && (d.bracket == null || d.bracket <= maxBracket));
 }
 
 /** A computer seat given a deck legal here, so a table fills without a trip to the chooser each. */
 function randomDeck(model: Model, actions: Actions, index: number): void {
-  const pool = randomPool(model.decks ?? []);
+  const pool = randomPool(model.decks ?? [], model.lobby?.maxBracket);
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
@@ -194,12 +194,16 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
             <span class="pips"><Pips colors={seat.colors} /></span>
             <span class="deck-name" title={seat.deckName ?? ''}>{seat.deckName ?? (waiting ? t('lblWebLobbyWaitingForPlayer') : '')}</span>
             <span class="deck-size">{hasDeck ? String(seat.deckSize) : ''}</span>
+            {hasDeck && seat.bracket != null && <BracketMark level={seat.bracket} />}
           </button>
           {randomable && hasDeck && (
             <button class="random-deck" title={t('lblWebLobbyDealAnotherDeck')} aria-label={t('lblWebLobbyRandomDeck')} onClick={random}><Dice /></button>
           )}
         </div>
         <p class="seat-problem" hidden={!seat.problem || !hasDeck}>{seat.problem ?? ''}</p>
+        {hasDeck && seat.bracket != null && lobby.maxBracket < 5 && seat.bracket > lobby.maxBracket && (
+          <p class="seat-problem bracket">{t('lblWebLobbyAboveTableBracket', lobby.maxBracket)}</p>
+        )}
         {pressReady && <Ready seat={seat} actions={actions} disabled={!hasDeck && !dealt} />}
         {seat.planes && <ExtraRow name={t('lblPlanes')} extra={seat.planes} mayEdit={seat.mayEdit} open={() => choose('planes')} />}
         {seat.schemes && <ExtraRow name={t('lblSchemes')} extra={seat.schemes} mayEdit={seat.mayEdit} open={() => choose('schemes')} />}
@@ -263,6 +267,11 @@ function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void
 
 function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   const problems = lobby.problems ?? [];
+  const over = lobby.overBracket;
+  // A deck above the table's bracket is the host's to allow: the first press asks, the second starts
+  const [asking, setAsking] = useState(false);
+  useEffect(() => setAsking(false), [over.join('\n')]);
+  const play = () => (over.length && !asking ? setAsking(true) : start());
   // Only the host can start, so a joined client is told what it is waiting for rather than shown a dead button
   if (!lobby.host) {
     return (
@@ -273,12 +282,21 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   }
   return (
     <div class="play-row">
-      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={start} title={t('lblWebLobbyEnterStarts')}>{t('lblWebLobbyPlay')}</button>
+      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={play} title={over.length ? '' : t('lblWebLobbyEnterStarts')}>
+        {t(asking ? 'lblWebLobbyPlayAnyway' : 'lblWebLobbyPlay')}
+      </button>
       <div class="not-yet" hidden={lobby.canStart}>
         <b>{t('lblWebLobbyNotPlayableYet')}</b>
         <ul>{problems.map(p => <li key={p}>{p}</li>)}</ul>
       </div>
       <IllegalDecks lobby={lobby} />
+      {lobby.canStart && over.length > 0 && (
+        <div class="not-yet warn">
+          <b>{t('lblWebLobbyAboveTableBracket', lobby.maxBracket)}</b>
+          <ul>{over.map(p => <li key={p}>{p}</li>)}</ul>
+          <p class="hint">{t(asking ? 'lblWebLobbyPlayAnywayHint' : 'lblWebLobbyAskIgnoreBracket')}</p>
+        </div>
+      )}
     </div>
   );
 }

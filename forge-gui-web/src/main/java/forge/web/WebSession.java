@@ -371,7 +371,7 @@ public final class WebSession {
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
             case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
-                    "setPlayerCount", "setMatchLength", "setSeat", "sleeveArt" -> {
+                    "setPlayerCount", "setMatchLength", "setMaxBracket", "setSeat", "sleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -576,6 +576,11 @@ public final class WebSession {
             case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count());
             case "setMatchLength" -> {
                 if (lobby.setMatchLength(Wire.decode(msg, FromBrowser.SetMatchLength.class).games())) {
+                    sessions.lobbyChanged();
+                }
+            }
+            case "setMaxBracket" -> {
+                if (lobby.setMaxBracket(Wire.decode(msg, FromBrowser.SetMaxBracket.class).bracket())) {
                     sessions.lobbyChanged();
                 }
             }

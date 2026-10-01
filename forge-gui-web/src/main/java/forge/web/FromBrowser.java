@@ -64,6 +64,11 @@ final class FromBrowser {
     record SetMatchLength(int games) {
     }
 
+    /** The highest Commander bracket the table plays at, 1 to 4, or 5 for any. */
+    @Command("setMaxBracket")
+    record SetMaxBracket(int bracket) {
+    }
+
     @Command("setFormat")
     record SetFormat(String format) {
     }
@@ -377,6 +382,6 @@ final class FromBrowser {
             EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, DeckDelete.class, CatalogueQuery.class,
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class,
+            DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class, SetMaxBracket.class,
             EventDecksOnly.class, EventHostAgain.class, EventForget.class);
 }

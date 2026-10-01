@@ -3,6 +3,7 @@ package forge.web;
 import com.google.common.collect.MapMaker;
 import forge.StaticData;
 import forge.deck.CardPool;
+import forge.deck.CommanderBracketCalculator;
 import forge.deck.Deck;
 import forge.deck.ArchetypeDeckGenerator;
 import forge.deck.DeckProxy;
@@ -22,6 +23,8 @@ import forge.util.Lang;
 import forge.util.Localizer;
 import forge.util.MyRandom;
 import forge.util.SleeveArt;
+import forge.web.ToBrowser.Bracket;
+import forge.web.ToBrowser.BracketReason;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.DeckStats;
 import forge.web.ToBrowser.DeckSummary;
@@ -107,11 +110,73 @@ final class DeckCatalog {
      */
     private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
     private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
+    /** A Commander deck's bracket, kept the same way; worked out only for decks listed in Commander. */
+    private static final Map<Deck, Integer> BRACKETS = new MapMaker().weakKeys().makeMap();
 
     /** Forgets what the list knew of a deck that was changed where it is stored. */
     static void changed(final Deck deck) {
         FACTS.remove(deck);
         VERDICTS.remove(deck);
+        BRACKETS.remove(deck);
+    }
+
+    /** A deck's suggested minimum Commander bracket, 1 to 4. */
+    static int bracketOf(final Deck deck) {
+        return BRACKETS.computeIfAbsent(deck, CommanderBracketCalculator::getBracket);
+    }
+
+    /** The bracket a deck lists with: in Commander only, the one format brackets are for. */
+    private static Integer listedBracket(final Deck deck, final GameType format) {
+        return format == GameType.Commander ? bracketOf(deck) : null;
+    }
+
+    /** The bracket and every kind of card behind it, for the panel beside the list. */
+    static Bracket bracket(final Deck deck) {
+        final CommanderBracketCalculator.Result r = CommanderBracketCalculator.calculate(deck);
+        final Localizer text = Localizer.getInstance();
+        final List<BracketReason> reasons = new ArrayList<>();
+        final List<String> clear = new ArrayList<>();
+        final int changers = r.getGamechangers().size();
+        reason(reasons, clear, "gameChangers", text.getMessage("lblCommanderBracketGameChangers"),
+                text.getMessage("lblWebBracketBriefGameChangers", changers), r.getGamechangers(), changers >= 4 ? 4 : changers > 0 ? 3 : 0,
+                changers >= 4 ? text.getMessage("lblCommanderBracketReasonGameChangersFour") : text.getMessage("lblCommanderBracketReasonGameChangersOne"));
+        reason(reasons, clear, "massLandDenial", text.getMessage("lblCommanderBracketMassLandDenial"),
+                text.getMessage("lblWebBracketBriefMassLandDenial"), r.getMassLandDenial(), 4,
+                text.getMessage("lblCommanderBracketReasonMassLandDenial"));
+        final int turns = r.getExtraTurns().size();
+        reason(reasons, clear, "extraTurns", text.getMessage("lblCommanderBracketExtraTurns"),
+                text.getMessage("lblWebBracketBriefExtraTurns", turns), r.getExtraTurns(), turns >= 4 ? 4 : turns == 3 ? 3 : turns == 2 ? 2 : 0,
+                text.getMessage(turns >= 4 ? "lblCommanderBracketReasonExtraTurnsFour" : turns == 3 ? "lblCommanderBracketReasonExtraTurnsThree"
+                        : turns == 2 ? "lblCommanderBracketReasonExtraTurnsTwo" : "lblCommanderBracketReasonExtraTurnsFew"));
+        reason(reasons, clear, "chainedExtraTurns", text.getMessage("lblCommanderBracketChainedExtraTurns"),
+                text.getMessage("lblWebBracketBriefChainedExtraTurns"), r.getChainedExtraTurns(), 4,
+                text.getMessage("lblCommanderBracketReasonChainedExtraTurn"));
+        final List<String> late = r.getLateGameCombos().stream().map(Object::toString).toList();
+        final List<String> early = r.getEarlyGameCombos().stream().map(Object::toString).toList();
+        final String combos = text.getMessage("lblCommanderBracketTwoCardCombos");
+        if (late.isEmpty() && early.isEmpty()) {
+            clear.add(combos);
+        }
+        if (!late.isEmpty()) {
+            reasons.add(new BracketReason("lateCombos", combos + " · " + text.getMessage("lblCommanderBracketLateGame"),
+                    text.getMessage("lblWebBracketBriefLateCombo"), late, 3, text.getMessage("lblCommanderBracketReasonLateGameCombo")));
+        }
+        if (!early.isEmpty()) {
+            reasons.add(new BracketReason("earlyCombos", combos + " · " + text.getMessage("lblCommanderBracketEarlyGame"),
+                    text.getMessage("lblWebBracketBriefEarlyCombo"), early, 4, text.getMessage("lblCommanderBracketReasonEarlyGameCombo")));
+        }
+        // What raised it most first
+        reasons.sort(Comparator.comparingInt(BracketReason::raises).reversed());
+        return new Bracket(r.getBracket(), reasons, clear);
+    }
+
+    private static void reason(final List<BracketReason> reasons, final List<String> clear, final String kind, final String title,
+            final String brief, final List<String> cards, final int raises, final String why) {
+        if (cards.isEmpty()) {
+            clear.add(title);
+        } else {
+            reasons.add(new BracketReason(kind, title, brief, cards, raises, why));
+        }
     }
 
     private static Facts factsOf(final Deck deck, final DeckProxy proxy) {
@@ -310,7 +375,8 @@ final class DeckCatalog {
             return new DeckDetails(key, deck.getName(), problem(deck, format, pool), colors(deck), stats(deck),
                     DeckEditor.groups(deck.getMain(), NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), NO_FLAGS),
                     deck.getSleeveArtKey(),
-                    deck.getSleeveArtOffset());
+                    deck.getSleeveArtOffset(),
+                    format == GameType.Commander ? bracket(deck) : null);
         }
     }
 
@@ -405,7 +471,7 @@ final class DeckCatalog {
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
-                null, null, null));
+                null, null, null, null));
     }
 
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
@@ -421,7 +487,7 @@ final class DeckCatalog {
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
-                    linked ? linkedFile(deck).lastModified() : null));
+                    linked ? linkedFile(deck).lastModified() : null, listedBracket(deck, format)));
         }
     }
 
@@ -431,7 +497,7 @@ final class DeckCatalog {
         final Facts facts = factsOf(deck, null);
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
                 facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
-                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null));
+                deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format)));
     }
 
     /** The decks loaded from links that belong to this format: each keeps its format, or is Commander when it has a commander. */

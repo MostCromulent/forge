@@ -75,7 +75,9 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
       return escape ? 'closePicker' : null;
     }
     const table = model.lobby;
-    return !press.typing && model.inLobby && key === 'Enter' && table?.host && table.canStart ? 'startMatch' : null;
+    return !press.typing && model.inLobby && key === 'Enter' && table?.host && table.canStart
+      // A deck above the table's bracket is started past only by Play, which asks first
+      && !table.overBracket.length ? 'startMatch' : null;
   }
   if (ui.optionsOpen) {
     return escape ? 'closeOptions' : null;

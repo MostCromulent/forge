@@ -93,7 +93,7 @@ final class ToBrowser {
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
             @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
             @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
-            @Nullable Long synced) {
+            @Nullable Long synced, @Nullable Integer bracket) {
     }
 
     @Message("deckDetails")
@@ -101,7 +101,23 @@ final class ToBrowser {
     }
 
     record DeckDetails(String key, String name, @Nullable String problem, String colors, DeckStats stats,
-            List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset) {
+            List<EditorGroup> main, List<EditorCard> sideboard, @Nullable String sleeveArt, int sleeveOffset,
+            @Nullable Bracket bracket) {
+    }
+
+    /**
+     * A Commander deck's suggested minimum bracket and what raised it, as desktop's bracket view explains it. clear
+     * names the kinds the deck has none of.
+     */
+    record Bracket(int level, List<BracketReason> reasons, List<String> clear) {
+    }
+
+    /**
+     * One kind of card that bears on the bracket: kind is its key (gameChangers, massLandDenial, extraTurns,
+     * chainedExtraTurns, lateCombos, earlyCombos), brief says it in a few words for a summary line, raises is the bracket
+     * it makes the deck, or 0 when it raises nothing on its own, and why is desktop's reason.
+     */
+    record BracketReason(String kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
     }
 
     /**
@@ -124,7 +140,8 @@ final class ToBrowser {
     record LobbyTable(boolean host, int mySeat, boolean shareable, String format, List<Format> formats,
             @Nullable String cardPool, List<Format> casualVariants, List<String> variantsOn,
             int maxSeats, int gamesPerMatch, List<Seat> seats, List<String> problems, boolean canStart,
-            List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited) {
+            List<String> illegalDecks, boolean legalityEnforced, @Nullable LimitedTable limited, int maxBracket,
+            List<String> overBracket) {
     }
 
     /**
@@ -171,7 +188,7 @@ final class ToBrowser {
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
             @Nullable SeatExtra planes, @Nullable SeatExtra schemes, @Nullable SeatExtra vanguard, boolean benched,
-            @Nullable String commander) {
+            @Nullable String commander, @Nullable Integer bracket) {
     }
 
     /** A planar deck, scheme deck or avatar a seat brings: its name, its size, a detail such as modifiers, a fault. */

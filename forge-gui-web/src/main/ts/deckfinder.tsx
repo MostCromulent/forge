@@ -4,6 +4,7 @@
 // is no separate window for reading one.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
+import { store, stored } from './storage';
 import { imageUrl } from './images';
 import { Curve } from './deckhalf';
 import { CardGroup } from './importer';
@@ -13,7 +14,7 @@ import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from './search';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { DeckDetails, DeckSummary, Seat } from './protocol';
+import type { Bracket, DeckDetails, DeckSummary, Seat } from './protocol';
 import { t, type TextKey } from './text';
 
 const SEARCH_DEBOUNCE_MS = 200;
@@ -24,9 +25,9 @@ const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B',
 export const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
 const netName = (source: string) => source.slice(NET.length + 1);
-export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal';
+export type SortKey = 'name' | 'colors' | 'formats' | 'size' | 'legal' | 'bracket';
 const SORTS: [SortKey, TextKey][] = [['name', 'lblWebEditorSortName'], ['colors', 'lblWebEditorSortColour'], ['formats', 'lblWebFinderSortFormat'],
-  ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst']];
+  ['size', 'lblWebFinderSortSize'], ['legal', 'lblWebFinderSortLegalFirst'], ['bracket', 'lblWebFinderSortBracket']];
 
 export interface DeckFilter {
   /** As typed. While there is one, it orders the list instead of the sort. */
@@ -59,6 +60,7 @@ export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter): Dec
     formats: (a, b) => (a.formats ?? '').localeCompare(b.formats ?? '') || byName(a, b),
     size: (a, b) => (b.main ?? 0) - (a.main ?? 0) || byName(a, b),
     legal: (a, b) => Number(!!a.problem) - Number(!!b.problem) || byName(a, b),
+    bracket: (a, b) => (a.bracket ?? 9) - (b.bracket ?? 9) || byName(a, b),
   };
   if (normalize(f.query)) {
     return rankByName(list.map(d => d.name), f.query).map(i => list[i]);
@@ -256,7 +258,8 @@ export function DeckFinder({ model, actions, seat, close }: {
               {normalize(filter.query)
                 ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
                 : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
-                    {SORTS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
+                    {SORTS.filter(([id]) => id !== 'bracket' || decks.some(d => d.bracket != null))
+                      .map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
                   </select>}
               <button class="random" disabled={!list.length} title={t('lblWebFinderRandomTip')} onClick={random}>
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
@@ -335,7 +338,10 @@ function Hit({ deck: d, chosen, choose, use, source }: {
     <button class="dk-hit" aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
       <Title deck={d} />
       <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
-      <span class="deck-formats">{d.formats ?? ''}</span>
+      {/* Commander decks are all one format, so there the column says each deck's bracket instead */}
+      {d.bracket != null
+        ? <span class="deck-formats"><BracketMark level={d.bracket} /></span>
+        : <span class="deck-formats">{d.formats ?? ''}</span>}
       {source && <span class="tag">{d.source}</span>}
       <span class={`legal ${d.problem ? 'no' : 'yes'}`}>{d.problem ? t('lblWebFinderIllegal') : t('lblWebFinderLegal')}</span>
     </button>
@@ -375,12 +381,15 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
 
 function Chosen({ details }: { details: DeckDetails }) {
   const s = details.stats;
+  // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
+  const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
   return (
     <>
       <div class="dk-chosen-head">
         <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
         <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
+        {details.bracket && <BracketPanel bracket={details.bracket} />}
         <div class="stats">
           <Curve curve={s.curve} creatures={s.creatures} px={42} />
           <div class="types">
@@ -390,10 +399,58 @@ function Chosen({ details }: { details: DeckDetails }) {
         </div>
       </div>
       <div class="dk-cards">
-        {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}
-        {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} />}
+        {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} marked={changers} />)}
+        {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} marked={changers} />}
       </div>
     </>
+  );
+}
+
+/** A deck's Commander bracket as a small mark: 4 in gold, 3 rimmed in gold, 1 and 2 plain. */
+export function BracketMark({ level }: { level: number }) {
+  return <span class={`bracket-mark b${level}`} title={t('lblWebBracketTip', level)}>{level}</span>;
+}
+
+const BRACKET_OPEN_KEY = 'forge.bracketOpen';
+
+/**
+ * A Commander deck's bracket in one row: the number, what raised it, and where it sits from 1 to 5. Opened, each
+ * reason with the cards behind it, as desktop's bracket view lists them. Whether it was left open is remembered.
+ */
+function BracketPanel({ bracket }: { bracket: Bracket }) {
+  const [open, setOpen] = useState(() => stored(BRACKET_OPEN_KEY) === 'open');
+  const toggle = () => {
+    store(BRACKET_OPEN_KEY, open ? 'shut' : 'open');
+    setOpen(!open);
+  };
+  const brief = bracket.reasons.filter(r => r.raises > 0).map(r => r.brief).join(' · ');
+  return (
+    <div class="bracket">
+      <button class="bracket-sum" aria-expanded={open} onClick={toggle}>
+        <span class="bnum">{bracket.level}</span>
+        <span class="bmid">
+          <span class="bline"><b>{t('lblWebBracketLevel', bracket.level)}</b><span>{t('lblWebBracketSuggestedMinimum')}</span></span>
+          <span class="bwhy">{brief || t('lblWebBracketNothingRaises')}</span>
+        </span>
+        <span class="bsteps" aria-hidden="true">
+          {[1, 2, 3, 4, 5].map(n => <i key={n} class={n < bracket.level ? 'on' : n === bracket.level ? 'mark' : ''} />)}
+        </span>
+        <svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 9.5l5.5 5.5 5.5-5.5" /></svg>
+      </button>
+      {open && (
+        <div class="bracket-more">
+          {bracket.reasons.map(r => (
+            <div key={r.kind} class="reason">
+              <b>{r.title} · {r.cards.length}</b>
+              {r.raises > 0 && <span class="to">{t('lblWebBracketRaisesTo', r.raises)}</span>}
+              <span class="cards">{r.cards.join(', ')}</span>
+              {r.why && <span class="because">{r.why}</span>}
+            </div>
+          ))}
+          {bracket.clear.length > 0 && <p class="clearline"><b>{t('lblWebBracketClear')}</b> {bracket.clear.join(', ')}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 

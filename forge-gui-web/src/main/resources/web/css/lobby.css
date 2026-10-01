@@ -293,6 +293,7 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .deck-row.fixed { margin: 0; padding: 6px 10px; border: 1px dashed var(--line-bright); border-radius: 6px; color: var(--muted); font-size: 13px; }
 .deck-row .deck-size { color: var(--muted); font-size: 12px; }
 .seat-problem { margin: 0; color: var(--select); font-size: 12px; }
+.seat-problem.bracket { color: var(--accent-2); }
 
 
 .play-row { display: grid; justify-items: center; gap: 10px; margin-top: 18px; }
@@ -364,6 +365,40 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .dk-chosen-head h3 { margin: 0 0 4px; }
 .verdict { margin: 0; font-size: 13px; }
 .verdict.yes { color: var(--muted); }
+
+/* A Commander deck's bracket: a small mark in lists and on seats, 4 in gold, 3 rimmed in gold, 1 and 2 plain */
+.bracket-mark { display: inline-grid; place-items: center; min-width: 22px; height: 19px; padding: 0 5px; border-radius: 6px; flex: none;
+  font: 700 11.5px ui-monospace, Consolas, monospace; color: var(--text); background: var(--surface-2); border: 1px solid var(--line-bright); }
+.bracket-mark.b1, .bracket-mark.b2 { color: var(--muted); }
+.bracket-mark.b3 { border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); }
+.bracket-mark.b4 { border-color: var(--accent-2); color: var(--accent-2); }
+/* In the deck panel: one row, opened for the cards behind each reason */
+.bracket { margin-top: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); padding: 7px 9px; display: grid; gap: 8px; }
+.bracket-sum { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; border-radius: 6px; }
+.bracket-sum:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.bnum { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; flex: none; font: 700 17px ui-monospace, Consolas, monospace;
+  background: var(--brass); color: var(--on-brass); }
+.bmid { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.bline { display: flex; gap: 6px; align-items: baseline; }
+.bline b { font-size: 13px; }
+.bline span { font-size: 11.5px; color: var(--muted); }
+.bwhy { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bsteps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; width: 64px; flex: none; }
+.bsteps i { height: 5px; border-radius: 3px; background: var(--surface-2); }
+.bsteps i.on { background: color-mix(in srgb, var(--accent-2) 70%, transparent); }
+.bsteps i.mark { background: var(--accent-2); }
+.bracket-sum .chev { width: 15px; height: 15px; flex: none; fill: none; stroke: var(--muted); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease; }
+.bracket-sum[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.bracket-more { display: grid; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+.bracket-more .reason { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 8px; border-radius: 7px; background: var(--surface-2); }
+.bracket-more .reason b { font-size: 12.5px; }
+.bracket-more .to { font-size: 10.5px; font-weight: 700; color: var(--accent-2); align-self: center; }
+.bracket-more .cards, .bracket-more .because { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.bracket-more .because { color: var(--faint, var(--muted)); font-size: 11.5px; }
+.bracket-more .clearline { margin: 0; font-size: 11.5px; color: var(--muted); }
+/* A game changer, where it sits in the deck's list */
+.dk-line.changer { background: color-mix(in srgb, var(--accent-2) 9%, transparent); }
+.dk-line .gc { margin-left: auto; font: 700 9.5px ui-monospace, Consolas, monospace; color: var(--accent-2); }
 .verdict.no { color: var(--select); }
 .dk-cards { overflow: auto; padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-content: start; }
 .group { margin-bottom: 14px; }

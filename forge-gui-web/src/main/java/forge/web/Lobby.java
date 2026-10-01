@@ -642,7 +642,7 @@ final class Lobby {
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
                     local.isHost() && problems.isEmpty(), illegalDecks(), FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
-                    limitedTable(lobby)));
+                    limitedTable(lobby), maxBracket(), overBracket(lobby)));
         }
     }
 
@@ -667,7 +667,50 @@ final class Lobby {
                 sectionsFor(lobby, index).contains(DeckSection.Avatar) ? seatExtra(lobby, index, deck, DeckSection.Avatar) : null,
                 slot.isBenched(),
                 deck == null || !format().getDeckFormat().hasCommander() || deck.getCommanders().isEmpty() ? null
-                        : deck.getCommanders().get(0).getImageKey(false));
+                        : deck.getCommanders().get(0).getImageKey(false),
+                deck == null || format() != GameType.Commander ? null : DeckCatalog.bracketOf(deck));
+    }
+
+    /** The highest Commander bracket this table plays at, 1 to 4, or 5 for any: the host's own setting, as desktop keeps it. */
+    static int maxBracket() {
+        return FModel.getPreferences().getPrefInt(FPref.DECKGEN_MAXIMUM_COMMANDER_BRACKET);
+    }
+
+    /**
+     * The decks above this table's bracket, each in a sentence with what raised it. Like an illegal deck, one does not
+     * stop the match: the host is asked before it starts.
+     */
+    private List<String> overBracket(final GameLobby lobby) {
+        final List<String> out = new ArrayList<>();
+        final int most = maxBracket();
+        if (format() != GameType.Commander || most >= 5) {
+            return out;
+        }
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            final Deck deck = deckAt(i);
+            if (lobby.getSlot(i).isBenched() || deck == null || DeckCatalog.bracketOf(deck) <= most) {
+                continue;
+            }
+            final String why = String.join(", ", DeckCatalog.bracket(deck).reasons().stream()
+                    .filter(r -> r.raises() > most).map(ToBrowser.BracketReason::brief).toList());
+            out.add(Localizer.getInstance().getMessage("lblWebLobbyAboveBracket", String.valueOf(lobby.getSlot(i).getName()), most, why));
+        }
+        return out;
+    }
+
+    /**
+     * Sets the table's bracket. It is the host's preference, which desktop's generated Commander decks keep to as well,
+     * and which netplay sends to every client with the lobby; returns whether it changed.
+     */
+    boolean setMaxBracket(final int bracket) {
+        final var prefs = FModel.getPreferences();
+        if (host() == null || bracket < 1 || bracket > 5 || prefs.getPrefInt(FPref.DECKGEN_MAXIMUM_COMMANDER_BRACKET) == bracket) {
+            return false;
+        }
+        prefs.setPref(FPref.DECKGEN_MAXIMUM_COMMANDER_BRACKET, String.valueOf(bracket));
+        prefs.save();
+        local.pushLobby();
+        return true;
     }
 
     /**

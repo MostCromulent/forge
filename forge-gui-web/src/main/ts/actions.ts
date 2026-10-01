@@ -105,6 +105,8 @@ export interface Actions {
   /** How many seats the table has; seats come and go at the end, and never one a person holds. */
   setPlayerCount(count: number): void;
   setMatchLength(games: number): void;
+  /** The table's highest Commander bracket, 1 to 4, or 5 for any. */
+  setMaxBracket(bracket: number): void;
   removeSeat(index: number): void;
   /** Turns a seat between a computer and one someone can join. */
   openSeat(index: number): void;
@@ -217,6 +219,7 @@ export function createActions(send: Send): Actions {
     askCardPoolDetails: () => send({ t: 'cardPoolDetails' }),
     setPlayerCount: count => send({ t: 'setPlayerCount', count }),
     setMatchLength: games => send({ t: 'setMatchLength', games }),
+    setMaxBracket: bracket => send({ t: 'setMaxBracket', bracket }),
     removeSeat: index => send({ t: 'removeSeat', index }),
     openSeat: index => send({ t: 'openSeat', index }),
     aiSeat: index => send({ t: 'aiSeat', index }),
