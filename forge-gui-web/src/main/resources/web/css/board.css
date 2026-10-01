@@ -751,6 +751,24 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
    carry it too, through --lift */
 .battlefield .card { --lift: 0 2px 5px #0006; box-shadow: var(--lift); }
 .battlefield .card.tapped { --lift: 2px 0 5px #0006; }
+/* An untapped flyer hovers: it rides a few pixels up, bobbing and swaying on two cycles that never line up, and its
+   shadow falls further below it, trailing the sway and spreading as it rises */
+@property --bob { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --sway { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes hover-bob { 0%, 100% { --bob: -1.6px; } 50% { --bob: 1.6px; } }
+@keyframes hover-sway { 0%, 100% { --sway: -1.6px; } 50% { --sway: 1.6px; } }
+.battlefield .card.flying:not(.tapped) {
+  translate: var(--sway) calc(var(--bob) - 5px);
+  --lift: calc(var(--sway) * -0.4) calc(9px - var(--bob)) calc(9px - var(--bob) * 0.6) #0005;
+  animation: hover-bob 3.1s ease-in-out infinite, hover-sway 4.6s ease-in-out infinite;
+  animation-delay: var(--hover-at), calc(var(--hover-at) * 1.7);
+}
+/* A flyer struck by damage still shakes, which the hover's own animations would otherwise replace */
+.battlefield .card.flying.struck:not(.tapped) {
+  animation: card-struck .34s ease-out, hover-bob 3.1s ease-in-out infinite, hover-sway 4.6s ease-in-out infinite;
+  animation-delay: 0s, var(--hover-at), calc(var(--hover-at) * 1.7);
+}
+html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: none; }
 /* Summoning sickness greys the art, and wears off at your untap as a fade rather than a switch */
 .card > img, .card .frame { transition: filter .3s ease; }
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */

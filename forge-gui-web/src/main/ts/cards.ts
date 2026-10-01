@@ -72,6 +72,9 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const owner = card.Owner ? model.objects.get(card.Owner.ref) : undefined;
   el.style.setProperty('--sleeve', cssUrl(visible ? '' : playerSleeveUrl(owner)));
   el.classList.toggle('tapped', !!card.Tapped);
+  el.classList.toggle('flying', visible && !!state.Keywords?.some(k => k.icon === 'IMG_ABILITY_FLYING'));
+  // Each flyer starts at its own point in its hover, so a row of them never moves together
+  el.style.setProperty('--hover-at', `${-(card.$key * 1.37 % 4.6).toFixed(2)}s`);
   el.classList.toggle('selectable', selectable);
   el.classList.toggle('playable', has(model.playable?.cards, card.$key));
   el.classList.toggle('auto-tap', has(model.playable?.autoTap, card.$key));

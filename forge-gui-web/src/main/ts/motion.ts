@@ -51,10 +51,15 @@ const intoHint = new Map<string, DOMRect>();
  */
 const resting = new Map<string, DOMRect>();
 
+/** Whether a card is part way through a move. An endless effect, such as a flyer's hover, is not one. */
+function moving(el: HTMLElement): boolean {
+  return el.getAnimations().some(a => a.effect?.getTiming().iterations !== Infinity);
+}
+
 function restingRect(el: HTMLElement): DOMRect {
   const key = el.dataset.key as string;
   const held = resting.get(key);
-  if (held && el.getAnimations().length) {
+  if (held && moving(el)) {
     return held;
   }
   resting.delete(key);
@@ -676,7 +681,7 @@ function note(): void {
   for (const el of document.querySelectorAll<HTMLElement>(CARDS)) {
     // The element itself: one that leaves the page is dropped, never reused, so it keeps this frame's look for a ghost
     const rest = el.matches('#hand .card:hover') ? unhovered(el) : restingRect(el);
-    const now = el.getAnimations().length ? el.getBoundingClientRect() : rest;
+    const now = moving(el) ? el.getBoundingClientRect() : rest;
     lastSeen.set(el.dataset.key as string, {
       rect: rest, ghost: el, laid: laidCentre(el), size: { w: el.offsetWidth, h: el.offsetHeight }, tapped: el.classList.contains('tapped'),
       drift: { x: now.left + now.width / 2 - (rest.left + rest.width / 2), y: now.top + now.height / 2 - (rest.top + rest.height / 2) },
