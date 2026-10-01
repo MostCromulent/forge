@@ -15,7 +15,7 @@ export interface Picker {
 }
 
 /** How an open zone is ordered: as the zone holds them, by name, or by card type. */
-export type ZoneSort = 'order' | 'name' | 'type';
+export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */

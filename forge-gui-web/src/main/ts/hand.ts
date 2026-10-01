@@ -11,7 +11,7 @@ import type { CardView, PlayerView, ZoneType } from './protocol';
 import { t } from './text';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
-function manaValue(cost: string | undefined): number {
+export function manaValue(cost: string | undefined): number {
   return [...String(cost ?? '').matchAll(/\{([^}]+)\}/g)].reduce((sum, [, shard]) => {
     const digits = shard.split('/').find(part => /^\d+$/.test(part));
     return sum + (digits !== undefined ? Number(digits) : /^[xyz]$/i.test(shard) ? 0 : 1);

@@ -4,6 +4,7 @@ import { stateOf, zone, type Model } from './model';
 import { byId, q } from './dom';
 import { changeUi, ui, type ZoneSort } from './ui';
 import { normalize, rankByName } from './search';
+import { manaValue } from './hand';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -22,7 +23,8 @@ interface Panel {
   forced: boolean;
 }
 
-const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType']];
+const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name', 'lblWebZoneSortName'], ['type', 'lblWebZoneSortType'],
+  ['mana', 'lblWebZoneSortManaValue']];
 
 /** Each zone's name as the page shows it. */
 const ZONE_NAMES: Record<ZoneType, TextKey> = {
@@ -157,6 +159,10 @@ function shown(model: Model, cards: CardView[]): CardView[] {
   if (ui.zoneSort === 'type') {
     const type = (c: CardView) => stateOf(model, c).Type ?? '';
     return kept.sort((a, b) => type(a).localeCompare(type(b)) || name(a).localeCompare(name(b)));
+  }
+  if (ui.zoneSort === 'mana') {
+    const value = (c: CardView) => manaValue(stateOf(model, c).ManaCost);
+    return kept.sort((a, b) => value(a) - value(b) || name(a).localeCompare(name(b)));
   }
   return kept;
 }
