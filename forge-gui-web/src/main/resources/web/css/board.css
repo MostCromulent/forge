@@ -771,8 +771,9 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 /* A card on the table casts a short, soft shadow, so it sits on the board rather than printed on it. The shadow turns
    with a tapped card, so its offset turns the other way to keep falling downwards. States that draw their own glow
    carry it too, through --lift */
-.battlefield .card { --lift: 0 2px 5px #0006; box-shadow: var(--lift); }
-.battlefield .card.tapped { --lift: 2px 0 5px #0006; }
+/* A tight dark edge where the card meets the table, and a softer fall around it, so cards stand off a busy playmat */
+.battlefield .card { --lift: 0 1px 2px #000c, 0 4px 12px #000a; box-shadow: var(--lift); }
+.battlefield .card.tapped { --lift: 1px 0 2px #000c, 4px 0 12px #000a; }
 /* An untapped flyer hovers: it rides a few pixels up, bobbing and swaying on two cycles that never line up, and its
    shadow falls further below it, trailing the sway and spreading as it rises */
 @property --bob { syntax: '<length>'; inherits: false; initial-value: 0px; }
@@ -781,7 +782,7 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 @keyframes hover-sway { 0%, 100% { --sway: -1.6px; } 50% { --sway: 1.6px; } }
 .battlefield .card.flying:not(.tapped) {
   translate: var(--sway) calc(var(--bob) - 5px);
-  --lift: calc(var(--sway) * -0.4) calc(9px - var(--bob)) calc(9px - var(--bob) * 0.6) #0005;
+  --lift: calc(var(--sway) * -0.4) calc(9px - var(--bob)) calc(12px - var(--bob) * 0.6) #0009;
   animation: hover-bob 3.1s ease-in-out infinite, hover-sway 4.6s ease-in-out infinite;
   animation-delay: var(--hover-at), calc(var(--hover-at) * 1.7);
 }
