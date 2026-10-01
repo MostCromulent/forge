@@ -16,6 +16,7 @@ const GUEST_KEY = 'forge.guestSettings';
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
   { id: 'table', name: 'lblWebPlaymatTable', image: null, thumb: null },
   { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
+  { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
 ];
 export type SettingValue = string | number | boolean;
 
