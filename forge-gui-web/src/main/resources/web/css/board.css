@@ -202,6 +202,14 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .seat.compact .player-extra { display: contents; }
 .player-id .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .seat.compact .player-id { gap: 3px; }
+/* In a full seat the portrait rides a row ahead of the tiles, on the side the player faces: above yours, below theirs */
+.seat:not(.compact) .player { flex-direction: column; align-items: flex-start; gap: 10px; }
+.seat:not(.compact) .player-id { grid-template-columns: auto auto; column-gap: 10px; row-gap: 2px; align-items: center; justify-items: start; }
+.seat:not(.compact) .player-id .avatar { grid-row: 1 / 3; }
+.seat:not(.compact) .player-id .name { align-self: end; }
+.seat:not(.compact) .player-id .hand-fan { align-self: start; }
+#opponent.seat .player-id { order: 1; }
+#opponent.seat .player-extra { order: 2; }
 #me .player { position: absolute; left: 8px; bottom: 8px; z-index: 6; }
 /* Above the line rather than beside it, so a floating mana pool never pushes the hand along */
 #me .player-extra { position: absolute; left: 0; bottom: calc(100% + 10px); }
