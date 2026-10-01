@@ -346,7 +346,7 @@ final class DeckSession {
                 : null;
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
-        return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.mv(), q.sort(),
+        return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), q.showAll()), problems, commanderOnly, inDeck::countByName);
     }
 

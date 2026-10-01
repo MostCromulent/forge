@@ -31,7 +31,8 @@ final class CardCatalog {
             "Enchantments", "Battles", "Lands");
 
     /** What the browser asked for. colours is letters such as "BG"; type and mv are "any" or one value; sort is name, mv, colour or type. */
-    record Query(String text, String colours, String type, String mv, String sort, int offset, boolean showAll) {
+    /** filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked. */
+    record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
     private record Row(PaperCard card, String normalised, String colours, String cost, int mv, String heading) {
@@ -91,12 +92,14 @@ final class CardCatalog {
         // Search syntax such as c:bg or mv<=3 is read by desktop's own parser; plain text is a name, ranked as desktop ranks names
         final Predicate<PaperCard> syntax = usesSyntax(typed) ? SFilterUtil.buildTextFilter(typed, false, true, false, false, false) : null;
         final String text = syntax == null ? normalize(typed) : "";
+        final Predicate<PaperCard> chips = q.filters() == null || q.filters().isBlank() ? null
+                : SFilterUtil.buildTextFilter(q.filters(), false, true, false, false, false);
         final List<Row> startsWith = new ArrayList<>();
         final List<Row> matches = new ArrayList<>();
         final List<String> problems = new ArrayList<>();
         int hidden = 0;
         for (final Row row : rows) {
-            if ((syntax != null && !syntax.test(row.card())) || (!text.isEmpty() && !row.normalised().contains(text)) || !passes(row, q)
+            if ((syntax != null && !syntax.test(row.card())) || (chips != null && !chips.test(row.card())) || (!text.isEmpty() && !row.normalised().contains(text)) || !passes(row, q)
                     || (commanderOnly != null && !commanderOnly.test(row.card()))) {
                 continue;
             }
@@ -163,9 +166,6 @@ final class CardCatalog {
         }
         if (!"any".equals(q.type()) && q.type() != null && !isType(row.card().getRules().getType(), q.type())) {
             return false;
-        }
-        if (!"any".equals(q.mv()) && q.mv() != null) {
-            return "7+".equals(q.mv()) ? row.mv() >= 7 : String.valueOf(row.mv()).equals(q.mv());
         }
         return true;
     }

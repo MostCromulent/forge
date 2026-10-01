@@ -177,7 +177,7 @@ final class FromBrowser {
 
     /** A page of the catalogue; request is echoed back so a late answer to an old query is dropped. */
     @Command("catalogue")
-    record CatalogueQuery(int request, String text, String colours, String type, String mv, String sort, int offset,
+    record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
             boolean showAll) {
     }
 

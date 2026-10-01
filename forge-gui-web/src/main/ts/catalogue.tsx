@@ -1,11 +1,12 @@
 // The editor's left half: every card the deck could take, as card images or as a table. The filters are the deck
-// finder's rail laid across the top. Cards the deck can't use are left out until the switch asks for them, and a
-// search that finds nothing says which filter hid the match.
+// finder's filter bar. Cards the deck can't use are left out until a filter asks for them, and a search that finds
+// nothing says which filter hid the match.
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { lift, liftFromLine } from './flight';
 import { Pip, SymbolText } from './symbols';
+import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
 import type { Model } from './model';
@@ -19,7 +20,6 @@ const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B',
 const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
   ['instant', 'lblInstants'], ['sorcery', 'lblSorceries'], ['artifact', 'lblArtifacts'], ['enchantment', 'lblEnchantments'],
   ['battle', 'lblBattles'], ['land', 'lblLands']];
-const MANA: string[] = ['any', '0', '1', '2', '3', '4', '5', '6', '7+'];
 const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
   ['type', 'lblWebCatalogueSortType']];
 const VIEW_KEY = 'forge.catalogueView';
@@ -69,12 +69,11 @@ export function Catalogue({ model, actions, state, handlers }: {
   const [text, setText] = useState('');
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
-  const [mv, setMv] = useState('any');
   const [sort, setSort] = useState('name');
-  const [showAll, setShowAll] = useState(false);
+  const [filter, setFilter] = useState<CatalogueFilter>(NO_FILTER);
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
   const asked = useRef(0);
-  const query = { text, colours: [...colours].join(''), type, mv, sort, showAll };
+  const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll };
 
   useEffect(() => {
     const timer = setTimeout(() => setText(typed), SEARCH_DEBOUNCE_MS);
@@ -84,7 +83,7 @@ export function Catalogue({ model, actions, state, handlers }: {
   useEffect(() => {
     asked.current = 0;
     actions.queryCatalogue(0, { ...query, offset: 0 });
-  }, [text, query.colours, type, mv, sort, showAll, state.check, state.identity, state.commanderWanted]);
+  }, [text, query.colours, type, query.filters, sort, filter.showAll, state.check, state.identity, state.commanderWanted]);
 
   const page = model.catalogue;
   const rows = page?.rows ?? [];
@@ -105,21 +104,45 @@ export function Catalogue({ model, actions, state, handlers }: {
       actions.queryCatalogue(0, { ...query, offset: rows.length });
     }
   };
-  const narrowed = !!typed || colours.size > 0 || type !== 'any' || mv !== 'any' || showAll;
+  const kinds = catalogueKinds(state);
+  const narrowed = !!typed || colours.size > 0 || type !== 'any' || kinds.some(k => k.chip(filter) !== null && !k.fixed?.(filter));
+  const clearAll = () => {
+    setTyped('');
+    setColours(new Set());
+    setType('any');
+    setFilter(NO_FILTER);
+  };
   return (
     <section class="catalogue" data-zone="catalogue">
-      <div class="find-row">
-        <span class="search-wrap">
-          <input class="find" type="search" placeholder={t('lblWebCatalogueSearch')} autocomplete="off" value={typed}
-            aria-describedby="search-tip"
-            onInput={e => setTyped(e.currentTarget.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && top) (state.commanderWanted ? makeCommander : add)(top.name); }} />
-          <table class="search-tip" id="search-tip" role="tooltip">
-            <tbody>
-              {SEARCH_TIPS.map(([key, what]) => <tr key={key}><th>{key}</th><td>{t(what)}</td></tr>)}
-            </tbody>
-          </table>
-        </span>
+      <div class="cat-bar">
+        <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed}>
+          <span class="search-wrap">
+            <input class="find" type="search" placeholder={t('lblWebCatalogueSearch')} autocomplete="off" value={typed}
+              aria-describedby="search-tip"
+              onInput={e => setTyped(e.currentTarget.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && top) (state.commanderWanted ? makeCommander : add)(top.name); }} />
+            <table class="search-tip" id="search-tip" role="tooltip">
+              <tbody>
+                {SEARCH_TIPS.map(([key, what]) => <tr key={key}><th>{key}</th><td>{t(what)}</td></tr>)}
+              </tbody>
+            </table>
+          </span>
+          <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
+            {COLOURS.map(([letter, name]) => (
+              <button key={letter} class="colour" aria-label={t(name)} aria-pressed={colours.has(letter)} onClick={() => {
+                const next = new Set(colours);
+                if (!next.delete(letter)) next.add(letter);
+                setColours(next);
+              }}><Pip letter={letter} /></button>
+            ))}
+          </div>
+          <select class="type-by" aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
+            {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
+          </select>
+        </FilterBar>
+      </div>
+      <div class="count-row">
+        <p class={state.commanderWanted ? 'shown commanders-only' : 'shown'}>{shownLine(page?.total, searched, state.commanderWanted)}</p>
         {text.trim() && page?.ranked !== false
           ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
           : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={sort} onChange={e => setSort(e.currentTarget.value)}>
@@ -130,45 +153,9 @@ export function Catalogue({ model, actions, state, handlers }: {
           <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>{t('lblWebCatalogueViewTable')}</button>
         </span>
       </div>
-      <div class="filter-band">
-        <span class="band-lab">{t('lblWebEditorColours')}</span>
-        <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
-          {COLOURS.map(([letter, name]) => (
-            <button key={letter} class="colour" aria-label={t(name)} aria-pressed={colours.has(letter)} onClick={() => {
-              const next = new Set(colours);
-              if (!next.delete(letter)) next.add(letter);
-              setColours(next);
-            }}><Pip letter={letter} /></button>
-          ))}
-        </div>
-        {!state.commanderWanted && state.identity && <>
-          <span class="band-lab">{t('lblWebCatalogueIdentity')}</span>
-          <p class="pinned">{state.identity.split('').join(' ')}<span>{t('lblWebCatalogueSetByCommander')}</span></p>
-        </>}
-        <select aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
-          {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
-        </select>
-        <select aria-label={t('lblWebCatalogueManaValue')} value={mv} onChange={e => setMv(e.currentTarget.value)}>
-          {MANA.map(v => <option key={v} value={v}>{v === 'any' ? t('lblWebCatalogueAnyManaValue') : t('lblWebCatalogueManaValueIs', v)}</option>)}
-        </select>
-        {!state.limited && (
-          <label class="legal-only">
-            <input type="checkbox" role="switch" checked={showAll} onChange={e => setShowAll(e.currentTarget.checked)} />
-            {t('lblWebCatalogueShowUnusable')}
-          </label>
-        )}
-        <button class="clear" hidden={!narrowed} onClick={() => {
-          setTyped('');
-          setColours(new Set());
-          setType('any');
-          setMv('any');
-          setShowAll(false);
-        }}>{t('lblWebEditorClearFilters')}</button>
-      </div>
-      <p class={state.commanderWanted ? 'shown commanders-only' : 'shown'}>{shownLine(page?.total, searched, state.commanderWanted)}</p>
       <div class={view === 'cards' ? 'cat-grid' : 'cat-table'} onScroll={more}>
         {page && page.total === 0 && <Empty text={searched} identity={state.identity} hidden={page.hiddenBySwitch}
-          showThem={() => setShowAll(true)} />}
+          showThem={() => setFilter(f => ({ ...f, showAll: true }))} />}
         {view === 'cards'
           ? rows.map(row => <Tile key={row.name} row={row} count={counts.get(row.name) ?? 0} top={row === top}
               limit={copyLimit(state, row.name)} room={roomFor(state, row, counts.get(row.name) ?? 0)} limited={state.limited}
@@ -178,6 +165,97 @@ export function Catalogue({ model, actions, state, handlers }: {
       </div>
     </section>
   );
+}
+
+/** Numbers from and to, either left open; null is no limit at all. */
+type Range = { from: number | null; to: number | null } | null;
+
+/** What the catalogue is narrowed by beyond the bar. Each becomes Forge's search syntax, which the server reads. */
+interface CatalogueFilter {
+  mv: Range;
+  rarity: string[];
+  set: string | null;
+  rules: string | null;
+  subtype: string | null;
+  power: Range;
+  toughness: Range;
+  colourCount: Range;
+  showAll: boolean;
+}
+
+const NO_FILTER: CatalogueFilter = {
+  mv: null, rarity: [], set: null, rules: null, subtype: null, power: null, toughness: null, colourCount: null, showAll: false,
+};
+const RARITIES: [string, TextKey][] = [['common', 'lblCommon'], ['uncommon', 'lblUncommon'], ['rare', 'lblRare'], ['mythic', 'lblMythic']];
+
+const between = (key: string, r: Range) => [r?.from != null ? `${key}>=${r.from}` : '', r?.to != null ? `${key}<=${r.to}` : ''];
+const quoted = (key: string, words: string | null) => (words ? `${key}:"${words.replace(/"/g, '')}"` : '');
+
+/** The filters as search syntax, every term of which a card must meet. */
+function asSyntax(f: CatalogueFilter): string {
+  return [
+    ...between('mv', f.mv), ...between('pow', f.power), ...between('tou', f.toughness), ...between('c', f.colourCount),
+    f.rarity.length ? `(${f.rarity.map(r => `r:${r}`).join(' | ')})` : '',
+    f.set ? `s:${f.set.replace(/\s/g, '')}` : '',
+    quoted('o', f.rules), quoted('t', f.subtype),
+  ].filter(Boolean).join(' ');
+}
+
+/** Everything the catalogue can be narrowed by beyond the bar, as desktop's card filters have it. */
+function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
+  const rules = t('lblWebFilterGroupRules');
+  const numbers = t('lblWebFilterGroupNumbers');
+  const printing = t('lblWebFilterGroupPrinting');
+  const deck = t('lblWebFilterGroupDeck');
+  const range = (id: 'mv' | 'power' | 'toughness' | 'colourCount', group: string, label: string): FilterKind<CatalogueFilter> => ({
+    id, group, label,
+    chip: f => rangeWords(f[id]?.from ?? null, f[id]?.to ?? null),
+    clear: f => ({ ...f, [id]: null }),
+    panel: (f, set, done) => <Between from={f[id]?.from ?? null} to={f[id]?.to ?? null} apply={(from, to) => {
+      set({ ...f, [id]: from === null && to === null ? null : { from, to } });
+      done();
+    }} />,
+  });
+  const words = (id: 'set' | 'rules' | 'subtype', group: string, label: string, placeholder: string): FilterKind<CatalogueFilter> => ({
+    id, group, label,
+    chip: f => f[id],
+    clear: f => ({ ...f, [id]: null }),
+    panel: (f, set, done) => <Words value={f[id] ?? ''} placeholder={placeholder} apply={v => { set({ ...f, [id]: v }); done(); }} />,
+  });
+  const kinds: FilterKind<CatalogueFilter>[] = [
+    words('rules', rules, t('lblWebFilterRulesText'), t('lblWebFilterRulesTextHint')),
+    words('subtype', rules, t('lblWebFilterSubtype'), t('lblWebFilterSubtypeHint')),
+    range('mv', numbers, t('lblWebFilterManaValue')),
+    range('power', numbers, t('lblWebFilterPower')),
+    range('toughness', numbers, t('lblWebFilterToughness')),
+    range('colourCount', numbers, t('lblWebFilterColourCount')),
+    {
+      id: 'rarity', group: printing, label: t('lblWebFilterRarity'),
+      chip: f => (f.rarity.length ? RARITIES.filter(([r]) => f.rarity.includes(r)).map(([, name]) => t(name)).join(', ') : null),
+      clear: f => ({ ...f, rarity: [] }),
+      panel: (f, set, done) => <AnyOf options={RARITIES.map(([r, name]) => [r, t(name)] as const)} value={f.rarity}
+        apply={rarity => { set({ ...f, rarity }); done(); }} />,
+    },
+    words('set', printing, t('lblWebFilterSet'), t('lblWebFilterSetCode')),
+    {
+      // The commander's colours are the deck's rule, so they show here but change only with the commander
+      id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
+      chip: () => state.identity.split('').join(' '),
+      from: () => t('lblWebFilterFromCommander'),
+      fixed: () => true,
+      clear: f => f,
+      panel: () => <p class="fnote">{t('lblWebFilterSetByCommander')}</p>,
+    },
+    {
+      id: 'unusable', group: deck, label: t('lblWebFilterUnusable'),
+      chip: f => (f.showAll ? t('lblWebFilterShown') : null),
+      clear: f => ({ ...f, showAll: false }),
+      panel: (f, set, done) => <OneOf options={[['show', t('lblWebFilterShown')], ['hide', t('lblWebFilterHidden')]] as const}
+        value={f.showAll ? 'show' : 'hide'} pick={v => { set({ ...f, showAll: v === 'show' }); done(); }} />,
+    },
+  ];
+  // A limited deck's catalogue is its pool, where nothing is unusable; only a chosen commander sets an identity
+  return kinds.filter(k => (k.id !== 'unusable' || !state.limited) && (k.id !== 'identity' || (!!state.identity && !state.commanderWanted)));
 }
 
 /** Lifts the card being added out of the catalogue, as a draft pick is lifted, to fly to its line in the deck. */

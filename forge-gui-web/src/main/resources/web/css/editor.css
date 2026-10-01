@@ -36,21 +36,15 @@ button.small { padding: 3px 10px; font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-2); font-weight: 600; }
 
 /* --- the catalogue -------------------------------------------------------- */
-.catalogue { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); min-height: 0; position: relative; }
-.catalogue .find-row { padding: 12px 14px 8px; }
+.catalogue { display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; position: relative; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
 .seg button { border: 0; border-radius: 0; background: var(--surface-2); color: var(--muted); padding: 6px 12px; }
 .seg button + button { border-left: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent-2); }
-.filter-band { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 4px 14px 10px; border-bottom: 1px solid var(--line); }
-.filter-band .colours { margin: 0; }
-.filter-band .pinned { margin: 0; display: grid; line-height: 1.2; font-weight: 600; font-size: 12.5px; }
-.filter-band .pinned span { color: var(--faint); font-size: 10.5px; font-weight: 400; }
-.filter-band select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
-.filter-band .legal-only { padding: 0; }
-.filter-band .clear { background: none; border: 0; padding: 0; color: var(--muted); font-size: 12.5px; font-weight: 600; }
-.band-lab { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
-.catalogue .shown { padding: 7px 14px 4px; }
+.cat-bar { padding: 12px 14px 10px; border-bottom: 1px solid var(--line); }
+.cat-bar .search-wrap { flex: 1 1 220px; }
+.cat-bar .type-by { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; }
+.catalogue .count-row { padding: 6px 14px 4px; }
 .catalogue .shown.commanders-only { color: var(--text); }
 .cat-grid { overflow: auto; padding: 12px 14px 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 18px 12px; align-content: start; }
 .cat-table { overflow: auto; padding: 0 14px 20px; }
