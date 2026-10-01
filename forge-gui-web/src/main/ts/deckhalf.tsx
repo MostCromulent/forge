@@ -1,7 +1,8 @@
 // The editor's right half: the deck as the deck finder shows it, made editable. The head carries the verdict and the
 // curve; below it the commander, the main deck in two columns, a row of basic lands, and the sideboard.
 
-import { useState } from 'preact/hooks';
+import { useLayoutEffect, useState } from 'preact/hooks';
+import { flyingFor, land } from './flight';
 import { drawHand, regroup, type GroupBy } from './decklist';
 import { imageUrl } from './images';
 import { Pip, Pips, SymbolText } from './symbols';
@@ -27,6 +28,14 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
   const groups = regroup(state, by);
+  // A card added from the catalogue flies to its line once the deck shows it there
+  useLayoutEffect(() => {
+    const key = flyingFor();
+    if (!key || !state.landed || key.slice(key.indexOf(':') + 1) !== state.landed) return;
+    const zone = key.slice(0, key.indexOf(':'));
+    const place = document.querySelector<HTMLElement>(`.deck-half [data-from="${zone}"][data-card="${CSS.escape(state.landed)}"]`);
+    land(place, place?.closest('.zone-body'), place?.closest('.zone')?.querySelector('h4'));
+  }, [state]);
   return (
     <section class="deck-half">
       <div class="deck-head">

@@ -57,6 +57,7 @@ button.link { background: none; border: 0; padding: 0; color: var(--accent-2); f
 .cat-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .cat-table th { position: sticky; top: 0; background: var(--bg); text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); padding: 7px; border-bottom: 1px solid var(--line); }
 .cat-table td { padding: 4px 7px; border-bottom: 1px solid var(--surface-2); white-space: nowrap; }
+.cat-table tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .cat-table tr:hover td { background: var(--surface-2); }
 .cat-table .sym { width: 13px; height: 13px; vertical-align: -2px; }
 

@@ -342,9 +342,11 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .random { display: flex; align-items: center; gap: 7px; border-color: var(--accent-2); background: var(--accent-soft); color: var(--accent-2); font-weight: 600; white-space: nowrap; }
 .random svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
 .random svg circle { fill: currentColor; stroke: none; }
-.dk-hits { overflow: auto; display: grid; align-content: start; gap: 2px; }
+.dk-hits { overflow: auto; display: grid; align-content: start; }
 
-.dk-hit { min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-radius: 0 6px 6px 0; padding: 8px 10px; }
+.dk-hit { min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left; background: none; border: 0; border-left: 3px solid transparent; border-bottom: 1px solid color-mix(in srgb, var(--text) 4%, transparent); border-radius: 0; padding: 8px 10px; }
+/* Every other row a shade lighter, so a long list is read row by row */
+.dk-hit:nth-child(even) { background: color-mix(in srgb, var(--text) 3%, transparent); }
 .dk-hit:hover { background: var(--surface-2); }
 .dk-hit[aria-pressed="true"] { background: var(--surface-2); border-left-color: var(--accent-2); }
 .dk-hit-title { flex: 1; min-width: 0; display: grid; gap: 3px; justify-items: start; }

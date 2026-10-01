@@ -7,6 +7,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Dial } from './packdial';
 import { nextFrom } from './dial';
 import { imageUrl } from './images';
+import { cancelFlight, land, lift } from './flight';
 import { avatarUrl } from './looks';
 import { rememberedAvatar } from './menu';
 import { SymbolText } from './symbols';
@@ -27,7 +28,6 @@ type Held = { card: DraftCard; index: number };
 const DRAG_TYPE = 'application/x-forge-draft';
 /** Under this much time the clock turns amber. */
 const CLOCK_LOW_MS = 15_000;
-const FLY_MS = 380;
 
 /** How long the rest of a pack takes to slide off, and a new pack to slide in, and how far each column follows the last. */
 const PASS_MS = 300;
@@ -104,45 +104,9 @@ function arrive(grid: HTMLElement, from: -1 | 1): void {
   });
 }
 
-/** A card picked from the pack, lifted off it as it looked there, until its place among the picks is drawn. */
-let inFlight: { face: HTMLElement; from: DOMRect } | null = null;
-
-/** Lifts the pack card about to be picked, so it can fly to where the pick lands. A card showing only its text stays put. */
+/** Lifts the pack card about to be picked, so it can fly to where the pick lands. */
 function launch(index: number): void {
-  if (document.documentElement.dataset.motion === 'reduced') return;
-  const img = document.querySelectorAll('.draft-pack .draft-slot')[index]?.querySelector<HTMLImageElement>('.tile img:not(.sym)');
-  inFlight = img?.complete && img.naturalWidth ? { face: img.cloneNode() as HTMLElement, from: img.getBoundingClientRect() } : null;
-}
-
-/**
- * Flies the lifted card onto the pick just drawn, which shows once it arrives. A pick out of sight in its scrolled
- * section is flown to the section's heading instead, fading as it goes in.
- */
-function land(pick: HTMLElement | null): void {
-  const flight = inFlight;
-  inFlight = null;
-  if (!flight || !pick) return;
-  const view = pick.closest('.draft-sections')?.getBoundingClientRect();
-  let to = pick.getBoundingClientRect();
-  const hidden = !view || to.bottom < view.top || to.top > view.bottom;
-  if (hidden) to = pick.closest('.pick-section')?.querySelector('h3')?.getBoundingClientRect() ?? to;
-  const { face, from } = flight;
-  Object.assign(face.style, { position: 'fixed', left: `${from.left}px`, top: `${from.top}px`, width: `${from.width}px`,
-    height: `${from.height}px`, margin: '0', zIndex: '60', pointerEvents: 'none', transformOrigin: '0 0', borderRadius: '6px',
-    boxShadow: '0 12px 28px #000b' });
-  document.body.append(face);
-  // Scaled to fit the pick's place, so a card in the list view shrinks into its line
-  const scale = Math.min(to.width / from.width, to.height / from.height);
-  const dy = to.top - from.top + (to.height - from.height * scale) / 2;
-  if (!hidden) pick.style.visibility = 'hidden';
-  const glide = face.animate([
-    { transform: 'none', opacity: 1 },
-    { transform: `translate(${to.left - from.left}px, ${dy}px) scale(${scale})`, opacity: hidden ? 0 : 1 },
-  ], { duration: FLY_MS, easing: 'cubic-bezier(.3,.1,.2,1)' });
-  glide.onfinish = glide.oncancel = () => {
-    face.remove();
-    pick.style.visibility = '';
-  };
+  lift(document.querySelectorAll('.draft-pack .draft-slot')[index]?.querySelector<HTMLImageElement>('.tile img:not(.sym)'), 'pick');
 }
 
 export function Drafting({ model, actions }: { model: Model; actions: Actions }) {
@@ -398,7 +362,7 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   // A card dropped from the pack is picked there; a pick dropped on the other section moves to it
   const drop = (sideboard: boolean) => (drag: Drag) => {
     // A dragged card has been carried here already, so nothing flies
-    inFlight = null;
+    cancelFlight();
     if (drag.from === 'pack') {
       passPack(drag.index, passSide(state.direction));
       actions.draftPick(state.step, drag.index, sideboard);
@@ -411,7 +375,8 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   // A pick made by a click in the pack flies here once it is drawn; the newest pick is the last in pick order
   useLayoutEffect(() => {
     if (state.picks.length > count.current) {
-      land(panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null);
+      const pick = panel.current?.querySelector<HTMLElement>(`[data-pick="${state.picks.length - 1}"]`) ?? null;
+      land(pick, pick?.closest('.draft-sections'), pick?.closest('.pick-section')?.querySelector('h3'));
     }
     count.current = state.picks.length;
   }, [state.picks.length]);

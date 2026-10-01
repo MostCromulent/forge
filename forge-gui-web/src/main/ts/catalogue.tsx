@@ -4,6 +4,7 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
+import { lift, liftFromLine } from './flight';
 import { Pip, SymbolText } from './symbols';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
@@ -91,7 +92,10 @@ export function Catalogue({ model, actions, state, handlers }: {
   const canAdd = (row: CatalogueRow) => !row.problem && roomFor(state, row, counts.get(row.name) ?? 0) > 0;
   const top = text.trim() ? rows.find(canAdd) : undefined;
   const searched = page?.ranked ? text.trim() : '';
-  const add = (name: string, to: 'Main' | 'Sideboard' = 'Main') => actions.edit({ op: 'add', name, to, count: 1 });
+  const add = (name: string, to: 'Main' | 'Sideboard' = 'Main') => {
+    liftCard(name, to);
+    actions.edit({ op: 'add', name, to, count: 1 });
+  };
   const remove = (name: string) => actions.edit({ op: 'remove', name, from: 'Main', count: 1 });
   const makeCommander = (name: string) => actions.edit({ op: 'commander', name, count: 1 });
   const more = (e: Event) => {
@@ -174,6 +178,14 @@ export function Catalogue({ model, actions, state, handlers }: {
       </div>
     </section>
   );
+}
+
+/** Lifts the card being added out of the catalogue, as a draft pick is lifted, to fly to its line in the deck. */
+function liftCard(name: string, to: string): void {
+  const at = document.querySelector<HTMLElement>(`[data-from="catalogue"][data-card="${CSS.escape(name)}"]`);
+  const img = at?.querySelector<HTMLImageElement>('img:not(.sym)');
+  if (img) lift(img, `${to}:${name}`);
+  else if (at?.dataset.image) liftFromLine(imageUrl(at.dataset.image), at.getBoundingClientRect(), `${to}:${name}`);
 }
 
 function Tile({ row, count, top, limit, room, limited, commanderWanted, add, remove, makeCommander, handlers }: {
