@@ -571,8 +571,8 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
    library of thirty, so it is dimmed rather than left to compete. Folded, the scrim goes and only the bar stays. */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
 /* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
-#zones.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
-#zones.minimised > * { pointer-events: auto; }
+#zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
+#zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
 /* A zone opened while something is on the stack (a search, a scry) is usually that spell or ability asking, so the
    stack stays in view above the scrim, and the zone moves over to sit beside it */
 #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }

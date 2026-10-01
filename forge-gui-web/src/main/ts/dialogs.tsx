@@ -116,13 +116,29 @@ function ButtonRow({ children }: { children: ComponentChildren }) {
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
 
-/** Cards laid out to be looked at, in the window a zone opens in, with OK (or Space) to put them away. */
+/**
+ * Cards laid out to be looked at, in the window a zone opens in, with OK (or Space) to put them away. It folds to a
+ * bar, as a zone's window does, so the board under it can be read before answering.
+ */
 export function RevealWindow({ model, title, cards, close }: { model: Model; title: string; cards: RequestOption[]; close: () => void }) {
+  const [folded, setFolded] = useState(false);
   const count = cards.filter(c => c.card || c.imageKey || !SECTION.test(c.label ?? '')).length;
+  const counted = t(count === 1 ? 'lblWebDialogOneCard' : 'lblWebDialogCards', count);
+  if (folded) {
+    return (
+      <div class="reveal-back minimised">
+        <section class="zone-bar">
+          <span class="zone-dot" aria-hidden="true" /><b><SymbolText text={title} /></b><span class="zone-count">{counted}</span>
+          <button class="zone-unfold primary" onClick={() => setFolded(false)}>{t('lblWebZoneShowCards')}</button>
+        </section>
+      </div>
+    );
+  }
   return (
     <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <section class="zone-panel reveal-panel" role="dialog" aria-label={title}>
-        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{t(count === 1 ? 'lblWebDialogOneCard' : 'lblWebDialogCards', count)}</span></header>
+        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span><span class="zone-gap" />
+          <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
         <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
       </section>
