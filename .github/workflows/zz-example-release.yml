@@ -1,0 +1,218 @@
+name: Native installers example release
+
+on:
+  push:
+    branches: [native-installers]
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  TAG: native-installers-example
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+      - name: Build
+        run: |
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a mvn -U -B clean -P windows-linux install -DskipTests
+      - name: Publish example pre-release
+        run: |
+          mkdir izpack
+          mv forge-installer/target/*.tar.bz2 forge-installer/target/*.jar izpack/
+          mv forge-gui-desktop/target/classes/*.txt izpack/
+          ls izpack
+          gh release delete "$TAG" -y --cleanup-tag -R "${{ github.repository }}" || true
+          gh release create "$TAG" izpack/* -R "${{ github.repository }}" \
+            --prerelease --target "$GITHUB_SHA" --title "Native installers example" \
+            --notes "Example output of the native installers branch: the usual tarball, IzPack jar, build.txt and version.txt, plus a Windows installer, a Debian package and a macOS disk image built from that tarball. Unsigned; not an official Forge release. The Android files a daily snapshot carries are built as today and are left out here, because this fork does not have the signing key."
+
+  native-installers:
+    needs: build
+    uses: ./.github/workflows/native-installers.yml
+    with:
+      tag: native-installers-example
+    secrets: inherit
+
+  verify-windows:
+    needs: native-installers
+    runs-on: windows-latest
+    steps:
+      - name: Verify and take screenshots
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $fail = @()
+          gh release download $env:TAG -R "${{ github.repository }}" -p '*-setup.exe' -D new
+          gh run download 36808819398 -R "${{ github.repository }}" -n windows-linux -D old
+          Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+          $shell = New-Object -ComObject WScript.Shell
+          New-Item -ItemType Directory shots | Out-Null
+          function Shot($name) {
+            Start-Sleep 2
+            $b = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $bmp = New-Object System.Drawing.Bitmap $b.Width, $b.Height
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.CopyFromScreen($b.Location, [System.Drawing.Point]::Empty, $b.Size)
+            $bmp.Save("shots\$name.png")
+            $g.Dispose(); $bmp.Dispose()
+          }
+          function Key($keys) {
+            $null = $shell.AppActivate('Forge Setup')
+            Start-Sleep 1
+            $shell.SendKeys($keys)
+          }
+          function WaitInstalled($sw) {
+            for ($i = 0; $i -lt 1200 -and -not (Test-Path "$dir\uninstall.exe"); $i++) { Start-Sleep -Milliseconds 500 }
+            return [int]$sw.Elapsed.TotalSeconds
+          }
+
+          # Hide every Java launch4j could find, so Forge shows its Java prompt.
+          Get-ChildItem env: | Where-Object { $_.Name -like 'JAVA_HOME*' } | ForEach-Object { Remove-Item "env:$($_.Name)" }
+          $env:PATH = ($env:PATH -split ';' | Where-Object { $_ -notmatch 'java|jdk|jre|temurin|adoptium' }) -join ';'
+          foreach ($k in 'HKLM:\SOFTWARE\JavaSoft', 'HKLM:\SOFTWARE\WOW6432Node\JavaSoft') {
+            if (Test-Path $k) { Rename-Item $k "$(Split-Path $k -Leaf)-hidden" }
+          }
+
+          $new = (Get-ChildItem new\*-setup.exe)[0].FullName
+          $old = (Get-ChildItem old\*-setup.exe)[0].FullName
+          $dir = "$env:LOCALAPPDATA\Programs\Forge"
+
+          # Old build (details line per file): time the interactive install, then remove it.
+          $p = Start-Process $old -PassThru
+          Start-Sleep 5
+          Key '~'
+          $t = WaitInstalled ([Diagnostics.Stopwatch]::StartNew())
+          "TIMING old build interactive install: $t s"
+          Start-Sleep 3
+          Stop-Process $p -Force
+          Start-Process "$dir\uninstall.exe" -ArgumentList '/S', "_?=$dir" -Wait
+          Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+
+          # New build: screenshots and timing.
+          $p = Start-Process $new -PassThru
+          Start-Sleep 5; Shot 'win-1-components-page'
+          Key '~'
+          Start-Sleep 2; Shot 'win-2-folder-page'
+          Key '~'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          Start-Sleep 4; Shot 'win-3-installing'
+          $t = WaitInstalled $sw
+          "TIMING new build interactive install: $t s"
+          Start-Sleep 8; Shot 'win-4-finish-page'
+          Key '~'
+          Start-Sleep 10; Shot 'win-5-java-prompt'
+          Get-Process | Where-Object { $_.Name -in 'forge', 'msedge' } | Stop-Process -Force
+          Stop-Process $p -Force
+          if (-not (Test-Path "$env:APPDATA\Microsoft\Windows\Start Menu\Programs\Forge\Forge.lnk")) { $fail += 'no Start menu shortcut' }
+          if (-not (Test-Path "$env:USERPROFILE\Desktop\Forge.lnk")) { $fail += 'no desktop shortcut' }
+
+          # Reinstall with "Yes, delete": a junction to another folder and a custom skin must both survive.
+          New-Item -ItemType Directory C:\Outside | Out-Null
+          Set-Content C:\Outside\keep.txt 'keep'
+          cmd /c mklink /J "$dir\res\linked" C:\Outside
+          New-Item -ItemType Directory "$dir\res\skins\TestSkin" | Out-Null
+          Set-Content "$dir\res\skins\TestSkin\x.txt" 'skin'
+          $p = Start-Process $new -PassThru
+          Start-Sleep 5
+          Key '~'
+          Start-Sleep 2
+          Key '~'
+          Start-Sleep 3; Shot 'win-6-delete-prompt'
+          Key '~'
+          $sw = [Diagnostics.Stopwatch]::StartNew()
+          # The old uninstall.exe moves away with the old folder; wait for that before waiting for the new one.
+          for ($i = 0; $i -lt 240 -and (Test-Path "$dir\uninstall.exe"); $i++) { Start-Sleep -Milliseconds 250 }
+          $t = WaitInstalled $sw
+          "TIMING new build delete old + install: $t s"
+          Start-Sleep 5
+          Stop-Process $p -Force
+          if (-not (Test-Path C:\Outside\keep.txt)) { $fail += 'delete went through the junction' }
+          if (-not (Test-Path "$dir\res\skins\TestSkin\x.txt")) { $fail += 'custom skin lost' }
+          if (Test-Path "$dir.old") { $fail += 'old folder left behind' }
+          if (Test-Path "$dir\res\linked") { $fail += 'junction survived the delete' }
+
+          # A folder with other files is refused.
+          $p = Start-Process $new -ArgumentList "/D=$env:USERPROFILE\Documents" -PassThru
+          Start-Sleep 5
+          Key '~'
+          Start-Sleep 2
+          Key '~'
+          Start-Sleep 3; Shot 'win-7-other-files-refused'
+          Stop-Process $p -Force
+
+          # A silent install into a folder with other files must install nothing.
+          New-Item -ItemType Directory C:\NotEmpty\res | Out-Null
+          Set-Content C:\NotEmpty\res\mine.txt 'mine'
+          Start-Process $new -ArgumentList '/S', '/D=C:\NotEmpty' -Wait
+          if (Test-Path C:\NotEmpty\forge.exe) { $fail += 'silent install went into a non-empty folder' }
+          if (-not (Test-Path C:\NotEmpty\res\mine.txt)) { $fail += 'silent install touched existing files' }
+
+          # Uninstaller page, then a silent uninstall with a junction under res.
+          Start-Process "$dir\uninstall.exe"
+          Start-Sleep 8; Shot 'win-8-uninstall'
+          Get-Process | Where-Object { $_.Name -like 'Au_*' -or $_.Name -like 'Un_*' } | Stop-Process -Force
+          cmd /c mklink /J "$dir\res\linked2" C:\Outside
+          Start-Process "$dir\uninstall.exe" -ArgumentList '/S', "_?=$dir" -Wait
+          if (-not (Test-Path C:\Outside\keep.txt)) { $fail += 'uninstall went through the junction' }
+          if (Test-Path "$dir\res") { $fail += 'uninstall left res behind' }
+          if (Test-Path "$env:USERPROFILE\Desktop\Forge.lnk") { $fail += 'uninstall left the desktop shortcut' }
+
+          if ($fail) { $fail | ForEach-Object { "FAIL $_" }; exit 1 }
+          'ALL CHECKS PASSED'
+          exit 0
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: screenshots-windows
+          path: shots/
+
+  verify-macos:
+    needs: native-installers
+    runs-on: macos-latest
+    steps:
+      - name: Verify and take screenshots
+        run: |
+          set +e
+          gh release download "$TAG" -R "${{ github.repository }}" -p '*.dmg' -D out
+          mkdir shots
+          open out/*.dmg
+          sleep 15
+          screencapture -x shots/mac-1-dmg-window.png
+          vol=$(ls -d /Volumes/Forge-* | head -1)
+
+          # A path with a space, as Finder's "Keep Both" produces.
+          cp -R "$vol/Forge.app" "/tmp/Forge 2.app"
+          "/tmp/Forge 2.app/Contents/MacOS/forge" &
+          sleep 60
+          screencapture -x shots/mac-3-forge-running.png
+          pgrep -f forge-gui-desktop
+          running=$?
+          pkill -f forge-gui-desktop
+          sleep 3
+
+          # Hide every Java the launcher could find, to show its prompt.
+          sudo mkdir -p /tmp/java-aside
+          sudo mv /Library/Java/JavaVirtualMachines /tmp/java-aside/
+          for h in /opt/homebrew/opt/openjdk /usr/local/opt/openjdk; do [ -e "$h" ] && sudo mv "$h" "/tmp/java-aside/$(echo "$h" | tr / _)"; done
+          "$vol/Forge.app/Contents/MacOS/forge" &
+          sleep 10
+          screencapture -x shots/mac-2-java-prompt.png
+
+          if [ "$running" -ne 0 ]; then echo "FAIL Forge did not start from a path with a space"; exit 1; fi
+          echo "ALL CHECKS PASSED"
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: screenshots-macos
+          path: shots/
