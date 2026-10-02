@@ -125,8 +125,11 @@ public class ConquestController {
         prefs.save();
     }
 
-    public void startBattle(ConquestBattle battle) {
-        if (activeBattle != null) { return; }
+    public record PreparedBattle(GameRules rules, Set<GameType> variants, List<RegisteredPlayer> players, RegisteredPlayer human) {}
+
+    /** Builds the match for a battle and marks it active; null while another is. gui may be null. */
+    public PreparedBattle prepareBattle(ConquestBattle battle, IGuiGame gui) {
+        if (activeBattle != null) { return null; }
 
         final Set<GameType> variants = battle.getVariants();
         final ConquestCommander commander = model.getSelectedCommander(); 
@@ -171,7 +174,6 @@ public class ConquestController {
         humanPlayer.setAvatarCardImageKey(commander.getCard().getImageKey(false));
         starter.add(humanStart.setPlayer(humanPlayer));
 
-        final IGuiGame gui = GuiBase.getInterface().getNewGuiGame();
         final LobbyPlayer aiPlayer = GamePlayerUtil.createAiPlayer(aiPlayerName, -1, -1);
         battle.setOpponentAvatar(aiPlayer, gui);
         starter.add(aiStart.setPlayer(aiPlayer));
@@ -184,9 +186,17 @@ public class ConquestController {
         rules.setGamesPerMatch(battle.gamesPerMatch());
         rules.setManaBurn(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_MANABURN));
         rules.setOrderCombatants(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_ORDER_COMBATANTS));
-        final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
-        FThreads.invokeInEdtNowOrLater(() -> hostedMatch.startMatch(rules, variants, starter, humanStart, gui));
         activeBattle = battle;
+        return new PreparedBattle(rules, variants, starter, humanStart);
+    }
+
+    public void startBattle(ConquestBattle battle) {
+        if (activeBattle != null) { return; }
+
+        final IGuiGame gui = GuiBase.getInterface().getNewGuiGame();
+        final PreparedBattle prepared = prepareBattle(battle, gui);
+        final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
+        FThreads.invokeInEdtNowOrLater(() -> hostedMatch.startMatch(prepared.rules(), prepared.variants(), prepared.players(), prepared.human(), gui));
     }
 
     private List<PaperCard> generatePlanarPool() {
@@ -227,11 +237,27 @@ public class ConquestController {
         activeBattle.showGameOutcome(model, game, humanPlayer, view);
     }
 
-    public void finishEvent(final IWinLoseView<? extends IButton> view) {
+    public ConquestBattle.Outcome recordOutcome(final GameView game) {
+        return activeBattle.recordOutcome(model, game, humanPlayer);
+    }
+
+    public ConquestBattle getActiveBattle() {
+        return activeBattle;
+    }
+
+    public void finishBattle() {
         if (activeBattle == null) { return; }
 
-        activeBattle.onFinished(model, view);
+        activeBattle.finish(model);
         activeBattle = null;
+    }
+
+    public void cancelBattle() {
+        activeBattle = null;
+    }
+
+    public void finishEvent(final IWinLoseView<? extends IButton> view) {
+        finishBattle();
     }
 
     public List<ConquestReward> awardBooster(ConquestAwardPool pool) {

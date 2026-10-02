@@ -59,6 +59,7 @@ final class ConquestFixture {
     }
 
     static void cleanUp() {
+        FModel.getConquest().cancelBattle();
         FModel.getConquest().setModel(null);
         for (final ConquestData data : made) {
             ConquestController.delete(data);
