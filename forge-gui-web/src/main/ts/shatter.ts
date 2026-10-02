@@ -1,5 +1,5 @@
 // A player's portrait breaking apart when they lose. At the end of the game it lifts to the middle of the board,
-// strains, cracks and bursts; a player knocked out while the game goes on breaks where they sit. The pieces are lit
+// strains, cracks and bursts; a player knocked out while the game goes on bursts at once where they sit. The pieces are lit
 // 3D slabs, so this draws with WebGL, and three.js is fetched the first time a portrait breaks rather than with
 // the page.
 
@@ -23,9 +23,9 @@ interface Timing {
   fly: number; crack: number; brk: number; burst: number; title: number; end: number;
 }
 
-// Tuned on a 1440 by 900 board; a seat's portrait runs the same beats, shorter and without the slow motion
+// Tuned on a 1440 by 900 board. A seat's portrait has no build-up: it comes apart and bursts, without the slow motion
 const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 1.78, burst: 1.86, title: 2.79, end: 5.34 };
-const SEAT: Timing = { fly: 0.35, crack: 0.45, brk: 0.95, burst: 1.02, title: Infinity, end: 3.4 };
+const SEAT: Timing = { fly: 0, crack: 0, brk: 0, burst: 0.07, title: Infinity, end: 2.45 };
 const GRAVITY = 1500;
 // The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
 // a little before it, which reads as on time
@@ -156,8 +156,8 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const T = o.final ? FINAL : SEAT;
   const W = window.innerWidth, H = window.innerHeight;
   const seatR = o.from.width / 2;
-  // The breaking portrait is sized to the board; a seat's lifts only a little above its own size
-  const R = o.final ? Math.min(140, Math.max(95, Math.min(W, H) * 0.145)) : seatR * 1.35;
+  // The breaking portrait is sized to the board; a seat's stays the size it sits at
+  const R = o.final ? Math.min(140, Math.max(95, Math.min(W, H) * 0.145)) : seatR;
   const k = R / 130;
 
   const layer = document.createElement('div');
@@ -254,7 +254,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const from = world(o.from.left + seatR, o.from.top + seatR);
   const to = o.final ? world(o.centre.x, o.centre.y) : from.clone();
   const startScale = seatR / R;
-  const lift = o.final ? 70 : 30;
+  const lift = o.final ? 70 : 0;
   medal.position.copy(from);
   medal.scale.setScalar(startScale);
 
@@ -264,6 +264,8 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   };
 
   let t = 0;
+  // A beat at 0 is reached on the first frame, which starts from 0 rather than from before it
+  const reaches = (before: number, at: number) => (before < at || before === 0) && t >= at;
   let titled = false;
   let last = performance.now();
   await new Promise<void>(done => {
@@ -279,9 +281,8 @@ export async function shatter(o: ShatterOptions): Promise<void> {
       }
       const dt = real * scale;
       t += dt;
-      const reaches = (at: number) => (before < at || before === 0) && t >= at;
-      if (build && reaches(Math.max(0, T.burst - BUILD_PEAK))) playEffect(build, Math.max(0, BUILD_PEAK - T.burst));
-      if (burst && reaches(T.burst - BURST_LEAD)) playEffect(burst);
+      if (build && reaches(before, Math.max(0, T.burst - BUILD_PEAK))) playEffect(build, Math.max(0, BUILD_PEAK - T.burst));
+      if (burst && reaches(before, T.burst - BURST_LEAD)) playEffect(burst);
       step(before, dt);
       renderer.render(scene, camera);
       if (!titled && t >= T.title) {
@@ -326,7 +327,7 @@ export async function shatter(o: ShatterOptions): Promise<void> {
         q.mesh.rotation.set(q.rj * 0.3 * p, -q.rj * 0.3 * p, q.rj * 0.6 * p);
       }
     }
-    if (before < T.brk && t >= T.brk) {
+    if (reaches(before, T.brk)) {
       whole.visible = false;
       for (const q of pieces) q.mesh.visible = true;
       medal.position.set(to.x, to.y, lift * 1.4);
