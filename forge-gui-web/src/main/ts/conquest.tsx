@@ -5,7 +5,7 @@ import { usePressOutside } from './hooks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { changeUi, ui, type ConquestTab } from './ui';
 import { skinIconUrl } from './images';
-import { CampaignBar, Purse } from './campaign';
+import { CampaignBar, Prefs, Purse, Stats } from './campaign';
 import { shortDay } from './limited';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
@@ -13,8 +13,6 @@ import { Collection } from './conquestcollection';
 import { NewConquest } from './conquestnew';
 import { Aether } from './conquestaether';
 import { Planes } from './conquestplanes';
-import { Stats } from './conqueststats';
-import { Prefs } from './conquestprefs';
 import { artUrl } from './sleeves';
 import { Reveal, wheelLabels, type Owed } from './conquestreward';
 import { setting } from './settings';
@@ -152,7 +150,7 @@ function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions
     case 'party': return <Party model={model} actions={actions} />;
     case 'collection': return <Collection model={model} actions={actions} />;
     case 'planes': return <Planes model={model} actions={actions} />;
-    case 'stats': return <Stats model={model} actions={actions} />;
+    case 'stats': return <Stats model={model} actions={actions} first={model.conquestState?.plane} />;
     default: return <ConquestMap actions={actions} state={model.conquestState!} />;
   }
 }

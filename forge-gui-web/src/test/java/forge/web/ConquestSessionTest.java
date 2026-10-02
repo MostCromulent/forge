@@ -830,6 +830,17 @@ public class ConquestSessionTest extends SessionsTest {
         return host;
     }
 
+    private static JsonObject pref(final String key, final int value) {
+        return message("campaignPref", "key", key, "value", String.valueOf(value));
+    }
+
+    /** A row of one of the statistics' tables, as its cells. */
+    private static List<String> row(final JsonObject stats, final int table, final int row) {
+        final List<String> cells = new ArrayList<>();
+        stats.getAsJsonArray("tables").get(table).getAsJsonObject().getAsJsonArray("rows").get(row).getAsJsonArray().forEach(c -> cells.add(c.getAsString()));
+        return cells;
+    }
+
     private static List<String> names(final JsonObject message, final String list) {
         final List<String> names = new ArrayList<>();
         message.getAsJsonArray(list).forEach(e -> names.add(e.getAsJsonObject().get("name").getAsString()));
@@ -1023,24 +1034,23 @@ public class ConquestSessionTest extends SessionsTest {
         final Recorder host = hostInConquest(ConquestFixture.create("Zendikar"));
         final String current = prefs.getPref(CQPref.CURRENT_CONQUEST);
         try {
-            send(host, message("conquestPref", "key", "BOOSTER_COMMONS", "value",
-                    16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
-            host.awaitMatching("conquestPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
+            send(host, pref("BOOSTER_COMMONS", 16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
+            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
             Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
-            send(host, message("conquestPref", "key", "AETHER_BASE_PULL_COST", "value", -1));
-            host.awaitMatching("conquestPrefs", p -> p.has("problem"), "a negative value was not refused");
+            send(host, pref("AETHER_BASE_PULL_COST", -1));
+            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a negative value was not refused");
             Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
-            send(host, message("conquestPref", "key", "CURRENT_CONQUEST", "value", 1));
-            host.awaitMatching("conquestPrefs", p -> true, "the preferences were not sent");
+            send(host, pref("CURRENT_CONQUEST", 1));
+            host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent");
             Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "a preference that is not the page's was written");
 
-            send(host, message("conquestPref", "key", "AETHER_BASE_PULL_COST", "value", pull + 50));
-            final JsonObject saved = host.awaitMatching("conquestPrefs", p -> !p.has("problem"), "a good value was refused");
+            send(host, pref("AETHER_BASE_PULL_COST", pull + 50));
+            final JsonObject saved = host.awaitMatching("campaignPrefs", p -> !p.has("problem"), "a good value was refused");
             Assert.assertEquals(saved.getAsJsonArray("rows").size(), 20);
             Assert.assertEquals(new forge.gamemodes.planarconquest.ConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull + 50);
 
-            send(host, JsonCodec.message("conquestPrefsReset"));
-            host.awaitMatching("conquestPrefs", p -> true, "the reset did not answer");
+            send(host, JsonCodec.message("campaignPrefsReset"));
+            host.awaitMatching("campaignPrefs", p -> true, "the reset did not answer");
             Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), Integer.parseInt(CQPref.AETHER_BASE_PULL_COST.getDefault()));
             Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");
         } finally {
@@ -1056,22 +1066,27 @@ public class ConquestSessionTest extends SessionsTest {
     public void statisticsNameTheRegions() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
-        send(host, message("conquestStats", "plane", "Zendikar"));
-        final JsonObject stats = host.awaitMatching("conquestStats", s -> true, "the statistics were not sent");
-        final List<String> regions = names(stats, "regions");
+        send(host, message("campaignStats", "scope", "Zendikar"));
+        final JsonObject stats = host.awaitMatching("campaignStats", s -> true, "the statistics were not sent");
+        // With a plane the regions are the first table, and the commanders the second
+        final List<String> regions = new ArrayList<>();
+        final int rows = stats.getAsJsonArray("tables").get(0).getAsJsonObject().getAsJsonArray("rows").size();
+        for (int r = 0; r < rows; r++) {
+            regions.add(row(stats, 0, r).get(0));
+        }
         final List<String> wanted = new ArrayList<>();
         data.getCurrentPlane().getRegions().forEach(r -> wanted.add(r.getName()));
         Assert.assertEquals(regions, wanted);
-        Assert.assertEquals(stats.getAsJsonArray("regions").get(0).getAsJsonObject().get("conquered").getAsInt(), 1);
-        Assert.assertEquals(stats.getAsJsonArray("regions").get(0).getAsJsonObject().get("wins").getAsInt(), 1);
+        Assert.assertEquals(row(stats, 0, 0).get(1), "1 / 9", "the first region's conquered events");
+        Assert.assertEquals(row(stats, 0, 0).get(2), "1", "the first region's wins");
         Assert.assertEquals(stats.getAsJsonArray("figures").size(), 8);
-        Assert.assertTrue(stats.getAsJsonArray("planes").toString().contains("Zendikar"));
+        Assert.assertTrue(stats.getAsJsonArray("scopes").toString().contains("Zendikar"));
 
-        send(host, JsonCodec.message("conquestStats"));
-        final JsonObject all = host.awaitMatching("conquestStats", s -> true, "the statistics for every plane were not sent");
-        Assert.assertFalse(all.has("plane"));
-        Assert.assertEquals(all.getAsJsonArray("regions").size(), 0);
-        Assert.assertEquals(all.getAsJsonArray("commanders").size(), 2, "one commander and the chaos battles");
+        send(host, JsonCodec.message("campaignStats"));
+        final JsonObject all = host.awaitMatching("campaignStats", s -> true, "the statistics for every plane were not sent");
+        Assert.assertFalse(all.has("scope"));
+        Assert.assertEquals(all.getAsJsonArray("tables").size(), 1, "every plane together has no table of regions");
+        Assert.assertEquals(all.getAsJsonArray("tables").get(0).getAsJsonObject().getAsJsonArray("rows").size(), 2, "one commander and the chaos battles");
     }
 
     // Fails if a name with a path in it reaches a folder that is not one of the saves, which a delete would remove

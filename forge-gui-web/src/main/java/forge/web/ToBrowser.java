@@ -564,6 +564,28 @@ final class ToBrowser {
     record CampaignResult(boolean won, boolean matchOver, @Nullable String line, List<ResultButton> buttons) {
     }
 
+    /** A figure of the statistics: its amount, and what it is out of when it is a share. */
+    record Figure(String label, int amount, @Nullable Integer of) {
+    }
+
+    /** A table of the statistics, as text. */
+    record StatTable(List<String> headers, List<List<String>> rows) {
+    }
+
+    /** scopes are what the figures can be narrowed to and scope the one they are for, null for all of them, which allScopes names. */
+    @Message("campaignStats")
+    record CampaignStats(String title, List<Figure> figures, List<StatTable> tables, List<String> scopes, @Nullable String scope,
+            @Nullable String allScopes) {
+    }
+
+    record PrefRow(String key, String label, String group, String value) {
+    }
+
+    /** A mode's preferences, each saved as it is changed. note says whose they are, and problem why the last change was refused. */
+    @Message("campaignPrefs")
+    record CampaignPrefs(String title, List<PrefRow> rows, String note, @Nullable String problem, boolean canReset) {
+    }
+
     /** One of a campaign's lists of cards, by the source its cards are asked for, and how many it holds. */
     record TradeList(String source, int count) {
     }
@@ -651,30 +673,6 @@ final class ToBrowser {
     /** Every plane that can be reached, with what the next unlock costs and the emblems held. */
     @Message("conquestPlanes")
     record ConquestPlanes(List<ConquestPlaneRow> planes, int unlockCost, int emblems) {
-    }
-
-    /** A figure of the statistics: its amount, and what it is out of when it is a share. */
-    record ConquestFigure(String label, int amount, @Nullable Integer of) {
-    }
-
-    record ConquestRegionStat(String name, int conquered, int events, int wins, int losses) {
-    }
-
-    record ConquestCommanderStat(String name, int wins, int losses) {
-    }
-
-    /** plane is the one the figures are for, null for all of them. planes are those that can be asked for. */
-    @Message("conquestStats")
-    record ConquestStats(List<ConquestFigure> figures, List<String> planes, @Nullable String plane,
-            List<ConquestRegionStat> regions, List<ConquestCommanderStat> commanders) {
-    }
-
-    record ConquestPrefRow(String key, String label, String group, int value) {
-    }
-
-    /** Conquest's preferences, which every conquest shares. problem is why the last change was refused. */
-    @Message("conquestPrefs")
-    record ConquestPrefs(List<ConquestPrefRow> rows, @Nullable String problem) {
     }
 
     /** A card of a booster: shards is what a duplicate became, 0 for a card that is new. */

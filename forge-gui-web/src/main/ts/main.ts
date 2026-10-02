@@ -264,7 +264,7 @@ function apply(msg: ServerMessage): void {
         model.trading = null;
         model.conquestAether = null;
         model.conquestPlanes = null;
-        model.conquestStats = null;
+        model.campaignStats = null;
         ui.conquestTab = 'map';
       }
       model.drafting = msg.drafting;
@@ -339,8 +339,8 @@ function apply(msg: ServerMessage): void {
     case 'conquestOptions': model.conquestOptions = msg; break;
     case 'conquestAether': model.conquestAether = msg; break;
     case 'conquestPlanes': model.conquestPlanes = msg; break;
-    case 'conquestStats': model.conquestStats = msg; break;
-    case 'conquestPrefs': model.conquestPrefs = msg; break;
+    case 'campaignStats': model.campaignStats = msg; break;
+    case 'campaignPrefs': model.campaignPrefs = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;

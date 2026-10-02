@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -125,8 +125,8 @@ export interface Model {
   /** The four pages that are Conquest's own, each as its page last asked for it. */
   conquestAether: ConquestAetherState | null;
   conquestPlanes: ConquestPlanes | null;
-  conquestStats: ConquestStats | null;
-  conquestPrefs: ConquestPrefs | null;
+  campaignStats: CampaignStats | null;
+  campaignPrefs: CampaignPrefs | null;
 }
 
 export function createModel(): Model {
@@ -143,7 +143,7 @@ export function createModel(): Model {
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
     campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, campaignBar: null, conquestState: null,
     campaignResult: null, reward: null, conquestParty: null, trading: null, conquestOptions: null,
-    conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
+    conquestAether: null, conquestPlanes: null, campaignStats: null, campaignPrefs: null,
   };
 }
 

@@ -576,29 +576,31 @@ final class ConquestGame implements Campaign {
     }
 
     /** The statistics of a plane the conquest has unlocked, or of them all. */
-    static ConquestStats stats(final String planeName) {
+    @Override
+    public CampaignStats stats(final String planeName) {
         final ConquestData data = model();
         final ConquestPlane asked = plane(planeName);
         final ConquestPlane plane = asked != null && data.isPlaneUnlocked(asked) ? asked : null;
         final ConquestData.Stats s = data.getStats(plane);
         final Localizer l = Localizer.getInstance();
-        final List<ConquestFigure> figures = List.of(
-                new ConquestFigure(l.getMessage("lblAetherShards"), s.shards(), null),
-                new ConquestFigure(l.getMessage("lblPlaneswalkEmblems"), s.emblems(), null),
-                new ConquestFigure(l.getMessage("lblTotalWins"), s.wins(), null),
-                new ConquestFigure(l.getMessage("lblTotalLosses"), s.losses(), null),
-                new ConquestFigure(l.getMessage("lblConqueredEvents"), s.conquered(), s.events()),
-                new ConquestFigure(l.getMessage("lblUnlockedCards"), s.unlockedCards(), s.cards()),
-                new ConquestFigure(l.getMessage("lblCommanders"), s.commanders(), s.allCommanders()),
-                new ConquestFigure(l.getMessage("lblPlaneswalkers"), s.planeswalkers(), s.allPlaneswalkers()));
+        final List<Figure> figures = List.of(
+                new Figure(l.getMessage("lblAetherShards"), s.shards(), null),
+                new Figure(l.getMessage("lblPlaneswalkEmblems"), s.emblems(), null),
+                new Figure(l.getMessage("lblTotalWins"), s.wins(), null),
+                new Figure(l.getMessage("lblTotalLosses"), s.losses(), null),
+                new Figure(l.getMessage("lblConqueredEvents"), s.conquered(), s.events()),
+                new Figure(l.getMessage("lblUnlockedCards"), s.unlockedCards(), s.cards()),
+                new Figure(l.getMessage("lblCommanders"), s.commanders(), s.allCommanders()),
+                new Figure(l.getMessage("lblPlaneswalkers"), s.planeswalkers(), s.allPlaneswalkers()));
         final List<String> planes = new ArrayList<>();
         for (final ConquestPlane p : FModel.getPlanes()) {
             if (data.isPlaneUnlocked(p)) {
                 planes.add(planeName(p));
             }
         }
-        final List<ConquestRegionStat> regions = new ArrayList<>();
+        final List<StatTable> tables = new ArrayList<>();
         if (plane != null) {
+            final List<List<String>> regions = new ArrayList<>();
             final ConquestPlaneData planeData = data.getPlaneData(plane);
             for (int r = 0; r < plane.getRegions().size(); r++) {
                 int conquered = 0;
@@ -614,15 +616,21 @@ final class ConquestGame implements Campaign {
                         }
                     }
                 }
-                regions.add(new ConquestRegionStat(plane.getRegions().get(r).getName(), conquered, plane.getRowsPerRegion() * plane.getCols(), wins, losses));
+                regions.add(List.of(plane.getRegions().get(r).getName(), conquered + " / " + plane.getRowsPerRegion() * plane.getCols(),
+                        String.valueOf(wins), String.valueOf(losses)));
             }
+            tables.add(new StatTable(List.of(l.getMessage("lblRegion"), l.getMessage("lblConqueredEvents"), l.getMessage("lblTotalWins"),
+                    l.getMessage("lblTotalLosses")), regions));
         }
-        final List<ConquestCommanderStat> commanders = new ArrayList<>();
+        final List<List<String>> commanders = new ArrayList<>();
         for (final ConquestCommander c : data.getCommanders()) {
-            commanders.add(new ConquestCommanderStat(c.getName(), c.getRecord().getWins(), c.getRecord().getLosses()));
+            commanders.add(List.of(c.getName(), String.valueOf(c.getRecord().getWins()), String.valueOf(c.getRecord().getLosses())));
         }
-        commanders.add(new ConquestCommanderStat(l.getMessage("lblChaosBattles"), data.getChaosBattleRecord().getWins(), data.getChaosBattleRecord().getLosses()));
-        return new ConquestStats(figures, planes, plane == null ? null : planeName(plane), regions, commanders);
+        commanders.add(List.of(l.getMessage("lblChaosBattles"), String.valueOf(data.getChaosBattleRecord().getWins()),
+                String.valueOf(data.getChaosBattleRecord().getLosses())));
+        tables.add(new StatTable(List.of(l.getMessage("lblCommanders"), l.getMessage("lblTotalWins"), l.getMessage("lblTotalLosses")), commanders));
+        return new CampaignStats(l.getMessage("lblStatistics"), figures, tables, planes, plane == null ? null : planeName(plane),
+                l.getMessage("lblAllPlanes"));
     }
 
     /** A preference of Conquest's as its page lists it, under mobile's label and group. */
@@ -652,18 +660,26 @@ final class ConquestGame implements Campaign {
             new PrefField(CQPref.CHAOS_BATTLE_WINS_HARDAI, "lblWinsforHardAI", "lblChaosBattles"),
             new PrefField(CQPref.CHAOS_BATTLE_WINS_EXPERTAI, "lblWinsforExpertAI", "lblChaosBattles"));
 
-    static ConquestPrefs prefs(final String problem) {
+    @Override
+    public CampaignPrefs prefs(final String problem) {
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         final Localizer l = Localizer.getInstance();
-        final List<ConquestPrefRow> rows = new ArrayList<>();
+        final List<PrefRow> rows = new ArrayList<>();
         for (final PrefField f : PREFS) {
-            rows.add(new ConquestPrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPrefInt(f.pref())));
+            rows.add(new PrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPref(f.pref())));
         }
-        return new ConquestPrefs(rows, problem);
+        return new CampaignPrefs(l.getMessage("lblConquestPreference"), rows, l.getMessage("lblWebConquestPrefsShared"), problem, true);
     }
 
-    /** Sets a preference and saves. Answers why it cannot, or null when it is set. */
-    static synchronized String setPref(final String key, final int value) {
+    /** Every one of Conquest's preferences is a whole number, and the page sends nothing else. */
+    @Override
+    public synchronized String setPref(final String key, final String text) {
+        final int value;
+        try {
+            value = Integer.parseInt(text.trim());
+        } catch (final NumberFormatException e) {
+            return null;
+        }
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         for (final PrefField f : PREFS) {
             if (f.pref().name().equals(key)) {
@@ -679,7 +695,8 @@ final class ConquestGame implements Campaign {
         return null;
     }
 
-    static synchronized void resetPrefs() {
+    @Override
+    public synchronized void resetPrefs() {
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         for (final PrefField f : PREFS) {
             prefs.setPref(f.pref(), f.pref().getDefault());
@@ -858,16 +875,6 @@ final class ConquestGame implements Campaign {
                 channel.send(bar());
                 channel.send(state(List.of()));
                 channel.send(planes());
-            }
-            case "conquestStats" -> channel.send(stats(Wire.decode(msg, ConquestStatsQuery.class).plane()));
-            case "conquestPrefs" -> channel.send(prefs(null));
-            case "conquestPref" -> {
-                final ConquestPref pref = Wire.decode(msg, ConquestPref.class);
-                channel.send(prefs(setPref(pref.key(), pref.value())));
-            }
-            case "conquestPrefsReset" -> {
-                resetPrefs();
-                channel.send(prefs(null));
             }
             case "conquestWalker" -> {
                 if (setPlaneswalker(Wire.decode(msg, ConquestWalker.class).planeswalker())) {

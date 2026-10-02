@@ -548,6 +548,23 @@ public final class WebSession {
                     campaign(c.mode()).claim(campaignHost);
                 }
             });
+            case "campaignStats", "campaignPrefs", "campaignPref", "campaignPrefsReset" -> onCampaign(() -> {
+                if (stage instanceof InCampaign c && c.save() != null) {
+                    final Campaign campaign = campaign(c.mode());
+                    switch (msg.get("t").getAsString()) {
+                        case "campaignStats" -> channel.send(campaign.stats(Wire.decode(msg, FromBrowser.CampaignStatsQuery.class).scope()));
+                        case "campaignPref" -> {
+                            final FromBrowser.CampaignPref pref = Wire.decode(msg, FromBrowser.CampaignPref.class);
+                            channel.send(campaign.prefs(campaign.setPref(pref.key(), pref.value())));
+                        }
+                        case "campaignPrefsReset" -> {
+                            campaign.resetPrefs();
+                            channel.send(campaign.prefs(null));
+                        }
+                        default -> channel.send(campaign.prefs(null));
+                    }
+                }
+            });
             case "trading", "trade" -> onCampaign(() -> {
                 if (stage instanceof InCampaign c && c.save() != null) {
                     final Campaign campaign = campaign(c.mode());

@@ -5,7 +5,9 @@ import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
+import forge.web.ToBrowser.CampaignPrefs;
 import forge.web.ToBrowser.CampaignResult;
+import forge.web.ToBrowser.CampaignStats;
 import forge.web.ToBrowser.CataloguePage;
 import forge.web.ToBrowser.Reward;
 import forge.web.ToBrowser.Trading;
@@ -67,6 +69,16 @@ interface Campaign {
 
     /** Trades picks out of the list of that source. Answers why it cannot, or null when it is done. */
     String trade(String source, List<TradePick> picks);
+
+    CampaignStats stats(String scope);
+
+    /** The mode's preferences. problem is why the last change was refused, if it was. */
+    CampaignPrefs prefs(String problem);
+
+    /** Sets a preference and saves. Answers why it cannot, or null when it is set. */
+    String setPref(String key, String value);
+
+    void resetPrefs();
 
     /** A message of the mode's own. save is null on the list of saved games. */
     void handle(BrowserChannel channel, JsonObject msg, String save, Host host);

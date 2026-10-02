@@ -22,7 +22,7 @@ final class FromBrowser {
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
         campaignLeave, conquestMove, conquestBattle, rewardClaim, conquestParty, trading,
-        conquestPlanes, conquestPrefs, conquestPrefsReset,
+        conquestPlanes, campaignPrefs, campaignPrefsReset,
         editorClose, editorUndo }
 
     @Command
@@ -379,6 +379,16 @@ final class FromBrowser {
     record CampaignDelete(String name) {
     }
 
+    /** Asks for a campaign's statistics, narrowed to a scope the mode offers, or all of them. */
+    @Command("campaignStats")
+    record CampaignStatsQuery(@Nullable String scope) {
+    }
+
+    /** Sets one of a mode's preferences, by the key its row was sent with. */
+    @Command("campaignPref")
+    record CampaignPref(String key, String value) {
+    }
+
     /** A card picked from one of a campaign's lists, by its image key, which names a printing. */
     record TradePick(String key, int count) {
     }
@@ -403,16 +413,6 @@ final class FromBrowser {
     /** Travels to an unlocked plane, or with unlock spends the emblems to unlock it first. */
     @Command("conquestPlaneswalk")
     record ConquestPlaneswalk(String plane, boolean unlock) {
-    }
-
-    /** Asks for the statistics of a plane, or of every plane. */
-    @Command("conquestStats")
-    record ConquestStatsQuery(@Nullable String plane) {
-    }
-
-    /** Sets one of Conquest's preferences, by its CQPref name. */
-    @Command("conquestPref")
-    record ConquestPref(String key, int value) {
     }
 
     /** Asks what a new conquest may start with: the planes, with a plane its commanders, and with a commander its planeswalkers. */

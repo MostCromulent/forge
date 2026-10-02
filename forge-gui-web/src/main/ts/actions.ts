@@ -103,10 +103,10 @@ export interface Actions {
   /** Travels to a plane, with unlock spending the emblems to unlock it first. */
   conquestPlaneswalk(plane: string, unlock: boolean): void;
   /** Asks for the statistics of a plane, or of every plane. */
-  conquestStats(plane?: string): void;
-  conquestPrefs(): void;
-  conquestPref(key: string, value: number): void;
-  conquestPrefsReset(): void;
+  campaignStats(scope?: string): void;
+  campaignPrefs(): void;
+  campaignPref(key: string, value: string): void;
+  campaignPrefsReset(): void;
   /** Asks for the commanders and planeswalkers found. */
   conquestParty(): void;
   conquestLead(commander: string): void;
@@ -270,10 +270,10 @@ export function createActions(send: Send): Actions {
     conquestAether: q => send({ t: 'conquestAether', ...q }),
     conquestPlanes: () => send({ t: 'conquestPlanes' }),
     conquestPlaneswalk: (plane, unlock) => send({ t: 'conquestPlaneswalk', plane, unlock }),
-    conquestStats: plane => send({ t: 'conquestStats', plane }),
-    conquestPrefs: () => send({ t: 'conquestPrefs' }),
-    conquestPref: (key, value) => send({ t: 'conquestPref', key, value }),
-    conquestPrefsReset: () => send({ t: 'conquestPrefsReset' }),
+    campaignStats: scope => send({ t: 'campaignStats', scope }),
+    campaignPrefs: () => send({ t: 'campaignPrefs' }),
+    campaignPref: (key, value) => send({ t: 'campaignPref', key, value }),
+    campaignPrefsReset: () => send({ t: 'campaignPrefsReset' }),
     conquestParty: () => send({ t: 'conquestParty' }),
     conquestLead: commander => send({ t: 'conquestLead', commander }),
     conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),
