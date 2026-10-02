@@ -46,7 +46,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const planes = [...new Set(party.commanders.map(c => planeOf(c.origin)).filter(Boolean))].sort();
   const kinds: FilterKind<PartyFilter>[] = [
     {
-      id: 'identity', group: t('lblCommanders'), label: t('lblWebFilterIdentity'),
+      id: 'identity', group: t('lblCommanders'), label: t('lblColorIdentity'),
       chip: f => (f.colours.length ? f.colours.join(' ') : null),
       clear: f => ({ ...f, colours: [] }),
       panel: (f, set, done) => <AnyOf options={FIVE_COLOURS.map(([c, name]) => [c, t(name)] as const)} value={f.colours}

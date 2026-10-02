@@ -221,7 +221,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     range('mv', numbers, t('lblWebDraftGroupManaValue')),
     range('power', numbers, t('lblPower')),
     range('toughness', numbers, t('lblToughness')),
-    range('colourCount', numbers, t('lblWebFilterColourCount')),
+    range('colourCount', numbers, t('lblColorCount')),
     {
       id: 'rarity', group: printing, label: t('lblRarity'),
       chip: f => (f.rarity.length ? RARITIES.filter(([r]) => f.rarity.includes(r)).map(([, name]) => t(name)).join(', ') : null),
@@ -232,7 +232,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     words('set', printing, t('lblSet'), t('lblWebFilterSetCode')),
     {
       // The commander's colours are the deck's rule, so the chip is fixed, except on a collection's deck, which has no such rule
-      id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
+      id: 'identity', group: deck, label: t('lblColorIdentity'),
       chip: f => (state.collection ? f.identity?.split('').join(' ') ?? null : state.identity.split('').join(' ')),
       from: () => t('lblCommander'),
       fixed: () => !state.collection,

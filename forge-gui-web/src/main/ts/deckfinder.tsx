@@ -392,12 +392,12 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
     cards('sideboard', contents, t('lblWebFilterSideboardHasCard'), t('lblWebFilterCardName')),
     cards('set', contents, t('lblWebFilterFromSet'), t('lblWebFilterSetName')),
     {
-      id: 'identity', group: colourSize, label: t('lblWebFilterIdentity'),
+      id: 'identity', group: colourSize, label: t('lblColorIdentity'),
       chip: f => f.identity && (f.identity.exactly ? t('lblWebFilterExactly', f.identity.letters || 'C') : t('lblWebFilterWithin', f.identity.letters || 'C')),
       clear: f => ({ ...f, identity: null }),
       panel: (f, set, done) => <IdentityPanel value={f.identity} apply={identity => { set({ ...f, identity }); done(); }} />,
     },
-    range('colourCount', colourSize, t('lblWebFilterColourCount'), f => f.colourCount, (f, colourCount) => ({ ...f, colourCount })),
+    range('colourCount', colourSize, t('lblColorCount'), f => f.colourCount, (f, colourCount) => ({ ...f, colourCount })),
     range('main', colourSize, t('lblWebFilterMainSize'), f => f.main, (f, main) => ({ ...f, main })),
     range('side', colourSize, t('lblWebFilterSideSize'), f => f.side, (f, side) => ({ ...f, side })),
     range('mana', colourSize, t('lblWebFilterAverageMana'), f => f.mana, (f, mana) => ({ ...f, mana })),
@@ -411,7 +411,7 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         : <p class="fnote">{t('lblWebFilterNoFolders')}</p>),
     },
     {
-      id: 'favourites', group: yours, label: t('lblWebFilterFavourites'),
+      id: 'favourites', group: yours, label: t('ttFavorite'),
       chip: f => (f.favourites ? t('lblWebFilterStarred') : null),
       clear: f => ({ ...f, favourites: false }),
       panel: (f, set, done) => <OneOf options={[['on', t('lblWebFilterStarredOnly')]] as const} value={f.favourites ? 'on' : null}
