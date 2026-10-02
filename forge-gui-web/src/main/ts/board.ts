@@ -792,7 +792,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const limited = model.limitedResult;
   // A conquest battle's result says which buttons the ending offers, so the panel waits for it
   const conquest = model.conquestResult;
-  if (model.conquest && !conquest) return;
+  if (model.campaignSave && !conquest) return;
   const drawnFor = `${!!limited}/${conquest ? `${conquest.won}:${conquest.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
   if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
   root.dataset.drawnFor = drawnFor;

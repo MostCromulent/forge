@@ -76,12 +76,14 @@ export interface Actions {
   gauntletNext(): void;
   gauntletRestart(): void;
 
-  // Planar Conquest
-  /** Opens the saved conquests, or with resume, the one played last. */
-  conquestOpen(resume: boolean): void;
-  conquestLoad(name: string): void;
-  /** Back from a conquest to the saved ones, or from those to the start page. */
-  conquestLeave(): void;
+  // A campaign mode: Planar Conquest
+  /** Opens a mode's saved games, or with resume, the one played last. */
+  campaignOpen(mode: string, resume: boolean): void;
+  campaignLoad(name: string): void;
+  /** Back from an open game to the saved ones, or from those to the start page. */
+  campaignLeave(): void;
+  campaignRename(name: string, to: string): void;
+  campaignDelete(name: string): void;
   /** Selects a place on the map; the player does not move. */
   conquestSelect(region: number, row: number, col: number): void;
   /** Walks to the selected place. */
@@ -92,8 +94,6 @@ export interface Actions {
   conquestClaim(): void;
   /** Dev mode: where the next Chaos Wheel stops. */
   devConquestWheel(outcome: string): void;
-  conquestRename(name: string, to: string): void;
-  conquestDelete(name: string): void;
   /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
   conquestOptions(plane?: string, commander?: string): void;
   conquestCreate(c: { name: string; plane: string; commander: string; planeswalker: string }): void;
@@ -255,16 +255,16 @@ export function createActions(send: Send): Actions {
     poolPlay: (name, mode, opponent, count, games) => send({ t: 'poolPlay', name, mode, opponent, count, games }),
     gauntletNext: () => send({ t: 'gauntletNext' }),
     gauntletRestart: () => send({ t: 'gauntletRestart' }),
-    conquestOpen: resume => send({ t: 'conquestOpen', resume }),
-    conquestLoad: name => send({ t: 'conquestLoad', name }),
-    conquestLeave: () => send({ t: 'conquestLeave' }),
+    campaignOpen: (mode, resume) => send({ t: 'campaignOpen', mode, resume }),
+    campaignLoad: name => send({ t: 'campaignLoad', name }),
+    campaignLeave: () => send({ t: 'campaignLeave' }),
+    campaignRename: (name, to) => send({ t: 'campaignRename', name, to }),
+    campaignDelete: name => send({ t: 'campaignDelete', name }),
     conquestSelect: (region, row, col) => send({ t: 'conquestSelect', region, row, col }),
     conquestMove: () => send({ t: 'conquestMove' }),
     conquestBattle: () => send({ t: 'conquestBattle' }),
     conquestClaim: () => send({ t: 'conquestClaim' }),
     devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
-    conquestRename: (name, to) => send({ t: 'conquestRename', name, to }),
-    conquestDelete: name => send({ t: 'conquestDelete', name }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
     conquestAether: q => send({ t: 'conquestAether', ...q }),

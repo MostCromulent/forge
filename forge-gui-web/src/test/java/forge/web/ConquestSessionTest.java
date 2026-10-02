@@ -130,8 +130,8 @@ public class ConquestSessionTest extends SessionsTest {
 
     private Recorder hostInConquest(final ConquestData data) throws InterruptedException {
         final Recorder host = onTheShelf();
-        send(host, message("conquestLoad", "name", data.getName()));
-        host.awaitMatching("hello", h -> data.getName().equals(str(h, "conquest")), "the conquest did not open");
+        send(host, message("campaignLoad", "name", data.getName()));
+        host.awaitMatching("hello", h -> data.getName().equals(str(h, "campaignSave")), "the conquest did not open");
         host.awaitMatching("conquestState", s -> true, "the map was not sent");
         return host;
     }
@@ -219,7 +219,7 @@ public class ConquestSessionTest extends SessionsTest {
     public void aGuestCannotOpenConquest() throws Exception {
         final Recorder guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
-        send(guest, message("conquestOpen", "resume", false));
+        send(guest, message("campaignOpen", "mode", "conquest", "resume", false));
         Thread.sleep(500);
         Assert.assertFalse(guest.got.stream().anyMatch(m -> "conquestSaves".equals(m.get("t").getAsString())));
     }
@@ -404,7 +404,7 @@ public class ConquestSessionTest extends SessionsTest {
         FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
         send(host, JsonCodec.message("conquestBattle"));
         host.awaitMatching("error", e -> true, "the failed start was not reported");
-        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean() && h.get("inConquest").getAsBoolean(), "the page did not return to the map");
+        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean() && "conquest".equals(str(h, "campaign")), "the page did not return to the map");
         Assert.assertNull(FModel.getConquest().getActiveBattle());
         Assert.assertNull(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc), "a battle that never started was recorded");
 
@@ -422,7 +422,7 @@ public class ConquestSessionTest extends SessionsTest {
         final String halfRead = ConquestFixture.broken("<data><planeswalker art=\"1\" name=\"A-Ellywick Tumblestrum\" set=\"AFR\"/>"
                 + "<currentLocation col=\"0\" plane=\"Zendikar\" regionIndex=\"0\" row=\"0\"/>"
                 + "<unlockedCards><card art=\"1\" name=\"\" set=\"C16\"/></unlockedCards></data>");
-        final List<String> names = ConquestGame.saves().saves().stream().map(s -> s.name()).toList();
+        final List<String> names = new ConquestGame().saves().saves().stream().map(s -> s.name()).toList();
         Assert.assertTrue(names.contains(data.getName()), "the readable save is not listed");
         Assert.assertFalse(names.contains(broken), "a save with no planeswalker or place is listed");
         Assert.assertFalse(names.contains(halfRead), "a save with no planes is listed");
@@ -453,16 +453,16 @@ public class ConquestSessionTest extends SessionsTest {
                 return;
             }
         }
-        if (str(host.hello, "conquest") != null) {
-            send(host, JsonCodec.message("conquestLeave"));
+        if (str(host.hello, "campaignSave") != null) {
+            send(host, JsonCodec.message("campaignLeave"));
             // The shelf reads every save as it opens, and the cleanup must not remove one under that reading
             if (host.awaitMatching("conquestSaves", saves -> true) == null) {
                 return;
             }
         }
-        if (host.hello.get("inConquest").getAsBoolean()) {
-            send(host, JsonCodec.message("conquestLeave"));
-            host.awaitMatching("hello", h -> !h.get("inConquest").getAsBoolean());
+        if ("conquest".equals(str(host.hello, "campaign"))) {
+            send(host, JsonCodec.message("campaignLeave"));
+            host.awaitMatching("hello", h -> !"conquest".equals(str(h, "campaign")));
         }
     }
 
@@ -781,8 +781,8 @@ public class ConquestSessionTest extends SessionsTest {
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
         sessions.onMessage(host, message("setName", "name", "Host"));
-        send(host, message("conquestOpen", "resume", false));
-        host.awaitMatching("hello", h -> h.get("inConquest").getAsBoolean() && str(h, "conquest") == null, "the shelf did not open");
+        send(host, message("campaignOpen", "mode", "conquest", "resume", false));
+        host.awaitMatching("hello", h -> "conquest".equals(str(h, "campaign")) && str(h, "campaignSave") == null, "the shelf did not open");
         host.awaitMatching("conquestSaves", s -> true, "the conquests were not listed");
         return host;
     }
@@ -832,7 +832,7 @@ public class ConquestSessionTest extends SessionsTest {
         send(host, message("conquestOptions", "plane", "Zendikar", "commander", commander));
         final String walker = names(host.awaitMatching("conquestOptions", o -> o.has("planeswalkers"), "the commander's planeswalkers were not sent"), "planeswalkers").get(0);
         send(host, message("conquestCreate", "name", name, "plane", "Zendikar", "commander", commander, "planeswalker", walker));
-        host.awaitMatching("hello", h -> name.equals(str(h, "conquest")), "the new conquest did not open");
+        host.awaitMatching("hello", h -> name.equals(str(h, "campaignSave")), "the new conquest did not open");
         final JsonObject state = host.awaitMatching("conquestState", s -> true, "the new conquest's map was not sent");
         Assert.assertEquals(state.get("plane").getAsString(), "Zendikar");
         final ConquestData saved = new ConquestData(saveDir(name));
@@ -859,7 +859,7 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final String to = ConquestFixture.expected();
         final Recorder host = onTheShelf();
-        send(host, message("conquestRename", "name", data.getName(), "to", to));
+        send(host, message("campaignRename", "name", data.getName(), "to", to));
         final JsonObject saves = host.awaitMatching("conquestSaves", s -> to.equals(str(s, "current")), "the shelf does not mark the new name as current");
         Assert.assertTrue(names(saves, "saves").contains(to));
         Assert.assertFalse(names(saves, "saves").contains(data.getName()));
@@ -868,7 +868,7 @@ public class ConquestSessionTest extends SessionsTest {
 
         // A name another conquest has is refused, and nothing is renamed
         final ConquestData other = ConquestFixture.create("Zendikar");
-        send(host, message("conquestRename", "name", to, "to", other.getName()));
+        send(host, message("campaignRename", "name", to, "to", other.getName()));
         final JsonObject refused = host.awaitMatching("error", e -> true, "a name in use was not refused");
         Assert.assertTrue(saveDir(to).isDirectory());
         // The browser forgets an error at every hello, so the refusal is the last thing said
@@ -882,7 +882,7 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final Recorder host = onTheShelf();
         Assert.assertTrue(names(host.awaitNewest("conquestSaves"), "saves").contains(data.getName()));
-        send(host, message("conquestDelete", "name", data.getName()));
+        send(host, message("campaignDelete", "name", data.getName()));
         final JsonObject saves = host.awaitMatching("conquestSaves", s -> true, "the shelf was not sent again");
         Assert.assertFalse(names(saves, "saves").contains(data.getName()));
         Assert.assertFalse(data.getDirectory().exists());
@@ -1057,7 +1057,7 @@ public class ConquestSessionTest extends SessionsTest {
     @Test
     public void aSaveSaysWhatIsConqueredOnItsPlane() throws Exception {
         final ConquestData data = ConquestFixture.install();
-        final ToBrowser.ConquestSave save = ConquestGame.saves().saves().stream().filter(s -> s.name().equals(data.getName())).findFirst().orElseThrow();
+        final ToBrowser.ConquestSave save = new ConquestGame().saves().saves().stream().filter(s -> s.name().equals(data.getName())).findFirst().orElseThrow();
         Assert.assertEquals(save.conquered(), 1);
         Assert.assertEquals(save.total(), 54);
     }

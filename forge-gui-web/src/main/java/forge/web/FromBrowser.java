@@ -21,7 +21,7 @@ final class FromBrowser {
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
-        conquestLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection,
+        campaignLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection,
         conquestPlanes, conquestPrefs, conquestPrefsReset,
         editorClose, editorUndo }
 
@@ -360,16 +360,26 @@ final class FromBrowser {
     record EventDecksOnly(boolean on) {
     }
 
+    // ---- Campaigns: what Planar Conquest and any mode like it share ---------------------------------------------
+
+    /** Opens a campaign mode's saved games, or with resume, straight into the one played last. mode is "conquest". */
+    @Command("campaignOpen")
+    record CampaignOpen(String mode, boolean resume) {
+    }
+
+    @Command("campaignLoad")
+    record CampaignLoad(String name) {
+    }
+
+    @Command("campaignRename")
+    record CampaignRename(String name, String to) {
+    }
+
+    @Command("campaignDelete")
+    record CampaignDelete(String name) {
+    }
+
     // ---- Planar Conquest ---------------------------------------------------------------------------------------
-
-    /** Opens the Conquest pages, or with resume, straight into the conquest played last. */
-    @Command("conquestOpen")
-    record ConquestOpen(boolean resume) {
-    }
-
-    @Command("conquestLoad")
-    record ConquestLoad(String name) {
-    }
 
     /** Selects a place on the map. The player does not move. */
     @Command("conquestSelect")
@@ -394,14 +404,6 @@ final class FromBrowser {
     /** Sets one of Conquest's preferences, by its CQPref name. */
     @Command("conquestPref")
     record ConquestPref(String key, int value) {
-    }
-
-    @Command("conquestRename")
-    record ConquestRename(String name, String to) {
-    }
-
-    @Command("conquestDelete")
-    record ConquestDelete(String name) {
     }
 
     /** Asks what a new conquest may start with: the planes, with a plane its commanders, and with a commander its planeswalkers. */

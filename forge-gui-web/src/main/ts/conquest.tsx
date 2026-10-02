@@ -26,7 +26,7 @@ import { t, type TextKey } from './text';
 const BALANCE_ICONS = ['IMG_AETHER_SHARD', 'IMG_PW_BADGE_COMMON'];
 
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
-  const open = model.conquest !== null;
+  const open = model.campaignSave !== null;
   useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = conquestIconUrl(icon); }, []);
   // The form that starts a conquest takes the shelf's place, and gives it back when left or when its conquest opens
   const [creating, setCreating] = useState(false);
@@ -38,7 +38,7 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
         <PageHeader class="limited-head">
           <div class="head-right">
             <HeadControls />
-            <button onClick={() => (creating && !open ? setCreating(false) : actions.conquestLeave())}>{t('lblBack')}</button>
+            <button onClick={() => (creating && !open ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
           </div>
         </PageHeader>
       </div>
@@ -52,8 +52,8 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
 function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
   const saves = model.conquestSaves;
   const trail = [
-    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.conquestLeave(); } },
-    { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.conquestLeave(); } },
+    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
+    { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.campaignLeave(); } },
     creating ? { label: t('lblPlanarConquest'), go: () => setCreating(false) } : { label: t('lblPlanarConquest') },
     ...(creating ? [{ label: t('lblWebConquestNew') }] : []),
   ];
@@ -89,7 +89,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
                   e.preventDefault();
                   const to = new FormData(e.currentTarget).get('name')?.toString().trim();
                   setRenaming(null);
-                  if (to && to !== s.name) actions.conquestRename(s.name, to);
+                  if (to && to !== s.name) actions.campaignRename(s.name, to);
                 }}>
                   <input name="name" defaultValue={s.name} maxLength={60} aria-label={t('lblConquestName')} autoFocus
                     onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); }} />
@@ -116,10 +116,10 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
                   <span class="ev-ask">{t('lblAreYouSuerDeleteConquest', s.name)}</span>
                   <span class="sp" />
                   <button onClick={() => setDeleting(null)}>{t('lblCancel')}</button>
-                  <button class="danger" onClick={() => { setDeleting(null); actions.conquestDelete(s.name); }}>{t('lblDelete')}</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.campaignDelete(s.name); }}>{t('lblDelete')}</button>
                 </>
               : <>
-                  <button class="primary" onClick={() => actions.conquestLoad(s.name)}>{t('lblPlay')}</button>
+                  <button class="primary" onClick={() => actions.campaignLoad(s.name)}>{t('lblPlay')}</button>
                   {s.saved && <span class="ev-ask">{t('lblWebLimitedSaved', shortDay(s.saved))}</span>}
                   <span class="sp" />
                   <span class="ev-more">

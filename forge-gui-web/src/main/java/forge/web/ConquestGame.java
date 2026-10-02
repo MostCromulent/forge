@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonObject;
 import forge.card.CardRarity;
 import forge.card.ColorSet;
 import forge.deck.Deck;
@@ -47,7 +48,7 @@ import java.util.function.Function;
 import org.apache.commons.lang3.EnumUtils;
 
 /** Holds only what one session knows that the save does not, as the conquest itself is Forge's, one for the whole process. */
-final class ConquestGame {
+final class ConquestGame implements Campaign {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
     private volatile ConquestResult result;
@@ -62,7 +63,8 @@ final class ConquestGame {
     }
 
     /** Reads every save, which loads the planes they stand on. Not for the socket thread. */
-    static ConquestSaves saves() {
+    @Override
+    public ConquestSaves saves() {
         final List<ConquestSave> rows = new ArrayList<>();
         for (final ConquestData data : ConquestController.listSaves()) {
             if (!readable(data)) {
@@ -75,13 +77,25 @@ final class ConquestGame {
                     data.getPlaneswalkEmblems(),
                     file.exists() ? LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString() : null));
         }
-        return new ConquestSaves(rows, currentName());
+        return new ConquestSaves(rows, current());
     }
 
     /** The conquest played last, if its folder is still there. */
-    static String currentName() {
+    @Override
+    public String current() {
         final String name = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);
         return name != null && saveDir(name).isDirectory() ? name : null;
+    }
+
+    @Override
+    public String open(final String save) {
+        final ConquestData data = find(save);
+        if (data == null) {
+            return null;
+        }
+        FModel.getConquest().load(data);
+        opened();
+        return data.getName();
     }
 
     /** The save of a name, or null when there is none or it cannot be read. */
@@ -213,8 +227,8 @@ final class ConquestGame {
         return null;
     }
 
-    /** Renames a save. Answers why it cannot, or null when it is done or there is nothing to do. */
-    static synchronized String rename(final String name, final String to) {
+    @Override
+    public synchronized String rename(final String name, final String to) {
         final ConquestData data = find(name);
         final String cleaned = QuestUtil.cleanString(to == null ? "" : to).trim();
         if (data == null || cleaned.equals(data.getName())) {
@@ -228,7 +242,8 @@ final class ConquestGame {
         return null;
     }
 
-    static synchronized void delete(final String name) {
+    @Override
+    public synchronized void delete(final String name) {
         final ConquestData data = find(name);
         if (data != null) {
             ConquestController.delete(data);
@@ -251,16 +266,18 @@ final class ConquestGame {
         nextWheel = outcome;
     }
 
-    ConquestResult result() {
+    @Override
+    public ConquestResult result() {
         return result;
     }
 
-    ConquestReward reward() {
+    @Override
+    public ConquestReward reward() {
         return reward;
     }
 
-    /** A game of the active battle ended. hostGame is the host's own view, which alone knows the match. */
-    ConquestResult gameOver(final GameView hostGame) {
+    @Override
+    public ConquestResult gameOver(final GameView hostGame) {
         final ConquestController controller = FModel.getConquest();
         final ConquestBattle battle = controller.getActiveBattle();
         if (battle == null || hostGame == null) {
@@ -281,8 +298,9 @@ final class ConquestGame {
         return result;
     }
 
-    /** The match is left: its result goes with it. */
-    void left() {
+    @Override
+    public void left() {
+        FModel.getConquest().finishBattle();
         result = null;
     }
 
@@ -311,6 +329,11 @@ final class ConquestGame {
         }
         return new ConquestStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
                 s.number(), s.total(), s.chaos(), pack, art);
+    }
+
+    @Override
+    public List<Record> page() {
+        return List.of(bar(), state(List.of()));
     }
 
     ConquestBar bar() {
@@ -389,7 +412,8 @@ final class ConquestGame {
     }
 
     /** A page of the collection or of the exile, each card with what exiling or retrieving it is worth. */
-    CataloguePage cards(final CatalogueQuery q) {
+    @Override
+    public CataloguePage cards(final CatalogueQuery q) {
         final ConquestData data = model();
         final boolean exile = "exile".equals(q.source());
         final List<PaperCard> cards = cardsOf(exile);
@@ -733,5 +757,128 @@ final class ConquestGame {
     ConquestBattle battle() {
         final ConquestLocation loc = model().getCurrentLocation();
         return loc.getEvent().createBattle(loc, 0);
+    }
+
+    private static void startBattle(final ConquestBattle battle, final Host host) {
+        host.startMatch(() -> FModel.getConquest().prepareBattle(battle, null), () -> FModel.getConquest().cancelBattle());
+    }
+
+    @Override
+    public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
+        final String type = msg.get("t").getAsString();
+        if (save == null) {
+            // The form that starts a conquest is all of the list of saves that is Conquest's own
+            if ("conquestOptions".equals(type)) {
+                final ConquestOptionsQuery q = Wire.decode(msg, ConquestOptionsQuery.class);
+                channel.send(options(q.plane(), q.commander()));
+            } else if ("conquestCreate".equals(type)) {
+                final ConquestCreate create = Wire.decode(msg, ConquestCreate.class);
+                final String problem = create(create.name(), create.plane(), create.commander(), create.planeswalker());
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return;
+                }
+                opened();
+                host.opened(model().getName());
+            }
+            return;
+        }
+        switch (type) {
+            case "conquestSelect" -> {
+                final ConquestSelect at = Wire.decode(msg, ConquestSelect.class);
+                select(at.region(), at.row(), at.col());
+                channel.send(state(List.of()));
+            }
+            case "conquestMove" -> {
+                // A move with nowhere to go is not answered: a map with no path would end a walk under way
+                final List<ConquestLocation> walked = move();
+                if (walked != null) {
+                    channel.send(state(walked));
+                }
+            }
+            case "conquestBattle" -> {
+                // A reward still to be shown may end in a chaos battle, which comes before any other
+                if (reward != null) {
+                    return;
+                }
+                final String problem = battleProblem();
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return;
+                }
+                startBattle(battle(), host);
+            }
+            case "conquestClaim" -> {
+                if (claim()) {
+                    startBattle(new ConquestChaosBattle(), host);
+                }
+            }
+            case "conquestParty" -> channel.send(party());
+            case "conquestCollection" -> channel.send(collection());
+            case "conquestAether" -> {
+                final ConquestAetherQuery q = Wire.decode(msg, ConquestAetherQuery.class);
+                channel.send(aether(q));
+                if (q.pull()) {
+                    channel.send(bar());
+                }
+            }
+            case "conquestPlanes" -> channel.send(planes());
+            case "conquestPlaneswalk" -> {
+                final ConquestPlaneswalk go = Wire.decode(msg, ConquestPlaneswalk.class);
+                final String problem = planeswalk(go.plane(), go.unlock());
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return;
+                }
+                channel.send(bar());
+                channel.send(state(List.of()));
+                channel.send(planes());
+            }
+            case "conquestStats" -> channel.send(stats(Wire.decode(msg, ConquestStatsQuery.class).plane()));
+            case "conquestPrefs" -> channel.send(prefs(null));
+            case "conquestPref" -> {
+                final ConquestPref pref = Wire.decode(msg, ConquestPref.class);
+                channel.send(prefs(setPref(pref.key(), pref.value())));
+            }
+            case "conquestPrefsReset" -> {
+                resetPrefs();
+                channel.send(prefs(null));
+            }
+            case "conquestWalker" -> {
+                if (setPlaneswalker(Wire.decode(msg, ConquestWalker.class).planeswalker())) {
+                    channel.send(party());
+                    channel.send(state(List.of()));
+                }
+            }
+            case "conquestExile" -> {
+                final ConquestExile exile = Wire.decode(msg, ConquestExile.class);
+                final String problem = exile(exile.cards(), exile.retrieve());
+                if (problem != null) {
+                    channel.send(new Notice(problem, null, false));
+                }
+                // An exiled commander leaves the party, and may have been the one on the map
+                channel.send(bar());
+                channel.send(collection());
+                channel.send(state(List.of()));
+            }
+            case "conquestLead", "conquestViewDeck", "conquestEditDeck" -> {
+                final ConquestCommander commander = commander(msg.get("commander").getAsString());
+                if (commander == null) {
+                    return;
+                }
+                if ("conquestLead".equals(type)) {
+                    model().setSelectedCommander(commander);
+                    model().saveData();
+                    channel.send(party());
+                    channel.send(state(List.of()));
+                } else if ("conquestViewDeck".equals(type)) {
+                    channel.send(new DeckDetailsMessage(deckDetails(commander)));
+                } else {
+                    host.decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
+                            collection(commander), channel);
+                }
+            }
+            default -> { }
+        }
     }
 }

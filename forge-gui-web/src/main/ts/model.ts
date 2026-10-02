@@ -106,9 +106,9 @@ export interface Model {
   /** The card pool picker's lines and old snapshots, asked for the first time it opens. */
   cardPoolDetails: CardPoolDetails | null;
   limitedPools: LimitedPools | null;
-  /** On the Planar Conquest pages; conquest names the one that is open, and currentConquest the one a Resume would open. */
-  inConquest: boolean;
-  conquest: string | null;
+  /** The campaign mode whose pages are showing, and the save open in it, which its matches name too. currentConquest is what a Resume opens. */
+  campaign: string | null;
+  campaignSave: string | null;
   currentConquest: string | null;
   conquestSaves: ConquestSaves | null;
   conquestBar: ConquestBar | null;
@@ -141,7 +141,7 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
-    inConquest: false, conquest: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
+    campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
     conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null, conquestOptions: null,
     conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
   };

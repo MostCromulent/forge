@@ -100,13 +100,13 @@ const actions: Actions = {
     model.error = null;
     wire.conquestCreate(c);
   },
-  conquestRename: (name, to) => {
+  campaignRename: (name, to) => {
     model.error = null;
-    wire.conquestRename(name, to);
+    wire.campaignRename(name, to);
   },
-  conquestDelete: name => {
+  campaignDelete: name => {
     model.error = null;
-    wire.conquestDelete(name);
+    wire.campaignDelete(name);
   },
   // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
   conquestClaim: () => {
@@ -251,12 +251,12 @@ function apply(msg: ServerMessage): void {
       // A gauntlet's result belongs to the game it followed; every new match arrives with a hello
       model.limitedResult = null;
       model.eventKind = msg.eventKind ?? null;
-      model.inConquest = msg.inConquest;
-      model.conquest = msg.conquest ?? null;
+      model.campaign = msg.campaign ?? null;
+      model.campaignSave = msg.campaignSave ?? null;
       model.currentConquest = msg.currentConquest ?? null;
       // A battle's result belongs to its match, and a conquest's pages to the conquest
       if (!msg.inMatch) model.conquestResult = null;
-      if (!msg.inConquest) {
+      if (msg.campaign !== 'conquest') {
         model.conquestState = null;
         model.conquestBar = null;
         model.conquestReward = null;

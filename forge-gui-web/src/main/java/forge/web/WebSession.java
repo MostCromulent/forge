@@ -17,12 +17,7 @@ import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
-import forge.gamemodes.planarconquest.ConquestBattle;
-import forge.gamemodes.planarconquest.ConquestChaosBattle;
-import forge.gamemodes.planarconquest.ConquestCommander;
-import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
-import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.util.storage.IStorage;
 import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -43,7 +38,7 @@ import java.util.function.Supplier;
 /** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
 public final class WebSession {
     /** Where the browser is. Each stage holds what exists there and nothing else. */
-    sealed interface Stage permits Menu, Opening, Setup, Event, Conquest, Playing { }
+    sealed interface Stage permits Menu, Opening, Setup, Event, InCampaign, Playing { }
 
     /** The start page; for a guest, waiting for the host to open a game. */
     record Menu() implements Stage { }
@@ -65,10 +60,10 @@ public final class WebSession {
         }
     }
 
-    /** The Planar Conquest pages: the saved conquests while save is null, otherwise the one that is open. */
-    record Conquest(String save) implements Stage { }
+    /** A campaign mode's pages: its saved games while save is null, otherwise the one that is open. */
+    record InCampaign(String mode, String save) implements Stage { }
 
-    /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a conquest, or null for the table. */
+    /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a campaign, or null for the table. */
     record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
 
     private static final int CARD_SEARCH_LIMIT = 60;
@@ -143,6 +138,36 @@ public final class WebSession {
         return mayHost;
     }
 
+    private Campaign campaign(final String mode) {
+        return "conquest".equals(mode) ? conquest : null;
+    }
+
+    private final Campaign.Host campaignHost = new Campaign.Host() {
+        @Override
+        public Record error(final String text) {
+            return WebSession.error(text);
+        }
+
+        @Override
+        public DeckSession decks() {
+            return decks;
+        }
+
+        @Override
+        public void opened(final String save) {
+            final Stage from = stage;
+            if (from instanceof InCampaign c && c.save() == null && move(from, new InCampaign(c.mode(), save))) {
+                sendCampaign();
+            }
+        }
+
+        @Override
+        public void startMatch(final Supplier<PreparedMatch> prepare, final Runnable failed) {
+            // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
+            ui.invokeInEdtAndWait(() -> startCampaignMatch(prepare, failed));
+        }
+    };
+
     private void onCampaign(final Runnable work) {
         campaignWork.execute(() -> {
             try {
@@ -156,7 +181,7 @@ public final class WebSession {
     /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
     boolean hasGame() {
         final Stage now = stage;
-        return now instanceof Setup || now instanceof Event || now instanceof Conquest || now instanceof Playing;
+        return now instanceof Setup || now instanceof Event || now instanceof InCampaign || now instanceof Playing;
     }
 
     /** Moves to the next stage only if the browser is still where the caller found it, closing the old GUI unless the new stage keeps it. */
@@ -264,9 +289,9 @@ public final class WebSession {
             if (result != null) {
                 channel.send(result);
             }
-            final ToBrowser.ConquestResult conquestResult = p.back() instanceof Conquest ? conquest.result() : null;
-            if (conquestResult != null) {
-                channel.send(conquestResult);
+            final Record campaignResult = p.back() instanceof InCampaign c ? campaign(c.mode()).result() : null;
+            if (campaignResult != null) {
+                channel.send(campaignResult);
             }
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
@@ -293,8 +318,8 @@ public final class WebSession {
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
             }
-        } else if (now instanceof Conquest) {
-            onCampaign(this::sendConquest);
+        } else if (now instanceof InCampaign) {
+            onCampaign(this::sendCampaign);
         } else if (now instanceof Menu) {
             // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
             joinHostGame();
@@ -405,10 +430,10 @@ public final class WebSession {
             case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
                     "editorDeck", "deckDelete", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
                 if ("catalogue".equals(msg.get("t").getAsString()) && msg.has("source") && !msg.get("source").isJsonNull()) {
-                    // A conquest's own cards, which need no deck open
-                    if (stage instanceof Conquest c && c.save() != null) {
+                    // A campaign's own cards, which need no deck open
+                    if (stage instanceof InCampaign c && c.save() != null) {
                         final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);
-                        onCampaign(() -> channel.send(conquest.cards(q)));
+                        onCampaign(() -> channel.send(campaign(c.mode()).cards(q)));
                     }
                 } else if (!(stage instanceof Playing)) {
                     // The pools go first, since closing the editor lists every deck again before the page changes
@@ -416,12 +441,9 @@ public final class WebSession {
                         channel.send(OfflineEvents.pools());
                     }
                     decks.onMessage(channel, msg);
-                    // A commander's deck may have changed size or become playable, which the bar's pages show
-                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Conquest c && c.save() != null) {
-                        onCampaign(() -> {
-                            channel.send(conquest.bar());
-                            channel.send(conquest.state(List.of()));
-                        });
+                    // A deck may have changed size or become playable, which the campaign's pages show
+                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof InCampaign c && c.save() != null) {
+                        onCampaign(() -> campaign(c.mode()).page().forEach(m -> channel.send(m)));
                     }
                 }
             }
@@ -494,64 +516,33 @@ public final class WebSession {
                 final PoolPlay play = Wire.decode(msg, PoolPlay.class);
                 ui.invokeInEdtLater(() -> playPool(channel, play));
             }
-            // A conquest is Forge's own, one for the whole process, so it is the host's
-            case "conquestOpen" -> {
-                final boolean resume = Wire.decode(msg, FromBrowser.ConquestOpen.class).resume();
-                if (isHost) {
-                    onCampaign(() -> openConquest(resume ? ConquestGame.currentName() : null));
+            // A campaign is Forge's own, one for the whole process, so it is the host's
+            case "campaignOpen" -> {
+                final FromBrowser.CampaignOpen open = Wire.decode(msg, FromBrowser.CampaignOpen.class);
+                final Campaign campaign = campaign(open.mode());
+                if (isHost && campaign != null) {
+                    onCampaign(() -> openCampaign(open.mode(), open.resume() ? campaign.current() : null));
                 }
             }
-            case "conquestLoad" -> {
-                final String save = Wire.decode(msg, FromBrowser.ConquestLoad.class).name();
-                if (isHost) {
-                    onCampaign(() -> openConquest(save));
-                }
+            case "campaignLoad" -> {
+                final String save = Wire.decode(msg, FromBrowser.CampaignLoad.class).name();
+                onCampaign(() -> {
+                    if (stage instanceof InCampaign c) {
+                        openCampaign(c.mode(), save);
+                    }
+                });
             }
-            case "conquestLeave" -> onCampaign(() -> {
+            case "campaignLeave" -> onCampaign(() -> {
                 final Stage now = stage;
-                if (now instanceof Conquest c) {
+                if (now instanceof InCampaign c) {
                     if (c.save() == null) {
                         move(now, new Menu());
                     } else {
-                        openConquest(null);
+                        openCampaign(c.mode(), null);
                     }
                 }
             });
-            case "conquestSelect", "conquestMove" -> onCampaign(() -> {
-                if (stage instanceof Conquest c && c.save() != null) {
-                    if ("conquestMove".equals(msg.get("t").getAsString())) {
-                        // A move with nowhere to go is not answered: a map with no path would end a walk under way
-                        final List<ConquestLocation> walked = conquest.move();
-                        if (walked != null) {
-                            channel.send(conquest.state(walked));
-                        }
-                    } else {
-                        final FromBrowser.ConquestSelect at = Wire.decode(msg, FromBrowser.ConquestSelect.class);
-                        conquest.select(at.region(), at.row(), at.col());
-                        channel.send(conquest.state(List.of()));
-                    }
-                }
-            });
-            // Listing the saves, reading every card for the planeswalkers and building a first deck are all slow
-            case "conquestRename", "conquestDelete", "conquestOptions", "conquestCreate" -> {
-                if (isHost && stage instanceof Conquest c && c.save() == null) {
-                    onCampaign(() -> conquestShelf(channel, msg));
-                }
-            }
-            case "conquestParty", "conquestCollection", "conquestLead", "conquestWalker", "conquestViewDeck", "conquestEditDeck",
-                    "conquestExile", "conquestAether", "conquestPlanes", "conquestPlaneswalk", "conquestStats", "conquestPrefs",
-                    "conquestPref", "conquestPrefsReset" -> onCampaign(() -> {
-                if (stage instanceof Conquest c && c.save() != null) {
-                    conquestPages(channel, msg);
-                }
-            });
-            // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
-            case "conquestBattle" -> onCampaign(() -> ui.invokeInEdtAndWait(() -> conquestBattle(channel)));
-            case "conquestClaim" -> onCampaign(() -> ui.invokeInEdtAndWait(() -> {
-                if (stage instanceof Conquest c && c.save() != null && conquest.claim()) {
-                    startConquestBattle(new ConquestChaosBattle());
-                }
-            }));
+            case "campaignRename", "campaignDelete" -> onCampaign(() -> campaignShelf(channel, msg));
             // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
             case "devConquestWheel" -> {
                 if (isHost && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
@@ -591,6 +582,13 @@ public final class WebSession {
             default -> {
                 if (stage instanceof Playing p) {
                     p.gui().onBrowserMessage(msg);
+                } else if (stage instanceof InCampaign) {
+                    // Whatever else a campaign's pages say is the mode's own
+                    onCampaign(() -> {
+                        if (stage instanceof InCampaign c) {
+                            campaign(c.mode()).handle(channel, msg, c.save(), campaignHost);
+                        }
+                    });
                 }
             }
         }
@@ -1032,10 +1030,10 @@ public final class WebSession {
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
                 isHost ? OfflineEvents.storage("draft").size() : 0,
-                now instanceof Conquest,
-                // The open conquest is named in its battles too, so the result screen knows whose ending it shows
-                now instanceof Conquest c ? c.save() : now instanceof Playing p && p.back() instanceof Conquest c ? c.save() : null,
-                isHost ? ConquestGame.currentName() : null,
+                now instanceof InCampaign m ? m.mode() : null,
+                // The open save is named in its matches too, so the result screen knows whose ending it shows
+                now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
+                isHost ? conquest.current() : null,
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }
@@ -1278,179 +1276,62 @@ public final class WebSession {
         }
     }
 
-    /** Opens the saved conquests, or one of them. Reading a save loads its planes, so this runs off the socket thread. */
-    private void openConquest(final String save) {
+    /** Opens a campaign's saved games, or one of them. Reading a save is slow, so this is campaign work. */
+    private void openCampaign(final String mode, final String save) {
         final Stage from = stage;
-        if (!isHost || !(from instanceof Menu || from instanceof Conquest)) {
+        if (!isHost || !(from instanceof Menu || from instanceof InCampaign)) {
             return;
         }
-        final ConquestData data = ConquestGame.find(save);
-        // A deck of the conquest being left has nothing to be built from any more
+        // A deck of the campaign being left has nothing to be built from any more
         decks.closeCollectionDeck(browser);
-        if (data != null) {
-            FModel.getConquest().load(data);
-            conquest.opened();
-        }
-        if (move(from, new Conquest(data == null ? null : data.getName()))) {
-            sendConquest();
+        if (move(from, new InCampaign(mode, save == null ? null : campaign(mode).open(save)))) {
+            sendCampaign();
         }
     }
 
-    /** The list of saved conquests: its menu, and the form that starts a conquest. */
-    private void conquestShelf(final BrowserChannel channel, final JsonObject msg) {
-        // A second Start, sent before the first had made its conquest, finds the page gone
-        final Stage from = stage;
-        if (!(from instanceof Conquest c) || c.save() != null) {
+    /** The menu of a saved game on the list of them. */
+    private void campaignShelf(final BrowserChannel channel, final JsonObject msg) {
+        if (!isHost || !(stage instanceof InCampaign c) || c.save() != null) {
             return;
         }
-        switch (msg.get("t").getAsString()) {
-            case "conquestOptions" -> {
-                final FromBrowser.ConquestOptionsQuery q = Wire.decode(msg, FromBrowser.ConquestOptionsQuery.class);
-                channel.send(ConquestGame.options(q.plane(), q.commander()));
-            }
-            case "conquestCreate" -> {
-                final FromBrowser.ConquestCreate create = Wire.decode(msg, FromBrowser.ConquestCreate.class);
-                final String problem = ConquestGame.create(create.name(), create.plane(), create.commander(), create.planeswalker());
-                if (problem != null) {
-                    channel.send(error(problem));
-                    return;
-                }
-                conquest.opened();
-                if (move(from, new Conquest(ConquestGame.model().getName()))) {
-                    sendConquest();
-                }
-            }
-            case "conquestRename" -> {
-                final FromBrowser.ConquestRename rename = Wire.decode(msg, FromBrowser.ConquestRename.class);
-                final String problem = ConquestGame.rename(rename.name(), rename.to());
-                channel.send(ConquestGame.saves());
-                // The start page's Resume names the conquest played last
-                channel.send(hello());
-                // Last, since the browser forgets an error at every hello
-                if (problem != null) {
-                    channel.send(error(problem));
-                }
-            }
-            default -> {
-                ConquestGame.delete(Wire.decode(msg, FromBrowser.ConquestDelete.class).name());
-                channel.send(ConquestGame.saves());
-                channel.send(hello());
-            }
-        }
-    }
-
-    /** The pages of the open conquest, other than its map. */
-    private void conquestPages(final BrowserChannel channel, final JsonObject msg) {
-        final String type = msg.get("t").getAsString();
-        switch (type) {
-            case "conquestParty" -> channel.send(conquest.party());
-            case "conquestCollection" -> channel.send(conquest.collection());
-            case "conquestAether" -> {
-                final FromBrowser.ConquestAetherQuery q = Wire.decode(msg, FromBrowser.ConquestAetherQuery.class);
-                channel.send(conquest.aether(q));
-                if (q.pull()) {
-                    channel.send(conquest.bar());
-                }
-            }
-            case "conquestPlanes" -> channel.send(conquest.planes());
-            case "conquestPlaneswalk" -> {
-                final FromBrowser.ConquestPlaneswalk go = Wire.decode(msg, FromBrowser.ConquestPlaneswalk.class);
-                final String problem = conquest.planeswalk(go.plane(), go.unlock());
-                if (problem != null) {
-                    channel.send(error(problem));
-                    return;
-                }
-                channel.send(conquest.bar());
-                channel.send(conquest.state(List.of()));
-                channel.send(conquest.planes());
-            }
-            case "conquestStats" -> channel.send(ConquestGame.stats(Wire.decode(msg, FromBrowser.ConquestStatsQuery.class).plane()));
-            case "conquestPrefs" -> channel.send(ConquestGame.prefs(null));
-            case "conquestPref" -> {
-                final FromBrowser.ConquestPref pref = Wire.decode(msg, FromBrowser.ConquestPref.class);
-                channel.send(ConquestGame.prefs(ConquestGame.setPref(pref.key(), pref.value())));
-            }
-            case "conquestPrefsReset" -> {
-                ConquestGame.resetPrefs();
-                channel.send(ConquestGame.prefs(null));
-            }
-            case "conquestWalker" -> {
-                if (ConquestGame.setPlaneswalker(Wire.decode(msg, FromBrowser.ConquestWalker.class).planeswalker())) {
-                    channel.send(conquest.party());
-                    channel.send(conquest.state(List.of()));
-                }
-            }
-            case "conquestExile" -> {
-                final FromBrowser.ConquestExile exile = Wire.decode(msg, FromBrowser.ConquestExile.class);
-                final String problem = ConquestGame.exile(exile.cards(), exile.retrieve());
-                if (problem != null) {
-                    channel.send(new Notice(problem, null, false));
-                }
-                // An exiled commander leaves the party, and may have been the one on the map
-                channel.send(conquest.bar());
-                channel.send(conquest.collection());
-                channel.send(conquest.state(List.of()));
-            }
-            default -> {
-                // The rest name a commander
-                final ConquestCommander commander = ConquestGame.commander(msg.get("commander").getAsString());
-                if (commander == null) {
-                    return;
-                }
-                switch (type) {
-                    case "conquestLead" -> {
-                        ConquestGame.model().setSelectedCommander(commander);
-                        ConquestGame.model().saveData();
-                        channel.send(conquest.party());
-                        channel.send(conquest.state(List.of()));
-                    }
-                    case "conquestViewDeck" -> channel.send(new ToBrowser.DeckDetailsMessage(ConquestGame.deckDetails(commander)));
-                    default -> decks.openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
-                            ConquestGame.collection(commander), channel);
-                }
-            }
-        }
-    }
-
-    /** What the Conquest stage draws from: the saves, or the bar and the map. */
-    private void sendConquest() {
-        if (!(stage instanceof Conquest c)) {
-            return;
-        }
-        if (c.save() == null) {
-            tell(ConquestGame.saves());
+        final Campaign campaign = campaign(c.mode());
+        String problem = null;
+        if ("campaignRename".equals(msg.get("t").getAsString())) {
+            final FromBrowser.CampaignRename rename = Wire.decode(msg, FromBrowser.CampaignRename.class);
+            problem = campaign.rename(rename.name(), rename.to());
         } else {
-            tell(conquest.bar());
-            tell(conquest.state(List.of()));
-            final ToBrowser.ConquestReward pending = conquest.reward();
+            campaign.delete(Wire.decode(msg, FromBrowser.CampaignDelete.class).name());
+        }
+        channel.send(campaign.saves());
+        // The start page's Resume names the save played last
+        channel.send(hello());
+        // Last, since the browser forgets an error at every hello
+        if (problem != null) {
+            channel.send(error(problem));
+        }
+    }
+
+    /** What the campaign stage draws from: the saved games, or the open one's pages and any reward yet to be shown. */
+    private void sendCampaign() {
+        if (!(stage instanceof InCampaign c)) {
+            return;
+        }
+        final Campaign campaign = campaign(c.mode());
+        if (c.save() == null) {
+            tell(campaign.saves());
+        } else {
+            campaign.page().forEach(this::tell);
+            final Record pending = campaign.reward();
             if (pending != null) {
                 tell(pending);
             }
         }
     }
 
-    private void conquestBattle(final BrowserChannel channel) {
-        // A reward still to be shown may end in a chaos battle, which comes before any other
-        if (!(stage instanceof Conquest c) || c.save() == null || conquest.reward() != null) {
-            return;
-        }
-        final String problem = conquest.battleProblem();
-        if (problem != null) {
-            channel.send(error(problem));
-            return;
-        }
-        startConquestBattle(conquest.battle());
-    }
-
-    private void startConquestBattle(final ConquestBattle battle) {
-        startCampaignMatch(() -> FModel.getConquest().prepareBattle(battle, null), () -> onCampaign(this::conquestGameOver),
-                () -> FModel.getConquest().cancelBattle());
-    }
-
     /** Starts a match a campaign built, over netplay. Leaving it returns to the campaign's page. failed undoes what preparing it did. */
-    private void startCampaignMatch(final Supplier<PreparedMatch> prepare, final Runnable gameOver, final Runnable failed) {
+    private void startCampaignMatch(final Supplier<PreparedMatch> prepare, final Runnable failed) {
         final Stage from = stage;
-        if (!(from instanceof Conquest back)) {
+        if (!(from instanceof InCampaign back)) {
             return;
         }
         // Saved before the match so HostedMatch never reaches the first-run name prompt
@@ -1467,7 +1348,7 @@ public final class WebSession {
         if (b != null) {
             playing.gui().attach(b);
         }
-        playing.gui().onGameOver(gameOver);
+        playing.gui().onGameOver(() -> onCampaign(this::campaignGameOver));
         try {
             final PreparedMatch prepared = prepare.get();
             if (prepared == null) {
@@ -1482,17 +1363,18 @@ public final class WebSession {
             local.endMatch();
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
-            sendConquest();
+            sendCampaign();
         }
     }
 
-    /** A game of the battle ended: recorded and rewarded here, where the game ran, so the browser decides nothing. */
-    private void conquestGameOver() {
-        final HostedMatch match = local.hostedMatch();
-        // The browser's own view will not do: who won the match is read from its Match, which a netplay client's lacks
-        final ToBrowser.ConquestResult result = conquest.gameOver(match == null ? null : match.getGameView());
-        if (result != null) {
-            tell(result);
+    /** A game of the campaign's match ended: recorded and rewarded where the game ran, so the browser decides nothing. */
+    private void campaignGameOver() {
+        if (stage instanceof Playing p && p.back() instanceof InCampaign c) {
+            final HostedMatch match = local.hostedMatch();
+            final Record result = campaign(c.mode()).gameOver(match == null ? null : match.getGameView());
+            if (result != null) {
+                tell(result);
+            }
         }
     }
 
@@ -1638,14 +1520,13 @@ public final class WebSession {
         final BrowserChannel b = browser;
         if (playing.back() != null) {
             stopGauntlet();
-            if (playing.back() instanceof Conquest) {
-                FModel.getConquest().finishBattle();
-                conquest.left();
+            if (playing.back() instanceof InCampaign c) {
+                campaign(c.mode()).left();
             }
             local.endMatch();
             if (move(from, playing.back()) && b != null) {
-                if (playing.back() instanceof Conquest) {
-                    onCampaign(this::sendConquest);
+                if (playing.back() instanceof InCampaign) {
+                    onCampaign(this::sendCampaign);
                 } else {
                     sendLimited(b);
                 }
