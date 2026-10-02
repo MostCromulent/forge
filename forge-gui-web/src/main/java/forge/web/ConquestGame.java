@@ -70,6 +70,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -104,7 +105,8 @@ final class ConquestGame {
             }
             final File file = new File(data.getDirectory(), "data.xml");
             rows.add(new ConquestSave(data.getName(), data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false),
-                    planeName(data.getCurrentPlane()), art(data.getCurrentPlane()), data.getProgress(), data.getUnlockedCardCount(), data.getAEtherShards(),
+                    planeName(data.getCurrentPlane()), art(data.getCurrentPlane()), data.getCurrentPlaneData().getConqueredCount(),
+                    data.getCurrentPlane().getEventCount(), data.getUnlockedCardCount(), data.getAEtherShards(),
                     data.getPlaneswalkEmblems(),
                     file.exists() ? LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString() : null));
         }
@@ -188,6 +190,10 @@ final class ConquestGame {
         return null;
     }
 
+    /** By name, with the rebalanced cards last: nowhere has a picture of one, so they are not what a list opens on. */
+    private static final Comparator<ConquestCardOption> PICTURED_FIRST = Comparator
+            .comparing((ConquestCardOption c) -> c.name().startsWith("A-")).thenComparing(ConquestCardOption::name);
+
     /** What a new conquest may start with. Finding the planeswalkers reads every card, so this is not for the socket thread. */
     static ConquestOptions options(final String planeName, final String commanderName) {
         final List<ConquestPlaneOption> planes = new ArrayList<>();
@@ -211,6 +217,7 @@ final class ConquestGame {
                 }
                 commanders.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), region));
             }
+            commanders.sort(PICTURED_FIRST);
             commander = named(plane.getCommanders(), commanderName);
         }
         if (commander != null) {
@@ -218,7 +225,7 @@ final class ConquestGame {
             for (final PaperCard card : ConquestUtil.getStartingPlaneswalkerOptions(commander)) {
                 walkers.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), null));
             }
-            walkers.sort((a, b) -> a.name().compareTo(b.name()));
+            walkers.sort(PICTURED_FIRST);
         }
         return new ConquestOptions(planes, commanders, walkers, FModel.getConquestPreferences().getPrefInt(CQPref.AETHER_START_SHARDS),
                 plane == null ? null : planeName, commander == null ? null : commanderName);
@@ -364,9 +371,7 @@ final class ConquestGame {
             walkers.add(new ConquestWalkerRow(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()),
                     card.equals(data.getPlaneswalker())));
         }
-        final ConquestData.Stats stats = data.getStats(null);
-        return new ConquestParty(commanders, walkers, ConquestData.formatRatio(stats.commanders(), stats.allCommanders()),
-                ConquestData.formatRatio(stats.planeswalkers(), stats.allPlaneswalkers()));
+        return new ConquestParty(commanders, walkers);
     }
 
     /** Makes an owned planeswalker the one travelled as. False when the conquest owns none of that name. */

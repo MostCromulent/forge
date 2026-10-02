@@ -44,7 +44,7 @@ export function mountWheel(host: HTMLElement, labels: Record<WheelOutcome, strin
   host.innerHTML = `<div class="cq-dl">
     <div class="cq-dl-glow"></div><div class="cq-dl-rim"></div>
     <div class="cq-dl-spin"><div class="cq-dl-disc" style="background: conic-gradient(from -22.5deg, ${stops})"></div>${
-      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-ic">${ICONS[o]}</div><span></span></div>`).join('')
+      WHEEL_SPOTS.map((o, i) => `<div class="cq-dl-wedge${i > 2 && i < 6 ? ' low' : ''}" style="transform: rotate(${45 * i}deg)"><div class="cq-dl-ic">${ICONS[o]}</div><span></span></div>`).join('')
     }</div>
     <div class="cq-dl-flare"></div><div class="cq-dl-hub">${LINES.chaos}</div><div class="cq-dl-needle"></div>
   </div>`;

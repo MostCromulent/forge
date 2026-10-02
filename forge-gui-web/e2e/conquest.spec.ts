@@ -68,8 +68,11 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(reveal.locator('.cq-wheel-first')).toBeVisible();
   // Nothing behind the reveal can be reached, so the reward is gone through to its end
   const back = page.locator('.cq-shell .page-head button', { hasText: 'Back' });
-  await back.focus();
-  expect(await back.evaluate(el => el === document.activeElement)).toBe(false);
+  // The page's own frame follows the reveal's by one, so this is asked until it holds
+  await expect(async () => {
+    await back.focus();
+    expect(await back.evaluate(el => el === document.activeElement)).toBe(false);
+  }).toPass({ timeout: 2000 });
   // The balances stay in view over it, and the emblem of the first conquest has reached them
   const emblems = page.locator('.cq-purse .cq-coin').nth(1);
   await expect(emblems.locator('b')).toHaveText('2');
@@ -139,8 +142,9 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await page.locator('.cq-pick-row').first().click();
   await expect(page.locator('.stp.done')).toHaveCount(2);
   await page.locator('.cq-pick-row').first().click();
+  // Start is dim until there is a name, and takes it as typed
+  await expect(page.locator('.ticket-foot .primary')).toBeDisabled();
   await page.locator('.stp-open input[type=text]').fill('Probe conquest');
-  await page.locator('.stp-open').getByRole('button', { name: 'Continue' }).click();
   await page.locator('.ticket-foot .primary').click();
   await expect(page.locator('.cq-id b')).toHaveText('Probe conquest', { timeout: 30_000 });
   await expect(page.locator('.cq-tile.open')).toHaveCount(1);

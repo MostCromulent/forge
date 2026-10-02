@@ -149,9 +149,9 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
             <div>
               <div class="cname">{c.name} <span class="cost"><SymbolText text={c.cost} /></span></div>
               {c.problem && <div class="flag">! {c.problem}</div>}
-              <p class="cnote">{state.identity
+              {!kept && <p class="cnote">{state.identity
                 ? t('lblWebEditorIdentityNote', state.identity.split('').join(' '))
-                : t('lblWebEditorIdentityColourlessNote')}</p>
+                : t('lblWebEditorIdentityColourlessNote')}</p>}
             </div>
             {!kept && <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>}
           </div>

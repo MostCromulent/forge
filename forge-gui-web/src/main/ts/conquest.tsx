@@ -21,8 +21,12 @@ import type { Model } from './model';
 import type { ConquestBar, ConquestSave } from './protocol';
 import { t, type TextKey } from './text';
 
+/** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the map. */
+const BALANCE_ICONS = ['IMG_AETHER_SHARD', 'IMG_PW_BADGE_COMMON'];
+
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.conquest !== null;
+  useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = conquestIconUrl(icon); }, []);
   // The form that starts a conquest takes the shelf's place, and gives it back when left or when its conquest opens
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (open) setCreating(false); }, [open]);
@@ -81,7 +85,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
       {saves.map(s => (
         <article key={s.name} class={s.name === current ? 'ev cq-save current' : 'ev cq-save'}>
           <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
-            <img class="cq-medal" alt="" src={imageUrl(s.walkerImage)} />
+            <img class="cq-medal" alt="" src={artUrl(s.walkerImage)} onError={e => { e.currentTarget.hidden = true; }} />
           </div>
           <div class="ev-top">
             {renaming === s.name
@@ -102,9 +106,9 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
             <span class="sub">{s.planeswalker} - {s.plane}</span>
           </div>
           <div class="ev-mid">
-            <div class="cq-pbar"><i style={{ width: s.progress }} /></div>
+            <div class="cq-pbar"><i style={{ width: `${s.total ? 100 * s.conquered / s.total : 0}%` }} /></div>
             <span class="ev-line dim">
-              <b class="pct">{s.progress}</b>
+              <b class="pct">{s.conquered} / {s.total}</b>
               <span class="sp" />
               {t('lblWebConquestCards', s.cards)}
               <Purse icon="IMG_AETHER_SHARD" n={s.shards} label={t('lblAetherShards')} />

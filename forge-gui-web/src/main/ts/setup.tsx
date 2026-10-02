@@ -63,13 +63,15 @@ export interface Ticket<V> {
   note: string;
 }
 
-export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy, ticket }: {
+/** ready, when given, says the form can be sent although its last step is still open: a name typed but not yet entered. */
+export function StepForm<V>({ title, steps, value, onChange, sentence, action, submit, problem, busy, ticket, ready }: {
   title?: string; steps: Step<V>[]; value: V; onChange: (v: V) => void; sentence?: (v: V) => string;
   action: string | ((v: V) => string); submit: () => void; problem?: JSX.Element | null; busy?: boolean; ticket?: Ticket<V>;
+  ready?: boolean;
 }) {
   const open = openStep(steps, value);
   const label = typeof action === 'string' ? action : action(value);
-  const button = <button class={ticket ? 'primary big' : 'primary'} disabled={busy || open !== null} onClick={submit}>{busy ? t('lblWebSetupOpening') : label}</button>;
+  const button = <button class={ticket ? 'primary big' : 'primary'} disabled={busy || !(ready ?? open === null)} onClick={submit}>{busy ? t('lblWebSetupOpening') : label}</button>;
   const questions = <Questions steps={steps} value={value} onChange={onChange} title={title} />;
   if (ticket) {
     return (
@@ -584,7 +586,7 @@ function PackCount({ extra, done }: { extra: boolean; done: (n: number) => void 
   );
 }
 
-export function TextStep({ placeholder, initial, done }: { placeholder: string; initial: string; done: (text: string) => void }) {
+function TextStep({ placeholder, initial, done }: { placeholder: string; initial: string; done: (text: string) => void }) {
   const [text, setText] = useState(initial);
   const ok = text.trim().length > 0;
   return (

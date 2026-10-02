@@ -5,16 +5,18 @@ import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
 import { imageUrl } from './images';
 import { Pip, Pips } from './symbols';
-import { StepForm, TextStep, type Step, type Ticket } from './setup';
+import { StepForm, type Step, type Ticket } from './setup';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ConquestCardOption, ConquestOptions, ConquestPlaneOption } from './protocol';
 import { t } from './text';
 
-interface NewValue { plane?: string; commander?: string; planeswalker?: string; name?: string }
+interface NewValue { plane?: string; commander?: string; planeswalker?: string }
 
 export function NewConquest({ model, actions }: { model: Model; actions: Actions }) {
   const [value, setValue] = useState<NewValue>({});
+  // The name is the last thing asked and is typed, not picked: Start takes it as it stands, with no step to close first
+  const [name, setName] = useState('');
   // Making a conquest builds its first deck; until the map or an error answers, a second click would make another
   const [busy, setBusy] = useState(false);
   // An error from before the form was opened is the shelf's, and is not this form's to show
@@ -26,6 +28,13 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   // A list answers the plane or the commander it was asked for, and an older answer is not shown for a newer choice
   const commanders = options.plane === value.plane ? options.commanders ?? null : null;
   const walkers = options.plane === value.plane && options.commander === value.commander ? options.planeswalkers ?? null : null;
+  const ready = !!value.planeswalker && name.trim().length > 0;
+  const start = () => {
+    if (!ready || busy) return;
+    setBusy(true);
+    setSent(true);
+    actions.conquestCreate({ name: name.trim(), plane: value.plane!, commander: value.commander!, planeswalker: value.planeswalker! });
+  };
   const steps: Step<NewValue>[] = [
     {
       id: 'plane', label: t('lblWebConquestStartingPlane'), short: t('lblPlane'), hint: '', fields: ['plane'],
@@ -43,14 +52,18 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
       render: (_, set) => <CardPick rows={walkers} pick={planeswalker => set({ planeswalker })} />,
     },
     {
-      id: 'name', label: t('lblHistoriiansWillRecallYourConquestAs'), short: t('lblConquestName'), hint: '', fields: ['name'],
-      answer: v => v.name ?? null,
-      render: (v, set) => <TextStep placeholder={t('lblConquestName')} initial={v.name ?? ''} done={name => set({ name })} />,
+      id: 'name', label: t('lblHistoriiansWillRecallYourConquestAs'), short: t('lblConquestName'), hint: '', fields: [],
+      answer: () => null,
+      render: () => (
+        <form class="rows" onSubmit={e => { e.preventDefault(); start(); }}>
+          <input type="text" placeholder={t('lblConquestName')} maxLength={60} autoFocus value={name} onInput={e => setName(e.currentTarget.value)} />
+        </form>
+      ),
     },
   ];
   const ticket: Ticket<NewValue> = {
     kicker: t('lblWebConquestNew'),
-    title: v => v.name ?? v.plane ?? t('lblPlanarConquest'),
+    title: v => name.trim() || v.plane || t('lblPlanarConquest'),
     picture: v => <Picture value={v} options={options} />,
     rows: v => [[t('lblPlane'), v.plane ?? null], [t('lblCommander'), v.commander ?? null], [t('lblPlaneswalker'), v.planeswalker ?? null],
       [t('lblStartingShards'), options.startShards.toLocaleString('en-GB')]],
@@ -58,13 +71,8 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   };
   return (
     <div class="setup cq-new">
-      <StepForm steps={steps} value={value} onChange={setValue} ticket={ticket} action={t('lblStart')} busy={busy}
-        problem={sent && model.error ? <span class="sentence taken">{model.error}</span> : null}
-        submit={() => {
-          setBusy(true);
-          setSent(true);
-          actions.conquestCreate({ name: value.name!, plane: value.plane!, commander: value.commander!, planeswalker: value.planeswalker! });
-        }} />
+      <StepForm steps={steps} value={value} onChange={setValue} ticket={ticket} action={t('lblStart')} busy={busy} ready={ready}
+        problem={sent && model.error ? <span class="sentence taken">{model.error}</span> : null} submit={start} />
     </div>
   );
 }
@@ -76,13 +84,23 @@ function Picture({ value, options }: { value: NewValue; options: ConquestOptions
   if (commander) {
     return (
       <div class="cq-ticket-cards">
-        <img alt={commander.name} src={imageUrl(commander.image)} />
-        {walker && <img alt={walker.name} src={imageUrl(walker.image)} />}
+        <TicketCard card={commander} />
+        {walker && <TicketCard card={walker} />}
       </div>
     );
   }
   const plane = options.planes.find(p => p.name === value.plane);
   return plane ? <div class="cq-ticket-art" style={{ backgroundImage: `url("${artUrl(plane.art)}")` }} /> : null;
+}
+
+/** A chosen card on the ticket. Its name stands in its place until its picture arrives, and when it has none. */
+function TicketCard({ card }: { card: ConquestCardOption }) {
+  return (
+    <span class="cq-pic" key={card.name}>
+      <span class="nm">{card.name}</span>
+      <img alt="" src={imageUrl(card.image)} onError={e => { e.currentTarget.hidden = true; }} />
+    </span>
+  );
 }
 
 /** The planes as tiles; the one pointed at says what it is underneath. */

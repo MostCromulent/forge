@@ -72,7 +72,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
           <input class="find" type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
         </FilterBar>
         <section>
-          <h4>{t('lblCommanders')}<span>{party.commanderCount}</span></h4>
+          <h4>{t('lblCommanders')}<span>{party.commanders.length}</span></h4>
           <div class="cq-cmd-grid">
             {commanders.map(c => <Plate key={c.name} name={c.name} image={c.image} colors={c.colors} selected={c.selected}
               pressed={c === commander} pick={() => setChosen({ walker: false, name: c.name })}
@@ -80,7 +80,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
           </div>
         </section>
         <section>
-          <h4>{t('lblPlaneswalkers')}<span>{party.walkerCount}</span></h4>
+          <h4>{t('lblPlaneswalkers')}<span>{party.planeswalkers.length}</span></h4>
           <div class="cq-cmd-grid">
             {walkers.map(w => <Plate key={w.name} name={w.name} image={w.image} colors={w.colors} selected={w.selected}
               pressed={w === walker} pick={() => setChosen({ walker: true, name: w.name })} lines={[t('lblPlaneswalker')]} />)}
@@ -91,7 +91,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
         : commander && (
           <aside class="cq-side">
             <div class="cq-cmd-detail">
-              <img class="card" alt={commander.name} src={imageUrl(commander.image)} />
+              <img class="cq-card" alt={commander.name} src={imageUrl(commander.image)} />
               <h3>{commander.name}</h3>
               <div class="cq-chips">
                 {commander.origin && <span class="cq-chip">{commander.origin}</span>}
@@ -146,7 +146,7 @@ function WalkerPanel({ walker, actions }: { walker: ConquestWalkerRow; actions: 
   return (
     <aside class="cq-side">
       <div class="cq-cmd-detail">
-        <img class="card" alt={walker.name} src={imageUrl(walker.image)} />
+        <img class="cq-card" alt={walker.name} src={imageUrl(walker.image)} />
         <h3>{walker.name}</h3>
         <div class="cq-chips"><span class="cq-chip">{t('lblPlaneswalker')}</span></div>
       </div>

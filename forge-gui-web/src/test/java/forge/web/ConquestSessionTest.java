@@ -843,7 +843,12 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(planes.get("startShards").getAsInt() > 0);
         host.forget();
         sessions.onMessage(host, message("conquestOptions", "plane", "Zendikar"));
-        final String commander = names(host.awaitMatching("conquestOptions", o -> o.has("commanders"), "the plane's commanders were not sent"), "commanders").get(0);
+        final List<String> commanders = names(host.awaitMatching("conquestOptions", o -> o.has("commanders"), "the plane's commanders were not sent"), "commanders");
+        // A rebalanced card has no picture anywhere, so it is offered after every card that has one
+        final List<String> pictured = commanders.stream().filter(n -> !n.startsWith("A-")).toList();
+        Assert.assertTrue(pictured.size() < commanders.size(), "Zendikar has no rebalanced commander to tell the order by");
+        Assert.assertEquals(commanders.subList(0, pictured.size()), pictured, "a rebalanced commander is listed before one with a picture");
+        final String commander = commanders.get(0);
         host.forget();
         sessions.onMessage(host, message("conquestOptions", "plane", "Zendikar", "commander", commander));
         final String walker = names(host.awaitMatching("conquestOptions", o -> o.has("planeswalkers"), "the commander's planeswalkers were not sent"), "planeswalkers").get(0);
@@ -1079,5 +1084,26 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(ConquestGame.find("../saves/" + folder));
         Assert.assertNull(ConquestGame.find("..\\saves\\" + folder));
         Assert.assertNull(ConquestGame.find(folder + "/."));
+    }
+
+    // Fails if a rebalanced card, which has no picture of its own, is not drawn with the art of the card it rebalances,
+    // or a card that has its own art is given another's
+    @Test
+    public void aRebalancedCardWearsItsOriginalsArt() {
+        final PaperCard rebalanced = FModel.getMagicDb().getCommonCards().getCard("A-Phylath, World Sculptor");
+        Assert.assertTrue(rebalanced.isRebalanced());
+        final PaperCard original = forge.util.ImageUtil.getPaperCardFromImageKey(WebServer.artKey(rebalanced.getImageKey(false)));
+        Assert.assertEquals(original.getName(), "Phylath, World Sculptor");
+        Assert.assertEquals(original.getEdition(), rebalanced.getEdition());
+        Assert.assertEquals(WebServer.artKey(original.getImageKey(false)), original.getImageKey(false));
+    }
+
+    // Fails if a saved conquest's card does not say how much of the plane it stands on is conquered
+    @Test
+    public void aSaveSaysWhatIsConqueredOnItsPlane() throws Exception {
+        final ConquestData data = ConquestFixture.install();
+        final ToBrowser.ConquestSave save = ConquestGame.saves().saves().stream().filter(s -> s.name().equals(data.getName())).findFirst().orElseThrow();
+        Assert.assertEquals(save.conquered(), 1);
+        Assert.assertEquals(save.total(), 54);
     }
 }

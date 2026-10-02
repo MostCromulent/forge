@@ -620,8 +620,11 @@ final class ToBrowser {
     record ConquestSaves(List<ConquestSave> saves, @Nullable String current) {
     }
 
-    /** One save as its card shows it. art is its plane's picture, and saved the day its file last changed, as yyyy-MM-dd. */
-    record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String art, String progress, int cards,
+    /**
+     * One save as its card shows it. art is its plane's picture, conquered and total count the events of that plane,
+     * and saved is the day its file last changed, as yyyy-MM-dd.
+     */
+    record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String art, int conquered, int total, int cards,
             int shards, int emblems, @Nullable String saved) {
     }
 
@@ -684,10 +687,8 @@ final class ToBrowser {
     record ConquestWalkerRow(String name, String image, String colors, boolean selected) {
     }
 
-    /** commanderCount and walkerCount are those found against all there are, as mobile's statistics write them. */
     @Message("conquestParty")
-    record ConquestParty(List<ConquestCommanderRow> commanders, List<ConquestWalkerRow> planeswalkers, String commanderCount,
-            String walkerCount) {
+    record ConquestParty(List<ConquestCommanderRow> commanders, List<ConquestWalkerRow> planeswalkers) {
     }
 
     /** The Collection page's two lists by size, the planes its filter offers, and mobile's line on what exile pays. */

@@ -26,8 +26,10 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const ask = (patch: Partial<Pick<ConquestAetherState, 'colors' | 'type' | 'rarity' | 'cmc'>>, pull = false) =>
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
   const toggle = (letter: string) => ask({ colors: COLOURS.map(([c]) => c).filter(c => (c === letter) !== a.colors.includes(c)).join('') });
+  // The price is on the button, so a pull that cannot be paid for is not offered
+  const short = a.cost > (model.conquestBar?.shards ?? 0);
   const pull = (
-    <button class="primary cq-ae-pull" disabled={!a.cost || !a.strict} onClick={() => ask({}, true)}>
+    <button class="primary cq-ae-pull" disabled={!a.cost || !a.strict || short} onClick={() => ask({}, true)}>
       {t('lblWebConquestPull')}<span class="dot">·</span>{shard(18)}{a.cost.toLocaleString('en-GB')}
     </button>
   );
@@ -64,7 +66,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
               {pull}
             </div>
           )}
-        {a.problem && <p class="cq-warn">{a.problem}</p>}
+        {(a.problem || (short && a.cost > 0)) && <p class="cq-warn">{a.problem ?? t('lblWebConquestTooFewShards')}</p>}
         <div class="cq-ae-count">{a.matching.toLocaleString('en-GB')} / {a.locked.toLocaleString('en-GB')}</div>
         <div class="cq-ae-recent">
           {recent.map((c, i) => <button key={`${c.image}:${recent.length - i}`} title={c.name} onClick={() => setZoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>)}

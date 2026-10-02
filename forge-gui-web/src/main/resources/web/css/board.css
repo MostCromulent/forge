@@ -221,7 +221,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* The name and hand sit together beside the portrait, centred on it */
 .seat:not(.compact) .player-id { grid-template-columns: auto auto; grid-template-rows: 1fr auto auto 1fr; column-gap: 12px; row-gap: 0; align-items: center; justify-items: start; }
 .seat:not(.compact) .player-id .avatar { grid-row: 1 / 5; }
-.seat:not(.compact) .player-id .name { grid-row: 2; font-weight: 700; font-size: 15px; }
+.seat:not(.compact) .player-id .name { grid-row: 2; font-weight: 700; font-size: 15px; max-width: 230px; }
 .seat:not(.compact) .player-id .hand-fan { grid-row: 3; margin-left: -4px; }
 #opponent.seat { position: relative; }
 #opponent.seat .player { position: absolute; left: 12px; top: 10px; z-index: 6; }

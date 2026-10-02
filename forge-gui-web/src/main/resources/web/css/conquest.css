@@ -272,7 +272,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cmd[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
 .cq-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
 .cq-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
-.cq-cmd-detail img.card { width: 216px; aspect-ratio: 63 / 88; border-radius: 11px; justify-self: center; box-shadow: 0 12px 30px #000b; }
+.cq-cmd-detail img.cq-card { width: 216px; aspect-ratio: 63 / 88; border-radius: 11px; justify-self: center; box-shadow: 0 12px 30px #000b; }
 .cq-cmd-detail h3 { margin: 0; font-size: 18px; }
 .cq-cmd-detail .dk-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; overflow: visible; }
 .cq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -287,7 +287,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-coll-note { font-size: 12.5px; color: var(--muted); margin-left: auto; }
 .cq-coll-grid { flex: 1; overflow-y: auto; padding: 18px 24px 130px; display: grid; grid-template-columns: repeat(auto-fill, 148px); gap: 16px 14px; justify-content: center; align-content: start; }
 .cq-cc { position: relative; padding: 0; border: 0; background: none; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; text-align: left; color: var(--text); }
-.cq-cc:disabled { opacity: 1; cursor: default; }
+.cq-cc[aria-disabled="true"] { cursor: help; }
 /* The name shows until the picture has arrived, and when there is none */
 .cq-cc .cq-pic { position: relative; display: block; flex: none; width: 100%; aspect-ratio: 63 / 88; border-radius: 7px; background: var(--surface-2); box-shadow: 0 4px 12px #0009; overflow: hidden; }
 .cq-cc .cq-pic .nm { position: absolute; left: 9px; right: 9px; top: 9px; font-size: 12px; color: var(--muted); }
@@ -343,7 +343,9 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pick-row:hover b { color: var(--accent-2); }
 .cq-ticket-art { margin: 0 18px 10px; height: 120px; border-radius: 9px; border: 1px solid var(--line); background: #111 center 35% / cover; }
 .cq-ticket-cards { margin: 0 18px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.cq-ticket-cards img { width: 100%; aspect-ratio: 63 / 88; border-radius: 6px; background: var(--surface-2); }
+.cq-ticket-cards .cq-pic { position: relative; aspect-ratio: 63 / 88; border-radius: 6px; background: var(--surface-2); overflow: hidden; }
+.cq-ticket-cards .cq-pic .nm { position: absolute; left: 8px; right: 8px; top: 8px; font-size: 11.5px; color: var(--muted); }
+.cq-ticket-cards .cq-pic img { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .cq-purse > button { font-size: 12.5px; padding: 5px 12px; }
 .dot { opacity: .5; margin: 0 8px; }
@@ -425,3 +427,10 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-pref { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
 .cq-pref input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
 .cq-pref.bad input { border-color: var(--select); }
+
+/* A wedge on the dial's lower half is read from outside the dial, so its icon and label are turned the right way up */
+.cq-dl-wedge.low > * { transform: rotate(180deg); }
+.cq-dl-wedge.low { align-content: start; }
+.cq-dl-wedge.low .cq-dl-ic { order: 2; }
+/* A picture still on its way leaves a quiet surface, not a hole */
+.cq-art, .cq-face2, .cq-you i { background-color: var(--surface-2); }

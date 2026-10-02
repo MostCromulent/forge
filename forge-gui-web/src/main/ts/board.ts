@@ -238,6 +238,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   root.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(player)));
   showLife(q(root, '.life'), avatar, player.Life ?? 0, isLocal(model, player));
   q(root, '.name .who').textContent = player.Name ?? '';
+  q(root, '.name').title = player.Name ?? '';
   // Out of the game: the seat stays where it was, greyed, with a skull by the name
   root.classList.toggle('out', !!player.HasLost);
   root.classList.toggle('turn', game(model)?.PlayerTurn?.ref === player.$key);

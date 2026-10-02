@@ -1,6 +1,5 @@
 // Where avatar and sleeve pictures come from, for players and for the lobby's pickers.
 
-import { imageUrl } from './images';
 import type { PlayerView } from './protocol';
 
 // Avatars and sleeves are numbered cells of the skin's sprite sheets, the same numbers desktop stores
@@ -8,9 +7,10 @@ export const avatarUrl = (index: number): string => `avatar?i=${index}`;
 export const sleeveUrl = (index: number): string => `sleeve?i=${index}`;
 
 // Packets leave out values still at their default, so a missing index means 0; -1 means none.
-// A card-art avatar, when the player has one, wins over the sprite
+// A card-art avatar, when the player has one, wins over the sprite. It is the card's art alone: the whole card, cut
+// to a circle, is its frame and a line of its text
 export function playerAvatarUrl(player: PlayerView): string {
-  if (player.AvatarCardImageKey) return imageUrl(player.AvatarCardImageKey);
+  if (player.AvatarCardImageKey) return `/sleeveart?key=${encodeURIComponent(player.AvatarCardImageKey)}`;
   const index = player.AvatarIndex ?? 0;
   return index >= 0 ? avatarUrl(index) : '';
 }

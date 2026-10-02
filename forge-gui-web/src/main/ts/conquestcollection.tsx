@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';
 import { Pip } from './symbols';
+import { showNotice } from './notices';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { CatalogueRow } from './protocol';
@@ -104,7 +105,8 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
         {page && page.total === 0 && <p class="none-found">{t('lblWebCatalogueNoMatchHint')}</p>}
         {rows.map(row => (
           <button key={row.image} class={`cq-cc${picked.has(row.image) ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
-            aria-pressed={picked.has(row.image)} disabled={!!row.problem} onClick={() => toggle(row)}>
+            aria-pressed={picked.has(row.image)} aria-disabled={!!row.problem}
+            onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(row))}>
             <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
             {row.isNew && <span class="new-card">{t('lblNew')}</span>}
             {row.problem && <span class="inuse">{t('lblWebConquestInUse')}</span>}

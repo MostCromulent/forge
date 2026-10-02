@@ -5,6 +5,7 @@ import com.google.gson.JsonParser;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import forge.ImageKeys;
+import forge.StaticData;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -213,9 +214,23 @@ public final class WebServer implements AutoCloseable {
         return file != null && file.isFile() && isImage(file) ? file : null;
     }
 
+    /** The key whose art a card is drawn with: its own, or for a rebalanced card, which has no picture, that of the card it rebalances. */
+    static String artKey(final String imageKey) {
+        if (!imageKey.startsWith(ImageKeys.CARD_PREFIX) || !safeImageKey(imageKey)) {
+            return imageKey;
+        }
+        final PaperCard card = ImageUtil.getPaperCardFromImageKey(imageKey);
+        if (card == null || !card.isRebalanced() || !card.getName().startsWith("A-")) {
+            return imageKey;
+        }
+        final PaperCard original = StaticData.instance().getCommonCards().getCard(card.getName().substring(2), card.getEdition());
+        return original == null ? imageKey : original.getImageKey(imageKey.endsWith(ImageKeys.BACKFACE_POSTFIX));
+    }
+
     /** As {@link #serveImage}: never wait on the download here, or the thread that serves every other
      *  request waits with it. */
-    private void serveSleeveArt(final ChannelHandlerContext ctx, final String key) throws IOException {
+    private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
+        final String key = artKey(asked);
         final File cached = SleeveArtCache.file(key);
         if (cached != null) {
             respondImage(ctx, cached);
