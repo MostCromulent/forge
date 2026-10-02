@@ -660,6 +660,21 @@ public class ConquestSessionTest extends SessionsTest {
         return names;
     }
 
+    // Fails if a conquest's messages are answered out of the order they were sent, as work on separate threads allows
+    @Test(timeOut = 120_000)
+    public void messagesAreAnsweredInTheOrderSent() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        host.forget();
+        sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
+                "sort", "name", "offset", 0, "showAll", true, "source", "collection"));
+        sessions.onMessage(host, JsonCodec.message("conquestCollection"));
+        host.awaitMatching("catalogue", c -> true, "the collection was not listed");
+        host.awaitMatching("conquestCollection", c -> true, "the collection was not counted");
+        final List<String> types = new ArrayList<>();
+        host.got.forEach(m -> types.add(m.get("t").getAsString()));
+        Assert.assertTrue(types.indexOf("catalogue") < types.indexOf("conquestCollection"), "the later message was answered first: " + types);
+    }
+
     // Fails if a card a deck uses can be exiled, or a free card's exile and retrieval do not pay, charge and move it between the lists
     @Test(timeOut = 120_000)
     public void exileAndRetrieveOverTheWire() throws Exception {
