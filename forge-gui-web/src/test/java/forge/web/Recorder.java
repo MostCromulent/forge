@@ -15,9 +15,14 @@ final class Recorder implements BrowserChannel {
     final List<JsonObject> got = new CopyOnWriteArrayList<>();
     /** Whether the server closed this browser's connection, as it does one past its limit. */
     volatile boolean closed;
+    /** The newest hello, kept when the rest is forgotten: where the session stands. */
+    volatile JsonObject hello;
 
     @Override
     public void send(final JsonObject message) {
+        if ("hello".equals(message.get("t").getAsString())) {
+            hello = message;
+        }
         got.add(message);
     }
 

@@ -417,20 +417,52 @@ public class ConquestSessionTest extends SessionsTest {
     @Test
     public void anUnreadableSaveDoesNotHideTheOthers() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final String broken = ConquestFixture.broken();
+        final String broken = ConquestFixture.broken("<data><planeswalker>nothing a card database knows</planeswalker>");
+        // A card with no name stops the reading there, after the planeswalker and the place and before the planes
+        final String halfRead = ConquestFixture.broken("<data><planeswalker art=\"1\" name=\"A-Ellywick Tumblestrum\" set=\"AFR\"/>"
+                + "<currentLocation col=\"0\" plane=\"Zendikar\" regionIndex=\"0\" row=\"0\"/>"
+                + "<unlockedCards><card art=\"1\" name=\"\" set=\"C16\"/></unlockedCards></data>");
         final List<String> names = ConquestGame.saves().saves().stream().map(s -> s.name()).toList();
         Assert.assertTrue(names.contains(data.getName()), "the readable save is not listed");
         Assert.assertFalse(names.contains(broken), "a save with no planeswalker or place is listed");
+        Assert.assertFalse(names.contains(halfRead), "a save with no planes is listed");
     }
 
     private Recorder editor;
 
-    // The session outlives a test, and an editor left open would be shown to the next one's browser
+    // The session outlives a test, so an open editor or a conquest the cleanup removes would be shown to the next one's browser
     @AfterMethod(alwaysRun = true)
-    public void closeTheEditor() {
+    public void leaveTheConquest() throws InterruptedException {
         if (editor != null) {
             sessions.onMessage(editor, JsonCodec.message("editorClose"));
             editor = null;
+        }
+        // A test that reconnects has two browsers that held the host's seat, and only the later one is heard
+        Recorder host = null;
+        for (final Recorder browser : browsers) {
+            if (browser.hello != null && browser.hello.get("host").getAsBoolean()) {
+                host = browser;
+            }
+        }
+        if (host == null) {
+            return;
+        }
+        if (host.hello.get("inMatch").getAsBoolean()) {
+            send(host, JsonCodec.message("leave"));
+            if (host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean()) == null) {
+                return;
+            }
+        }
+        if (str(host.hello, "conquest") != null) {
+            send(host, JsonCodec.message("conquestLeave"));
+            // The shelf reads every save as it opens, and the cleanup must not remove one under that reading
+            if (host.awaitMatching("conquestSaves", saves -> true) == null) {
+                return;
+            }
+        }
+        if (host.hello.get("inConquest").getAsBoolean()) {
+            send(host, JsonCodec.message("conquestLeave"));
+            host.awaitMatching("hello", h -> !h.get("inConquest").getAsBoolean());
         }
     }
 
@@ -734,12 +766,6 @@ public class ConquestSessionTest extends SessionsTest {
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
         sessions.onMessage(host, message("setName", "name", "Host"));
-        // A test that failed in a battle leaves the session in it, and nothing but leaving gets it out
-        final JsonObject hello = host.awaitNewest("hello");
-        if (hello.get("inMatch").getAsBoolean()) {
-            send(host, JsonCodec.message("leave"));
-            host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean(), "the session never left the last test's battle");
-        }
         send(host, message("conquestOpen", "resume", false));
         host.awaitMatching("hello", h -> h.get("inConquest").getAsBoolean() && str(h, "conquest") == null, "the shelf did not open");
         host.awaitMatching("conquestSaves", s -> true, "the conquests were not listed");

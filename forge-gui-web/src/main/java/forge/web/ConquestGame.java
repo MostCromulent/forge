@@ -92,9 +92,9 @@ final class ConquestGame {
         return data != null && readable(data) ? data : null;
     }
 
-    /** A save whose file could not be read is left with nothing in it, and has no page to show. */
+    /** A save whose file could not be read to its end is left without its planes or with nothing at all, and has no page to show. */
     private static boolean readable(final ConquestData data) {
-        return data.getPlaneswalker() != null && data.getCurrentLocation() != null;
+        return data.getPlaneswalker() != null && data.getCurrentLocation() != null && data.getCurrentPlaneData() != null;
     }
 
     /** Whether a folder is the saves folder's own child of exactly that name, however its path was written. */

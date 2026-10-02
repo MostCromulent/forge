@@ -84,11 +84,11 @@ final class ConquestFixture {
     }
 
     /** A save folder whose data cannot be read, by the name it would be listed under. */
-    static String broken() throws IOException {
+    static String broken(final String xml) throws IOException {
         final String name = name();
         final Path dir = Path.of(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
         Files.createDirectories(dir);
-        Files.writeString(dir.resolve("data.xml"), "<data><planeswalker>nothing a card database knows</planeswalker>");
+        Files.writeString(dir.resolve("data.xml"), xml);
         junk.add(dir);
         return name;
     }
