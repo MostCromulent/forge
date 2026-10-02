@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
 import { imageUrl } from './images';
+import { peekAt } from './deckfinder';
 import { Pip, Pips } from './symbols';
 import { StepForm, type Step, type Ticket } from './setup';
 import type { Actions } from './actions';
@@ -20,6 +21,7 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
   const [busy, setBusy] = useState(false);
   // An error from before the form was opened is the shelf's, and is not this form's to show
   const [sent, setSent] = useState(false);
+  const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   useEffect(() => { actions.conquestOptions(value.plane, value.commander); }, [value.plane, value.commander]);
   useEffect(() => setBusy(false), [model.error]);
   const options = model.conquestOptions;
@@ -69,9 +71,10 @@ export function NewConquest({ model, actions }: { model: Model; actions: Actions
     note: '',
   };
   return (
-    <div class="setup cq-new">
+    <div class="setup cq-new" onPointerOver={e => setPeek(peekAt(e, '.cq-new'))} onPointerLeave={() => setPeek(null)}>
       <StepForm steps={steps} value={value} onChange={setValue} ticket={ticket} action={t('lblStart')} busy={busy} ready={ready}
         problem={sent && model.error ? <span class="sentence taken">{model.error}</span> : null} submit={start} />
+      {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
   );
 }
@@ -102,26 +105,41 @@ function TicketCard({ card }: { card: ConquestCardOption }) {
   );
 }
 
-/** The planes as tiles; the one pointed at says what it is underneath. */
+/** One of the choices shown, picked by chance. */
+const anyOf = <T,>(shown: T[]) => shown[Math.floor(Math.random() * shown.length)];
+
+/** The planes as tiles, narrowed by a search; the one pointed at says what it is underneath. */
 function PlaneTiles({ planes, pick }: { planes: ConquestPlaneOption[]; pick: (plane: string) => void }) {
   const [looking, setLooking] = useState<ConquestPlaneOption | null>(null);
+  const [typed, setTyped] = useState('');
+  const words = typed.trim().toLowerCase();
+  const shown = planes.filter(p => p.name.toLowerCase().includes(words));
   return (
-    <>
+    <div class="cq-pick">
+      <input type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
       <div class="cq-plane-grid">
-        {planes.map(p => (
+        {shown.length > 0 && (
+          <button class="cq-plane random" onPointerEnter={() => setLooking(null)} onFocus={() => setLooking(null)} onClick={() => pick(anyOf(shown).name)}>
+            <div class="a">?</div>
+            <b>{t('lblRandom')}</b>
+            <span>{t('lblWebConquestRandomPlane')}</span>
+          </button>
+        )}
+        {shown.map(p => (
           <button key={p.name} class="cq-plane" onPointerEnter={() => setLooking(p)} onFocus={() => setLooking(p)} onClick={() => pick(p.name)}>
             <div class="a" style={{ backgroundImage: `url("${artUrl(p.art)}")` }} />
             <b>{p.name}</b>
             <span>{t('lblWebConquestEvents', p.events)}</span>
           </button>
         ))}
+        {shown.length === 0 && <p class="hint">{t('lblWebSetupNothingMatches')}</p>}
       </div>
       <p class="cq-plane-desc">{looking?.description}</p>
-    </>
+    </div>
   );
 }
 
-/** Commanders or planeswalkers in one column, narrowed by a search. rows is null until the server has answered. */
+/** Commanders or planeswalkers in one column, narrowed by a search; pointing at one shows its card. rows is null until the server has answered. */
 function CardPick({ rows, pick }: { rows: ConquestCardOption[] | null; pick: (name: string) => void }) {
   const [typed, setTyped] = useState('');
   if (!rows) return <p class="hint">{t('lblWebConquestReading')}</p>;
@@ -131,8 +149,14 @@ function CardPick({ rows, pick }: { rows: ConquestCardOption[] | null; pick: (na
     <div class="cq-pick">
       <input type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
       <div class="cq-pick-list">
+        {shown.length > 0 && (
+          <button class="cq-pick-row random" onClick={() => pick(anyOf(shown).name)}>
+            <i>?</i>
+            <b>{t('lblRandom')}</b>
+          </button>
+        )}
         {shown.map(r => (
-          <button key={r.name} class="cq-pick-row" onClick={() => pick(r.name)}>
+          <button key={r.name} class="cq-pick-row" data-image={r.image} onClick={() => pick(r.name)}>
             <i style={{ backgroundImage: `url("${artUrl(r.image)}")` }} />
             <b>{r.name}</b>
             <span class="pips">{r.colors ? <Pips colors={r.colors} /> : <Pip letter="C" />}</span>
