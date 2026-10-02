@@ -34,7 +34,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
       <div class="cq-purse">
         {extra}
         {bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />)}
-        <button onClick={prefs}>{t('lblWebConquestPreferences')}</button>
+        <button onClick={prefs}>{t('lblWebCampaignPreferences')}</button>
       </div>
     </div>
   );
@@ -46,7 +46,7 @@ const amount = (n: number): string => n.toLocaleString('en-GB');
 export function Stats({ model, actions, first }: { model: Model; actions: Actions; first?: string }) {
   const s = model.campaignStats;
   useEffect(() => { actions.campaignStats(first); }, []);
-  if (!s) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
+  if (!s) return <p class="muted pools-wait">{t('lblLoadingEllipsis')}</p>;
   return (
     <div class="cq-stats">
       <div class="cq-stats-head">

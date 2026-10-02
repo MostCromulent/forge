@@ -146,7 +146,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await expect(page.locator('.cq-id b')).toHaveText('Probe conquest', { timeout: 30_000 });
   await expect(page.locator('.cq-tile.open')).toHaveCount(1);
 
-  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back', exact: true }).click();
   const card = (name: string) => page.locator('.cq-save', { hasText: name });
   await card('Probe conquest').locator('.more').click();
   await page.getByRole('menuitem', { name: 'Rename' }).click();
