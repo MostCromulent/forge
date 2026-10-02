@@ -65,6 +65,7 @@ import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
+import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.util.storage.IStorage;
 import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -557,12 +558,16 @@ public final class WebSession {
             case "conquestSelect", "conquestMove" -> {
                 if (stage instanceof Conquest c && c.save() != null) {
                     if ("conquestMove".equals(msg.get("t").getAsString())) {
-                        conquest.move();
+                        // A move with nowhere to go is not answered: a map with no path would end a walk under way
+                        final List<ConquestLocation> walked = conquest.move();
+                        if (walked != null) {
+                            channel.send(conquest.state(walked));
+                        }
                     } else {
                         final FromBrowser.ConquestSelect at = Wire.decode(msg, FromBrowser.ConquestSelect.class);
                         conquest.select(at.region(), at.row(), at.col());
+                        channel.send(conquest.state(List.of()));
                     }
-                    channel.send(conquest.state());
                 }
             }
             // A match is started on the host UI thread, as a table's is
@@ -1350,7 +1355,7 @@ public final class WebSession {
             tell(ConquestGame.saves());
         } else {
             tell(conquest.bar());
-            tell(conquest.state());
+            tell(conquest.state(List.of()));
             final ToBrowser.ConquestReward pending = conquest.reward();
             if (pending != null) {
                 tell(pending);

@@ -645,7 +645,7 @@ final class ToBrowser {
     /**
      * The map. rows is how many steps a region is along and cols how many lanes across. steps is how far the
      * selection is from where the player stands, 0 when it is the same place. path is the move just made, first place
-     * first, and is sent once.
+     * first, and is empty in every map but the one that answers the move.
      */
     @Message("conquestState")
     record ConquestState(String plane, int rows, int cols, List<ConquestRegionRow> regions, List<ConquestCell> cells,

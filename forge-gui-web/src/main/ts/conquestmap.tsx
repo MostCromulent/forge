@@ -2,11 +2,12 @@
 // A region is a banner of its art over a grid of tiles; a tile is the opponent's picture and its state is carried by
 // the picture alone. White is used for where the player stands and what is selected, and for nothing else.
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
 import { conquestIconUrl, imageUrl } from './images';
 import { Pips } from './symbols';
-import { BH, G, SPINE, TH, TW, Y0, layout } from './conquestlayout';
+import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
+import { reducedMotion } from './conquestmotion';
 import type { Actions } from './actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from './protocol';
 import { t, type TextKey } from './text';
@@ -22,28 +23,20 @@ const VARIANT_NAMES: Record<string, TextKey> = { Commander: 'lblCommander', Vang
 const VARIANT_DESC: Record<string, TextKey> = { Commander: 'lblCommanderDesc', Vanguard: 'lblVanguardDesc', Planeswalker: 'lblPlaneswalkerDesc', Planechase: 'lblPlanechaseDesc' };
 const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v]) : v);
 
-const reducedMotion = (): boolean => document.documentElement.dataset.motion === 'reduced'
-  || matchMedia('(prefers-reduced-motion: reduce)').matches;
-
 export function ConquestMap({ actions, state }: { actions: Actions; state: ConquestState }) {
   const cells = new Map(state.cells.map(c => [key(c), c]));
-  const inRegion = (r: number) => state.cells.filter(c => c.region === r);
-  // A region nobody has reached, or one that is finished, stands folded until the player opens it. The one the
-  // player stands in is always open.
-  const [opened, setOpened] = useState<Record<number, boolean>>({});
-  const folded = (r: number): boolean => {
-    if (r >= state.regions.length || r === state.at.region) return false;
-    if (r in opened) return !opened[r];
-    const region = state.regions[r];
-    return inRegion(r).every(c => c.state === 'fog') || region.conquered === region.total;
-  };
-  const l = layout(state, folded);
-
-  // The marker walks the last move's path a step at a time; nothing on the map answers while it does
-  const [walk, setWalk] = useState<ConquestPlace | null>(null);
+  // The marker walks the move just made a step at a time, and nothing on the map answers while it does. It is first
+  // put at the walk's start with no movement, since the map that brings the path already has the player at its end.
+  const [walk, setWalk] = useState<{ at: ConquestPlace; moving: boolean } | null>(null);
   const battleWanted = useRef(false);
   const pathKey = state.path.map(key).join('>');
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (state.path.length < 2) {
+      // A map with no path, arriving mid-walk, ends the walk; whatever was to follow it is forgotten
+      battleWanted.current = false;
+      setWalk(null);
+      return;
+    }
     const done = () => {
       setWalk(null);
       if (battleWanted.current) {
@@ -51,25 +44,38 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
         actions.conquestBattle();
       }
     };
-    if (state.path.length < 2 || reducedMotion()) {
-      if (state.path.length >= 2) done();
+    if (reducedMotion()) {
+      done();
       return;
     }
     let i = 0;
-    setWalk(state.path[0]);
-    // The first frame places the marker at the start, so the next has somewhere to move from
-    const first = requestAnimationFrame(() => { i = 1; setWalk(state.path[1]); });
-    const timer = setInterval(() => {
-      i += 1;
-      if (i < state.path.length) setWalk(state.path[i]);
-      else { clearInterval(timer); done(); }
-    }, STEP_MS);
-    return () => { cancelAnimationFrame(first); clearInterval(timer); };
+    let timer = 0;
+    setWalk({ at: state.path[0], moving: false });
+    // Two frames: one for the marker to be drawn at the start, and the next to set it moving from there
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        const step = () => {
+          i += 1;
+          if (i < state.path.length) setWalk({ at: state.path[i], moving: true });
+          else { clearInterval(timer); done(); }
+        };
+        step();
+        timer = window.setInterval(step, STEP_MS);
+      });
+    });
+    return () => { cancelAnimationFrame(frame); clearInterval(timer); };
   }, [pathKey]);
+
+  // A region nobody has reached, or one that is finished, stands folded until the player opens it. The one the player
+  // stands in is always open, and so is every one the marker is walking through.
+  const [opened, setOpened] = useState<Record<number, boolean>>({});
+  const keepOpen = new Set([state.at.region, ...(walk ? state.path.map(p => p.region) : [])]);
+  const folded = (r: number): boolean => isFolded(state, r, opened, keepOpen);
+  const l = layout(state, folded);
 
   // The view follows the player, as mobile's does
   const trail = useRef<HTMLDivElement>(null);
-  const marker = walk ?? state.at;
+  const marker = walk?.at ?? state.at;
   const markerAt = l.at(marker.region, marker.row, marker.col);
   useEffect(() => {
     const el = trail.current;
@@ -106,7 +112,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
       <div class="cq-stage">
         <div class="cq-map-head"><h2>{state.plane}</h2><span class="muted">{state.cells.filter(c => c.state === 'won').length} / {state.cells.length}</span></div>
         <div class="cq-trail" ref={trail}>
-          <div class={walk ? 'cq-trail-in walking' : 'cq-trail-in'} style={{ width: `${l.width}px`, height: `${l.height}px` }}>
+          <div class={walk?.moving ? 'cq-trail-in walking' : 'cq-trail-in'} style={{ width: `${l.width}px`, height: `${l.height}px` }}>
             {state.regions.map((region, r) => {
               const at = l.regions[r];
               const done = region.conquered === region.total;

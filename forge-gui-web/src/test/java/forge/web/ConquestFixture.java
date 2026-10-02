@@ -10,6 +10,7 @@ import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
+import forge.util.FileUtil;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -23,6 +24,7 @@ import java.util.stream.Stream;
 /** Conquests made for a test, in the profile of whoever runs it, and removed afterwards. */
 final class ConquestFixture {
     private static final List<ConquestData> made = new ArrayList<>();
+    private static final List<Path> junk = new ArrayList<>();
     private static String currentBefore;
 
     private ConquestFixture() {
@@ -74,6 +76,16 @@ final class ConquestFixture {
         return data;
     }
 
+    /** A save folder whose data cannot be read, by the name it would be listed under. */
+    static String broken() throws IOException {
+        final String name = name();
+        final Path dir = Path.of(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
+        Files.createDirectories(dir);
+        Files.writeString(dir.resolve("data.xml"), "<data><planeswalker>nothing a card database knows</planeswalker>");
+        junk.add(dir);
+        return name;
+    }
+
     /** The first place on a plane whose event opens a secret plane, or null. */
     static ConquestLocation portal(final ConquestPlane plane) {
         for (int region = 0; region < plane.getRegions().size(); region++) {
@@ -96,6 +108,10 @@ final class ConquestFixture {
             ConquestController.delete(data);
         }
         made.clear();
+        for (final Path dir : junk) {
+            FileUtil.deleteDirectory(dir.toFile());
+        }
+        junk.clear();
         // The portal flag is shared by the whole process
         for (final ConquestPlane plane : FModel.getPlanes()) {
             if (List.of("Time_Vault", "Unstable_Realm").contains(plane.getName())) {

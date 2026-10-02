@@ -11,8 +11,8 @@ export interface Layout {
 }
 
 /**
- * Where everything stands. A region's steps run along the road and its lanes down it. Open regions stand 46 apart, an
- * open one and a folded one 30, and folded ones 10.
+ * Where everything stands. A region's steps run along the road and its lanes down it. Two open regions stand 46
+ * apart, an open one and a folded one 30, and two folded ones 10.
  */
 export function layout(state: Pick<ConquestState, 'rows' | 'cols' | 'regions'>, folded: (region: number) => boolean): Layout {
   const w = state.rows * TW + (state.rows - 1) * G;
@@ -24,10 +24,23 @@ export function layout(state: Pick<ConquestState, 'rows' | 'cols' | 'regions'>, 
     const f = folded(r);
     regions.push({ x, w: f ? SPINE : w, folded: f });
     const last = r === state.regions.length - 1;
-    x += (f ? SPINE : w) + (last ? 0 : f ? 10 : folded(r + 1) ? 30 : 46);
+    x += (f ? SPINE : w) + (last ? 0 : f && folded(r + 1) ? 10 : f || folded(r + 1) ? 30 : 46);
   });
   return {
     width: x + X0, height: top + h + 20, regions,
     at: (r, row, col) => ({ x: regions[r].x + row * (TW + G), y: top + col * (TH + G) }),
   };
+}
+
+/**
+ * Whether a region stands folded. One nobody has reached, or one that is finished, is folded until the player opens
+ * it by hand; opened holds what they chose. A region in keepOpen is never folded: the one the player stands in, and
+ * while the marker walks, every one it passes through.
+ */
+export function isFolded(state: Pick<ConquestState, 'regions' | 'cells'>, region: number, opened: Readonly<Record<number, boolean>>,
+    keepOpen: ReadonlySet<number>): boolean {
+  if (region >= state.regions.length || keepOpen.has(region)) return false;
+  if (region in opened) return !opened[region];
+  const r = state.regions[region];
+  return r.conquered === r.total || state.cells.filter(c => c.region === region).every(c => c.state === 'fog');
 }

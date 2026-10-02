@@ -27,6 +27,7 @@ import org.testng.annotations.Test;
 
 import java.util.Collections;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -324,9 +325,15 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
 
+        // A reload on the result screen shows the same result and records nothing again
+        final Recorder reloaded = connect("host");
+        Assert.assertEquals(reloaded.awaitMatching("conquestResult", r -> true, "a reload lost the result"), result);
+        Assert.assertEquals(model.getCurrentPlaneData().getEventRecord(model.getCurrentLocation()).getTotalWins(), 1);
+        Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
+
         host.forget();
-        sessions.onMessage(host, JsonCodec.message("leave"));
-        final JsonObject reward = host.awaitMatching("conquestReward", r -> true, "the reward was not sent with the map");
+        sessions.onMessage(reloaded, JsonCodec.message("leave"));
+        final JsonObject reward = reloaded.awaitMatching("conquestReward", r -> true, "the reward was not sent with the map");
         Assert.assertEquals(reward.getAsJsonArray("steps").size(), 3);
 
         final Recorder again = connect("host");
@@ -390,5 +397,49 @@ public class ConquestSessionTest extends SessionsTest {
         host.awaitMatching("conquestState", s -> true, "leaving did not return to the map");
         Assert.assertEquals(FModel.getConquest().getModel().getChaosBattleRecord().getLosses(), losses + 1);
         Assert.assertNull(FModel.getConquest().getActiveBattle());
+    }
+
+    // Fails if a move with nowhere to go answers with a map, which a browser in the middle of a walk would take as its end
+    @Test(timeOut = 120_000)
+    public void aMoveWithNothingSelectedSendsNoMap() throws Exception {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final Recorder host = hostInConquest(data);
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("conquestMove"));
+        sessions.onMessage(host, message("conquestSelect", "region", 0, "row", 0, "col", 0));
+        host.awaitMatching("conquestState", s -> true, "selecting sent no map");
+        Assert.assertEquals(host.got.stream().filter(m -> "conquestState".equals(m.get("t").getAsString())).count(), 1);
+    }
+
+    // Fails if a battle that could not start leaves the conquest unable to start another, or records anything
+    @Test(timeOut = 180_000)
+    public void aBattleThatFailsToStartLeavesTheConquestUsable() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final Recorder host = hostInConquest(data);
+        // A battle already marked active makes the next one refuse to be prepared
+        final ConquestLocation loc = FModel.getConquest().getModel().getCurrentLocation();
+        FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("conquestBattle"));
+        host.awaitMatching("error", e -> true, "the failed start was not reported");
+        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean() && h.get("inConquest").getAsBoolean(), "the page did not return to the map");
+        Assert.assertNull(FModel.getConquest().getActiveBattle());
+        Assert.assertNull(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc), "a battle that never started was recorded");
+
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("conquestBattle"));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "a second battle did not start");
+        awaitPriority(host);
+    }
+
+    // Fails if one save that cannot be read keeps every save from being listed
+    @Test
+    public void anUnreadableSaveDoesNotHideTheOthers() throws Exception {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final String broken = ConquestFixture.broken();
+        final List<String> names = ConquestGame.saves().saves().stream().map(s -> s.name()).toList();
+        Assert.assertTrue(names.contains(data.getName()), "the readable save is not listed");
+        Assert.assertFalse(names.contains(broken), "a save with no planeswalker or place is listed");
     }
 }

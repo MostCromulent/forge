@@ -42,12 +42,11 @@ import java.util.List;
 
 /**
  * One browser's view of the open conquest. The conquest itself is Forge's, one for the whole process; this holds only
- * what the session knows that the save does not: which place is selected, the last move's path, and the result and
- * reward the browser has yet to show.
+ * what the session knows that the save does not: which place is selected, and the result and reward the browser has
+ * yet to show.
  */
 final class ConquestGame {
     private ConquestLocation selection;
-    private List<ConquestLocation> path = List.of();
     /** The result of the game just ended, while its match is still open. */
     private volatile ConquestResult result;
     /** What the last won battle gave, until the browser says it has shown it. */
@@ -64,6 +63,9 @@ final class ConquestGame {
     static ConquestSaves saves() {
         final List<ConquestSave> rows = new ArrayList<>();
         for (final ConquestData data : ConquestController.listSaves()) {
+            if (!readable(data)) {
+                continue;
+            }
             final File file = new File(data.getDirectory(), "data.xml");
             rows.add(new ConquestSave(data.getName(), data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false),
                     planeName(data.getCurrentPlane()), data.getProgress(), data.getUnlockedCardCount(), data.getAEtherShards(),
@@ -79,9 +81,16 @@ final class ConquestGame {
         return name != null && saveDir(name).isDirectory() ? name : null;
     }
 
+    /** The save of a name, or null when there is none or it cannot be read. */
     static ConquestData find(final String name) {
         final File dir = name == null ? null : saveDir(name);
-        return dir != null && dir.isDirectory() ? new ConquestData(dir) : null;
+        final ConquestData data = dir != null && dir.isDirectory() ? new ConquestData(dir) : null;
+        return data != null && readable(data) ? data : null;
+    }
+
+    /** A save whose file could not be read is left with nothing in it, and has no page to show. */
+    private static boolean readable(final ConquestData data) {
+        return data.getPlaneswalker() != null && data.getCurrentLocation() != null;
     }
 
     private static File saveDir(final String name) {
@@ -94,7 +103,6 @@ final class ConquestGame {
 
     void opened() {
         selection = null;
-        path = List.of();
         result = null;
         reward = null;
         chaosOwed = false;
@@ -174,7 +182,8 @@ final class ConquestGame {
                 data.getAEtherShards(), data.getPlaneswalkEmblems());
     }
 
-    ConquestState state() {
+    /** The map as it stands. walked is the move just made, for the marker to walk, and is empty otherwise. */
+    ConquestState state(final List<ConquestLocation> walked) {
         final ConquestData data = model();
         final ConquestPlane plane = data.getCurrentPlane();
         final ConquestPlaneData planeData = data.getCurrentPlaneData();
@@ -200,9 +209,6 @@ final class ConquestGame {
                     conquered, plane.getRowsPerRegion() * plane.getCols()));
         }
         final List<ConquestLocation> toChosen = chosen.equals(here) ? null : data.getPath(chosen);
-        // A move's path is for the marker to walk once, so a reload does not walk it again
-        final List<ConquestLocation> walked = path;
-        path = List.of();
         final ConquestCommander commander = data.getSelectedCommander();
         return new ConquestState(planeName(plane), plane.getRowsPerRegion(), plane.getCols(), regions, cells, place(here),
                 data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false), place(chosen),
@@ -263,23 +269,20 @@ final class ConquestGame {
         final ConquestLocation loc = new ConquestLocation(plane, region, row, col);
         if (loc.equals(data.getCurrentLocation()) || data.getPath(loc) != null) {
             selection = loc;
-            path = List.of();
         }
     }
 
-    /** Walks to the selection. False when there is nowhere to walk. */
-    boolean move() {
+    /** Walks to the selection and returns the path walked, or null when there is nowhere to walk. */
+    List<ConquestLocation> move() {
         final ConquestData data = model();
         if (selection == null || selection.getPlane() != data.getCurrentPlane() || selection.equals(data.getCurrentLocation())) {
-            return false;
+            return null;
         }
         final List<ConquestLocation> walked = data.moveTo(selection);
-        if (walked == null) {
-            return false;
+        if (walked != null) {
+            selection = null;
         }
-        path = walked;
-        selection = null;
-        return true;
+        return walked;
     }
 
     /** Why a battle cannot start where the player stands, or null if it can. */
