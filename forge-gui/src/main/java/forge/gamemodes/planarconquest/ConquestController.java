@@ -48,6 +48,7 @@ import forge.util.storage.StorageImmediatelySerialized;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
@@ -78,6 +79,50 @@ public class ConquestController {
 
     public IStorage<Deck> getDecks() {
         return decks;
+    }
+
+    public static List<ConquestData> listSaves() {
+        final List<ConquestData> saves = new ArrayList<>();
+        final File[] files = new File(ForgeConstants.CONQUEST_SAVE_DIR).listFiles();
+        if (files != null) {
+            for (File f : files) {
+                if (f.isDirectory()) {
+                    saves.add(new ConquestData(f));
+                }
+            }
+        }
+        saves.sort(Comparator.comparing(d -> d.getName().toLowerCase()));
+        return saves;
+    }
+
+    public ConquestData create(String name, ConquestPlane plane, PaperCard planeswalker, PaperCard commander) {
+        setModel(new ConquestData(name, plane, planeswalker, commander));
+        decks.add(model.getSelectedCommander().getDeck()); //ensure starting deck is saved
+        model.saveData();
+        setCurrent(name);
+        return model;
+    }
+
+    public void load(ConquestData data) {
+        setCurrent(data.getName());
+        setModel(data);
+    }
+
+    public static void delete(ConquestData data) {
+        FileUtil.deleteDirectory(data.getDirectory());
+    }
+
+    public static void rename(ConquestData data, String newName) {
+        if (data.getName().equals(FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST))) {
+            setCurrent(newName);
+        }
+        data.rename(newName);
+    }
+
+    private static void setCurrent(String name) {
+        ConquestPreferences prefs = FModel.getConquestPreferences();
+        prefs.setPref(CQPref.CURRENT_CONQUEST, name);
+        prefs.save();
     }
 
     public void startBattle(ConquestBattle battle) {
