@@ -618,9 +618,25 @@ final class ToBrowser {
     record ConquestSaves(List<ConquestSave> saves, @Nullable String current) {
     }
 
-    /** One save as its card shows it. saved is the day its file last changed, as yyyy-MM-dd. */
-    record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String progress, int cards,
+    /** One save as its card shows it. art is its plane's picture, and saved the day its file last changed, as yyyy-MM-dd. */
+    record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String art, String progress, int cards,
             int shards, int emblems, @Nullable String saved) {
+    }
+
+    record ConquestPlaneOption(String name, String art, String description, int events) {
+    }
+
+    /** A commander or a planeswalker a new conquest may start with. region is the commander's own. */
+    record ConquestCardOption(String name, String image, String colors, @Nullable String region) {
+    }
+
+    /**
+     * What a new conquest may start with: the planes, with a plane its commanders, and with a commander its
+     * planeswalkers. plane and commander are those asked about, so an answer can be told from an older one.
+     */
+    @Message("conquestOptions")
+    record ConquestOptions(List<ConquestPlaneOption> planes, @Nullable List<ConquestCardOption> commanders,
+            @Nullable List<ConquestCardOption> planeswalkers, int startShards, @Nullable String plane, @Nullable String commander) {
     }
 
     /** What the bar over every Conquest page shows. */
@@ -708,7 +724,7 @@ final class ToBrowser {
             ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
             DraftState.class, LimitedResult.class,
             ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class,
-            ConquestParty.class, ConquestCollection.class);
+            ConquestParty.class, ConquestCollection.class, ConquestOptions.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

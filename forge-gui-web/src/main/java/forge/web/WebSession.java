@@ -582,6 +582,12 @@ public final class WebSession {
                     }
                 }
             }
+            // Listing the saves, reading every card for the planeswalkers and building a first deck are all slow
+            case "conquestRename", "conquestDelete", "conquestOptions", "conquestCreate" -> {
+                if (isHost && stage instanceof Conquest c && c.save() == null) {
+                    ui.runBackgroundTask("Conquest", () -> conquestShelf(channel, msg));
+                }
+            }
             case "conquestParty", "conquestCollection", "conquestLead", "conquestWalker", "conquestViewDeck", "conquestEditDeck",
                     "conquestExile" -> {
                 if (stage instanceof Conquest c && c.save() != null) {
@@ -1364,6 +1370,48 @@ public final class WebSession {
         }
         if (move(from, new Conquest(data == null ? null : data.getName()))) {
             sendConquest();
+        }
+    }
+
+    /** The list of saved conquests: its menu, and the form that starts a conquest. */
+    private void conquestShelf(final BrowserChannel channel, final JsonObject msg) {
+        // A second Start, sent before the first had made its conquest, finds the page gone
+        final Stage from = stage;
+        if (!(from instanceof Conquest c) || c.save() != null) {
+            return;
+        }
+        switch (msg.get("t").getAsString()) {
+            case "conquestOptions" -> {
+                final FromBrowser.ConquestOptionsQuery q = Wire.decode(msg, FromBrowser.ConquestOptionsQuery.class);
+                channel.send(ConquestGame.options(q.plane(), q.commander()));
+            }
+            case "conquestCreate" -> {
+                final FromBrowser.ConquestCreate create = Wire.decode(msg, FromBrowser.ConquestCreate.class);
+                final String problem = ConquestGame.create(create.name(), create.plane(), create.commander(), create.planeswalker());
+                if (problem != null) {
+                    channel.send(error(problem));
+                    return;
+                }
+                conquest.opened();
+                if (move(from, new Conquest(ConquestGame.model().getName()))) {
+                    sendConquest();
+                }
+            }
+            case "conquestRename" -> {
+                final FromBrowser.ConquestRename rename = Wire.decode(msg, FromBrowser.ConquestRename.class);
+                final String problem = ConquestGame.rename(rename.name(), rename.to());
+                if (problem != null) {
+                    channel.send(error(problem));
+                }
+                channel.send(ConquestGame.saves());
+                // The start page's Resume names the conquest played last
+                channel.send(hello());
+            }
+            default -> {
+                ConquestGame.delete(Wire.decode(msg, FromBrowser.ConquestDelete.class).name());
+                channel.send(ConquestGame.saves());
+                channel.send(hello());
+            }
         }
     }
 

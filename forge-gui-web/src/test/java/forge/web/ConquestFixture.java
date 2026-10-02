@@ -76,6 +76,16 @@ final class ConquestFixture {
         return data;
     }
 
+    /** A name a test is about to have a conquest made or renamed to, whose folder is removed afterwards. */
+    static String expected() {
+        if (currentBefore == null) {
+            currentBefore = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);
+        }
+        final String name = name();
+        junk.add(Path.of(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_')));
+        return name;
+    }
+
     /** A save folder whose data cannot be read, by the name it would be listed under. */
     static String broken() throws IOException {
         final String name = name();

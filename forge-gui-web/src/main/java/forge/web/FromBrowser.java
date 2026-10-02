@@ -399,6 +399,23 @@ final class FromBrowser {
     record ConquestSelect(int region, int row, int col) {
     }
 
+    @Command("conquestRename")
+    record ConquestRename(String name, String to) {
+    }
+
+    @Command("conquestDelete")
+    record ConquestDelete(String name) {
+    }
+
+    /** Asks what a new conquest may start with: the planes, with a plane its commanders, and with a commander its planeswalkers. */
+    @Command("conquestOptions")
+    record ConquestOptionsQuery(@Nullable String plane, @Nullable String commander) {
+    }
+
+    @Command("conquestCreate")
+    record ConquestCreate(String name, String plane, String commander, String planeswalker) {
+    }
+
     /** Makes a commander the one battles are fought with. */
     @Command("conquestLead")
     record ConquestSetLead(String commander) {
@@ -441,5 +458,6 @@ final class FromBrowser {
             DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class, SetMaxBracket.class,
             EventDecksOnly.class, EventHostAgain.class, EventForget.class,
             ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class,
-            ConquestSetLead.class, ConquestWalker.class, ConquestViewDeck.class, ConquestExile.class, ConquestEditDeck.class);
+            ConquestSetLead.class, ConquestWalker.class, ConquestViewDeck.class, ConquestExile.class, ConquestEditDeck.class,
+            ConquestRename.class, ConquestDelete.class, ConquestOptionsQuery.class, ConquestCreate.class);
 }

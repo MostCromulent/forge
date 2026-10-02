@@ -21,6 +21,7 @@ import forge.gamemodes.planarconquest.ConquestRecord;
 import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
 import forge.gamemodes.planarconquest.ConquestUtil;
+import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
@@ -33,10 +34,13 @@ import forge.web.ToBrowser.ConquestParty;
 import forge.web.ToBrowser.ConquestWalkerRow;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.ConquestBar;
+import forge.web.ToBrowser.ConquestCardOption;
 import forge.web.ToBrowser.ConquestCell;
 import forge.web.ToBrowser.ConquestLead;
 import forge.web.ToBrowser.ConquestPackCard;
+import forge.web.ToBrowser.ConquestOptions;
 import forge.web.ToBrowser.ConquestPlace;
+import forge.web.ToBrowser.ConquestPlaneOption;
 import forge.web.ToBrowser.ConquestRegionRow;
 import forge.web.ToBrowser.ConquestResult;
 import forge.web.ToBrowser.ConquestReward;
@@ -82,7 +86,7 @@ final class ConquestGame {
             }
             final File file = new File(data.getDirectory(), "data.xml");
             rows.add(new ConquestSave(data.getName(), data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false),
-                    planeName(data.getCurrentPlane()), data.getProgress(), data.getUnlockedCardCount(), data.getAEtherShards(),
+                    planeName(data.getCurrentPlane()), art(data.getCurrentPlane()), data.getProgress(), data.getUnlockedCardCount(), data.getAEtherShards(),
                     data.getPlaneswalkEmblems(),
                     file.exists() ? LocalDate.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneId.systemDefault()).toString() : null));
         }
@@ -127,6 +131,107 @@ final class ConquestGame {
         // The commander caches its deck, and the editor saves a copy
         return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard,
                 ConquestUtil::getBasicLandSets, commander::reloadDeck);
+    }
+
+    /** A plane has no picture of its own, so it wears its first region's. */
+    private static String art(final ConquestPlane plane) {
+        final ConquestRegion.ArtCard picture = plane.getRegions().get(0).getArtCard();
+        return picture.card().getImageKey(picture.backFace());
+    }
+
+    /** A plane a conquest can be on, by the name the browser shows, or null. */
+    private static ConquestPlane plane(final String name) {
+        for (final ConquestPlane plane : FModel.getPlanes()) {
+            if (!plane.isUnreachable() && planeName(plane).equals(name)) {
+                return plane;
+            }
+        }
+        return null;
+    }
+
+    private static PaperCard named(final Iterable<PaperCard> cards, final String name) {
+        for (final PaperCard card : cards) {
+            if (card.getName().equals(name)) {
+                return card;
+            }
+        }
+        return null;
+    }
+
+    /** What a new conquest may start with. Finding the planeswalkers reads every card, so this is not for the socket thread. */
+    static ConquestOptions options(final String planeName, final String commanderName) {
+        final List<ConquestPlaneOption> planes = new ArrayList<>();
+        for (final ConquestPlane p : FModel.getPlanes()) {
+            if (!p.isUnreachable()) {
+                final String description = p.getDescription() == null ? "" : p.getDescription().replace("\\n", " ");
+                planes.add(new ConquestPlaneOption(planeName(p), art(p), description, p.getEventCount()));
+            }
+        }
+        final ConquestPlane plane = plane(planeName);
+        List<ConquestCardOption> commanders = null;
+        List<ConquestCardOption> walkers = null;
+        PaperCard commander = null;
+        if (plane != null) {
+            commanders = new ArrayList<>();
+            for (final PaperCard card : plane.getCommanders()) {
+                String region = null;
+                for (final ConquestRegion r : plane.getRegions()) {
+                    if (region == null && r.getCardPool().contains(card)) {
+                        region = r.getName();
+                    }
+                }
+                commanders.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), region));
+            }
+            commander = named(plane.getCommanders(), commanderName);
+        }
+        if (commander != null) {
+            walkers = new ArrayList<>();
+            for (final PaperCard card : ConquestUtil.getStartingPlaneswalkerOptions(commander)) {
+                walkers.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), null));
+            }
+            walkers.sort((a, b) -> a.name().compareTo(b.name()));
+        }
+        return new ConquestOptions(planes, commanders, walkers, FModel.getConquestPreferences().getPrefInt(CQPref.AETHER_START_SHARDS),
+                plane == null ? null : planeName, commander == null ? null : commanderName);
+    }
+
+    /** Starts a conquest and makes it the open one. Answers why it cannot, or null when it is made. */
+    static synchronized String create(final String name, final String planeName, final String commanderName, final String walkerName) {
+        final String cleaned = QuestUtil.cleanString(name == null ? "" : name).trim();
+        final String problem = ConquestUtil.nameProblem(cleaned);
+        if (problem != null) {
+            return problem;
+        }
+        final ConquestPlane plane = plane(planeName);
+        final PaperCard commander = plane == null ? null : named(plane.getCommanders(), commanderName);
+        final PaperCard walker = commander == null ? null : named(ConquestUtil.getStartingPlaneswalkerOptions(commander), walkerName);
+        if (walker == null) {
+            return Localizer.getInstance().getMessage("lblWebConquestCannotStart");
+        }
+        FModel.getConquest().create(cleaned, plane, walker, commander);
+        return null;
+    }
+
+    /** Renames a save. Answers why it cannot, or null when it is done or there is nothing to do. */
+    static synchronized String rename(final String name, final String to) {
+        final ConquestData data = find(name);
+        final String cleaned = QuestUtil.cleanString(to == null ? "" : to).trim();
+        if (data == null || cleaned.equals(data.getName())) {
+            return null;
+        }
+        final String problem = ConquestUtil.nameProblem(cleaned);
+        if (problem != null) {
+            return problem;
+        }
+        ConquestController.rename(data, cleaned);
+        return null;
+    }
+
+    static synchronized void delete(final String name) {
+        final ConquestData data = find(name);
+        if (data != null) {
+            ConquestController.delete(data);
+        }
     }
 
     static String planeName(final ConquestPlane plane) {
@@ -200,9 +305,7 @@ final class ConquestGame {
             } else {
                 final ConquestPlane plane = model().getCurrentPlane();
                 pack = planeName(plane);
-                // The plane has no picture of its own, so its pack wears its first region's
-                final ConquestRegion.ArtCard picture = plane.getRegions().get(0).getArtCard();
-                art = picture.card().getImageKey(picture.backFace());
+                art = art(plane);
             }
         }
         return new ConquestStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,

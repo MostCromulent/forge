@@ -22,6 +22,7 @@ import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
 import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.gui.GuiBase;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
@@ -31,6 +32,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -772,5 +774,129 @@ public class ConquestSessionTest extends SessionsTest {
                 "unrestricted", false, "action", "add"));
         Assert.assertEquals(storedDeck(deck).getMain().countByName(legend.getName()), 1, "the owned legendary creature did not reach the deck");
         Assert.assertEquals(storedDeck(deck).get(DeckSection.Commander).toFlatList(), List.of(data.getSelectedCommander().getCard()));
+    }
+
+    /** The host on the list of saved conquests, wherever the last test left the session. */
+    private Recorder onTheShelf() throws InterruptedException {
+        final Recorder host = connect("host");
+        sessions.onMessage(host, JsonCodec.message("claimHost"));
+        host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
+        sessions.onMessage(host, message("setName", "name", "Host"));
+        final JsonObject hello = host.awaitNewest("hello");
+        if (hello.get("inMatch").getAsBoolean()) {
+            host.forget();
+            sessions.onMessage(host, JsonCodec.message("leave"));
+            host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean(), "the session never left the last test's battle");
+        }
+        host.forget();
+        sessions.onMessage(host, message("conquestOpen", "resume", false));
+        host.awaitMatching("hello", h -> h.get("inConquest").getAsBoolean() && str(h, "conquest") == null, "the shelf did not open");
+        host.awaitMatching("conquestSaves", s -> true, "the conquests were not listed");
+        return host;
+    }
+
+    private static List<String> names(final JsonObject message, final String list) {
+        final List<String> names = new ArrayList<>();
+        message.getAsJsonArray(list).forEach(e -> names.add(e.getAsJsonObject().get("name").getAsString()));
+        return names;
+    }
+
+    private static File saveDir(final String name) {
+        return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
+    }
+
+    // Fails if a conquest can be started under a name another has: no error is sent, the page leaves the shelf, or
+    // the conquest of that name is replaced
+    @Test(timeOut = 120_000)
+    public void aNameInUseIsRefused() throws Exception {
+        final ConquestData existing = ConquestFixture.create("Zendikar");
+        existing.rewardAEtherShards(17);
+        existing.saveData();
+        final int shards = existing.getAEtherShards();
+        final PaperCard commander = existing.getCurrentPlane().getCommanders().get(0);
+        final Recorder host = onTheShelf();
+        host.forget();
+        sessions.onMessage(host, message("conquestCreate", "name", existing.getName(), "plane", "Zendikar", "commander", commander.getName(),
+                "planeswalker", ConquestUtil.getStartingPlaneswalkerOptions(commander).iterator().next().getName()));
+        host.awaitMatching("error", e -> true, "a name in use was not refused");
+        Assert.assertFalse(host.got.stream().anyMatch(m -> "conquestState".equals(m.get("t").getAsString())), "a conquest was opened");
+        Assert.assertEquals(new ConquestData(existing.getDirectory()).getAEtherShards(), shards, "the conquest of that name was replaced");
+    }
+
+    // Fails if the form is not told a plane's commanders or a commander's planeswalkers, or a conquest made from the
+    // first of each is not saved, named in the hello and shown on its map
+    @Test(timeOut = 120_000)
+    public void aCreatedConquestOpensOnItsMap() throws Exception {
+        final String name = ConquestFixture.expected();
+        final Recorder host = onTheShelf();
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("conquestOptions"));
+        final JsonObject planes = host.awaitMatching("conquestOptions", o -> true, "the planes were not sent");
+        Assert.assertTrue(names(planes, "planes").contains("Zendikar"));
+        Assert.assertTrue(planes.get("startShards").getAsInt() > 0);
+        host.forget();
+        sessions.onMessage(host, message("conquestOptions", "plane", "Zendikar"));
+        final String commander = names(host.awaitMatching("conquestOptions", o -> o.has("commanders"), "the plane's commanders were not sent"), "commanders").get(0);
+        host.forget();
+        sessions.onMessage(host, message("conquestOptions", "plane", "Zendikar", "commander", commander));
+        final String walker = names(host.awaitMatching("conquestOptions", o -> o.has("planeswalkers"), "the commander's planeswalkers were not sent"), "planeswalkers").get(0);
+        host.forget();
+        sessions.onMessage(host, message("conquestCreate", "name", name, "plane", "Zendikar", "commander", commander, "planeswalker", walker));
+        host.awaitMatching("hello", h -> name.equals(str(h, "conquest")), "the new conquest did not open");
+        final JsonObject state = host.awaitMatching("conquestState", s -> true, "the new conquest's map was not sent");
+        Assert.assertEquals(state.get("plane").getAsString(), "Zendikar");
+        final ConquestData saved = new ConquestData(saveDir(name));
+        Assert.assertEquals(saved.getSelectedCommander().getName(), commander);
+        Assert.assertEquals(saved.getPlaneswalker().getName(), walker);
+    }
+
+    // Fails if a commander that is not of the plane can start a conquest there: no error is sent, or a save is made
+    @Test(timeOut = 120_000)
+    public void aConquestThatCannotBeIsNotCreated() throws Exception {
+        final String name = ConquestFixture.expected();
+        final PaperCard stranger = FModel.getPlanes().get("Alara").getCommanders().get(0);
+        Assert.assertFalse(FModel.getPlanes().get("Zendikar").getCommanders().contains(stranger));
+        final Recorder host = onTheShelf();
+        host.forget();
+        sessions.onMessage(host, message("conquestCreate", "name", name, "plane", "Zendikar", "commander", stranger.getName(),
+                "planeswalker", ConquestUtil.getStartingPlaneswalkerOptions(stranger).iterator().next().getName()));
+        host.awaitMatching("error", e -> true, "a commander of another plane was not refused");
+        Assert.assertFalse(saveDir(name).exists(), "a conquest was made all the same");
+    }
+
+    // Fails if renaming the conquest played last leaves the old folder, or the start page's Resume and the shelf's
+    // mark still name the old one
+    @Test(timeOut = 120_000)
+    public void renamingTheCurrentConquestKeepsItCurrent() throws Exception {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final String to = ConquestFixture.expected();
+        final Recorder host = onTheShelf();
+        host.forget();
+        sessions.onMessage(host, message("conquestRename", "name", data.getName(), "to", to));
+        final JsonObject saves = host.awaitMatching("conquestSaves", s -> to.equals(str(s, "current")), "the shelf does not mark the new name as current");
+        Assert.assertTrue(names(saves, "saves").contains(to));
+        Assert.assertFalse(names(saves, "saves").contains(data.getName()));
+        host.awaitMatching("hello", h -> to.equals(str(h, "currentConquest")), "the start page was not told the new name");
+        Assert.assertFalse(data.getDirectory().exists(), "the old folder is still there");
+
+        // A name another conquest has is refused, and nothing is renamed
+        final ConquestData other = ConquestFixture.create("Zendikar");
+        host.forget();
+        sessions.onMessage(host, message("conquestRename", "name", to, "to", other.getName()));
+        host.awaitMatching("error", e -> true, "a name in use was not refused");
+        Assert.assertTrue(saveDir(to).isDirectory());
+    }
+
+    // Fails if a deleted conquest is still listed, or its folder is still there
+    @Test(timeOut = 120_000)
+    public void deletingRemovesTheSave() throws Exception {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final Recorder host = onTheShelf();
+        Assert.assertTrue(names(host.awaitNewest("conquestSaves"), "saves").contains(data.getName()));
+        host.forget();
+        sessions.onMessage(host, message("conquestDelete", "name", data.getName()));
+        final JsonObject saves = host.awaitMatching("conquestSaves", s -> true, "the shelf was not sent again");
+        Assert.assertFalse(names(saves, "saves").contains(data.getName()));
+        Assert.assertFalse(data.getDirectory().exists());
     }
 }
