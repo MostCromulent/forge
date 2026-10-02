@@ -60,10 +60,14 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
+import forge.gamemodes.planarconquest.ConquestBattle;
+import forge.gamemodes.planarconquest.ConquestController;
+import forge.gamemodes.planarconquest.ConquestData;
 import forge.util.storage.IStorage;
 import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import org.apache.commons.lang3.StringUtils;
 import org.tinylog.Logger;
 
 import java.util.ArrayList;
@@ -83,7 +87,7 @@ import java.util.function.Supplier;
  */
 public final class WebSession {
     /** Where the browser is. Each stage holds what exists there and nothing else. */
-    sealed interface Stage permits Menu, Opening, Setup, Event, Playing { }
+    sealed interface Stage permits Menu, Opening, Setup, Event, Conquest, Playing { }
 
     /** The start page; for a guest, waiting for the host to open a game. */
     record Menu() implements Stage { }
@@ -108,8 +112,11 @@ public final class WebSession {
         }
     }
 
-    /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, or null for the table. */
-    record Playing(WebGuiGame gui, boolean invited, boolean spectating, Event back) implements Stage { }
+    /** The Planar Conquest pages: the saved conquests while save is null, otherwise the one that is open. */
+    record Conquest(String save) implements Stage { }
+
+    /** In a match, playing it or watching the computer play it. back is where leaving it returns to: a pool, a conquest, or null for the table. */
+    record Playing(WebGuiGame gui, boolean invited, boolean spectating, Stage back) implements Stage { }
 
     private static final int CARD_SEARCH_LIMIT = 60;
     /** Chat is shown to every player, so one message is kept to a length a chat box can hold. */
@@ -148,6 +155,8 @@ public final class WebSession {
     /** Whether this session is playing a limited gauntlet, and the result of its last game. */
     private volatile boolean gauntletRunning;
     private volatile LimitedResult lastResult;
+    /** What this session alone knows of the open conquest: its selection and the last move. */
+    private final ConquestGame conquest = new ConquestGame();
 
     WebSession(final WebGuiBase ui, final WebSessions sessions, final Runnable onQuit, final boolean mayHost) {
         this.mayHost = mayHost;
@@ -182,7 +191,7 @@ public final class WebSession {
     /** Whether this session is holding a game open, which is what keeps the host's seat reserved. */
     boolean hasGame() {
         final Stage now = stage;
-        return now instanceof Setup || now instanceof Event || now instanceof Playing;
+        return now instanceof Setup || now instanceof Event || now instanceof Conquest || now instanceof Playing;
     }
 
     /**
@@ -326,6 +335,8 @@ public final class WebSession {
             if (draft != null && draft.latest() != null) {
                 channel.send(draft.latest());
             }
+        } else if (now instanceof Conquest) {
+            ui.runBackgroundTask("Conquest", this::sendConquest);
         } else if (now instanceof Menu) {
             // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
             joinHostGame();
@@ -514,6 +525,42 @@ public final class WebSession {
                 final PoolPlay play = Wire.decode(msg, PoolPlay.class);
                 ui.invokeInEdtLater(() -> playPool(channel, play));
             }
+            // A conquest is Forge's own, one for the whole process, so it is the host's
+            case "conquestOpen" -> {
+                final boolean resume = Wire.decode(msg, FromBrowser.ConquestOpen.class).resume();
+                if (isHost) {
+                    ui.runBackgroundTask("Conquest", () -> openConquest(resume ? ConquestGame.currentName() : null));
+                }
+            }
+            case "conquestLoad" -> {
+                final String save = Wire.decode(msg, FromBrowser.ConquestLoad.class).name();
+                if (isHost) {
+                    ui.runBackgroundTask("Conquest", () -> openConquest(save));
+                }
+            }
+            case "conquestLeave" -> {
+                final Stage now = stage;
+                if (now instanceof Conquest c) {
+                    if (c.save() == null) {
+                        move(now, new Menu());
+                    } else {
+                        ui.runBackgroundTask("Conquest", () -> openConquest(null));
+                    }
+                }
+            }
+            case "conquestSelect", "conquestMove" -> {
+                if (stage instanceof Conquest c && c.save() != null) {
+                    if ("conquestMove".equals(msg.get("t").getAsString())) {
+                        conquest.move();
+                    } else {
+                        final FromBrowser.ConquestSelect at = Wire.decode(msg, FromBrowser.ConquestSelect.class);
+                        conquest.select(at.region(), at.row(), at.col());
+                    }
+                    channel.send(conquest.state());
+                }
+            }
+            // A match is started on the host UI thread, as a table's is
+            case "conquestBattle" -> ui.invokeInEdtLater(() -> conquestBattle(channel));
             // A cheat asks its questions as the game does and waits for the answers, so it runs on a thread of its own
             case "dev" -> {
                 if (isHost && stage instanceof Playing) {
@@ -1007,7 +1054,7 @@ public final class WebSession {
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
                 isHost ? OfflineEvents.storage("draft").size() : 0,
-                false, null, null,
+                now instanceof Conquest, now instanceof Conquest c ? c.save() : null, isHost ? ConquestGame.currentName() : null,
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }
@@ -1254,6 +1301,83 @@ public final class WebSession {
         }
     }
 
+    /** Opens the saved conquests, or one of them. Reading a save loads its planes, so this runs off the socket thread. */
+    private void openConquest(final String save) {
+        final Stage from = stage;
+        if (!isHost || !(from instanceof Menu || from instanceof Conquest)) {
+            return;
+        }
+        final ConquestData data = ConquestGame.find(save);
+        if (data != null) {
+            FModel.getConquest().load(data);
+            conquest.opened();
+        }
+        if (move(from, new Conquest(data == null ? null : data.getName()))) {
+            sendConquest();
+        }
+    }
+
+    /** What the Conquest stage draws from: the saves, or the bar and the map. */
+    private void sendConquest() {
+        if (!(stage instanceof Conquest c)) {
+            return;
+        }
+        if (c.save() == null) {
+            tell(ConquestGame.saves());
+        } else {
+            tell(conquest.bar());
+            tell(conquest.state());
+        }
+    }
+
+    private void conquestBattle(final BrowserChannel channel) {
+        if (!(stage instanceof Conquest c) || c.save() == null) {
+            return;
+        }
+        final String problem = conquest.battleProblem();
+        if (problem != null) {
+            channel.send(error(problem));
+            return;
+        }
+        startConquestBattle(conquest.battle());
+    }
+
+    /** Starts a battle the conquest built, over netplay. Leaving it returns to the map. */
+    private void startConquestBattle(final ConquestBattle battle) {
+        final Stage from = stage;
+        if (!(from instanceof Conquest back)) {
+            return;
+        }
+        // Saved before the match so HostedMatch never reaches the first-run name prompt
+        if (StringUtils.isBlank(FModel.getPreferences().getPref(FPref.PLAYER_NAME))) {
+            FModel.getPreferences().setPref(FPref.PLAYER_NAME, playerName());
+            FModel.getPreferences().save();
+        }
+        final Playing playing = new Playing(new WebGuiGame(settings), false, false, back);
+        if (!move(from, playing)) {
+            playing.gui().close();
+            return;
+        }
+        final BrowserChannel b = browser;
+        if (b != null) {
+            playing.gui().attach(b);
+        }
+        try {
+            final ConquestController.PreparedBattle prepared = FModel.getConquest().prepareBattle(battle, null);
+            if (prepared == null) {
+                throw new IllegalStateException("A battle is already being fought");
+            }
+            local.startPrepared(playerName(), prepared.rules(), prepared.variants(), prepared.players(), prepared.human(), playing.gui());
+        } catch (final RuntimeException ex) {
+            Logger.error(ex, "Could not start the battle");
+            FModel.getConquest().cancelBattle();
+            local.endMatch();
+            move(playing, back);
+            tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
+            sendConquest();
+        }
+    }
+
     private LocalGame.Seat mySeat(final Deck deck) {
         return new LocalGame.Seat(playerName(), false, avatarIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0), deck);
     }
@@ -1396,9 +1520,16 @@ public final class WebSession {
         final BrowserChannel b = browser;
         if (playing.back() != null) {
             stopGauntlet();
+            if (playing.back() instanceof Conquest) {
+                FModel.getConquest().finishBattle();
+            }
             local.endMatch();
             if (move(from, playing.back()) && b != null) {
-                sendLimited(b);
+                if (playing.back() instanceof Conquest) {
+                    sendConquest();
+                } else {
+                    sendLimited(b);
+                }
             }
             return;
         }
