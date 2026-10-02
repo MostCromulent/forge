@@ -23,7 +23,8 @@ final class FromBrowser {
 
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
-        ok, cancel, endTurn, stopYield, autoPass, undo, concede }
+        ok, cancel, endTurn, stopYield, autoPass, undo, concede,
+        conquestLeave, conquestMove, conquestBattle, conquestClaim }
 
     @Command
     record Bare(Plain t) {
@@ -378,6 +379,27 @@ final class FromBrowser {
     record EventDecksOnly(boolean on) {
     }
 
+    // ---- Planar Conquest ---------------------------------------------------------------------------------------
+
+    /** Opens the Conquest pages, or with resume, straight into the conquest played last. */
+    @Command("conquestOpen")
+    record ConquestOpen(boolean resume) {
+    }
+
+    @Command("conquestLoad")
+    record ConquestLoad(String name) {
+    }
+
+    /** Selects a place on the map. The player does not move. */
+    @Command("conquestSelect")
+    record ConquestSelect(int region, int row, int col) {
+    }
+
+    /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name. */
+    @Command("devConquestWheel")
+    record DevConquestWheel(String outcome) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
             SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, DeckQuery.class, HostChoiceAnswer.class,
@@ -388,5 +410,6 @@ final class FromBrowser {
             ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
             DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class, SetMaxBracket.class,
-            EventDecksOnly.class, EventHostAgain.class, EventForget.class);
+            EventDecksOnly.class, EventHostAgain.class, EventForget.class,
+            ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class);
 }

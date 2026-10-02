@@ -45,7 +45,8 @@ final class ToBrowser {
     record Hello(boolean inMatch, boolean inLobby, boolean joining, boolean spectating, boolean host,
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
-            @Nullable String eventKind, boolean drafting, int draftPools, ServerSettings settings) {
+            @Nullable String eventKind, boolean drafting, int draftPools, boolean inConquest, @Nullable String conquest,
+            @Nullable String currentConquest, ServerSettings settings) {
     }
 
     record SavedSleeveArt(String key, int offset) {
@@ -605,6 +606,74 @@ final class ToBrowser {
     record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean wonMatch, boolean nextRound) {
     }
 
+    // ---- Planar Conquest ---------------------------------------------------------------------------------------
+
+    /** The saved conquests, and the one played last. */
+    @Message("conquestSaves")
+    record ConquestSaves(List<ConquestSave> saves, @Nullable String current) {
+    }
+
+    /** One save as its card shows it. saved is the day its file last changed, as yyyy-MM-dd. */
+    record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String progress, int cards,
+            int shards, int emblems, @Nullable String saved) {
+    }
+
+    /** What the bar over every Conquest page shows. */
+    @Message("conquestBar")
+    record ConquestBar(String name, String plane, int conquered, int total, int shards, int emblems) {
+    }
+
+    record ConquestPlace(int region, int row, int col) {
+    }
+
+    /** A region of the plane: art is its art card's image key. */
+    record ConquestRegionRow(String name, String art, String colors, int conquered, int total) {
+    }
+
+    /**
+     * One place on the plane. state is won, open (it can be fought) or fog; a fogged cell carries nothing else.
+     * opens names the secret plane a win here opens.
+     */
+    record ConquestCell(int region, int row, int col, String state, @Nullable String name, @Nullable String opponent,
+            @Nullable String avatar, @Nullable List<String> variants, int wins, int losses, @Nullable String opens) {
+    }
+
+    /** The selected commander: problem is why its deck cannot be played, when it cannot. */
+    record ConquestLead(String name, String image, int deckSize, @Nullable String problem) {
+    }
+
+    /**
+     * The map. rows is how many steps a region is along and cols how many lanes across. steps is how far the
+     * selection is from where the player stands, 0 when it is the same place. path is the last move, first place first.
+     */
+    @Message("conquestState")
+    record ConquestState(String plane, int rows, int cols, List<ConquestRegionRow> regions, List<ConquestCell> cells,
+            ConquestPlace at, String walker, String walkerImage, ConquestPlace selected, int steps, List<ConquestPlace> path,
+            ConquestLead commander) {
+    }
+
+    /** A battle's game ended. matchOver is false between the games of a chaos battle. */
+    @Message("conquestResult")
+    record ConquestResult(boolean won, boolean matchOver, boolean chaos, String event, boolean firstConquest) {
+    }
+
+    /** A card of a booster: shards is what a duplicate became, 0 for a card that is new. */
+    record ConquestPackCard(String name, String image, String rarity, int shards) {
+    }
+
+    /**
+     * One thing a won battle gave. kind is a ConquestRewardStep.Kind name. pack is the name to draw on a booster and
+     * art its picture's image key; a chaos booster has no art.
+     */
+    record ConquestStep(String kind, int amount, @Nullable String outcome, @Nullable List<ConquestPackCard> cards,
+            int number, int total, boolean chaos, @Nullable String pack, @Nullable String art) {
+    }
+
+    /** What a won battle gave, already in the save, for the browser to reveal. */
+    @Message("conquestReward")
+    record ConquestReward(List<ConquestStep> steps) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
             Decks.class, DeckMatches.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
@@ -612,7 +681,8 @@ final class ToBrowser {
             Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, CataloguePage.class, EditorMessage.class,
             ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
-            DraftState.class, LimitedResult.class);
+            DraftState.class, LimitedResult.class,
+            ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

@@ -1007,6 +1007,7 @@ public final class WebSession {
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
                 isHost ? OfflineEvents.storage("draft").size() : 0,
+                false, null, null,
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }
