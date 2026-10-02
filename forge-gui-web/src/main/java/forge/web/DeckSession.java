@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
+import forge.card.ColorSet;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
@@ -259,6 +260,28 @@ final class DeckSession {
         }
     }
 
+    /** Opens a game mode's own deck, built from that mode's collection and saved among its decks. */
+    synchronized void openCollectionDeck(final Deck deck, final IStorage<Deck> storage, final GameType type,
+            final DeckEditor.Collection collection, final BrowserChannel channel) {
+        editor = new DeckEditor(deck, false, true, new DeckEditor.Stored(storage), Check.of(type, null), storages, false,
+                this::sendDeviceDeck, collection);
+        eventPool = false;
+        editorSeat = null;
+        editorPath = "";
+        channel.send(new EditorMessage(editor.state(false)));
+    }
+
+    /** Puts away an editor open on a collection whose owner is being left. channel may be null. */
+    synchronized void closeCollectionDeck(final BrowserChannel channel) {
+        if (editor == null || editor.collection() == null) {
+            return;
+        }
+        editor = null;
+        if (channel != null) {
+            channel.send(new EditorMessage(null));
+        }
+    }
+
     /** A guest's event pool its browser has not yet said it keeps. */
     private volatile EventPool pendingPool;
 
@@ -344,10 +367,15 @@ final class DeckSession {
         final Predicate<PaperCard> commanderOnly = df.hasCommander() && commanders.isEmpty()
                 ? c -> df.isLegalCommander(c.getRules()) && !c.getRules().getType().hasSubtype("Background")
                 : null;
+        final ColorSet within = q.identity() == null ? null : ColorSet.fromNames(q.identity().toCharArray());
+        final Predicate<PaperCard> only = within == null ? commanderOnly
+                : c -> c.getRules().getColorIdentity().hasNoColorsExcept(within) && (commanderOnly == null || commanderOnly.test(c));
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
+        final DeckEditor.Collection collection = e == null ? null : e.collection();
         return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
-                q.offset(), q.showAll()), problems, commanderOnly, inDeck::countByName);
+                q.offset(), q.showAll()), problems, only, inDeck::countByName,
+                collection == null ? null : c -> new CardCatalog.Extra(collection.isNew().test(c) ? Boolean.TRUE : null, null));
     }
 
     private ImportResult fetched(final ImportFetch fetch) {

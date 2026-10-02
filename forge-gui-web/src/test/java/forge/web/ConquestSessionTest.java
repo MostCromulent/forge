@@ -2,6 +2,8 @@ package forge.web;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.game.Game;
 import forge.game.GameType;
 import forge.game.player.Player;
@@ -10,6 +12,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.input.InputPassPriority;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
+import forge.gamemodes.planarconquest.ConquestCommander;
 import forge.gamemodes.planarconquest.ConquestController.PreparedBattle;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestLocation;
@@ -17,15 +20,19 @@ import forge.gamemodes.planarconquest.ConquestPlane;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
 import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.gui.GuiBase;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
@@ -441,5 +448,154 @@ public class ConquestSessionTest extends SessionsTest {
         final List<String> names = ConquestGame.saves().saves().stream().map(s -> s.name()).toList();
         Assert.assertTrue(names.contains(data.getName()), "the readable save is not listed");
         Assert.assertFalse(names.contains(broken), "a save with no planeswalker or place is listed");
+    }
+
+    private Recorder editor;
+
+    // The session outlives a test, and an editor left open would be shown to the next one's browser
+    @AfterMethod(alwaysRun = true)
+    public void closeTheEditor() {
+        if (editor != null) {
+            sessions.onMessage(editor, JsonCodec.message("editorClose"));
+            editor = null;
+        }
+    }
+
+    /** Opens the selected commander's deck in the editor, and answers what the editor shows. */
+    private JsonObject editing(final Recorder host) throws InterruptedException {
+        editor = host;
+        host.forget();
+        sessions.onMessage(host, message("conquestEditDeck", "commander", FModel.getConquest().getModel().getSelectedCommander().getName()));
+        return host.awaitMatching("editor", e -> e.has("state"), "the editor did not open").getAsJsonObject("state");
+    }
+
+    /** What the editor shows once it has answered the message just sent. */
+    private JsonObject edited(final Recorder host, final JsonObject message) throws InterruptedException {
+        host.forget();
+        sessions.onMessage(host, message);
+        return host.awaitMatching("editor", e -> e.has("state"), "the editor did not answer").getAsJsonObject("state");
+    }
+
+    private static List<String> mainNames(final JsonObject editorState) {
+        final List<String> names = new ArrayList<>();
+        editorState.getAsJsonArray("main").forEach(g -> g.getAsJsonObject().getAsJsonArray("cards")
+                .forEach(c -> names.add(c.getAsJsonObject().get("name").getAsString())));
+        return names;
+    }
+
+    /** Owned cards that are in no deck and are neither a commander nor the planeswalker, in name order. */
+    private static List<PaperCard> spares(final ConquestData data) {
+        final List<PaperCard> out = new ArrayList<>();
+        for (final PaperCard card : data.getUnlockedCards()) {
+            boolean used = card.equals(data.getPlaneswalker()) || data.isInExile(card) || card.getRules().getType().isBasicLand();
+            for (final ConquestCommander c : data.getCommanders()) {
+                used |= c.getCard().equals(card) || c.getDeck().getMain().countByName(card.getName()) > 0;
+            }
+            if (!used) {
+                out.add(card);
+            }
+        }
+        out.sort((a, b) -> a.getName().compareTo(b.getName()));
+        return out;
+    }
+
+    /** A card the conquest does not own under any printing. */
+    private static PaperCard stranger(final ConquestData data) {
+        final Set<String> owned = new HashSet<>();
+        data.getUnlockedCards().forEach(c -> owned.add(c.getName()));
+        for (final PaperCard card : FModel.getMagicDb().getCommonCards().getUniqueCards()) {
+            if (!owned.contains(card.getName()) && card.getRules().getType().isCreature() && !card.getRules().getType().isLegendary()) {
+                return card;
+            }
+        }
+        throw new AssertionError("every card is owned");
+    }
+
+    private static Deck storedDeck(final String name) {
+        return FModel.getConquest().getDecks().get(name);
+    }
+
+    // Fails if the editor's catalogue lists a card outside the conquest's available cards, lists an exiled card, or
+    // a card that is not owned can be added to the deck
+    @Test(timeOut = 120_000)
+    public void theEditorOffersOnlyOwnedCards() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final PaperCard exiled = spares(data).get(0);
+        data.exile(List.of(exiled));
+        final JsonObject opened = editing(host);
+        Assert.assertEquals(str(opened, "collection"), data.getName());
+        host.forget();
+        sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
+                "sort", "name", "offset", 0, "showAll", true));
+        final JsonObject page = host.awaitMatching("catalogue", c -> true, "the catalogue did not answer");
+        final Set<String> available = new HashSet<>();
+        ConquestUtil.getAvailablePool().forEach(e -> available.add(e.getKey().getName()));
+        final List<String> listed = new ArrayList<>();
+        page.getAsJsonArray("rows").forEach(r -> listed.add(r.getAsJsonObject().get("name").getAsString()));
+        Assert.assertFalse(listed.isEmpty(), "the catalogue is empty");
+        Assert.assertTrue(available.containsAll(listed), "the catalogue lists cards that are not owned: " + listed);
+        Assert.assertFalse(listed.contains(exiled.getName()), "an exiled card is offered");
+        Assert.assertEquals(page.get("total").getAsInt(), available.size());
+
+        final String stranger = stranger(data).getName();
+        final JsonObject after = edited(host, message("editorEdit", "op", "add", "name", stranger, "to", "Main", "count", 1));
+        Assert.assertFalse(mainNames(after).contains(stranger), "a card that is not owned was added");
+        Assert.assertTrue(host.got.stream().anyMatch(m -> "notice".equals(m.get("t").getAsString())), "the refusal was not said");
+        final JsonObject again = edited(host, message("editorEdit", "op", "add", "name", exiled.getName(), "to", "Main", "count", 1));
+        Assert.assertFalse(mainNames(again).contains(exiled.getName()), "an exiled card was added");
+    }
+
+    // Fails if a card added in the editor is not in the deck the next battle is prepared with, or the map is not
+    // told the deck's new size when the editor closes
+    @Test(timeOut = 120_000)
+    public void anEditedDeckIsTheDeckFoughtWith() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final String spare = spares(data).get(0).getName();
+        final int size = data.getSelectedCommander().getDeck().getMain().countAll();
+        editing(host);
+        Assert.assertTrue(mainNames(edited(host, message("editorEdit", "op", "add", "name", spare, "to", "Main", "count", 1))).contains(spare));
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("editorClose"));
+        host.awaitMatching("conquestState", s -> s.getAsJsonObject("commander").get("deckSize").getAsInt() == size + 1,
+                "the map was not told the deck's new size");
+        onUi(() -> {
+            final ConquestLocation loc = data.getCurrentLocation();
+            final PreparedBattle prepared = FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
+            try {
+                Assert.assertEquals(prepared.human().getDeck().getMain().countByName(spare), 1, "the battle's deck lacks the card added");
+            } finally {
+                FModel.getConquest().cancelBattle();
+            }
+        });
+    }
+
+    // Fails if anything the editor can be asked changes the deck's Commander section or its name: an edit and its
+    // undo, a removal or a move from the Commander section, a rename, or an import that replaces the deck
+    @Test(timeOut = 120_000)
+    public void theCommanderStays() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final ConquestCommander commander = data.getSelectedCommander();
+        final List<PaperCard> spares = spares(data);
+        editing(host);
+        edited(host, message("editorEdit", "op", "add", "name", spares.get(0).getName(), "to", "Main", "count", 1));
+        edited(host, JsonCodec.message("editorUndo"));
+        edited(host, message("editorEdit", "op", "remove", "name", commander.getName(), "from", "Commander", "count", 1));
+        edited(host, message("editorEdit", "op", "move", "name", commander.getName(), "from", "Commander", "to", "Main", "count", 1));
+        edited(host, message("editorEdit", "op", "commander", "name", spares.get(0).getName(), "count", 1));
+        edited(host, message("editorRename", "name", "Another name"));
+        final JsonObject replaced = edited(host, message("importCommit", "text",
+                "Commander\n1 " + commander.getName() + "\n\nDeck\n1 " + spares.get(0).getName() + "\n", "name", "Imported",
+                "format", "PlanarConquest", "unrestricted", false, "action", "replace"));
+        Assert.assertEquals(mainNames(replaced), List.of(spares.get(0).getName()), "the import did not replace the main deck");
+        Assert.assertEquals(replaced.get("name").getAsString(), commander.getName());
+        final Deck stored = storedDeck(commander.getName());
+        Assert.assertNotNull(stored, "the deck is no longer saved under the commander's name");
+        Assert.assertEquals(stored.get(DeckSection.Commander).toFlatList(), List.of(commander.getCard()));
+        Assert.assertNull(storedDeck("Another name"));
+        Assert.assertNull(storedDeck("Imported"));
+        Assert.assertSame(commander.getDeck(), stored, "the commander does not hold the deck that was saved");
     }
 }

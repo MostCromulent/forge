@@ -35,6 +35,10 @@ final class CardCatalog {
     record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
+    /** What a collection adds to a card's row. */
+    record Extra(Boolean isNew, Integer value) {
+    }
+
     private record Row(PaperCard card, String normalised, String colours, String cost, int mv, String heading) {
     }
 
@@ -88,6 +92,12 @@ final class CardCatalog {
      */
     CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
             final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck) {
+        return query(request, q, problemOf, commanderOnly, inDeck, null);
+    }
+
+    /** extras, when given, says what a collection adds to each row. */
+    CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
+            final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck, final Function<PaperCard, Extra> extras) {
         final String typed = q.text() == null ? "" : q.text().trim();
         // Search syntax such as c:bg or mv<=3 is read by desktop's own parser; plain text is a name, ranked as desktop ranks names
         final Predicate<PaperCard> syntax = usesSyntax(typed) ? SFilterUtil.buildTextFilter(typed, false, true, false, false, false) : null;
@@ -123,7 +133,8 @@ final class CardCatalog {
         final int from = Math.min(Math.max(0, q.offset()), ordered.size());
         final List<CatalogueRow> page = new ArrayList<>();
         for (final Row row : ordered.subList(from, Math.min(from + PAGE, ordered.size()))) {
-            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName())));
+            page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName()),
+                    extras == null ? null : extras.apply(row.card())));
         }
         return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty());
     }
@@ -194,10 +205,11 @@ final class CardCatalog {
         };
     }
 
-    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck) {
+    private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck, final Extra extra) {
         final CardRules rules = row.card().getRules();
         return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
-                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem);
+                row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem,
+                extra == null ? null : extra.isNew(), extra == null ? null : extra.value());
     }
 
     static String pt(final CardRules rules) {

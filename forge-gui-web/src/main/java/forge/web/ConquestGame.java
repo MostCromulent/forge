@@ -17,6 +17,7 @@ import forge.gamemodes.planarconquest.ConquestPlaneData;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
 import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
+import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
@@ -95,6 +96,24 @@ final class ConquestGame {
 
     private static File saveDir(final String name) {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
+    }
+
+    /** The open conquest's commander of a name, or null. */
+    static ConquestCommander commander(final String name) {
+        for (final ConquestCommander c : model().getCommanders()) {
+            if (c.getName().equals(name)) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /** What the deck editor builds a commander's deck from: the cards owned and not exiled. */
+    static DeckEditor.Collection collection(final ConquestCommander commander) {
+        final ConquestData data = model();
+        // The commander caches its deck, and the editor saves a copy
+        return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard,
+                ConquestUtil::getBasicLandSets, commander::reloadDeck);
     }
 
     static String planeName(final ConquestPlane plane) {

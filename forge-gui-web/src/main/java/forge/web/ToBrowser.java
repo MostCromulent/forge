@@ -241,13 +241,14 @@ final class ToBrowser {
     /**
      * Everything the editor shows about its deck. check is the "Check legality against" label; format, cardPool and
      * unrestricted are its parts, for the control. target is storage (the host's decks) or device (a guest's browser).
-     * copyOf names a deck that can't be changed in place, until the first change copies it.
+     * copyOf names a deck that can't be changed in place, until the first change copies it. collection names whose
+     * cards the deck is built from (a conquest), when it is not built from every card.
      */
     record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, int problemCount, boolean canUndo, @Nullable String landed, boolean onSeat,
-            boolean limited, @Nullable String landSet, List<LandSet> landSets) {
+            boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection) {
     }
 
     /** An edition basic lands can come from, for a limited deck's land row. */
@@ -301,9 +302,13 @@ final class ToBrowser {
     record NameTaken(String name) {
     }
 
-    /** One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. */
+    /**
+     * One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. In a
+     * collection, isNew marks a card not yet played with, value is what exiling or retrieving it is worth, and problem
+     * is why it can't be exiled.
+     */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String heading, int inDeck, @Nullable String problem) {
+            String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value) {
     }
 
     @Message("cardSearch")

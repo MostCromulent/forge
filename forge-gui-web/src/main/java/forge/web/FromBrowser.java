@@ -176,10 +176,14 @@ final class FromBrowser {
     record DeckDelete(String key) {
     }
 
-    /** A page of the catalogue; request is echoed back so a late answer to an old query is dropped. */
+    /**
+     * A page of the catalogue; request is echoed back so a late answer to an old query is dropped. identity keeps
+     * only cards within those colours, as WUBRG letters. source asks for a conquest's cards instead of the open
+     * deck's catalogue, collection or exile, and plane keeps only those of one plane.
+     */
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
-            boolean showAll) {
+            boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String plane) {
     }
 
     @Command("importRead")
@@ -393,6 +397,11 @@ final class FromBrowser {
     /** Selects a place on the map. The player does not move. */
     @Command("conquestSelect")
     record ConquestSelect(int region, int row, int col) {
+    }
+
+    /** Opens a commander's deck in the editor, over the conquest's cards. */
+    @Command("conquestEditDeck")
+    record ConquestEditDeck(String commander) {
     }
 
     /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name, or empty to leave it to chance. */

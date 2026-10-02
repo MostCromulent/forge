@@ -585,6 +585,10 @@ public final class ConquestData {
         xmlFilename = directory.getPath() + ForgeConstants.PATH_SEPARATOR + XML_FILE;
     }
 
+    public boolean isNewCard(PaperCard card) {
+        return newCards.contains(card);
+    }
+
     public void resetNewCards() {
         newCards.clear();
     }

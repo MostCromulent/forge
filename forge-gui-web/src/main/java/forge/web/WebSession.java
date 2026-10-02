@@ -62,6 +62,7 @@ import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
+import forge.gamemodes.planarconquest.ConquestCommander;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
@@ -461,6 +462,11 @@ public final class WebSession {
                         channel.send(OfflineEvents.pools());
                     }
                     decks.onMessage(channel, msg);
+                    // A commander's deck may have changed size or become playable, which the bar's pages show
+                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Conquest c && c.save() != null) {
+                        channel.send(conquest.bar());
+                        channel.send(conquest.state(List.of()));
+                    }
                 }
             }
             // LocalGame runs on the host UI thread, so host-side dialogs during setup never block a web server thread
@@ -567,6 +573,15 @@ public final class WebSession {
                         final FromBrowser.ConquestSelect at = Wire.decode(msg, FromBrowser.ConquestSelect.class);
                         conquest.select(at.region(), at.row(), at.col());
                         channel.send(conquest.state(List.of()));
+                    }
+                }
+            }
+            case "conquestEditDeck" -> {
+                if (stage instanceof Conquest c && c.save() != null) {
+                    final ConquestCommander commander = ConquestGame.commander(Wire.decode(msg, FromBrowser.ConquestEditDeck.class).commander());
+                    if (commander != null) {
+                        decks.openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
+                                ConquestGame.collection(commander), channel);
                     }
                 }
             }
@@ -1338,6 +1353,8 @@ public final class WebSession {
             return;
         }
         final ConquestData data = ConquestGame.find(save);
+        // A deck of the conquest being left has nothing to be built from any more
+        decks.closeCollectionDeck(browser);
         if (data != null) {
             FModel.getConquest().load(data);
             conquest.opened();
