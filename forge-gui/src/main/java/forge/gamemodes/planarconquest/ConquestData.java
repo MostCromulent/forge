@@ -215,6 +215,25 @@ public final class ConquestData {
         setCurrentLocation(planeData.getLocation());
     }
 
+    public int getPlaneUnlockCost() {
+        ConquestPreferences prefs = FModel.getConquestPreferences();
+        return prefs.getPrefInt(CQPref.PLANESWALK_FIRST_UNLOCK) + prefs.getPrefInt(CQPref.PLANESWALK_UNLOCK_INCREASE) * (getUnlockedPlaneCount() - 1);
+    }
+
+    /** Walks to a place and saves. Returns the path from where the player stood, or null if it cannot be reached. */
+    public List<ConquestLocation> moveTo(ConquestLocation dest) {
+        List<ConquestLocation> path = getPath(dest);
+        if (path == null || dest.equals(currentLocation)) { return path; }
+
+        String secretArea = currentLocation.getEvent().getTemporaryUnlock();
+        if (secretArea != null) {
+            ConquestUtil.setPlaneTemporarilyAccessible(secretArea, false);
+        }
+        setCurrentLocation(dest);
+        saveData();
+        return path;
+    }
+
     public ConquestCommander getSelectedCommander() {
         return commanders.get(selectedCommanderIndex);
     }

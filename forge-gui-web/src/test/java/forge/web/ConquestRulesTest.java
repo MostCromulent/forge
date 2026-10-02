@@ -216,6 +216,51 @@ public class ConquestRulesTest {
         assertEquals(data.getPlaneswalkEmblems(), 0);
     }
 
+    // Fails if moving away from an event that opened a secret plane leaves the plane open, or the new place is not saved
+    @Test
+    public void movingAwayClosesThePortal() {
+        final ConquestData data = ConquestFixture.create("Eldraine");
+        final ConquestPlane plane = data.getCurrentPlane();
+        final ConquestLocation portal = ConquestFixture.portal(plane);
+        assertNotNull(portal, "Eldraine has lost its secret plane; pick another plane");
+        final ConquestPlane secret = ConquestUtil.getPlaneByName(portal.getEvent().getTemporaryUnlock());
+        data.setCurrentLocation(portal);
+        data.addWin(portal.getEvent().createBattle(portal, 0));
+        ConquestUtil.setPlaneTemporarilyAccessible(secret.getName(), true);
+        assertFalse(secret.isUnreachable());
+
+        // Standing still is not a move
+        assertEquals(data.moveTo(portal).size(), 1);
+        assertFalse(secret.isUnreachable());
+
+        final ConquestLocation next = portal.getNeighbors().get(0);
+        final List<ConquestLocation> path = data.moveTo(next);
+        assertEquals(path.size(), 2);
+        assertEquals(path.get(0), portal);
+        assertTrue(secret.isUnreachable());
+        assertEquals(new ConquestData(data.getDirectory()).getCurrentLocation(), next);
+    }
+
+    // Fails if a place that touches no conquered event can be walked to
+    @Test
+    public void anUnreachablePlaceIsNotMovedTo() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestLocation start = data.getCurrentLocation();
+        assertNull(data.moveTo(new ConquestLocation(data.getCurrentPlane(), 2, 1, 1)));
+        assertEquals(data.getCurrentLocation(), start);
+    }
+
+    // Fails if a plane's cost is not the first-unlock price plus the increase for each plane already unlocked past the first
+    @Test
+    public void eachPlaneCostsMoreEmblems() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final int first = FModel.getConquestPreferences().getPrefInt(CQPref.PLANESWALK_FIRST_UNLOCK);
+        final int more = FModel.getConquestPreferences().getPrefInt(CQPref.PLANESWALK_UNLOCK_INCREASE);
+        assertEquals(data.getPlaneUnlockCost(), first);
+        data.unlockPlane(FModel.getPlanes().get("Alara"));
+        assertEquals(data.getPlaneUnlockCost(), first + more);
+    }
+
     private static ConquestBattle wonBattle(final ConquestData data) {
         final ConquestLocation loc = new ConquestLocation(data.getCurrentPlane(), 0, 0, 0);
         final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);

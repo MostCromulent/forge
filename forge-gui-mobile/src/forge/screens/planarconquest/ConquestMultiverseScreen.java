@@ -34,7 +34,6 @@ import forge.gamemodes.planarconquest.ConquestPlane;
 import forge.gamemodes.planarconquest.ConquestPlaneData;
 import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
-import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.gui.FThreads;
 import forge.gui.card.CardDetailUtil;
 import forge.gui.card.CardDetailUtil.DetailColors;
@@ -456,12 +455,7 @@ public class ConquestMultiverseScreen extends FScreen {
 
             @Override
             protected void onEnd(boolean endingAll) {
-                String secretArea = model.getCurrentLocation().getEvent().getTemporaryUnlock();
-                if (secretArea != null) {
-                    ConquestUtil.setPlaneTemporarilyAccessible(secretArea, false);
-                }
-                model.setCurrentLocation(path.get(path.size() - 1));
-                model.saveData(); //save new location
+                model.moveTo(path.get(path.size() - 1));
                 activeMoveAnimation = null;
 
                 battleBar.update();
