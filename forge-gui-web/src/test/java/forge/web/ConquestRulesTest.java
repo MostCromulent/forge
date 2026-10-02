@@ -2,18 +2,27 @@ package forge.web;
 
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
+import forge.gamemodes.planarconquest.ConquestAwardPool;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
+import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.gamemodes.planarconquest.ConquestPlane;
+import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
+import forge.gamemodes.planarconquest.ConquestReward;
+import forge.gamemodes.planarconquest.ConquestRewardStep;
+import forge.gamemodes.planarconquest.ConquestRewardStep.Kind;
 import forge.gamemodes.planarconquest.ConquestUtil;
+import forge.item.PaperCard;
 import forge.model.FModel;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -108,6 +117,114 @@ public class ConquestRulesTest {
         assertNull(conquest.getActiveBattle());
         final ConquestLocation loc = new ConquestLocation(data.getCurrentPlane(), 0, 0, 0);
         assertNotNull(conquest.prepareBattle(loc.getEvent().createBattle(loc, 0), null));
+    }
+
+    // Fails if the wheel can be told to rest on a spot that pays something else
+    @Test
+    public void theWheelRestsOnTheOutcomeItWasGiven() {
+        for (final ChaosWheelOutcome outcome : ChaosWheelOutcome.values()) {
+            for (int i = 0; i < 20; i++) {
+                assertEquals(ChaosWheelOutcome.getWheelOutcome(ChaosWheelOutcome.restingRotation(outcome)), outcome);
+            }
+        }
+    }
+
+    // Fails if a first win does not give its emblem before the wheel, or the shards spot does not pay the wheel's shards
+    @Test
+    public void aFirstWinGivesAnEmblemThenTheWheel() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestBattle battle = wonBattle(data);
+        final int wheelShards = FModel.getConquestPreferences().getPrefInt(CQPref.AETHER_WHEEL_SHARDS);
+        final int conquerEmblems = FModel.getConquestPreferences().getPrefInt(CQPref.PLANESWALK_CONQUER_EMBLEMS);
+        final int shards = data.getAEtherShards();
+        final List<ConquestRewardStep> steps = FModel.getConquest().claimRewards(battle, ChaosWheelOutcome.SHARDS);
+        assertEquals(kinds(steps), List.of(Kind.CONQUER_EMBLEMS, Kind.WHEEL, Kind.SHARDS));
+        assertEquals(data.getPlaneswalkEmblems(), conquerEmblems);
+        assertEquals(data.getAEtherShards(), shards + wheelShards);
+        assertEquals(steps.get(2).amount(), wheelShards);
+
+        // A second win at the same event gives no emblem
+        data.addWin(battle);
+        assertEquals(kinds(FModel.getConquest().claimRewards(battle, ChaosWheelOutcome.DOUBLE_SHARDS)), List.of(Kind.WHEEL, Kind.SHARDS));
+        assertEquals(data.getPlaneswalkEmblems(), conquerEmblems);
+        assertEquals(data.getAEtherShards(), shards + 3 * wheelShards);
+    }
+
+    // Fails if a booster's cards are not unlocked, its duplicates are not paid for, or two boosters are not two steps
+    @Test
+    public void boostersUnlockTheirCardsAndPayForDuplicates() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestBattle battle = wonBattle(data);
+        final int shards = data.getAEtherShards();
+        final int cards = data.getUnlockedCardCount();
+        final List<ConquestRewardStep> steps = FModel.getConquest().claimRewards(battle, ChaosWheelOutcome.DOUBLE_BOOSTER);
+        final List<ConquestRewardStep> boosters = steps.stream().filter(s -> s.kind() == Kind.BOOSTER).toList();
+        assertEquals(boosters.size(), 2);
+        assertEquals(boosters.get(1).number(), 2);
+        assertEquals(boosters.get(1).total(), 2);
+        int fresh = 0;
+        int paid = 0;
+        for (final ConquestRewardStep booster : boosters) {
+            assertFalse(booster.cards().isEmpty());
+            for (final ConquestReward reward : booster.cards()) {
+                assertTrue(data.hasUnlockedCard(reward.getCard()));
+                if (reward.isDuplicate()) {
+                    paid += reward.getReplacementShards();
+                } else {
+                    fresh++;
+                }
+            }
+        }
+        assertEquals(data.getUnlockedCardCount(), cards + fresh);
+        assertEquals(data.getAEtherShards(), shards + paid);
+        final int owed = paid;
+        assertEquals(steps.stream().anyMatch(s -> s.kind() == Kind.DUPLICATE_SHARDS && s.amount() == owed), paid > 0);
+    }
+
+    // Fails if a booster from an empty pool is shown as a pack with no cards
+    @Test
+    public void anEmptyBoosterIsLeftOut() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestBattle battle = wonBattle(data);
+        final ConquestAwardPool pool = data.getCurrentPlane().getAwardPool();
+        final List<List<PaperCard>> kept = List.of(new ArrayList<>(pool.commons), new ArrayList<>(pool.uncommons),
+                new ArrayList<>(pool.rares), new ArrayList<>(pool.mythics));
+        pool.commons.clear();
+        pool.uncommons.clear();
+        pool.rares.clear();
+        pool.mythics.clear();
+        try {
+            final List<ConquestRewardStep> steps = FModel.getConquest().claimRewards(battle, ChaosWheelOutcome.BOOSTER);
+            assertFalse(steps.stream().anyMatch(s -> s.kind() == Kind.BOOSTER));
+        } finally {
+            // The pool is cached on the plane for the whole process
+            pool.commons.addAll(kept.get(0));
+            pool.uncommons.addAll(kept.get(1));
+            pool.rares.addAll(kept.get(2));
+            pool.mythics.addAll(kept.get(3));
+        }
+    }
+
+    // Fails if a lost battle is rewarded
+    @Test
+    public void aLostBattleGivesNothing() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestLocation loc = new ConquestLocation(data.getCurrentPlane(), 0, 0, 0);
+        final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
+        data.addLoss(battle);
+        assertTrue(FModel.getConquest().claimRewards(battle, ChaosWheelOutcome.SHARDS).isEmpty());
+        assertEquals(data.getPlaneswalkEmblems(), 0);
+    }
+
+    private static ConquestBattle wonBattle(final ConquestData data) {
+        final ConquestLocation loc = new ConquestLocation(data.getCurrentPlane(), 0, 0, 0);
+        final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
+        data.addWin(battle);
+        return battle;
+    }
+
+    private static List<Kind> kinds(final List<ConquestRewardStep> steps) {
+        return steps.stream().map(ConquestRewardStep::kind).toList();
     }
 
     /** The first place on a plane whose event's variants are wanted. */

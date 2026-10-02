@@ -28,7 +28,10 @@ import forge.game.GameType;
 import forge.game.GameView;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
+import forge.gamemodes.planarconquest.ConquestEvent.ConquestEventRecord;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
+import forge.gamemodes.planarconquest.ConquestRewardStep.Kind;
 import forge.gamemodes.quest.BoosterUtils;
 import forge.gui.FThreads;
 import forge.gui.GuiBase;
@@ -258,6 +261,83 @@ public class ConquestController {
 
     public void finishEvent(final IWinLoseView<? extends IButton> view) {
         finishBattle();
+    }
+
+    /** Applies and saves what a won battle gives, and returns it in the order it is shown. */
+    public List<ConquestRewardStep> claimRewards(ConquestBattle battle, ChaosWheelOutcome outcome) {
+        final List<ConquestRewardStep> steps = new ArrayList<>();
+        if (!battle.wasConquered()) { return steps; }
+
+        final ConquestPreferences prefs = FModel.getConquestPreferences();
+        if (battle instanceof ConquestChaosBattle) {
+            addBoosters(steps, ((ConquestChaosBattle) battle).getAwardPool(), 3, true);
+            model.saveData();
+            return steps;
+        }
+
+        ConquestEventRecord record = model.getCurrentPlaneData().getEventRecord(battle.getLocation());
+        if (record.getWins(battle.getTier()) == 1 && record.getHighestConqueredTier() == battle.getTier()) {
+            int emblems = prefs.getPrefInt(CQPref.PLANESWALK_CONQUER_EMBLEMS);
+            model.rewardPlaneswalkEmblems(emblems);
+            steps.add(ConquestRewardStep.of(Kind.CONQUER_EMBLEMS, emblems));
+        }
+
+        steps.add(ConquestRewardStep.wheel(outcome));
+        switch (outcome) {
+        case BOOSTER:
+            addBoosters(steps, model.getCurrentPlane().getAwardPool(), 1, false);
+            break;
+        case DOUBLE_BOOSTER:
+            addBoosters(steps, model.getCurrentPlane().getAwardPool(), 2, false);
+            break;
+        case SHARDS:
+            addShards(steps, prefs.getPrefInt(CQPref.AETHER_WHEEL_SHARDS));
+            break;
+        case DOUBLE_SHARDS:
+            addShards(steps, 2 * prefs.getPrefInt(CQPref.AETHER_WHEEL_SHARDS));
+            break;
+        case PLANESWALK:
+            if (model.getUnlockedPlaneCount() == model.getAccessiblePlaneCount()) {
+                steps.add(ConquestRewardStep.of(Kind.ALL_PLANES_UNLOCKED));
+                steps.add(ConquestRewardStep.of(Kind.CHAOS_BATTLE));
+            }
+            else {
+                int emblems = prefs.getPrefInt(CQPref.PLANESWALK_WHEEL_EMBLEMS);
+                model.rewardPlaneswalkEmblems(emblems);
+                steps.add(ConquestRewardStep.of(Kind.EMBLEMS, emblems));
+            }
+            break;
+        case CHAOS:
+            steps.add(ConquestRewardStep.of(Kind.CHAOS_BATTLE));
+            break;
+        }
+        model.saveData();
+        return steps;
+    }
+
+    private void addShards(List<ConquestRewardStep> steps, int shards) {
+        model.rewardAEtherShards(shards);
+        steps.add(ConquestRewardStep.of(Kind.SHARDS, shards));
+    }
+
+    private void addBoosters(List<ConquestRewardStep> steps, ConquestAwardPool pool, int count, boolean chaos) {
+        final List<List<ConquestReward>> boosters = new ArrayList<>();
+        int duplicateShards = 0;
+        for (int i = 0; i < count; i++) {
+            List<ConquestReward> cards = awardBooster(pool);
+            if (cards.isEmpty()) { continue; }
+
+            boosters.add(cards);
+            for (ConquestReward reward : cards) {
+                duplicateShards += reward.getReplacementShards();
+            }
+        }
+        for (int i = 0; i < boosters.size(); i++) {
+            steps.add(ConquestRewardStep.booster(boosters.get(i), i + 1, boosters.size(), chaos));
+        }
+        if (duplicateShards > 0) {
+            steps.add(ConquestRewardStep.of(Kind.DUPLICATE_SHARDS, duplicateShards));
+        }
     }
 
     public List<ConquestReward> awardBooster(ConquestAwardPool pool) {
