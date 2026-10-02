@@ -49,6 +49,18 @@ final class DeckImport {
     }
 
     static Read read(final String text, final Check check) {
+        return read(text, check, null);
+    }
+
+    /**
+     * With a collection, the list is read for a deck built from those cards: only its main deck is taken, each card
+     * as the printing owned, and a card that is not owned is a problem. Basic lands are free.
+     */
+    static Read read(final String text, final Check check, final DeckEditor.Collection collection) {
+        final Map<String, PaperCard> owned = new HashMap<>();
+        if (collection != null) {
+            collection.cards().get().forEach(e -> owned.putIfAbsent(e.getKey().getName(), e.getKey()));
+        }
         final String[] raw = text.split("\r?\n", -1);
         // Lines the recognizer misses only because of a set code and collector number are read by name
         final String[] lines = DeckUrlLoader.getRecognizableImportLines(new DeckRecognizer(), String.join("\n", raw));
@@ -95,8 +107,21 @@ final class DeckImport {
                         kinds[i] = IGNORED;
                         continue;
                     }
+                    if (collection != null && token.getTokenSection() != DeckSection.Main) {
+                        kinds[i] = IGNORED;
+                        continue;
+                    }
+                    final PaperCard listed = token.getCard();
+                    final PaperCard card = collection == null || listed.getRules().getType().isBasicLand() ? listed : owned.get(listed.getName());
+                    if (card == null) {
+                        kinds[i] = PROBLEM;
+                        notImported++;
+                        problems.add(new ImportProblem(i, Localizer.getInstance().getMessage("lblWebImportLineCard", i + 1, listed.getName()),
+                                Localizer.getInstance().getMessage("lblWebConquestNotOwned"),
+                                List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
+                        continue;
+                    }
                     kinds[i] = READ;
-                    final PaperCard card = token.getCard();
                     deck.getOrCreate(token.getTokenSection()).add(card, token.getQuantity());
                     lineOf.putIfAbsent(card.getName(), i);
                 }

@@ -598,4 +598,44 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(storedDeck("Imported"));
         Assert.assertSame(commander.getDeck(), stored, "the commander does not hold the deck that was saved");
     }
+
+    // Fails if reading a list for a conquest's deck does not mark a card that is not owned as a problem, or adding
+    // the list puts that card in the deck, leaves out an owned card named in a printing that is not owned, puts it
+    // in as the printing named instead of the one owned, or refuses the basic lands
+    @Test(timeOut = 120_000)
+    public void importTakesOnlyOwnedCards() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        PaperCard owned = null;
+        PaperCard otherPrinting = null;
+        for (final PaperCard spare : spares(data)) {
+            for (final PaperCard printing : FModel.getMagicDb().getCommonCards().getAllCards(spare.getName())) {
+                if (!printing.getEdition().equals(spare.getEdition())) {
+                    owned = spare;
+                    otherPrinting = printing;
+                }
+            }
+        }
+        Assert.assertNotNull(owned, "the fixture owns no spare card with a second printing");
+        final String stranger = stranger(data).getName();
+        final int forests = data.getSelectedCommander().getDeck().getMain().countByName("Forest");
+        final String list = "1 " + owned.getName() + " (" + otherPrinting.getEdition() + ")\n1 " + stranger + "\n5 Forest\n";
+        editing(host);
+        host.forget();
+        sessions.onMessage(host, message("importRead", "request", 7, "text", list, "format", "PlanarConquest", "unrestricted", false));
+        final JsonObject read = host.awaitMatching("importResult", r -> true, "the list was not read");
+        Assert.assertEquals(read.getAsJsonArray("lines").get(0).getAsJsonObject().get("kind").getAsString(), "read");
+        Assert.assertEquals(read.getAsJsonArray("lines").get(1).getAsJsonObject().get("kind").getAsString(), "problem",
+                "a card that is not owned was not marked");
+        Assert.assertEquals(read.getAsJsonArray("lines").get(2).getAsJsonObject().get("kind").getAsString(), "read");
+        Assert.assertEquals(read.getAsJsonObject("summary").get("notImported").getAsInt(), 1);
+
+        final JsonObject added = edited(host, message("importCommit", "text", list, "name", "Imported", "format", "PlanarConquest",
+                "unrestricted", false, "action", "add"));
+        Assert.assertTrue(mainNames(added).contains(owned.getName()), "the owned card was left out");
+        Assert.assertFalse(mainNames(added).contains(stranger), "a card that is not owned was imported");
+        final Deck stored = storedDeck(data.getSelectedCommander().getName());
+        Assert.assertEquals(stored.getMain().count(owned), 1, "the card went in as a printing that is not owned");
+        Assert.assertEquals(stored.getMain().countByName("Forest"), forests + 5);
+    }
 }

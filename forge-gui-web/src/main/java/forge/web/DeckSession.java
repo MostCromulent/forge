@@ -124,7 +124,8 @@ final class DeckSession {
             case "importRead" -> {
                 final ImportRead read = Wire.decode(msg, ImportRead.class);
                 final Check check = check(read.format(), read.cardPool(), read.unrestricted());
-                ui.runBackgroundTask("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check), check, null)));
+                final DeckEditor.Collection collection = openCollection();
+                ui.runBackgroundTask("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
             }
             // Fetching waits on a web site
             case "importFetch" -> {
@@ -271,6 +272,11 @@ final class DeckSession {
         channel.send(new EditorMessage(editor.state(false)));
     }
 
+    /** The collection the open deck is built from, or null. */
+    private synchronized DeckEditor.Collection openCollection() {
+        return editor == null ? null : editor.collection();
+    }
+
     /** Puts away an editor open on a collection whose owner is being left. channel may be null. */
     synchronized void closeCollectionDeck(final BrowserChannel channel) {
         if (editor == null || editor.collection() == null) {
@@ -398,7 +404,12 @@ final class DeckSession {
     /** Saves an imported deck, then does what the player asked: puts it on a seat, opens it, or adds it to the open deck. */
     private synchronized void commit(final BrowserChannel channel, final ImportCommit c) {
         final Check check = check(c.format(), c.cardPool(), c.unrestricted());
-        final Deck deck = DeckImport.read(c.text(), check).deck();
+        final DeckEditor.Collection collection = openCollection();
+        final Deck deck = DeckImport.read(c.text(), check, collection).deck();
+        // A list read against a collection is for the deck open on it, and makes no deck of its own
+        if (collection != null && c.action() != FromBrowser.ImportAction.add && c.action() != FromBrowser.ImportAction.replace) {
+            return;
+        }
         if (c.action() == FromBrowser.ImportAction.add || c.action() == FromBrowser.ImportAction.replace) {
             if (editor != null) {
                 final String refused = c.action() == FromBrowser.ImportAction.add ? editor.addAll(deck) : editor.replaceAll(deck);
