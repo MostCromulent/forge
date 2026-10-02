@@ -455,7 +455,13 @@ public final class WebSession {
             // A match takes the whole page, so nothing about decks is done during one
             case "browseFormat", "editorOpen", "editorClose", "editorUndo", "editorEdit", "editorRename", "editorCheck",
                     "editorDeck", "deckDelete", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
-                if (!(stage instanceof Playing)) {
+                if ("catalogue".equals(msg.get("t").getAsString()) && msg.has("source") && !msg.get("source").isJsonNull()) {
+                    // A conquest's own cards, which need no deck open
+                    if (stage instanceof Conquest c && c.save() != null) {
+                        final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);
+                        ui.runBackgroundTask("Catalogue", () -> channel.send(conquest.cards(q)));
+                    }
+                } else if (!(stage instanceof Playing)) {
                     // A pool's deck, saved with every edit, changes its row, which the opponents screen reads the deck
                     // from; it goes first, since closing the editor lists every deck again before the page changes
                     if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
@@ -576,13 +582,10 @@ public final class WebSession {
                     }
                 }
             }
-            case "conquestEditDeck" -> {
+            case "conquestParty", "conquestCollection", "conquestLead", "conquestWalker", "conquestViewDeck", "conquestEditDeck",
+                    "conquestExile" -> {
                 if (stage instanceof Conquest c && c.save() != null) {
-                    final ConquestCommander commander = ConquestGame.commander(Wire.decode(msg, FromBrowser.ConquestEditDeck.class).commander());
-                    if (commander != null) {
-                        decks.openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
-                                ConquestGame.collection(commander), channel);
-                    }
+                    conquestPages(channel, msg);
                 }
             }
             // A match is started on the host UI thread, as a table's is
@@ -1361,6 +1364,50 @@ public final class WebSession {
         }
         if (move(from, new Conquest(data == null ? null : data.getName()))) {
             sendConquest();
+        }
+    }
+
+    /** The Commanders and Collection pages of the open conquest. */
+    private void conquestPages(final BrowserChannel channel, final JsonObject msg) {
+        final String type = msg.get("t").getAsString();
+        switch (type) {
+            case "conquestParty" -> channel.send(conquest.party());
+            case "conquestCollection" -> channel.send(conquest.collection());
+            case "conquestWalker" -> {
+                if (ConquestGame.setPlaneswalker(Wire.decode(msg, FromBrowser.ConquestWalker.class).planeswalker())) {
+                    channel.send(conquest.party());
+                    channel.send(conquest.state(List.of()));
+                }
+            }
+            case "conquestExile" -> {
+                final FromBrowser.ConquestExile exile = Wire.decode(msg, FromBrowser.ConquestExile.class);
+                final String problem = ConquestGame.exile(exile.cards(), exile.retrieve());
+                if (problem != null) {
+                    channel.send(new Notice(problem, null, false));
+                }
+                // An exiled commander leaves the party, and may have been the one on the map
+                channel.send(conquest.bar());
+                channel.send(conquest.collection());
+                channel.send(conquest.state(List.of()));
+            }
+            default -> {
+                // The rest name a commander
+                final ConquestCommander commander = ConquestGame.commander(msg.get("commander").getAsString());
+                if (commander == null) {
+                    return;
+                }
+                switch (type) {
+                    case "conquestLead" -> {
+                        ConquestGame.model().setSelectedCommander(commander);
+                        ConquestGame.model().saveData();
+                        channel.send(conquest.party());
+                        channel.send(conquest.state(List.of()));
+                    }
+                    case "conquestViewDeck" -> channel.send(new ToBrowser.DeckDetailsMessage(ConquestGame.deckDetails(commander)));
+                    default -> decks.openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
+                            ConquestGame.collection(commander), channel);
+                }
+            }
         }
     }
 

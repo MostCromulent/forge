@@ -328,7 +328,10 @@ public final class ConquestData {
     private boolean exile(Collection<PaperCard> cards, int value) {
         if (!exiledCards.addAll(cards)) { return false; }
 
+        // The selection is a place in the list, which removing an earlier commander would shift
+        ConquestCommander selected = getSelectedCommander();
         commanders.removeIf(commander -> cards.contains(commander.getCard()));
+        selectedCommanderIndex = Math.max(0, commanders.indexOf(selected));
         rewardAEtherShards(value);
         saveData();
         return true;

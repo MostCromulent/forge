@@ -6,6 +6,7 @@ import forge.gamemodes.planarconquest.ConquestAether;
 import forge.gamemodes.planarconquest.ConquestAwardPool;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
+import forge.gamemodes.planarconquest.ConquestCommander;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
@@ -417,5 +418,28 @@ public class ConquestRulesTest {
         final ConquestData made = ConquestFixture.create("Zendikar");
         ConquestController.delete(made);
         assertFalse(ConquestController.listSaves().stream().anyMatch(d -> d.getName().equals(made.getName())));
+    }
+
+    // Fails if exiling a commander listed before the selected one leaves a different commander selected
+    @Test
+    public void exilingACommanderKeepsTheSelection() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final List<PaperCard> more = new ArrayList<>();
+        for (final PaperCard card : data.getCurrentPlane().getCommanders()) {
+            if (!data.hasUnlockedCard(card) && more.size() < 2) {
+                more.add(card);
+            }
+        }
+        data.unlockCards(more);
+        ConquestCommander third = null;
+        for (final ConquestCommander c : data.getCommanders()) {
+            if (c.getCard().equals(more.get(1))) {
+                third = c;
+            }
+        }
+        data.setSelectedCommander(third);
+        assertNull(data.getExileProblem(List.of(more.get(0))));
+        data.exile(List.of(more.get(0)));
+        assertSame(data.getSelectedCommander(), third);
     }
 }

@@ -658,6 +658,25 @@ final class ToBrowser {
             ConquestLead commander) {
     }
 
+    /** A commander as the Commanders page lists it. problem is why its deck cannot be played. */
+    record ConquestCommanderRow(String name, String image, String colors, String origin, int wins, int losses, int deckSize,
+            @Nullable String problem, boolean selected) {
+    }
+
+    record ConquestWalkerRow(String name, String image, String colors, boolean selected) {
+    }
+
+    /** commanderCount and walkerCount are those found against all there are, as mobile's statistics write them. */
+    @Message("conquestParty")
+    record ConquestParty(List<ConquestCommanderRow> commanders, List<ConquestWalkerRow> planeswalkers, String commanderCount,
+            String walkerCount) {
+    }
+
+    /** The Collection page's two lists by size, the planes its filter offers, and mobile's line on what exile pays. */
+    @Message("conquestCollection")
+    record ConquestCollection(int collection, int exiled, List<String> planes, String note) {
+    }
+
     /** A battle's game ended. matchOver is false between the games of a chaos battle. */
     @Message("conquestResult")
     record ConquestResult(boolean won, boolean matchOver, boolean chaos, String event, boolean firstConquest) {
@@ -688,7 +707,8 @@ final class ToBrowser {
             Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, CataloguePage.class, EditorMessage.class,
             ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
             DraftState.class, LimitedResult.class,
-            ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class);
+            ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class,
+            ConquestParty.class, ConquestCollection.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

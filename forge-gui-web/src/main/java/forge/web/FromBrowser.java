@@ -24,7 +24,7 @@ final class FromBrowser {
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
-        conquestLeave, conquestMove, conquestBattle, conquestClaim }
+        conquestLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection }
 
     @Command
     record Bare(Plain t) {
@@ -399,6 +399,26 @@ final class FromBrowser {
     record ConquestSelect(int region, int row, int col) {
     }
 
+    /** Makes a commander the one battles are fought with. */
+    @Command("conquestLead")
+    record ConquestSetLead(String commander) {
+    }
+
+    /** Makes an owned planeswalker the one the player travels as. */
+    @Command("conquestWalker")
+    record ConquestWalker(String planeswalker) {
+    }
+
+    /** Asks for a commander's deck, answered as a deck's details are. */
+    @Command("conquestViewDeck")
+    record ConquestViewDeck(String commander) {
+    }
+
+    /** Exiles cards of the collection for shards, or brings exiled ones back. cards are image keys. */
+    @Command("conquestExile")
+    record ConquestExile(List<String> cards, boolean retrieve) {
+    }
+
     /** Opens a commander's deck in the editor, over the conquest's cards. */
     @Command("conquestEditDeck")
     record ConquestEditDeck(String commander) {
@@ -420,5 +440,6 @@ final class FromBrowser {
             PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
             DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class, SetMaxBracket.class,
             EventDecksOnly.class, EventHostAgain.class, EventForget.class,
-            ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class);
+            ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class,
+            ConquestSetLead.class, ConquestWalker.class, ConquestViewDeck.class, ConquestExile.class, ConquestEditDeck.class);
 }

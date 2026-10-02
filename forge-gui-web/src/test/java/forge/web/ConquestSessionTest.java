@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.deck.Deck;
@@ -637,5 +638,84 @@ public class ConquestSessionTest extends SessionsTest {
         final Deck stored = storedDeck(data.getSelectedCommander().getName());
         Assert.assertEquals(stored.getMain().count(owned), 1, "the card went in as a printing that is not owned");
         Assert.assertEquals(stored.getMain().countByName("Forest"), forests + 5);
+    }
+
+    private static JsonObject exile(final PaperCard card, final boolean retrieve) {
+        final JsonObject m = message("conquestExile", "retrieve", retrieve);
+        final JsonArray cards = new JsonArray();
+        cards.add(card.getImageKey(false));
+        m.add("cards", cards);
+        return m;
+    }
+
+    private List<String> cardsOf(final Recorder host, final String source) throws InterruptedException {
+        host.forget();
+        sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
+                "sort", "name", "offset", 0, "showAll", true, "source", source));
+        final List<String> names = new ArrayList<>();
+        host.awaitMatching("catalogue", c -> true, "the " + source + " was not listed").getAsJsonArray("rows")
+                .forEach(r -> names.add(r.getAsJsonObject().get("name").getAsString()));
+        return names;
+    }
+
+    // Fails if a card a deck uses can be exiled over the wire; if exiling a free card does not pay its exile value,
+    // leaves it in the collection's list or out of the exile's; or if retrieving it does not cost its price and
+    // bring it back
+    @Test(timeOut = 120_000)
+    public void exileAndRetrieveOverTheWire() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final PaperCard inDeck = data.getSelectedCommander().getDeck().getMain().toFlatList().stream()
+                .filter(c -> !c.getRules().getType().isBasicLand()).findFirst().orElseThrow();
+        final int shards = data.getAEtherShards();
+        host.forget();
+        sessions.onMessage(host, exile(inDeck, false));
+        host.awaitMatching("notice", n -> true, "exiling a card in use was not refused");
+        Assert.assertFalse(data.isInExile(inDeck));
+        Assert.assertEquals(data.getAEtherShards(), shards);
+
+        final PaperCard spare = spares(data).get(0);
+        final int value = data.getExileValue(List.of(spare));
+        final int cost = data.getRetrieveCost(List.of(spare));
+        host.forget();
+        sessions.onMessage(host, exile(spare, false));
+        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards + value, "the exile was not paid for");
+        Assert.assertEquals(host.awaitMatching("conquestCollection", c -> true, "the lists' sizes were not sent").get("exiled").getAsInt(), 1);
+        Assert.assertFalse(cardsOf(host, "collection").contains(spare.getName()), "an exiled card is still in the collection");
+        Assert.assertEquals(cardsOf(host, "exile"), List.of(spare.getName()));
+        final JsonObject row = host.awaitNewest("catalogue").getAsJsonArray("rows").get(0).getAsJsonObject();
+        Assert.assertEquals(row.get("value").getAsInt(), cost);
+
+        host.forget();
+        sessions.onMessage(host, exile(spare, true));
+        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards + value - cost, "the retrieval was not charged");
+        Assert.assertFalse(data.isInExile(spare));
+        Assert.assertTrue(cardsOf(host, "collection").contains(spare.getName()));
+    }
+
+    // Fails if choosing a commander does not make it the one the map names and the party marks, or is not saved
+    @Test(timeOut = 120_000)
+    public void selectingACommanderChangesTheLead() throws Exception {
+        final ConquestData made = ConquestFixture.create("Zendikar");
+        PaperCard second = null;
+        for (final PaperCard card : made.getCurrentPlane().getCommanders()) {
+            if (!made.hasUnlockedCard(card)) {
+                second = card;
+            }
+        }
+        made.unlockCard(second);
+        made.saveData();
+        final Recorder host = hostInConquest(made);
+        final ConquestCommander wanted = ConquestGame.commander(second.getName());
+        host.forget();
+        sessions.onMessage(host, message("conquestLead", "commander", second.getName()));
+        host.awaitMatching("conquestState", s -> s.getAsJsonObject("commander").get("name").getAsString().equals(wanted.getDisplayName()),
+                "the map does not name the commander chosen");
+        final JsonObject party = host.awaitMatching("conquestParty", p -> true, "the party was not sent");
+        for (final JsonElement e : party.getAsJsonArray("commanders")) {
+            final JsonObject c = e.getAsJsonObject();
+            Assert.assertEquals(c.get("selected").getAsBoolean(), c.get("name").getAsString().equals(second.getName()));
+        }
+        Assert.assertEquals(new ConquestData(made.getDirectory()).getSelectedCommander().getName(), second.getName());
     }
 }

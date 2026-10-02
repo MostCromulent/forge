@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.card.ColorSet;
+import forge.deck.Deck;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.planarconquest.ConquestBattle;
@@ -14,13 +15,23 @@ import forge.gamemodes.planarconquest.ConquestEvent.ConquestEventRecord;
 import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.gamemodes.planarconquest.ConquestPlane;
 import forge.gamemodes.planarconquest.ConquestPlaneData;
+import forge.gamemodes.planarconquest.ConquestPreferences;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
+import forge.gamemodes.planarconquest.ConquestRecord;
 import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
 import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
+import forge.util.Localizer;
+import forge.web.FromBrowser.CatalogueQuery;
+import forge.web.ToBrowser.CataloguePage;
+import forge.web.ToBrowser.ConquestCollection;
+import forge.web.ToBrowser.ConquestCommanderRow;
+import forge.web.ToBrowser.ConquestParty;
+import forge.web.ToBrowser.ConquestWalkerRow;
+import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.ConquestBar;
 import forge.web.ToBrowser.ConquestCell;
 import forge.web.ToBrowser.ConquestLead;
@@ -40,6 +51,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * One browser's view of the open conquest. The conquest itself is Forge's, one for the whole process; this holds only
@@ -201,6 +214,116 @@ final class ConquestGame {
         final ConquestPlane plane = data.getCurrentPlane();
         return new ConquestBar(data.getName(), planeName(plane), data.getCurrentPlaneData().getConqueredCount(), plane.getEventCount(),
                 data.getAEtherShards(), data.getPlaneswalkEmblems());
+    }
+
+    /** The commanders and planeswalkers the conquest has found. */
+    ConquestParty party() {
+        final ConquestData data = model();
+        final ConquestCommander lead = data.getSelectedCommander();
+        final List<ConquestCommanderRow> commanders = new ArrayList<>();
+        for (final ConquestCommander c : data.getCommanders()) {
+            final ConquestRecord record = c.getRecord();
+            commanders.add(new ConquestCommanderRow(c.getName(), c.getCard().getImageKey(false),
+                    colors(c.getCard().getRules().getColorIdentity()), c.getOrigin(), record.getWins(), record.getLosses(),
+                    c.getDeck().getMain().countAll(), c.getDeckProblem(), c == lead));
+        }
+        final List<ConquestWalkerRow> walkers = new ArrayList<>();
+        for (final PaperCard card : data.getSortedPlaneswalkers()) {
+            walkers.add(new ConquestWalkerRow(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()),
+                    card.equals(data.getPlaneswalker())));
+        }
+        final ConquestData.Stats stats = data.getStats(null);
+        return new ConquestParty(commanders, walkers, ConquestData.formatRatio(stats.commanders(), stats.allCommanders()),
+                ConquestData.formatRatio(stats.planeswalkers(), stats.allPlaneswalkers()));
+    }
+
+    /** Makes an owned planeswalker the one travelled as. False when the conquest owns none of that name. */
+    static boolean setPlaneswalker(final String name) {
+        final ConquestData data = model();
+        for (final PaperCard card : data.getSortedPlaneswalkers()) {
+            if (card.getName().equals(name)) {
+                data.setPlaneswalker(card);
+                data.saveData();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** A commander's deck as the deck finder's panel shows one. */
+    static DeckDetails deckDetails(final ConquestCommander commander) {
+        final Deck deck = commander.getDeck();
+        final Legality.Result noFlags = new Legality.Result(Map.of(), Map.of(), List.of());
+        return new DeckDetails("conquest:" + commander.getName(), commander.getName(), commander.getDeckProblem(),
+                colors(commander.getCard().getRules().getColorIdentity()), DeckCatalog.stats(deck),
+                DeckEditor.groups(deck.getMain(), noFlags), List.of(), null, 0, null);
+    }
+
+    /** The cards owned and not exiled, or those exiled. */
+    private static List<PaperCard> cardsOf(final boolean exile) {
+        final ConquestData data = model();
+        final List<PaperCard> cards = new ArrayList<>();
+        for (final PaperCard card : exile ? data.getExiledCards() : data.getUnlockedCards()) {
+            if (exile || !data.isInExile(card)) {
+                cards.add(card);
+            }
+        }
+        return cards;
+    }
+
+    ConquestCollection collection() {
+        final ConquestPreferences prefs = FModel.getConquestPreferences();
+        final double base = prefs.getPrefInt(CQPref.AETHER_BASE_DUPLICATE_VALUE);
+        final List<String> planes = new ArrayList<>();
+        for (final ConquestPlane plane : FModel.getPlanes()) {
+            if (!plane.isUnreachable()) {
+                planes.add(planeName(plane));
+            }
+        }
+        // Mobile's line, on one line
+        final String note = Localizer.getInstance().getMessage("lblExileRetrieveProportion",
+                Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_EXILE_VALUE) / base),
+                Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_RETRIEVE_COST) / base)).replace('\n', ' ');
+        return new ConquestCollection(cardsOf(false).size(), cardsOf(true).size(), planes, note);
+    }
+
+    /** A page of the collection or of the exile, each card with what exiling or retrieving it is worth. */
+    CataloguePage cards(final CatalogueQuery q) {
+        final ConquestData data = model();
+        final boolean exile = "exile".equals(q.source());
+        final List<PaperCard> cards = cardsOf(exile);
+        if (q.plane() != null) {
+            for (final ConquestPlane plane : FModel.getPlanes()) {
+                if (planeName(plane).equals(q.plane())) {
+                    cards.removeIf(c -> !plane.getCardPool().contains(c));
+                }
+            }
+        }
+        // A card that cannot be exiled says why, and is listed all the same
+        final Function<PaperCard, String> problem = exile ? c -> null : c -> data.getExileProblem(List.of(c));
+        return CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
+                q.offset(), true), problem, null, name -> 0, c -> new CardCatalog.Extra(data.isNewCard(c) ? Boolean.TRUE : null,
+                exile ? data.getRetrieveCost(List.of(c)) : data.getExileValue(List.of(c))));
+    }
+
+    /** Exiles cards of the collection, or brings exiled ones back. Answers why it cannot, or null when it is done. */
+    static String exile(final List<String> imageKeys, final boolean retrieve) {
+        final ConquestData data = model();
+        final List<PaperCard> cards = cardsOf(retrieve);
+        cards.removeIf(c -> !imageKeys.contains(c.getImageKey(false)));
+        if (cards.isEmpty()) {
+            return null;
+        }
+        final String problem = retrieve ? data.getRetrieveProblem(cards) : data.getExileProblem(cards);
+        if (problem != null) {
+            return problem;
+        }
+        if (retrieve) {
+            data.retrieve(cards);
+        } else {
+            data.exile(cards);
+        }
+        return null;
     }
 
     /** The map as it stands. walked is the move just made, for the marker to walk, and is empty otherwise. */
