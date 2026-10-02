@@ -276,14 +276,14 @@ function Verdict({ lobby, start }: { lobby: LobbyTable; start: () => void }) {
   if (!lobby.host) {
     return (
       <div class="play-row">
-        <p class="match-line">{problems.length ? problems[0] : t('lblWebLobbyWaitingForHost')}</p>
+        <p class="match-line">{problems.length ? problems[0] : t('lblWebEventWaitingHostStart')}</p>
       </div>
     );
   }
   return (
     <div class="play-row">
-      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={play} title={over.length ? '' : t('lblWebLobbyEnterStarts')}>
-        {t(asking ? 'lblWebLobbyPlayAnyway' : 'lblWebLobbyPlay')}
+      <button id="play" class="primary play" disabled={!lobby.canStart} onClick={play} title={over.length ? '' : t('ttWebEventEnterStarts')}>
+        {t(asking ? 'lblWebLobbyPlayAnyway' : 'lblPlay')}
       </button>
       <div class="not-yet" hidden={lobby.canStart}>
         <b>{t('lblWebLobbyNotPlayableYet')}</b>

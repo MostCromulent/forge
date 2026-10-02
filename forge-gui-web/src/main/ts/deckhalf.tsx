@@ -43,7 +43,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
             ? t('lblWebEditorSizesLimited', state.stats.total, state.stats.lands, state.stats.sideboard)
-            : state.collection ? t('lblWebConquestSizes', state.stats.main, state.stats.lands)
+            : state.collection ? t('lblWebFinderSizesNoSideboard', state.stats.main, state.stats.lands)
             : t('lblWebEditorSizes', state.stats.total, state.stats.sideboard, state.stats.lands)}</p>
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
@@ -55,13 +55,13 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
       {hasCommander && <CommanderZone actions={actions} state={state} handlers={handlers} />}
       <div class="zone main-zone" data-zone="Main">
         <h4>
-          <span class="zn">{t('lblWebEditorMainDeck')}</span>
+          <span class="zn">{t('lblWebDraftMainDeck')}</span>
           <span class="count">{state.stats.main}</span>
           <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
-            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblWebEditorViewCards')}</button>
-            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebEditorViewList')}</button>
+            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
+            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
           </span>
-          <select aria-label={t('lblWebEditorGroupBy')} value={by} onChange={e => {
+          <select aria-label={t('lblWebDraftGroupBy')} value={by} onChange={e => {
             const next = e.currentTarget.value as GroupBy;
             setBy(next);
             store(GROUP_KEY, next);

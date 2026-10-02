@@ -221,7 +221,7 @@ final class OnlineDraft implements IDraftEventHandler {
 
     private String nameOf(final int seat) {
         final EventParticipant p = EventParticipant.findBySeat(participants(), seat);
-        return p == null || p.getName() == null ? Localizer.getInstance().getMessage("lblWebOfflineDraftSeat", seat + 1) : p.getName();
+        return p == null || p.getName() == null ? Localizer.getInstance().getMessage("lblSeatN", seat + 1) : p.getName();
     }
 
     private int depthOf(final int seat) {

@@ -46,9 +46,9 @@ const glyph = (name: string, size: number): string => `<svg class="glyph" viewBo
 const STEPS: [PhaseType, string, TextKey, TextKey][] = [
   ['UPKEEP', 'upkeep', 'lblWebPhaseUpkeep', 'lblWebPhaseUpkeep'], ['DRAW', 'draw', 'lblWebPhaseDraw', 'lblWebPhaseDraw'],
   ['MAIN1', 'main1', 'lblWebPhaseMain1', 'lblWebPhaseMain1'],
-  ['COMBAT_BEGIN', 'boc', 'lblWebPhaseBeginCombat', 'lblWebPhaseCombat'],
-  ['COMBAT_DECLARE_ATTACKERS', 'atk', 'lblWebPhaseDeclareAttackers', 'lblWebPhaseAttackers'],
-  ['COMBAT_DECLARE_BLOCKERS', 'blk', 'lblWebPhaseDeclareBlockers', 'lblWebPhaseBlockers'],
+  ['COMBAT_BEGIN', 'boc', 'lblWebPhaseBeginCombat', 'lblCombatTab'],
+  ['COMBAT_DECLARE_ATTACKERS', 'atk', 'lblWebPhaseDeclareAttackers', 'lblAttackers'],
+  ['COMBAT_DECLARE_BLOCKERS', 'blk', 'lblWebPhaseDeclareBlockers', 'lblBlockers'],
   ['COMBAT_FIRST_STRIKE_DAMAGE', 'fs', 'lblWebPhaseFirstStrikeDamage', 'lblWebPhaseFirstStrike'],
   ['COMBAT_DAMAGE', 'dmg', 'lblWebPhaseCombatDamage', 'lblWebPhaseDamage'], ['COMBAT_END', 'eoc', 'lblWebPhaseEndOfCombat', 'lblWebPhaseEndCombat'],
   ['MAIN2', 'main2', 'lblWebPhaseMain2', 'lblWebPhaseMain2'], ['END_OF_TURN', 'end', 'lblEndStep', 'lblEndStep'],
@@ -67,7 +67,7 @@ interface Phase {
 const PHASES: Phase[] = [
   { glyph: 'upkeep', code: 'lblWebPhaseCodeUpkeep', name: 'lblWebPhaseUpkeepAndDraw', group: 'lblWebPhaseBeginning', steps: [0, 1] },
   { glyph: 'main1', code: 'lblWebPhaseCodeMain1', name: 'lblWebPhaseMain1', group: 'lblWebPhaseMain1', steps: [2] },
-  { glyph: 'boc', code: 'lblWebPhaseCodeCombat', name: 'lblWebPhaseCombat', group: 'lblWebPhaseCombat', steps: [3, 4, 5, 6, 7, 8] },
+  { glyph: 'boc', code: 'lblWebPhaseCodeCombat', name: 'lblCombatTab', group: 'lblCombatTab', steps: [3, 4, 5, 6, 7, 8] },
   { glyph: 'main2', code: 'lblWebPhaseCodeMain2', name: 'lblWebPhaseMain2', group: 'lblWebPhaseMain2', steps: [9] },
   { glyph: 'end', code: 'lblWebPhaseCodeEnd', name: 'lblWebPhaseEndOfTurn', group: 'lblWebPhaseEnding', steps: [10, 11] },
 ];
@@ -354,7 +354,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   chip.classList.toggle('you', onMe);
   // An element, which the sentence keeps whole where a string would be run into the words around it
   const you = document.createElement('strong');
-  you.textContent = t('lblWebPhaseYou');
+  you.textContent = t('lblYou');
   const words = onMe
     ? (people.length === 1 ? tNodes('lblWebPhaseWaitingOnYou', people[0].Name ?? '', you) : tNodes('lblWebPhasePlayersWaitingOnYou', people.length, you))
     : [t('lblWebPhaseWaitingOn', holder.Name ?? '')];
@@ -364,7 +364,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
     const seconds = Math.floor((Date.now() - waitingSince) / 1000);
     const yours = chip.classList.contains('you');
     chip.hidden = seconds < (yours ? YOUR_WAIT_SHOWN_AFTER_S : WAIT_SHOWN_AFTER_S);
-    q(chip, 'b').textContent = t('lblWebPhaseWaitSeconds', seconds);
+    q(chip, 'b').textContent = t('lblWebOptionsSeconds', seconds);
     // Your wait pulses once every PULSE_EVERY_S, restarted by taking the class off and putting it back
     if (yours && seconds >= PULSE_EVERY_S && seconds % PULSE_EVERY_S === 0 && lastPulse !== seconds) {
       lastPulse = seconds;
@@ -396,7 +396,7 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: Theirs):
     const title = t(on ? 'lblWebPhaseCellTitleClear' : 'lblWebPhaseCellTitleStop', t(s[2]), r.mine ? t('lblWebPhaseYourTurnsInSentence') : theirs.turns);
     const cell = marked ? `<span class="skip">${glyph('skip', 13)}</span>` : `<span class="square ${on ? 'on' : ''} ${r.now && i === step ? 'current' : ''}"></span>`;
     return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
-  }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">${escapeHtml(t('lblWebPhaseClear'))}</button>`
+  }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">${escapeHtml(t('lblWebOptionsClear'))}</button>`
     + `<button class="row-tool" data-defaults data-mine="${r.mine}">${escapeHtml(t('lblWebPhaseDefaults'))}</button></td></tr>`).join('');
   return `<div class="title">${escapeHtml(t('lblWebPhaseStops'))}</div><table>${groups}${head}${body}</table>`
     + `<div class="hint">${escapeHtml(t('lblWebPhaseStopsHint'))}</div>`;

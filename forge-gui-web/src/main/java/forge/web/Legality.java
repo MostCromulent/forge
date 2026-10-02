@@ -38,7 +38,7 @@ record Check(GameType format, GameFormat pool, boolean unrestricted) {
 
     String label() {
         if (unrestricted) {
-            return Localizer.getInstance().getMessage("lblWebLegalityNoRestriction");
+            return Localizer.getInstance().getMessage("lblWebEditorNoRestriction");
         }
         return pool == null ? format.toString() : format + " · " + pool.getName();
     }

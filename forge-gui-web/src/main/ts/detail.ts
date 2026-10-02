@@ -440,7 +440,7 @@ function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void
     row.innerHTML = '<span class="art"></span><span class="who"><span class="nm"></span><span class="bar"><i></i></span></span><span class="v"><b></b><small></small></span>';
     const src = cardImageSrc(model, commander);
     if (src) q(row, '.art').style.backgroundImage = `url("${src}")`;
-    q(row, '.nm').textContent = (commander ? stateOf(model, commander).Name : undefined) ?? t('lblWebDetailCommander');
+    q(row, '.nm').textContent = (commander ? stateOf(model, commander).Name : undefined) ?? t('lblCommander');
     q(row, '.bar i').style.width = `${Math.min(value, COMMANDER_LETHAL) / COMMANDER_LETHAL * 100}%`;
     q(row, '.v b').textContent = String(value);
     q(row, '.v small').textContent = ` / ${COMMANDER_LETHAL}`;

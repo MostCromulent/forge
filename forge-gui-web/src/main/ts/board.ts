@@ -207,7 +207,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       </div>`;
     q(root, '.skull-mark').title = t('lblWebBoardOutOfGame');
     q(root, '.ai-badge').title = t('lblWebBoardComputerPlayer');
-    q(root, '.role-tag').textContent = t('lblWebBoardArchenemy');
+    q(root, '.role-tag').textContent = t('lblArchenemy');
     q(root, '.mana-label').textContent = t('lblWebBoardFloatingMana');
     const avatarEl = q(root, '.avatar');
     // Said by the mark board.css draws on the portrait of whoever goes first
@@ -360,7 +360,7 @@ export function cardTypes(typeLines: readonly string[]): string[] {
 
 /** A graveyard tile's tooltip: how many cards, and how many card types among them. */
 export function graveyardTitle(count: number, types: string[]): string {
-  const cards = t(count === 1 ? 'lblWebBoardOneCard' : 'lblWebBoardCards', count);
+  const cards = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
   if (!types.length) return t('lblWebBoardGraveyardTitle', cards);
   const kinds = t(types.length === 1 ? 'lblWebBoardOneCardType' : 'lblWebBoardCardTypes', types.length);
   return t('lblWebBoardGraveyardTitleTypes', cards, kinds, types.join(', '));
@@ -654,10 +654,10 @@ const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="
 
 /** What a command zone effect is called on its plaque: an emblem or a lasting designation by name, else an effect. */
 function effectKind(state: Partial<CardStateView>): { label: string; lasting: boolean } {
-  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: t('lblWebBoardEmblem'), lasting: true };
+  if (/\bEmblem\b/.test(state.Type ?? '')) return { label: t('lblEmblem'), lasting: true };
   // The designation's name is the card's, as the host sends it
   const named = /^The (Monarch|Initiative|Ring)$/.exec(state.Name ?? '');
-  return named ? { label: named[1], lasting: true } : { label: t('lblWebBoardEffect'), lasting: false };
+  return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
 }
 
 // The rest of the command zone: the monarch, the initiative and emblems as art plaques, and avatars as cards.
@@ -727,7 +727,7 @@ function tileBand(kind: CommandKind, state: Partial<CardStateView>, tax: number)
   if (kind === 'avatar') {
     const mods = avatarModifiers(state.RulesText);
     const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
-    return mods ? t('lblWebBoardAvatarModifiers', signed(mods[0]), signed(mods[1])) : '';
+    return mods ? t('lblWebLobbyAvatarMods', signed(mods[0]), signed(mods[1])) : '';
   }
   if (kind === 'signature') return t('lblWebBoardSignature');
   return tax > 0 ? t('lblWebBoardTax', tax) : '';
@@ -929,7 +929,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   if (!matchOver) add(t('lblWebBoardNextGame'), true, () => actions.nextGame());
   add(t('lblWebBoardViewBattlefield'), false, () => view(true));
   if (limited) add(t('lblWebBoardRestartRound'), false, () => actions.gauntletRestart());
-  add(t(limited ? 'lblWebBoardQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'lblWebBoardQuitMatch'), matchOver && !limited?.nextRound, () => {
+  add(t(limited ? 'lblQuit' : matchOver ? 'lblWebBoardReturnToLobby' : 'lblWebBoardQuitMatch'), matchOver && !limited?.nextRound, () => {
     if (!matchOver) actions.quitMatch();
     actions.leave();
   });

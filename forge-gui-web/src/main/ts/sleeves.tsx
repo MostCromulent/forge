@@ -30,7 +30,7 @@ export function SleevePicker({ model, actions, index, seat, close }: {
     <div class="sleeves-back">
       <div class={picking ? 'sleeves picking' : 'sleeves'}>
         <header class="sleeves-head">
-          <h2>{t(picking ? 'lblWebSleevesChooseCard' : 'lblWebSleevesChooseSleeve')}</h2>
+          <h2>{t(picking ? 'lblChooseaCard' : 'lblWebSleevesChooseSleeve')}</h2>
           <button class="dk-close" title={t('lblClose')} onClick={close}>&times;</button>
         </header>
         <div class="sleeves-body">

@@ -637,7 +637,7 @@ final class DeckCatalog {
             }
             return out;
         }
-        out.add(new ExtraChoice(GENERATE, Localizer.getInstance().getMessage("lblWebDeckCatalogGenerated"), null, null, null, null, null));
+        out.add(new ExtraChoice(GENERATE, Localizer.getInstance().getMessage("lblWebFinderSourceGenerated"), null, null, null, null, null));
         out.add(new ExtraChoice(RANDOM, Localizer.getInstance().getMessage("lblWebDeckCatalogRandomSaved"), null, null, null, null, null));
         for (final DeckProxy proxy : savedDecks(section)) {
             final CardPool cards = proxy.getDeck().get(section);
@@ -685,7 +685,7 @@ final class DeckCatalog {
             }
             return null;
         }
-        return new Extra(Localizer.getInstance().getMessage("lblWebDeckCatalogGenerated"), section == DeckSection.Planes ? DeckgenUtil.generatePlanarPool()
+        return new Extra(Localizer.getInstance().getMessage("lblWebFinderSourceGenerated"), section == DeckSection.Planes ? DeckgenUtil.generatePlanarPool()
                 : DeckgenUtil.generateSchemePool());
     }
 

@@ -67,31 +67,31 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: t('lblWebOptionsSectionGameplay'), key: 'logDetail', label: t('lblWebOptionsLogDetail'), type: 'choice', server: true,
-    options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblWebOptionsMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
+    options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
   },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), hint: t('lblWebOptionsBoardLayoutHint'), type: 'choice',
-    options: [['columns', t('lblWebOptionsColumns')], ['quadrants', t('lblWebOptionsQuadrants')]], def: 'columns',
+    section: t('lblDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), hint: t('lblWebOptionsBoardLayoutHint'), type: 'choice',
+    options: [['columns', t('lblColumns')], ['quadrants', t('lblWebOptionsQuadrants')]], def: 'columns',
   },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
-    options: [['mana', t('lblWebOptionsManaValue')], ['color', t('lblWebOptionsColour')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
+    section: t('lblDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
+    options: [['mana', t('lblWebDraftGroupManaValue')], ['color', t('lblWebDraftGroupColour')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
-  { section: t('lblWebOptionsSectionDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
+  { section: t('lblDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
-    options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblWebOptionsMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
+    section: t('lblDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',
+    options: [['small', t('lblWebOptionsSmall')], ['medium', t('lblMedium')], ['large', t('lblWebOptionsLarge')]], def: 'medium',
   },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'choice', menu: 'playmat',
+    section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'choice', menu: 'playmat',
     options: PLAYMATS.map(m => [m.id, t(m.name)]), def: 'table',
   },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat',
+    section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat',
     options: [['dark', t('lblWebPlaymatDark')], ['dim', t('lblWebPlaymatDim')], ['light', t('lblWebPlaymatLight')], ['bright', t('lblWebPlaymatBright')]], def: 'dim',
   },
   {
-    section: t('lblWebOptionsSectionDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
+    section: t('lblDisplay'), key: 'motion', label: t('lblWebOptionsMotion'), hint: t('lblWebOptionsMotionHint'), type: 'choice',
     options: [['full', t('lblWebOptionsFull')], ['system', t('lblWebOptionsSystem')], ['reduced', t('lblWebOptionsReduced')]], def: 'full',
   },
   {
@@ -107,11 +107,11 @@ export const SETTINGS: SettingDef[] = [
   { section: t('lblWebOptionsSectionKeys'), key: 'keyNextFace', label: t('lblWebOptionsKeyNextFace'), hint: t('lblWebOptionsUnderPointer'), action: 'nextFace', type: 'key', def: 'f' },
   { section: t('lblWebOptionsSectionKeys'), key: 'keyCardText', label: t('lblWebOptionsKeyCardText'), hint: t('lblWebOptionsUnderPointer'), action: 'cardText', type: 'key', def: 't' },
   {
-    section: t('lblWebOptionsSectionAdvanced'), key: 'devMode', label: t('lblWebDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
+    section: t('lblAdvanced'), key: 'devMode', label: t('lblWebDevMode'), type: 'toggle', server: true, hostOnly: true, def: false,
     hint: t('lblWebOptionsDevModeHint'),
   },
   {
-    section: t('lblWebOptionsSectionAdvanced'), key: 'customCss', label: t('lblWebOptionsCustomCss'), hint: t('lblWebOptionsCustomCssHint'), type: 'css', def: '',
+    section: t('lblAdvanced'), key: 'customCss', label: t('lblWebOptionsCustomCss'), hint: t('lblWebOptionsCustomCssHint'), type: 'css', def: '',
   },
 ];
 

@@ -14,7 +14,7 @@ import { t } from './text';
 export interface Owed { shards: number; emblems: number }
 
 export const wheelLabels = (): Record<WheelOutcome, string> => ({
-  CHAOS: t('lblWebConquestChaos'), BOOSTER: t('lblWebConquestWheelBooster'), DOUBLE_BOOSTER: t('lblWebConquestWheelBoosters'),
+  CHAOS: t('lblChaos'), BOOSTER: t('lblWebConquestWheelBooster'), DOUBLE_BOOSTER: t('lblWebConquestWheelBoosters'),
   SHARDS: t('lblWebConquestWheelShards'), DOUBLE_SHARDS: t('lblWebConquestWheelDoubleShards'), PLANESWALK: t('lblWebConquestWheelEmblems'),
 });
 
@@ -135,7 +135,7 @@ function PackStop({ step, release, zoom, next }: { step: ConquestStep; release: 
   const duplicates = cards.reduce((sum, c) => sum + c.shards, 0);
   useEffect(() => {
     pack.current = mountPack(host.current!, {
-      name: step.chaos ? t('lblWebConquestChaos') : step.pack ?? '', sub: step.chaos ? step.pack ?? '' : t('lblWebConquestBoosterPack'),
+      name: step.chaos ? t('lblChaos') : step.pack ?? '', sub: step.chaos ? step.pack ?? '' : t('lblBoosterPack'),
       art: step.chaos ? null : step.art ?? null, chaos: step.chaos, cards, hint: t('lblWebConquestClickToOpen'),
     }, {
       flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }); },

@@ -138,12 +138,12 @@ final class CardImageDownloads {
         choices.setMaximumSize(choices.getPreferredSize());
         choices.addActionListener(e -> recount());
         final JPanel pick = row();
-        pick.add(plain(new JLabel(TEXT.getMessage("lblWebImagesCards") + "  ")));
+        pick.add(plain(new JLabel(TEXT.getMessage("lblCards") + "  ")));
         pick.add(choices);
         pick.add(Box.createHorizontalGlue());
         // Each count under its heading, as wide as its own text, so a long one is never cut short
         final JPanel counts = row();
-        final List<String> heads = List.of("lblWebImagesCardsCount", "lblWebImagesSaved", "lblWebImagesToDownload");
+        final List<String> heads = List.of("lblCards", "lblWebEditorSaved", "lblWebImagesToDownload");
         final List<JLabel> values = List.of(cardCount, savedCount, neededCount);
         for (int i = 0; i < heads.size(); i++) {
             final JLabel head = plain(new JLabel(TEXT.getMessage(heads.get(i))));

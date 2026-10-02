@@ -57,7 +57,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   root.classList.toggle('collapsed', collapsed);
   q(root, '.count').textContent = String(items.length + awaiting.size);
   const collapse = q(root, '.collapse');
-  collapse.textContent = t(collapsed ? 'lblWebStackShow' : 'lblWebStackHide');
+  collapse.textContent = t(collapsed ? 'lblShow' : 'lblWebStackHide');
   collapse.title = t(collapsed ? 'lblWebStackShowTitle' : 'lblWebStackHideTitle');
   const pile = q(root, '.pile');
   const pick = stackPick(model);

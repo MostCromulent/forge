@@ -136,12 +136,12 @@ export function Catalogue({ model, actions, state, handlers }: {
       <div class="count-row">
         <p class={state.commanderWanted ? 'shown commanders-only' : 'shown'}>{shownLine(page?.total, searched, state.commanderWanted)}</p>
         {text.trim() && page?.ranked !== false
-          ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
-          : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={sort} onChange={e => setSort(e.currentTarget.value)}>
+          ? <select class="sort-by" aria-label={t('lblSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
+          : <select class="sort-by" aria-label={t('lblSort')} value={sort} onChange={e => setSort(e.currentTarget.value)}>
               {SORTS.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
             </select>}
-        <span class="seg" role="group" aria-label={t('lblWebCatalogueView')}>
-          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>{t('lblWebEditorViewCards')}</button>
+        <span class="seg" role="group" aria-label={t('lblView')}>
+          <button aria-pressed={view === 'cards'} onClick={() => { setView('cards'); store(VIEW_KEY, 'cards'); }}>{t('lblCards')}</button>
           <button aria-pressed={view === 'table'} onClick={() => { setView('table'); store(VIEW_KEY, 'table'); }}>{t('lblWebCatalogueViewTable')}</button>
         </span>
       </div>
@@ -220,12 +220,12 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
   const kinds: FilterKind<CatalogueFilter>[] = [
     words('rules', rules, t('lblWebFilterRulesText'), t('lblWebFilterRulesTextHint')),
     words('subtype', rules, t('lblWebFilterSubtype'), t('lblWebFilterSubtypeHint')),
-    range('mv', numbers, t('lblWebFilterManaValue')),
-    range('power', numbers, t('lblWebFilterPower')),
-    range('toughness', numbers, t('lblWebFilterToughness')),
+    range('mv', numbers, t('lblWebDraftGroupManaValue')),
+    range('power', numbers, t('lblPower')),
+    range('toughness', numbers, t('lblToughness')),
     range('colourCount', numbers, t('lblWebFilterColourCount')),
     {
-      id: 'rarity', group: printing, label: t('lblWebFilterRarity'),
+      id: 'rarity', group: printing, label: t('lblRarity'),
       chip: f => (f.rarity.length ? RARITIES.filter(([r]) => f.rarity.includes(r)).map(([, name]) => t(name)).join(', ') : null),
       clear: f => ({ ...f, rarity: [] }),
       panel: (f, set, done) => <AnyOf options={RARITIES.map(([r, name]) => [r, t(name)] as const)} value={f.rarity}
@@ -237,7 +237,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
       // collection's deck has no such rule, and its chip can be taken off.
       id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
       chip: f => (state.collection ? f.identity?.split('').join(' ') ?? null : state.identity.split('').join(' ')),
-      from: () => t('lblWebFilterFromCommander'),
+      from: () => t('lblCommander'),
       fixed: () => !state.collection,
       clear: f => ({ ...f, identity: null }),
       panel: (f, set, done) => (state.collection
@@ -369,7 +369,7 @@ function shownLine(total: number | undefined, text: string, commandersOnly: bool
   }
   return text
     ? t(one ? 'lblWebCatalogueCardsOneNamed' : 'lblWebCatalogueCardsNamed', total, text)
-    : t(one ? 'lblWebCatalogueCardsOne' : 'lblWebCatalogueCards', total);
+    : t(one ? 'lblWebOneCard' : 'lblWebNCards', total);
 }
 
 function storedView(): 'cards' | 'table' {

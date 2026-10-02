@@ -124,7 +124,7 @@ const SECTION = /^=+\s*(.*?)\s*=+$/;
 export function RevealWindow({ model, title, cards, close }: { model: Model; title: string; cards: RequestOption[]; close: () => void }) {
   const [folded, setFolded] = useState(false);
   const count = cards.filter(c => c.card || c.imageKey || !SECTION.test(c.label ?? '')).length;
-  const counted = t(count === 1 ? 'lblWebDialogOneCard' : 'lblWebDialogCards', count);
+  const counted = t(count === 1 ? 'lblWebOneCard' : 'lblWebNCards', count);
   if (folded) {
     return (
       <div class="reveal-back minimised">
@@ -482,7 +482,7 @@ function Sideboard({ req, model, answer }: { req: SideboardRequest; model: Model
           <div class="sb-list">{req.entries.map((_, i) => (inMain[i] > 0 ? row(i, inMain[i], '→', -1) : null))}</div>
         </div>
         <div>
-          <h4>{t('lblWebDialogSideboardCount', sideTotal)}</h4>
+          <h4>{t('lblSideboardNCards', sideTotal)}</h4>
           <div class="sb-list">{req.entries.map((e, i) => (e.total - inMain[i] > 0 ? row(i, e.total - inMain[i], '←', 1) : null))}</div>
         </div>
       </div>

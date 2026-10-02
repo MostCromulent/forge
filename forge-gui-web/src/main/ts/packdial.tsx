@@ -43,13 +43,13 @@ export function Dial({ state, faces }: { state: DraftState; faces: string[] }) {
         const cls = ['dial-seat', i === 0 ? 'you' : '', i === next ? 'next' : '', seat.held ? 'held' : ''].join(' ');
         return (
           <div key={i} class={cls}>
-            <span class={seat.ai ? 'dial-face ai' : 'dial-face'} data-label={seat.ai ? t('lblWebPackDialAi') : undefined}
+            <span class={seat.ai ? 'dial-face ai' : 'dial-face'} data-label={seat.ai ? t('lblAI') : undefined}
               style={{ left: `${face.x}px`, top: `${face.y}px` }}>
               {faces[i] ? <img alt="" src={faces[i]} draggable={false} /> : <b>{seat.name.slice(0, 1)}</b>}
             </span>
             <span class="dial-label" style={{ left: `${label.x}px`, top: `${label.y}px` }}>
-              <span class="dial-name">{i === 0 ? t('lblWebPackDialYou') : seat.name}</span>
-              <span class={seat.packs > 2 ? 'dial-held many' : 'dial-held'} title={t(seat.packs === 1 ? 'lblWebPackDialOnePack' : 'lblWebPackDialPacks', seat.packs)}>
+              <span class="dial-name">{i === 0 ? t('lblWebLobbyKindYou') : seat.name}</span>
+              <span class={seat.packs > 2 ? 'dial-held many' : 'dial-held'} title={t(seat.packs === 1 ? 'lblWebPackDialOnePack' : 'lblWebSetupNPacks', seat.packs)}>
                 {seat.held ? <span title={t('lblWebPackDialAwayTitle')}>{t('lblWebPackDialAway')}</span> : null}
                 {seat.packs > 0 && <><i aria-hidden="true" />{seat.packs}</>}
               </span>
@@ -57,7 +57,7 @@ export function Dial({ state, faces }: { state: DraftState; faces: string[] }) {
           </div>
         );
       })}
-      <div class="dial-centre"><b>{t('lblWebPackDialPack', state.pack)}</b><span>{direction > 0 ? t('lblWebPackDialPassingRight') : t('lblWebPackDialPassingLeft')}</span></div>
+      <div class="dial-centre"><b>{t('lblPackN', state.pack)}</b><span>{direction > 0 ? t('lblWebPackDialPassingRight') : t('lblWebPackDialPassingLeft')}</span></div>
     </div>
   );
 }

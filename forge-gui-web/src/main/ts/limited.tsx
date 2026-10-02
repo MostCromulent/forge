@@ -27,7 +27,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
     { label: t('lblWebLimitedStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
     { label: kind, go: toEvents },
-    ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebLimitedNewEvent') }] : []),
+    ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebEventNewEvent') }] : []),
   ];
   return (
     <div class="limited-page">
@@ -41,7 +41,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
         ? <SetupHead trail={trail} title={pool.name} aside={<YourDeck pool={pool} actions={actions} />}
             sub={draft ? t('lblWebLimitedDraftSub', pool.opponents.length) : t('lblWebLimitedSealedSub', pool.opponents.length)} />
         : creating
-          ? <SetupHead trail={trail} title={draft ? t('lblWebLimitedNewBoosterDraft') : t('lblWebLimitedNewSealedEvent')}
+          ? <SetupHead trail={trail} title={draft ? t('lblWebLimitedNewBoosterDraft') : t('lblWebEventNewSealedEvent')}
               aside={<button class="ghost" onClick={() => setCreating(false)}>{t('lblWebLimitedBackToEvents')}</button>} />
           : <SetupHead trail={trail} title={draft ? t('lblWebLimitedYourDrafts') : t('lblWebLimitedYourSealedEvents')}
               sub={draft ? t('lblWebLimitedDraftsIntro') : t('lblWebLimitedSealedIntro')} />}
@@ -70,7 +70,7 @@ function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: bo
     <div class="event-shelf">
       <button class="ev new" onClick={create}>
         <span class="plus" aria-hidden="true">+</span>
-        <b>{draft ? t('lblWebLimitedNewDraft') : t('lblWebLimitedNewSealedEvent')}</b>
+        <b>{draft ? t('lblWebEventNewDraft') : t('lblWebEventNewSealedEvent')}</b>
         <span>{draft ? t('lblWebLimitedNewDraftLine') : t('lblWebLimitedNewSealedLine')}</span>
       </button>
       {pools.map(p => (
@@ -95,7 +95,7 @@ function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: bo
                 </>
               : <>
                   {p.built
-                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblWebLimitedPlay')}</button>
+                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblPlay')}</button>
                         <button onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedEditDeck')}</button></>
                     : <button class="primary" onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedBuildDeck')}</button>}
                   <span class="sp" />
@@ -139,7 +139,7 @@ function SealedSetup({ model, actions }: { model: Model; actions: Actions }) {
         problem={taken ? (
           <span class="sentence taken">
             {tNodes('lblWebLimitedPoolTaken', <b>{value.name}</b>)}
-            <button class="danger" onClick={() => send(true)}>{t('lblWebLimitedReplaceIt')}</button>
+            <button class="danger" onClick={() => send(true)}>{t('lblWebDraftReplaceIt')}</button>
           </span>
         ) : null} />
     </div>
@@ -174,7 +174,7 @@ const COLOUR_NAMES: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 
 /** A deck's colours in words: White–Green, or the count past three, or Colourless. */
 export function colourName(colors: string): string {
   const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
-  if (!names.length) return t('lblWebLimitedColourless');
+  if (!names.length) return t('lblWebDraftColourless');
   if (names.length > 3) return names.length === 5 ? t('lblWebLimitedAllFiveColours') : t('lblWebLimitedFourColours');
   return names.join('–');
 }
@@ -218,7 +218,7 @@ function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; ac
             <span class="n">{i + 1}</span>
             <span class="pips"><Pips colors={o.colors} /></span>
             <span class="opp-name">{o.name} <span class="muted">· {colourName(o.colors)}</span></span>
-            <button class="opp-play" onClick={() => play('one', i)} aria-label={t('lblWebLimitedPlayOpponent', o.name)}>{t('lblWebLimitedPlay')}</button>
+            <button class="opp-play" onClick={() => play('one', i)} aria-label={t('lblWebLimitedPlayOpponent', o.name)}>{t('lblPlay')}</button>
           </li>
         ))}
       </ol>

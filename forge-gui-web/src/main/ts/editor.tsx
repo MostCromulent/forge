@@ -249,7 +249,7 @@ function TextDialog({ state, close }: { state: EditorState; close: () => void })
         <div class="actions">
           <button onClick={download}>{t('lblWebEditorDownloadFile')}</button>
           {navigator.clipboard && (
-            <button onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>{copied ? t('lblWebEditorCopied') : t('lblCopy')}</button>
+            <button onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); }}>{copied ? t('lblWebMatchBarCopied') : t('lblCopy')}</button>
           )}
           <button class="primary" onClick={close}>{t('lblClose')}</button>
         </div>

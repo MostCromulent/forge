@@ -33,7 +33,7 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   const draft = lim.kind === 'draft';
   const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready);
   const close = () => setSetting(false);
-  const stages = [t('lblWebEventStageReady'), draft ? t('lblWebEventStageDraft') : t('lblWebEventStageOpen'), t('lblWebEventStageBuild'), t('lblWebEventStagePlay')];
+  const stages = [t('lblWebEventStageReady'), draft ? t('lblDraft') : t('lblWebEventStageOpen'), t('lblWebEventStageBuild'), t('lblPlay')];
   const at = eventStage(lobby);
   const players = lobby.seats.length;
   // Computers draft the seats the table's players do not fill; they draft but don't play
@@ -43,14 +43,14 @@ export function EventHead({ model, lobby, actions, preview, start }: {
   let why = eventStatus(lobby);
   if (!lim.started) {
     if (lobby.host && lim.product) {
-      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? t('lblWebEventStartDraft') : t('lblWebEventOpenPacks')}</button>;
+      button = <button class="primary big" disabled={unready.length > 0} onClick={() => actions.eventStart()}>{draft ? t('lblWebEventStartDraft') : t('lblWebEventStageOpen')}</button>;
     }
   } else if (model.drafting && ui.draftHidden) {
     button = <button class="primary big" onClick={() => changeUi(u => { u.draftHidden = false; })}>{t('lblWebEventReturnToDraft')}</button>;
   } else if (lim.activeEventId) {
     const problem = lobby.problems?.[0];
     if (lobby.host) {
-      button = <button id="play" class="primary big" disabled={!lobby.canStart} onClick={start} title={t('ttWebEventEnterStarts')}>{t('lblWebEventPlay')}</button>;
+      button = <button id="play" class="primary big" disabled={!lobby.canStart} onClick={start} title={t('ttWebEventEnterStarts')}>{t('lblPlay')}</button>;
       why = lobby.canStart ? t('lblWebEventEveryoneHasDeck') : problem ?? why;
     } else {
       why = problem ?? t('lblWebEventWaitingHostStart');
@@ -105,9 +105,9 @@ export function EventHead({ model, lobby, actions, preview, start }: {
             <div class="eh-field"><span class="field-name">{t('lblPlayers')}</span><PlayerCount lobby={lobby} actions={actions} preview={preview} /></div>
             {draft && lim.product && <>
               <div class="eh-field"><span class="field-name">{t('lblWebEventAiDrafters')}</span>
-                <span>{ai ? <>{ai} <span class="muted">{t('lblWebEventToMakePod', lim.podSize)}</span></> : t('lblWebEventNone')}</span></div>
+                <span>{ai ? <>{ai} <span class="muted">{t('lblWebEventToMakePod', lim.podSize)}</span></> : t('lblNone')}</span></div>
               <div class="eh-field"><span class="field-name">{t('lblWebEventPicks')}</span><span>{pickRuleName(lim.pickRule)}</span></div>
-              <div class="eh-field"><span class="field-name">{t('lblWebEventPickTimer')}</span><span>{lim.timer ? t('lblWebEventSeconds', lim.timer) : t('lblWebEventNone')}</span></div>
+              <div class="eh-field"><span class="field-name">{t('lblNetworkPickTimerCaption')}</span><span>{lim.timer ? t('lblWebEventSeconds', lim.timer) : t('lblNone')}</span></div>
             </>}
             {!draft && lim.product && <div class="eh-field"><span class="field-name">{t('lblWebEventPools')}</span><span>{t('lblWebEventEachOpensOwn')}</span></div>}
           </div>
@@ -141,7 +141,7 @@ export function eventStatus(lobby: LobbyTable): string {
   const lim = lobby.limited!;
   if (!lim.product) return lobby.host ? t('lblWebEventSetUpThenReady') : t('lblWebEventHostSettingUp');
   if (!lim.started) {
-    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? t('lblWebEventYou') : s.name ?? t('lblWebEventAPlayer')));
+    const unready = lobby.seats.filter(s => s.type !== 'OPEN' && !s.ready).map(s => (s.mine ? t('lblYou') : s.name ?? t('lblWebEventAPlayer')));
     if (unready.length) return t('lblWebEventWaitingForReady', unready.join(', '));
     return lobby.host ? t('lblWebEventEveryoneReady') : t('lblWebEventEveryoneReadyWaitHost');
   }

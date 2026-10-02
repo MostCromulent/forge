@@ -18,7 +18,7 @@ export function Volume({ close, anchor = '#prompt .volume' }: { close: () => voi
     : { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` };
   return (
     <div id="volume" class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div class="volume-panel" role="dialog" aria-label={t('lblWebVolumeTitle')} style={at}>
+      <div class="volume-panel" role="dialog" aria-label={t('lblWebHeadVolume')} style={at}>
         {VOLUMES.map(def => {
           const value = Number(setting(def.key));
           return (

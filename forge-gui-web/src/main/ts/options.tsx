@@ -31,7 +31,7 @@ export function Options({ close }: { close: () => void }) {
   }, []);
   const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu && !(def.hostOnly && isGuest())), query);
   return (
-    <OptionsDialog title={t('lblWebOptionsTitle')} close={close}
+    <OptionsDialog title={t('lblWebHeadOptions')} close={close}
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
       footer={<span class="hint">{t('lblWebOptionsFooter')}</span>}>

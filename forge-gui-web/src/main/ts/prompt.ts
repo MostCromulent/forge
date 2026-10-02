@@ -117,9 +117,9 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
     q(root, '.auto-pass').title = t('lblWebPromptAutoPassTip');
-    q(root, '.volume').title = t('lblWebPromptVolume');
+    q(root, '.volume').title = t('lblWebHeadVolume');
     q(root, '.more').title = t('lblWebPromptGameMenuTip');
-    q(root, '.cog').title = t('lblWebPromptOptions');
+    q(root, '.cog').title = t('lblWebHeadOptions');
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
     q(root, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });

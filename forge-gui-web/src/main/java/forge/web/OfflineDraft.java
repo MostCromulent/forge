@@ -169,7 +169,7 @@ final class OfflineDraft {
         final List<LimitedPlayer> players = draft.getAllPlayers();
         for (int i = 0; i < players.size(); i++) {
             final LimitedPlayer p = players.get(i);
-            final String name = i == 0 ? playerName : p.getName() == null || p.getName().isBlank() ? Localizer.getInstance().getMessage("lblWebOfflineDraftSeat", i + 1) : p.getName();
+            final String name = i == 0 ? playerName : p.getName() == null || p.getName().isBlank() ? Localizer.getInstance().getMessage("lblSeatN", i + 1) : p.getName();
             seats.add(new DraftSeat(name, p instanceof LimitedPlayerAI, p.getPackQueueSize(), false));
         }
         final int pick = roundPicks + 1;

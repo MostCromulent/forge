@@ -165,7 +165,7 @@ const PRODUCTS: [string, TextKey, TextKey][] = [
   ['Full', 'lblWebSetupProductFull', 'lblWebSetupProductFullLine'],
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
   ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
-  ['Prerelease', 'lblWebSetupProductPrerelease', 'lblWebSetupProductPrereleaseLine'],
+  ['Prerelease', 'lblLimitedPrerelease', 'lblWebSetupProductPrereleaseLine'],
   ['Custom', 'lblWebSetupProductCustom', 'lblWebSetupProductCustomLine'],
   ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
 ];
@@ -208,7 +208,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
         pick={name => set(sealedBlockChoice(options, v.product!, name))} />,
     },
     {
-      id: 'combo', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
+      id: 'combo', label: t('lblDraftOverlayPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
       applies: v => isBlock(v) && !!v.block && (blockOf(options, v)?.combos.length ?? 0) > 1,
       answer: v => v.combo ?? null,
       render: (v, set) => (
@@ -236,7 +236,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
       render: (_, set) => <TextStep placeholder={t('lblWebSetupCubeCobraField')} initial="" done={id => set({ cubeId: id })} />,
     },
     {
-      id: 'packs', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintHowMany'), fields: ['packs'], applies: hasPackCount,
+      id: 'packs', label: t('lblDraftOverlayPacks'), hint: t('lblWebSetupHintHowMany'), fields: ['packs'], applies: hasPackCount,
       answer: v => v.packs === undefined ? null : t('lblWebSetupNPacks', v.packs),
       render: (v, set) => <PackCount extra={v.product === 'Import'} done={n => set({ packs: n })} />,
     },
@@ -249,7 +249,7 @@ export function sealedSteps(options: LimitedOptions): Step<SealedValue>[] {
 }
 
 function defaultName(v: SealedValue): string {
-  const what = v.product === 'Prerelease' ? t('lblWebSetupProductPrerelease') : isBlock(v) ? v.block ?? '' : productName(v.product);
+  const what = v.product === 'Prerelease' ? t('lblLimitedPrerelease') : isBlock(v) ? v.block ?? '' : productName(v.product);
   return t('lblWebSetupDefaultName', what, new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }));
 }
 
@@ -290,7 +290,7 @@ export function sealedTicket(options: LimitedOptions): Ticket<SealedValue> {
     title: t('lblSealed'),
     rows: v => [
       [t('lblProduct'), sealedProduct(options, v)],
-      [t('lblWebSetupPacks'), sealedPacks(v)],
+      [t('lblDraftOverlayPacks'), sealedPacks(v)],
       [t('lblName'), v.name ?? null],
       [t('lblWebSetupYourDeck'), t('lblWebSetupFortyOrMore')],
       [t('lblWebSetupOpponents'), t('lblWebSetupSevenSamePacks')],
@@ -354,7 +354,7 @@ const PICK_RULES: [string, TextKey, TextKey][] = [
 ];
 const TIMERS = [0, 30, 45, 60, 90];
 const GRACES = [0, 60, 120, 300];
-const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebSetupSeconds', n));
+const seconds = (n: number, none: string) => (n === 0 ? none : t('lblWebEventSeconds', n));
 
 /** The draft products desktop offers; LimitedPoolType's names are the ids. */
 const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
@@ -362,7 +362,7 @@ const DRAFT_PRODUCTS: [string, TextKey, TextKey][] = [
   ['Block', 'lblBlock', 'lblWebSetupProductBlockLine'],
   ['FantasyBlock', 'lblWebSetupProductFantasy', 'lblWebSetupProductFantasyLine'],
   ['Custom', 'lblWebSetupCube', 'lblWebSetupDraftCubeLine'],
-  ['Chaos', 'lblWebSetupChaos', 'lblWebSetupDraftChaosLine'],
+  ['Chaos', 'lblChaos', 'lblWebSetupDraftChaosLine'],
   ['Import', 'lblWebSetupProductCubeCobra', 'lblWebSetupProductCubeCobraLine'],
 ];
 
@@ -407,7 +407,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
         pick={name => set(draftBlockChoice(options, v.product!, name))} />,
     },
     {
-      id: 'combo', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
+      id: 'combo', label: t('lblDraftOverlayPacks'), hint: t('lblWebSetupHintWhichSets'), fields: ['combo'],
       applies: v => isBlock(v) && (draftBlockOf(options, v)?.combos.length ?? 0) > 0,
       answer: v => v.combo ?? null,
       render: (v, set) => (
@@ -417,7 +417,7 @@ export function draftSteps(options: LimitedOptions, table?: DraftTable): Step<Dr
       ),
     },
     {
-      id: 'packs', label: t('lblWebSetupPacks'), hint: t('lblWebSetupHintSetEachPack'), fields: ['packs'],
+      id: 'packs', label: t('lblDraftOverlayPacks'), hint: t('lblWebSetupHintSetEachPack'), fields: ['packs'],
       applies: v => isBlock(v) && (draftBlockOf(options, v)?.sets.length ?? 0) > 1 && (draftBlockOf(options, v)?.combos.length ?? 0) === 0,
       answer: v => v.packs?.join(' / ') ?? null,
       render: (v, set) => {
@@ -460,7 +460,7 @@ export function pickRuleName(rule?: string, inline = false): string {
 /** The table rules as the folded step and the event panel say them. */
 export function rulesLine(v: DraftValue): string {
   const picks = pickRuleName(v.pickRule, true);
-  return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebSetupNoPickTimer'));
+  return t('lblWebSetupRulesLine', v.podSize ?? 0, picks, v.timer ? t('lblWebSetupSecondsToPick', v.timer) : t('lblWebEventNoPickTimer'));
 }
 
 function TableRules({ seated, recommended, done }: { seated: number; recommended: number; done: (v: Partial<DraftValue>) => void }) {
@@ -481,11 +481,11 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
         </span>
         <span class="hint">{t('lblWebSetupComputersFill')}</span>
       </div>
-      <label class="tr-label" for="tr-picks">{t('lblWebSetupPicks')}</label>
+      <label class="tr-label" for="tr-picks">{t('lblWebEventPicks')}</label>
       <span class="pill-select"><select id="tr-picks" value={pickRule} onChange={e => setPickRule(e.currentTarget.value)}>
         {PICK_RULES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
       </select></span>
-      <label class="tr-label" for="tr-timer">{t('lblWebSetupPickTimer')}</label>
+      <label class="tr-label" for="tr-timer">{t('lblNetworkPickTimerCaption')}</label>
       <span class="pill-select"><select id="tr-timer" value={timer} onChange={e => setTimer(Number(e.currentTarget.value))}>
         {TIMERS.map(n => <option key={n} value={n}>{seconds(n, t('lblNone'))}</option>)}
       </select></span>
@@ -496,7 +496,7 @@ function TableRules({ seated, recommended, done }: { seated: number; recommended
         </select></span>
         <span class="hint">{t('lblWebSetupRejoinHint')}</span>
       </div>
-      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>{t('lblWebSetupContinue')}</button>
+      <button class="primary" onClick={() => done({ podSize: pod, pickRule, timer, grace })}>{t('lblContinue')}</button>
     </div>
   );
 }
@@ -530,7 +530,7 @@ function draftProduct(v: DraftValue): string | null {
 /** The offline draft beside its questions: seven computers draft beside you, and their decks are your opponents. */
 export function draftTicket(): Ticket<DraftValue> {
   return {
-    title: t('lblWebSetupBoosterDraft'),
+    title: t('lblWebDraftBoosterDraft'),
     rows: v => [
       [t('lblProduct'), draftProduct(v)],
       [t('lblWebSetupDrafters'), t('lblWebSetupYouAndSevenAi')],
@@ -546,13 +546,13 @@ function PackSets({ sets, packs, done }: { sets: string[]; packs: number; done: 
   return (
     <div class="rows">
       {chosen.map((code, i) => (
-        <label key={i} class="pack-set">{t('lblWebSetupPackN', i + 1)}
+        <label key={i} class="pack-set">{t('lblPackN', i + 1)}
           <select value={code} onChange={e => setChosen(chosen.map((c, j) => (j === i ? e.currentTarget.value : c)))}>
             {sets.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </label>
       ))}
-      <button class="primary" onClick={() => done(chosen)}>{t('lblWebSetupContinue')}</button>
+      <button class="primary" onClick={() => done(chosen)}>{t('lblContinue')}</button>
     </div>
   );
 }
@@ -581,7 +581,7 @@ function PackCount({ extra, done }: { extra: boolean; done: (n: number) => void 
         <button class="step" disabled={n >= 12} aria-label={t('lblWebSetupOneMorePack')} onClick={() => setN(n + 1)}>+</button>
       </span>
       <span class="hint">{extra ? t('lblWebSetupCubeCobraExtra') : t('lblWebSetupRange', 3, 12)}</span>
-      <button class="primary" onClick={() => done(n)}>{t('lblWebSetupContinue')}</button>
+      <button class="primary" onClick={() => done(n)}>{t('lblContinue')}</button>
     </div>
   );
 }
@@ -592,7 +592,7 @@ function TextStep({ placeholder, initial, done }: { placeholder: string; initial
   return (
     <form class="rows" onSubmit={e => { e.preventDefault(); if (ok) done(text.trim()); }}>
       <input type="text" placeholder={placeholder} value={text} onInput={e => setText(e.currentTarget.value)} />
-      <button class="primary" type="submit" disabled={!ok}>{t('lblWebSetupContinue')}</button>
+      <button class="primary" type="submit" disabled={!ok}>{t('lblContinue')}</button>
     </form>
   );
 }

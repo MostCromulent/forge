@@ -492,7 +492,7 @@ function typeHeading(type: string): string {
   for (const [name, heading] of TYPE_HEADINGS) {
     if (type.includes(name)) return t(heading);
   }
-  return t('lblWebDraftGroupOther');
+  return t('lblOther');
 }
 
 /** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */

@@ -121,8 +121,8 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
 function DeckLine({ commander }: { commander: ConquestCommanderRow }) {
   if (!commander.deckSize) return <>{t('lblNoDeck')}</>;
   return commander.problem
-    ? <span class="cq-warn" title={commander.problem}>{t('lblWebConquestInvalidDeck')} · {commander.deckSize}</span>
-    : <>{t('lblWebConquestCards', commander.deckSize)}</>;
+    ? <span class="cq-warn" title={commander.problem}>{t('lblInvalidDeck')} · {commander.deckSize}</span>
+    : <>{t('lblWebNCards', commander.deckSize)}</>;
 }
 
 function Plate({ name, image, colors, selected, pressed, pick, lines }: {

@@ -105,7 +105,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
             <span class="ev-line dim">
               <b class="pct">{s.conquered} / {s.total}</b>
               <span class="sp" />
-              {t('lblWebConquestCards', s.cards)}
+              {t('lblWebNCards', s.cards)}
               <Purse icon="IMG_AETHER_SHARD" n={s.shards} label={t('lblAetherShards')} />
               <Purse icon="IMG_PW_BADGE_COMMON" n={s.emblems} label={t('lblPlaneswalkEmblems')} />
             </span>
@@ -119,8 +119,8 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
                   <button class="danger" onClick={() => { setDeleting(null); actions.conquestDelete(s.name); }}>{t('lblDelete')}</button>
                 </>
               : <>
-                  <button class="primary" onClick={() => actions.conquestLoad(s.name)}>{t('lblWebLimitedPlay')}</button>
-                  {s.saved && <span class="ev-ask">{t('lblWebConquestSaved', shortDay(s.saved))}</span>}
+                  <button class="primary" onClick={() => actions.conquestLoad(s.name)}>{t('lblPlay')}</button>
+                  {s.saved && <span class="ev-ask">{t('lblWebLimitedSaved', shortDay(s.saved))}</span>}
                   <span class="sp" />
                   <span class="ev-more">
                     <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', s.name)} aria-expanded={menu === s.name}

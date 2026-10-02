@@ -76,7 +76,7 @@ function chipFor(text: string): Chip | null | 'skip' {
   if ((m = /^Assigned Damage: (\d+)$/.exec(text))) return { kind: 'damage', text: t('lblWebDetailAssignedChip', m[1]) };
   if ((m = /^Regeneration Shields: (\d+)$/.exec(text))) return { kind: 'shield', text: t(m[1] === '1' ? 'lblWebDetailRegenShield' : 'lblWebDetailRegenShields', m[1]) };
   if (text === 'Phased Out') return { kind: 'status', text: t('lblWebDetailPhasedOut') };
-  if (text === '^Exerted^') return { kind: 'status', text: t('lblWebDetailExerted') };
+  if (text === '^Exerted^') return { kind: 'status', text: t('lblExerted') };
   if (text === '^Detained^') return { kind: 'status', text: t('lblWebDetailDetained') };
   return null;
 }

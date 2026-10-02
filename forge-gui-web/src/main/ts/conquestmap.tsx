@@ -162,7 +162,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
                 : <i key={`${key(a)}-${key(b)}`} class={`cq-tie down ${kind}`} style={{ left: `${p.x + TW / 2}px`, top: `${p.y + TH}px`, height: `${G}px` }} />;
             })}
             <div class="cq-you" style={{ left: `${markerAt.x + TW / 2}px`, top: `${markerAt.y + 54}px` }}>
-              <i style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} /><b>{t('lblWebConquestYou')}</b>
+              <i style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} /><b>{t('lblWebLobbyKindYou')}</b>
             </div>
             {hovered && hovered.state !== 'fog' && !walk && <HoverCard cell={hovered} at={l.at(hovered.region, hovered.row, hovered.col)} width={l.width} />}
           </div>
@@ -234,9 +234,9 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
           <button class="cq-face2" aria-label={lead.name} style={{ backgroundImage: `url("${artUrl(lead.image)}")` }} onClick={() => setZoom(lead.image)} />
           <div class="t">
             <b>{lead.name}</b>
-            {lead.problem ? <span class="cq-warn">{t('lblWebConquestInvalidDeck')}</span> : <span>{t('lblWebConquestDeckCards', lead.deckSize)}</span>}
+            {lead.problem ? <span class="cq-warn">{t('lblInvalidDeck')}</span> : <span>{t('lblWebConquestDeckCards', lead.deckSize)}</span>}
           </div>
-          <button onClick={() => changeUi(u => { u.conquestTab = 'party'; })}>{t('lblWebConquestChange')}</button>
+          <button onClick={() => changeUi(u => { u.conquestTab = 'party'; })}>{t('lblWebMenuChange')}</button>
         </div>
         {(cell.variants ?? []).includes('Planeswalker') && (
           <div class="cq-mine">

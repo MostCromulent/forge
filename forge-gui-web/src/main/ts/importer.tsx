@@ -145,7 +145,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
                 onKeyDown={e => { if (e.key === 'Enter') fetch(url); }} />
               <button onClick={() => fetch(url)}>{t('lblWebImportFetch')}</button>
             </div>
-            <h4>{fetched ? t('lblWebImportFromSite', fetched.site) : t('lblWebImportOrPaste')}</h4>
+            <h4>{fetched ? t('lblWebFinderFrom', fetched.site) : t('lblWebImportOrPaste')}</h4>
             {fetching
               ? <div class="fetching"><span class="spinner" /> {t('lblWebImportFetching')}</div>
               : (
@@ -186,7 +186,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
               ? <Guide />
               : <>
                   <div class="summary">
-                    <span class="big"><span class="pips"><Pips colors={summary.colors} /></span> {t('lblWebImportCards', summary.cards)}</span>
+                    <span class="big"><span class="pips"><Pips colors={summary.colors} /></span> {t('lblWebNCards', summary.cards)}</span>
                     <span class="sub">{summary.notImported
                       ? t('lblWebImportSideboardNotImported', summary.sideboard, summary.notImported)
                       : t('lblWebImportSideboard', summary.sideboard)}</span>
@@ -226,7 +226,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
               <h3>{t('lblWebImportNameTaken', model.nameTaken)}</h3>
               <div class="actions">
                 <button onClick={() => setSent(null)}>{t('lblCancel')}</button>
-                <button onClick={() => commit(sent.action, 'replace')}>{t('lblWebImportReplaceIt')}</button>
+                <button onClick={() => commit(sent.action, 'replace')}>{t('lblWebDraftReplaceIt')}</button>
                 <button class="primary" onClick={() => commit(sent.action, 'keep')}>{t('lblWebImportKeepBoth')}</button>
               </div>
             </div>

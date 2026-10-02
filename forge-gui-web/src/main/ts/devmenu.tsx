@@ -17,7 +17,7 @@ const GROUPS: [TextKey, [DevAction, TextKey][]][] = [
     ['repeatLastAddition', 'lblWebDevRepeatLastAddition'], ['castASpell', 'lblWebDevCastSpell'],
     ['tutorForCard', 'lblWebDevTutor'],
   ]],
-  ['lblWebDevRemove', [
+  ['lblRemove', [
     ['exileCardsFromHand', 'lblWebDevExileFromHand'], ['exileCardsFromBattlefield', 'lblWebDevExileFromBattlefield'],
     ['removeCardsFromGame', 'lblWebDevRemoveFromGame'],
   ]],

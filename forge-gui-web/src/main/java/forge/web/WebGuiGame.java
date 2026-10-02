@@ -1000,7 +1000,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         final List<String> declined = update.entries().stream()
                 .filter(e -> e.vote() == forge.game.DrawOffer.Vote.DECLINED && e.player() != null)
-                .map(e -> isLocalPlayer(e.player()) ? Localizer.getInstance().getMessage("lblWebGameYou") : e.player().getName()).toList();
+                .map(e -> isLocalPlayer(e.player()) ? Localizer.getInstance().getMessage("lblWebLobbyKindYou") : e.player().getName()).toList();
         send(new Notice(Localizer.getInstance().getMessage("lblWebGameDrawDeclined"), declined.isEmpty() ? Localizer.getInstance().getMessage("lblWebGameGoesOn")
                 : Localizer.getInstance().getMessage("lblWebGameDeclined", String.join(", ", declined)), false));
     }

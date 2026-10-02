@@ -152,7 +152,7 @@ final class ServerConsole implements IProgressBar {
             browse.setEnabled(true);
             progress.setIndeterminate(false);
             progress.setValue(progress.getMaximum());
-            progress.setString(Localizer.getInstance().getMessage("lblWebConsoleReady"));
+            progress.setString(Localizer.getInstance().getMessage("lblReady"));
         });
         inBackground("ForgeAddresses", this::findAddresses);
     }
@@ -239,7 +239,7 @@ final class ServerConsole implements IProgressBar {
     /** Each address a guest could use, which copies that address's full link when clicked. */
     private void showLinks(final List<Invite> found) {
         links.removeAll();
-        final JLabel name = new JLabel(Localizer.getInstance().getMessage("lblWebConsoleInvite"));
+        final JLabel name = new JLabel(Localizer.getInstance().getMessage("lblWebMatchBarInvite"));
         name.setPreferredSize(new Dimension(80, name.getPreferredSize().height));
         name.setMaximumSize(name.getPreferredSize());
         links.add(name);
@@ -377,7 +377,7 @@ final class ServerConsole implements IProgressBar {
         copyLogReset.setRepeats(false);
         copyLog.addActionListener(e -> {
             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(text.getText()), null);
-            copyLog.setText(Localizer.getInstance().getMessage("lblWebConsoleCopied"));
+            copyLog.setText(Localizer.getInstance().getMessage("lblWebMatchBarCopied"));
             copyLogReset.restart();
         });
         final JPanel logActions = new JPanel();
@@ -449,8 +449,8 @@ final class ServerConsole implements IProgressBar {
         static final Color BACKGROUND = new Color(0x10, 0x14, 0x1c);
         static final Color LABEL = new Color(0xc8, 0xd1, 0xdb);
         /** Indexed by {@link ServerTraffic.Kind}, and stacked in that order from the bottom. */
-        static final String[] KIND_NAMES = {Localizer.getInstance().getMessage("lblWebConsoleKindGame"),
-                Localizer.getInstance().getMessage("lblWebConsoleKindCardArt"), Localizer.getInstance().getMessage("lblWebConsoleKindAudio"),
+        static final String[] KIND_NAMES = {Localizer.getInstance().getMessage("lblGame"),
+                Localizer.getInstance().getMessage("lblWebSleevesCardArt"), Localizer.getInstance().getMessage("lblAudio"),
                 Localizer.getInstance().getMessage("lblWebConsoleKindPage")};
         static final Color[] KIND_COLOURS = {new Color(0xf5, 0xc4, 0x51), new Color(0x4f, 0x86, 0xe8),
                 new Color(0xa9, 0xc4, 0xff), new Color(0x4a, 0x52, 0x60)};

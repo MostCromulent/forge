@@ -44,7 +44,7 @@ export function ExtraPicker({ model, actions, index, seat, kind, close }: {
               : <div class="extra-list">{shown.map(c => (
                 <button key={c.key} class={`extra-choice${c.problem ? ' illegal' : ''}`} title={c.problem ?? ''} onClick={() => use(c)}>
                   <span class="name">{c.label}</span>
-                  <span class="count">{c.count != null ? t('lblWebLobbyExtraCount', c.count) : ''}</span>
+                  <span class="count">{c.count != null ? t('lblWebNCards', c.count) : ''}</span>
                   {c.problem && <span class="legal no">{c.problem}</span>}
                 </button>
               ))}</div>}

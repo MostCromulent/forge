@@ -29,11 +29,11 @@ const SORTS: [ZoneSort, TextKey][] = [['order', 'lblWebZoneSortOrder'], ['name',
 /** Each zone's name as the page shows it. */
 const ZONE_NAMES: Record<ZoneType, TextKey> = {
   Hand: 'lblWebZoneHand', Library: 'lblLibrary', Graveyard: 'lblGraveyard', Battlefield: 'lblWebZoneBattlefield',
-  Exile: 'lblWebZoneExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',
-  Sideboard: 'lblWebZoneSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblWebZoneSchemeDeck',
+  Exile: 'lblExile', Flashback: 'lblWebZoneFlashback', Command: 'lblWebZoneCommand', Stack: 'lblStack',
+  Sideboard: 'lblSideboard', Ante: 'lblWebZoneAnte', Merged: 'lblWebZoneMerged', SchemeDeck: 'lblWebZoneSchemeDeck',
   PlanarDeck: 'lblWebZonePlanarDeck', AttractionDeck: 'lblWebZoneAttractionDeck', Junkyard: 'lblWebZoneJunkyard',
   ContraptionDeck: 'lblWebZoneContraptionDeck', Subgame: 'lblWebZoneSubgame', ExtraHand: 'lblWebZoneExtraHand',
-  StickerSheets: 'lblStickerSheets', None: 'lblWebZoneNone',
+  StickerSheets: 'lblStickerSheets', None: 'lblNone',
 };
 
 export function zoneTitle(zoneName: ZoneType): string {
@@ -115,7 +115,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const player = model.objects.get(p.player);
   const cards = shown(model, zone(model, player, p.zone));
   q(el, '.zone-who').textContent = t('lblWebZonePlayersZone', player?.Name ?? '', zoneTitle(p.zone));
-  q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebZoneOneCard' : 'lblWebZoneCards', cards.length);
+  q(el, '.zone-count').textContent = t(cards.length === 1 ? 'lblWebOneCard' : 'lblWebNCards', cards.length);
   const find = q<HTMLInputElement>(el, '.zone-find');
   if (find.value !== ui.zoneSearch) {
     find.value = ui.zoneSearch;
@@ -171,7 +171,7 @@ function shown(model: Model, cards: CardView[]): CardView[] {
 function drawBar(root: HTMLElement, model: Model, panels: Panel[]): void {
   const first = panels[0];
   const player = model.objects.get(first.player);
-  const count = panels.length > 1 ? t('lblWebZoneNZones', panels.length) : t('lblWebZoneCards', zone(model, player, first.zone).length);
+  const count = panels.length > 1 ? t('lblWebZoneNZones', panels.length) : t('lblWebNCards', zone(model, player, first.zone).length);
   // Kept across renders, so a click is not lost to a render between the press and the release
   let bar = root.querySelector<HTMLElement>(':scope > .zone-bar');
   if (!bar) {

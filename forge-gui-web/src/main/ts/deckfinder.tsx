@@ -215,7 +215,7 @@ export function DeckFinder({ model, actions, seat, close }: {
           void file.text().then(text => importer({ text }));
         }}>
         <header class="finder-head">
-          <h2>{seat ? t('lblWebFinderChooseDeck') : t('lblWebFinderDecks')}</h2>
+          <h2>{seat ? t('lblWebLobbyChooseDeck') : t('lblDecks')}</h2>
           {!seat && (
             <label class="legality set">
               {t('lblFormat')}
@@ -244,7 +244,7 @@ export function DeckFinder({ model, actions, seat, close }: {
         <div class="finder-body">
           <nav class="rail" aria-label={t('lblWebFinderFilters')}>
             <section>
-              <h4>{t('lblWebFinderSource')}</h4>
+              <h4>{t('lblSource')}</h4>
               {[...sources].map(([id, count]) => (
                 <button key={id} class="source" aria-pressed={id === NET ? inNet : id === filter.source}
                   onClick={() => change({ source: id })}>
@@ -277,11 +277,11 @@ export function DeckFinder({ model, actions, seat, close }: {
                 title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
             </FilterBar>
             <div class="count-row">
-              <p class="shown">{list.length === decks.length ? t('lblWebFinderDeckCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
+              <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
               {/* A search orders the list by how well each name matches, so the sort waits until it is cleared */}
               {normalize(filter.query)
-                ? <select class="sort-by" aria-label={t('lblWebEditorSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
-                : <select class="sort-by" aria-label={t('lblWebEditorSort')} value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
+                ? <select class="sort-by" aria-label={t('lblSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
+                : <select class="sort-by" aria-label={t('lblSort')} value={filter.sort} onChange={e => change({ sort: e.currentTarget.value as SortKey })}>
                     {SORTS.filter(([id]) => id !== 'bracket' || decks.some(d => d.bracket != null))
                       .map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
                   </select>}
@@ -388,7 +388,7 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
         value={f.legalOnly ? 'hide' : 'show'} pick={v => { set({ ...f, legalOnly: v === 'hide' }); done(); }} />,
     },
     {
-      id: 'bracket', group: legality, label: t('lblWebFilterBracket'),
+      id: 'bracket', group: legality, label: t('lblBracket'),
       chip: f => (f.bracket === null ? null : `≤ ${f.bracket}`),
       from: f => (model.lobby && f.bracket === model.lobby.maxBracket ? fromTable : null),
       clear: f => ({ ...f, bracket: null }),
@@ -412,7 +412,7 @@ function finderKinds(model: Model, decks: readonly DeckSummary[], actions: Actio
     range('side', colourSize, t('lblWebFilterSideSize'), f => f.side, (f, side) => ({ ...f, side })),
     range('mana', colourSize, t('lblWebFilterAverageMana'), f => f.mana, (f, mana) => ({ ...f, mana })),
     {
-      id: 'folder', group: yours, label: t('lblWebFilterFolder'),
+      id: 'folder', group: yours, label: t('lblFolder'),
       chip: f => f.folder,
       clear: f => ({ ...f, folder: null }),
       panel: (f, set, done) => (folders.size
@@ -528,7 +528,7 @@ function Chosen({ details }: { details: DeckDetails }) {
           <Curve curve={s.curve} creatures={s.creatures} px={42} />
           <div class="types">
             {s.types.map(ty => <div key={ty.name} class="type"><span>{ty.name}</span><b>{ty.count}</b></div>)}
-            <div class="type avg"><span>{t('lblWebFinderAverageManaValue')}</span><b>{s.averageMana}</b></div>
+            <div class="type avg"><span>{t('lblWebFilterAverageMana')}</span><b>{s.averageMana}</b></div>
           </div>
         </div>
       </div>

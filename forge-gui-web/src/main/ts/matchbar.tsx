@@ -59,7 +59,7 @@ function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
 /** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
 export function deckMark(format: Format): string {
   const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
-  return size ? t('lblWebMatchBarDeckSize', size) : t('lblWebMatchBarNoDeck');
+  return size ? t('lblWebNCards', size) : t('lblWebMatchBarNoDeck');
 }
 
 /** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
@@ -73,7 +73,7 @@ const GROUP_ICONS: Record<string, ComponentChildren> = {
 
 /** What each family of games is called; the server names a format's family by these words. */
 const GROUP_NAMES: Record<string, TextKey> = {
-  Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblWebMatchBarGroupOther', Limited: 'lblLimited',
+  Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
 };
 
 /**
@@ -209,10 +209,10 @@ export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; ac
 /** The highest Commander bracket the table plays at, as the host's own Forge keeps it; 5 is any. Only the host may change it. */
 function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
-    <span class="count" role="group" aria-label={t('lblWebMatchBarBracket')}>
+    <span class="count" role="group" aria-label={t('lblBracket')}>
       {[1, 2, 3, 4, 5].map(n => (
         <button key={n} aria-pressed={n === lobby.maxBracket} disabled={!lobby.host} title={n < 5 ? t('lblWebMatchBarBracketTip', n) : ''}
-          onClick={() => actions.setMaxBracket(n)}>{n < 5 ? n : t('lblWebMatchBarBracketAny')}</button>
+          onClick={() => actions.setMaxBracket(n)}>{n < 5 ? n : t('lblAny')}</button>
       ))}
     </span>
   );
@@ -223,7 +223,7 @@ const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOf
 /** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
 function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   return (
-    <span class="count" role="group" aria-label={t('lblWebMatchBarMatch')}>
+    <span class="count" role="group" aria-label={t('lblMatch')}>
       {MATCH_LENGTHS.map(([n, name]) => (
         <button key={n} aria-pressed={n === lobby.gamesPerMatch} disabled={!lobby.host} title={t(name)}
           onClick={() => actions.setMatchLength(n)}>{t('lblWebMatchBarBestOfShort', n)}</button>
@@ -295,8 +295,8 @@ export function MatchBar({ model, lobby, actions, preview }: {
         <Field name={t('lblWebMatchBarMode')}><GameMenu lobby={lobby} actions={actions} /></Field>
         {lobby.format === 'Constructed' && <Field name={t('lblFormat')}><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
         <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
-        {lobby.format === 'Commander' && <Field name={t('lblWebMatchBarBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
-        <Field name={t('lblWebMatchBarMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
+        {lobby.format === 'Commander' && <Field name={t('lblBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
+        <Field name={t('lblMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
         <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
       </div>
     </div>

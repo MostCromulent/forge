@@ -732,7 +732,7 @@ final class Lobby {
         String detail = null;
         if (section == DeckSection.Avatar && count > 0 && !DeckCatalog.randomLabel().equals(label)) {
             final var rules = cards.iterator().next().getKey().getRules();
-            detail = Localizer.getInstance().getMessage("lblWebLobbyAvatarModifiers", signed(rules.getHand()), signed(rules.getLife()));
+            detail = Localizer.getInstance().getMessage("lblWebLobbyAvatarMods", signed(rules.getHand()), signed(rules.getLife()));
         }
         // Before a seat has a deck nothing has been dealt to it, so an empty section is not yet a fault
         final String problem = deck == null ? null : section == DeckSection.Avatar ? (count == 0 ? Localizer.getInstance().getMessage("lblWebLobbyNoAvatar") : null)
@@ -976,11 +976,11 @@ final class Lobby {
             for (final Deck d : FModel.getDecks().getNetworkEventDecks()) {
                 if (eventId.equals(DeckProxy.getEventTag(d, "eventId"))) {
                     final String product = DeckProxy.getEventTag(d, "eventProduct");
-                    return product == null || product.isBlank() ? Localizer.getInstance().getMessage("lblWebLobbyEarlierEvent") : product;
+                    return product == null || product.isBlank() ? Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent") : product;
                 }
             }
         }
-        return Localizer.getInstance().getMessage("lblWebLobbyEarlierEvent");
+        return Localizer.getInstance().getMessage("lblWebEventAnEarlierEvent");
     }
 
     /** A past event as one of its pools' tags describe it. */
