@@ -1,5 +1,4 @@
-// The Chaos Wheel as a dial: a brass ring round dark glass, eight wedges that differ in tone and each carry an icon
-// and a label, and a fixed needle. It is drawn and turned by hand, as the board is; where it stops is the server's.
+// The Chaos Wheel as a dial, drawn and turned by hand, and the server decides where it stops
 
 import { conquestIconUrl } from './images';
 import { reducedMotion } from './conquestmotion';

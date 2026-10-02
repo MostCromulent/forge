@@ -22,8 +22,7 @@ public class OnlineCoreTest {
         WebTestSupport.initModel();
     }
 
-    // Fails if configuring a sealed event from a built pool still runs the prompting constructor, whose questions a
-    // browser host cannot answer there; the time limit turns such a hang into a failure
+    // Fails if configuring a sealed event from a built pool runs the prompting constructor, which hangs until the time limit
     @Test(timeOut = 30_000)
     public void configureWithABuiltGenerator() {
         final ServerGameLobby lobby = new ServerGameLobby();

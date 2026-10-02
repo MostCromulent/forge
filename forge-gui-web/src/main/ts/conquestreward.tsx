@@ -1,6 +1,4 @@
-// What a won battle gave, revealed on the map one step at a time: the emblem of a first conquest, the Chaos Wheel,
-// each booster as a pack to open, and what else the wheel paid. All of it is already in the save; the steps are the
-// server's, and this only shows them. The bar is told what has yet to be shown, so its balances rise as it is.
+// The reward is already in the save and its steps are the server's, so this only shows them and tells the bar what is yet to be shown
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';

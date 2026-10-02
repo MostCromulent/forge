@@ -1,5 +1,4 @@
-// Archenemy on the board. A scheme set in motion is shown to the whole table for a moment, then the ones that stay
-// in play sit in a row under their archenemy's seat.
+// A scheme set in motion is shown to the whole table for a moment, then the ongoing ones sit in a row under their archenemy's seat
 
 import { reconcile } from './render';
 import { cardImageSrc, setImage } from './images';

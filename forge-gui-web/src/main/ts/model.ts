@@ -1,5 +1,4 @@
-// The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
-// Messages from the server change it here, and everything on the page is drawn from it.
+// The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
 import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, ConquestBar, ConquestPlanes, ConquestPrefs, ConquestStats, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
@@ -10,8 +9,7 @@ export interface Looks {
   sleeveCount: number;
 }
 
-/** A line of chat. from is empty for netplay announcing somebody coming or going; earlier marks a line said before
- *  this browser arrived, replayed so it can catch up. */
+/** A line of chat, where from is empty for a netplay announcement and earlier marks a line said before this browser arrived. */
 export interface ChatEntry { from: string; text: string; earlier: boolean }
 
 // Everything the browser knows. objects is its copy of the game's table, which forge.web.BrowserModel applies and prunes by the same rules
@@ -41,8 +39,7 @@ export interface Model {
   addresses: Address[] | null;
   host: boolean;
   canClaimHost: boolean;
-  /** What the game did since the board was last drawn, oldest first. The render hands them to whatever animates
-   *  them and empties the list, so each is shown once. */
+  /** What the game did since the board was last drawn, oldest first, emptied by the render so each is shown once. */
   events: GameEvent[];
   /** Rules text the server composed for cards and players the pointer has been over, kept for the match. */
   cardDetails: Map<number, Detail>;
@@ -169,8 +166,7 @@ export function applyState(model: Model, msg: StateMessage): void {
       else target[name] = value;
     }
   }
-  // Only a new object, or a property cleared or given an object or list, can leave something unreachable. Most
-  // packets only change numbers and flags, and walking every object for each of them is wasted.
+  // Only a new object, or a property cleared or given an object or list, can leave something unreachable, so other packets skip the walk
   const mayOrphan = msg.full || Object.keys(msg.newObjects).length > 0
     || Object.values(msg.deltas).some(props => Object.values(props).some(v => v === null || typeof v === 'object'));
   if (mayOrphan) prune(model);
@@ -220,16 +216,14 @@ export function oldestRequest(model: Model): Request | undefined {
   return [...model.requests.values()].sort((a, b) => a.id - b.id)[0];
 }
 
-/** The question the game is asking, when it is which of one clicked card's abilities to use: a short list of words,
- *  answered from a menu at the pointer rather than a dialog. */
+/** The open question when it is which of one clicked card's abilities to use, answered from a menu at the pointer. */
 export function cardMenu(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.max === 1 && (oldest.atX != null || oldest.atY != null)
     && oldest.options.every(o => !o.card && !o.imageKey && !o.player) ? oldest : null;
 }
 
-/** The question the game is asking, when it is which spell on the stack to choose: that is answered by clicking
- *  the spell where it already is, rather than from a list. */
+/** The open question when it is which spell on the stack to choose, answered by clicking the spell where it already is. */
 export function stackPick(model: Model): ChoicesRequest | null {
   const oldest = oldestRequest(model);
   return oldest?.kind === 'choices' && oldest.stackKeys ? oldest : null;

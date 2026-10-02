@@ -1,6 +1,4 @@
-// Everything a player can do, at the table and around it. Renderers and screens call these and never see the
-// protocol; the controller is the one place that turns them into messages, so a different renderer (a canvas board)
-// drives the game the same way.
+// Everything a player can do, which the controller alone turns into messages, so renderers and screens never see the protocol
 
 import type {
   AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, EventSetup, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,

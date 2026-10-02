@@ -1,11 +1,4 @@
-// Declaring a block by dragging, as Arena does: press on one of your creatures, drag, and let go over the attacker it
-// blocks, with the block arrow following the pointer. It sends the clicks the engine already takes for a block, the
-// attacker and then the blocker, so clicking the two in turn still works as it always has. The host runs each click
-// from a client on a thread of its own, so clicks sent together can arrive in either order; each one here waits for
-// the one before it to show on the board.
-//
-// In a game of three or more an attack is dragged the same way, onto the seat or portrait of the player it attacks,
-// and the attack prompt turns to whoever you attacked last rather than to the first opponent every combat.
+// A dragged block or attack sends the clicks the engine already takes, each waiting for the one before to show on the board
 
 import { byId, q } from './dom';
 import { game, me, opponents, stateOf, type Model } from './model';
@@ -29,11 +22,7 @@ let queued: Promise<void> = Promise.resolve();
 
 const has = (refs: (Ref | null)[] | null | undefined, key: number) => (refs ?? []).some(r => r?.ref === key);
 
-/**
- * Whether the prompt is asking this player for blockers, so their creatures can be dragged onto attackers. The block
- * prompt lists no cards as selectable, so it is known by the step and by whom the attack is aimed at; whether a
- * creature can block is the engine's to say, as it is for a click.
- */
+/** The block prompt lists no cards as selectable, so it is known by the step and by whom the attack is aimed at. */
 function declaringBlocks(model: Model): boolean {
   const mine = me(model)?.$key;
   return game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && !!model.prompt
@@ -46,10 +35,7 @@ function currentDefender(model: Model): PlayerView | undefined {
   return opponents(model).find(p => lit.includes(p.$key));
 }
 
-/**
- * Whether the prompt is asking this player for attackers with more than one opponent to choose from. The attack prompt
- * highlights the player it is declaring at; the priority prompt later in the same step does not.
- */
+/** The attack prompt highlights the player it is declaring at, which the priority prompt later in the same step does not. */
 function declaringAttacks(model: Model): boolean {
   return game(model)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && game(model)?.PlayerTurn?.ref === me(model)?.$key
     && opponents(model).filter(p => !p.HasLost).length > 1 && !!currentDefender(model);
@@ -63,10 +49,7 @@ let turned = false;
 /** The player this browser asked the prompt to turn to, until it has. */
 let turning: number | null = null;
 
-/**
- * The engine starts every attack at the first opponent. Once per attack prompt this turns it to whoever you attacked
- * last, if they are still in; after that, whoever the prompt is at is the one to remember.
- */
+/** The engine starts every attack at the first opponent, so once per attack prompt this turns it to whoever you attacked last. */
 function followDefender(model: Model): void {
   const at = declaringAttacks(model) ? currentDefender(model) : undefined;
   if (!at) {
@@ -219,18 +202,10 @@ function until(test: () => boolean): Promise<boolean> {
   });
 }
 
-/**
- * Blocks the attacker with the blocker, as the clicks would. A creature already blocking that attacker is left as it
- * is, where a click would take the block back. One blocking another attacker has that block taken back first, by
- * choosing its attacker and clicking it again, so the drag moves the block rather than being refused.
- *
- * TODO: ideally the shared input code would take a block as a single intent and leave how it is selected to each GUI;
- * until it does, a drag is translated here into the clicks the block input already understands.
- */
+/** TODO: the shared input code should take a block as one intent, so that a drag need not be translated into clicks here. */
 async function block(actions: Actions, blocker: number, attacker: number, at: Point): Promise<void> {
   if (!current || blocking(blocker, attacker)) return;
-  // The prompt names the attacker being blocked by its id; one already named is not clicked again, as a click on it
-  // changes nothing and would only run beside the next click on the host
+  // The prompt names the attacker being blocked by its id, and one already named is not clicked again
   const named = (key: number) => (current?.prompt?.message ?? '').includes(`(${key})`);
   const choose = async (key: number) => {
     if (named(key)) return;
@@ -248,11 +223,7 @@ async function block(actions: Actions, blocker: number, attacker: number, at: Po
   if (!await until(() => blocking(blocker, attacker))) explainRefusal(blocker, attacker, at);
 }
 
-/**
- * Says why the engine would not take a block. The board does not carry the rules for who may block whom, but it does
- * carry each keyword's reminder, and an attacker that evades a block says so in its own ("can't be blocked except by
- * creatures with flying or reach"). Anything else gets no reason rather than a guessed one.
- */
+/** Gives the reason for a refused block only when one of the attacker's keyword reminders states it, and no reason otherwise. */
 function explainRefusal(blocker: number, attacker: number, at: Point): void {
   const model = current;
   if (!model) return;

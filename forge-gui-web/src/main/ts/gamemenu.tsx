@@ -1,5 +1,4 @@
-// The game menu behind the prompt's ⋯ button: what a player does to the game as a whole rather than on the board,
-// and how priority passes by itself, which is changed often enough mid-game to sit one click from the prompt
+// The game menu behind the prompt's ⋯ button, which keeps how priority passes by itself one click from the prompt
 
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { CloseIcon, OnOff, OptionsDialog, Row } from './options';

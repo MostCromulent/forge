@@ -1,5 +1,4 @@
-// A conquest's cards: those it owns and those it has exiled. Cards are picked by clicking, the bar at the foot prices
-// the pick, and one question exiles them for shards or brings them back. Every price is the server's.
+// A conquest's cards, owned and exiled, where every price shown is the server's
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';

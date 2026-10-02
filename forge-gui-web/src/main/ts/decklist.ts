@@ -1,5 +1,4 @@
-// The editor's deck, read in ways the server does not send it: grouped by mana value or colour, written out as a list,
-// and dealt as a sample hand.
+// The editor's deck, read in ways the server does not send it: regrouped, written out as a list, and dealt as a sample hand
 
 import type { EditorCard, EditorGroup, EditorState } from './protocol';
 import { t, type TextKey } from './text';

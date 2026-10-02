@@ -1,6 +1,4 @@
-// The editor's left half: every card the deck could take, as card images or as a table. The filters are the deck
-// finder's filter bar. Cards the deck can't use are left out until a filter asks for them, and a search that finds
-// nothing says which filter hid the match.
+// The editor's left half, where cards the deck can't use are left out until a filter asks for them
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
@@ -233,8 +231,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     },
     words('set', printing, t('lblWebFilterSet'), t('lblWebFilterSetCode')),
     {
-      // The commander's colours are the deck's rule, so they show here but change only with the commander. A
-      // collection's deck has no such rule, and its chip can be taken off.
+      // The commander's colours are the deck's rule, so the chip is fixed, except on a collection's deck, which has no such rule
       id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
       chip: f => (state.collection ? f.identity?.split('').join(' ') ?? null : state.identity.split('').join(' ')),
       from: () => t('lblCommander'),

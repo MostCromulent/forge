@@ -25,8 +25,7 @@ final class CardDetails {
     static PlayerDetail player(final PlayerView player) {
         final List<String> lines = new ArrayList<>();
         final String[] parts = player.getDetails().split("\n");
-        // The commander damage lines follow the commanders' cast counts in the engine's list; the browser draws that
-        // damage itself, above these lines, so it is left out of them
+        // The browser draws commander damage itself, so those lines, which follow the cast counts in the engine's list, are left out
         final List<String> commander = player.getPlayerCommanderInfo();
         final int casts = player.getCommanders() == null ? 0 : 1 + player.getCommanders().size();
         final Set<String> damage = new HashSet<>();
@@ -42,10 +41,7 @@ final class CardDetails {
         return new PlayerDetail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_PLAYER_VIEW, player.getId()), player.getName(), lines);
     }
 
-    /**
-     * A card's faces, as far as this viewer may see them. mayFlip hides an opponent's face-down card but shows the
-     * owner theirs, as on desktop.
-     */
+    /** A card's faces as far as this viewer may see them, where mayFlip shows the other face only to a viewer allowed to see it. */
     static Detail card(final CardView card, final GameView game, final boolean mayView, final boolean mayFlip) {
         final List<CardFace> faces = new ArrayList<>();
         if (mayView) {

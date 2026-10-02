@@ -50,17 +50,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/**
- * The desktop window that starts the server, shows what it is doing and stops it. The browser is the whole
- * of the game, so without this a player who closes their tab has no sign the process is still there.
- *
- * <p>Three things share this package and are easy to confuse. The <em>server</em> is the port players reach,
- * which this window can stop and start again. The <em>console</em> is this window. The <em>browser</em> is the
- * page a player actually plays in.
- *
- * <p>Closing the console ends Forge; stopping the server only closes the port. A machine with no display, or
- * one started with {@code -Dforge.web.noConsole}, gets none of this and behaves as it did before.
- */
+/** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
 final class ServerConsole implements IProgressBar {
     /** Enough to see what just happened without holding a whole session's output. */
     private static final int MAX_LINES = 300;
@@ -218,10 +208,7 @@ final class ServerConsole implements IProgressBar {
         });
     }
 
-    /**
-     * Found off the event thread, because the address the internet sees is a web request of its own. Every link
-     * comes from the server, so what the console shows cannot drift from what a player is actually given.
-     */
+    /** Found off the event thread, because the address the internet sees is a web request of its own. */
     private void findAddresses() {
         final List<Invite> found = new ArrayList<>();
         for (final Map.Entry<String, String> local : FServerManager.getAllLocalAddresses().entrySet()) {
@@ -350,8 +337,7 @@ final class ServerConsole implements IProgressBar {
         foot.add(quitWhenEmpty);
         foot.add(forwardRow);
 
-        // A styled pane rather than a plain area, so errors and warnings can stand out; it wraps long lines, as a stack
-        // trace is wider than any window worth opening
+        // A styled pane so errors and warnings can stand out, and it wraps long lines because a stack trace is wider than the window
         text = new JTextPane();
         text.setEditable(false);
         text.setFont(mono);
@@ -438,11 +424,7 @@ final class ServerConsole implements IProgressBar {
         }
     }
 
-    /**
-     * The last five minutes of bytes through the port: what was sent stacked by what it carried, and what was
-     * received as a dashed line over it. The four fills step in lightness as well as colour, and the stats box
-     * beside it names each one with its total, so neither depends on telling the colours apart.
-     */
+    /** The last five minutes of bytes through the port, with what was sent stacked by kind and what was received as a dashed line. */
     private static final class TrafficGraph extends JComponent {
         static final int SAMPLE_MILLIS = 1000;
         static final int HEIGHT = 130;
@@ -787,10 +769,7 @@ final class ServerConsole implements IProgressBar {
         return set;
     }
 
-    /**
-     * How one line reads: tinylog marks its level as [ERROR] or [WARN ]. A line of a stack trace (indented, "Caused
-     * by", "... n more", or an exception's own name) carries on the colour of the error or warning above it.
-     */
+    /** A stack trace line carries on the colour of the error or warning above it, which tinylog marks as [ERROR] or [WARN ]. */
     private SimpleAttributeSet styleOf(final String line) {
         if (line.contains("[ERROR]")) {
             return carried = ERROR;

@@ -1,5 +1,4 @@
-// The Aether: the current plane's cards still to find, narrowed by mobile's four filters, and a pull that spends
-// shards for one of them. What matches, what a pull costs and which card comes are all the server's.
+// The Aether, where the server decides what matches the filters, what a pull costs and which card comes
 
 import { useEffect, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';

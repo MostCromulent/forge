@@ -1,5 +1,4 @@
-/* The deck importer. The pasted text carries a mark per line in a gutter beside it, and a wash behind it for lines with
-   a problem; the result beside it is the deck finder's grouped list. A problem is the lime wash, a hatch and a "!". */
+/* The deck importer: pasted text with a mark per line in a gutter and a wash behind lines with a problem, beside the result list */
 
 /* Above the deck finder, which it can be opened from */
 .importer-back { z-index: 70; }

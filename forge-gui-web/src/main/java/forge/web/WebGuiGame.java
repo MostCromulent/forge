@@ -66,19 +66,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Predicate;
 
-/**
- * One player's view of a match, drawn in their browser. Forge's desktop client draws a match through an
- * {@link forge.gui.interfaces.IGuiGame}; this is that interface for the web, turning each call into messages for the
- * browser instead of Swing.
- *
- * <p>Every seat plays as a netplay client, so the game's state arrives here as netplay's delta packets. They are kept in
- * a {@link BrowserModel}, the same table the browser holds, and passed on as JSON. The prompt, the questions the game
- * asks, the zones on show, the log and the sounds are sent alongside. When a browser connects or reloads it is sent the
- * whole table and every open question again, so it picks up where it was.
- *
- * <p>Calls from the game run on one dispatch thread, in the order they were made. Replies from the browser arrive on
- * the socket's thread; a question the game is waiting on is answered through {@link PendingRequests}.
- */
+/** One player's view of a match for the browser: game calls run on one dispatch thread, and browser replies arrive on the socket's thread. */
 public class WebGuiGame extends NetworkGuiGame {
     private final ReentrantLock mirrorLock = new ReentrantLock();
     private final ExecutorService dispatch = Executors.newSingleThreadExecutor(
@@ -109,15 +97,14 @@ public class WebGuiGame extends NetworkGuiGame {
     private volatile List<MatchScore> score = List.of();
     /** Run once, when this seat's game ends. */
     private volatile Runnable onGameOver;
-    /** What the game did since the last state message, in order. Filled and drained on the dispatch thread: a packet's
-     *  events are handled inside its applyDelta, so they leave with the state change they explain. */
+    /** What the game did since the last state message, in order, filled and drained on the dispatch thread only. */
     private final List<Record> events = new ArrayList<>();
 
-    /** A GUI for the host's own seat, whose settings are Forge's preferences. */
     void onGameOver(final Runnable listener) {
         onGameOver = listener;
     }
 
+    /** A GUI for the host's own seat, whose settings are Forge's preferences. */
     public WebGuiGame() {
         this(PlayerSettings.saved());
     }
@@ -145,8 +132,7 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
-    /** Sends on the caller's thread. A browser reconnects while a request is open, and the thread that applies
-     *  deltas is blocked on that request until the new browser answers it, so waiting for it here would hang. */
+    /** Sends on the caller's thread, because the dispatch thread can be blocked on a request only the new browser can answer. */
     public void attach(final BrowserChannel channel) {
         sendFullState(channel);
     }
@@ -205,11 +191,7 @@ public class WebGuiGame extends NetworkGuiGame {
         });
     }
 
-    /**
-     * The next game of a match has a game view of its own id, but the client applies it to the one game view it
-     * already holds (NetworkGuiGame), so the browser is given it under that view's key too. Otherwise the browser keeps
-     * the last game's turn and phase while the new game's updates pile up under a key nothing reads.
-     */
+    /** Moves a later game's game view under the key of the one view the client holds, which is the only key the browser reads. */
     static Map<Integer, Map<TrackableProperty, Object>> asRootGame(final Map<Integer, Map<TrackableProperty, Object>> objects,
             final int root) {
         Map<Integer, Map<TrackableProperty, Object>> out = objects;
@@ -338,8 +320,7 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public void handleGameEvent(final GameEvent event) {
-        // The log, the sound and what the browser animates. FControlGameEventHandler would post to the host UI
-        // thread, and everything else comes from state
+        // FControlGameEventHandler would post to the host UI thread, so the log, the sound and the animations are sent from here
         if (BrowserEvents.worthSeeing(event, this::isLocalPlayer)) {
             unseen = true;
         }
@@ -372,11 +353,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    /**
-     * Games won by each player, read from the engine's summary of the match ("Alice: 1 Bob: 0 "), which is all that
-     * reaches a guest. Each seated player's name is looked for in it, so a name with a colon or a space in it is read
-     * whole.
-     */
+    /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "), so a name holding a colon or space is read whole. */
     private List<MatchScore> matchScore(final String summary) {
         final GameView gv = getGameView();
         if (gv == null || summary == null) {
@@ -464,8 +441,7 @@ public class WebGuiGame extends NetworkGuiGame {
         }
     }
 
-    // Desktop's right-click menu on a stack item: auto-yield to an ability, always accept or decline an optional
-    // trigger of your own, and yield to the stack
+    // The choices of desktop's right-click menu on a stack item
     private StackMenu stackMenuMessage(final IGameController controller, final StackItemView item) {
         final String yieldKey = item.getKey();
         return new StackMenu(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId()),
@@ -635,10 +611,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return player.getId() + "/" + zone.name();
     }
 
-    /**
-     * Opens the zones named, those the browser does not already show, and returns the ones it opened, so they can be
-     * closed again without closing a zone something else opened. Called holding zonesLock.
-     */
+    /** Called holding zonesLock, and returns only the zones it opened so that closing them spares a zone something else opened. */
     private List<PlayerZoneUpdate> showZones(final Iterable<PlayerZoneUpdate> zones) {
         final List<PlayerZoneUpdate> opened = new ArrayList<>();
         for (final PlayerZoneUpdate update : zones) {
@@ -820,12 +793,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return ask(request, Answers.singleIndex(labels.size())).getAsInt();
     }
 
-    /**
-     * This is what paces the game. Priority does not pass for the player while something has happened they have not
-     * seen: the pass is shown coming on the browser's pass button, and the game waits for it, or for the player to
-     * stop it. With nothing new it goes by with only Forge's own pause. A yield the player asked for, such as End
-     * Turn, is them skipping ahead on purpose, so it is not held either.
-     */
+    /** Holds an automatic pass for the browser to confirm while the player has not seen what happened, unless they asked for a yield. */
     @Override
     public boolean confirmAutoPass(final int delayMs) {
         final IGameController controller = getGameController();
@@ -988,8 +956,7 @@ public class WebGuiGame extends NetworkGuiGame {
         if (abilities.size() == 1 && (triggerEvent == null || !abilities.get(0).promptIfOnlyPossibleAbility())) {
             return abilities.get(0);
         }
-        // A click, with either button, offers what the card can do now in a menu where it was clicked, as desktop
-        // does; one thing it can do is simply done
+        // A click with either button offers what the card can do now in a menu where it was clicked, and a single thing is simply done
         final List<SpellAbilityView> offered = triggerEvent == null ? abilities
                 : abilities.stream().filter(SpellAbilityView::canPlay).toList();
         if (offered.isEmpty()) {
@@ -1054,8 +1021,7 @@ public class WebGuiGame extends NetworkGuiGame {
         return result;
     }
 
-    // One entry per distinct card; the reply is how many copies of each go in the main deck.
-    // PlayerControllerHuman checks deck sizes and asks again if the result is illegal
+    // The reply is how many copies of each distinct card go in the main deck, and PlayerControllerHuman asks again if that is illegal
     @Override
     public List<PaperCard> sideboard(final CardPool sideboard, final CardPool main, final String message) {
         final Map<PaperCard, int[]> counts = new LinkedHashMap<>();

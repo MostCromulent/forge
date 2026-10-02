@@ -1,6 +1,4 @@
-// The deck editor: the catalogue on the left, the deck on the right, under the lobby's own head. Every change is sent
-// to the server, which saves it at once, so there is no Save button; Undo covers mistakes. The deck half is the deck
-// finder's panel made editable, so a player who has chosen a deck has already read it.
+// The deck editor: every change is sent to the server, which saves it at once, so there is no Save button
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Catalogue } from './catalogue';
@@ -59,8 +57,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       actions.edit({ op: 'move', name: carried.name, from: carried.from, to: v.zone, count: carried.count });
     }
   };
-  // Alt at the press carries every copy. Whether a card can lead the deck is the server's to say, so the command zone
-  // takes any card in a commander format and a refusal comes back as a notice
+  // Alt at the press carries every copy, and the command zone takes any card because the server decides what can lead a deck
   const handlers: CardHandlers = (name, from, image, count) => ({
     onPointerDown: e => {
       const carried: Carried = { name, from, count: e.altKey ? Math.max(1, count) : 1 };
@@ -203,10 +200,7 @@ export function CheckControl({ model, state, actions }: { model: Model; state: E
   );
 }
 
-/**
- * "Check legality against": the lobby's formats, each Constructed card pool, and no restriction at all. value is
- * "format|pool", or "none".
- */
+/** "Check legality against" a format, a Constructed card pool or nothing, where value is "format|pool" or "none". */
 export function CheckSelect({ model, value, change }: {
   model: Model; value: string; change: (format: string, cardPool: string | null, unrestricted: boolean) => void;
 }) {

@@ -1,5 +1,4 @@
-// The bar across the top of every page outside a match, so the wordmark, the sound and the options sit in one place
-// whichever page is open. Each page fills the middle and its own buttons, and ends with its way out.
+// The bar across the top of every page outside a match, where each page fills the middle and ends with its way out
 
 import type { ComponentChildren } from 'preact';
 import { changeUi, ui } from './ui';
@@ -25,10 +24,7 @@ export interface SetupStep {
   go?: () => void;
 }
 
-/**
- * The trail through game setup and the question the page asks, in the same place on every setup page: the start page,
- * the kinds of game, and the table. Each earlier step in the trail goes back to it.
- */
+/** The trail through game setup and the page's question, where each earlier step in the trail goes back to it. */
 export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
   return (
     <div class="setup-head">

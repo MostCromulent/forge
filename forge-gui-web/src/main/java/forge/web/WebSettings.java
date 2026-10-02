@@ -15,10 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}), and the phase
- * stops. The host's are the Forge preferences the desktop client shares.
- */
+/** What the options dialog reads and writes: a player's own settings (see {@link PlayerSettings}) and the phase stops. */
 final class WebSettings {
     private WebSettings() {
     }
@@ -50,16 +47,11 @@ final class WebSettings {
                 player.getBoolean(FPref.UI_ENABLE_MUSIC) ? player.getInt(FPref.UI_VOL_MUSIC) : 0);
     }
 
-    /**
-     * Saves a setting. A value off the socket can reach the file the desktop client shares, so an illegal one is
-     * dropped. The controller is the game's, if one has started: a browser can change a setting (its first-run
-     * defaults do) before a match begins, and that must not be lost.
-     */
+    /** Saves a setting, dropping an illegal value because it could reach the file the desktop client shares. */
     static void set(final PlayerSettings player, final IGameController controller, final String key, final String value) {
         final FPref pref = BOOLEAN_PREFS.get(key);
         if (pref != null) {
-            // The host decides what to interrupt and what to highlight from its own copy of these, seeded when the
-            // game opened, so a change mid-game has to reach it as well. Before then the seed carries it.
+            // The host decides from its own copy of these, seeded when the game opened, so a change mid-game has to reach it as well
             setEverywhere(player, controller, pref, String.valueOf(Boolean.parseBoolean(value)));
         } else if ("devMode".equals(key)) {
             final boolean on = Boolean.parseBoolean(value);
@@ -106,15 +98,7 @@ final class WebSettings {
         }
     }
 
-    /**
-     * Gives a game this player's settings in place of the shared preferences it would otherwise read: the host's
-     * engine keeps a copy per player, and the client's own controller reads the auto-yield mode.
-     *
-     * <p>Auto-pass always stops where the interrupts say. Forge leaves that off unless asked, which makes the
-     * interrupts stop only a yield such as End Turn; here they are offered as what stops auto-passing, so they do.
-     * It is given to the game only, never saved, so the desktop client keeps its own choice. Playable cards are
-     * always highlighted the same way, because this client has no other sign of what can be played.</p>
-     */
+    /** Gives a game this player's settings, except auto-pass always respects the interrupts and playable cards are always highlighted. */
     static void applyAll(final PlayerSettings player, final IGameController controller) {
         // Every one is pushed after the engine's own seed, which read the shared preferences, so a guest plays by its own
         for (final FPref pref : YieldController.SYNCED_PREFS) {
@@ -146,10 +130,7 @@ final class WebSettings {
         return out;
     }
 
-    /**
-     * Sets every stop of one row: those listed on, the rest off. Untap takes no stop, as on desktop. Answers the
-     * phases that changed, which a game already under way has to be told of.
-     */
+    /** Sets every stop of one row, those listed on and the rest off, and answers the phases that changed. */
     static List<PhaseType> setStops(final PlayerSettings player, final boolean mine, final List<PhaseType> phases) {
         final List<PhaseType> changed = new ArrayList<>();
         for (final PhaseType phase : PhaseType.values()) {

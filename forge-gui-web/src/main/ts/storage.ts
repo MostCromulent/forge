@@ -1,5 +1,4 @@
-// What this browser remembers between visits. localStorage throws when the browser blocks it (a private window,
-// site data turned off), and then nothing is kept: every value simply starts from its default again next time.
+// localStorage throws when the browser blocks it, and then nothing is kept and every value starts from its default next time
 
 export function stored(key: string): string | null {
   try {

@@ -103,8 +103,7 @@ public class ActiveClientTest {
         return browser.last("prompt").getAsJsonObject("ok").get("enabled").getAsBoolean();
     }
 
-    // Answers the pre-game prompts with OK (play first if the coin toss asks, keep the hand), then waits at the
-    // first priority prompt; returns the turn it holds on
+    // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns the turn it holds on
     private static int keepAndHoldPriority(final WebGuiGame gui, final FakeBrowser browser) throws InterruptedException {
         for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
             if (turn(browser) == 0 && okEnabled(browser)) {
@@ -176,8 +175,7 @@ public class ActiveClientTest {
         });
     }
 
-    // Jötun Grunt's upkeep asks the web seat to choose a player (whose graveyard); the browser must be told which
-    // players it may click, or the scripted seat cancels and the Grunt is sacrificed
+    // Jötun Grunt's upkeep asks the web seat to choose a player, and unless the browser is told which it may click the Grunt is sacrificed
     @Test(timeOut = 180000)
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
         WebTestSupport.skipUnlessStress();

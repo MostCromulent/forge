@@ -1,7 +1,4 @@
-// Choosing a deck. One query runs across every source at once, so knowing a deck's name is enough and
-// picking a source is optional. Colour and source narrow the list rather than hiding anything for good.
-// The panel beside the results carries the deck's statistics and its whole card list, which is why there
-// is no separate window for reading one.
+// Choosing a deck: one query runs across every source at once, and a panel beside the results shows the chosen deck's cards
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored } from './storage';
@@ -70,10 +67,7 @@ const within = (r: Range, n: number | null | undefined) =>
   !r || (n != null && (r.from === null || n >= r.from) && (r.to === null || n <= r.to));
 const identityLetters = (d: DeckSummary) => (d.colors ?? '').replace('C', '');
 
-/**
- * The decks the filter lets through, in its order. A generator has built nothing yet, so legality cannot rule it out.
- * found gives the decks the server has found for a card or set filter, or nothing while it is still looking.
- */
+/** The decks the filter lets through, in its order, where a generated deck has no cards yet so legality cannot rule it out. */
 export function matchingDecks(decks: readonly DeckSummary[], f: DeckFilter,
   found: (kind: DeckQueryKind, value: string) => ReadonlySet<string> | undefined = () => undefined): DeckSummary[] {
   const asked = ([['card', f.card], ['sideboard', f.sideboard], ['set', f.set]] as const)
@@ -116,10 +110,7 @@ export function sourceCounts(decks: readonly DeckSummary[]): Map<string, number>
   return sources;
 }
 
-/**
- * The deck finder. With a seat it chooses that seat's deck; opened from the start page it has no seat, lists one format's
- * decks, and its main button opens the editor instead.
- */
+/** The deck finder, which chooses a seat's deck, or with no seat lists one format's decks and opens the editor instead. */
 export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
@@ -168,8 +159,7 @@ export function DeckFinder({ model, actions, seat, close }: {
     actions.openEditor({ key: chosen, seat: seat?.index, copy: !!summary?.readOnly });
     close();
   };
-  // From a seat the importer takes the finder's place, since importing puts the deck on the seat; from the start page
-  // the finder stays beneath it, to show the deck once it is saved
+  // From a seat the importer replaces the finder, but from the start page the finder stays beneath to show the saved deck
   const importer = (more: { text?: string; url?: string; sync?: boolean } = {}) => {
     if (seat) close();
     changeUi(u => { u.importer = { from: seat ? 'seat' : 'start', seat: seat?.index, ...more }; });
@@ -492,8 +482,7 @@ function Title({ deck }: { deck: DeckSummary }) {
   );
 }
 
-// Hovering a card in the list shows it, the way hovering one on the table does: beside the line being pointed at,
-// pushed left of it so the cursor never covers the card
+// Shows a hovered card beside the line pointed at, pushed left of it so the cursor never covers the card
 export function peekAt(e: PointerEvent, frameSelector: string): { image: string; left: number; top: number } | null {
   const el = e.target instanceof Element ? e.target.closest<HTMLElement>('[data-image]') : null;
   const frame = el?.closest(frameSelector)?.getBoundingClientRect();
@@ -547,10 +536,7 @@ export function BracketMark({ level }: { level: number }) {
 
 const BRACKET_OPEN_KEY = 'forge.bracketOpen';
 
-/**
- * A Commander deck's bracket in one row: the number, what raised it, and where it sits from 1 to 5. Opened, each
- * reason with the cards behind it, as desktop's bracket view lists them. Whether it was left open is remembered.
- */
+/** A Commander deck's bracket in one row that opens to each reason and its cards, remembering whether it was left open. */
 function BracketPanel({ bracket }: { bracket: Bracket }) {
   const [open, setOpen] = useState(() => stored(BRACKET_OPEN_KEY) === 'open');
   const toggle = () => {

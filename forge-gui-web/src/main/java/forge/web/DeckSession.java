@@ -33,11 +33,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-/**
- * One browser's deck editor and deck importer. The browser's session hands it the messages about decks; it keeps the
- * deck being edited and, for a guest, the decks the guest's browser keeps. Decks reach a seat through the lobby, as a
- * deck chosen in the finder does.
- */
+/** One browser's deck editor and importer, which also keeps the decks a guest's browser stores. */
 final class DeckSession {
     private final Lobby lobby;
     private final WebGuiBase ui;
@@ -207,10 +203,7 @@ final class DeckSession {
         lobby.sendDecks(channel);
     }
 
-    /**
-     * Opens a sealed or draft pool's deck, which saves back into its pool as desktop's limited editor does. channel
-     * may be null while no browser is attached; the editor is shown when one arrives.
-     */
+    /** Opens a pool's deck that saves back into its pool, with a null channel when no browser is attached to show it yet. */
     synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
                 !host.getAsBoolean(), this::sendDeviceDeck);
@@ -221,10 +214,7 @@ final class DeckSession {
         }
     }
 
-    /**
-     * Opens an online event's pool in the limited editor. The host keeps it among the event decks, as desktop does; a
-     * guest's is kept in its browser, and is sent again on each arrival until the browser says it keeps it.
-     */
+    /** A guest's event pool is kept in its browser and sent again on each arrival until the browser says it keeps it. */
     synchronized void openEventPool(final Deck pool, final GameType type, final IStorage<Deck> eventDecks, final String deviceId,
             final BrowserChannel channel) {
         final DeckEditor.Target target;

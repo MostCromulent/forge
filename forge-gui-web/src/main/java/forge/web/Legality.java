@@ -44,20 +44,12 @@ record Check(GameType format, GameFormat pool, boolean unrestricted) {
     }
 }
 
-/**
- * Whether a deck can be played under a check, card by card and as a whole. The editor's verdict, the catalogue's hiding
- * and the importer's line marks all read this, so the three never disagree. It asks the engine's rules and reports them;
- * it only adds what DeckFormat.getDeckConformanceProblem leaves out, which is the commander formats' ban lists and every
- * problem after the first.
- */
+/** Reports the engine's deck rules, adding the commander ban lists and every problem after the first, which DeckFormat leaves out. */
 final class Legality {
     private Legality() {
     }
 
-    /**
-     * Problems with the deck as a whole, and each card's problem by name. kinds holds, by name, how a card's problem is
-     * summed up in a verdict that names several: the copy limit, a ban, or the flag itself.
-     */
+    /** The deck's own problems and each card's by name, with kinds holding how a card's problem is summed up in a verdict that names several. */
     record Result(Map<String, String> flags, Map<String, String> kinds, List<String> deckItems) {
         int problemCount() {
             return deckItems.size() + flags.size();

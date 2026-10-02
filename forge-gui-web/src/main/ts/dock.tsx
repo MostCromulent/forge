@@ -1,7 +1,4 @@
-// Who is on this server and what they are saying, in one panel that follows you in. Before a match it rises out
-// of the bottom edge; during one it is a widget under the log in the side panel, and the roster collapses to a
-// row, because every seated player already carries a name on the board. What the board never says is who is
-// watching, who holds the host's seat and who has dropped, so that is what the row keeps.
+// Who is on this server and what they are saying: a panel at the bottom edge before a match, a widget under the log during one
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { avatarUrl } from './looks';
@@ -39,8 +36,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   useEffect(() => {
     if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [model.chat.length, open]);
-  // The last line you could have read, held by the line itself, so a chat the server replays after a reconnect
-  // (a new list of new lines) is counted from its start, where its replayed lines are passed over as history
+  // The last line you could have read, held by the line itself so a chat replayed after a reconnect is counted from its start
   const lastSeen = useRef<ChatEntry | undefined>(model.chat[model.chat.length - 1]);
   if (open || model.inMatch) {
     lastSeen.current = model.chat[model.chat.length - 1];
@@ -160,8 +156,7 @@ function Chevron({ up }: { up: boolean }) {
   );
 }
 
-/** Lines someone else said since the last one you could have read. What the server says itself is not news, and
- *  nor is anything said before you arrived. */
+/** Lines someone else said since the last one you could have read, leaving out the server's own and any said before you arrived. */
 export function unreadSince(chat: readonly ChatEntry[], lastSeen: ChatEntry | undefined, me: string): number {
   const from = lastSeen ? chat.lastIndexOf(lastSeen) + 1 : 0;
   return chat.slice(from).filter(l => l.from && !l.earlier && l.from !== me).length;

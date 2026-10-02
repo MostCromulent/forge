@@ -1,5 +1,4 @@
-// Choosing what a seat brings beyond its deck: a planar deck, a scheme deck or a Vanguard avatar. The server lists
-// the choices for the seat, so a computer seat is only offered avatars the computer can play.
+// The server lists what a seat may bring beyond its deck, so a computer seat is only offered avatars the computer can play
 
 import { useEffect, useState } from 'preact/hooks';
 import { imageUrl } from './images';

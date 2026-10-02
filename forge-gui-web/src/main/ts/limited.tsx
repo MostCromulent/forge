@@ -1,5 +1,4 @@
-// The Limited pages against the computer: your saved events as a shelf of cards, the setup form with the event it
-// makes beside it, and the list of opponents a pool's deck plays. The deck itself is built in the deck editor.
+// The Limited pages against the computer: saved events, the setup form, and the opponents a pool's deck plays
 
 import { useEffect, useState } from 'preact/hooks';
 import { usePressOutside } from './hooks';
@@ -190,10 +189,7 @@ function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
   );
 }
 
-/**
- * The opponents as one numbered list, each row playing that one. The numbers are the gauntlet's order, so the gauntlet
- * is the list played through, and a draft's free-for-all is chosen at random from it.
- */
+/** The opponents as one numbered list in the gauntlet's order, from which a draft's free-for-all is chosen at random. */
 function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; actions: Actions }) {
   const cap = severalCap(pool.opponents.length);
   const [count, setCount] = useState(cap);

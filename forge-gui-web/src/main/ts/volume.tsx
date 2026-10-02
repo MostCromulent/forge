@@ -1,5 +1,4 @@
-// The volume control: a small panel over the speaker button beside the options, so the sound can be turned down
-// in a moment without opening the whole options list.
+// The volume control, a small panel over the speaker button so the sound can be turned down without opening the options
 
 import { SETTINGS, set, setting } from './settings';
 import { t } from './text';
@@ -11,8 +10,7 @@ export const isSilent = (): boolean => VOLUMES.every(def => Number(setting(def.k
 
 export function Volume({ close, anchor = '#prompt .volume' }: { close: () => void; anchor?: string }) {
   const button = document.querySelector(anchor)?.getBoundingClientRect();
-  // Opens leftwards from the button's edge, and away from the screen edge it sits nearer: up from the match's console in
-  // the bottom corner, down from the table's header
+  // Opens leftwards from the button's edge, and away from whichever screen edge the button sits nearer
   const below = !!button && button.top < window.innerHeight / 2;
   const at = !button ? {} : below ? { right: `${window.innerWidth - button.right}px`, top: `${button.bottom + 6}px` }
     : { right: `${window.innerWidth - button.right}px`, bottom: `${window.innerHeight - button.top + 6}px` };

@@ -22,14 +22,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
-/**
- * How the protocol's records become JSON and back. Every message the browser receives or sends is a record in
- * {@link ToBrowser} or {@link FromBrowser}; the browser's TypeScript types are generated from those records, so
- * a field is named in one place only.
- *
- * <p>A null component is left out of the JSON, which the TypeScript sees as an optional field. Only components
- * marked {@link Nullable} may be null; the tests run with assertions on and fail on any other.
- */
+/** A null component is left out of the JSON, and only components marked {@link Nullable} may be null. */
 final class Wire {
     private Wire() {
     }
@@ -48,8 +41,7 @@ final class Wire {
         String value() default "";
     }
 
-    /** A question the game waits on, sent as {@code {"t": "request", "id", "kind": value, ...}}. Empty when a
-     *  {@code kind} component names several kinds that share one shape. */
+    /** A question the game waits on, whose value is empty when a {@code kind} component names several kinds that share one shape. */
     @Retention(RetentionPolicy.RUNTIME)
     @Target(ElementType.TYPE)
     @interface Request {

@@ -1,5 +1,4 @@
-// What a reward's steps still owe the bar. The balances the server sends already hold the whole reward, so the bar
-// shows them less whatever has yet to be revealed.
+// The balances the server sends already hold the whole reward, so the bar shows them less whatever has yet to be revealed
 
 import type { ConquestStep } from './protocol';
 

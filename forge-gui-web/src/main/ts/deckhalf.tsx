@@ -1,5 +1,4 @@
-// The editor's right half: the deck as the deck finder shows it, made editable. The head carries the verdict and the
-// curve; below it the commander, the main deck in two columns, a row of basic lands, and the sideboard.
+// The editor's right half: the deck as the deck finder shows it, made editable
 
 import { useLayoutEffect, useState } from 'preact/hooks';
 import { flyingFor, land } from './flight';

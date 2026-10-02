@@ -1,5 +1,4 @@
-// A table's draft or sealed event, as desktop's lobby runs one: the host switches the table to Limited, sets the
-// event up one question at a time, and deals the packs once every seat is ready. Everyone else reads it as it goes.
+// A table's draft or sealed event, as desktop's lobby runs one: the host sets it up and deals the packs once every seat is ready
 
 import { useState } from 'preact/hooks';
 import { StepForm, draftCombo, draftSentence, draftSteps, pickRuleName, sealedSentence, sealedSteps, type DraftValue, type SealedValue } from './setup';
@@ -14,12 +13,7 @@ import { t } from './text';
 /** What the setup dialog shows: the choice between a new event and an earlier one, or either of those. */
 type SetupView = 'choose' | 'new' | 'earlier';
 
-/**
- * The event as the head of the table: its mode, product and rules with the players who will play it, then the stages
- * along a rail whose button is always the next thing to do. Once the packs are out the rules fold to one line, since
- * nobody needs them then. The host sets the event up in a dialog over the table, which opens by itself on a table with
- * no event yet.
- */
+/** The event as the head of the table, with the host's setup dialog opening by itself on a table that has no event yet. */
 export function EventHead({ model, lobby, actions, preview, start }: {
   model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void; start: () => void;
 }) {

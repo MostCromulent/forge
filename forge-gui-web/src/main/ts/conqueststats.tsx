@@ -1,5 +1,4 @@
-// A conquest's statistics: mobile's eight figures, for one plane or for all, and the two tables the save holds
-// besides, which mobile never shows: what is conquered region by region, and each commander's record.
+// A conquest's statistics, with two tables mobile never shows: what is conquered by region, and each commander's record
 
 import { useEffect } from 'preact/hooks';
 import type { Actions } from './actions';

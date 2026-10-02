@@ -1,5 +1,4 @@
-// The game's open questions, shown one at a time, oldest first. Answering one takes it out of the model at once,
-// so its dialog closes without waiting for the server.
+// The game's open questions, shown oldest first, where answering one closes its dialog without waiting for the server
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
@@ -39,10 +38,7 @@ export function Requests({ model, actions }: { model: Model; actions: Actions })
   return <RequestDialog key={req.id} req={req} model={model} answer={value => actions.answer(req.id, value)} />;
 }
 
-/**
- * What one clicked card can do, as a menu at the pointer the way desktop opens it. Picking an item answers at once;
- * a click anywhere else, or Escape, closes it having chosen nothing. Items are numbered for the keys 1 to 9.
- */
+/** A menu at the pointer of what one clicked card can do, which a click anywhere else closes having chosen nothing. */
 function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   const menu = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState({ x: req.atX ?? 0, y: req.atY ?? 0 });
@@ -117,10 +113,7 @@ function ButtonRow({ children }: { children: ComponentChildren }) {
 // A deck list arrives with its sections marked out as entries of their own, which read as headings, not choices
 const SECTION = /^=+\s*(.*?)\s*=+$/;
 
-/**
- * Cards laid out to be looked at, in the window a zone opens in, with OK (or Space) to put them away. It folds to a
- * bar, as a zone's window does, so the board under it can be read before answering.
- */
+/** Cards laid out to be looked at, in a window that folds to a bar so the board under it can be read before answering. */
 export function RevealWindow({ model, title, cards, close }: { model: Model; title: string; cards: RequestOption[]; close: () => void }) {
   const [folded, setFolded] = useState(false);
   const count = cards.filter(c => c.card || c.imageKey || !SECTION.test(c.label ?? '')).length;
@@ -317,15 +310,10 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   );
 }
 
-// Scry and friends: the host passes the whole library with only the top cards movable.
-// Movable cards placed after the untouched middle go to the bottom (PlayerControllerHuman.arrangeForMove).
+// The host passes the whole library with only the top cards movable, and those placed after the rest go to the bottom
 type Shelf = 'top' | 'bottom';
 
-/**
- * Where the cards you are looking at go back to: a shelf for the top of the library and one for the bottom, with
- * the rest of the library drawn between them so the two ends mean something. Drag a card to the other shelf or
- * past its neighbours; the button does the same for touch and the keyboard.
- */
+/** A shelf for the top of the library and one for the bottom, with the rest of the library drawn between them. */
 function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Model; answer: Answer }) {
   const all = req.options.map((_, i) => i);
   const rest = all.filter(i => !req.movable.includes(i));

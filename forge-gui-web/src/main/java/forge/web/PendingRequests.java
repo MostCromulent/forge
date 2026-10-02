@@ -25,8 +25,7 @@ public final class PendingRequests {
         this.send = send;
     }
 
-    /** Sends one of the requests in {@link ToBrowser} and waits for its answer, or for its default when the
-     *  game gives up waiting. */
+    /** Sends one of the requests in {@link ToBrowser} and waits for its answer, or for its default when the game gives up waiting. */
     public JsonElement await(final Record payload, final Predicate<JsonElement> valid) {
         final int id;
         final Pending pending;

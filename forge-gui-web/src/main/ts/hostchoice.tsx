@@ -1,5 +1,4 @@
-// A question the host asks outside a match, such as which net deck category to fetch. The engine thread
-// waits for the answer, so this always replies — cancelling sends an empty choice rather than nothing.
+// The engine thread waits for the answer to a question the host is asked, so cancelling sends an empty choice instead of nothing
 
 import { useEffect, useRef } from 'preact/hooks';
 import { t } from './text';

@@ -7,9 +7,7 @@ import { t, tNodes, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { GameView, PhaseType, TurnMarker } from './protocol';
 
-// A pill on the divider: whose turn it is, then the five phases with the current step named. The track is a
-// read-out and never changes shape under the cursor; clicking the pill opens the grid of phase stops, one row
-// for your turns and one for your opponents', which is where a stop is set.
+// A pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
 
 function star(): string {
   let d = '';
@@ -41,8 +39,7 @@ const GLYPHS: Record<string, string> = {
 };
 const glyph = (name: string, size: number): string => `<svg class="glyph" viewBox="0 0 24 24" style="width:${size}px;height:${size}px;stroke-width:${(1.3 * 24 / size).toFixed(2)}">${GLYPHS[name]}</svg>`;
 
-// Untap takes no stop, as on desktop
-// [PhaseType, glyph, full name, short name]
+// Each step's PhaseType, glyph, full name and short name, without untap because it takes no stop
 const STEPS: [PhaseType, string, TextKey, TextKey][] = [
   ['UPKEEP', 'upkeep', 'lblWebPhaseUpkeep', 'lblWebPhaseUpkeep'], ['DRAW', 'draw', 'lblWebPhaseDraw', 'lblWebPhaseDraw'],
   ['MAIN1', 'main1', 'lblWebPhaseMain1', 'lblWebPhaseMain1'],
@@ -152,8 +149,7 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 function build(root: HTMLElement): void {
   root.innerHTML = `<div class="pill" role="button" tabindex="0" title="${escapeHtml(t('lblWebPhaseStops'))}"></div><div class="stops" hidden></div>`;
   const pill = q(root, '.pill');
-  // Every segment is laid out alike, the icon over its code, then the step name and pips that only the current one
-  // opens, so a change of phase moves nothing by a jump
+  // Every segment is laid out alike and only the current one opens its name and pips, so a change of phase moves nothing by a jump
   const track = PHASES.map(p => `<span class="phase"><span class="mark">${glyph(p.glyph, 12)}<span class="code">${escapeHtml(t(p.code))}</span></span><span class="label"></span><span class="pips"></span></span>`).join('');
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track"><span class="slide" aria-hidden="true"></span>${track}</span>`
@@ -180,8 +176,7 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
     const current = n === phase;
     el.classList.toggle('current', current);
     el.classList.toggle('marked', !current && !!marker && marker.mine === myTurn && p.steps.some(i => STEPS[i][0] === marker.phase));
-    // Desktop passes priority until a phase by right-clicking it, so the pill offers the same gesture and
-    // not only the grid behind it. The marker lands on the first step the segment covers.
+    // Right-click passes priority until a phase, as on desktop, and the marker lands on the first step the segment covers
     el.title = t('lblWebPhaseSegmentTitle', t(p.name));
     el.oncontextmenu = e => {
       e.preventDefault();
@@ -202,11 +197,7 @@ const PILL_MS = 240;
 const easeOut = (t: number): number => 1 - (1 - t) ** 3;
 const reduced = (): boolean => document.documentElement.dataset.motion === 'reduced';
 
-/**
- * The brass behind the current phase is one piece that glides from segment to segment, since a gradient cannot fade
- * from one to the next. It eases from where it is to where the current segment is, read each frame, as that segment
- * is still growing to fit its step's name; a change arriving mid-glide starts the next from where it has got to.
- */
+/** The brass behind the current phase is one piece that glides between segments, since a gradient cannot fade from one to the next. */
 let slideKey = '';
 let slideAt = { left: 0, width: 0 };
 let sliding = 0;
@@ -332,9 +323,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   const onMe = !!(mine?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled);
   // Only a person minds waiting; against the computer your own wait is nobody's business
   const people = players(model).filter(p => !isLocal(model, p) && !p.IsAI && !p.HasLost);
-  // The engine marks who has priority only once priority has passed, so at the start of a step nobody has it yet.
-  // Then, as core's own "Waiting for" line does, it is whoever's turn it is, or before the first turn (the coin
-  // toss, the mulligan) the one other player
+  // The engine marks priority only once it has passed, so at a step's start it is whoever's turn it is, or the one other player
   const turn = players(model).find(p => p.$key === game(model)?.PlayerTurn?.ref);
   const left = opponents(model).filter(p => !p.HasLost);
   const other = players(model).find(p => p.HasPriority && !isLocal(model, p))

@@ -20,10 +20,7 @@ import forge.web.Wire.Ts;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Every message the server sends the browser, and the shapes inside them. src/main/ts/protocol.gen.ts is
- * generated from this file when the module builds, so a record changed here fails the build where the browser reads it.
- */
+/** The build generates src/main/ts/protocol.gen.ts from this file, so a changed record fails the build where the browser reads it. */
 final class ToBrowser {
     private ToBrowser() {
     }
@@ -111,26 +108,15 @@ final class ToBrowser {
             @Nullable Bracket bracket) {
     }
 
-    /**
-     * A Commander deck's suggested minimum bracket and what raised it, as desktop's bracket view explains it. clear
-     * names the kinds the deck has none of.
-     */
+    /** A Commander deck's suggested minimum bracket, where clear names the kinds of card the deck has none of. */
     record Bracket(int level, List<BracketReason> reasons, List<String> clear) {
     }
 
-    /**
-     * One kind of card that bears on the bracket: kind is its key (gameChangers, massLandDenial, extraTurns,
-     * chainedExtraTurns, lateCombos, earlyCombos), brief says it in a few words for a summary line, raises is the bracket
-     * it makes the deck, or 0 when it raises nothing on its own, and why is desktop's reason.
-     */
+    /** One kind of card that bears on the bracket, where raises is the bracket it makes the deck, or 0 when it raises nothing on its own. */
     record BracketReason(String kind, String title, String brief, List<String> cards, int raises, @Nullable String why) {
     }
 
-    /**
-     * total is every card the deck plays with, its commanders included, which is what a Commander deck's 100 counts; main
-     * is the main deck alone. curve counts the spells at each mana value, the last holding it and above; creatures counts
-     * the creatures among them.
-     */
+    /** total counts the commanders with the main deck, and the last curve entry holds its mana value and above. */
     record DeckStats(int total, int main, int sideboard, int lands, float averageMana, List<Integer> curve, List<Integer> creatures,
             List<TypeCount> types) {
     }
@@ -150,12 +136,7 @@ final class ToBrowser {
             List<String> overBracket) {
     }
 
-    /**
-     * A Limited table's event, as the lobby data carries it to every seat. kind is "draft" or "sealed"; product, phase
-     * and the draft's settings are there once the event is set up; phase is an EventPhase name; activeEventId names
-     * the event whose decks the next match is played with; started says the event can no longer be changed; pastEvents are the host's earlier
-     * events it may play again, newest first.
-     */
+    /** A Limited table's event, where kind is "draft" or "sealed" and phase is an EventPhase name. */
     record LimitedTable(String kind, @Nullable String product, int podSize, @Nullable String pickRule, int timer,
             @Nullable String phase, @Nullable String activeEventId, boolean eventDecksOnly, boolean started,
             List<PastEvent> pastEvents) {
@@ -186,10 +167,7 @@ final class ToBrowser {
     record Format(String id, String name, String group, String desc, List<String> facts, String play) {
     }
 
-    /**
-     * A seat's type is a netplay lobby slot's: LOCAL, AI, OPEN or REMOTE. benched says it sits the next match out.
-     * commander is the image of the deck's first commander, in a format played with one.
-     */
+    /** type is a netplay lobby slot's (LOCAL, AI, OPEN or REMOTE), and benched says the seat sits the next match out. */
     record Seat(@Nullable String name, String type, boolean mine, boolean mayEdit, boolean ready, int avatar,
             int sleeve, @Nullable String deck, @Nullable String deckName, int deckSize, String colors,
             @Nullable String problem, @Nullable String sleeveArt, int sleeveOffset, @Nullable String role,
@@ -217,19 +195,12 @@ final class ToBrowser {
     record Address(String label, String url) {
     }
 
-    /**
-     * A line of lobby or match chat. Netplay's own announcements (a player joining) have no sender. earlier marks
-     * a line said before this browser arrived, replayed so it can catch up, which is history rather than news.
-     */
+    /** A line with no sender is one of netplay's own announcements, and earlier marks a line replayed from before this browser arrived. */
     @Message("chat")
     record ChatLine(@Nullable String from, String text, boolean earlier) {
     }
 
-    /**
-     * A page of the deck editor's catalogue. hiddenBySwitch counts the cards the deck can't use that matched, sent only
-     * when nothing else did. ranked says the rows are in best-match order for a name, rather than in the sort asked for.
-     * source is the list of a conquest's cards the page is of, and null for the open deck's catalogue.
-     */
+    /** hiddenBySwitch counts the matching cards the deck can't use, sent only when nothing else matched. */
     @Message("catalogue")
     record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked,
             @Nullable String source) {
@@ -240,12 +211,7 @@ final class ToBrowser {
     record EditorMessage(@Nullable EditorState state) {
     }
 
-    /**
-     * Everything the editor shows about its deck. check is the "Check legality against" label; format, cardPool and
-     * unrestricted are its parts, for the control. target is storage (the host's decks) or device (a guest's browser).
-     * copyOf names a deck that can't be changed in place, until the first change copies it. collection names whose
-     * cards the deck is built from (a conquest), when it is not built from every card.
-     */
+    /** target is storage (the host's decks) or device (a guest's browser), and copyOf names a read-only deck the first change will copy. */
     record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
@@ -304,11 +270,7 @@ final class ToBrowser {
     record NameTaken(String name) {
     }
 
-    /**
-     * One card in the catalogue: how many the open deck holds, and why it can't be added, when it can't. In a
-     * collection, isNew marks a card not yet played with, value is what exiling or retrieving it is worth, and problem
-     * is why it can't be exiled.
-     */
+    /** In a collection, value is what exiling or retrieving the card is worth and problem is why it can't be exiled. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
             String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value) {
     }
@@ -330,18 +292,14 @@ final class ToBrowser {
     record DeviceDeck(String id, @Nullable String text, String format) {
     }
 
-    /**
-     * A question the host asks outside a match; the browser answers with the indices chosen. A "confirm" is desktop's
-     * dialog of a few buttons, with a title over its message; "choices" is a list to pick from.
-     */
+    /** A question outside a match, answered with the indices chosen, where kind is "confirm" (a few buttons) or "choices" (a list). */
     @Message("hostChoice")
     record HostChoice(int id, String kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options) {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
 
-    /** Changes to the game's object table, and what happened in the game to cause them. A property set to null in
-     *  a delta has gone back to its default. The events are in the order the game fired them. */
+    /** A property set to null in a delta has gone back to its default, and events are in the order the game fired them. */
     @Message("state")
     record StateMessage(boolean full, long seq, int root,
             @Ts("Record<string, TrackedProps>") Map<String, JsonObject> newObjects,
@@ -355,10 +313,7 @@ final class ToBrowser {
     record Place(ZoneType zone, @Nullable Ref player) {
     }
 
-    /**
-     * A card went from one zone to another. No from means it came into being there (a token, a copy). A card put on the
-     * stack names who is casting it, since the browser does not have the card until its costs are paid.
-     */
+    /** No from means the card came into being there, and caster is set for a card put on the stack, which the browser does not have yet. */
     @Event("cardMoved")
     record CardMoved(Ref card, @Nullable Place from, @Nullable Place to, @Nullable Ref caster) {
     }
@@ -479,16 +434,14 @@ final class ToBrowser {
 
     // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} -------------------------
 
-    /** One thing to choose. Which fields are set depends on what it is: a card on the table, one that is not
-     *  (a split pile, a card face), or a player. */
+    /** Which fields are set depends on what it is: a card on the table, one that is not (a split pile, a card face), or a player. */
     record RequestOption(String label, @Nullable Ref card, @Nullable String name, @Nullable String imageKey,
             @Nullable Ref player) {
     }
 
     enum ChoiceKind { choices, reveal }
 
-    /** Pick from a list. A reveal only shows the list. When every option is a spell on the stack, stackKeys
-     *  says which, and the browser picks it there instead. */
+    /** A reveal only shows the list, and stackKeys is set when every option is a spell on the stack, so the browser picks it there. */
     @Request
     record ChoicesRequest(ChoiceKind kind, @Nullable String message, int min, int max, List<RequestOption> options,
             List<Integer> selected, @Nullable List<Integer> stackKeys, @Nullable Integer atX, @Nullable Integer atY,
@@ -535,10 +488,7 @@ final class ToBrowser {
             @Name("default") List<Integer> defaultAnswer) {
     }
 
-    /**
-     * Priority is about to pass by itself, which the browser shows coming on its pass button for as long as the player
-     * likes, never less than delay; the answer is whether to go ahead. Stopping it asks for priority as usual.
-     */
+    /** Priority is about to pass by itself after at least delay, and the answer is whether to go ahead. */
     @Request("autoPass")
     record AutoPassRequest(int delay, @Name("default") boolean defaultAnswer) {
     }
@@ -550,10 +500,7 @@ final class ToBrowser {
             List<String> themes, @Nullable String lastCube) {
     }
 
-    /**
-     * A draftable block: its sets, desktop's preset combinations, or none when each pack's set is chosen, and the pod size
-     * a draft of it starts at.
-     */
+    /** A draftable block, which has no combos when each pack's set is chosen, and whose podSize is what a draft of it starts at. */
     record DraftBlockOption(String name, int packs, List<String> sets, List<String> combos, int podSize) {
     }
 
@@ -569,23 +516,14 @@ final class ToBrowser {
     record LimitedPools(List<PoolRow> sealed, List<PoolRow> draft) {
     }
 
-    /**
-     * One saved pool: whether a deck has been built from it, its colours, and the opponents its match can be played
-     * against. changed is the day the pool was last saved or played, as yyyy-MM-dd.
-     */
+    /** One saved pool, where changed is the day it was last saved or played, as yyyy-MM-dd. */
     record PoolRow(String name, boolean built, int deckSize, String colors, @Nullable String changed, List<Opponent> opponents) {
     }
 
     record Opponent(String name, String colors) {
     }
 
-    /**
-     * An offline draft as the player sees it after a step. pick counts from 1 within the pack; direction is 1 while packs
-     * go to the next seat and -1 while they go to the previous one; moved lists the seats whose pack went on to the next seat
-     * since the last state; clockSeconds is the pick timer's length and clockLeftMillis what is left of it, both 0 when
-     * there is no timer; log is the draft's story so far, which only an online draft tells; done says the draft is over
-     * and waits for a name.
-     */
+    /** pick counts from 1 within the pack, and direction is 1 while packs go to the next seat and -1 while they go to the previous one. */
     @Message("draft")
     record DraftState(int step, String product, int pack, int packs, int pick, int packSize, int direction, List<DraftSeat> seats,
             List<DraftCard> cards, List<DraftCard> picks, List<Integer> moved, int clockSeconds, int clockLeftMillis,
@@ -596,19 +534,12 @@ final class ToBrowser {
     record DraftSeat(String name, boolean ai, int packs, boolean held) {
     }
 
-    /**
-     * A card in the pack or among the picks, with the pack and pick it was drafted at. rank is desktop's draft score to
-     * 99, higher being better, when the card is ranked. sideboard says a pick went to the sideboard, not the main deck. text is
-     * the rules text, drawn in place of a picture that cannot be had.
-     */
+    /** rank is desktop's draft score to 99, higher being better, and text is the rules text drawn when there is no picture. */
     record DraftCard(String name, String image, String cost, int mv, String colors, String type, String text, @Nullable String pt,
             String rarity, @Nullable Integer rank, int pack, int pick, boolean sideboard) {
     }
 
-    /**
-     * A gauntlet game's result and where the gauntlet stands, as desktop's limited result shows them. nextRound says the
-     * match was won with rounds still to play.
-     */
+    /** A gauntlet game's result, where nextRound says the match was won with rounds still to play. */
     @Message("limitedResult")
     record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean nextRound) {
     }
@@ -620,10 +551,7 @@ final class ToBrowser {
     record ConquestSaves(List<ConquestSave> saves, @Nullable String current) {
     }
 
-    /**
-     * One save as its card shows it. art is its plane's picture, conquered and total count the events of that plane,
-     * and saved is the day its file last changed, as yyyy-MM-dd.
-     */
+    /** conquered and total count the events of the save's plane, and saved is the day its file last changed, as yyyy-MM-dd. */
     record ConquestSave(String name, String planeswalker, String walkerImage, String plane, String art, int conquered, int total, int cards,
             int shards, int emblems, @Nullable String saved) {
     }
@@ -635,10 +563,7 @@ final class ToBrowser {
     record ConquestCardOption(String name, String image, String colors, @Nullable String region) {
     }
 
-    /**
-     * What a new conquest may start with: the planes, with a plane its commanders, and with a commander its
-     * planeswalkers. plane and commander are those asked about, so an answer can be told from an older one.
-     */
+    /** plane and commander are those asked about, so an answer can be told from an older one. */
     @Message("conquestOptions")
     record ConquestOptions(List<ConquestPlaneOption> planes, @Nullable List<ConquestCardOption> commanders,
             @Nullable List<ConquestCardOption> planeswalkers, int startShards, @Nullable String plane, @Nullable String commander) {
@@ -656,10 +581,7 @@ final class ToBrowser {
     record ConquestRegionRow(String name, String art, String colors, int conquered, int total) {
     }
 
-    /**
-     * One place on the plane. state is won, open (it can be fought) or fog; a fogged cell carries nothing else.
-     * opens names the secret plane a win here opens.
-     */
+    /** state is won, open (it can be fought) or fog, and a fogged cell carries nothing else. */
     record ConquestCell(int region, int row, int col, String state, @Nullable String name, @Nullable String opponent,
             @Nullable String avatar, @Nullable List<String> variants, int wins, int losses, @Nullable String opens) {
     }
@@ -668,11 +590,7 @@ final class ToBrowser {
     record ConquestLead(String name, String image, int deckSize, @Nullable String problem) {
     }
 
-    /**
-     * The map. rows is how many steps a region is along and cols how many lanes across. steps is how far the
-     * selection is from where the player stands, 0 when it is the same place. path is the move just made, first place
-     * first, and is empty in every map but the one that answers the move.
-     */
+    /** steps is how far the selection is from where the player stands, and path is empty in every map but the one that answers a move. */
     @Message("conquestState")
     record ConquestState(String plane, int rows, int cols, List<ConquestRegionRow> regions, List<ConquestCell> cells,
             ConquestPlace at, String walker, String walkerImage, ConquestPlace selected, int steps, List<ConquestPlace> path,
@@ -705,12 +623,7 @@ final class ToBrowser {
     record ConquestOption(String key, String label, @Nullable Integer cost) {
     }
 
-    /**
-     * The Aether as the filters leave it. locked counts the plane's cards still to find, matching those the filters
-     * allow, strict those of exactly the rarity asked for, without which nothing can be pulled, and byRarity the
-     * matching ones from common to mythic rare. cost is what a pull costs, 0 when nothing matches. pulled is the card
-     * a pull gave, and problem why it gave none.
-     */
+    /** strict counts the cards of exactly the rarity asked for, without which nothing can be pulled, and cost is 0 when nothing matches. */
     @Message("conquestAether")
     record ConquestAetherState(int locked, int matching, int strict, List<Integer> byRarity, int cost, List<ConquestOption> types,
             List<ConquestOption> rarities, List<ConquestOption> cmcs, String colors, String type, String rarity, String cmc,
@@ -754,10 +667,7 @@ final class ToBrowser {
     record ConquestPackCard(String name, String image, String rarity, int shards) {
     }
 
-    /**
-     * One thing a won battle gave. kind is a ConquestRewardStep.Kind name. pack is the name to draw on a booster and
-     * art its picture's image key; a chaos booster has no art.
-     */
+    /** kind is a ConquestRewardStep.Kind name, and a chaos booster has no art. */
     record ConquestStep(String kind, int amount, @Nullable String outcome, @Nullable List<ConquestPackCard> cards,
             int number, int total, boolean chaos, @Nullable String pack, @Nullable String art) {
     }

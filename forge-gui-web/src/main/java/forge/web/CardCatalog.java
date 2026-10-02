@@ -20,20 +20,14 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
-/**
- * Every card a deck can be built from, one row per card, for the deck editor's catalogue. Built once and shared by every
- * browser; a query filters it for one deck, whose rules arrive as a function naming each card's problem.
- */
+/** Every card a deck can be built from, built once and shared by every browser. */
 final class CardCatalog {
     static final int PAGE = 60;
     /** The order a decklist is written in, which the headings and the type sort follow. */
     static final List<String> HEADINGS = List.of("Creatures", "Planeswalkers", "Instants", "Sorceries", "Artifacts",
             "Enchantments", "Battles", "Lands");
 
-    /**
-     * What the browser asked for. colours is letters such as "BG"; type is "any" or one value; sort is name, mv, colour
-     * or type. filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked.
-     */
+    /** filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked. */
     record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
@@ -88,11 +82,7 @@ final class CardCatalog {
                 rules.getManaCost().getCMC(), heading(card));
     }
 
-    /**
-     * A page of the catalogue for one deck. problemOf names why a card can't go in it, or null; such cards are left out
-     * unless the query asks for everything. commanderOnly, when set, narrows to cards that can lead the deck.
-     * extras, when given, says what a collection adds to each row.
-     */
+    /** A card problemOf names a problem for is left out unless the query asks for everything, and commanderOnly and extras may be null. */
     CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
             final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck, final Function<PaperCard, Extra> extras) {
         final String typed = q.text() == null ? "" : q.text().trim();

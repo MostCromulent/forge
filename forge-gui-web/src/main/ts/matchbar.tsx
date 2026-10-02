@@ -1,5 +1,4 @@
-// The bar above the seats: what is played and by how many, as labelled fields that each open their own control. The
-// page header above it says only whose table this is and how to leave it.
+// The bar above the seats: what is played and by how many, as labelled fields that each open their own control
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -76,10 +75,7 @@ const GROUP_NAMES: Record<string, TextKey> = {
   Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
 };
 
-/**
- * What is played: a list of every game beside a card that explains one. The card shows the chosen game until another is
- * pointed at, and keeps showing that one while the pointer crosses over to read it. A click on a name chooses it.
- */
+/** A list of every game beside a card that explains the chosen one, or the one last pointed at. */
 export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
   const lim = lobby.limited;
   const LIMITED = limitedFormats();
@@ -232,10 +228,7 @@ function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }
   );
 }
 
-/**
- * Which cards a Constructed game allows: the sanctioned formats as tiles, the casual ones as chips, and a block on the
- * bottom line. Where each format's cards come from is asked for when it first opens.
- */
+/** Which cards a Constructed game allows, with where each format's cards come from asked for when it first opens. */
 function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
   const details = model.cardPoolDetails;
   const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
@@ -282,10 +275,7 @@ function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyT
   );
 }
 
-/**
- * Mode · format · players · match · variants. The names are the tournament rules' own: a format says which cards are
- * allowed, and a match is the games played between decks. A Draft or Sealed table shows its event instead (event.tsx).
- */
+/** The field names are the tournament rules' own: a format says which cards are allowed, and a match is the games played between decks. */
 export function MatchBar({ model, lobby, actions, preview }: {
   model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
 }) {

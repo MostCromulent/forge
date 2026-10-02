@@ -1,5 +1,4 @@
-// The pack dial's geometry, kept apart from drawing so it can be tested without a page. Seats sit on a ring in pass
-// order with the player (seat 0) at the bottom; angles are radians in screen terms, where y grows downwards.
+// The pack dial's geometry, kept apart from drawing so it can be tested without a page, with angles in radians and y growing downwards
 
 /** Seat i of n: seat 0 at the bottom, and the seats after it running anticlockwise on screen, towards the player's right. */
 export function seatAngle(i: number, n: number): number {

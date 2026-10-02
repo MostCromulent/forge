@@ -1,13 +1,10 @@
-/* The table is lit at the centre and falls away at the edges, so the board is not one flat rectangle. The wash
-   over it is what holds the cards' contrast against the lit middle. It is lighter than the other pages' ground, so
-   a card's black border still stands off it. */
+/* The table is lighter than the other pages' ground, so a card's black border still stands off it */
 #match { --table: #1a202c; --table-deep: #0f131b; }
 #match::after {
   content: ''; position: fixed; inset: -16px; z-index: -3;
   background: radial-gradient(120% 90% at 50% 42%, var(--table) 0%, var(--table-deep) 100%);
 }
-/* A playmat lies under a dark wash, so a busy picture never fights the cards; the brightness setting thins or
-   thickens the wash, and the picture loses a little colour as it darkens */
+/* A playmat lies under a dark wash so a busy picture never fights the cards, and the brightness setting sets how thick the wash is */
 html[data-playmat="dark"] #match { --mat-wash: .62; --mat-saturate: .75; }
 html[data-playmat="dim"] #match { --mat-wash: .46; --mat-saturate: .9; }
 html[data-playmat="light"] #match { --mat-wash: .32; --mat-saturate: 1; }
@@ -17,8 +14,7 @@ html:not([data-playmat=""]) #match::after {
     var(--playmat) center / cover no-repeat;
   filter: saturate(var(--mat-saturate));
 }
-/* Your half of the table is lit a little from the bottom of the window, so whose side is whose reads without a
-   label; the light runs on under the hand and the console rather than stopping at the edge of your seat */
+/* Your half of the table is lit a little from the bottom of the window, so whose side is whose reads without a label */
 #match::before {
   content: ''; position: fixed; inset: -16px; z-index: -3;
   background: linear-gradient(0deg, color-mix(in srgb, var(--accent-2) 2.5%, transparent) 0%, transparent 42%),
@@ -27,8 +23,7 @@ html:not([data-playmat=""]) #match::after {
               color-mix(in srgb, var(--table-deep) 68%, transparent) 100%);
 }
 #match { --side-w: 250px; --prompt-w: 300px; --side-gap: calc(var(--side-w) + 20px); display: grid; position: relative; height: 100vh; overflow: hidden; grid-template-columns: 1fr var(--side-w); grid-template-rows: 1fr auto 1fr auto; grid-template-areas: "opp side" "phase side" "me side" "hand side"; gap: 8px; padding: 8px 8px 0; }
-/* Clipped, not hidden: the hand hangs below the edge, and a hidden overflow can still be scrolled by Space or a focus, which
-   slid the whole table up and cut off the top seat */
+/* Clipped, not hidden: a hidden overflow can still be scrolled by Space or a focus, which slid the table up and cut off the top seat */
 #match { overflow: clip; }
 #opponent { grid-area: opp; }
 #me { grid-area: me; }
@@ -36,8 +31,7 @@ html:not([data-playmat=""]) #match::after {
 #side { grid-area: side; display: flex; flex-direction: column; gap: 8px; min-height: 0; view-transition-name: side-column; }
 /* A panel opening or shutting (side.ts) eases the column to its new size and the board to its new layout */
 ::view-transition-group(side-column), ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .26s; animation-timing-function: cubic-bezier(.2,.7,.3,1); }
-/* Folding or unfolding, the column slides off or on at the right edge rather than resizing: each picture keeps its own
-   size, held to the right, and the one leaving fades as the other comes */
+/* Folding or unfolding, the column slides off or on at the right edge rather than resizing */
 html[data-side]::view-transition-group(side-column) { animation: none; }
 html[data-side]::view-transition-old(side-column), html[data-side]::view-transition-new(side-column) {
   inset-inline: auto 0; inline-size: auto; block-size: auto; mix-blend-mode: normal; }
@@ -45,8 +39,7 @@ html[data-side="shut"]::view-transition-old(side-column) { animation: side-off .
 html[data-side="shut"]::view-transition-new(side-column) { animation: side-fade-in .2s .08s ease-out both; }
 html[data-side="open"]::view-transition-new(side-column) { animation: side-on .28s cubic-bezier(.2,.7,.3,1) both; }
 html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-out .12s ease-out both; }
-/* The prompt sits at the foot of the column but keeps its corner whether the column is open or folded, so it is
-   pictured apart from the column and stays put rather than sliding or fading with it */
+/* The prompt keeps its corner whether the column is open or folded, so it is pictured apart from the column and does not slide with it */
 #prompt { view-transition-name: prompt; }
 ::view-transition-group(prompt), ::view-transition-new(prompt) { animation: none; }
 ::view-transition-old(prompt) { display: none; }
@@ -117,8 +110,7 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #out-banner b { font-size: 14px; }
 #out-banner p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
 @keyframes out-in { from { opacity: 0; transform: translate(calc(-50% - var(--side-w) / 2), -10px); } }
-/* A seat's card size (battlefield.ts) eases to its new value over a card's flight, so a board that fills up or empties
-   resizes as the card travels rather than jumping when it lands */
+/* A seat's card size (battlefield.ts) eases to its new value over a card's flight, so the board does not jump when the card lands */
 @property --fit { syntax: '<number>'; inherits: true; initial-value: 1; }
 .seat { transition: --fit .6s cubic-bezier(.2,.7,.3,1); }
 /* Each group of cards has a size of its own (battlefield.ts), easing the same way */
@@ -127,52 +119,35 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 html[data-motion="reduced"] .seat, html[data-motion="reduced"] #match > :is(#me, #opponent),
 html[data-motion="reduced"] .row > .group { transition: none; }
 .seat { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: center; min-height: 0; }
-/* The board is sized to fit, so it scrolls only when even the smallest cards do not (battlefield.ts marks it crowded).
-   Otherwise a card flying in, stepping out to attack or sliding along its row would count as overflow for a moment
-   and flash a scrollbar, and would be cut off at the board's edge */
+/* Scrolls only when battlefield.ts marks it crowded, because otherwise a moving card would flash a scrollbar and be cut off at the edge */
 .battlefield { display: flex; flex-direction: column; gap: 8px; overflow: visible; scrollbar-width: thin; min-height: 0; max-height: 100%; padding: var(--glow); }
 .battlefield.crowded { overflow-y: auto; }
 .battlefield.crowded.settling { overflow: hidden; }
-/* Lands sit nearest their owner's edge: top for the opponent, bottom for the local player. The local board rests on
-   the hand rather than floating in the middle of its half, so the two read as one side of the table. */
+/* Lands sit nearest their owner's edge, and the local board rests on the hand so the two read as one side of the table */
 #me .battlefield { flex-direction: column-reverse; align-self: end; }
-/* Each battlefield keeps room on the side towards the phase pill for an attacker's step and the chevron beyond it,
-   a little over a third of a card's width. It is held always, not only in combat, so the cards never resize as an
-   attack starts or ends. Your rows already carry some of it above them. */
+/* Room for an attacker's step and its chevron is held always, not only in combat, so the cards never resize as an attack starts or ends */
 #me .battlefield { padding-top: max(calc(var(--glow) + 6px), calc(var(--card-w) * var(--fit, 1) * .38 - 2px)); }
 #opponent .battlefield { padding-bottom: max(calc(var(--glow) + 20px), calc(var(--card-w) * var(--fit, 1) * .38 + 14px)); }
-/* A tapped card lies on its side at 90% size, so it is (0.9 × height − width) / 2 wider each side than its box,
-   11px at the standard size. That room is held on every slot rather than added when one taps, because adding it
-   would slide the whole row and could throw a card onto the next line. It is worked out from the card's size, so
-   two tapped cards side by side never overlap whatever size cards are set to, and keep a little air between. */
-/* Each row holds two groups: lands and the other permanents, creatures and the planeswalkers or battles. A group
-   with nothing in it gives up its room, so one kind alone still sits in the middle. */
+/* Each row holds two groups, and a group with nothing in it gives up its room, so one kind alone still sits in the middle */
 .row { display: flex; gap: 20px; min-height: calc(var(--card-h) * var(--fit, 1) * .6); padding-top: 16px; align-items: flex-end; }
-/* A group keeps to one line unless battlefield.ts splits it over two, which it sizes for; it never squeezes, since
-   the sizing has already made the row fit */
+/* A group keeps to one line unless battlefield.ts splits it over two, and never squeezes, since the sizing has already made the row fit */
 .row > .group { flex: 1 0 auto; display: flex; flex-wrap: nowrap; align-items: flex-end; }
-/* Split, the group breaks at the width battlefield.ts holds it to, with room between its lines for a back-line
-   attacker to step forward into */
+/* Split, the group breaks at the width battlefield.ts holds it to, with room between its lines for a back-line attacker to step forward */
 .row > .group.two { max-width: calc(var(--split-w) * var(--fit, 1) + 2px); flex-wrap: wrap; align-content: flex-end; row-gap: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 .row > .group:first-child { justify-content: flex-start; }
 .row > .group:last-child { justify-content: flex-end; }
 .row:has(> .group:empty) > .group { justify-content: center; }
 .row > .group:empty { display: none; }
-/* With both of a row's kinds out (creatures and planeswalkers or battles), the first stays in the middle and the
-   second keeps to the end. Only when the first grows into the room the second needs does it move over: the two side
-   columns share what is left, and the one holding the second never shrinks below it. Contained, so the grid's width
-   never feeds back into the board's, which battlefield.ts measures to size the cards */
+/* Contained, so the grid's width never feeds back into the board's, which battlefield.ts measures to size the cards */
 .row:not(.paired):has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; contain: inline-size; }
 .row:not(.paired):has(> .group:last-child:not(:empty)) > .group:first-child { grid-column: 2; justify-content: center; }
 .row:not(.paired):has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 0; }
 /* The other permanents stand just past the lands, the two centred together while the row has room */
 .row.paired { justify-content: safe center; gap: 40px; }
 .row.paired > .group { flex: 0 0 auto; justify-content: center; }
-/* Planeswalkers and battles hold the far end of the row an attack is aimed into. The group has no width of its
-   own until something goes in it, so an ordinary board looks exactly as it did. */
+/* Planeswalkers and battles hold the far end of the row, in a group that has no width of its own until something goes in it */
 .row > .group.far { flex: 0 0 auto; margin-left: auto; }
-/* A battle is printed on its side and every other client draws it that way, so the slot turns with the art.
-   The room a slot reserves either side already fits a card lying down, so nothing else has to move. */
+/* A battle is printed on its side and every other client draws it that way, so the slot turns with the art */
 .card.battle { width: calc(var(--card-h) * var(--fit, 1)); height: calc(var(--card-w) * var(--fit, 1)); }
 .card.battle > img {
   position: absolute; left: 50%; top: 50%; translate: -50% -50%; rotate: 90deg;
@@ -181,34 +156,26 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 /* Defence counters, not toughness — a different number needs a different colour */
 .card.battle .pt .pt-t { color: #cfe8b8; }
 /* The creatures, their tokens after them, stay in the middle, with a wider gap before the far end */
-/* safe: past the smallest card size a row can still be too wide, and it then keeps its start in view rather than
-   losing both ends */
+/* safe: past the smallest card size a row can still be too wide, and it then keeps its start in view rather than losing both ends */
 .row.together { justify-content: safe center; gap: 52px; }
 .row.together > .group { flex: 0 0 auto; justify-content: center; }
+/* Every slot always holds the extra width of a tapped card, because adding it on a tap would slide the whole row */
 .group > .slot { margin-inline: calc(((var(--card-h) * .9 - var(--card-w)) / 2 + var(--slot-gap)) * var(--fit, 1)); }
 /* Attachments sit behind their host, each showing a strip above the one in front of it */
 .slot > .card:last-child { z-index: 1; }
-/* What is attached to a card, and the cards under a pile's top one, fan out behind it, each a step to the left of
-   the next, as Arena lays them: only to the left, so a row keeps one card's height however much is attached. The
-   step is a share of the card's width, so a crowded board's smaller cards keep the same look. battlefield.ts counts
-   the room the fan takes when it sizes the cards */
+/* Attached cards and a pile's lower cards fan out to the left only, so a row keeps one card's height, and battlefield.ts counts the room */
 .battlefield { --fan: .15; --support-indent: 28px; }
-/* The artifacts and enchantments at the end of the lands' row stand in from its edge, so they do not line up with
-   the edge of the stack panel above them; battlefield.ts counts the room */
+/* The support group stands in from the row's edge so it does not line up with the stack panel above, and battlefield.ts counts the room */
 .row > .group.support { margin-right: var(--support-indent); }
 .slot { position: relative; padding-left: calc(var(--behind, 0) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 /* Each card behind the host is a layer of its own, so its P/T, badges and icons stay behind the host with it */
 .slot > .card:not(:last-child) { position: absolute; z-index: 0; top: 0; left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .slot > .card:not(:last-child):hover { z-index: 6; }
-/* A tapped card turns about its centre, which lifts its foot above the foot of what is attached to it; with an
-   attachment under it, it drops back to that foot so the two line up rather than one sticking out below. Turned, it
-   also reaches further left, over the strip of what is behind it, so that moves out by as much */
+/* A tapped host drops to the foot of what is attached to it, and the cards behind it move left by as much as the turned card reaches */
 .slot > .card:not(:last-child) ~ .card.tapped:last-child { top: calc((var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 .slot:has(> .card.tapped:last-child) > .card:not(:last-child) {
   left: calc(var(--under) * var(--card-w) * var(--fit, 1) * var(--fan) - (var(--card-h) * .9 - var(--card-w)) / 2 * var(--fit, 1)); }
-/* A player is one line: the portrait with the name and hand under it, then the zone tiles, then whatever they carry.
-   It takes no column from the battlefield: yours sits in the corner beside your hand, where no card is drawn, and
-   the player across from you has theirs along the top of their half */
+/* A player's line takes no column from the battlefield: yours sits in the corner beside your hand, theirs along the top of their half */
 .player { display: flex; align-items: flex-end; gap: 10px; }
 .player-id { display: grid; justify-items: center; gap: 6px; }
 .player-extra { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -297,8 +264,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .zone-tile .zone-name { position: absolute; left: 2px; right: 2px; top: 2px; z-index: 2; padding: 1px 2px; border-radius: 4px; background: #000000c4; color: var(--text); font-size: 10.5px; letter-spacing: .03em; text-align: center; }
 .zone-tile .zone-count { position: absolute; z-index: 2; right: 3px; bottom: 3px; min-width: 20px; background: var(--bg); border: 1px solid var(--accent-2); border-radius: 10px; padding: 0 5px; font-size: 12px; font-weight: 700; color: var(--text); }
 .zone-tile:hover { border-color: var(--accent-2); }
-/* Dust drifts down through the graveyard and motes circle a slowly turning ring in exile. Each mote has its own lane,
-   start and size, so the six never move as one. */
+/* Each mote has its own lane, start and size, so the six never move as one */
 .zone-tile { --ash: #cdc3b3; --void: #9fe7ff; }
 .zone-tile .ambient { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
 .zone-tile .ambient i { position: absolute; width: 5px; height: 5px; border-radius: 50%; opacity: 0; }
@@ -318,8 +284,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
   82% { opacity: .3; transform: translate(-2px, calc(var(--tile-w) * 1.05)); }
   100% { opacity: 0; transform: translate(3px, calc(var(--tile-w) * 1.3)); }
 }
-/* Exile is a dark core ringed by a thin band of light, inside a faint disc turning round it, with streaks of light
-   falling in. Screen blending lets each layer add light rather than paint over the others. */
+/* Screen blending lets each layer of the exile effect add light rather than paint over the others */
 .zone-tile[data-zone="Exile"] .ambient { mix-blend-mode: screen; }
 .zone-tile[data-zone="Exile"] .ambient::before { content: ''; position: absolute; left: 50%; top: 48%; width: 78%; height: 30%; margin: -15% 0 0 -39%; border-radius: 50%;
   background: conic-gradient(from 200deg, transparent 0 10%, color-mix(in srgb, var(--void) 30%, transparent) 30%, transparent 55%, color-mix(in srgb, var(--void) 18%, transparent) 80%, transparent 95%);
@@ -383,8 +348,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
   background: linear-gradient(180deg, transparent, #000d 50%); }
 .emblem .band i { display: flex; width: 9px; height: 9px; }
 .emblem .band svg { width: 100%; height: 100%; }
-/* What a commander costs beyond its printed cost. The word is there because a bare "+6" reads as a counter or a
-   pump long before it reads as a tax. It takes the band's place, since the plaque clips whatever leaves it. */
+/* What a commander costs beyond its printed cost, worded because a bare "+6" reads as a counter, and shown in the band's place */
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
 .emblem .tax:empty { display: none; }
 .emblem:has(.tax:not(:empty)) .band { display: none; }
@@ -395,8 +359,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .cmd-tile .band { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 1px 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--text); background: linear-gradient(180deg, transparent, #000000e0 38%); white-space: nowrap; }
 .cmd-tile .band:empty { display: none; }
 
-/* Day and night, in the corner of the table. Both the word and the shape carry it, and the table cools at night,
-   so a flip registers without anyone watching the corner for it. */
+/* Day and night: both the word and the shape carry it and the table cools at night, so a flip registers without watching the corner */
 #sky { grid-area: opp; justify-self: end; align-self: start; z-index: 24; pointer-events: none; display: flex; align-items: center; gap: 8px; padding: 4px 11px 4px 6px; border-radius: 18px; background: color-mix(in srgb, var(--bg-deep) 80%, transparent); border: 1px solid var(--line); }
 #sky .orb { width: 19px; height: 19px; border-radius: 50%; display: block; flex: none; }
 #sky[data-time="Day"] .orb { background: radial-gradient(circle at 50% 50%, #ffeec0, #e8b54a 62%, #c8922e); box-shadow: 0 0 10px #e8b54a70; }
@@ -431,8 +394,7 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 #phase-strip .track { position: relative; display: flex; align-items: center; gap: 2px; }
 /* The brass under the current phase, moved by phasebar.ts */
 #phase-strip .slide { position: absolute; left: 0; top: 50%; height: 28px; margin-top: -14px; width: 0; border-radius: 14px; background: var(--brass); pointer-events: none; }
-/* One layout for every segment: the icon over its code, then the name and pips, which only the current one opens.
-   The current one's code folds away and its padding opens, so the icon eases into the row rather than jumping */
+/* The current segment's code folds away and its padding opens, so the icon eases into the row rather than jumping */
 #phase-strip .phase { position: relative; display: flex; align-items: center; height: 30px; padding: 0; margin: 0; color: var(--muted);
   transition: color var(--pill-ms) var(--pill-ease), padding var(--pill-ms) var(--pill-ease), margin var(--pill-ms) var(--pill-ease); }
 #phase-strip .phase .mark { width: 24px; display: flex; flex-direction: column; align-items: center; }
@@ -446,16 +408,13 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 /* The name grows out of the icon as the step arrives, rather than appearing at full width */
 #phase-strip .phase .label { width: 0; overflow: hidden; white-space: nowrap; transition: width var(--pill-ms) var(--pill-ease); }
 #phase-strip .phase.current .label { width: auto; }
-/* Every phase keeps its pips; only the current one's are open, and they open and close as the label does, so the
-   pill does not jump sideways at each change of phase */
+/* Every phase keeps its pips and only the current one's are open, so the pill does not jump sideways at each change of phase */
 #phase-strip .pips { display: flex; align-items: center; gap: 2px; margin-left: 0; width: 0; opacity: 0; overflow: clip; overflow-clip-margin: 3px;
   transition: width var(--pill-ms) var(--pill-ease), opacity var(--pill-ms) var(--pill-ease), margin-left var(--pill-ms) var(--pill-ease); }
 #phase-strip .phase.current .pips { margin-left: 8px; width: auto; opacity: 1; }
 #phase-strip .pip { width: 4px; height: 4px; border-radius: 2px; background: var(--muted); transition: width .18s ease, background-color .18s ease; }
 #phase-strip .pip.now { width: 9px; background: var(--on-brass); }
-/* Inside the brass step every pip is dark on light, as a tint of the brass barely shows: a filled circle for a step
-   gone or under way, an open one for a step to come, so the last filled one is where the game is. The stops are left
-   to the grid under the pill, and the pill shows none. */
+/* Inside the brass step a filled pip is a step gone or under way and an open one a step to come, and the pill shows no stops */
 #phase-strip .current .pip { width: 5px; height: 5px; border-radius: 50%; }
 #phase-strip .current .pip { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-brass) 75%, transparent); }
 #phase-strip .current .pip.past { background: color-mix(in srgb, var(--on-brass) 75%, transparent); box-shadow: none; }
@@ -506,8 +465,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops th.group { height: auto; padding: 0 3px 5px; color: var(--muted); font-size: 10px; font-weight: 650; letter-spacing: .08em; text-transform: uppercase; }
 #phase-strip .stops th.group span { display: block; white-space: nowrap; padding-bottom: 3px; border-bottom: 1px solid var(--line-bright); }
 #phase-strip .stops td.gap { width: 12px; }
-/* The row of the player whose turn it is is lit gold, as a band across it; the current step's column a warmer amber,
-   as a band down it. Where they cross, both lie on the one cell, so the step the game is at reads strongest */
+/* The row of the player whose turn it is is lit gold and the current step's column amber, so the cell where they cross reads strongest */
 #phase-strip .stops { --row-lit: color-mix(in srgb, var(--accent-2) 12%, transparent); --col: #ffa94d; --col-lit: color-mix(in srgb, var(--col) 13%, transparent); }
 #phase-strip .stops tr.active td { background: var(--row-lit); }
 #phase-strip .stops tr.active td:first-child { border-radius: 6px 0 0 6px; box-shadow: inset 2px 0 0 var(--accent-2); color: var(--accent-2); font-weight: 650; }
@@ -525,8 +483,7 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
 #phase-strip .stops .cell:hover .square { outline: 2px solid var(--text); outline-offset: 2px; }
 #phase-strip .stops .skip { color: var(--select); display: flex; }
 /* The stack floats over the right edge of the board; collapsed, only its button shows at the edge */
-/* A raised tray of its own, lighter than the table, with a lit top edge and a dark keyline, so the stack never reads
-   as loose cards over the board */
+/* A raised tray lighter than the table, with a lit top edge and a dark keyline, so the stack never reads as loose cards over the board */
 #stack .pile { transition: height .15s ease; }
 #stack { position: fixed; top: 56px; right: calc(var(--side-gap) + 8px); z-index: 25; width: calc(var(--stack-w) + 20px); display: grid; gap: 8px; padding: 8px 10px 10px; background: linear-gradient(180deg, color-mix(in srgb, var(--surface-3) 96%, #fff), var(--surface-3)); border: 1px solid color-mix(in srgb, var(--line-bright) 92%, #fff); border-radius: 12px;
   box-shadow: inset 0 1px 0 #ffffff24, 0 0 0 1px var(--bg-deep), 0 22px 48px #000000e0, 0 4px 12px #000a; }
@@ -567,14 +524,12 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 .log-entry.turn::before, .log-entry.turn::after { content: ''; flex: 1; height: 1px; background: color-mix(in srgb, var(--accent-2) 35%, transparent); }
 .log-entry.turn:first-child { margin-top: 2px; }
 .log-entry.game_outcome, .log-entry.match_results { color: var(--text); }
-/* A zone worth reading is worth the whole screen: the board has nothing to say while you look through a
-   library of thirty, so it is dimmed rather than left to compete. Folded, the scrim goes and only the bar stays. */
+/* An open zone takes the whole screen and dims the board, and folded, the scrim goes and only the bar stays */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
 /* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
 #zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
-/* A zone opened while something is on the stack (a search, a scry) is usually that spell or ability asking, so the
-   stack stays in view above the scrim, and the zone moves over to sit beside it */
+/* A zone opened while something is on the stack is usually that spell asking, so the stack stays above the scrim with the zone beside it */
 #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }
 #match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: calc(var(--side-gap) + var(--stack-w) + 40px); }
 #match:has(#stack:not([hidden])) #zones:not(.minimised) .zone-panel { width: min(860px, calc(100vw - var(--side-gap) - var(--stack-w) - 80px)); }
@@ -622,8 +577,7 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* Either side of a card, image or rules, is the card's own size, with the keys in a pill under it */
 #zoom.image-only, #zoom.text-card { flex-direction: column; align-items: center; gap: 6px; }
 #zoom.image-only .detail { display: none; }
-/* Where a card in hand is really played from, as a tab on the image's foot, clear of its cost and of the overlays at
-   its top; the text view says it in a line instead */
+/* Where a card in hand is really played from is a tab on the image's foot, clear of its cost and of the overlays at its top */
 #zoom .shot { position: relative; display: block; line-height: 0; }
 /* Turned to its other side, image or text, the preview swings the new side in from edge-on */
 #zoom.flipping.image-only > .shot, #zoom.flipping.text-card > .detail { animation: zoom-flip .26s cubic-bezier(.2, .7, .3, 1); }
@@ -640,10 +594,7 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 /* Held open while the card's details are fetched, so the preview does not grow and shift when the hint arrives */
 #zoom > .hint:empty { visibility: hidden; }
 #zoom > .hint:empty::before { content: '\00a0'; }
-/* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing. It is
-   laid out as the card is printed, in the frame the board gives a card with no picture: the name and cost in a bar, the
-   type in a bar with the set beside it, the text box, and the P/T in the corner. What the game has done to the card sits
-   along the foot of the frame, beside the P/T. */
+/* The rules text takes the card's own shape and size, so swapping between it and the image with T moves nothing */
 #zoom.text-card .detail { position: relative; width: var(--zoom-w); aspect-ratio: 63 / 88; box-sizing: border-box; display: flex; flex-direction: column; gap: 5px;
   padding: 6px; overflow: hidden; border: 7px solid #0b0d11; border-radius: 14px; font-size: 13px; line-height: 1.38;
   background: linear-gradient(165deg, color-mix(in srgb, var(--frame) 40%, #1b2029), color-mix(in srgb, var(--frame) 16%, #0d1016));
@@ -771,14 +722,11 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 html[data-motion="reduced"] #match.ending > :not(#game-over) { transition: none; }
 html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
-/* A card on the table casts a short, soft shadow, so it sits on the board rather than printed on it. The shadow turns
-   with a tapped card, so its offset turns the other way to keep falling downwards. States that draw their own glow
-   carry it too, through --lift */
+/* A tapped card's shadow turns with it, so its offset turns the other way to keep falling downwards, and glow states carry it by --lift */
 /* A tight dark edge where the card meets the table, and a softer fall around it, so cards stand off a busy playmat */
 .battlefield .card { --lift: 0 1px 2px #000c, 0 4px 12px #000a; box-shadow: var(--lift); }
 .battlefield .card.tapped { --lift: 1px 0 2px #000c, 4px 0 12px #000a; }
-/* An untapped flyer hovers: it rides a few pixels up, bobbing and swaying on two cycles that never line up, and its
-   shadow falls further below it, trailing the sway and spreading as it rises */
+/* An untapped flyer bobs and sways on two cycles that never line up, and its shadow falls further below it */
 @property --bob { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @property --sway { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @keyframes hover-bob { 0%, 100% { --bob: -1.6px; } 50% { --bob: 1.6px; } }
@@ -800,12 +748,10 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* The text frame sits under the image, so a card reads while its image loads or when it has none */
 .card > img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: var(--radius); display: block; object-fit: cover; }
 .card .cost-badge { display: none; }
-/* The text face under a card's picture, for while it loads or when there is none; kept inside the card, since a long
-   type line on a small card otherwise hangs out below it */
+/* The text face is kept inside the card, since a long type line on a small card otherwise hangs out below it */
 .card .frame { position: absolute; inset: 0; display: grid; gap: 2px; padding: 6px; font-size: 10px; align-content: start; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); }
 .card.noimg img { display: none; }
-/* Without its image a card is drawn as a small printed card: a frame in its colour, the name and cost in a bar
-   across the top, the type in a bar near the foot, and the space between where the art would be */
+/* Without its image a card is drawn as a small printed card, with a frame in its colour */
 .card, #zoom .detail, .plaque-fan i { --frame: #9aa1ab; }
 :is(.card, #zoom .detail, .plaque-fan i)[data-frame="W"] { --frame: #e8dfc0; }
 :is(.card, #zoom .detail, .plaque-fan i)[data-frame="U"] { --frame: #5f9fd6; }
@@ -824,8 +770,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
   font-size: calc(var(--u) * 8.5); line-height: 1.2; color: #d9dee5; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .pt, .card .badges, .card .sick, .card .count { z-index: 2; }
 .card.back > img, .card.back .frame { display: none; }
-/* A card a permanent holds in exile sits under it like an attachment, as a faded ghost of itself edged in exile's
-   colour; dimmed rather than brightened, so its frame stays as dark as its holder's */
+/* A card held in exile is dimmed rather than brightened, so its frame stays as dark as its holder's */
 .card.ghost { box-shadow: 0 0 0 1px var(--zone-exile), var(--lift, 0 0 #0000); }
 .card.ghost > img { opacity: .55; filter: grayscale(.6); }
 .card .pt { display: none; position: absolute; right: 4px; bottom: 4px; background: #000c; border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 700; }
@@ -839,9 +784,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .card .badges:empty, .card .pt:empty { display: none; }
 /* A land creature's tag sits on the same line, so its counters start under it */
 .battlefield .card:has(.kind-tag:not(:empty)) .badges { top: 27%; }
-/* The bottom-left corner holds everything a permanent is carrying: the keywords that decide a block, the shield
-   counters that decide whether removal lands, and wherever it has got to in its set's own track. They stack
-   upward from the corner, so the first icon is always in the same place and the card's name stays clear. */
+/* What a permanent carries stacks upward from the bottom-left corner, so the first icon keeps its place and the name stays clear */
 .card .kind-tag { display: none; }
 .battlefield .card .kind-tag:not(:empty) { display: block; position: absolute; left: 50%; top: 14%; z-index: 3; transform: translateX(-50%);
   padding: 1px 7px; border-radius: 999px; background: #0e1116e6; border: 1px solid var(--accent-2); color: var(--accent-2);
@@ -875,26 +818,21 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 #zoom .sym { height: 1.05em; width: 1.05em; }
 /* A land that can pay the cost being paid. Paying is not a pick among options, so the board does not dim for it */
 .card.selectable { outline: 2px dashed var(--select); outline-offset: 0; }
-/* A card you could act on now, and the stronger mark on what Auto would tap: paler and thinner than a card a
-   prompt is asking for, so the two never read the same */
+/* A card you could act on now, and what Auto would tap, are marked paler and thinner than a card a prompt is asking for */
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent), var(--lift, 0 0 #0000); }
 .card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent), var(--lift, 0 0 #0000); }
-/* While a prompt offers a pick, what it offers is left as it is and everything else dims; the gold ring is for what is
-   already chosen */
+/* While a prompt offers a pick, what it offers stays as it is and everything else dims, and the gold ring marks what is already chosen */
 #match.picking .card.selectable { outline: none; }
 #match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
 #match.picking #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
-/* What the aimed or dragged arrow lands on, in the arrow's colour (overlay.ts). Important, because the picking and
-   selectable outlines above are more specific and would hide it */
+/* Important, because the picking and selectable outlines above are more specific and would hide the aimed arrow's mark (overlay.ts) */
 #match .aimed { outline: 2px solid var(--aimed) !important; outline-offset: 1px; box-shadow: 0 0 16px 2px var(--aimed) !important; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
-/* The whole slot steps forward, towards the defender, so anything attached to the attacker travels with it. A tapped
-   attacker steps further by the room its turned card leaves, so the leading edges of a row of attackers line up. */
+/* The whole slot steps forward so attachments travel with the attacker, and a tapped one steps further so the leading edges line up */
 /* On every slot, not only an attacking one, so the step back at the end of combat eases as the step forward does */
 .battlefield .slot { transition: transform .15s ease; }
-/* While a card is on its way into a pile the pile keeps its old depth and room (motion.ts holdPile); when it arrives
-   the room widens and the new copy slides out from under the top card */
+/* While a card is on its way into a pile the pile keeps its old depth and room (motion.ts holdPile), and widens when it arrives */
 .battlefield .slot.holding { padding-left: calc(var(--held-behind) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .battlefield .slot.opening { transition: transform .15s ease, padding-left .26s cubic-bezier(.2,.7,.3,1); }
 .card.pile.grown[data-depth="1"]::after, .card.pile.grown[data-depth="2"]::before, .card.pile.grown[data-depth="3"] .pile-edge { animation: pile-out .26s cubic-bezier(.2,.7,.3,1); }
@@ -903,10 +841,7 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .slot.attacking:has(> .card.tapped:last-child) { --advance: calc(14px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
 #opponent .slot.attacking { transform: translateY(var(--advance)); }
 .card.attacking { outline: 2px solid var(--attack); }
-/* An attacker that can only be attacking the lone opponent wears a chevron of light rather than an arrow to their
-   face: a red chevron with a smaller, fainter one trailing it, each a red sheath round a white-hot core, in a slowly
-   breathing halo, pointing at the defender. The marks sit in
-   a layer of their own over the board, since the battlefield scrolls and would clip the glow above its top row. */
+/* The charge marks sit in a layer of their own over the board, since the battlefield scrolls and would clip the glow above its top row */
 #charges { position: fixed; inset: 0; pointer-events: none; z-index: 30; }
 .charge { position: absolute; aspect-ratio: 64 / 54; transform: translate(-50%, -100%); }
 .charge.down { transform: translate(-50%, 0) rotate(180deg); }
@@ -917,13 +852,11 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 @keyframes charge-breathe { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
 html[data-motion="reduced"] .charge::before { animation: none; }
 .slot.charging > .card.attacking { outline: none; }
-/* While blockers are declared a creature can be dragged onto an attacker, so a touch on one drags rather than
-   scrolls, and the card preview stays out of the way of the drop */
+/* While blockers are declared a creature can be dragged onto an attacker, so a touch on one drags rather than scrolls */
 #match:is(.declaring-blocks, .declaring-attacks) #me .battlefield .card { touch-action: none; }
 body.dragging-block, body.dragging-block * { cursor: grabbing !important; }
 body.dragging-block #zoom { display: none; }
-/* A blocker says so in a tab on its foot, in the block arrows' blue, with a small shield before the word. An outline
-   would read as the pale blue one a playable card wears. The P/T steps up clear of the tab. */
+/* A blocker says so in a tab on its foot, because an outline would read as the pale blue one a playable card wears */
 .card .block-tab { display: none; }
 .card.blocking .block-tab { display: flex; align-items: center; gap: calc(3px * var(--fit, 1)); position: absolute; left: 50%; bottom: 0; z-index: 4;
   transform: translate(-50%, 50%); padding: calc(2px * var(--fit, 1)) calc(7px * var(--fit, 1)) calc(2px * var(--fit, 1)) calc(5px * var(--fit, 1));
@@ -932,8 +865,7 @@ body.dragging-block #zoom { display: none; }
 .card.blocking .block-tab::before { content: ''; width: calc(9px * var(--fit, 1)); aspect-ratio: 40 / 44; flex: none;
   background: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 44'><path d='M20 3L36 9V21C36 31 29 37.5 20 41C11 37.5 4 31 4 21V9Z' fill='%23eef6ff'/></svg>") center / contain no-repeat; }
 .card.blocking .pt { bottom: calc(12px * var(--fit, 1)); }
-/* Damage on a creature: the card jolts and the amount is thrown off it. The jolt uses translate and rotate rather
-   than transform, so a tapped card keeps its own turn while it shakes */
+/* The jolt uses translate and rotate rather than transform, so a tapped card keeps its own turn while it shakes */
 .card.struck { animation: card-struck .34s ease-out; }
 @keyframes card-struck { 25% { translate: -3px 2px; rotate: -1deg; } 60% { translate: 3px -1px; rotate: 1deg; } }
 .card .hit-number { position: absolute; left: 50%; top: 28%; z-index: 4; transform: translateX(-50%); color: #ff7a59; font-size: 26px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 12px #000; animation: hit-number 1s ease-out forwards; }
@@ -947,16 +879,14 @@ body.dragging-block #zoom { display: none; }
 .card.sickness > img, .card.sickness .frame { filter: grayscale(1) brightness(.78); }
 .card.phased { opacity: .35; outline: 2px dotted var(--muted); }
 .card.phased > img, .card.phased .frame { filter: grayscale(1); }
-/* The cards under the top one are the same card, stepped out to its left as attachments are, and a little darker, so
-   their own frames show at the edge. Isolated, so they sit under the top card's image but above whatever the board paints. */
+/* Isolated, so the copies under the top card sit under its image but above whatever the board paints */
 .card.pile { isolation: isolate; }
 .card.pile::before, .card.pile::after { content: ''; position: absolute; inset: 0; z-index: -1; display: none; border-radius: var(--radius);
   background: var(--pile-img, none) center / cover, var(--surface-2); box-shadow: 0 1px 4px #000a; }
 .card.pile { --pile-step: calc(var(--card-w) * var(--fit, 1) * var(--fan, .2)); }
 .card.pile::after { transform: translateX(calc(-1 * var(--pile-step))); filter: brightness(.78); }
 .card.pile::before { transform: translateX(calc(-2 * var(--pile-step))); filter: brightness(.58); }
-/* The layers turn with a tapped card, so they step along its length to land to its left on the board; the card is
-   drawn at .9, which the step undoes */
+/* The layers turn with a tapped card, so they step along its length to land to its left, and the step undoes the card's .9 scale */
 .card.pile.tapped::after { transform: translateY(calc(var(--pile-step) / .9)); }
 .card.pile.tapped::before { transform: translateY(calc(2 * var(--pile-step) / .9)); }
 /* A third copy for a pile of four or more, beneath the other two */
@@ -975,8 +905,7 @@ body.dragging-block #zoom { display: none; }
 /* Held back while a card is on its way into the pile (motion.ts holdPile); after the rules above, so they win */
 .card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
 .card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
-/* A pile's count is black with white figures, perched on the top card's corner, so how many there are reads at a glance;
-   laid out, it goes quiet as a way back */
+/* A pile's count is black with white figures on the top card's corner, and laid out, it goes quiet as a way back */
 .card .count { display: none; position: absolute; right: -7px; top: -7px; z-index: 3; min-width: 28px; height: 24px; padding: 0 7px; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 12px; box-shadow: 0 2px 6px #000b; font-size: 14.5px; font-weight: 800; cursor: pointer; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
@@ -987,8 +916,7 @@ body.dragging-block #zoom { display: none; }
 /* A spell whose cost is still being paid waits over the board */
 .card.paying { transform-origin: 0 0; outline: 2px solid var(--accent-2); outline-offset: 0; border-radius: var(--radius); box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); animation: paying 1.4s ease-in-out infinite; }
 @keyframes paying { 50% { box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 10px color-mix(in srgb, var(--accent-2) 45%, transparent); } }
-/* The turn changing, said once and swept away. It stands in the phase pill's place rather than across the
-   board, so it never covers the cards, and the pill steps aside for it rather than showing through. */
+/* The turn banner stands in the phase pill's place rather than across the board, so it never covers the cards */
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color var(--pill-ms) var(--pill-ease), box-shadow var(--pill-ms) var(--pill-ease); }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
 /* Who goes first and how the game ended are said in the middle of the board, so the pill steps aside for them too */
@@ -1019,8 +947,7 @@ body.dragging-block #zoom { display: none; }
 .turn-banner::after { content: ''; position: absolute; inset: 0; transform: translateX(-120%); background: linear-gradient(105deg, transparent 38%, #ffffff5c 47%, #ffffffad 50%, #ffffff5c 53%, transparent 62%); animation: turn-sheen 1.1s cubic-bezier(.3,.6,.4,1) .26s; }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 
-/* Who goes first, over the board as the hands are dealt. Every face shows, then the starter is lit in brass and
-   the rest step back. It never takes a click, so the mulligan prompt under it can be answered straight away. */
+/* Who goes first never takes a click, so the mulligan prompt under it can be answered straight away */
 #first-reveal { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
   background: radial-gradient(closest-side, #070910d9, #07091000); animation: first-reveal 3s ease forwards; }
 #first-reveal .reveal-faces { display: flex; gap: 36px; }

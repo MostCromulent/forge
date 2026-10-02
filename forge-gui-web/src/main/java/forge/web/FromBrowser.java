@@ -11,10 +11,7 @@ import forge.web.Wire.Ts;
 
 import java.util.List;
 
-/**
- * Every message the browser sends the server. src/main/ts/protocol.gen.ts is generated from this file, so the
- * browser cannot send a message, or a field, that is not read here.
- */
+/** Every message the browser sends the server, from which src/main/ts/protocol.gen.ts is generated. */
 final class FromBrowser {
     private FromBrowser() {
     }
@@ -172,11 +169,7 @@ final class FromBrowser {
     record DeckDelete(String key) {
     }
 
-    /**
-     * A page of the catalogue; request is echoed back so a late answer to an old query is dropped. identity keeps
-     * only cards within those colours, as WUBRG letters. source asks for a conquest's cards instead of the open
-     * deck's catalogue, collection or exile, and plane keeps only those of one plane.
-     */
+    /** A page of the catalogue, where request is echoed back so a late answer to an old query is dropped. */
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
             boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String plane) {
@@ -234,8 +227,7 @@ final class FromBrowser {
     record StackYield(int key, YieldAction action) {
     }
 
-    /** Sets every stop of one row at once: your turns (mine) or your opponents'. Setting, not toggling, so a browser
-     *  can give a server back the stops it remembers without knowing what the server has now. */
+    /** Sets, not toggles, every stop of one row, so a browser can restore its remembered stops without knowing the server's. */
     @Command("setStops")
     record SetStops(boolean mine, List<PhaseType> phases) {
     }
@@ -279,8 +271,7 @@ final class FromBrowser {
 
     enum AutoDecisionAction { list, remove, clear, disableYields, disableTriggers }
 
-    /** The auto-yields and trigger answers the player has set: listed, one forgotten, all forgotten, or either
-     *  kind switched off (on) or back on. */
+    /** Lists or forgets the player's auto-yields and trigger answers, or switches either kind off when on is true. */
     @Command("autoDecisions")
     record AutoDecisionCommand(AutoDecisionAction action, @Nullable String key, boolean on) {
     }
@@ -292,10 +283,7 @@ final class FromBrowser {
     record LimitedOpen(String kind, boolean resume) {
     }
 
-    /**
-     * Opens a sealed pool from the setup form's answers. product is a LimitedPoolType name; the fields its product needs
-     * are set and the rest are null. replace says the player agreed to replace a pool of the same name.
-     */
+    /** Opens a sealed pool, where product is a LimitedPoolType name and the fields that product does not need are null. */
     @Command("sealedCreate")
     record SealedCreate(String product, @Nullable String block, @Nullable String combo, @Nullable String edition,
             @Nullable String template, @Nullable String cubeId, int packs, String name, boolean replace) {
@@ -307,10 +295,7 @@ final class FromBrowser {
             @Nullable String cubeId) {
     }
 
-    /**
-     * Picks the card at index of the pack shown in state step, so a click on a state that has moved on is ignored.
-     * sideboard puts it in the sideboard rather than the main deck.
-     */
+    /** Picks the card at index of the pack shown in state step, so a click on a state that has moved on is ignored. */
     @Command("draftPick")
     record DraftPick(int step, int index, boolean sideboard) {
     }
@@ -348,11 +333,7 @@ final class FromBrowser {
     record SetLimited(@Nullable String kind) {
     }
 
-    /**
-     * Sets the table's event up, or sets it up again. product is a LimitedPoolType name and the fields its product needs
-     * are set, as in sealedCreate and draftStart. A draft also takes the pod size, a DoublePick name, and the pick timer
-     * and disconnect grace in seconds.
-     */
+    /** Sets the table's event up or sets it up again, with timer and grace in seconds and pickRule a DoublePick name. */
     @Command("eventSetup")
     record EventSetup(String product, @Nullable String block, @Nullable String combo, @Nullable String edition,
             @Nullable String template, @Nullable String cube, @Nullable String theme, @Nullable String cubeId, int packs,
@@ -395,10 +376,7 @@ final class FromBrowser {
     record ConquestSelect(int region, int row, int col) {
     }
 
-    /**
-     * The Aether's filters: colours as WUBRG letters, and the names of a TypeFilter, a RarityFilter and a CMCFilter.
-     * An empty type asks for the filters a visit starts with. pull spends the shards and takes a card.
-     */
+    /** The Aether's filters, where an empty type asks for a visit's starting filters and pull spends the shards to take a card. */
     @Command("conquestAether")
     record ConquestAetherQuery(String colors, String type, String rarity, String cmc, boolean pull) {
     }
@@ -437,10 +415,7 @@ final class FromBrowser {
 
     enum CommanderAction { conquestLead, conquestViewDeck, conquestEditDeck }
 
-    /**
-     * Something done with a commander: made the one battles are fought with, its deck asked for (answered as a deck's
-     * details are), or its deck opened in the editor over the conquest's cards.
-     */
+    /** Something done with a commander: made the battle leader, its deck asked for, or its deck opened in the editor. */
     @Command
     record ConquestCommanderCommand(CommanderAction t, String commander) {
     }

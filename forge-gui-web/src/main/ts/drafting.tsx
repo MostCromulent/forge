@@ -1,7 +1,4 @@
-// Drafting: the pack and the picks side by side in the middle of the page, as the lobby's seats are, with the table
-// behind a button in the header. A click selects a card and a second click, or Enter, picks it into the main deck,
-// because a pick cannot be taken back and a timer can make a single click a slip. Dragging a card picks it into
-// whichever of the main deck and the sideboard it is dropped on, and a pick can be moved between them after.
+// Drafting: a click selects a card and a second click or Enter picks it, because a pick cannot be taken back
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Dial } from './packdial';
@@ -50,11 +47,7 @@ function columnsFrom(slots: HTMLElement[], edge: -1 | 1): number[] {
   return xs.map(x => columns.indexOf(x));
 }
 
-/**
- * Sends the rest of the pack on to the next player once a card is picked: each card is lifted off as it looks and
- * slides off the side the pack passes to. The cards themselves stay hidden until the next pack replaces them, and show
- * again if none comes, as when a pick is refused.
- */
+/** Slides the rest of the pack off to the next player, hiding the real cards until a new pack replaces them or none comes. */
 function passPack(picked: number, side: -1 | 1): void {
   const grid = document.querySelector<HTMLElement>('.draft-pack .cat-grid');
   const slots = [...grid?.querySelectorAll<HTMLElement>('.draft-slot') ?? []].filter((_, i) => i !== picked);
@@ -160,10 +153,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
   );
 }
 
-/**
- * Each seat's face: your own avatar, a lobby player's, or for a computer drafter one picked from its name, so it keeps
- * the same face all draft.
- */
+/** Each seat's face, where a computer drafter's is picked from its name so it keeps the same face all draft. */
 function seatFaces(model: Model, seats: DraftSeat[]): string[] {
   const count = model.looks?.avatarCount ?? 0;
   return seats.map((seat, i) => {

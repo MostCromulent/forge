@@ -17,14 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CountDownLatch;
 
-/**
- * Starts Forge as a web server: loads the cards, opens the server window, starts the server and opens the host's
- * browser on it. It then waits until something asks Forge to quit (the server window closing, the host choosing Quit,
- * or the last browser leaving) and stops the server on the way out.
- *
- * <p>Each launch makes two fresh tokens, one for the host's link and one for the links sent to guests, so a link
- * from an earlier launch no longer works.
- */
+/** Each launch makes two fresh tokens, one for the host's link and one for guests, so a link from an earlier launch no longer works. */
 public final class WebMain {
     /** How long the process waits after the last browser goes, unless the console is told to keep it open. */
     private static final long IDLE_MILLIS = 15_000;
@@ -40,8 +33,7 @@ public final class WebMain {
         // Opened before the cards are read, because reading them takes long enough to look like a failure
         final ServerConsole console = ServerConsole.open(ui, quit::countDown);
         FModel.initialize(console, prefs -> null, false);
-        // Card-based deck generation's data takes seconds to load and serves only its archetype decks, which the deck
-        // list shows once it is in, so the server starts without waiting on it
+        // Card-based deck generation's data takes seconds to load and serves only its archetype decks, so the server starts without it
         if (!FModel.getPreferences().getPrefBoolean(FPref.LOAD_CARD_SCRIPTS_LAZILY)) {
             final Thread deckGen = new Thread(FModel::loadDeckGenMatrix, "DeckGenData");
             deckGen.setDaemon(true);

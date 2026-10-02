@@ -1,5 +1,4 @@
-// Starting a conquest: four questions, with what it will be beside them. The planes, a plane's commanders and a
-// commander's planeswalkers are the server's to say, asked for as each answer is given.
+// Starting a conquest: the planes, a plane's commanders and a commander's planeswalkers are asked of the server as each answer is given
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';

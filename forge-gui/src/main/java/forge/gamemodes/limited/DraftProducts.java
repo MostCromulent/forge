@@ -11,10 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * What a limited event can be built from, read without prompting: the lists desktop's setup dialogs offer, for a
- * frontend that asks for every choice at once.
- */
+/** What a limited event can be built from, read without prompting, for a frontend that asks for every choice at once. */
 public final class DraftProducts {
     private DraftProducts() {
     }

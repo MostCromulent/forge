@@ -1,5 +1,4 @@
-// Searching a long list by name, by the same rules as desktop's ListChooser, so a name typed in either client finds
-// the same cards in the same order.
+// Searches a long list by name by the same rules as desktop's ListChooser, so either client finds the same cards in the same order
 
 /** Lower case, accents stripped, and nothing but letters, digits and spaces. */
 export function normalize(s: string): string {

@@ -13,11 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/**
- * The prompt console: its message, its two buttons, and what may be clicked. The engine changes it piece by piece,
- * from the dispatch thread and from AbstractGuiGame's final timer methods on the host UI thread, so every change
- * is made and sent under one lock, and the browser sees each prompt in the order it came about.
- */
+/** The prompt console, changed from the dispatch thread and the host UI thread, so every change is made and sent under one lock. */
 final class PromptState {
     private final Consumer<Prompt> send;
     private String message = "";
@@ -123,8 +119,7 @@ final class PromptState {
         return card == null ? null : Ref.card(card.getId());
     }
 
-    // The phase pill and the stack pile carry the turn, the step and what is waiting, so the priority prompt
-    // keeps only the lines that add something, such as the storm count or a macro being recorded
+    // Drops the priority prompt's lines that the phase pill and the stack pile already show
     private static String withoutTurnState(final String message) {
         final Localizer loc = Localizer.getInstance();
         if (!message.startsWith(loc.getMessage("lblPriority") + ":")) {

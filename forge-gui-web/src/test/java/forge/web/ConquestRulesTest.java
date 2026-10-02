@@ -58,8 +58,7 @@ public class ConquestRulesTest {
         assertNotNull(ConquestUtil.nameProblem("  "));
     }
 
-    // Fails if a created conquest is not on disk as created: missing from the list, or read back with another
-    // place, balance or commander deck
+    // Fails if a created conquest is missing from the list, or reads back with another place, balance or commander deck
     @Test
     public void aCreatedConquestIsListedAndReadsBack() {
         final ConquestData made = ConquestFixture.create("Zendikar");
@@ -76,8 +75,7 @@ public class ConquestRulesTest {
         assertTrue(deckSize >= 40);
     }
 
-    // Fails if a Commander event's players do not start at 30 life with their commanders set, or the match is not
-    // one game under Conquest's own rules
+    // Fails if a Commander event's players do not start at 30 life with commanders set, or the match is not one game under Conquest's rules
     @Test
     public void aCommanderEventIsPreparedAsConquestPlaysIt() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -304,8 +302,7 @@ public class ConquestRulesTest {
         }
     }
 
-    // Fails if exiling does not pay a card's exile value, takes a card a deck uses, or takes the planeswalker; or if
-    // a card comes back for less than its price, or without the shards for it
+    // Fails if exile misprices a card or takes one a deck uses or the planeswalker, or if a card comes back cheaply or without the shards
     @Test
     public void exilePaysAndRefusesWhatIsInUse() {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -397,8 +394,7 @@ public class ConquestRulesTest {
         throw new AssertionError("no such event on " + plane.getName());
     }
 
-    // Fails if a save written by today's code, which is also what mobile writes, no longer reads back as it was
-    // written: another place, balance, card count or commander deck
+    // Fails if a save written by today's code, which is also what mobile writes, no longer reads back as it was written
     @Test
     public void aSavedConquestStillLoads() throws Exception {
         final ConquestData data = ConquestFixture.install();

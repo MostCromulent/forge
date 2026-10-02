@@ -93,8 +93,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a Commander event played over netplay does not start both players at 30 life with their commanders
-    // in the command zone, or the web seat is not the human's
+    // Fails if a Commander event over netplay does not start both players at 30 life with their commanders in the command zone
     @Test(timeOut = 120_000)
     public void aCommanderEventStartsAsConquestPlaysIt() {
         WebTestSupport.skipUnlessStress();
@@ -114,8 +113,7 @@ public class ConquestSessionTest extends SessionsTest {
         });
     }
 
-    // Fails if an event that is Planeswalker only, against a planeswalker, does not put both planeswalkers in the
-    // command zone
+    // Fails if a Planeswalker-only event against a planeswalker does not put both planeswalkers in the command zone
     @Test(timeOut = 120_000)
     public void aPlaneswalkerEventPutsBothInTheCommandZone() {
         WebTestSupport.skipUnlessStress();
@@ -152,8 +150,7 @@ public class ConquestSessionTest extends SessionsTest {
         throw new AssertionError("no such cell");
     }
 
-    // Fails if the list of saves leaves out a conquest, or the map of a new one does not have the player at its
-    // first place with only that place open
+    // Fails if the map of a new conquest does not have the player at its first place with only that place open
     @Test(timeOut = 120_000)
     public void aConquestOpensOnItsMap() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -250,10 +247,7 @@ public class ConquestSessionTest extends SessionsTest {
     /** By message and not by id: a restarted match numbers its questions from the start again. */
     private final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
 
-    /**
-     * Plays the web seat up to its first priority: every question the game asks on the way (the mulligan) is given its
-     * default answer. Only then is the game past dealing its zones, and safe to end.
-     */
+    /** Gives every question on the way its default answer, since only at first priority is the game past dealing its zones and safe to end. */
     private void awaitPriority(final Recorder host) {
         final String[] seen = { "no game" };
         // A press that lands before the input is ready is lost, so it is made again
@@ -297,8 +291,7 @@ public class ConquestSessionTest extends SessionsTest {
         return host;
     }
 
-    // Fails if a won battle is not recorded, its first-conquest emblem and the wheel's shards are not in the save, or
-    // a browser that reconnects before the reward is acknowledged is not sent the same reward with the save unchanged
+    // Fails if a win is not recorded and rewarded once, or a reconnecting browser is not sent the same reward with the save unchanged
     @Test(timeOut = 180_000)
     public void aWinIsRecordedAndRewardedOnce() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -346,8 +339,7 @@ public class ConquestSessionTest extends SessionsTest {
                 "an acknowledged reward was sent again");
     }
 
-    // Fails if a lost Commander event restarted from the result screen does not start again at 30 life, or the loss
-    // is not in the event's record
+    // Fails if a lost Commander event restarted from the result screen does not start again at 30 life, or the loss is not recorded
     @Test(timeOut = 180_000)
     public void retryKeepsTheBattlesSetUp() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -368,8 +360,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a wheel that lands on chaos does not lead to a best-of-three once the reward is acknowledged, or
-    // leaving that battle early is not a loss
+    // Fails if a wheel landing on chaos does not lead to a best-of-three once the reward is acknowledged, or leaving it early is not a loss
     @Test(timeOut = 240_000)
     public void aChaosBattleFollowsTheWheelAndLeavingItIsALoss() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -495,8 +486,7 @@ public class ConquestSessionTest extends SessionsTest {
         return FModel.getConquest().getDecks().get(name);
     }
 
-    // Fails if the editor's catalogue lists a card outside the conquest's available cards, lists an exiled card, or
-    // a card that is not owned can be added to the deck
+    // Fails if the editor's catalogue lists a card that is not owned or is exiled, or such a card can be added to the deck
     @Test(timeOut = 120_000)
     public void theEditorOffersOnlyOwnedCards() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -525,8 +515,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(mainNames(again).contains(exiled.getName()), "an exiled card was added");
     }
 
-    // Fails if a card added in the editor is not in the deck the next battle is prepared with, or the map is not
-    // told the deck's new size when the editor closes
+    // Fails if a card added in the editor is not in the next battle's deck, or the map is not told the deck's new size on close
     @Test(timeOut = 120_000)
     public void anEditedDeckIsTheDeckFoughtWith() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -549,8 +538,7 @@ public class ConquestSessionTest extends SessionsTest {
         });
     }
 
-    // Fails if anything the editor can be asked changes the deck's Commander section or its name: an edit and its
-    // undo, a removal or a move from the Commander section, a rename, or an import that replaces the deck
+    // Fails if anything the editor can be asked changes the deck's Commander section or its name
     @Test(timeOut = 120_000)
     public void theCommanderStays() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -582,9 +570,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertSame(commander.getDeck(), stored, "the commander does not hold the deck that was saved");
     }
 
-    // Fails if reading a list for a conquest's deck does not mark a card that is not owned as a problem, or adding
-    // the list puts that card in the deck, leaves out an owned card named in a printing that is not owned, puts it
-    // in as the printing named instead of the one owned, or refuses the basic lands
+    // Fails if an import adds a card that is not owned, leaves out an owned card named in another printing, or refuses the basic lands
     @Test(timeOut = 120_000)
     public void importTakesOnlyOwnedCards() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -642,9 +628,7 @@ public class ConquestSessionTest extends SessionsTest {
         return names;
     }
 
-    // Fails if a card a deck uses can be exiled over the wire; if exiling a free card does not pay its exile value,
-    // leaves it in the collection's list or out of the exile's; or if retrieving it does not cost its price and
-    // bring it back
+    // Fails if a card a deck uses can be exiled, or a free card's exile and retrieval do not pay, charge and move it between the lists
     @Test(timeOut = 120_000)
     public void exileAndRetrieveOverTheWire() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -706,8 +690,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(new ConquestData(made.getDirectory()).getSelectedCommander().getName(), second.getName());
     }
 
-    // Fails if a card the rules allow any number of can go into a conquest's deck more times than it is owned, by
-    // adding it again or by importing a list that asks for many
+    // Fails if a card the rules allow any number of goes into a conquest's deck more times than it is owned, by adding or importing
     @Test(timeOut = 120_000)
     public void aCardIsNotAddedMoreTimesThanItIsOwned() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -725,8 +708,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1, "an import added copies that are not owned");
     }
 
-    // Fails if a list read for a conquest's deck is read against the format the importer's control sends, under
-    // which an owned legendary creature is taken for the list's commander and never reaches the deck
+    // Fails if a conquest import is read under the format sent, which takes an owned legendary creature for the list's commander
     @Test(timeOut = 120_000)
     public void anImportIsReadAsAConquestDeckWhateverFormatIsAsked() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -774,8 +756,7 @@ public class ConquestSessionTest extends SessionsTest {
         return new File(ForgeConstants.CONQUEST_SAVE_DIR, name.replace(' ', '_'));
     }
 
-    // Fails if a conquest can be started under a name another has: no error is sent, the page leaves the shelf, or
-    // the conquest of that name is replaced
+    // Fails if a conquest can be started under a name another has, or the conquest of that name is replaced
     @Test(timeOut = 120_000)
     public void aNameInUseIsRefused() throws Exception {
         final ConquestData existing = ConquestFixture.create("Zendikar");
@@ -791,8 +772,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(new ConquestData(existing.getDirectory()).getAEtherShards(), shards, "the conquest of that name was replaced");
     }
 
-    // Fails if the form is not told a plane's commanders or a commander's planeswalkers, or a conquest made from the
-    // first of each is not saved, named in the hello and shown on its map
+    // Fails if the form is not told a plane's commanders or a commander's planeswalkers, or a conquest made from them is not saved and shown
     @Test(timeOut = 120_000)
     public void aCreatedConquestOpensOnItsMap() throws Exception {
         final String name = ConquestFixture.expected();
@@ -832,8 +812,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(saveDir(name).exists(), "a conquest was made all the same");
     }
 
-    // Fails if renaming the conquest played last leaves the old folder, or the start page's Resume and the shelf's
-    // mark still name the old one
+    // Fails if renaming the conquest played last leaves the old folder, or the start page's Resume and the shelf's mark still name the old one
     @Test(timeOut = 120_000)
     public void renamingTheCurrentConquestKeepsItCurrent() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
@@ -868,8 +847,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(data.getDirectory().exists());
     }
 
-    // Fails if a plane can be unlocked without the emblems for it or entered while locked; or if unlocking with
-    // enough does not spend the cost once, move the player there and save; or if going back costs anything
+    // Fails if a plane can be unlocked without the emblems or entered while locked, unlocking does not spend once, or going back costs
     @Test(timeOut = 120_000)
     public void unlockingSpendsOnce() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -910,8 +888,7 @@ public class ConquestSessionTest extends SessionsTest {
                 "rarity", shown == null ? "" : shown.get("rarity").getAsString(), "cmc", shown == null ? "" : shown.get("cmc").getAsString(), "pull", pull);
     }
 
-    // Fails if a pull does not cost what the page showed, does not add the card it names to the cards owned, or
-    // leaves the count of matching cards as it was; or if a pull with no shards gives a card
+    // Fails if a pull does not cost what the page showed and add the card it names, or a pull with no shards gives a card
     @Test(timeOut = 120_000)
     public void aPullSpendsAndUnlocks() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -990,8 +967,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a plane's statistics do not list its regions with what is conquered in each, or the figures for
-    // every plane carry one plane's regions
+    // Fails if a plane's statistics do not list its regions with what is conquered in each, or every plane's figures carry regions
     @Test(timeOut = 120_000)
     public void statisticsNameTheRegions() throws Exception {
         final Recorder host = hostInConquest(ConquestFixture.install());
@@ -1025,8 +1001,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(ConquestGame.find(folder + "/."));
     }
 
-    // Fails if a rebalanced card, which has no picture of its own, is not drawn with the art of the card it rebalances,
-    // or a card that has its own art is given another's
+    // Fails if a rebalanced card is not drawn with the art of the card it rebalances, or a card with its own art is given another's
     @Test
     public void aRebalancedCardWearsItsOriginalsArt() {
         final PaperCard rebalanced = FModel.getMagicDb().getCommonCards().getCard("A-Phylath, World Sculptor");

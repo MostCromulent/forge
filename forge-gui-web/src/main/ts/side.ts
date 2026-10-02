@@ -1,5 +1,4 @@
-// The column beside the board. It holds the game log and, in a networked game, the chat dock under it. Each
-// collapses to its tab; with both shut, the column folds to its tabs against the edge and the board takes the room.
+// The column beside the board, holding the game log and, in a networked game, the chat dock, each of which collapses to its tab
 
 import { byId, q } from './dom';
 import { changeUi, changeUiNow, rememberSidePanels, ui, type UiState } from './ui';
@@ -8,13 +7,7 @@ import { t } from './text';
 
 const PANELS = ['log', 'chat'] as const;
 
-/**
- * Whether it is day or night, in the corner of the table. Cards with daybound and nightbound transform on it
- * without asking, so it has to be readable without being looked for: the table itself cools at night, and the
- * corner says which it is for anyone checking.
- *
- * The host has sent this in the Controls message all along; nothing had ever read it.
- */
+/** Daybound and nightbound cards transform without asking, so the whole table changes at night as well as the corner that says which it is. */
 export function renderSky(model: Model): void {
   const sky = byId('sky');
   const time = model.controls?.dayTime;
@@ -40,11 +33,7 @@ export function initSide(): void {
   }
 }
 
-/**
- * Opening or shutting a panel reflows the column and the board, which CSS cannot ease (grid areas do not animate), so
- * the browser eases between the two layouts. The browser shows no frames while it waits for the new layout, so it is
- * drawn at once rather than on the next frame.
- */
+/** CSS cannot ease a change of grid areas, so a view transition eases between the two layouts, with the new one drawn at once. */
 function eased(change: (state: UiState) => void): void {
   if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
     changeUi(change);
@@ -65,8 +54,7 @@ function eased(change: (state: UiState) => void): void {
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
 let drawn = '';
 
-// Chat is there only in a game others can join. The dock itself is one of the screens (screens.tsx); this only
-// opens and shuts the column's panels.
+// Chat is there only in a game others can join, and its dock is one of the screens (screens.tsx)
 export function renderSide(model: Model): void {
   const hasChat = model.networked;
   const shown = { log: ui.sidePanels.log, chat: hasChat && ui.sidePanels.chat };

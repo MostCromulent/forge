@@ -9,11 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Tests that drive the server as browsers do. One server serves the class, since stopping and restarting it between
- * tests races with its own shutdown; every browser a test connects is let go after it, or a guest from one test takes
- * the seat the next test's guest wants.
- */
+/** One server serves the whole class, because stopping and restarting it between tests races with its own shutdown. */
 abstract class SessionsTest {
     WebSessions sessions;
     final List<Recorder> browsers = new CopyOnWriteArrayList<>();

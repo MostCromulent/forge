@@ -37,11 +37,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/**
- * One deck open in the browser's editor. Every change goes through here: it is checked against the engine's limits,
- * applied, and saved at once, to the host's deck folders or, for a guest, to the guest's browser. A deck that can't be
- * changed in place (a precon, somebody else's) is copied by its first change. Changes can be undone while it is open.
- */
+/** One deck open in the browser's editor, where every change is checked against the engine's limits, applied and saved at once. */
 final class DeckEditor {
     /** The name a new deck starts with, until its commander names it or the player does. */
     static final String NEW_DECK = "New deck";
@@ -79,11 +75,7 @@ final class DeckEditor {
     record Group(IStorage<DeckGroup> storage) implements Target {
     }
 
-    /**
-     * A game mode's own cards, which a deck of that mode is built from. The deck keeps its name, its format and its
-     * Commander section, and has a main deck only. cards is read at each use, landSets gives the editions its basic
-     * lands may come from, and saved is run after each save.
-     */
+    /** A game mode's own cards, which a deck of that mode is built from, with cards read at each use and saved run after each save. */
     record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
             Function<Deck, List<CardEdition>> landSets, Runnable saved) {
     }
@@ -592,11 +584,7 @@ final class DeckEditor {
         }
     }
 
-    /**
-     * Saves the deck under a new name or folder and removes the old file. Storage deletes by the stored deck's own name,
-     * so the old deck object must keep its name until it is deleted; and when both names give one file (a change of case),
-     * the old file goes first, or deleting it would take the new one with it.
-     */
+    /** Storage deletes by the deck's own name, so the old deck keeps its name until deleted, and goes first when both names are one file. */
     private void moveFile(final IStorage<Deck> from, final IStorage<Deck> to, final String name) {
         if (from == to && DeckStore.sameFile(owned, name)) {
             from.delete(owned);
@@ -719,11 +707,7 @@ final class DeckEditor {
                 : codes.get(MyRandom.getRandom().nextInt(codes.size()));
     }
 
-    /**
-     * The sets with basic lands, newest first, built once from the editions themselves. StaticData's own sorted list is
-     * built lazily without a lock, and two editors opening at once (every player's event pool arrives together) read it
-     * while it is still being sorted.
-     */
+    /** Built once here, because StaticData's sorted list is built lazily without a lock and two editors opening at once read it half sorted. */
     private static final class LandSets {
         static final List<LandSet> ALL = build();
 

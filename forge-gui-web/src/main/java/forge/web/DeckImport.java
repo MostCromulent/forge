@@ -26,11 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * Reads a deck list the way the browser shows it: one mark per line of the text, the problems with a fix for each, and
- * the deck the list makes. Cards are recognised by the engine's DeckRecognizer; whether each is allowed comes from
- * Legality, so the marks here and the editor's verdict never disagree.
- */
+/** Reads a deck list for the browser, taking whether each card is allowed from Legality so its marks and the editor's verdict agree. */
 final class DeckImport {
     private static final String READ = "read";
     private static final String PROBLEM = "problem";
@@ -52,10 +48,7 @@ final class DeckImport {
         return read(text, check, null);
     }
 
-    /**
-     * With a collection, the list is read for a deck built from those cards: only its main deck is taken, each card
-     * as the printing owned, and a card that is not owned is a problem. Basic lands are free.
-     */
+    /** With a collection, only the main deck is taken, each card as the printing owned, and a card not owned is a problem. */
     static Read read(final String text, final Check check, final DeckEditor.Collection collection) {
         final Map<String, PaperCard> owned = new HashMap<>();
         if (collection != null) {
@@ -180,10 +173,7 @@ final class DeckImport {
         return new ImportProblem(line, title, Localizer.getInstance().getMessage("lblWebImportNotACard"), fixes);
     }
 
-    /**
-     * A list for a commander format with no Commander section: one card that could lead it is made the commander, and
-     * several are offered as a choice. Returns the name chosen, or null.
-     */
+    /** With no Commander section, a lone card that could lead the deck is made its commander and named, and several are offered as a choice. */
     private static String chooseCommander(final Deck deck, final Check check, final List<ImportProblem> problems) {
         final DeckFormat df = check.deckFormat();
         final CardPool commanders = deck.get(DeckSection.Commander);

@@ -1,11 +1,8 @@
-// How the player has arranged the table: what is open, collapsed or pointed at. None of it is the game's, and none
-// of it goes to the server. It lives here, in one place, so any renderer reads the same arrangement and a new match
-// clears it at once.
+// How the player has arranged the table, none of which goes to the server, kept in one place so a new match clears it at once
 
 import { storeJson, storedJson } from './storage';
 
-/** The card or player the pointer is over, whose details the zoom panel shows. A card's src is its image, empty
- *  when the viewer may not see it, and at is the element it was hovered in, so its preview can be put beside it. */
+/** The card or player the pointer is over, where src is empty when the viewer may not see the card and at is the element hovered in. */
 export type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
 
 /** A picker open over match setup, for one seat. */

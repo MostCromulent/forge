@@ -55,8 +55,7 @@
 /* A banner or an empty place is a button that does nothing, and is not dimmed for it */
 button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
 
-/* A tile is the opponent's picture and nothing else. What can be fought next is in full colour with a lit gold edge;
-   conquered ground keeps its picture but steps back; what has not been found is an empty place. */
+/* What can be fought next is in full colour with a lit gold edge, conquered ground is dimmed, and the unfound is an empty place */
 .cq-tile { position: absolute; padding: 8px; border: 0; border-radius: 9px; background: #141a26 center 20% / cover; overflow: hidden; display: flex; align-items: flex-end; text-align: left; color: var(--text); opacity: 1; transition: transform .12s, box-shadow .12s, filter .12s; }
 .cq-tile span { position: relative; z-index: 1; font-size: 11.5px; font-weight: 600; line-height: 1.2; text-shadow: 0 1px 3px #000; }
 .cq-tile.open { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 45%, transparent); }
@@ -181,8 +180,7 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-bp-cell { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 30px; pointer-events: none; }
 .cq-pk { position: relative; width: 196px; height: 312px; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; pointer-events: auto; animation: cq-pk-float 3.6s ease-in-out infinite; }
 @keyframes cq-pk-float { 50% { transform: translateY(-9px) rotate(-1deg); } }
-/* The light a card in hand wears when it can be cast from another zone, on the pack's own outline: a thin still band
-   that hugs every tooth of the crimp, and the same outline twice more, a little larger, wavering */
+/* The light a card in hand wears when it can be cast from another zone, drawn here on the pack's own outline */
 .cq-pk-lit { position: absolute; inset: 0; transition: filter .35s ease;
   filter: drop-shadow(0 0 .8px var(--gold)) drop-shadow(0 0 .8px var(--gold)) drop-shadow(0 0 1.2px var(--gold)); }
 .cq-pk.open .cq-pk-lit { filter: none; }

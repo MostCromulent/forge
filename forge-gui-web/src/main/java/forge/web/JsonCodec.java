@@ -27,14 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/**
- * Turns the game's state into JSON for the browser. Netplay sends the state as packets of changed properties, keyed by
- * each object's number; this writes those properties as JSON, one object at a time.
- *
- * <p>A property that points at another object (a card's controller, a player's hand) becomes {@code {"ref": key}}. The
- * browser follows those to find objects, and drops any object nothing points at any more, without knowing what any
- * property means.
- */
+/** Writes netplay's changed properties as JSON for the browser, with a property that points at another object as {@code {"ref": key}}. */
 public final class JsonCodec {
     public static final Gson GSON = new GsonBuilder().serializeNulls().create();
 
@@ -74,7 +67,7 @@ public final class JsonCodec {
         return out;
     }
 
-    // ProtocolTypes (in the tests) writes the TypeScript type of each of these forms; a new form needs one there too
+    // ProtocolTypes writes the TypeScript type of each of these forms; a new form needs one there too
     @SuppressWarnings("unchecked")
     static JsonElement encodeValue(final TrackableProperty prop, final Object value, final int ownerId) {
         if (value == null) {

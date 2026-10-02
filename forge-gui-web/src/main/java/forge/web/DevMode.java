@@ -18,14 +18,7 @@ import org.tinylog.Logger;
 
 import java.util.Arrays;
 
-/**
- * Forge's developer cheats, for the host's own seat. Every web seat plays as a netplay client, and Forge gives a
- * netplay client no cheats; the host shares its process with the server, though, so its player's own controller is
- * at hand. Only the host can cheat; guests never can.
- *
- * <p>A cheat asks its questions as the game does, so they reach the browser as the game's own prompts, and the
- * thread that runs one waits for the answers.
- */
+/** Forge gives a netplay client no cheats, but the host shares its process with the server, so only the host's own seat can cheat. */
 final class DevMode {
     private DevMode() {
     }
@@ -102,8 +95,7 @@ final class DevMode {
                 channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDevStateNotSetUp"), String.valueOf(e.getMessage()), true));
                 return;
             }
-            // Placing cards fires no game event, so nothing else would send the new board. It is sent from the same
-            // task, after the state: a second task can run on another game thread at once and send the board unchanged
+            // Placing cards fires no game event, and a second task could run at once and send the board unchanged, so this one sends it
             if (gui instanceof RemoteClientGuiGame remote) {
                 remote.updateGameView();
             }

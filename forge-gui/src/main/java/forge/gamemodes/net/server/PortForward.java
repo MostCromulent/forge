@@ -14,10 +14,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Consumer;
 
-/**
- * Asks the router, over UPnP, to forward a TCP port to this machine, so players on the internet can reach it.
- * Closing removes the forwarding again.
- */
+/** Asks the router, over UPnP, to forward a TCP port to this machine, and removes the forwarding again when closed. */
 public final class PortForward implements IHasForgeLog {
     /** How long a router has to confirm the forwarding before it counts as refused. */
     private static final long ANSWER_MILLIS = 5000;
@@ -54,9 +51,7 @@ public final class PortForward implements IHasForgeLog {
                 }
             }, ANSWER_MILLIS);
         } catch (LinkageError | Exception e) {
-            // jupnp is unavailable on iOS/MobiVM (provided scope, no platform UPnP service), so its classes fail to
-            // load there. NoClassDefFoundError is a LinkageError, so forwarding fails quietly instead of taking the
-            // server down, while fatal Errors (OutOfMemoryError etc.) still propagate.
+            // jupnp's classes fail to load on iOS/MobiVM with a LinkageError, which is caught so the server stays up there
             netLog.error(e, "UPnP mapping unavailable");
             result.accept(false);
         }

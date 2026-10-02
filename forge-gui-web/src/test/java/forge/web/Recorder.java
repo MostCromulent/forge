@@ -63,11 +63,7 @@ final class Recorder implements BrowserChannel {
         return null;
     }
 
-    /**
-     * Waits until the table as it stands now is the one wanted, and answers it. The lobby is pushed on every change,
-     * and one choice can travel as several changes (a deck, then being ready), so an earlier message can describe a
-     * table that has already moved on; only the latest counts.
-     */
+    /** Waits until the latest table is the one wanted, because an earlier lobby message can describe a table that has already moved on. */
     JsonObject awaitLobby(final Predicate<JsonObject> wanted) throws InterruptedException {
         for (int i = 0; i < WAIT_MILLIS / POLL_MILLIS; i++) {
             final JsonObject latest = latestTable();

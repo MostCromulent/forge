@@ -73,17 +73,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.CRC32;
 
-/**
- * Serves the page, its files and card images, and the browser's WebSocket. It listens on every interface so a
- * player elsewhere can open a link, and the per-launch tokens in the links are what keep everyone else out.
- *
- * <p>There are two: the host's, in the link Forge opens itself, and the guests', in the links the host sends. Either
- * lets a browser in; only the host's lets it take the host's seat, which can set the table and stop the server.</p>
- */
+/** Listens on every interface so a player elsewhere can open a link, and the per-launch tokens in the links keep everyone else out. */
 public final class WebServer implements AutoCloseable {
     public interface Endpoint {
-        /** A browser arrived. The id tells one browser from another across a reload; mayHost says it came in on the
-         *  host's link. */
+        /** The id tells one browser from another across a reload, and mayHost says it came in on the host's link. */
         void connected(BrowserChannel channel, String clientId, boolean mayHost);
         void disconnected(BrowserChannel channel);
         void onMessage(BrowserChannel channel, JsonObject message);
@@ -96,21 +89,14 @@ public final class WebServer implements AutoCloseable {
     private static final AttributeKey<Boolean> KEEP_ALIVE = AttributeKey.valueOf("forge.keepAlive");
     /** For what never changes at its address, a card picture of one printing or a hashed script chunk: kept for good. */
     private static final String KEEP_FOREVER = "public, max-age=31536000, immutable";
-    /**
-     * For an avatar or sleeve, which changes only with the skin. Asked for again, it would queue behind card pictures
-     * that are still downloading, which can hold every connection the browser allows to one server.
-     */
+    /** For an avatar or sleeve, which asked for again would queue behind card pictures holding every connection the browser allows. */
     private static final String KEEP_AN_HOUR = "private, max-age=3600";
     private static final Pattern BYTE_RANGE = Pattern.compile("bytes=(\\d*)-(\\d*)");
     /** The most one answer to a range of audio carries: about a minute of music at 128 kbps. */
     private static final int AUDIO_SLICE = 1 << 20;
     /** Keys that failed are remembered so they are not fetched again; past this many, the list starts over. */
     private static final int MOST_UNAVAILABLE_IMAGES = 10_000;
-    /**
-     * Forge's own netplay port. Anyone who has hosted a game from the desktop client has already opened it,
-     * and this server never binds it for netplay, because every seat here reaches the game over loopback.
-     * Hosting from the desktop client at the same time needs {@code -Dforge.web.port}.
-     */
+    /** Forge's own netplay port, so hosting from the desktop client at the same time needs {@code -Dforge.web.port}. */
     private static final int DEFAULT_PORT = 36743;
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
@@ -142,8 +128,7 @@ public final class WebServer implements AutoCloseable {
                                 new HttpServerCodec(),
                                 new HttpObjectAggregator(1 << 20),
                                 new AccessGate(),
-                                // State and deck lists are JSON that repeats its field names, so they compress well,
-                                // which matters to a guest over the internet. Every browser asks for it by itself.
+                                // State and deck lists are JSON that repeats its field names, so compression matters to a guest over the internet
                                 new WebSocketServerCompressionHandler(),
                                 new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
                                         .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
@@ -182,11 +167,7 @@ public final class WebServer implements AutoCloseable {
 
     private static final Pattern PARENT = Pattern.compile("(^|[/\\\\:|])\\.\\.([/\\\\|]|$)");
 
-    /**
-     * Whether an image key stays inside Forge's image folders. Forge joins a key onto a folder as it is, and tries
-     * some with no extension at all, so a ".." in one reached any file on the machine; and Forge deletes a folder it
-     * finds where an image should be. A key like that is refused before Forge looks.
-     */
+    /** Refuses a key with ".." in it, because Forge joins a key onto a folder as it is and deletes a folder found where an image should be. */
     static boolean safeImageKey(final String key) {
         return !PARENT.matcher(key).find();
     }
@@ -235,8 +216,7 @@ public final class WebServer implements AutoCloseable {
         return f.isFile() ? f : null;
     }
 
-    /** As {@link #serveImage}: never wait on the download here, or the thread that serves every other
-     *  request waits with it. */
+    /** Never waits on the download, or the thread that serves every other request waits with it. */
     private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
         final String key = artKey(asked);
         final File cached = sleeveArtFile(key);
@@ -271,10 +251,7 @@ public final class WebServer implements AutoCloseable {
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    /**
-     * A missing image is downloaded as on desktop, and the request answered when it lands. small asks for the card at
-     * the size the board draws it, which is shrunk here rather than in the browser.
-     */
+    /** A missing image is downloaded and the request answered when it lands, and small asks for the card at the size the board draws it. */
     private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
         final File file = cardImage(key);
         if (file != null) {
@@ -415,11 +392,7 @@ public final class WebServer implements AutoCloseable {
         respond(ctx, status, body, type, cookieToken, cacheControl, null);
     }
 
-    /**
-     * A board can hold forty pictures, so each one closing its connection costs forty handshakes and each one
-     * saying "do not keep this" costs the whole board again on the next load. Both are answered here: the
-     * connection is held open when the browser asked for that, and what may be kept says for how long.
-     */
+    /** Holds the connection open when the browser asked, because a board of forty pictures would otherwise cost forty handshakes. */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
@@ -483,10 +456,7 @@ public final class WebServer implements AutoCloseable {
         return "application/octet-stream";
     }
 
-    /**
-     * The player's own sound set and music, resolved the way the desktop client resolves them. A playlist is answered
-     * with a redirect to one of its tracks by name, so the shuffle stays here while each track is downloaded only once.
-     */
+    /** A playlist is answered with a redirect to one of its tracks by name, so the shuffle stays here and each track downloads once. */
     private void serveAudio(final ChannelHandlerContext ctx, final boolean sound, final String name, final String track,
             final String range) throws IOException {
         if (sound) {
@@ -514,15 +484,7 @@ public final class WebServer implements AutoCloseable {
         return name != null && !name.isEmpty() && !name.contains("/") && !name.contains("\\") && !name.contains("..");
     }
 
-    /**
-     * A browser asks for audio in byte ranges. Answered only in whole files, it cannot seek or reuse its cache, so it
-     * downloads a track or sound again each time it plays it.
-     *
-     * A media player asks for the rest of a track from where it is ("bytes=0-"), and often lets the answer go: as it
-     * probes a file before playing it, and whenever the player reloads or moves to another screen and so another
-     * track. The rest of a track is several megabytes, so a range is answered a slice at a time; what the browser lets
-     * go costs at most a slice, and it asks for the next one as it plays. Only the slice is read from disk.
-     */
+    /** Answers a range a slice at a time, because a media player asks for the rest of a track and often lets the answer go. */
     private void respondAudio(final ChannelHandlerContext ctx, final File file, final String range, final String cacheControl)
             throws IOException {
         if (file == null || !file.isFile()) {

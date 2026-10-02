@@ -47,10 +47,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * The decks a seat may choose from, and what the browser shows about each one: your own, the preconstructed ones,
- * quest opponents, generated decks and downloaded net decks, for each format the lobby offers.
- */
+/** The decks a seat may choose from, and what the browser shows about each one. */
 final class DeckCatalog {
     /** Where a deck came from, which the browser tags each row with. */
     static final String MINE = "yours";
@@ -95,11 +92,7 @@ final class DeckCatalog {
     private record Facts(String colors, int played, int sideboard, List<String> legalIn, String formats, int averageMana) {
     }
 
-    /**
-     * Each deck's facts and its verdict at each table, kept between rebuilds: working out a deck's formats reads every
-     * printing of its cards, and the list is rebuilt whenever the table changes. A saved deck is replaced in storage
-     * rather than changed, so a deck's entries hold for as long as it does. Keyed by the deck itself, not its contents.
-     */
+    /** Kept per deck object, not per contents, because working out a deck's formats reads every printing of its cards. */
     private static final Map<Deck, Facts> FACTS = new MapMaker().weakKeys().makeMap();
     private static final Map<Deck, Map<String, Optional<String>>> VERDICTS = new MapMaker().weakKeys().makeMap();
     /** A Commander deck's bracket, kept the same way; worked out only for decks listed in Commander. */
@@ -187,12 +180,7 @@ final class DeckCatalog {
     /** Categories the browser has asked for and core has downloaded, kept so a refresh does not lose them. */
     private final List<NetDeckCategory> netCategories = new ArrayList<>();
 
-    /**
-     * Held while anything reads or changes a deck. Every browser's catalogue reads the same decks from Forge's deck
-     * storage, and a deck loads its sections the first time it is read, which is not safe from two threads at once:
-     * two browsers opening match setup together could each find a deck half loaded. Match setup reads decks too,
-     * so it takes the same lock.
-     */
+    /** Held while anything reads or changes a deck, because a deck loads its sections on first read, which is not safe from two threads. */
     static final Object DECKS = new Object();
 
     /** Asks core for a net deck category. Core picks one through the browser and downloads it. */
@@ -216,13 +204,7 @@ final class DeckCatalog {
     /** Whether the browser this catalogue serves is a guest's, whose own decks are those on its device. */
     private boolean guest;
 
-    /**
-     * Rebuilds the catalogue for a format and card pool, and returns every deck in it. A guest's list adds the decks its
-     * browser keeps; the host's adds the decks it has loaded from links.
-     *
-     * At a Limited table the decks are event pools: the host's event decks and a guest's own, only those of
-     * event when it is not null, as desktop's event-decks switch filters them.
-     */
+    /** Rebuilds the catalogue and returns its decks, which at a Limited table are event pools, only those of event when it is not null. */
     List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device,
             final String event) {
         synchronized (DECKS) {
@@ -305,10 +287,7 @@ final class DeckCatalog {
         }
     }
 
-    /**
-     * Registers a deck under the key the finder gives it, replacing the cached copy. The editor and the importer save a
-     * new deck object each time, and a seat must be given that one rather than the one loaded when the list was built.
-     */
+    /** Replaces the cached copy, because each save makes a new deck object and a seat must be given that one. */
     String adopt(final String tag, final String path, final Deck deck) {
         final String key = DEVICE.equals(tag) ? DEVICE + ":" + path : tag + ":" + path + "/" + deck.getName();
         synchronized (DECKS) {
@@ -367,10 +346,7 @@ final class DeckCatalog {
         }
     }
 
-    /**
-     * The keys of the listed decks holding a card whose name contains the words (kind "card", outside the sideboard, or
-     * "sideboard"), or a card printed in a set given by code or name (kind "set"). Generators have no cards to search.
-     */
+    /** The keys of listed decks holding a matching card, where kind is "card" (outside the sideboard), "sideboard" or "set" (a code or name). */
     List<String> matching(final String kind, final String value) {
         final String words = value.trim().toLowerCase();
         final CardEdition set = "set".equals(kind) ? edition(value.trim()) : null;
@@ -445,10 +421,7 @@ final class DeckCatalog {
                 types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList());
     }
 
-    /**
-     * Sources that build a deck when you pick one. They are listed by name only: there is nothing to measure, and
-     * asking each for a deck just to fill a row would build hundreds of them.
-     */
+    /** Generators are listed by name only, because asking each for a deck to fill a row would build hundreds of them. */
     private void addGenerators(final List<DeckSummary> out) {
         // The tokens the colour generator expects, shown under friendlier names
         final Map<String, String> colours = new LinkedHashMap<>();
@@ -500,8 +473,7 @@ final class DeckCatalog {
             byKey.put(key, new Entry(proxy));
             final Deck deck = proxy.getDeck();
             final Facts facts = factsOf(deck, proxy);
-            // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there.
-            // Its formats are the same wording the desktop chooser puts in its format column.
+            // An illegal deck is shown and marked rather than hidden, so nobody hunts for a deck that is there
             final boolean linked = LINKED.equals(tag);
             out.add(new DeckSummary(key, proxy.getName(), tag, facts.colors(), null, null, facts.played(),
                     facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), facts.formats(),
@@ -748,10 +720,7 @@ final class DeckCatalog {
         prefs.save();
     }
 
-    /**
-     * Card names matching what has been typed, for the card-art sleeve picker. Ranked as desktop's ListChooser and the
-     * browser's lists rank: names starting with the text first, shortest first, then names containing it.
-     */
+    /** Names starting with the text come first, shortest first, then names containing it. */
     static List<String> searchCardNames(final String query, final int limit) {
         final String text = CardCatalog.normalize(query == null ? "" : query);
         if (text.isEmpty()) {

@@ -1,5 +1,4 @@
-// The match screen as a whole: lays out every player's area, the hand, the stack and the side panels, and redraws
-// them from the model each frame. The pieces are drawn by their own modules; this decides where each one goes.
+// Lays out the whole match screen and redraws it from the model, leaving each piece to its own module
 
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
@@ -81,10 +80,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   animateCardMoves(model, events);
 }
 
-/**
- * The players across the table, in the order they sit: turn order, going round from you. The order is taken once,
- * when the game is first drawn, so a card that reverses the turn order does not move anyone.
- */
+/** Seat order, taken once when the game is first drawn so a card that reverses the turn order does not move anyone. */
 let seating: number[] | null = null;
 
 function seated(model: Model): PlayerView[] {
@@ -101,10 +97,7 @@ function seated(model: Model): PlayerView[] {
   return seating.map(k => byKey.get(k)).filter((p): p is PlayerView => !!p && !isLocal(model, p));
 }
 
-/**
- * One opponent fills the top half as a seat of its own. Two or three share it as columns, or with you as four
- * quarters of the table, as the player chooses; each is then a compact seat, its details in a row above its cards.
- */
+/** One opponent takes the top half as a full seat, and two or three share it as compact seats in columns or quarters. */
 function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], actions: Actions, select: CardClick): void {
   const across = seated(model);
   const many = across.length > 1;
@@ -270,10 +263,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   renderBattlefield(root, model, zone(model, player, 'Battlefield'), onField, select);
 }
 
-/**
- * Commander damage on the portrait: an arc round it that fills towards 21 with the most any one commander has dealt
- * this player, and that number on a chip. Both burn from 15. The breakdown by commander is in the portrait's hover.
- */
+/** The arc and chip on the portrait show the most damage any one commander has dealt this player, not the total. */
 function showCommanderDamage(avatar: HTMLElement, model: Model, player: PlayerView): void {
   const hits = (player.CommanderDamage ?? []).filter(h => h.value > 0);
   const top = hits.reduce((best, h) => (h.value > best.value ? h : best), { card: { ref: -1 }, value: 0 });
@@ -293,8 +283,7 @@ function showCommanderDamage(avatar: HTMLElement, model: Model, player: PlayerVi
   chip.title = t('lblWebBoardCommanderDamageFrom', top.value, COMMANDER_LETHAL, name);
 }
 
-// Mana in the pool is spent or lost when the step ends, so it is shown apart from everything that stays, under its
-// own label. Clicking your own pays with that colour, as on desktop.
+// Mana in the pool is lost when the step ends, so it is shown apart from everything that stays
 function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, actions: Actions): void {
   const pool = MANA.filter(([bit]) => player.Mana?.[bit]);
   root.hidden = pool.length === 0;
@@ -323,8 +312,7 @@ const MANA_NAMES: Record<string, TextKey> = {
   G: 'lblWebBoardManaGreen', C: 'lblWebBoardManaColourless',
 };
 
-// A hand is cards held, not a pile, so it is drawn as a few backs fanned beside the portrait with the count, and opens
-// in a window when clicked: every player's, your own included, though yours is also laid out along the bottom.
+// A hand is drawn as a few fanned backs with its count, and opens in a window when clicked, your own included
 function renderHandFan(el: HTMLElement, model: Model, player: PlayerView): void {
   const count = zone(model, player, 'Hand').length;
   el.hidden = false;
@@ -417,11 +405,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
     });
 }
 
-/**
- * The Command tile holds what is cast from the command zone: commanders, and an oathbreaker's signature spell. It
- * shows the first of them, and its badge carries the tax where the other tiles carry a count, or how many are
- * there when partners share it.
- */
+/** The Command tile's badge carries the commander's tax, or how many cards are there when partners share it. */
 function updateCommandTile(el: HTMLElement, model: Model, player: PlayerView): void {
   const cards = castFromCommand(model, zone(model, player, 'Command'));
   const top = cards[0];
@@ -449,14 +433,10 @@ function castFromCommand(model: Model, cards: CardView[]): CardView[] {
   return cards.filter(c => ['commander', 'signature'].includes(commandKind(c, stateOf(model, c))));
 }
 
-// Whose turn it is, said once as the turn begins. The game's first turn says who goes first. A table first seen
-// part way through a game (a reload) says nothing until the turn changes.
+// The turn last announced, null on a new table so one first seen part way through says nothing until the turn changes
 let announced: string | null = null;
 
-/**
- * A new table: its first turn is announced afresh, even when the same player starts it as last game, and its
- * losses and its ending start over.
- */
+/** Clears what is kept per game, so a new table announces its first turn even when the same player starts it. */
 export function resetTable(): void {
   announced = null;
   resetMotion();
@@ -482,11 +462,7 @@ let firstPlayer: number | null = null;
 /** This viewer was asked who starts, having won the toss or lost the last game. */
 let choseStarter = false;
 
-/**
- * Having won the toss or lost the last game, you choose who starts from the same faces the reveal shows. Two
- * players are asked to play or draw, so your own face plays and the other draws; with more, a face is the player
- * chosen. Having chosen, you are not told again who starts.
- */
+/** Two players are asked to play or draw, so your own face answers OK and the other cancels, while with more a face picks that player. */
 function chooseFirst(model: Model, actions: Actions, choice: string): void {
   const mine = me(model)?.$key;
   const two = players(model).length === 2;
@@ -498,11 +474,7 @@ function chooseFirst(model: Model, actions: Actions, choice: string): void {
   });
 }
 
-/**
- * Who goes first, said over the board as the opening hands are dealt: every player's face, then the one who
- * starts lit in brass and the rest stepping back. The prompt says it too, but a sentence above a hand is easy to
- * read past. With pick, it asks instead: the faces are buttons and it stays until one is chosen.
- */
+/** Shows who goes first over the board, or with pick asks it: the faces are buttons and it stays until one is chosen. */
 function revealFirst(model: Model, first: number | null, said?: string, pick?: (key: number) => void): void {
   const everyone = players(model);
   const starter = everyone.find(p => p.$key === first);
@@ -541,10 +513,7 @@ function revealFirst(model: Model, first: number | null, said?: string, pick?: (
   });
 }
 
-/**
- * Announces the turn a state message starts before the message is shown, so nothing the turn does (an untap, a
- * draw) happens under the banner. Returns whether a banner went up; `then` runs once it has gone.
- */
+/** Announces the turn a state message starts before it is shown, and runs `then` only if a banner went up, as it leaves. */
 export function announceComing(model: Model, msg: StateMessage, then: () => void): boolean {
   const g = game(model);
   const delta = msg.deltas[model.root] as { Turn?: number; PlayerTurn?: Ref } | undefined;
@@ -554,8 +523,7 @@ export function announceComing(model: Model, msg: StateMessage, then: () => void
   return announce(model, delta.Turn ?? g.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
 }
 
-// Every turn after the first seen is announced as its message arrives; drawing the board only catches the turn a
-// table was first drawn in, as the board it held behind a banner is still the last turn's
+// Only catches the turn a table was first drawn in, as every later turn is announced when its message arrives
 function announceTurn(model: Model, g: GameView): void {
   if (announced === null) announce(model, g.Turn, deref(model, g.PlayerTurn), () => {});
 }
@@ -581,8 +549,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   const banner = document.createElement('div');
   banner.className = `turn-banner${mine ? ' mine' : ''}`;
   banner.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
-  // The banner takes the pill's place for as long as it shows, rather than covering it. The pill animates
-  // its own width, so anything sized to cover it is measuring a number that is about to change.
+  // The banner takes the pill's place instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
   strip.append(banner);
   strip.classList.add('announcing');
@@ -591,8 +558,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   setTimeout(() => strip.classList.remove('announcing'), sweep * 0.84);
   // The turn goes on just before the banner has quite gone
   setTimeout(then, Math.max(0, sweep - TURN_OVERLAP_MS));
-  // The light that travels across the plate is an animation on the banner's own ::after, and its end reaches
-  // the banner too, so the sweep has to be named or the banner leaves less than half way through
+  // The end of the ::after light's animation reaches the banner too, so the sweep is named or the banner leaves early
   banner.addEventListener('animationend', e => {
     if (e.animationName === 'turn-sweep') banner.remove();
   });
@@ -644,11 +610,6 @@ function takeHit(amount: number): void {
   flash.addEventListener('animationend', () => flash.remove());
 }
 
-/**
- * What a commander costs beyond its printed cost: two generic for each time it has already been cast from here.
- * The word goes on the badge because a bare "+6" on a card reads as a counter or a pump long before it reads as
- * a tax, and this is a number a player meets only a few times in a game.
- */
 const STAR_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1l1.9 4.2 4.6.5-3.4 3.1 1 4.5L8 11l-4.1 2.3 1-4.5L1.5 5.7l4.6-.5z"/></svg>';
 const HOURGLASS_ICON = '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M3 1h10v2l-3.6 5L13 13v2H3v-2l3.6-5L3 3zm2 2l3 4 3-4z"/></svg>';
 
@@ -660,8 +621,7 @@ function effectKind(state: Partial<CardStateView>): { label: string; lasting: bo
   return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
 }
 
-// The rest of the command zone: the monarch, the initiative and emblems as art plaques, and avatars as cards.
-// Commanders and signature spells have the Command tile among the zones.
+// The command zone apart from commanders and signature spells, which have the Command tile among the zones
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
   // Planes, schemes and the planar die have places of their own; the rest stay beside the portrait
@@ -739,11 +699,7 @@ let broken: Set<number> | null = null;
 let titleReady = true;
 let finalRunning = false;
 
-/**
- * A player who has just lost has their portrait broken. When that ends the game it breaks in the middle of the
- * board and the title follows it; in a game of three or more that carries on, it breaks where they sit. A table
- * first seen part way through (a reload) takes the losses it already had as broken.
- */
+/** Breaks the portrait of each player who has just lost, taking the losses a table already had when first seen as broken. */
 function noticeLosses(model: Model, actions: Actions): void {
   const lost = players(model).filter(p => p.HasLost);
   if (!broken) {
@@ -753,8 +709,7 @@ function noticeLosses(model: Model, actions: Actions): void {
   const fresh = lost.filter(p => !broken!.has(p.$key));
   if (!fresh.length) return;
   fresh.forEach(p => broken!.add(p.$key));
-  // The loss and the end of the game can arrive a message apart, so the title waits and the ending is decided a
-  // moment later
+  // The loss and the end of the game can arrive a message apart, so the ending is decided a moment later
   titleReady = false;
   window.setTimeout(() => breakPortraits(model, fresh, actions), 120);
 }
@@ -796,10 +751,7 @@ function breakPortraits(model: Model, losers: PlayerView[], actions: Actions): v
   if (!final) release();
 }
 
-/**
- * The middle of the window, where a portrait breaks at the end of the game: the result is drawn there, over the whole
- * page, so the portrait lands where the winner's face then shows rather than off to one side of the log.
- */
+/** The middle of the window, not of the board, so a breaking portrait lands where the result then shows the winner's face. */
 function pageCentre(): { x: number; y: number } {
   return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 }
@@ -822,10 +774,7 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
   }
 }
 
-/**
- * The end of a game: the board recedes, and once the losing portrait has broken the result is said over it.
- * Drawn once per ending, so what fades in does so once.
- */
+/** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
 function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   const show = model.gameOver && titleReady;
@@ -908,8 +857,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     b.onclick = onClick;
     buttons.append(b);
   };
-  // A conquest battle ends as mobile's does: a win is acknowledged, a lost event can be fought again, and a chaos
-  // battle goes on to its next game
+  // A conquest battle ends as mobile's does: a win is acknowledged, and a lost event can be fought again but a chaos battle cannot
   if (conquest) {
     if (!conquest.matchOver) {
       add(t('btnContinue'), true, () => actions.nextGame());

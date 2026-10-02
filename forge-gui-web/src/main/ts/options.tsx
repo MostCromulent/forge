@@ -8,8 +8,7 @@ import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type 
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
 
-// Labels rank as every search box ranks names. A setting found only through its section or its hint comes after those.
-// Each section stays together and in its usual place, so its heading is drawn once.
+// A setting found only through its section or its hint ranks after label matches, and each section stays together in its usual place
 function matching(defs: SettingDef[], typed: string): SettingDef[] {
   const text = normalize(typed);
   if (!text) return defs;
@@ -56,10 +55,7 @@ function SectionHeading({ name, keys }: { name: string; keys: boolean }) {
 
 export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
 
-/**
- * The frame the options dialog and the game menu's dialogs share: a title with a close button, the rows, and a footer.
- * head takes the header's free space, which is otherwise left empty; label names the dialog when the title is a phrase.
- */
+/** The frame the options dialog and the game menu's dialogs share, where label names the dialog when the title is a phrase. */
 export function OptionsDialog({ title, label, kind, head, footer, close, children }: {
   title: string; label?: string; kind?: string; head?: ComponentChildren; footer: ComponentChildren; close: () => void;
   children: ComponentChildren;
@@ -79,10 +75,7 @@ export function OptionsDialog({ title, label, kind, head, footer, close, childre
   );
 }
 
-/**
- * One setting: what it is on the left, its control filling the column on the right. onChange runs after the setting
- * is changed, for a dialog that must follow it. The CSS editor is too big for the column, so it opens under the row.
- */
+/** onChange runs after the setting is changed, for a dialog that must follow it. */
 export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
@@ -99,10 +92,7 @@ export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void 
   );
 }
 
-/**
- * On and off as a pair of segments, drawn as every other choice is, so each control in a list reads the same way.
- * Off is marked in grey rather than gold, so a glance down the list finds what is switched on.
- */
+/** Off is marked in grey rather than gold, so a glance down the list finds what is switched on. */
 export function OnOff({ on, change }: { on: boolean; change: (on: boolean) => void }) {
   return (
     <div class="choice" role="radiogroup">

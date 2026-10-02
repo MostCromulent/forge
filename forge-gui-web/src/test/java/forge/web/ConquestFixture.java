@@ -51,10 +51,7 @@ final class ConquestFixture {
         return data;
     }
 
-    /**
-     * A conquest saved earlier, copied into the profile under a name of its own: Zendikar, its first event won once,
-     * one booster opened, 3000 shards, 1 emblem, 42 cards, and A-Phylath, World Sculptor leading a 40-card deck.
-     */
+    /** Copies a saved conquest into the profile under a new name: Zendikar, first event won, 3000 shards, 1 emblem, 42 cards, a 40-card deck. */
     static ConquestData install() throws IOException, URISyntaxException {
         if (currentBefore == null) {
             currentBefore = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);

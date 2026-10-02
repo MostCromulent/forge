@@ -1,6 +1,4 @@
-// This is what paces the game. When it is about to pass priority for you and something has happened you have not
-// seen, the pass button fills for a moment first: the game waits on it, so what the computer just did stays on the
-// board to be read, and you can stop the pass to act instead. The server decides when a pass is worth showing.
+// Paces the game: before an automatic pass the button fills for a moment, so the player can read the board or stop the pass
 
 import { setting } from './settings';
 import type { AutoPassRequest } from './protocol';
@@ -24,8 +22,7 @@ export function initAutoPass(reply: (id: number, go: boolean) => void, redraw: (
 
 export const countdown = (): Countdown | null => current;
 
-/** Starts filling the button. Every pass fills for the same length, whatever pause the server suggests, so the
- *  game keeps one pace rather than a different one per kind of pass. */
+/** Starts filling the button, always for the same length whatever pause the server suggests, so the game keeps one pace. */
 export function startCountdown(req: AutoPassRequest): void {
   clearTimeout(timer);
   const ms = Number(setting('autoPassDelay'));

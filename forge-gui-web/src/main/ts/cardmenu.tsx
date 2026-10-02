@@ -1,5 +1,4 @@
-// A card's menu in the editor, opened by right-click or, on touch, by holding a finger on the card. It holds every
-// route a drag offers, in words, so nothing depends on dragging; and it opens the printing picker.
+// A card's menu in the editor, which holds every route a drag offers, in words, so nothing depends on dragging
 
 import { useEffect } from 'preact/hooks';
 import { imageUrl } from './images';
@@ -119,10 +118,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
   );
 }
 
-/**
- * Which printing each copy of a card is. Steppers move copies between printings, so the total never changes; every
- * step is saved as it is made, which is why there is no Cancel. A printing outside the card pool is shown greyed.
- */
+/** Steppers move copies between printings so the total never changes, and each step is saved as it is made, so there is no Cancel. */
 export function PrintingPicker({ name, zone, model, state, actions, close }: {
   name: string; zone: DeckSection; model: Model; state: EditorState; actions: Actions; close: () => void;
 }) {

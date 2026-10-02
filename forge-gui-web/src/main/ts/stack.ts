@@ -11,18 +11,14 @@ import type { Actions } from './actions';
 import { t } from './text';
 import type { CardView, GameEvent, StackItemView, YieldAction } from './protocol';
 
-// The stack as a panel on the board's right edge: what resolves next is the card at the top, and the rest
-// cascade down behind it. Hovering an item lifts it and pushes its neighbours apart.
+// What resolves next is the card at the top of the pile, and the rest cascade down behind it
 const STEP_MAX = 42;
 const STEP_MIN = 14;
 const PUSH_Y = 26;
 
 let actions: Actions | null = null;
 
-/**
- * Spells being cast, by card key. The game puts the card on the stack before its cost is paid but makes its item only
- * once it is, and the card is not in the browser's copy of the game in between, so its picture is taken from where it was cast from.
- */
+/** Spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. */
 const awaiting = new Map<string, { src: string; zoom: string; since: number }>();
 /** How long a spell may go on awaiting once its caster has priority again; past this its item is not coming. */
 const SETTLE_MS = 900;
@@ -45,8 +41,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     window.addEventListener('resize', () => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
-  // Spells arrive by flying in, from their card or from their waiting slot; anything else, an ability or a trigger,
-  // has no card move and grows into place instead
+  // Spells arrive by flying in, and anything else, an ability or a trigger, has no card move and grows into place instead
   const flown = new Set([...awaiting.keys(), ...[...journeys(events)].filter(([, m]) => m.to?.zone === 'Stack').map(([k]) => k)]);
   noteAwaiting(model, items, events);
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
@@ -89,10 +84,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
 /** The panel fading out as its last item leaves, so a render meanwhile does not bring it back or hide it at once. */
 let closing: Animation | null = null;
 
-/**
- * Shows or hides the panel with a fade rather than at once. Opacity only: a spell flying to its waiting slot is aimed at
- * where the slot stands, which a scale or a slide would move.
- */
+/** Fades the panel in or out by opacity only, because a scale or slide would move the slot a flying spell is aimed at. */
 function showPanel(root: HTMLElement, shown: boolean): void {
   const reduced = document.documentElement.dataset.motion === 'reduced';
   if (shown) {
@@ -121,10 +113,7 @@ function showPanel(root: HTMLElement, shown: boolean): void {
 
 const PANEL_FADE_MS = 150;
 
-/**
- * How many spells have been cast this turn, once there are any: under the stack while something is on it, where a
- * storm spell will resolve, and otherwise beside the foot of the prompt.
- */
+/** The count of spells cast this turn, shown under the stack while something is on it and otherwise beside the foot of the prompt. */
 function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void {
   let chip = document.getElementById('storm');
   if (!chip) {
@@ -273,8 +262,7 @@ function layout(pile: HTMLElement, n: number): void {
 /** What the menu open on the page was drawn for, so it is rebuilt only when that changes. */
 let menuDrawn = '';
 
-// The server answers a right-click with what applies to that item and the current settings; the menu opens where
-// the click was once that answer is in
+// The server answers a right-click with what applies to that item, and the menu opens once that answer is in
 function renderMenu(model: Model): void {
   const at = ui.stackMenuAt;
   const answer = model.stackMenu;

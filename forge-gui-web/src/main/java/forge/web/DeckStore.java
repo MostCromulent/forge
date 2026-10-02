@@ -32,10 +32,7 @@ final class DeckStore {
         };
     }
 
-    /**
-     * The format whose decks a deck is listed with: each commander format has its own, limited decks are Draft's, and
-     * everything else is Constructed's. Limited decks are stored as their pools are, not in a folder of their own.
-     */
+    /** The format whose decks a deck is listed with, where limited decks are Draft's and are stored as their pools are. */
     static GameType family(final GameType format) {
         return switch (format) {
             case Commander, Oathbreaker, Brawl, TinyLeaders -> format;
@@ -91,10 +88,7 @@ final class DeckStore {
         return null;
     }
 
-    /**
-     * The wanted name, or "wanted (2)", "wanted (3)" and so on, whichever saves to a file no other deck uses. mine is the
-     * name the caller already saves under, which it may keep; null when it saves nothing yet.
-     */
+    /** The wanted name, or "wanted (2)" and so on, whichever saves to a file that no deck other than mine uses. */
     static String freeName(final IStorage<Deck> storage, final String wanted, final String mine) {
         return freeName(storage.getItemNames(), wanted, mine);
     }

@@ -1,7 +1,4 @@
-// Dragging a card between the catalogue and the deck's sections. Pointer events rather than the browser's own drag and
-// drop, so the card the pointer carries can say what releasing it will do, and every section can show before the
-// release whether it takes the card. A drag is one route among several: every result is also on a button or the card
-// menu. On touch a press opens the card menu instead, since a drag there is a scroll.
+// Dragging a card between the catalogue and the deck, on pointer events so the carried card can say what releasing it will do
 
 import { copyLimit, countsInDeck } from './catalogue';
 import { imageUrl } from './images';
@@ -69,11 +66,7 @@ export function verdictFor(carried: Carried, zone: Zone, state: EditorState, com
   return { zone, accepts: true, verb: t(ADD[zone], n) };
 }
 
-/**
- * Starts watching a press that may become a drag. Nothing happens until the pointer moves a few pixels, so a click
- * stays a click. While dragging, every [data-zone] element is marked with whether it takes the card, and the one under
- * the pointer shows the result; drop receives the verdict of the zone released over, or nothing.
- */
+/** Watches a press that becomes a drag only after the pointer moves a few pixels, then gives drop the accepting zone's verdict. */
 export function startDrag(e: PointerEvent, carried: Carried, image: string, judge: (zone: Zone) => Verdict,
   drop: (v: Verdict) => void): void {
   if (e.button !== 0 || e.pointerType === 'touch') {

@@ -1,7 +1,4 @@
-// Everything outside the board is drawn with Preact: the start page, match setup and its pickers, the options,
-// the game's questions and the chat. Each is a function of the model and the table's arrangement, drawn again on
-// every frame the controller renders, and each acts only through Actions. The board is drawn by hand (board.ts),
-// because it is placed by measuring and animated card by card.
+// Everything outside the board is drawn with Preact, and the board by hand (board.ts) because it is placed by measuring
 
 import { render } from 'preact';
 import { Menu, NamePrompt, rememberedName } from './menu';

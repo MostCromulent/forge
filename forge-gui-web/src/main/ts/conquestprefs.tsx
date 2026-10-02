@@ -1,5 +1,4 @@
-// Conquest's preferences: mobile's twenty numbers in its four groups. Each is saved as it is changed, since the
-// server checks one against the others as they stand, and every conquest shares them.
+// Conquest's preferences, each saved as it is changed, since the server checks one against the others as they stand
 
 import { useEffect, useState } from 'preact/hooks';
 import type { Actions } from './actions';

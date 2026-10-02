@@ -1,7 +1,4 @@
-// One filter bar for the deck finder and the deck editor's catalogue. What almost everyone uses stays in the bar; every
-// other kind of filter is added from + Filter, a menu in groups with a box to find one by name, and each in use shows as
-// a chip saying what it does, reopened by a click and removed with its ×. A chip the table or the deck sets is gold and
-// says where it comes from.
+// One filter bar for the deck finder and the editor's catalogue, where a chip the table or the deck sets is gold and says its source
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';

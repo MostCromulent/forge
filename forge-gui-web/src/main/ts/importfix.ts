@@ -1,6 +1,4 @@
-// The importer's fixes, which edit the pasted text itself rather than the deck it makes, so the text always says what
-// will be imported and can be copied out as it stands. Lines are never deleted: a fix keeps every line where it was,
-// so the line numbers the problems name stay right.
+// The importer's fixes edit the pasted text itself, and most keep every line where it was so the problems' line numbers stay right
 
 // A card line: an optional count, the name, then anything a site adds after it (a set code, a number, a foil mark)
 const CARD_LINE = /^(\s*(?:\d+x?\s+)?)(.+?)(\s*(?:[[(].*|\*F\*.*)?)$/;

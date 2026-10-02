@@ -1,10 +1,4 @@
-// Match setup. Each seat is a plate anchored by its deck's sleeve. The sleeve stands for the deck, so it is
-// the largest thing on the plate and clicking it chooses the deck, empty or not. Which sleeve to wear is a
-// property of a deck you already have, so it hangs off a small button in the corner of a filled one.
-// Seats are added, never presented as empty slots waiting to be filled.
-//
-// A seat's type is the one a netplay lobby slot carries. The browser reaches the game through a client even
-// when it hosts it, so your own seat arrives as REMOTE and is recognised by its "mine" flag, not its type.
+// The browser reaches the game through a client even when it hosts, so your own seat arrives as REMOTE and is known by its "mine" flag
 
 import { useEffect, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from './ui';
@@ -37,10 +31,9 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const close = () => changeUi(u => { u.picker = null; });
   const lim = lobby.limited;
   const leaving = preview === null ? new Set<number>() : seatsLeaving(lobby, preview);
-  // The table is the last step of setting up: how you are playing, and what. The host steps back by leaving the table,
-  // to the start page or to its kinds of game; a guest joined the host's choices and has no steps of its own to go to
   // A guest only ever reaches a table by a link, so its table is always one with friends
   const way = lobby.shareable || !lobby.host ? 'friends' : 'play';
+  // The host steps back by leaving the table, and a guest has no earlier steps of its own to go back to
   const back = (to: 'play' | 'friends' | null) => lobby.host ? () => {
     changeUi(u => { u.menuChoice = to; });
     actions.leaveLobby();
@@ -54,8 +47,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}
           title={t(lobby.host ? 'lblWebLobbySetUpGame' : lim?.activeEventId ? 'lblWebLobbyBuildThenPlay'
             : lim?.started ? (lim.kind === 'draft' ? 'lblWebLobbyDraftOn' : 'lblWebLobbyOpeningPacks') : 'lblWebLobbyHostSettingUp')} />
-        {/* A Draft or Sealed table is its event, which carries the mode and players itself; a new kind of event is set up
-            afresh, so its dialog opens again */}
+        {/* A new kind of event is set up afresh, so the key makes its dialog open again */}
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => actions.startMatch(ui.spectate)} />
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
@@ -244,11 +236,9 @@ function ExtraRow({ name, counted = true, extra, mayEdit, open }: {
   );
 }
 
-// A seat nobody holds has no name of its own, and its kind beside it would only say the same thing twice.
-// Your own name, and the computer's at a table you host, is edited in place and saved when you leave it.
+// Your own name, and the computer's at a table you host, is edited in place and saved when you leave it
 function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void }) {
-  // Typing edits the page, not what Preact drew, so each edit ends by drawing the field afresh: it then shows
-  // the name as the server has it, the new one if the server takes it and this one if not
+  // Typing edits the page, not what Preact drew, so each edit ends by drawing the field afresh with the name the server has
   const [edits, setEdits] = useState(0);
   const name = seat.name || kindName(seat.type);
   if (!seat.mine && !(seat.mayEdit && seat.type === 'AI')) {

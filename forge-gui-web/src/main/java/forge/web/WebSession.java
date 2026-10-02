@@ -38,13 +38,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
-/**
- * One browser: its start page, its seat and its match. The host's session also owns shutting the process down.
- *
- * <p>Where the browser is lives in one {@link Stage}, and every move between stages goes through {@link #move}, which
- * closes whatever the stage being left held and tells the browser where it is now. A reconnecting browser is put
- * back by the same stage, so a reload and a first visit cannot disagree about what the page should show.</p>
- */
+/** One browser's session, whose place is held in one {@link Stage} that changes only through {@link #move}. */
 public final class WebSession {
     /** Where the browser is. Each stage holds what exists there and nothing else. */
     sealed interface Stage permits Menu, Opening, Setup, Event, Conquest, Playing { }
@@ -52,10 +46,7 @@ public final class WebSession {
     /** The start page; for a guest, waiting for the host to open a game. */
     record Menu() implements Stage { }
 
-    /**
-     * Taking a seat: the host opening a game of its own, or a guest joining the host's. The table is built while the
-     * browser waits, and nothing may change it until the seat is taken.
-     */
+    /** Taking a seat: the table is built while the browser waits, and nothing may change it until the seat is taken. */
     record Opening() implements Stage { }
 
     /** Match setup, at a seat whose GUI the match will be played through. Invited means others can join. */
@@ -150,11 +141,7 @@ public final class WebSession {
         return now instanceof Setup || now instanceof Event || now instanceof Conquest || now instanceof Playing;
     }
 
-    /**
-     * Moves from one stage to the next, if the browser is still where the caller found it: a guest's seat can
-     * vanish while it is being taken, and a match can end under a lobby being opened. Closes the GUI the old stage
-     * held unless the new one carries it on, and tells the browser where it now is.
-     */
+    /** Moves to the next stage only if the browser is still where the caller found it, closing the old GUI unless the new stage keeps it. */
     private synchronized boolean move(final Stage from, final Stage next) {
         if (stage != from) {
             return false;
@@ -184,10 +171,7 @@ public final class WebSession {
         }
     }
 
-    /**
-     * The name this session plays under. Every browser reaches Forge through the one set of preferences, so the
-     * saved player name is the host's: a host that has not chosen one plays under it, and nobody else ever does.
-     */
+    /** The saved player name is the host's, so only a host that has not chosen a name plays under it. */
     String playerName() {
         final String chosen = name;
         return chosen != null || !isHost ? chosen : FModel.getPreferences().getPref(FPref.PLAYER_NAME);
@@ -385,8 +369,7 @@ public final class WebSession {
                     ui.runBackgroundTask("Net decks", () -> lobby.loadNetDecks(channel));
                 }
             }
-            // The links are the host's to hand out. Finding the external address is a web request, so it cannot run on
-            // the socket thread.
+            // Finding the external address is a web request, so it cannot run on the socket thread
             case "addresses" -> {
                 if (isHost) {
                     ui.runBackgroundTask("Addresses", () -> channel.send(new Addresses(sessions.inviteUrls())));
@@ -410,8 +393,7 @@ public final class WebSession {
                         ui.runBackgroundTask("Catalogue", () -> channel.send(conquest.cards(q)));
                     }
                 } else if (!(stage instanceof Playing)) {
-                    // A pool's deck, saved with every edit, changes its row, which the opponents screen reads the deck
-                    // from; it goes first, since closing the editor lists every deck again before the page changes
+                    // The pools go first, since closing the editor lists every deck again before the page changes
                     if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
                         channel.send(OfflineEvents.pools());
                     }
@@ -574,8 +556,7 @@ public final class WebSession {
                     ui.invokeInEdtLater(this::quit);
                 }
             }
-            // A setting is the player's, whatever the browser is doing: set before a match, it is what the match is seeded
-            // with; during one, the game is told as well
+            // A setting changed before a match is what the match is seeded with, and during one the game is told as well
             case "setSetting", "setStops" -> {
                 if (stage instanceof Playing p) {
                     p.gui().onBrowserMessage(msg);
@@ -798,10 +779,7 @@ public final class WebSession {
         });
     }
 
-    /**
-     * Makes this table's online draft and hands it to the seat's client. Its events are handled on the client's
-     * dispatch executor, one at a time, as the match's are.
-     */
+    /** Makes this table's online draft, whose events are handled one at a time on the client's dispatch executor, as the match's are. */
     private void newOnlineDraft(final WebGuiGame gui) {
         seatReportedGone = false;
         toldDrafting = false;
@@ -855,10 +833,7 @@ public final class WebSession {
         tell(state);
     }
 
-    /**
-     * The event's pool arrived. The host keeps it among the event decks and sets the table to play them, as desktop's
-     * host does; a guest's is kept in its browser. Either way it opens in the limited editor.
-     */
+    /** Opens the event's pool in the limited editor: the host keeps it among the event decks, and a guest's is kept in its browser. */
     private void poolArrived(final String eventId, final Deck pool) {
         // A pool dealt as this seat leaves its table belongs to a table that is going, and nothing here shows it
         if (!(stage instanceof Setup)) {
@@ -900,10 +875,7 @@ public final class WebSession {
         }
     }
 
-    /**
-     * The browser has been gone a while. If this seat is drafting, the draft host is told its player left, as a closed
-     * connection tells desktop's, and holds or picks for the seat until the browser is back.
-     */
+    /** The browser has been gone a while, so a drafting seat's draft host is told its player left, as a closed connection tells desktop's. */
     void goneAWhile() {
         final OnlineDraft draft = onlineDraft;
         final ServerGameLobby table = sessions.hostLobby();
@@ -953,18 +925,13 @@ public final class WebSession {
     }
 
     private void chatted(final String from, final String text) {
-        // A player's line reaches every browser through the server's own chat, so only netplay's announcements
-        // of who came and went are worth passing on from the game
+        // A player's line reaches every browser through the server's own chat, so only netplay's own announcements are passed on
         if (from == null) {
             tell(new ChatLine(null, text, false));
         }
     }
 
-    /**
-     * Takes the name this browser asked for, unless another player already has it: two players of one name
-     * cannot share a netplay game, which tells its clients apart by name. A guest waiting for a name takes its
-     * seat as soon as it has one.
-     */
+    /** Takes the name this browser asked for unless it has a problem, and a guest waiting for a name then takes its seat. */
     private void rename(final BrowserChannel channel, final String wanted, final Integer face) {
         final String problem = nameProblem(wanted);
         if (problem != null) {
@@ -1117,8 +1084,7 @@ public final class WebSession {
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionOpeningPacks")));
             return;
         }
-        // A block whose booster the player chooses asks through the host's browser, and waits for the answer. The
-        // browser may have been reloaded by the time it is done, so results go to whichever is attached then.
+        // Opening can wait on a question to the player, so results go to whichever browser is attached when it is done
         ui.runBackgroundTask("Sealed", () -> {
             try {
                 final DeckGroup group;
@@ -1219,10 +1185,7 @@ public final class WebSession {
         });
     }
 
-    /**
-     * Plays a pool's deck as desktop's limited screens offer: against one of its opponents, several at once (a draft only),
-     * or every one in turn as a gauntlet. Leaving the match returns to the pool.
-     */
+    /** Plays a pool's deck against one of its opponents, several at once, or every one in turn as a gauntlet, and returns to the pool after. */
     private void playPool(final BrowserChannel channel, final PoolPlay play) {
         final Stage from = stage;
         final DeckGroup group = from instanceof Event e ? e.storage().get(play.name()) : null;

@@ -32,13 +32,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
-/**
- * What Forge asks of the program it runs in, answered for the web: where Forge's files are, how to open a link, how to
- * download images, which thread the interface runs on, and so on. The desktop and mobile clients each have one.
- *
- * <p>Forge expects its interface work to happen on one thread, as Swing's event thread does on desktop. Here a single
- * thread named "WebUI" plays that part, and code that Forge would run "on the interface" runs there.
- */
+/** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
 public final class WebGuiBase implements IGuiBase {
     private volatile Thread uiThread;
     private final ExecutorService ui = Executors.newSingleThreadExecutor(r -> {
@@ -72,8 +66,7 @@ public final class WebGuiBase implements IGuiBase {
         if (fromWorkingDirectory != null) {
             return fromWorkingDirectory;
         }
-        // A packaged JAR is often launched from its target directory or by double-clicking it. In that
-        // case user.dir is unrelated to the installation, so also look upward from the JAR/classes path.
+        // user.dir may be unrelated to where a packaged JAR is installed, so also look upward from the JAR or classes path
         try {
             final File codeSource = new File(WebGuiBase.class.getProtectionDomain().getCodeSource()
                     .getLocation().toURI());
@@ -228,12 +221,7 @@ public final class WebGuiBase implements IGuiBase {
     }
 
     @Override public HostedMatch hostMatch() { return new HostedMatch(); }
-    /**
-     * Unreachable rather than unimplemented. Its callers are the ones that start a match from the desktop menus —
-     * {@code HostedMatch.startMatch} and the gauntlet screens — and the web client reaches none of them: every match
-     * it plays is opened by {@link LocalGame} over netplay, and each browser's seat is given the {@link WebGuiGame}
-     * its own {@link WebSession} built. Throwing says so, rather than handing back a GUI no browser is attached to.
-     */
+    /** Unreachable, because every web match is opened by LocalGame over netplay and each seat's WebGuiGame is built by its WebSession. */
     @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("A web seat's GUI is built by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
 

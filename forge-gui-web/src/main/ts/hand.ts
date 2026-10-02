@@ -37,14 +37,7 @@ function handOrder(model: Model, cards: CardView[]): CardView[] {
   });
 }
 
-/**
- * Cards you may play from somewhere that is not your hand: flashback, escape, adventure, foretell, a land out of
- * the graveyard. The engine gathers them into its Flashback pseudo-zone and the view keeps it current, so they
- * only have to be laid out. They come before the hand and are ordered by the same rule, and they stay there
- * whether or not you can afford them — the playable outline is what says which are castable right now.
- *
- * Each one still reports the zone it is really in, which is what the desktop client labels them by.
- */
+/** Cards playable from outside the hand, which the engine gathers in its Flashback pseudo-zone, each with the zone it is really in. */
 function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number, ZoneType> {
   const found = new Map<number, ZoneType>();
   for (const card of zone(model, player, 'Flashback')) {

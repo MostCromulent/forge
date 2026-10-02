@@ -1,6 +1,4 @@
-// Every key the page answers, decided in one place from what is open. Layers are checked from the top of the screen
-// down and the first that wants a key takes it, so a key answers exactly one thing: Escape closing a menu can never
-// also pass priority, which is what happened when each part of the page listened for keys on its own.
+// Every key the page answers is decided here, top layer first, so a key answers exactly one thing
 
 import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';

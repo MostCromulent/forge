@@ -77,8 +77,7 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 /* A card drawn by the board's own code sits in a holder of its own, which takes no part in the layout */
 .card-host { display: contents; }
 
-/* Putting cards back on the library: a shelf for each end, with the rest of the library drawn between them so
-   "top" and "bottom" are two places rather than two lists that happen to be stacked. Sized to what is in it. */
+/* Putting cards back on the library: a shelf for each end, with the rest of the library drawn between them */
 .manipulate { display: grid; gap: 8px; }
 .manipulate .shelf { border-radius: 9px; border: 1px dashed var(--line-bright); background: var(--bg-deep); padding: 7px 9px; }
 .manipulate .shelf.top { border-style: solid; border-color: var(--accent-2); background: color-mix(in srgb, var(--accent-2) 7%, var(--bg-deep)); }
@@ -107,8 +106,7 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .card-menu-item:disabled:hover { background: none; }
 /* The game menu opens upward from the prompt's ⋯ button; conceding asks twice, and says so the second time */
 .game-menu { min-width: 240px; }
-/* Dev mode's cheats are many more than the menu's own items. The groups flow as newspaper columns, which balance their
-   heights rather than leaving each row as tall as its tallest group, and the menu scrolls if they still do not fit */
+/* Dev mode's many cheats flow as newspaper columns, which balance their heights, and the menu scrolls if they still do not fit */
 .game-menu { max-height: calc(100vh - 140px); overflow-y: auto; }
 .game-menu.dev { width: min(720px, calc(100vw - 16px)); max-width: none; }
 .dev-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1px 10px; }
@@ -116,8 +114,7 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .dev-group { display: grid; gap: 1px; break-inside: avoid; }
 .dev-group h5 { margin: 8px 10px 3px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 #options textarea.dev-state { width: 100%; box-sizing: border-box; font: 12px/1.4 ui-monospace, monospace; resize: vertical; }
-/* Conceding asks twice. The first click leaves an ordinary row; armed for the second, the row becomes a bar of red metal,
-   the brass button's bevel with a harder sheen, so the change reads by brightness as well as colour */
+/* Armed for the second click, the concede row becomes a bar of red metal, so the change reads by brightness as well as colour */
 .game-menu .concede.armed, .game-menu .concede.armed:hover { --red: #c9432f; justify-content: center; text-align: center;
   background: linear-gradient(180deg, color-mix(in srgb, var(--red) 45%, #fff) 0%, color-mix(in srgb, var(--red) 78%, #fff) 44%,
     var(--red) 50%, color-mix(in srgb, var(--red) 82%, #000) 53%, color-mix(in srgb, var(--red) 62%, #000) 100%);

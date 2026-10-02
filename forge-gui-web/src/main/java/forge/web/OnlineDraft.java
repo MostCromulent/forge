@@ -25,11 +25,7 @@ import java.util.function.IntPredicate;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-/**
- * One seat's view of a draft the host's lobby runs, built from the draft host's events as desktop's drafting screen
- * builds it. Events arrive on the network thread and are handled one at a time on the session's own executor, so the
- * browser is sent whole states in the order the draft made them. The browser's seat is drawn first, as offline.
- */
+/** One seat's view of a draft the host's lobby runs, with events handled one at a time so the browser gets whole states in order. */
 final class OnlineDraft implements IDraftEventHandler {
     private final Executor serial;
     private final Supplier<NetworkEventView> event;
@@ -53,10 +49,7 @@ final class OnlineDraft implements IDraftEventHandler {
     private boolean pendingSideboard;
     private volatile boolean pooled;
 
-    /**
-     * lobbySeat finds this seat in the pod before its first pack says it; held says whether a seat's player has gone;
-     * send reaches the draft host; onPool is handed the pool the event ends with.
-     */
+    /** lobbySeat finds this seat before its first pack says it, and held says whether a seat's player has gone. */
     OnlineDraft(final Executor serial, final Supplier<NetworkEventView> event, final IntSupplier lobbySeat, final IntPredicate held,
             final Consumer<NetEvent> send, final Consumer<DraftState> publish, final BiConsumer<String, Deck> onPool) {
         this.serial = serial;
@@ -163,10 +156,7 @@ final class OnlineDraft implements IDraftEventHandler {
         });
     }
 
-    /**
-     * The pool the event ends with, each card in the main deck or the sideboard as it was picked into. The host does not
-     * hear where a pick went, so its pool is sorted here by the picks this seat remembers; anything else is sideboard.
-     */
+    /** The host does not hear where a pick went, so its pool is sorted by the picks this seat remembers, and anything else is sideboard. */
     private Deck sorted(final Deck pool) {
         final Map<String, Integer> main = new HashMap<>();
         for (final DraftCard pick : picks) {

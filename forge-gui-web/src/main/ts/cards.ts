@@ -1,5 +1,4 @@
-// One card on the page: its image, counters, damage, tapped and selectable states. Every zone that shows a card
-// builds it here, so a card looks the same wherever it is.
+// One card on the page, built here by every zone that shows one, so a card looks the same wherever it is
 
 import { combatShown, commanderTax, deref, stateOf, type Model } from './model';
 import { hoverable } from './detail';
@@ -36,10 +35,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
 
 const has = (refs: Ref[] | undefined, key: number) => (refs ?? []).some(r => r.ref === key);
 
-/**
- * The colour a card without its image is framed in, as a printed card is: one colour, gold for several, and
- * colourless artifacts and lands in their own greys. The mask is MagicColor's, as in the player's Mana property.
- */
+/** The frame of a card drawn without its image, from a MagicColor mask: its one colour, M for several, and L or C for none. */
 export function frameColour(colours: number, type: string): string {
   const one = [[1, 'W'], [2, 'U'], [4, 'B'], [8, 'R'], [16, 'G']].filter(([bit]) => colours & (bit as number));
   if (one.length > 1) return 'M';
@@ -61,8 +57,7 @@ export function forgetPictures(): void {
 
 export function updateCard(el: HTMLElement, model: Model, card: CardView): void {
   const state = stateOf(model, card);
-  // A card held face down in exile under a permanent shows its owner's sleeve, as it lies, though one its owner may
-  // look at still shows its face in the zoom
+  // A card held face down in exile under a permanent shows its owner's sleeve, even when its owner may look at it
   const visible = model.visible.has(card.$key) && !(card.Facedown && el.classList.contains('ghost'));
   // Only a prompt that demands a pick rings its cards; an optional one leaves the playable outline to do it
   const selectable = (model.prompt?.selectableMin ?? 0) > 0 && has(model.prompt?.selectable, card.$key);
@@ -140,21 +135,14 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   if (card.IsRingBearer) badges.push(t('lblWebCardRingBearer'));
   // The corner already gives a planeswalker's loyalty and a battle's defense, unless the card is a creature too
   const inCorner = creature ? null : /Planeswalker/.test(type) ? 'Loyalty' : /Battle/.test(type) ? 'Defense' : null;
-  // As desktop's counter tabs: each kind of counter by name, then how many. The count is marked as one, so +1/+1 ×2 is
-  // never read as a change to the P/T, and matches the rules text in the preview
+  // The count is marked with ×, so +1/+1 ×2 is never read as a change to the P/T
   for (const [name, n] of Object.entries(card.Counters ?? {})) {
     if (name !== inCorner) badges.push(`${name} ×${n}`);
   }
   q(el, '.badges').textContent = badges.join(' · ');
 }
 
-/**
- * The keywords that decide a block, as the pictures desktop uses for them. Only ones the skin has an icon for
- * appear: the host names the icon (FSkinProp.iconFromKeyword) so neither client keeps its own table. The rest of
- * a card's keywords are in its rules text, which the detail panel shows on hover.
- *
- * Reminder text goes in the title so a player who does not know the picture can still find out what it means.
- */
+/** Only keywords the host names an icon for appear, so neither client keeps its own table of them. */
 function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, shields: number | undefined): void {
   const shown = (keywords ?? []).filter(k => k.icon);
   reconcile(root, shown, k => k.icon ?? k.title, () => {
@@ -166,8 +154,7 @@ function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, sh
     setImage(img as HTMLImageElement, abilityUrl(k.icon ?? ''));
     img.title = k.reminder ? `${k.title} — ${k.reminder}` : k.title;
   });
-  // A shield counter is a counter by the rules and a keyword by the way it is used: you look for it when working
-  // out whether removal resolves or a block kills, which is when you are reading this strip anyway
+  // A shield counter sits with the keywords because it is looked for when working out whether removal or a block kills
   const had = root.querySelector('.shield');
   if (!shields) {
     had?.remove();
@@ -185,12 +172,6 @@ function shieldBadge(): HTMLElement {
   return el;
 }
 
-/**
- * Where a permanent has got to in whatever track its set gave it: a Class's level, the Ring's tier, an unlocked
- * Room, a contraption's sprocket, an attraction's lit numbers, an Omen's intensity. They never co-occur, so one
- * chip serves them all, and it sits above the keyword icons rather than on the top edge, which is the card's name.
- */
-// Every card is updated on every frame, so its cost is rebuilt only when it changes
 /** A mana cost with more generic mana added to it, as a tax adds it: {2}{G} with 2 more is {4}{G}. */
 function withTax(cost: string, tax: number): string {
   if (!tax) return cost;
@@ -198,6 +179,7 @@ function withTax(cost: string, tax: number): string {
   return generic ? `{${Number(generic[1]) + tax}}${cost.slice(generic[0].length)}` : `{${tax}}${cost}`;
 }
 
+// Every card is updated on every frame, so its cost is rebuilt only when it changes
 function setCost(el: HTMLElement, text: string, pips = false): void {
   if (el.dataset.text !== text) {
     el.dataset.text = text;
@@ -214,6 +196,7 @@ function setCost(el: HTMLElement, text: string, pips = false): void {
   }
 }
 
+/** Where a permanent has got to in its set's track, and a card has at most one such track, so one chip serves them all. */
 function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
     const pips = document.createElement('span');
@@ -252,11 +235,7 @@ function label(text: string): HTMLElement {
   return el;
 }
 
-/**
- * Why a block is or is not allowed. A creature that must block something is lit and tied to it by the overlay;
- * one that may block more than one carries how many. Both only while blockers are being declared, because that
- * is the only step either fact can change anything.
- */
+/** A creature that must block something is lit, and one that may block more than one carries how many. */
 function showBlocking(el: HTMLElement, card: CardView): void {
   const must = (card.MustBlockCards ?? []).filter(r => r).length > 0;
   const extra = card.BlockAny ? '∞' : card.BlockAdditional ? String(card.BlockAdditional + 1) : '';

@@ -1,7 +1,4 @@
-// Cards move rather than jump. The game says what moved (a cardMoved event from one zone to another); this file
-// decides how that looks, from where each card stood before the board was drawn to where it stands now. A spell
-// being cast goes onto the stack before its cost is paid, so it waits beside the stack until its item appears there,
-// or flies home if the cast is cancelled, which is the one move the game makes without an event.
+// Decides how each cardMoved event looks, from where a card stood before the board was drawn to where it stands now
 
 import { hoverable } from './detail';
 import type { CardMoved, GameEvent, Place } from './protocol';
@@ -21,10 +18,7 @@ interface Snapshot {
   size?: { w: number; h: number };
   /** How far a slide or flight still under way has it from where it will rest. */
   drift?: { x: number; y: number };
-  /**
-   * Whether it was tapped. The ghost is the live element, which a card that stays on the page carries on updating, so
-   * a copy of a card tapped since would set off already turned without this.
-   */
+  /** Whether it was tapped, kept because the ghost is the live element and goes on updating after this was taken. */
   tapped?: boolean;
 }
 
@@ -44,11 +38,7 @@ const waiting = new Map<string, Waiting>();
 const fromHint = new Map<string, DOMRect>();
 const intoHint = new Map<string, DOMRect>();
 
-/**
- * Where a card will stand once the flight it is part way through is over. A flight is a transform, and a
- * transform moves what the element measures, so a frame drawn while one runs would read the card as displaced
- * and slide it again — which is what any redraw during a flight, a hover among them, used to do.
- */
+/** Where a card will rest once its flight ends, since a flight's transform changes what the element measures. */
 const resting = new Map<string, DOMRect>();
 
 /** Whether a card is part way through a move. An endless effect, such as a flyer's hover, is not one. */
@@ -70,10 +60,7 @@ function restingRect(el: HTMLElement): DOMRect {
 const FLIGHT_MS = 500;
 /** A card put onto the battlefield from the hand (a land, a permanent that resolves at once) travels this fast. */
 const PLAY_MS = 260;
-/**
- * Cards moving within the battlefield (a land tapped from one pile onto another, a row closing up round it) are short
- * moves the player has usually just made, so they take this long.
- */
+/** How long a move within the battlefield takes, such as a land tapped from one pile onto another. */
 const SHIFT_MS = 340;
 /** Cards moving together (a deal, a mulligan, a discard) set off this far apart, so each can be followed. */
 const STAGGER_MS = 110;
@@ -112,10 +99,7 @@ export function resetMotion(): void {
   fresh = true;
 }
 
-/**
- * Remembers where every card stands before the board is drawn again. Taken now rather than after the last frame,
- * because the board can move between frames on its own: a card size easing to a new value moves every card.
- */
+/** Remembers where every card stands just before the board is redrawn, because the board can move between frames on its own. */
 export function noteBoard(): void {
   if (fresh) {
     fresh = false;
@@ -177,8 +161,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       // A card put straight down from the hand, such as a land, is a short trip and makes it quicker
       const ms = move.from?.zone === 'Hand' && move.to?.zone === 'Battlefield' ? PLAY_MS : FLIGHT_MS;
       land(key);
-      // A card joining a pile is drawn as the pile's top, so flying that element would carry the whole pile in; a copy
-      // of the card makes the trip instead, and the pile stays where it is
+      // Flying a pile's top element would carry the whole pile in, so a copy of the joining card makes the trip instead
       const pile = el.closest<HTMLElement>('.slot[data-members]');
       if (start && pile && (pile.dataset.members ?? '').split(',').length > 1) {
         holdPile(el, ms);
@@ -205,8 +188,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     // Somewhere not drawn card by card (a library, a graveyard's pile, an opponent's hand): a copy makes the trip
     const ghost = waiting.get(key)?.ghost ?? seen?.ghost ?? null;
     const was = waiting.get(key)?.ghost ? { rect: waiting.get(key)!.rect, ghost, size: seen?.size } : seen;
-    // Another player's hand is only an icon by their portrait, so a card drawn into it makes no trip: the icon swells
-    // once as its count goes up
+    // Another player's hand is only an icon, so a card drawn into it makes no trip and the icon swells once instead
     const intoFan = move.from?.zone === 'Library' && move.to?.zone === 'Hand' ? handFanOf(move.to) : null;
     if (!ghost && intoFan) {
       if (!swelled.has(intoFan)) {
@@ -217,8 +199,7 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       continue;
     }
     if (!ghost && start && move.from?.zone === 'Library') {
-      // An opponent's draw or anyone's mill: the library shows no card to copy, so a back in the owner's sleeve makes
-      // the trip, one after another when several go together
+      // The library shows no card to copy, so a back in the owner's sleeve makes the trip, staggered when several go together
       const target = tileImageRect(key) ?? placeRect(move.to);
       if (target) {
         if (tileImageRect(key)) holdTile(key, fromLibrary * STAGGER_MS);
@@ -260,20 +241,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   layOutPiles();
 }
 
-/**
- * A card that stays on the battlefield but stands somewhere else now slides there: out of a pile it has left, into
- * a pile it has joined, or along the row as its neighbours come and go. The game says nothing of these, so they are
- * read off where each card stood before the frame. The slide is added to whatever the card is doing (turning as it
- * taps), never in place of it. wait holds the row where it was while a card that left it is still being unmade there.
- */
+/** Slides cards that changed place on the battlefield with no event from the game, once any card being unmade there has gone. */
 function shiftBoard(travelled: Set<string>, wait: number): void {
-  // Only a change in what the rows hold moves a card along them. The same cards resized or pushed over (room kept
-  // for a chevron) settle where they are without sliding, or every card on the table would drift
+  // Only a change in what the rows hold slides cards, or a resize would make every card on the table drift
   if (boardShape() === lastShape) {
     return;
   }
-  // A card that had a place of its own and is now folded into a pile slides onto the pile's top card. The pile is
-  // held as it was before anything is measured, so the row slides to where it stands while the card is on its way
+  // A card folded into a pile slides onto the pile's top card, and the pile is held as it was before anything is measured
   const joining: { was: Snapshot; top: HTMLElement }[] = [];
   const newcomers = new Set<string>();
   for (const { keys, top } of pileSlots()) {
@@ -283,9 +257,7 @@ function shiftBoard(travelled: Set<string>, wait: number): void {
         joining.push({ was, top });
       }
     }
-    // The card drawn as the pile's top can be the one that has just joined it (a land tapped onto the tapped ones).
-    // The pile then stays where its other cards were and a copy of the newcomer flies in, rather than the whole pile
-    // setting off from where that one card stood
+    // When the pile's top is the card that just joined, the pile stays put and a copy of that card flies in
     const topKey = top.dataset.key as string;
     const topWas = lastSeen.get(topKey);
     // Compared with a card that was already in the pile, not one arriving this frame, which set off from elsewhere
@@ -332,19 +304,16 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
     if (!was?.laid || travelled.has(key) || fromHint.has(key)) {
       continue;
     }
-    // Compared as laid out, since a transform still under way (an attacker stepping forward) is not a move, and a
-    // redraw that measured it part way, such as a hover's, would slide the card again
+    // Compared as laid out, since a transform still under way (an attacker stepping forward) is not a move
     const laid = laidCentre(el);
-    // A card redrawn as a new element loses the slide the old one was part way through, so it starts from where that
-    // one was showing rather than where it would have come to rest
+    // A card redrawn as a new element starts from where the old one was showing mid-slide, not where it would have rested
     const carried = was.ghost !== el ? was.drift : undefined;
     const dx = was.laid.x + (carried?.x ?? 0) - laid.x;
     const dy = was.laid.y + (carried?.y ?? 0) - laid.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) {
       // Measured mid-slide the card is still near where it came from, which a flight would set off from
       resting.set(key, restingRect(el));
-      // On translate, not transform: an animation of transform overrides the transition that turns a card as it taps,
-      // so a card tapped out of a pile would show already turned
+      // On translate, because animating transform would override the transition that turns a card as it taps
       el.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0px 0px' }],
         { duration, delay, easing: EASE, composite: 'add', fill: 'backwards' });
     }
@@ -357,12 +326,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
 /** How long a redrawn card takes to turn or resize from how its old element looked; a little longer than a tap's turn. */
 const MORPH_MS = 220;
 
-/**
- * A card redrawn as a new element (tapped out of a pile, untapped back into one, moved to a row of another size) has no
- * earlier look for a transition to start from, so it would appear already turned and sized. It starts from how the old
- * element looked instead: its turn and its size, the slide above having already carried its place. rotate and scale are
- * properties of their own, so they add to the transform that turns a tapped card rather than replacing it.
- */
+/** Starts a card redrawn as a new element from the old element's turn and size, since it has no earlier look to transition from. */
 function morph(el: HTMLElement, old: HTMLElement, oldSize: { w: number; h: number } | undefined): void {
   const wasTapped = old.classList.contains('tapped');
   const isTapped = el.classList.contains('tapped');
@@ -373,10 +337,7 @@ function morph(el: HTMLElement, old: HTMLElement, oldSize: { w: number; h: numbe
   el.animate([{ rotate: `${turn}deg`, scale: String(size) }, { rotate: '0deg', scale: '1' }], { duration: MORPH_MS, easing: EASE });
 }
 
-/**
- * A card the game lets you play from another zone joins the hand strip without moving, sometimes a message after
- * it reached that zone, so it comes out of the zone's tile rather than blinking on.
- */
+/** A card playable from another zone joins the hand strip with no move event, so it flies out of that zone's tile. */
 function arriveElsewhere(travelled: Set<string>): void {
   if (!lastSeen.size) {
     return;
@@ -408,10 +369,7 @@ function laidCentre(el: HTMLElement): { x: number; y: number } {
 /** A card's journey this frame: where it set off, where it ended, and where it turned back if it came home. */
 export type Journey = CardMoved & { via?: Place };
 
-/**
- * Each card's first origin and last destination this frame. A card that went out and back in one step (a
- * mulligan's shuffle and redraw) keeps the zone it turned back in, so both trips can be shown.
- */
+/** Each card's first origin and last destination this frame, with the zone it turned back in if it went out and came home. */
 export function journeys(events: readonly GameEvent[]): Map<string, Journey> {
   const out = new Map<string, Journey>();
   for (const e of events) {
@@ -430,9 +388,7 @@ export function journeys(events: readonly GameEvent[]): Map<string, Journey> {
   return out;
 }
 
-// A paid spell's item has appeared on the stack, so it flies there from where it waited. A cancelled cast is put
-// back without the game saying so (Forge undoes it rather than moving it), so a waiting card that is drawn in a zone
-// again flies home from beside the stack
+// Forge undoes a cancelled cast without an event, so a waiting card drawn in a zone again flies home from beside the stack
 function settleWaiting(paying: boolean): void {
   for (const [key, held] of waiting) {
     const arrived = stackItemFor(key) ?? cardElement(key);
@@ -514,8 +470,6 @@ export function pileTopFor(key: string): HTMLElement | null {
   return null;
 }
 
-// The top card of a zone tile is drawn on it, which is where a card sent there lands. A face-down top is not
-// drawn, and its hidden picture measures nothing
 /** A face-down card in its owner's sleeve, to stand in for a card no one can see. */
 function cardBack(model: Model, key: string): HTMLElement {
   const card = model.objects.get(Number(key)) as CardView | undefined;
@@ -526,10 +480,7 @@ function cardBack(model: Model, key: string): HTMLElement {
   return back;
 }
 
-/**
- * Keeps a pile as deep and as wide as it was until the card joining it arrives, then lets it open out to take the
- * card in: the room behind it widens and the new copy slides out from under the top card (board.css).
- */
+/** Keeps a pile as deep and as wide as it was until the card joining it arrives, then lets it open out (board.css). */
 function holdPile(top: HTMLElement, duration: number): void {
   const slot = top.closest<HTMLElement>('.slot');
   if (!slot) return;
@@ -561,6 +512,7 @@ function holdTile(key: string | undefined, delay: number): void {
   img?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.92 }, { opacity: 1 }], { duration: FLIGHT_MS + delay, easing: 'linear' });
 }
 
+// A face-down top card is not drawn on its tile, and its hidden picture measures nothing
 function tileImageRect(key: string): DOMRect | null {
   const img = document.querySelector(`.zone-tile img[data-key="${key}"]`);
   const rect = img?.getBoundingClientRect();
@@ -645,11 +597,7 @@ let lastHand = '';
 let lastZones = '';
 const zonesShape = () => [...document.querySelectorAll<HTMLElement>(ZONE_CARDS)].map(c => c.dataset.key).join(',');
 
-/**
- * Where a card in hand rests. The pointer over it lifts and enlarges it, which is not where a trip from the hand should
- * start, so it is worked out from its resting transform (hand.css) rather than read. Putting that transform on the card
- * to measure it would cut short a rise under way, and the card would jump to full size while its cost still grew.
- */
+/** Where a hovered hand card rests, worked out from its resting transform (hand.css) because setting it would cut short a rise. */
 function unhovered(el: HTMLElement): DOMRect {
   const style = getComputedStyle(el);
   const [ox, oy] = style.transformOrigin.split(' ').map(parseFloat);
@@ -749,10 +697,7 @@ function land(key: string): void {
   waiting.delete(key);
 }
 
-/**
- * A copy of a card, standing where the card stood. It is given the card's own laid-out size, centred on where the
- * card was seen, so a tapped card's copy is turned as the card was rather than squeezed into its turned outline.
- */
+/** A copy of a card at its laid-out size, centred where the card was seen, so a tapped card's copy is turned and not squeezed. */
 function place(from: HTMLElement, rect: DOMRect, size?: { w: number; h: number }): HTMLElement {
   // Copied only now, when a ghost is actually shown, rather than for every card on every frame
   const ghost = from.cloneNode(true) as HTMLElement;
@@ -766,11 +711,7 @@ function place(from: HTMLElement, rect: DOMRect, size?: { w: number; h: number }
   return ghost;
 }
 
-/**
- * The shift that puts an element's centre on a place's centre once it is scaled. Measured with the scale applied,
- * because cards grow about different points (a card in hand about its foot) and carry transforms of their own (a
- * tapped card's turn), which a sum of rectangles would get wrong.
- */
+/** The shift that centres a scaled element on a place, measured with the scale applied since cards grow about different points. */
 function shiftTo(el: HTMLElement, scale: number, to: DOMRect): string {
   el.style.scale = String(scale);
   const now = el.getBoundingClientRect();
@@ -816,8 +757,7 @@ function sendTo(was: Snapshot, target: DOMRect, endOpacity: number, delay = 0, o
   // One card makes the trip, looking as it did when it set off, even when it was the top of a pile
   ghost.classList.remove('pile');
   if (was.tapped !== undefined) ghost.classList.toggle('tapped', was.tapped);
-  // A copy joining a pile turned the other way (a card tapped onto the tapped ones) turns as it goes, so it lands as the
-  // pile lies. Its scale is then measured along the card, since its outline swaps width for height as it turns
+  // A copy joining a pile turned the other way turns as it goes, so its scale is measured along the card
   const tapped = (el: HTMLElement) => el.classList.contains('tapped');
   const turn = onto ? Number(tapped(onto)) - Number(tapped(ghost)) : 0;
   const along = (el: HTMLElement) => el.offsetWidth * (tapped(el) ? TAPPED_SCALE : 1);

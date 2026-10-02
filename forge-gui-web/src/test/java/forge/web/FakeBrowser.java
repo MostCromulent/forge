@@ -12,10 +12,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
-/**
- * Records what the web client sends. With autoPlay it passes priority; with answerRequests it answers every request
- * with its default. Without either it holds whatever the game asks.
- */
+/** Records what the web client sends, and holds whatever the game asks unless autoPlay or answerRequests is set. */
 final class FakeBrowser implements BrowserChannel {
     final List<JsonObject> received = new CopyOnWriteArrayList<>();
     final BrowserModel model = new BrowserModel();

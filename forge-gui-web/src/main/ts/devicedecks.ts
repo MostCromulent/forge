@@ -1,6 +1,4 @@
-// A guest's decks, kept in this browser rather than on the host's disk. The host sends each deck as .dck text after
-// every change, and is sent the whole list once per connection. Browser storage belongs to one address, so a host
-// reached by another address or port finds none of them; Copy as text in the editor is the backup.
+// A guest's decks are kept in this browser's storage, which belongs to one address, so a host reached by another finds none of them
 
 export interface DeviceDeck {
   id: string;

@@ -12,10 +12,7 @@ import org.tinylog.Logger;
 
 import java.util.function.Consumer;
 
-/**
- * Runs a download the way desktop and mobile do, but with the browser as the progress window: the shared
- * service does the work and reports through the same interfaces their dialogs implement.
- */
+/** Runs a download through the shared service, with the browser in place of the progress dialog desktop and mobile show. */
 final class WebDownloads {
     private WebDownloads() {
     }
@@ -24,8 +21,7 @@ final class WebDownloads {
             final Consumer<JsonObject> toBrowser) {
         final Progress progress = new Progress(service.getTitle(), toBrowser);
         try {
-            // The desktop dialog wires the service up and waits for the user to press Start and then Close.
-            // Nothing here does either, so the service is set up and then run on this thread to completion.
+            // No dialog waits for Start and Close here, so the service is set up and then run on this thread to completion
             service.initialize(new Text(""), new Text(""), progress, new StartButton(), () -> { }, null, () -> { });
             service.run();
         } catch (final RuntimeException e) {

@@ -1,5 +1,4 @@
-/* The filter bar the deck finder and the deck editor share: what almost everyone uses, a chip for each filter in use,
-   and + Filter for the rest */
+/* The filter bar the deck finder and the deck editor share */
 .fbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; position: relative; z-index: 3; }
 .fbar .find { flex: 1 1 180px; min-width: 140px; }
 .fbar .colours { margin: 0; }

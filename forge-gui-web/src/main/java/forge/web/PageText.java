@@ -16,11 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
 
-/**
- * The page's text, in the language Forge is set to: the patterns of the keys the page uses, from Forge's language
- * files, with English standing in for any a translation lacks. The page formats them itself (i18n.ts), by the same
- * rules as {@link forge.util.Localizer}, so the text of the page and the text the game sends it are in one language.
- */
+/** The page's text in Forge's language, as patterns the page formats itself (i18n.ts) by the rules of {@link forge.util.Localizer}. */
 final class PageText {
     /** The keys the page uses, listed by {@link ProtocolTypes} when it reads them from the TypeScript. */
     static final String KEYS_RESOURCE = "/forge/web/page-text.keys";

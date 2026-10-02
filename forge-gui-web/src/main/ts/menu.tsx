@@ -1,8 +1,4 @@
-// The first screen: the name and face you play under, and whether you are the one opening the game. Those used
-// to be two pages, but the host seat is only ever offered to a browser holding the host's link while nobody
-// holds the seat, so the offer costs one checkbox and everyone else never sees it.
-//
-// Past that, a browser holding the seat gets the menu; every other one is told to wait for a table.
+// The first screen: the name and face you play under, then the menu for the host and a wait for a table for everyone else
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -31,8 +27,6 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
     return <Waiting model={model} actions={actions} />;
   }
   const decks = model.decks?.length ?? 0;
-  // Only the ones that open something are built; the rest are shown so the shape of the product is honest,
-  // and greyed so nothing looks broken
   return (
     <div class="menu-shell">
       <PageHeader>
@@ -105,10 +99,7 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
   quest: <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>,
 };
 
-/**
- * A kind of game, with a way back into the event of that kind saved last along its foot when there is one. The card
- * is two buttons in one frame, as a button cannot hold another. A kind with nothing to open is shown greyed.
- */
+/** A kind of game, drawn as two buttons in one frame because a button cannot hold another, and greyed when it opens nothing. */
 function Kind({ id, name, blurb, resume, resumeLabel, onClick }: {
   id: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
@@ -141,11 +132,7 @@ const MODE_ICONS: Record<string, ComponentChildren> = {
 /** Blank cards in the five colours fanned on the Decks plaque, a deck's worth of variety at a glance. */
 const DECK_FAN = ['W', 'U', 'B', 'R', 'G'];
 
-/**
- * A way in from the start page: a brass-framed plaque with its icon on a brass medallion, over a ground drawn for it
- * (lobby.css) with the same icon large and faint. No card art: the page is Forge's, and card art is not ours to use.
- * Decks, given a fan of cards, runs the full width under the others.
- */
+/** A way in from the start page, drawn as a plaque with an icon because card art is not Forge's to use. */
 function Mode({ id, fan, name, blurb, status, onClick }: {
   id: string; fan?: string[]; name: string; blurb: string; status: string; onClick?: () => void;
 }) {
@@ -168,11 +155,7 @@ function Mode({ id, fan, name, blurb, status, onClick }: {
   );
 }
 
-/**
- * The name and face to play under, asked for before anything else, along with the host seat while it is free.
- * Every browser shares the server's one set of preferences, so nobody can be named from them but the host;
- * and two players of one name cannot share a game.
- */
+/** Asks for the name and face to play under, and offers the host seat while it is free. */
 export function NamePrompt({ model, actions, initial = '', cancel }: {
   model: Model; actions: Actions; initial?: string; cancel?: () => void;
 }) {
@@ -200,8 +183,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
           return;
         }
         rememberAvatar(avatar);
-        // The seat is taken first, so the name reaches a session that already knows it is the host and does
-        // not set off a join as a guest
+        // The seat is taken first, so the name reaches a session that knows it is the host and does not join as a guest
         if (offerHost && takeHost) {
           actions.claimHost();
         }
@@ -270,11 +252,7 @@ export function rememberAvatar(index: number): void {
   store(AVATAR_KEY, String(index));
 }
 
-/**
- * A browser with no seat. Three things can be true here and they used to read as one sentence: a seat is being
- * taken, the last attempt at one failed, or nobody has opened a table at all. The trail says how far the browser
- * got, which is the difference between nothing happening yet and something unfinished.
- */
+/** A browser with no seat: one is being taken, the last attempt at one failed, or nobody has opened a table yet. */
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
   const failed = !model.joining && !!model.error;
   const state = model.joining ? 'joining' : failed ? 'failed' : 'idle';

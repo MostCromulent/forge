@@ -5,10 +5,7 @@ import type { CardView } from './protocol';
 
 export const imageUrl = (key: string): string => `img?key=${encodeURIComponent(key)}`;
 
-/**
- * The same image at the size the board draws cards, shrunk by the server: a browser shrinking the full scan on a
- * rotated or moving card samples it roughly, and the card's text breaks up. The width is the server's only one.
- */
+/** The image shrunk by the server to its one width, because a browser shrinking the full scan on a moving card breaks up the text. */
 export const smallImage = (src: string): string => (src ? `${src}&w=256` : '');
 
 // Empty for a card the viewer may not see, so the element falls back to its back or its frame

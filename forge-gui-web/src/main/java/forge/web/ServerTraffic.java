@@ -10,11 +10,7 @@ import io.netty.util.AttributeKey;
 
 import java.util.concurrent.atomic.LongAdder;
 
-/**
- * Every byte through the web port since the server started, as it crosses the wire. What is sent is split by what
- * it carries, taken from the request a connection is answering; once a connection becomes the game's socket it
- * carries nothing else.
- */
+/** Counts every byte through the web port, with what is sent split by the kind its connection was last marked as carrying. */
 @ChannelHandler.Sharable
 final class ServerTraffic extends ChannelDuplexHandler {
     enum Kind { GAME, CARD_ART, AUDIO, PAGE }

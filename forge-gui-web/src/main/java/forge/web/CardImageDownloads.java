@@ -45,12 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-/**
- * The console's Card images window. The image index is Scryfall's daily card data, which says where each image is kept
- * on Scryfall's image servers; those have no rate limit, so with it every image Forge fetches comes at full speed
- * rather than at the API's ten a second. The download saves a choice of images ahead of play. Both run in the
- * background, carry on when the window is closed, and are the same tools the desktop offers.
- */
+/** The console's Card images window, whose image index lets Forge fetch from Scryfall's image servers, which have no rate limit. */
 final class CardImageDownloads {
     private static final Localizer TEXT = Localizer.getInstance();
     /** A rough size for one saved image, for the estimate beside the count. */
@@ -381,8 +376,7 @@ final class CardImageDownloads {
         window.pack();
         running = new GuiDownloadFilteredCardImages(chosenCards());
         downloadStarted = 0;
-        // The service reports to these and, once it has listed what is missing, hands over the command that starts it,
-        // which runs at once: the count in the window was the confirmation
+        // Once the service has listed what is missing, the start command it hands over runs at once, as the count was the confirmation
         running.initialize(new Blank(), new Blank(), new Bar(), new Starter(), this::finished, null, null);
     }
 
@@ -467,10 +461,7 @@ final class CardImageDownloads {
         @Override public void setMaximum(final int maximum0) { maximum = maximum0; }
     }
 
-    /**
-     * Stands in for the service's Start button. It is given the start command once the missing images are listed, and
-     * the close command once they are done or there were none; each runs at once.
-     */
+    /** Stands in for the service's Start button, running the start and close commands as soon as each is handed over. */
     private static final class Starter implements IButton {
         @Override public void setCommand(final UiCommand command) { command.run(); }
         @Override public void setEnabled(final boolean b0) { }

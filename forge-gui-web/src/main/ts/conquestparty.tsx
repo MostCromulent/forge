@@ -1,5 +1,4 @@
-// A conquest's commanders and planeswalkers on one page: every one found, which leads and which is travelled as,
-// and beside them the one being looked at, with its deck. A deck is edited in the deck editor, over the cards owned.
+// A conquest's commanders and planeswalkers on one page, with the one being looked at and its deck beside them
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';

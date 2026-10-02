@@ -1,5 +1,4 @@
-// Lookups for markup a module built itself, and saving text as a file. A looked-up element is always there, so a
-// miss is a bug and says which.
+// Lookups for markup a module built itself, where a looked-up element is always there, so a miss is a bug and says which
 
 export function q<T extends HTMLElement = HTMLElement>(root: ParentNode, selector: string): T {
   const el = root.querySelector<T>(selector);

@@ -1,8 +1,7 @@
 import { setting } from './settings';
 import type { Sound } from './protocol';
 
-// Sound effects come from the host as names, and both they and the music are files the server serves from the
-// player's own Forge sound set.
+// Sound effects come from the host as names, and the server serves them and the music from the player's own Forge sound set
 
 const clips = new Map<string, HTMLAudioElement>();
 let music: HTMLAudioElement | null = null;
@@ -38,10 +37,7 @@ export function playSound(msg: Sound, echo = false): void {
   voice.play().catch(() => {});
 }
 
-/**
- * Plays a sound the host has just played again after each delay, for the cards of a deal that follow the first as
- * they set off. Only a sound the host sent a moment ago is echoed, so sounds turned off on the host stay off.
- */
+/** Only a sound the host sent a moment ago is echoed, so sounds turned off on the host stay off. */
 export function echoSound(name: string, delays: number[]): void {
   const now = performance.now();
   if (!delays.length || now - (started.get(name) ?? -Infinity) > 1500) {

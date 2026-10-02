@@ -1,5 +1,4 @@
-// Every setting the player can change: in the options dialog, or in the volume control for those marked with it.
-// Settings marked server:true are Forge preferences shared with the desktop client; the rest live in this browser.
+// Settings marked server:true are Forge preferences shared with the desktop client, and the rest live in this browser
 
 import type { KeyBindings } from './keys';
 import type { ServerSettings } from './protocol';
@@ -7,8 +6,7 @@ import { storeJson, storedJson } from './storage';
 import { t, type TextKey } from './text';
 
 const LOCAL_KEY = 'forge.settings';
-/** A guest's settings that the server keeps. The server keeps them only as long as the session, so the browser
- *  remembers them and gives them back whenever it connects. */
+/** The server keeps a guest's settings only as long as the session, so the browser remembers them and gives them back on connecting. */
 const GUEST_KEY = 'forge.guestSettings';
 
 
@@ -152,10 +150,7 @@ export function onServerSettings(values: ServerSettings | undefined): void {
   apply();
 }
 
-/**
- * Gives the server the settings this guest's browser remembers. Sent as the browser connects, before any game
- * opens, so the game is seeded with them; each one sets a value, so it does not matter what the server had.
- */
+/** Gives the server the settings this guest's browser remembers, sent before any game opens so the game is seeded with them. */
 export function restoreGuestSettings(): void {
   for (const [key, value] of Object.entries(guestSettings())) {
     if (byKey.get(key)?.server) {

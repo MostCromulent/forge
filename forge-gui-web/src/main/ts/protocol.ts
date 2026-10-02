@@ -1,6 +1,4 @@
-// The protocol as the browser uses it. Every message and field comes from protocol.gen.ts, which is generated from
-// the Java records in forge.web.ToBrowser and FromBrowser; this file adds only the views the client reads objects
-// through.
+// Every message and field comes from protocol.gen.ts, and this file adds only the views the client reads objects through
 
 import type { ClientMessage, Ref, TrackedProps, ZoneType } from './protocol.gen';
 
@@ -9,8 +7,7 @@ export type * from './protocol.gen';
 /** Any object in the game's table. The table does not say which kind an object is. */
 export type TrackedObject = TrackedProps & { $key: number };
 
-// Each view names the properties the client reads from that kind of object. They are picked from TrackedProps, so
-// a property Forge renames or retypes breaks the build here rather than going quiet in the browser.
+// Each view is picked from TrackedProps, so a property Forge renames or retypes breaks the build here
 type View<K extends keyof TrackedProps> = Pick<TrackedProps, K> & { $key: number };
 
 export type CardView = View<'CurrentState' | 'Owner' | 'Controller' | 'Tapped' | 'Sickness' | 'Attacking' | 'Blocking'
@@ -31,8 +28,7 @@ export type GameView = View<'Players' | 'PlayerTurn' | 'Turn' | 'Phase' | 'Stack
 export type StackItemView = View<'SourceCard' | 'ActivatingPlayer' | 'Ability' | 'Description' | 'SubInstance'
   | 'TargetCards' | 'TargetPlayers'>;
 
-/** The zones a player holds cards in: each is both a Forge zone and a player property listing them. The stack
- *  is the game's, not a player's. */
+/** The zones a player holds cards in, each both a Forge zone and a player property listing its cards, which leaves out the stack. */
 export type PlayerZone = Exclude<Extract<ZoneType, keyof TrackedProps>, 'Stack'>;
 
 /** A list of references as the table holds them; an object Forge could not name is null. */

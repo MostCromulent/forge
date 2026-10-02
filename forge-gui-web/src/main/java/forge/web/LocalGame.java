@@ -38,14 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.function.IntConsumer;
 
-/**
- * The netplay seat one browser plays from, and the game behind it when that browser is the host. Every browser
- * is a client of the same server inside this process: the host starts it and takes a seat, and each guest takes
- * another. It opens no socket, so only the web port is ever reachable from outside this machine.
- *
- * <p>There is one of these per browser. The host's calls come on the host UI thread; a guest's join runs on a
- * background thread, because taking a seat waits on the server.
- */
+/** The netplay seat one browser plays from, as a client of a server inside this process that opens no socket of its own. */
 public final class LocalGame {
     private static final long JOIN_TIMEOUT_SECONDS = 15;
     /** How long a new table waits for the last one's connections to be gone. */
@@ -136,16 +129,11 @@ public final class LocalGame {
             @Override public void update(final int slot, final LobbySlotType type) { }
         });
         server.setLobbyListener(new HostChat(onChat));
-        // The host reads chat through its own listener, so the client one would only repeat it. Its own
-        // connection ends only because the host ended it, which has already told the browser.
+        // The host reads chat through its own listener, so the client one would only repeat it
         connect(playerName, gui, onUpdate, (from, text) -> { }, () -> { });
     }
 
-    /**
-     * Waits until no connection from an earlier table is left on the server. A connection closes in the background,
-     * and the server frees its seat when it notices, in whichever lobby is current by then: were the new table set up
-     * first, a seat in it would be cleared under whoever had just taken it.
-     */
+    /** Waits for the last table's connections to go, since the server frees a late-closing seat in whichever lobby is current by then. */
     private void awaitOldSeatsFreed() {
         if (!server.isHosting()) {
             return;
@@ -206,10 +194,7 @@ public final class LocalGame {
         }
     }
 
-    /**
-     * Sends the table out to every client. A slot edited straight on the server does not announce itself, so
-     * without this the browser's own copy of the lobby keeps the old answer.
-     */
+    /** Sends the table out to every client, because a slot edited straight on the server does not announce itself. */
     public void pushLobby() {
         if (hosted != null) {
             server.updateLobbyState();
@@ -223,10 +208,7 @@ public final class LocalGame {
         }
     }
 
-    /**
-     * Readies the match, which only the machine hosting it can, and returns what starts it; null when it will not start.
-     * With deck legality enforced this is where desktop's lobby lists illegal decks and asks whether to play anyway.
-     */
+    /** Readies the match, which only the host can, and returns what starts it, or null when it will not start. */
     public Runnable prepare() {
         if (hosted == null) {
             throw new IllegalStateException(Localizer.getInstance().getMessage("lblWebLocalGameOnlyHostStarts"));
@@ -302,8 +284,7 @@ public final class LocalGame {
         return v == null || v < 0 ? seat : v;
     }
 
-    /** Hands the web seat to an AI, the way the host does for a player who never reconnects, so the browser
-     *  spectates instead of playing. Only the host can: the seat belongs to its server. */
+    /** Hands the web seat to an AI so the browser spectates, which only the host can do because the seat belongs to its server. */
     public void spectate() {
         if (hosted == null) {
             Logger.warn("Only the host can hand its seat to the AI");
@@ -352,10 +333,7 @@ public final class LocalGame {
         if (hosted != null) {
             hosted.clearCurrentEvent();
         }
-        // The server notices a closed connection later, in whichever lobby it is serving by then. Left with this
-        // table's, it would count a finished match whose players have not yet chosen what next as still going, and
-        // hold the seat for a reconnect under the player's name, which the next table's seat of that name then
-        // walks into instead of taking a seat. An empty lobby of its own takes those disconnects instead.
+        // An empty lobby takes the late disconnects, which would otherwise hold this table's seats for a reconnect at the next table
         if (hosted != null) {
             server.setLobby(new ServerGameLobby());
         }
@@ -372,19 +350,14 @@ public final class LocalGame {
         webSeat = -1;
     }
 
-    /**
-     * Ends a game still being played at a table that is closing. Its thread is waiting on players who are leaving
-     * and will never answer, so without this it waits for good, holding the whole game. Ended the way a concession
-     * ends one: the game is over, and every human's waiting input is let go so the thread can finish.
-     */
+    /** Ends a game still being played at a closing table, whose thread would otherwise wait for good on players who have left. */
     private void abandonGame() {
         final HostedMatch match = hostedMatch();
         final Game game = match == null ? null : match.getGame();
         if (game == null || game.isGameOver()) {
             return;
         }
-        // Remote players' controllers have no event handler here to let their inputs go, as in concede(), and ending
-        // the game clears the players' controllers, so they are found first
+        // Ending the game clears the players' controllers, so the humans are found first
         final List<PlayerControllerHuman> humans = new ArrayList<>();
         for (final Player p : game.getRegisteredPlayers()) {
             if (p.getController() instanceof PlayerControllerHuman human) {

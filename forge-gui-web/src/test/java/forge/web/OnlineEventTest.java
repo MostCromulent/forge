@@ -46,10 +46,7 @@ public class OnlineEventTest extends SessionsTest {
         return message("draftPick", "step", step, "index", index);
     }
 
-    /**
-     * Waits for a browser to be shown the table's event, as one must be before it can ready: a seat's copy of the table
-     * learning of the event deals the seat afresh, which unreadies a seat readied before it arrived.
-     */
+    /** A browser must see the table's event before it readies, because learning of the event deals the seat afresh and unreadies it. */
     private static void seeEvent(final Recorder browser) throws InterruptedException {
         browser.awaitLobby(l -> l.has("limited") && l.getAsJsonObject("limited").has("product"),
                 "the event never reached this browser's table");
@@ -106,8 +103,7 @@ public class OnlineEventTest extends SessionsTest {
                 ? l.getAsJsonObject("limited").get("phase").getAsString() : null), "the sealed event never started");
     }
 
-    // Fails if the draft handler is not registered, so no pack reaches a seat; if it is registered twice, so one pick
-    // counts twice; if a pick made on a pack that has moved on is sent; or if the other seat never sees the pick
+    // Fails if no pack reaches a seat, one pick counts twice, a pick on a pack that has moved on counts, or the other seat never sees the pick
     @Test(timeOut = 300_000)
     public void aGuestPicksOnlyItsOwnPacks() throws Exception {
         WebTestSupport.skipUnlessStress();

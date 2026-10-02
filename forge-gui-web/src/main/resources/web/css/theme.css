@@ -1,6 +1,4 @@
-/* One size for every card preview, over the table or beside a list: large enough to read, small enough to leave the
-   page in view. It grows with the window, up to three fifths of its height, between a readable least and a most the
-   player chooses (settings.ts). Registered as a length, so script reads it in pixels. */
+/* One size for every card preview, registered as a length so that script reads it in pixels */
 @property --preview-w { syntax: '<length>'; inherits: true; initial-value: 280px; }
 :root { --preview-w: clamp(280px, 60vh * 63 / 88, 340px); }
 :root[data-preview="small"] { --preview-w: 280px; }
@@ -19,9 +17,7 @@
   --text: #e6edf3;
   --muted: #8b96a5;
   --faint: #6b7686;
-  /* Brass: gold for "your moment", as Arena and Forge desktop use it. The bright gold (--accent-2) fills and
-     outlines; the dark one (--accent) is only the ink laid on brass, never a fill of its own, because a gold that
-     dark reads as dull brown. It glows only as a tight halo, so edges stay crisp. */
+  /* The dark gold (--accent) is only ink laid on brass, never a fill, because a gold that dark reads as dull brown */
   --accent: #8d680b;
   --accent-2: #f2c344;
   /* Tinted forms of the accent, so it can sit behind something instead of only filling or outlining it */
@@ -35,17 +31,13 @@
   --back-a: #2d2513;
   --back-b: #251e0f;
   --back-edge: #574319;
-  /* Selection and attack cues differ in luminance and shape, never only in red versus green. Lime marks what needs
-     putting right (a problem, a stop) and the lands that can pay a cost. While a prompt offers a pick, what it does
-     not offer dims, and what is already chosen is ringed in gold. */
+  /* Selection and attack cues differ in luminance and shape, never only in red versus green */
   --select: #b4f05a;
   --pick: var(--accent-2);
   --attack: #ffffff;
   --danger: #f59e0b;
   --error: #ef4a3c;
-  /* Where a card you may play is really sitting. Taken from the zone banners the desktop client paints on these
-     cards and lifted until they read as light rather than paint, so the same card means the same thing in both.
-     All five stay clear of the castable cyan and the prompt's lime, and differ in brightness as much as in hue. */
+  /* Where a card you may play is sitting, from desktop's zone banners, all clear of the castable cyan and the prompt's lime */
   --zone-graveyard: #a98fe0;
   --zone-exile: #cfd6ea;
   --zone-command: #f0c05a;
@@ -53,8 +45,7 @@
   --zone-other: #8f9bc4;
   --scrim: #070910b8;
   --scrim-deep: #05070ce0;
-  /* Magic's five colours, kept low in chroma because they sit beside card art. The letter inside each pip
-     carries the meaning; the hue only decorates, which is why red and green may sit next to each other. */
+  /* Magic's five colours, low in chroma beside card art, where the letter in each pip carries the meaning and the hue only decorates */
   --mtg-w: #f4f0dc;
   --mtg-u: #7fb6e0;
   --mtg-b: #9a92a8;
@@ -75,15 +66,13 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-/* Anything that names a zone it came from lights in that zone's colour. The bare attribute has to come first:
-   it is the fallback for a zone with no colour of its own, and all of these match with the same weight. */
+/* The bare attribute must come first: it is the fallback for a zone with no colour, and all of these match with the same weight */
 [data-from] { --zone-glow: var(--zone-other); }
 [data-from="Graveyard"] { --zone-glow: var(--zone-graveyard); }
 [data-from="Exile"] { --zone-glow: var(--zone-exile); }
 [data-from="Command"] { --zone-glow: var(--zone-command); }
 [data-from="Library"] { --zone-glow: var(--zone-library); }
-/* The ground is painted on the root, not on the body. The board's backdrop layers sit at a negative
-   z-index, which puts them above the page canvas but behind any background the body paints itself. */
+/* Painted on the root, because the board's backdrop layers sit at a negative z-index, behind any background the body paints */
 /* The menus sit on the table's lit-centre ground, a shade darker so their panels still stand off it */
 html { background: radial-gradient(120% 90% at 50% 38%, #151a24 0%, #0b0e14 100%) fixed, var(--bg); }
 html, body { margin: 0; height: 100%; color: var(--text); font: 14px/1.4 system-ui, sans-serif; }
@@ -92,8 +81,7 @@ button { font: inherit; color: var(--text); background: var(--surface-2); border
 button:disabled { opacity: .4; cursor: default; }
 input { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
 input:focus { outline: 2px solid var(--accent-2); outline-offset: -1px; }
-/* The button that does the thing is a piece of brass, the same bevel the turn banner is cast from, and built
-   from the same token so warming the gold warms both. Dark type on it, because the fill is bright. */
+/* The primary button is brass built from the turn banner's token, so warming the gold warms both */
 button.primary {
   background: var(--brass);
   border-color: color-mix(in srgb, var(--accent-2) 52%, #fff);

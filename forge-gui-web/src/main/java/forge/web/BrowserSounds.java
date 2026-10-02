@@ -11,10 +11,7 @@ import forge.web.ToBrowser.Sound;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-/**
- * The sound a game event makes. Desktop plays the same sounds from the same events; here the browser plays them, so
- * only the name travels. Two of them depend on whose view this is, which the GUI answers.
- */
+/** The sound a game event makes, which the browser plays, so only the name travels and two of them depend on whose view this is. */
 final class BrowserSounds {
     private final EventVisualizer sounds;
 

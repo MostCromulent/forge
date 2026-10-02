@@ -19,11 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
-/**
- * Writes src/main/ts/protocol.gen.ts: the protocol's records ({@link ToBrowser}, {@link FromBrowser}) as
- * TypeScript, and the game objects' properties as {@link JsonCodec} encodes them. Maven runs this after compiling the
- * Java and before type-checking the TypeScript, so neither side can change a field without the other hearing of it.
- */
+/** Writes protocol.gen.ts, the TypeScript for the protocol's records and the game objects' properties as {@link JsonCodec} encodes them. */
 public final class ProtocolTypes {
     private final StringBuilder out = new StringBuilder();
     private final Map<Class<?>, String> declared = new LinkedHashMap<>();
@@ -32,11 +28,7 @@ public final class ProtocolTypes {
     private ProtocolTypes() {
     }
 
-    /**
-     * Writes the file to args[0], and beside it text.gen.ts ({@link PageTextKeys}). args[1] is Forge's languages
-     * folder: some enums name themselves as they load, and the page's text is checked against it. args[2] is the
-     * compiled classes' folder, where the list of the page's keys goes.
-     */
+    /** args[0] is the file to write, args[1] Forge's languages folder, and args[2] the compiled classes' folder for the page's key list. */
     public static void main(final String[] args) throws IOException {
         Localizer.getInstance().initialize("en-US", args[1]);
         final Path file = Path.of(args[0]);
@@ -261,10 +253,7 @@ public final class ProtocolTypes {
         throw new IllegalStateException("No TypeScript for property " + prop + ": add its JSON form to JsonCodec and here");
     }
 
-    /**
-     * Which enum each EnumType property holds. TrackableTypes keeps that only in a private table, so it is read by
-     * reflection; if Forge ever changes the table, an enum property is typed by the constants' names being strings.
-     */
+    /** Which enum each EnumType property holds, read by reflection from TrackableTypes' private table, and empty if that table has changed. */
     private static Map<TrackableType<?>, Class<?>> enumTypes() {
         final Map<TrackableType<?>, Class<?>> out = new IdentityHashMap<>();
         try {

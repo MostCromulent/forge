@@ -1,5 +1,4 @@
-// Dev mode: Forge's developer cheats for the host's own seat, as a submenu of the game menu, and the dialog that sets
-// up a game state from text. Each cheat asks what it needs (which card, how much life) as the game's own prompts.
+// Dev mode: each cheat asks what it needs (which card, how much life) as the game's own prompts
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { OptionsDialog } from './options';

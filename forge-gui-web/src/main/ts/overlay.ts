@@ -5,10 +5,7 @@ import { cardElement, pileTopFor } from './motion';
 import { ui } from './ui';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
-// Arrows on the full-window canvas: attackers to what they attack, blockers to what they block, and the targets
-// of the hovered stack item. All are one arrow in three colours, drawn as the attack chevron is: a coloured body that
-// swells and narrows to a neck, a faceted head, and a hairline of white-hot light down both. Red, blue and yellow
-// differ in brightness as well as hue, so they stay apart for red-green colour blindness.
+// Attack, block and target arrows differ in brightness as well as hue, so they stay apart for red-green colour blindness
 interface ArrowKind {
   sheath: string;
   rim: string;
@@ -48,8 +45,7 @@ let repaintQueued = false;
 
 export function initOverlay(schedule: () => void): void {
   window.addEventListener('resize', schedule);
-  // A scrolling log or zone panel moves the cards the arrows point at and nothing else, so only the arrows are
-  // redrawn, once a frame, rather than the whole page
+  // A scrolling log or zone panel moves the cards the arrows point at, so only the arrows are redrawn, once a frame
   document.addEventListener('scroll', repaintSoon, true);
   document.addEventListener('pointermove', e => {
     if (e.pointerType !== 'mouse') return;
@@ -70,9 +66,7 @@ function repaintSoon(): void {
 export function drawOverlay(model: Model): void {
   drawn = model;
   paint(model);
-  // Cards animate into place (tapping, attacking, flying in from another zone), so the arrows and chevrons are
-  // measured again every frame until they settle, keeping step with the card rather than catching up in jumps. A
-  // transition starts a frame after the change that causes it, so the first frames run whether or not one has
+  // A card's move starts a frame after the change that causes it, so the first frames repaint whether or not anything moves yet
   cancelAnimationFrame(settleFrame);
   const since = performance.now();
   const settle = () => {
@@ -150,8 +144,7 @@ function paintArrows(model: Model): void {
   // "On hover" keeps combat arrows off and leaves only the ones for the stack item under the pointer
   for (const band of mode === '1' || !combatShown(model) ? [] : g.CombatView ?? []) {
     const attackers = present(band.attackers);
-    // A blocked attacker's block arrow is what matters now, so it loses its arrow at the defender, as one charging a
-    // lone opponent loses its chevron
+    // A blocked attacker's block arrow is what matters now, so it loses its arrow at the defender
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
     attackers.forEach(attacker => {
       if (!atFace.has(attacker.ref) && !blocked) {
@@ -165,8 +158,7 @@ function paintArrows(model: Model): void {
       }
     });
   }
-  // A creature that has to block something is tied to what it has to block, while blockers are being declared.
-  // Without this an illegal block is simply refused and nothing on screen says why.
+  // Without an arrow to what a creature has to block, an illegal block is refused and nothing on screen says why
   if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
     for (const obj of model.objects.values()) {
       const forced = present((obj as CardView).MustBlockCards);
@@ -212,10 +204,7 @@ let pointer: Point | null = null;
 /** The card being aimed and the targets picked for it, which the payment prompt that follows no longer carries. */
 let lastAim: { key: string; targets: number[] } | null = null;
 
-/**
- * A card or player clicked while aiming. A spell with one target goes straight on to its payment, so the prompt never
- * shows that target picked; the click is kept here for the arrow drawn while the spell is paid for.
- */
+/** Keeps a clicked target, because a spell with one target goes straight to payment and the prompt never shows it picked. */
 export function notePick(key: number): void {
   const p = drawn?.prompt;
   const offered = !!p && (p.selectable.some(r => r.ref === key) || p.selectablePlayers.some(r => r.ref === key));
@@ -228,20 +217,12 @@ let aiming = false;
 export function isAiming(): boolean {
   return aiming;
 }
-/**
- * The target the aim has landed on. It holds until the pointer leaves the target's box, so moving about on it (onto a
- * badge, or a corner of a round avatar) never sends the arrow back to the pointer and out again.
- */
+/** The target the aim has landed on, held until the pointer leaves its box so that moving about on it never drops the arrow. */
 let aimedAt: HTMLElement | null = null;
 /** How far past that target's box the pointer can stray before the arrow lets go of it. */
 const LET_GO = 4;
 
-/**
- * While targets are chosen: from the card to each target already picked, and to the pointer, or to the target it is
- * over. Only the targeting prompt names a card and offers picks (a confirm names one but offers none), so that pair
- * marks it; a priority prompt can still carry the last ones for a moment. Cards picked from a zone panel are behind
- * its scrim, so nothing is drawn while one covers the board.
- */
+/** Draws the aim while targets are chosen, which only a prompt that both names a card and offers picks marks. */
 function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   const p = model.prompt;
   const aimed = !!p?.card && !p.paying && !p.priority && (p.selectable.length > 0 || p.selectablePlayers.length > 0)
@@ -285,8 +266,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   }
 }
 
-// The attack mark's drawing (board.css) is 64 by 54 units; its two chevrons fill it from 16 units below the top to 13.7
-// above the bottom, and the rest is room for their glow
+// The attack mark's drawing (board.css) is 64 by 54 units, with its chevrons from 16 below the top to 13.7 above the bottom
 const MARK_W = 64;
 const MARK_H = 54;
 const MARK_TOP = 16;
@@ -295,10 +275,7 @@ const MARK_BELOW = 13.7;
 /** The chevron over each charging attacker, kept between paints so its halo breathes on rather than restarting. */
 const charges = new Map<number, HTMLElement>();
 
-/**
- * Puts a chevron over each attacker in keys, measured from the card as it stands on screen, so a tapped card's is
- * over its turned edge. It points up from your side and down from the opponent's, towards the defender.
- */
+/** Places each chevron from its card as it stands on screen, so a tapped card's chevron is over its turned edge. */
 function placeCharges(keys: Set<number>, landed = false): void {
   for (const [key, mark] of charges) {
     if (!keys.has(key)) {
@@ -327,8 +304,7 @@ function placeCharges(keys: Set<number>, landed = false): void {
     // The chevrons stand an eighth of the card's width clear of it, so the trailing one is not lost behind the card
     const sink = height * MARK_BELOW / MARK_H - card.offsetWidth * .12;
     const down = !!card.closest('#opponent');
-    // A crowded battlefield scrolls, and its front row can sit at the very edge; the chevron stays inside the
-    // battlefield's box then, rather than spilling over the phase pill beyond it
+    // A crowded battlefield scrolls, so the chevron is kept inside the battlefield's box and off the phase pill beyond it
     const field = card.closest('.battlefield')?.getBoundingClientRect();
     mark.classList.toggle('down', down);
     mark.style.width = `${width}px`;
@@ -353,10 +329,7 @@ const ARRIVE_MS = 220;
 const RETREAT_DELAY_MS = 250;
 const RETREAT_MS = 300;
 
-/**
- * A chevron whose attack is over draws back towards its creature, shrinking and fading as it goes. One whose card has
- * left the battlefield has nothing to draw back to, and goes at once.
- */
+/** A chevron whose card has left the battlefield has nothing to draw back to, so it goes at once. */
 function retreat(mark: HTMLElement, cardStays: boolean, afterHit: boolean): void {
   if (!cardStays || document.documentElement.dataset.motion === 'reduced') {
     mark.remove();
@@ -371,11 +344,7 @@ function retreat(mark: HTMLElement, cardStays: boolean, afterHit: boolean): void
   run.finished.then(() => mark.remove(), () => mark.remove());
 }
 
-/**
- * Attackers that can only be attacking the one opponent's face, each with whether it is blocked: in a two-player
- * game, those attacking a player rather than a planeswalker or battle. An arrow would only point at the portrait, so
- * none of them gets one.
- */
+/** Attackers aimed at the one opponent's face in a two-player game, each mapped to whether it is blocked. */
 function atLoneFace(model: Model): Map<number, boolean> {
   const out = new Map<number, boolean>();
   const everyone = players(model);
@@ -388,10 +357,7 @@ function atLoneFace(model: Model): Map<number, boolean> {
   return out;
 }
 
-/**
- * The attackers at the lone opponent's face that wear a chevron: the unblocked ones. A blocked one's block arrow is
- * what matters now, and a chevron at the face would say otherwise.
- */
+/** The unblocked attackers at the lone opponent's face, which are the only ones that wear a chevron. */
 export function chargingAtPlayer(model: Model): Set<number> {
   return new Set([...atLoneFace(model)].filter(([, blocked]) => !blocked).map(([key]) => key));
 }
@@ -416,12 +382,12 @@ function center(el: HTMLElement): Point {
   return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
 }
 
-// Where the line from the element's middle towards `to` leaves its box
 /** Whether a point lies in a box, or within pad of it. */
 function within(r: DOMRect, at: Point, pad: number): boolean {
   return at.x >= r.left - pad && at.x <= r.right + pad && at.y >= r.top - pad && at.y <= r.bottom + pad;
 }
 
+// Where the line from the element's middle towards `to` leaves its box
 function edge(el: HTMLElement, to: Point, pad: number): Point {
   const r = el.getBoundingClientRect();
   const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
@@ -443,8 +409,7 @@ let queued: { from: HTMLElement; to: HTMLElement; kind: ArrowKind; grows: boolea
 
 function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
   if (!fromEl || !toEl || fromEl === toEl) return;
-  // One arrow between two things: a block the engine lists as both declared and planned is drawn once, as declared,
-  // which is queued first
+  // A block the engine lists as both declared and planned is drawn once, as declared, which is queued first
   if (queued.some(q => q.from === fromEl && q.to === toEl)) return;
   queued.push({ from: fromEl, to: toEl, kind, grows });
 }
@@ -452,12 +417,7 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
 /** How far apart the heads of arrows at one target sit, at most, so each can still be told from the others. */
 const HEAD_GAP = 6;
 
-/**
- * Draws the arrows queued this paint. The arrows at one target gather round one point, on the target's edge facing
- * the middle of where they come from, so two blows at one player read as two blows at one place rather than a spray.
- * Their heads sit a little apart along that edge, in the order their sources stand, so they never cross and stay
- * countable.
- */
+/** Arrows at one target land round one point on its edge, spaced in the order their sources stand so they never cross. */
 function drawQueued(ctx: CanvasRenderingContext2D): void {
   const byTarget = new Map<HTMLElement, typeof queued>();
   for (const q of queued) byTarget.set(q.to, [...byTarget.get(q.to) ?? [], q]);
@@ -572,10 +532,7 @@ function taper(ctx: CanvasRenderingContext2D, a: Point, bend: Point, b: Point, h
   ctx.closePath();
 }
 
-/**
- * The head, drawn pointing along its angle with its tip on the point: two barbs swept back on curved edges, one facet
- * in shadow and one lit, and a hairline ridge of white-hot light between them.
- */
+/** Draws the head pointing along its angle with its tip on the point. */
 function head(ctx: CanvasRenderingContext2D, at: Point, angle: number, kind: ArrowKind): void {
   ctx.save();
   ctx.translate(at.x, at.y);

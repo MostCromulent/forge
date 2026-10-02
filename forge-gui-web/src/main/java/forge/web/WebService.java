@@ -7,14 +7,7 @@ import org.tinylog.Logger;
 
 import java.util.function.Consumer;
 
-/**
- * The web server as something that can be stopped and started again while the process lives on. The console
- * drives it; without a console it is started once and never stopped.
- *
- * <p>The tokens are made once and outlive a restart, so a link a player was already given still works after the
- * server has been off. Everything else is made afresh: stopping drops every seat, so a game in progress ends
- * with it and the host's seat is free again when the server comes back.
- */
+/** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
 final class WebService {
     private final WebGuiBase ui;
     private final long idleMillis;
@@ -115,8 +108,7 @@ final class WebService {
         final PortForward asking = new PortForward(server.port());
         forward = asking;
         setForwarding(Forwarding.ASKING);
-        // The answer arrives on a UPnP thread, which stop() may be waiting on while it holds this object's lock, so the
-        // answer takes no lock. One for a forwarding already closed or replaced says nothing about the current one.
+        // The answer takes no lock, because it arrives on a UPnP thread that stop() may wait on while holding this object's lock
         asking.open(accepted -> {
             if (forward == asking) {
                 if (accepted) {

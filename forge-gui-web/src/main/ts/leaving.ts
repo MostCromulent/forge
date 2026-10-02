@@ -1,7 +1,4 @@
-// A permanent that leaves the battlefield for a graveyard or exile is unmade where it stood instead of flying to the
-// zone tile. Going to the graveyard it burns away in patches into soot; going to exile it is pulled into a wormhole that
-// opens inside it and smears it round as it goes, and the hole closes with a flash. Both are drawn pixel by pixel on a
-// canvas laid over the card, from the card's own picture.
+// A permanent leaving for a graveyard or exile is unmade where it stood, drawn on a canvas over the card from its own picture
 
 export type Destination = 'Graveyard' | 'Exile';
 
@@ -47,11 +44,7 @@ function noiseField(pw: number, ph: number, scale: number): Float32Array {
   return out;
 }
 
-/**
- * Unmakes a card where it stood, from a copy of how it looked: rect is where it was on screen, size its laid-out size
- * before any turn. Returns how long until it has gone, or 0 when it cannot be drawn (it showed no picture, or motion
- * is reduced), for the caller to move it the ordinary way.
- */
+/** Unmakes a card where it stood and returns how long until it has gone, or 0 when it cannot be drawn and the caller must move it. */
 export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: number } | undefined, tapped: boolean,
   to: Destination): number {
   const img = card.querySelector('img');
@@ -148,10 +141,7 @@ function drawSparks(job: Job, dt: number): void {
   }
 }
 
-/**
- * The graveyard: a jolt, then holes open in patches all over the card and spread into each other, each behind a band of
- * char, with no light at all. Flecks of soot lift off the edges.
- */
+/** The graveyard: a jolt, then holes open in patches and spread into each other behind a band of char, shedding soot. */
 function soot(job: Job): (t: number) => boolean {
   const { pw, ph, src, out, dpr, up } = job;
   const noise = noiseField(pw, ph, 1 / (10 * dpr));
@@ -187,11 +177,7 @@ function soot(job: Job): (t: number) => boolean {
   };
 }
 
-/**
- * Exile: a dark hole opens inside the card with a softly lit, wavering edge. Inside it the card is seen down a turning
- * tunnel; outside it everything flows inward and round, gathering speed, so the card smears into a spiral as it is
- * taken. The hole closes as the last of the card goes in, and the light is let out in a flash.
- */
+/** Exile: a hole opens inside the card and pulls the card into it in a spiral, then closes with a flash. */
 function wormhole(job: Job): (t: number) => boolean {
   const { pw, ph, src, out, dpr } = job;
   const px = out.data;

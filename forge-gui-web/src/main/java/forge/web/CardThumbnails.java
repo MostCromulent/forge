@@ -21,11 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Card images at the size the board and hand draw them. A browser shrinking a 488px scan to an 88px card on a
- * rotated or animated layer samples it with a cheap filter and the card's text breaks up; shrunk here with a proper
- * one, the browser has little left to do. Each is made once, off the thread that serves every connection.
- */
+/** Shrinks card images with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text. */
 final class CardThumbnails {
     /** Twice a board card's width, so it stays sharp on a screen scaled up to 2.5 times. */
     static final int WIDTH = 256;

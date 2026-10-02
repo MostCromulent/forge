@@ -19,8 +19,7 @@
 .limited-head .head-right { gap: 10px; }
 .limited-error { grid-row: 2; margin: 10px 20px 0; color: var(--select); }
 .limited-page .muted { color: var(--muted); font-size: 12.5px; }
-/* Whichever view is showing sits under the setup trail, from the top as on every setup page, in a frame like the
-   lobby's */
+/* Whichever view is showing sits under the setup trail, in a frame like the lobby's */
 .limited-page > .setup-head { grid-row: 3; justify-self: center; width: min(100% - 40px, 960px); margin-top: 40px; }
 .limited-page > :is(.event-shelf, .setup, .opponents, .pools-wait) { grid-row: 4; align-self: start; justify-self: center; width: min(100% - 40px, 960px); margin: 4px 0 28px; }
 .pools-wait { padding: 20px; }

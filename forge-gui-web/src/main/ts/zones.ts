@@ -11,9 +11,7 @@ import { boundKeys } from './settings';
 import type { CardView, PromptButton, ZoneType } from './protocol';
 import { t, type TextKey } from './text';
 
-// Looking through a zone: a dialog over a dimmed board, because the board has nothing to say while you are
-// reading a library of thirty. It folds to a bar instead of closing, so the board can be read without losing
-// your place — which is what the game's own openings need, since those sit beside a prompt you are answering.
+// The zone dialog folds to a bar instead of closing, so the board can be read beside a prompt without losing your place
 
 // Piles the player opened by clicking, on top of the zones the game asks to show
 interface Panel {
@@ -131,8 +129,7 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   const done = q(el, '.zone-done');
   done.hidden = p.forced;
   done.onclick = () => togglePile(p.player, p.zone);
-  // The dialog covers the prompt, so one the game put up carries the prompt's question and its OK. Not its other
-  // button: that is the prompt's way out of priority, such as End turn, which means nothing about the cards shown.
+  // A dialog the game put up carries the prompt's question and its OK, but not its other button, which is the way out of priority
   const prompt = p.forced ? model.prompt : null;
   q(el, '.zone-hint').textContent = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
   answer(q(el, '.zone-answer.ok'), prompt?.ok, () => actions.ok());

@@ -12,8 +12,7 @@
 /* The hovered card grows 1.8 times; its cost grows by only a fifth, so the symbols stay the size of a label */
 #hand .card:hover .cost-badge { transform: scale(.67); }
 #hand .card .cost-badge .pip { position: relative; display: flex; border-radius: 50%; }
-/* A cost changed from the printed one rings each of its symbols, as a card from another zone is ringed: a still
-   band, and light beyond it moved by a finer version of the zone rim's distortion, sized for a symbol */
+/* A changed cost rings each of its symbols with a still band and moving light, as a card from another zone is ringed */
 #hand .card .cost-badge.changed { gap: 3px; }
 #hand .card .cost-badge.changed .pip { outline: 1.5px solid var(--cost-changed); outline-offset: 1px;
   box-shadow: 0 0 5px 1px color-mix(in srgb, var(--cost-changed) 40%, transparent); }
@@ -41,9 +40,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 /* The risen card still owns the strip it rose from: a pointer there would otherwise fall off it, drop it, and raise it again */
 #hand .card:hover::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 25%; }
 
-/* A card you may play from somewhere other than your hand — flashback, escape, an adventure in exile. The band
-   against the card is solid and still and only the light outside it moves, because these sit here all game.
-   Both layers are rings, not filled boxes, so neither can tint a card that is face down or has no art yet. */
+/* A card playable from outside the hand is ringed, not filled, so the ring cannot tint a face-down or artless card */
 .card .haze, .card .halo, .card .rim { display: none; }
 #hand .card.elsewhere .rim, #hand .card.elsewhere .halo {
   display: block; position: absolute; z-index: -1; pointer-events: none; mix-blend-mode: plus-lighter;
@@ -57,8 +54,7 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 /* Three copies of the filter at different points in the loop, so neighbours in the hand are never in step */
 #hand .card.elsewhere:nth-child(3n+2) .halo { filter: url(#zone-warp-b) blur(3px); }
 #hand .card.elsewhere:nth-child(3n) .halo { filter: url(#zone-warp-c) blur(3px); }
-/* The castable outline starts at the card's edge and paints over whatever is under it, so the rim moves out far
-   enough that the two nest rather than one hiding the other */
+/* The rim moves out so it nests with the castable outline, which starts at the card's edge and paints over what is under it */
 #hand .card.elsewhere.playable:not(.selectable) .rim { inset: -4px; border-radius: 10px; }
 #hand .card.elsewhere.auto-tap:not(.selectable) .rim { inset: -5px; border-radius: 11px; }
 #hand .card.elsewhere:hover .rim { opacity: 1; }

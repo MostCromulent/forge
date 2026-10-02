@@ -1,6 +1,4 @@
-/* The deck editor. It sits on the same ground as match setup and reuses the deck finder's parts (the colour well, the
-   pinned value, the switch, the grouped list), so what is here is only the editor's own layout and states. A problem is
-   always the lime wash with a diagonal hatch and a "!", never the colour alone. */
+/* The deck editor reuses the deck finder's parts, so only its own layout and states are here. */
 
 #editor { height: 100%; }
 .editor-page { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
@@ -161,8 +159,7 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .deck-text textarea { width: min(520px, 80vw); font: 12px/1.5 ui-monospace, monospace; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
 
 /* --- dragging --------------------------------------------------------------- */
-/* A section that takes the card is dashed; the one under the pointer is washed in brass and says the result; one that
-   refuses is hatched and says why. Removal, onto the catalogue, is amber with a hatch. */
+/* A section that takes the card is dashed, the one under the pointer says the result, and one that refuses is hatched and says why. */
 [data-zone].drop-eligible, [data-zone].drop-over, [data-zone].drop-refuse, [data-zone].drop-remove { position: relative; }
 [data-zone].drop-eligible::before { content: ''; position: absolute; inset: 3px; border: 1px dashed var(--line-bright); border-radius: 6px; pointer-events: none; }
 [data-zone].drop-over { background: linear-gradient(100deg, var(--accent-soft) 0%, transparent 55%); }

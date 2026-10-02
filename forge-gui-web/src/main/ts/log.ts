@@ -1,5 +1,4 @@
-// The game log panel: each entry as it arrives, with player names tinted, kept scrolled to the newest unless the
-// player has scrolled back.
+// The game log panel, kept scrolled to the newest entry unless the player has scrolled back
 
 import { imageUrl, setSymbolText } from './images';
 import { hoverable } from './detail';
@@ -13,8 +12,7 @@ let stick = true;
 
 export function initLog(): void {
   const log = byId('log');
-  // Only the player scrolling decides it: a thumbnail loading, or the browser keeping the view steady as entries
-  // above are trimmed, also moves the log, and once read as scrolling back it stopped following for good
+  // Only the player's own scrolling counts, since a thumbnail loading or entries being trimmed also moves the log
   let handled = 0;
   const byHand = () => { handled = Date.now(); };
   for (const type of ['wheel', 'touchmove', 'pointerdown', 'keydown']) log.addEventListener(type, byHand, { passive: true });
@@ -28,10 +26,7 @@ export function initLog(): void {
 // Told apart by lightness as well as hue, so they hold for red-green colour blindness
 const PLAYER_TINTS = ['#8fc3ff', '#f0a35e', '#c3a8ff', '#5fd0c0'];
 
-/**
- * Each player's name in a colour of its own, so a line is placed at a glance; you keep the brass. Longer names
- * first, so "Forge AI 2" is never read as "Forge AI".
- */
+/** Tints each player's name, matching longer names first so "Forge AI 2" is never read as "Forge AI". */
 function tintNames(el: HTMLElement, names: readonly { name: string; colour: string }[]): void {
   if (!names.length) return;
   const byName = new Map(names.map(n => [n.name, n.colour]));

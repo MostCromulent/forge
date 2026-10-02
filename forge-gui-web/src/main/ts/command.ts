@@ -1,5 +1,4 @@
-// The command zone holds very different things: a commander to cast, an avatar to activate, a plane that rules the
-// table, a scheme in motion, and small reminders like the monarch. Each kind is drawn in its own place.
+// The command zone holds very different kinds of thing, and each kind is drawn in its own place
 
 import type { CardStateView, CardView } from './protocol';
 

@@ -14,10 +14,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public class BrowserEventsTest {
-    /**
-     * A spell cast from the hand is copied as it moves, so netplay delivers the event's card as a snapshot with no
-     * controller. The browser shows its own spell as awaiting payment only when the move names a caster.
-     */
+    /** Netplay delivers a cast spell's card as a snapshot with no controller, so the move must name its caster from the tracker. */
     @Test
     public void castSnapshotNamesItsCasterFromTheTracker() {
         final Tracker tracker = new Tracker();

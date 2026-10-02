@@ -14,8 +14,7 @@ import { notePick } from './overlay';
 import type { PlayerView, PromptButton, Ref } from './protocol';
 import { t } from './text';
 
-// The console in the bottom-left corner: turn controls on top, the prompt in the middle, its answers along the
-// bottom. Its rim lights while the game waits on you.
+// The console in the bottom-left corner, whose rim lights while the game waits on you
 
 // Icons from Lucide (ISC, see web/licenses/lucide-license.txt), drawn on the same 24-unit grid
 const ICONS = {
@@ -34,10 +33,7 @@ let built = false;
 let shown: Model['prompt'] = null;
 let arrived = 0;
 
-/**
- * Two glints that travel round the rim while you hold priority. They are dashes along an outline of the box, not a
- * turning gradient, so they keep one speed along the long and short edges alike; the outline follows the box's size.
- */
+/** The glints are dashes along an outline of the box, not a turning gradient, so they keep one speed along long and short edges. */
 const GLINT_LAYERS = ['halo', 'mid', 'core'];
 function buildGlints(root: HTMLElement): void {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -75,10 +71,7 @@ export function pressPromptButton(name: string): void {
 /** How long the console takes to grow or shrink to a new prompt. */
 const RESIZE_MS = 160;
 
-/**
- * The console changes height as prompts come and go (a card, a longer message, a row of players). It eases there
- * rather than jumping, anchored at its foot where the buttons are, so any clipping while it does falls on the tools.
- */
+/** Eases the console to a new prompt's height, anchored at its foot so any clipping while it does falls on the tools. */
 export function renderPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   const before = built ? root.offsetHeight : 0;
@@ -196,8 +189,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   cancel.onclick = () => actions.cancel();
   const p = model.prompt;
   if (!p) return;
-  // Several prompts open with a short line naming the phase; that line becomes the title rather than repeating
-  // under it, and a plain priority prompt has nothing left to print
+  // Several prompts open with a short line naming the phase, which becomes the title rather than repeating under it
   const lines = (p.message ?? '').trim().split('\n');
   // A heading, not a sentence: short, and with nothing that ends a sentence
   const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]);
@@ -213,10 +205,7 @@ function drawPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('priority', waiting && !!p.priority);
 }
 
-/**
- * The players a prompt lets you pick who have no seat on the board to click, offered as buttons in the prompt. The
- * board draws one opponent, so in a game of three or more the others are reached from here.
- */
+/** Offers as buttons the players a prompt lets you pick who have no seat on the board, which draws only one opponent. */
 function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly Ref[], actions: Actions): void {
   const box = q(root, '.choose-players');
   const offBoard = choices.filter(r => !document.querySelector(`.seat[data-player="${r.ref}"]`));

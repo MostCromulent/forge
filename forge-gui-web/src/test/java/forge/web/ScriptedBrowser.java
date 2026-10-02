@@ -17,11 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Plays the web seat to a script: waits at its first own main phase until released, then uses the named cards in
- * order (clicking a card in hand plays it, clicking one on the battlefield activates it) and passes priority after.
- * Every request is held open before it is answered, and the browser reloads once, while the first one is open.
- */
+/** Plays the web seat to a script, holding every request open before answering and reloading once while the first one is open. */
 final class ScriptedBrowser implements BrowserChannel {
     final BrowserModel model = new BrowserModel();
     final CountDownLatch atOwnMain = new CountDownLatch(1);
@@ -128,8 +124,7 @@ final class ScriptedBrowser implements BrowserChannel {
             atOwnMain.countDown();
             return;
         }
-        // A rejected click sends no new prompt; act again if nothing arrives, but a click the game will never
-        // accept would otherwise retry until the test times out, so give up and let the wait fail instead
+        // A rejected click sends no new prompt, so act again if nothing arrives, but only MAX_RETRIES times so the wait can fail
         final long seen = promptVersion.get();
         actions.schedule(() -> {
             if (promptVersion.get() != seen) {
@@ -195,8 +190,7 @@ final class ScriptedBrowser implements BrowserChannel {
         return game != null && (!game.has("Stack") || game.getAsJsonArray("Stack").isEmpty());
     }
 
-    // Entries are "Zone:Card Name". An entry is done once its card has left that zone (played, or sacrificed);
-    // until then it is clicked again, because a click can be rejected while a trigger waits to go on the stack
+    // An entry, "Zone:Card Name", is clicked again until its card leaves that zone, because a click can be rejected
     private Integer nextScriptedCard() {
         final Map<Integer, JsonObject> objects = model.objectsCopy();
         final JsonObject player = objects.get(localPlayers.get(0).getAsInt());

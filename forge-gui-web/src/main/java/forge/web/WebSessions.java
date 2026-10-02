@@ -23,11 +23,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-/**
- * Every browser attached to this process. The first one on this machine hosts the game; anyone who opens the
- * invite link afterwards is a guest, gets a session of its own, and takes a seat in the host's game inside this
- * process. Only the web port is reachable from outside, so nothing else has to be forwarded.
- */
+/** Every browser attached to this process, each with a session of its own, so only the web port has to be reachable from outside. */
 final class WebSessions implements WebServer.Endpoint {
     private final WebGuiBase ui;
     private final long idleMillis;
@@ -43,10 +39,7 @@ final class WebSessions implements WebServer.Endpoint {
     private boolean quitWhenEmpty = true;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(
             new ThreadFactoryBuilder().setNameFormat("WebStartIdle").setDaemon(true).build());
-    /**
-     * The most browsers kept track of at once. Anyone with an invite link can open one after another, so past this
-     * the ones that have gone and hold nothing are forgotten, and if none has, the newcomer is turned away.
-     */
+    /** The most browsers tracked at once, since anyone with an invite link can open one after another. */
     static final int MOST_SESSIONS = 64;
     /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
     private static final long HOST_GRACE_MILLIS = 20_000;
@@ -88,11 +81,7 @@ final class WebSessions implements WebServer.Endpoint {
         session.connected(channel);
     }
 
-    /**
-     * Stops the process giving up before anyone has connected. The countdown exists because nothing else
-     * showed Forge was running; with the console on screen that reason is gone, and a server started ahead
-     * of the players who will use it has to keep waiting.
-     */
+    /** Stops the process giving up before anyone connects, for when the console shows Forge is running. */
     synchronized void visibleElsewhere() {
         holdOpen();
     }
@@ -102,10 +91,7 @@ final class WebSessions implements WebServer.Endpoint {
         return host == null && asking != null && asking.mayHost();
     }
 
-    /**
-     * Takes the host's seat for this session, if it is still free. One claim wins and the rest are told no,
-     * so two browsers pressing at the same moment cannot both end up setting the table.
-     */
+    /** Takes the host's seat for this session if it is still free, so only one of two claims made at once wins. */
     synchronized boolean claimHost(final WebSession session) {
         if (!session.mayHost()) {
             return false;
@@ -121,10 +107,7 @@ final class WebSessions implements WebServer.Endpoint {
         return true;
     }
 
-    /**
-     * Frees the host's seat once its browser has been gone a while and it is holding no game. A reload gets
-     * the seat back, and a game in progress keeps it reserved, so only an abandoned server opens up.
-     */
+    /** Frees the host's seat once its browser has been gone a while and it holds no game. */
     private synchronized void releaseHostIfAbandoned() {
         if (host == null || host.attached() || host.hasGame()) {
             return;
@@ -143,13 +126,7 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
-    /**
-     * Whether the process ends once the last browser has gone. The console can hold it open instead, because
-     * with the console on screen a server nobody is playing on is still plainly there and can be started again.
-     *
-     * <p>Turning it back on takes effect the next time a browser leaves, never at once: a server waiting for its
-     * first player has nobody who has left yet, and must not count itself down before anyone arrives.
-     */
+    /** Sets whether the process ends once the last browser has gone, which when turned on applies only the next time one leaves. */
     synchronized void quitWhenEmpty(final boolean value) {
         quitWhenEmpty = value;
         if (!value && idle != null) {
@@ -165,10 +142,7 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
-    /**
-     * The session a browser returns to, or a new one; null when there is no room for one. The link it came in on is
-     * part of the key, so a browser on a guest's link can never pick up a session that may host.
-     */
+    /** The session a browser returns to or a new one, null when full, keyed by link kind so a guest's link never reaches a host session. */
     private synchronized WebSession sessionFor(final BrowserChannel channel, final String clientId, final boolean mayHost) {
         final String id = clientId.isEmpty() ? String.valueOf(System.identityHashCode(channel)) : clientId;
         final String key = (mayHost ? "host:" : "guest:") + id;
@@ -256,11 +230,7 @@ final class WebSessions implements WebServer.Endpoint {
         return h != null && h.hostsGame();
     }
 
-    /**
-     * Whether another player here already plays under this name, or the computer does at the host's table.
-     * Case is ignored, because two players told apart only by it would be told apart by nobody. A browser that
-     * has gone and holds no seat has given its name up.
-     */
+    /** Whether another player here or a computer at the host's table has this name, ignoring case. */
     boolean nameTaken(final String name, final WebSession asking) {
         for (final WebSession session : byId.values()) {
             if (session != asking && (session.attached() || session.hasGame() || session == host)
@@ -277,10 +247,7 @@ final class WebSessions implements WebServer.Endpoint {
 
     private final Deque<ChatLine> said = new ArrayDeque<>();
 
-    /**
-     * A line one browser typed, given to every browser here. It belongs to the server rather than to a table,
-     * so it survives a table opening, starting and closing, and people waiting for one can still talk.
-     */
+    /** Gives a typed line to every browser here, kept by the server so chat outlasts any one table. */
     synchronized void say(final WebSession from, final String text) {
         final String who = from.playerName();
         if (who == null) {
@@ -364,8 +331,7 @@ final class WebSessions implements WebServer.Endpoint {
         for (final Map.Entry<String, String> e : FServerManager.getAllLocalAddresses().entrySet()) {
             list.add(new Address(e.getKey(), s.inviteUrl(e.getValue())));
         }
-        // Unless the router agreed to forward the port, the link reaches the router and stops there until somebody
-        // forwards it by hand. Last, because it is the one least likely to work.
+        // Last, because without a forwarded port this link reaches the router and stops there
         final String external = FServerManager.getExternalAddress();
         if (external != null) {
             list.add(new Address(internetCaption(s.port(), portForwarded), s.inviteUrl(external)));

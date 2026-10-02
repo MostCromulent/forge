@@ -6,8 +6,7 @@ let server: Server;
 test.beforeEach(async () => { server = await startServer(); });
 test.afterEach(async () => { await server.stop(); });
 
-// Fails if any step of an offline draft cannot be reached from the start page: the chooser, the setup form, 45
-// picks on the pack dial, saving, building a deck from the picks, and a gauntlet against the computer's decks
+// Fails if any step of an offline draft cannot be reached from the start page, from the chooser to a gauntlet game
 test('an offline draft is picked, saved, built and played as a gauntlet', async ({ page }) => {
   test.setTimeout(480_000);
   await page.goto(server.url);

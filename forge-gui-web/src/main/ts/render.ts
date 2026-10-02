@@ -1,7 +1,4 @@
-/**
- * Moves an element that is already on the page with moveBefore where the browser has it: insertBefore takes it out
- * and puts it back, which ends any transition it was running (a card turning as it taps, a card in hand rising).
- */
+/** Uses moveBefore where the browser has it, because insertBefore takes the element out and puts it back, which ends its transitions. */
 function place(parent: HTMLElement, el: HTMLElement, next: ChildNode | null): void {
   const mover = parent as HTMLElement & { moveBefore?: (node: Node, child: Node | null) => void };
   if (el.isConnected && mover.moveBefore) {

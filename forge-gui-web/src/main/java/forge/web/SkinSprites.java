@@ -17,10 +17,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Avatar and sleeve images cut from the skin's sprite sheets. The cell scan follows the desktop FSkin exactly, so an
- * index stored in the shared preferences picks the same picture in both clients.
- */
+/** The cell scan follows the desktop FSkin exactly, so an index in the shared preferences picks the same picture in both clients. */
 final class SkinSprites {
     private static List<BufferedImage> avatars;
     private static BufferedImage manaIcons;

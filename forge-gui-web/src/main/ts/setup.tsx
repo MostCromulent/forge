@@ -1,6 +1,4 @@
-// Setting up a Limited event: one question at a time, each answered one folding into a line that can be reopened, and
-// the questions still to come listed faintly so the length of the form shows from the start. Desktop asks the same
-// questions as a chain of dialogs; which ones are asked depends on the answers before them, here as there.
+// Desktop asks the same questions as a chain of dialogs, and here as there the answers decide which questions are asked
 
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
@@ -48,10 +46,7 @@ function reopen<V>(steps: Step<V>[], v: V, id: string): V {
   return next;
 }
 
-/**
- * What the event will be, beside the questions: filled in as they are answered, with the button that starts it. A row
- * with no value yet says so.
- */
+/** What the event will be, shown beside the questions and filled in as they are answered. */
 export interface Ticket<V> {
   /** The small words over the title; "Your event" when left out. */
   kicker?: string;

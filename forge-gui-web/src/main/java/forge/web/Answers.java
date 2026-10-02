@@ -10,10 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/**
- * The shapes of the browser's answers to the game's questions: which replies are valid, and how an index list picks
- * from the choices. Pure functions, so each can be tested without a game.
- */
+/** The shapes of the browser's answers to the game's questions, as pure functions so each can be tested without a game. */
 final class Answers {
     private Answers() {
     }

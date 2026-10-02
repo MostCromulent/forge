@@ -2,10 +2,7 @@
 
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/**
- * Answers the name prompt every browser the server does not know is shown first. While the host seat is free the
- * prompt offers it, already ticked, so the first browser to answer is the host.
- */
+/** Answers the name prompt, where the first browser to answer is the host because the host seat is offered already ticked. */
 export async function enterName(page: Page, name: string): Promise<void> {
   await page.fill('#player-name', name);
   await page.keyboard.press('Enter');
@@ -35,10 +32,7 @@ export async function inviteLink(page: Page, serverUrl: string): Promise<string>
   return (shared ?? '').replace(/^https?:\/\/[^/]+/, new URL(serverUrl).origin);
 }
 
-/**
- * Answers whatever the game asks in a dialog with its first choice, until none is open. Cards only put up to be seen,
- * such as those the AI plays poorly, are closed.
- */
+/** Answers each dialog with its first choice until none is open, and closes cards only put up to be seen. */
 export async function answerDialogs(page: Page): Promise<void> {
   const dialog = page.locator('#dialog-layer .dialog');
   const reveal = page.locator('#dialog-layer .reveal-panel');
@@ -77,10 +71,7 @@ export async function say(page: Page, input: string, text: string): Promise<void
   await page.press(input, 'Enter');
 }
 
-/**
- * Builds the open limited deck to forty cards: 23 cards from the pool, the suggested lands, then basics until there are
- * forty, since the suggestion depends on the pool and a short deck is refused when deck legality is enforced.
- */
+/** Builds the open limited deck to forty cards, topping up with basics because a short deck is refused when legality is enforced. */
 export async function buildLimitedDeck(page: Page): Promise<void> {
   const sizes = page.locator('.deck-head .sizes');
   const tiles = page.locator('.cat-grid .slot .tile');

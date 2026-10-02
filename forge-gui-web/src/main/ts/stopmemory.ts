@@ -1,7 +1,4 @@
-// A guest's phase stops, remembered by its browser. The server keeps a guest's stops only as long as its session, so
-// a browser gives them back whenever it connects, before any game opens: the game's players are seeded with them,
-// and nothing has to be corrected once play has begun. Setting a row is the same whatever the server had, so the
-// browser need not know what that was.
+// A guest's phase stops, remembered by its browser because the server keeps them only as long as its session
 
 import type { Controls, PhaseType } from './protocol';
 import { storeJson, storedJson } from './storage';

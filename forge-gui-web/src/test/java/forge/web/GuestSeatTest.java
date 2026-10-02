@@ -6,22 +6,14 @@ import org.testng.annotations.Test;
 
 import java.util.List;
 
-/**
- * A second browser taking a seat in the host's game. Both live in this process and reach the same loopback
- * server, which is the whole of link-only multiplayer: nothing but the web port is ever exposed.
- */
+/** A second browser taking a seat in the host's game, with both in this process and reaching the same loopback server. */
 public class GuestSeatTest extends SessionsTest {
     @Override
     boolean slow() {
         return true;
     }
 
-    /**
-     * Fails if a guest cannot reach the host's game: if it is handed the host's own seat, if it is left
-     * without one, if the host's table never shows it arriving, or if closing the game leaves the guest
-     * looking at one that is gone. One game serves all of it, because stopping and restarting the loopback
-     * server mid-test races with its own shutdown.
-     */
+    /** Fails if a guest cannot reach the host's game, in one game because restarting the loopback server mid-test races its shutdown. */
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
         final Recorder hostBrowser = connect("host");
@@ -35,8 +27,7 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
         Assert.assertTrue(hosted.get("shareable").getAsBoolean(), "an invited game offered no link");
 
-        // Every browser shares the server's preferences, so a guest has no name until it chooses one, and two
-        // players of one name cannot share a game
+        // Every browser shares the server's preferences, so a guest has no name until it chooses one
         final Recorder guestBrowser = connect("guest");
         final JsonObject greeted = guestBrowser.awaitNewest("hello", "the guest was never greeted");
         Assert.assertFalse(greeted.has("playerName"), "the guest was given a name it never chose");
@@ -76,8 +67,7 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(guestBrowser, choose);
         final JsonObject table = hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat
                 && l.getAsJsonArray("seats").get(guestSeat).getAsJsonObject().has("deckName"), "the host's table never showed the guest's deck");
-        // The host's own seat has no deck yet, and is named as "You". The table that shows the guest's deck is the
-        // one to read, because the host's copy of the table can trail the server's by an update.
+        // The table that shows the guest's deck is the one to read, because the host's copy can trail the server's by an update
         for (final var problem : table.getAsJsonArray("problems")) {
             Assert.assertFalse(problem.getAsString().endsWith(" has no deck."),
                     "the host still counted the guest as having no deck: " + problem.getAsString());

@@ -33,24 +33,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-/**
- * What happened in the game, as the browser animates it. Forge bundles its events with the state change they caused;
- * the ones a renderer can show travel with that state, and the rest are covered by the state itself.
- */
+/** The game events the browser can animate, which travel with the state change they caused. */
 final class BrowserEvents {
     private BrowserEvents() {
     }
 
-    /**
-     * The events a renderer can show, as the browser names them; null for the rest, which the state covers. A card
-     * the game copied as it moved arrives as a snapshot holding only its name and picture, so its controller is read
-     * from the tracker's copy instead.
-     */
+    /** Returns null for an event the browser has nothing to show for, which the state covers. */
     static Record forwarded(final GameEvent event, final Tracker tracker) {
         if (event instanceof GameEventCardChangeZone e && e.card() != null) {
             PlayerView caster = null;
             if (e.to() != null && e.to().zoneType() == ZoneType.Stack) {
                 caster = e.card().getController();
+                // A card the game copied as it moved arrives without its controller, so the tracker's copy gives it
                 final CardView tracked = caster == null && tracker != null ? tracker.getObj(TrackableTypes.CardViewType, e.card().getId()) : null;
                 caster = tracked == null ? caster : tracked.getController();
             }
@@ -87,11 +81,7 @@ final class BrowserEvents {
     private static final Set<ZoneType> OPEN = EnumSet.of(ZoneType.Battlefield, ZoneType.Stack, ZoneType.Graveyard,
             ZoneType.Exile, ZoneType.Command);
 
-    /**
-     * Whether an event is something the player would want to see before the game passes priority for them: another
-     * player acting in the open, or anything being dealt damage. What the player did themselves they have seen, and
-     * what nobody can see (an opponent's draw) there is nothing to look at.
-     */
+    /** Whether the player would want to see an event before priority passes for them: another player acting in the open, or any damage. */
     static boolean worthSeeing(final GameEvent event, final Predicate<PlayerView> mine) {
         if (event instanceof GameEventSpellAbilityCast e) {
             return e.si() != null && !mine.test(e.si().getActivatingPlayer());
@@ -109,10 +99,7 @@ final class BrowserEvents {
         return event instanceof GameEventCardDamaged || event instanceof GameEventPlayerDamaged;
     }
 
-    /**
-     * Whose card moved. A card that has just left a zone can arrive as a copy with no controller, so then it is whoever
-     * owns the zones it moved between: a discard is from its own player's hand to their own graveyard.
-     */
+    /** A card that has just left a zone can arrive as a copy with no controller, so then it is whoever owns the zones it moved between. */
     private static PlayerView mover(final GameEventCardChangeZone e) {
         if (e.card().getController() != null) {
             return e.card().getController();

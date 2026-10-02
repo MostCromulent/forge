@@ -1,15 +1,9 @@
-// The card preview's rules text, sorted into the parts of a printed card. The host sends one block of text
-// (CardDetailUtil, as desktop shows it): the card's own rules, then whatever the game has done to it, each on lines of
-// their own. This tells the two apart and sorts the rules into keywords, abilities and plain text. A line it does not
-// recognise stays a line of text, so nothing the host sends is ever lost.
+// Sorts the host's one block of rules text into the parts of a printed card, and an unrecognised line stays a line of text
 
 import { t } from './text';
 import type { KeywordText } from './protocol';
 
-/**
- * A stretch of text; muted is text that does not apply just now, which CardDetailUtil greys out, and struck is a word a
- * text-changing effect replaced, which the host strikes through ahead of its replacement.
- */
+/** A stretch of text, where muted does not apply just now and struck is a word a text-changing effect replaced. */
 export interface Run {
   text: string;
   muted: boolean;
@@ -81,8 +75,7 @@ function chipFor(text: string): Chip | null | 'skip' {
   return null;
 }
 
-// The shapes CardDetailUtil gives the rest of what the game has done to a card. Some are wrapped in marks desktop
-// colours them by (=Attached: …=, *Attached to …*, +Controlling: …+, ^Cloned via: …^), which are dropped.
+// The shapes CardDetailUtil gives the other notes on a card, some wrapped in marks desktop colours them by, which are dropped
 const NOTE_PREFIXES = [
   'Text changed:', 'Intensity:', 'Prevent the next ', 'Draft Notes:', 'Sector:', 'Sprocket:', 'Protected by:', 'Imprinting:',
   'Exiled:', 'Exiled until this leaves the battlefield:', 'Haunted by:', 'Haunting ', 'Encoded:', 'Must block ',
@@ -115,10 +108,7 @@ function costEnd(text: string): number {
   return /\{[^}]+\}/.test(bare) || COST_VERBS.test(bare) ? at : -1;
 }
 
-/**
- * A line of keywords: short names, perhaps each with a cost, separated by commas, with no sentence in them, and perhaps
- * reminder text in brackets at the end. Returns where the names end, or -1.
- */
+/** Where a line of comma-separated keywords ends, before any reminder text in brackets, or -1 when the line is not one. */
 function keywordsEnd(text: string): number {
   const reminder = /\s*\((?:[^()]|\([^()]*\))*\)$/.exec(text);
   const head = reminder ? text.slice(0, reminder.index) : text;
@@ -163,11 +153,7 @@ const normal = (text: string) => text.replace(/<[^>]*>/g, '').replace(/\((?:[^()
   .replace(/\s+/g, ' ').trim().replace(/\.$/, '').toLowerCase();
 const paragraphs = (text: string) => text.split(/\r?\n/).map(normal).filter(Boolean);
 
-/**
- * Compares a card's printed rules with its rules now. now is the host's ability text, which strikes out each word a
- * text-changing effect replaced; swaps are those replacements (Elf to Goblin), made in the printed text too, so a
- * rewritten paragraph is not taken for a lost one.
- */
+/** Compares printed rules with rules now, applying swaps to the printed text so a rewritten paragraph is not taken for a lost one. */
 export function changesOf(printed: string, now: string, swaps: Readonly<Record<string, string>>,
   keywords: readonly KeywordText[]): Changes {
   let swapped = printed;
@@ -194,10 +180,7 @@ export function changesOf(printed: string, now: string, swaps: Readonly<Record<s
   return changes;
 }
 
-/**
- * keywords are the card's own, each with its reminder text. The host writes none for the evergreen ones ("Menace"), as
- * printed Oracle text does, so a line of keywords without reminder text takes theirs from these.
- */
+/** The host writes no reminder text for evergreen keywords, so a line of keywords without any takes it from keywords. */
 export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = []): SortedText {
   const sorted: SortedText = { blocks: [], chips: [], notes: [] };
   let first = true;
@@ -251,8 +234,7 @@ export function sortRulesText(lines: Line[], keywords: readonly KeywordText[] = 
       }
       continue;
     }
-    // The spell on the other half of the card (CardDetailUtil adds it as "Adventure — Stomp {1}{R}: …"), which has a
-    // cost to cast rather than to activate
+    // The spell on the other half of the card, which has a cost to cast rather than to activate
     const half = /^(Adventure|Omen|Prepared) — /.exec(text);
     if (half) {
       sorted.blocks.push({ kind: 'text', label: slice(line, 0, half[1].length), text: slice(line, half[0].length) });

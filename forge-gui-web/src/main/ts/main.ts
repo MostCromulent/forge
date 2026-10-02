@@ -1,6 +1,4 @@
-// The controller. It is the only place that talks to the server: messages from it update the model, what the player
-// does arrives as actions and leaves as messages, and one render per frame draws the model and the table's
-// arrangement. Nothing it draws with sends anything itself.
+// The controller, which is the only place that talks to the server and draws the model once per frame
 
 import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
@@ -38,8 +36,7 @@ let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 let catalogueRequest = 0;
 let importRequest = 0;
-// The game is paced where it runs: it holds for the player on a pass they have something new to see before
-// (autopass.ts). The one pause made here is a new turn's, whose banner shows before anything the turn does
+// The game is paced where it runs (autopass.ts), and the one pause made here is a new turn's, while its banner shows
 const send = connect(receive, online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty
@@ -50,8 +47,7 @@ const send = connect(receive, online => {
   }
 });
 
-// While a new turn is announced the prompt on screen is still the last turn's, which the game has moved past, so an
-// answer to it would land on a question the player has not seen yet
+// While a new turn is announced the prompt on screen is the last turn's, so an answer to it would land on a question not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
@@ -120,8 +116,7 @@ const actions: Actions = {
   },
 };
 
-// The page's own actions and model, for the browser console and for e2e probes, which drive the game by what it is
-// asking rather than by which key or button answers it
+// The page's own actions and model, for the browser console and for e2e probes
 Object.assign(window, { forge: { actions, model } });
 
 const stopMemory = createStopMemory(localStopStore('forge.guestStops'));

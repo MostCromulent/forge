@@ -1,5 +1,4 @@
-// Planechase on the board. The face-up planes rule the whole table, so they sit in a dock of their own on the
-// divider between the halves rather than among a player's tokens, and the die that moves them sits beside them.
+// The face-up planes rule the whole table, so they sit in a dock on the divider between the halves, with their die beside them
 
 import { reconcile } from './render';
 import { cardImageSrc, setImage } from './images';
@@ -12,18 +11,12 @@ import type { Actions } from './actions';
 import type { CardView, GameView, PlayerView } from './protocol';
 import { t } from './text';
 
-/**
- * The planes and phenomena face up now. The engine moves them into the command zone of whoever's turn it is, while
- * the game's PlanarPlayer can still name the first player, so every command zone is looked through.
- */
+/** The engine moves the face-up planes into the command zone of whoever's turn it is, so every command zone is looked through. */
 export function faceUpPlanes(model: Model): CardView[] {
   return players(model).flatMap(p => zone(model, p, 'Command')).filter(c => commandKind(c, stateOf(model, c)) === 'plane');
 }
 
-/**
- * Whether the viewer may roll now. The roll is a special action at sorcery speed, so the viewer must hold priority
- * on their own turn in a main phase with nothing on the stack. The engine refuses anything else in any case.
- */
+/** The roll is a special action at sorcery speed, and the engine refuses it at any other time in any case. */
 export function mayRoll(prompt: { priority: boolean } | null | undefined, g: GameView | undefined, viewer: number | undefined): boolean {
   return !!prompt?.priority && g?.PlayerTurn?.ref === viewer && (g?.Phase === 'MAIN1' || g?.Phase === 'MAIN2')
     && !(g?.Stack ?? []).some(Boolean);

@@ -6,12 +6,7 @@ import forge.model.FModel;
 import java.util.EnumMap;
 import java.util.Map;
 
-/**
- * One player's settings. Every browser reaches Forge through the process's one set of preferences, which is the
- * host's: the host's settings are those preferences, saved and shared with the desktop client, while a guest's
- * start from Forge's defaults and live in its session. Anything a player can set is read through here, never
- * straight from the preferences, so one player's choice cannot become another's.
- */
+/** Anything a player can set is read through here, never straight from the preferences, so one player's choice cannot become another's. */
 final class PlayerSettings {
     /** Null for the host, whose settings are the preferences themselves. */
     private final Map<FPref, String> own;

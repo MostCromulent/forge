@@ -1,6 +1,4 @@
-// Importing a deck: from a link, a pasted list or a dropped file. The server reads the list again after each pause in
-// typing and marks every line; problems are gathered at the top right, each with a fix that edits the text, so the text
-// always says what will be imported. Nothing is saved until the player presses Import.
+// The server marks every line of the list, each fix edits the text, and nothing is saved until the player presses Import
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CheckSelect } from './editor';
@@ -237,10 +235,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   );
 }
 
-/**
- * One heading of a deck list and its cards, each flagged when it has a problem. The deck finder lists a deck with it
- * too, and marks there the cards that are Commander game changers.
- */
+/** One heading of a deck list and its cards, which the deck finder uses too, marking the Commander game changers. */
 export function CardGroup({ heading, cards, marked }: { heading: string; cards: EditorCard[]; marked?: ReadonlySet<string> }) {
   return (
     <div class="group">
@@ -267,10 +262,7 @@ function Guide() {
   );
 }
 
-/**
- * Where "Check legality against" starts: the open deck's from the editor, the table's from a seat, and the format the
- * start page's finder is listing from there. It also decides where the deck is saved.
- */
+/** Where "Check legality against" starts, which also decides where the deck is saved. */
 export function startingCheck(model: Model, from: 'seat' | 'start' | 'editor', browseFormat?: string): string {
   if (from === 'editor' && model.editor) {
     return model.editor.unrestricted ? 'none' : `${model.editor.format}|${model.editor.cardPool ?? ''}`;

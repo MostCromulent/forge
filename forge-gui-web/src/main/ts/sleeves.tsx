@@ -1,6 +1,4 @@
-// Choosing a sleeve. Two kinds: the numbered ones the skin ships, and a card's art cropped to a card back.
-// A card-art sleeve belongs to the deck rather than the player, so choosing one writes it onto the deck and
-// every other Forge client shows it too.
+// A card-art sleeve belongs to the deck rather than the player, so choosing one writes it onto the deck for every Forge client
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { sleeveUrl } from './looks';

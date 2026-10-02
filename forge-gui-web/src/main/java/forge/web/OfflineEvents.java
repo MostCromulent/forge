@@ -110,11 +110,7 @@ final class OfflineEvents {
         return rows;
     }
 
-    /**
-     * Builds the pool the form describes, named name, with its opponents' decks. The player's pool is drawn as desktop
-     * draws it, so a block whose booster the player chooses asks through the host's browser; call it off the socket
-     * thread. Null when that question was cancelled. Throws IllegalArgumentException with a reason a player can read.
-     */
+    /** Builds the pool the form describes, or null if cancelled, and may ask the host's browser, so call it off the socket thread. */
     static DeckGroup create(final SealedCreate c, final String name) {
         final SealedCardPoolGenerator gen = generator(c);
         if (gen.isEmpty()) {
@@ -124,10 +120,7 @@ final class OfflineEvents {
         return pool == null ? null : gen.buildGroup(name, pool);
     }
 
-    /**
-     * What builds the draft the form describes. Building runs later, on the draft's own thread, since importing a cube
-     * waits on a web site; what can be checked now is checked now. Throws IllegalArgumentException with a reason.
-     */
+    /** What builds the draft the form describes, run later on the draft's own thread since importing a cube waits on a web site. */
     static Supplier<BoosterDraft> draft(final DraftStart d) {
         final LimitedPoolType type;
         try {

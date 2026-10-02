@@ -1,6 +1,4 @@
-// A card lifted from where it was chosen and flown to where it lands: a pick from a draft pack to the picks, a card
-// from the deck editor's catalogue to its line in the deck. The card is lifted as it looked when chosen, and flies once
-// the place it lands on has been drawn.
+// A card is lifted as it looked when chosen, and flies once the place it lands on has been drawn
 
 const FLY_MS = 380;
 
@@ -41,10 +39,7 @@ export function cancelFlight(): void {
   inFlight = null;
 }
 
-/**
- * Flies the lifted card onto its place, which shows once it arrives. A place out of sight in its scrolled list (view)
- * is flown to the list's heading instead, fading as it goes in.
- */
+/** A place out of sight in its scrolled list (view) is flown to the list's heading instead, fading as it goes in. */
 export function land(place: HTMLElement | null, view: Element | null | undefined, heading: Element | null | undefined): void {
   const flight = inFlight;
   inFlight = null;

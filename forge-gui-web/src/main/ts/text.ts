@@ -1,6 +1,4 @@
-// The page's words. Every piece of text the player reads comes from Forge's language files through t(), in the
-// language Forge is set to, so the page and the game it shows speak the same language. The server sends the patterns
-// before anything is drawn (app.ts); a key the page uses must be in en-US.properties, which the build checks.
+// Every piece of text the player reads comes through t() from Forge's language files, in the language Forge is set to
 
 import type { ComponentChild } from 'preact';
 import type { TextKey } from './text.gen';
@@ -52,10 +50,7 @@ function pieces<T>(key: TextKey, args: readonly T[]): (string | T)[] {
   return pattern === undefined ? [key] : format(pattern, args);
 }
 
-/**
- * Splits a pattern at its arguments, following java.text.MessageFormat's quoting, which Forge's language files are
- * written for: '' is an apostrophe, and a run between single quotes is taken as it stands.
- */
+/** Splits a pattern at its arguments, following java.text.MessageFormat's quoting, which Forge's language files are written for. */
 export function format<T>(pattern: string, args: readonly T[]): (string | T)[] {
   const out: (string | T)[] = [];
   let text = '';

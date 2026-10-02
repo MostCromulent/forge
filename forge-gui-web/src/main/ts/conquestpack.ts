@@ -1,6 +1,4 @@
-// A booster pack over its cards. The pack waits, lit along its own outline; a click peels it open, the cards leave
-// its mouth one after another and come down on their places, and they turn over at a pace set by their rarity.
-// Drawn and moved by hand with the Web Animations API, as the board is. Which cards it holds is the server's.
+// A booster pack over its cards, animated by hand with the Web Animations API, and the server decides which cards it holds
 
 import { conquestIconUrl, imageUrl } from './images';
 import { artUrl } from './sleeves';
@@ -149,8 +147,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
     const n = cards.length, mid = (n - 1) / 2;
     const px = box.left + box.width / 2;
 
-    // Peeled from one corner. The tear runs across and the freed seal is pulled up and back in an arc behind it;
-    // light spills from the part already open, foil flecks fly from the tear, and the pack is tugged by the pull.
+    // Peeled from one corner: the tear runs across and the freed seal is pulled up and back in an arc behind it
     const W = box.width, R = 84, D = 640, S = 30, w = W / SLICES;
     const prog = (u: number) => { const v = Math.max(0, (u - .14) / .86); return v < .5 ? 2 * v * v : 1 - (-2 * v + 2) ** 2 / 2; };
     const sample = <T>(fn: (xk: number) => T): T[] => Array.from({ length: S + 1 }, (_, j) => fn(prog(j / S) * (W + 8)));
@@ -177,8 +174,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
     }
     pk.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 460, delay: 700 + n * 78 + 120, easing: 'ease-in', fill: 'forwards' });
 
-    // Each card leaves the mouth as the last one clears it, climbs, and comes down on its place in one curve. It moves
-    // sideways and vertically on separate curves, so its path bends.
+    // Each card moves sideways and vertically on separate curves, so its path from the mouth to its place bends
     const FLIGHT = 860;
     let flipAt = 0;
     const flips = slots.map((slot, i) => {

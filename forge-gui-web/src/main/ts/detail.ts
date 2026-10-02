@@ -12,8 +12,7 @@ import { isAiming } from './overlay';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
-// Zoomed image and rules text of the hovered card. The host composes the text (CardDetailUtil, as on desktop), and
-// it arrives in the model a moment after the pointer does
+// The host composes a hovered card's text (CardDetailUtil, as on desktop), and it arrives in the model a moment after the pointer does
 
 let actions: Actions | null = null;
 
@@ -50,8 +49,7 @@ function afterRest(show: () => void): void {
   else opening = setTimeout(show, HOVER_DELAY_MS);
 }
 
-// el carries data-key (the card), data-zoom (its image, empty when the viewer may not see it) and, for a card in
-// hand that is really somewhere else, data-from (the zone it is in)
+// el carries data-key, data-zoom (empty when the viewer may not see the card) and data-from for a card in hand that is elsewhere
 export function hoverCard(el: HTMLElement | null): void {
   if (!el || !el.dataset.zoom) {
     clearTimeout(opening);
@@ -146,10 +144,7 @@ function placeAtPointer(zoom: HTMLElement): void {
   zoom.style.top = `${Math.round(Math.max(8, y))}px`;
 }
 
-/**
- * Puts the preview beside the card it shows, never over it: to its right where there is room, else to its left, else
- * on whichever side has more room. It stays inside the board, clear of the side column.
- */
+/** Puts the preview beside its card, never over it, and inside the board clear of the side column. */
 function placeZoom(zoom: HTMLElement, at: HTMLElement): void {
   if (zoom.hidden || !at.isConnected) return;
   const card = at.getBoundingClientRect();
@@ -240,8 +235,7 @@ const PLAYABLE_FROM: Record<string, TextKey> = {
   Sideboard: 'lblWebDetailPlayableFromSideboard',
 };
 
-/** Says a card in hand is not really in hand: a tab on the image's foot, or a line in the text. The glow around the card
- *  is in this same zone's colour. */
+/** Says a card in hand is really in another zone, whose colour the glow around the card also takes. */
 function setSource(el: HTMLElement, zone: string | undefined): void {
   const known = zone ? PLAYABLE_FROM[zone] : undefined;
   el.textContent = known ? t(known) : zone ? t('lblWebDetailPlayableFrom', zone.toLowerCase()) : '';
@@ -252,8 +246,7 @@ function setSource(el: HTMLElement, zone: string | undefined): void {
   }
 }
 
-// CardDetailUtil marks text that does not currently apply with a grey span, and a word a text-changing effect replaced
-// with a strike. Only those survive; every other tag is dropped and its text kept, so card text can never inject markup.
+// Only CardDetailUtil's grey and strike marks survive, and every other tag is dropped with its text kept, so card text cannot inject markup
 function rulesLines(html: string): Line[] {
   const lines: Line[] = [[]];
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -278,11 +271,7 @@ function rulesLines(html: string): Line[] {
 /** The text last sorted, for the next frame to reuse. */
 let lastSorted: SortedText = { blocks: [], chips: [], notes: [] };
 
-/**
- * Lays out a card's rules as its printed text box: keywords as chips, each ability on a row of its own with its cost
- * beside it, then the rest. What the game has done to the card goes under the box: counters and damage as chips by the
- * P/T, anything longer as notes at the foot of the box.
- */
+/** Lays out a card's rules as its printed text box, with what the game has done to the card under it as chips and notes. */
 function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keywords: readonly KeywordText[], changes?: Changes): SortedText {
   // The preview is redrawn every frame while a card is hovered, so the text is sorted again only when it changes
   const drawn = html + JSON.stringify(keywords) + JSON.stringify(changes, (_, v) => (v instanceof Set ? [...v] : v));
@@ -373,10 +362,7 @@ function richLine<E extends HTMLElement>(el: E, line: Line): E {
   return el;
 }
 
-/**
- * The P/T, loyalty or defence in the card's corner. The face the card is showing now is counted as the board counts
- * it: damage comes off the toughness, and a number above or below the printed one is coloured so.
- */
+/** The P/T, loyalty or defence in the card's corner, with damage taken off the toughness and changed numbers coloured. */
 function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFace, current: boolean): void {
   el.classList.toggle('shield', /Planeswalker/.test(face.type ?? ''));
   const card = current && key !== null ? model.objects.get(key) as CardView | undefined : undefined;
@@ -420,10 +406,7 @@ function ensureZoom(zoom: HTMLElement): void {
   });
 }
 
-/**
- * The commander damage a player has taken, one row per commander that has dealt any, most first: its art, its name,
- * a bar to 21 and the number. The server leaves desktop's own lines for it out of the text below.
- */
+/** One row per commander that has dealt the player damage, most first, since the server leaves desktop's lines for it out of the text. */
 function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void {
   const player = model.objects.get(key) as PlayerView | undefined;
   const hits = (player?.CommanderDamage ?? []).filter(h => h.value > 0).sort((a, b) => b.value - a.value);

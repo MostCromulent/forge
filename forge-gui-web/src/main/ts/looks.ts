@@ -6,9 +6,7 @@ import type { PlayerView } from './protocol';
 export const avatarUrl = (index: number): string => `avatar?i=${index}`;
 export const sleeveUrl = (index: number): string => `sleeve?i=${index}`;
 
-// Packets leave out values still at their default, so a missing index means 0; -1 means none.
-// A card-art avatar, when the player has one, wins over the sprite. It is the card's art alone: the whole card, cut
-// to a circle, is its frame and a line of its text
+// A missing index means 0 because packets omit default values, -1 means none, and a card-art avatar wins over the sprite
 export function playerAvatarUrl(player: PlayerView): string {
   if (player.AvatarCardImageKey) return `/sleeveart?key=${encodeURIComponent(player.AvatarCardImageKey)}`;
   const index = player.AvatarIndex ?? 0;

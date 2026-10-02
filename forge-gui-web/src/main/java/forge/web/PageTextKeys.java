@@ -13,15 +13,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-/**
- * Finds the language keys the page uses, for {@link ProtocolTypes} to write out at build time: as text.gen.ts, whose
- * TextKey type is every key the page may pass to t(), and as the list {@link PageText} sends the browser the patterns of.
- *
- * <p>A key is any quoted word in the TypeScript or index.html shaped like one (lblSomething) that en-US.properties
- * has. A key of the page's own (lblWeb…, ttWeb…) that the file lacks fails the build, as does an apostrophe in its
- * English written singly: Forge's patterns follow MessageFormat, where a single quote starts a quoted run, so one is
- * written twice.
- */
+/** Finds the language keys the page uses, and fails the build on a page key en-US.properties lacks or one with a lone apostrophe. */
 final class PageTextKeys {
     private static final Pattern QUOTED_KEY = Pattern.compile("['\"]([a-z]{2,4}[A-Z][A-Za-z0-9]*)['\"]");
     private static final Pattern OWN_KEY = Pattern.compile("[a-z]+Web[A-Z][A-Za-z0-9]*");

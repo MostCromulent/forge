@@ -1,5 +1,4 @@
-// The table: the draft's seats round a ring in pass order, you at the bottom, with a chevron between seats for the way
-// packs go. Each seat's name and the packs it holds sit on the outside of the ring, clear of the chevrons.
+// The table: the draft's seats round a ring in pass order, you at the bottom, with a chevron between seats for the way packs go
 
 import { nextFrom, seatAngle } from './dial';
 import type { DraftState } from './protocol';

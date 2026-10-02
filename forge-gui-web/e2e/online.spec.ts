@@ -29,8 +29,7 @@ async function buildAndSit(page: Page): Promise<void> {
   await chooseDeck(page, page.locator('.plate.mine'));
 }
 
-// Fails if any step of an online sealed event is unreachable: the friends chooser, the event form, a guest readying
-// up, both pools opening in the editor, the event decks on the seats, and the match
+// Fails if any step of an online sealed event is unreachable, from the event form to a guest's pool and the match
 test('online sealed with a guest', async ({ page, browser }) => {
   test.setTimeout(480_000);
   await hostEvent(page, 'sealed');

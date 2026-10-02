@@ -1,5 +1,4 @@
-// Planeswalk: every plane that can be reached, those unlocked and those still locked, with the one being looked at
-// beside them. Travelling to an unlocked plane is free; a locked one is unlocked for emblems and travelled to at once.
+// Planeswalk: travelling to an unlocked plane is free, and a locked one is unlocked for emblems and travelled to at once
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';

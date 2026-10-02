@@ -46,11 +46,7 @@ import java.util.function.Function;
 
 import org.apache.commons.lang3.EnumUtils;
 
-/**
- * One browser's view of the open conquest. The conquest itself is Forge's, one for the whole process; this holds only
- * what the session knows that the save does not: which place is selected, and the result and reward the browser has
- * yet to show.
- */
+/** Holds only what one session knows that the save does not, as the conquest itself is Forge's, one for the whole process. */
 final class ConquestGame {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */

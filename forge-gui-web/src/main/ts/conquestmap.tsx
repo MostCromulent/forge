@@ -1,6 +1,4 @@
-// The Multiverse: the plane as a road of regions running left to right, and the selected event in a panel beside it.
-// A region is a banner of its art over a grid of tiles; a tile is the opponent's picture and its state is carried by
-// the picture alone. White is used for where the player stands and what is selected, and for nothing else.
+// A tile's state is carried by its picture alone, and white is used only for where the player stands and what is selected
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
@@ -26,8 +24,7 @@ const variantName = (v: string): string => (VARIANT_NAMES[v] ? t(VARIANT_NAMES[v
 
 export function ConquestMap({ actions, state }: { actions: Actions; state: ConquestState }) {
   const cells = new Map(state.cells.map(c => [key(c), c]));
-  // The marker walks the move just made a step at a time, and nothing on the map answers while it does. It is first
-  // put at the walk's start with no movement, since the map that brings the path already has the player at its end.
+  // The marker is first put at the walk's start with no movement, since the map that brings the path already has the player at its end
   const [walk, setWalk] = useState<{ at: ConquestPlace; moving: boolean } | null>(null);
   const battleWanted = useRef(false);
   const pathKey = state.path.map(key).join('>');
@@ -67,9 +64,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
     return () => { cancelAnimationFrame(frame); clearInterval(timer); };
   }, [pathKey]);
 
-  // A region nobody has reached, or one that is finished, stands folded until the player opens it. The one the player
-  // stands in is always open, and so is every one the marker is walking through.
-  // What the player chose is kept by plane, and outlives a visit to another page
+  // The player's region and those the marker walks through are always open, and what the player chose is kept by plane
   const opened: Record<number, boolean> = {};
   state.regions.forEach((_, r) => {
     const chosen = ui.conquestOpened[`${state.plane}:${r}`];
@@ -92,8 +87,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
   const hovered = hover ? cells.get(hover) : undefined;
   const selected = cells.get(key(state.selected));
 
-  // Every two places that touch are tied where at least one is conquered: along the road to the next step, crossing
-  // into the next region at a region's last step, and down to the next lane
+  // Two places that touch are tied where at least one is conquered, along the road, into the next region and down to the next lane
   const ties: { a: ConquestCell; b: ConquestCell }[] = [];
   for (const c of state.cells) {
     const next = c.row + 1 < state.rows ? cells.get(key({ region: c.region, row: c.row + 1, col: c.col }))

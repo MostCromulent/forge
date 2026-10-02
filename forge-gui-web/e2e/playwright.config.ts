@@ -1,7 +1,6 @@
 import { defineConfig } from '@playwright/test';
 
-// Each test starts a Forge server of its own (server.ts), which takes a while: the card database loads first. With a
-// server and home folder each, tests share nothing, so three run at once
+// Each test starts a Forge server and home folder of its own (server.ts) and shares nothing, so three run at once
 export default defineConfig({
   testDir: '.',
   testMatch: '*.spec.ts',

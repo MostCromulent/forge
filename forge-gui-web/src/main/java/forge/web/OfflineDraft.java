@@ -22,11 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-/**
- * One offline booster draft against the computer, driven the way desktop's drafting screen drives it: the player's
- * pick, then the computer's, then the next pack. BoosterDraft has no locks, so everything touching it runs on this
- * draft's own thread, and the browser is sent a whole state after every step.
- */
+/** BoosterDraft has no locks, so everything touching it runs on this draft's own thread. */
 final class OfflineDraft {
     private final ExecutorService thread = Executors.newSingleThreadExecutor(r -> {
         final Thread t = new Thread(r, "Draft");

@@ -6,8 +6,7 @@ const region = (conquered = 0) => ({ name: '', art: '', colors: '', conquered, t
 const plane = (regions: number) => ({ rows: 3, cols: 3, regions: Array.from({ length: regions }, () => region()) });
 const W = 3 * 100 + 2 * 14;
 
-// Fails if regions are not spaced as designed: two open ones 46 apart, an open one and a folded one 30 whichever
-// comes first, and two folded ones 10
+// Fails if regions are not spaced 46 apart when both are open, 30 when one is folded, and 10 when both are
 test('regions stand apart by what they are', () => {
   const l = layout(plane(4), r => r >= 2);
   expect(l.regions.map(r => r.x)).toEqual([4, 4 + W + 46, 4 + 2 * W + 46 + 30, 4 + 2 * W + 46 + 30 + 62 + 10]);

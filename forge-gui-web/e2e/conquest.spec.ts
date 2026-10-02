@@ -31,8 +31,7 @@ async function toPriority(page: Page): Promise<void> {
   }).toPass({ timeout: 90_000, intervals: [500] });
 }
 
-// Fails if the marker does not walk to a selected place, a battle cannot be reached from the map, the wheel or the pack
-// cannot be gone through, or the win is not shown as conquered on returning
+// Fails if a battle cannot be reached from the map, its reward cannot be gone through, or the win is not shown as conquered
 test('a conquest battle is fought and comes back to the map', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -100,8 +99,7 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await expect(page.locator('.cq-reveal')).toHaveCount(0);
 });
 
-// Fails if a commander's deck cannot be opened from the Commanders page in the editor over the conquest's cards, changed
-// and left again with its new size shown, or a card of the collection cannot be exiled for the shards it is priced at
+// Fails if a commander's deck cannot be edited over the conquest's cards, or a collection card cannot be exiled for its price
 test('a deck is edited and a card is exiled', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -131,7 +129,6 @@ test('a deck is edited and a card is exiled', async ({ page }) => {
 });
 
 // Fails if a conquest cannot be started from the form and opened on its map, or cannot then be renamed and deleted
-// from the list of saved conquests
 test('a conquest is started, renamed and deleted', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -163,8 +160,7 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await expect(card('Fixture conquest')).toHaveCount(1);
 });
 
-// Fails if a card cannot be pulled from the Aether for the price on its button, the planes are not listed with the
-// one stood on marked, the statistics do not show their eight figures, or the preferences do not open and close
+// Fails if a card cannot be pulled from the Aether at its price, or the planes, statistics or preferences do not show
 test('the Aether, the planes, the statistics and the preferences open', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
