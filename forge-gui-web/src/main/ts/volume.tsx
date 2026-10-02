@@ -8,7 +8,7 @@ const VOLUMES = SETTINGS.filter(def => def.volume);
 /** Nothing plays, which the speaker button shows crossed out. */
 export const isSilent = (): boolean => VOLUMES.every(def => Number(setting(def.key)) <= 0);
 
-export function Volume({ close, anchor = '#prompt .volume' }: { close: () => void; anchor?: string }) {
+export function Volume({ close, anchor = '#side-tools .volume' }: { close: () => void; anchor?: string }) {
   const button = document.querySelector(anchor)?.getBoundingClientRect();
   // Opens leftwards from the button's edge, and away from whichever screen edge the button sits nearer
   const below = !!button && button.top < window.innerHeight / 2;

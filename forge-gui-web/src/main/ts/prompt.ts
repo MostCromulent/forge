@@ -5,7 +5,6 @@ import { hoverable } from './detail';
 import { stepName } from './phasebar';
 import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
-import { isSilent } from './volume';
 import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
 import { keyName } from './keys';
@@ -21,10 +20,7 @@ const ICONS = {
   endTurn: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',
   autoPass: '<path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/><circle cx="12" cy="12" r="10"/>',
   undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/>',
-  volume: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
-  muted: '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>',
   more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
-  cog: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
 };
 const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
@@ -95,9 +91,7 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="auto-pass">${icon('autoPass')}</button>
         <button class="undo">${icon('undo')}</button>
         <span class="tools-gap" aria-hidden="true"></span>
-        <button class="volume">${icon('volume')}</button>
         <button class="more">${icon('more')}</button>
-        <button class="cog">${icon('cog')}</button>
       </div>
       <p class="step"></p>
       <div class="prompt-body">
@@ -110,14 +104,10 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
     q(root, '.auto-pass').title = t('lblWebPromptAutoPassTip');
-    q(root, '.volume').title = t('lblWebHeadVolume');
     q(root, '.more').title = t('lblWebPromptGameMenuTip');
-    q(root, '.cog').title = t('lblWebHeadOptions');
     q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
     q(root, '.undo').onclick = () => actions.undo();
-    q(root, '.volume').onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
     q(root, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
-    q(root, '.cog').onclick = () => changeUi(u => { u.optionsOpen = true; });
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
     buildGlints(root);
     const card = q<HTMLImageElement>(root, '.prompt-card');
@@ -134,13 +124,6 @@ function drawPrompt(model: Model, actions: Actions): void {
     root.dataset.seq = String(++arrived);
   }
   root.classList.toggle('spectating', !!model.spectating);
-  const volume = q(root, '.volume');
-  const silent = String(isSilent());
-  if (volume.dataset.silent !== silent) {
-    volume.dataset.silent = silent;
-    volume.innerHTML = icon(silent === 'true' ? 'muted' : 'volume');
-  }
-  volume.classList.toggle('open', ui.volumeOpen);
   if (model.spectating) {
     renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);
