@@ -12,6 +12,7 @@ import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.gamemodes.planarconquest.ConquestPlane;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
+import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestReward;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
 import forge.gamemodes.planarconquest.ConquestRewardStep.Kind;
@@ -300,6 +301,73 @@ public class ConquestRulesTest {
             assertFalse(card.getRules().getType().isBasicLand());
             assertFalse(data.hasUnlockedCard(card));
         }
+    }
+
+    // Fails if exiling does not pay a card's exile value, takes a card a deck uses, or takes the planeswalker; or if
+    // a card comes back for less than its price, or without the shards for it
+    @Test
+    public void exilePaysAndRefusesWhatIsInUse() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final PaperCard inDeck = data.getSelectedCommander().getDeck().getMain().toFlatList().stream()
+                .filter(c -> !c.getRules().getType().isBasicLand()).findFirst().orElseThrow();
+        assertNotNull(data.getExileProblem(List.of(inDeck)));
+        assertNotNull(data.getExileProblem(List.of(data.getPlaneswalker())));
+
+        final PaperCard pulled = ConquestAether.pull(data, ConquestAether.Filter.startingFor(data.getSelectedCommander()));
+        final List<PaperCard> cards = List.of(pulled);
+        assertNull(data.getExileProblem(cards));
+        final int value = data.getExileValue(cards);
+        assertEquals(value, ConquestUtil.getShardValue(pulled, CQPref.AETHER_BASE_EXILE_VALUE));
+        assertTrue(value > 0);
+        final int shards = data.getAEtherShards();
+        data.exile(cards);
+        assertTrue(data.isInExile(pulled));
+        assertEquals(data.getAEtherShards(), shards + value);
+        assertFalse(ConquestUtil.getAvailablePool().contains(pulled));
+
+        final int cost = data.getRetrieveCost(cards);
+        assertEquals(cost, ConquestUtil.getShardValue(pulled, CQPref.AETHER_BASE_RETRIEVE_COST));
+        assertNull(data.getRetrieveProblem(cards));
+        data.retrieve(cards);
+        assertFalse(data.isInExile(pulled));
+        assertEquals(data.getAEtherShards(), shards + value - cost);
+        data.exile(cards);
+        data.spendAEtherShards(data.getAEtherShards());
+        assertNotNull(data.getRetrieveProblem(cards));
+    }
+
+    // Fails if a figure of the statistics does not match the save: a new conquest has no wins and owns its starting cards
+    @Test
+    public void statisticsReadTheSave() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestData.Stats plane = data.getStats(data.getCurrentPlane());
+        assertEquals(plane.shards(), data.getAEtherShards());
+        assertEquals(plane.wins(), 0);
+        assertEquals(plane.conquered(), 0);
+        assertEquals(plane.events(), data.getCurrentPlane().getEventCount());
+        assertTrue(plane.commanders() >= 1);
+        assertTrue(plane.unlockedCards() > 0 && plane.unlockedCards() <= plane.cards());
+        wonBattle(data);
+        assertEquals(data.getStats(null).wins(), 1);
+        assertEquals(data.getStats(null).conquered(), 1);
+        assertTrue(data.getStats(null).events() > plane.events());
+    }
+
+    // Fails if a region's art cannot be named as a card, which is how the web asks for the picture
+    @Test
+    public void everyRegionOfAPlaneNamesItsArt() {
+        for (final ConquestRegion region : FModel.getPlanes().get("Zendikar").getRegions()) {
+            assertNotNull(region.getArtCard().card(), region.getName());
+        }
+    }
+
+    // Fails if a new conquest's generated deck is not legal for Conquest, or the check passes a deck cut short
+    @Test
+    public void theDeckCheckIsConquestsOwn() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        assertNull(data.getSelectedCommander().getDeckProblem());
+        data.getSelectedCommander().getDeck().getMain().clear();
+        assertNotNull(data.getSelectedCommander().getDeckProblem());
     }
 
     private static ConquestBattle wonBattle(final ConquestData data) {
