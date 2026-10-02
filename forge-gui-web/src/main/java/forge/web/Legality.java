@@ -106,12 +106,7 @@ final class Legality {
         return new Result(flags, kinds, check.unrestricted() ? List.of() : deckItems(deck, df, commanders, flags.isEmpty()));
     }
 
-    /** Why one card can't go in this deck, or null: a ban, the format, the card pool or the commander's colours. Counts are not considered. */
-    static String cardProblem(final PaperCard card, final Check check, final List<PaperCard> commanders) {
-        return cardProblems(check, commanders).apply(card);
-    }
-
-    /** cardProblem with its rules looked up once, for asking about many cards in a row. */
+    /** Why a card can't go in this deck, or null: a ban, the format, the card pool or the commander's colours. Counts are not considered. */
     static Function<PaperCard, String> cardProblems(final Check check, final List<PaperCard> commanders) {
         if (check.unrestricted()) {
             return card -> null;
@@ -143,8 +138,7 @@ final class Legality {
         for (final PaperCard c : commanders) {
             colours |= c.getRules().getColorIdentity().getColor();
         }
-        final String letters = CardCatalog.letters(ColorSet.fromMask(colours));
-        return "C".equals(letters) ? "" : letters;
+        return CardCatalog.wubrg(ColorSet.fromMask(colours));
     }
 
     /** The cards whose colours the rest of the deck must share. In Oathbreaker that is the oathbreaker alone, not its spell. */

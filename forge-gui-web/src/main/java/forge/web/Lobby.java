@@ -321,7 +321,7 @@ final class Lobby {
             seenFormat = format;
             seenCardPool = poolName;
             seenRules = rules();
-            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device, eventFilter()), DeckCatalog.cardFormats(),
+            out = new Decks(catalog.refresh(format, cardPool, guest.getAsBoolean(), device, eventFilter()), names(FModel.getFormats().getSanctionedList()),
                     poolName);
         }
         if (newPool) {
@@ -630,22 +630,20 @@ final class Lobby {
             if (lobby == null) {
                 return new LobbyMessage(null);
             }
-            final List<Format> formats = new ArrayList<>();
-            for (final GameType t : FORMATS) {
-                formats.add(explained(t));
-            }
+            final List<Format> formats = FORMATS.stream().map(Lobby::explained).toList();
             final List<Seat> seats = new ArrayList<>();
             for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
                 seats.add(seat(lobby, i));
             }
-            final List<String> problems = problems();
+            final List<String> illegal = new ArrayList<>();
+            final List<String> problems = problems(illegal);
             final GameFormat cardPool = cardPool();
             // Only the machine running the game can start it; everyone else waits on the host
             return new LobbyMessage(new LobbyTable(local.isHost(), local.webSeat(), shareable, format().name(), formats,
                     cardPool == null ? null : cardPool.getName(),
                     VARIANTS.stream().map(Lobby::explainedVariant).toList(), variantsOn(lobby),
                     maxSeats(), FModel.getPreferences().getPrefInt(FPref.UI_MATCHES_PER_GAME), seats, problems,
-                    local.isHost() && problems.isEmpty(), illegalDecks(), FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
+                    local.isHost() && problems.isEmpty(), illegal, FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY),
                     limitedTable(lobby), maxBracket(), overBracket(lobby)));
         }
     }
@@ -773,15 +771,9 @@ final class Lobby {
     }
 
     /**
-     * Decks that break their format's rules. They do not stop the match: as on desktop, starting it with deck legality
-     * enforced lists them and asks whether to play anyway.
+     * The same, and into illegal the decks that break their format's rules. Those do not stop the match: as on desktop,
+     * starting it with deck legality enforced lists them and asks whether to play anyway.
      */
-    List<String> illegalDecks() {
-        final List<String> illegal = new ArrayList<>();
-        problems(illegal);
-        return illegal;
-    }
-
     private List<String> problems(final List<String> illegal) {
         synchronized (DeckCatalog.DECKS) {
             final List<String> out = new ArrayList<>();

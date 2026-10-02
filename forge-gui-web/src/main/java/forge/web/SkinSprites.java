@@ -60,25 +60,13 @@ final class SkinSprites {
         if (prop == null) {
             return null;
         }
-        return encoded.computeIfAbsent("m" + symbol, k -> {
-            final BufferedImage sheet = manaSheet();
-            final int[] at = prop.getCoords();
-            if (sheet == null || at.length < 4 || at[0] + at[2] > sheet.getWidth() || at[1] + at[3] > sheet.getHeight()) {
-                return null;
-            }
-            return encode(sheet.getSubimage(at[0], at[1], at[2], at[3]), k);
-        });
+        return encoded.computeIfAbsent("m" + symbol, k -> cell(manaSheet(), prop, k));
     }
 
     /** PNG bytes of one keyword's icon, named by its FSkinProp, or null for a keyword the skin has no picture for. */
     static byte[] abilityPng(final String name) {
-        final FSkinProp prop;
-        try {
-            prop = FSkinProp.valueOf(name);
-        } catch (final IllegalArgumentException e) {
-            return null;
-        }
-        if (!name.startsWith("IMG_ABILITY_")) {
+        final FSkinProp prop = prop(name);
+        if (prop == null || !name.startsWith("IMG_ABILITY_")) {
             return null;
         }
         return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
@@ -86,16 +74,19 @@ final class SkinSprites {
 
     /** PNG bytes of one of Planar Conquest's icons, named by its FSkinProp, or null for any other name. */
     static byte[] conquestPng(final String name) {
-        final FSkinProp prop;
-        try {
-            prop = FSkinProp.valueOf(name);
-        } catch (final IllegalArgumentException e) {
-            return null;
-        }
-        if (!CONQUEST_ICONS.contains(prop)) {
+        final FSkinProp prop = prop(name);
+        if (prop == null || !CONQUEST_ICONS.contains(prop)) {
             return null;
         }
         return encoded.computeIfAbsent("c" + name, k -> cell(conquestSheet(), prop, k));
+    }
+
+    private static FSkinProp prop(final String name) {
+        try {
+            return FSkinProp.valueOf(name);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
     }
 
     private static synchronized BufferedImage conquestSheet() {

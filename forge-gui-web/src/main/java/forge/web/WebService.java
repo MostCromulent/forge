@@ -108,10 +108,6 @@ final class WebService {
         listener.accept(forwarding);
     }
 
-    Forwarding forwarding() {
-        return forwarding;
-    }
-
     private void openForward() {
         if (forward != null) {
             forward.close();

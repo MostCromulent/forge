@@ -190,7 +190,7 @@ public final class WebGuiBase implements IGuiBase {
         for (final T choice : all) {
             options.add(display == null ? String.valueOf(choice) : display.apply(choice));
         }
-        final List<Integer> answer = hostRequests.ask("choices", message, options, min, max);
+        final List<Integer> answer = hostRequests.ask("choices", null, message, options, min, max);
         final List<T> result = new ArrayList<>();
         if (answer != null) {
             for (final int i : answer) {

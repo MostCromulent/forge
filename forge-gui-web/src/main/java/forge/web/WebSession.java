@@ -184,10 +184,6 @@ public final class WebSession {
         });
     }
 
-    boolean isHost() {
-        return isHost;
-    }
-
     boolean mayHost() {
         return mayHost;
     }
@@ -212,10 +208,7 @@ public final class WebSession {
         if (old != null && old != guiOf(next)) {
             old.close();
         }
-        final BrowserChannel b = browser;
-        if (b != null) {
-            b.send(hello());
-        }
+        tell(hello());
         // Every stage is something the panel that says who is here reports: waiting, joining, at a table, playing
         sessions.announcePresence();
         return true;
@@ -230,9 +223,8 @@ public final class WebSession {
 
     /** The seat came free or was taken, so a browser waiting on it is told again what it may do. */
     void hostSeatChanged() {
-        final BrowserChannel b = browser;
-        if (b != null && !isHost) {
-            b.send(hello());
+        if (!isHost) {
+            tell(hello());
         }
     }
 
@@ -383,7 +375,7 @@ public final class WebSession {
             case "leaveLobby" -> ui.invokeInEdtLater(() -> {
                 final Stage now = stage;
                 if (now instanceof Setup && move(now, new Menu())) {
-                    local.close();
+                    local.endMatch();
                     if (isHost) {
                         sessions.hostGameClosed();
                     }
@@ -693,14 +685,11 @@ public final class WebSession {
                 final SleeveArt art = Wire.decode(msg, SleeveArt.class);
                 lobby.setSleeveArt(art.index(), art.key(), art.offset());
             }
-            default -> {
-                return;
-            }
         }
         channel.send(lobby.state());
     }
 
-    /** A change to the table's draft or sealed event. Everything but the finder's filter is the host's to do. */
+    /** A change to the table's draft or sealed event, which is the host's to make. */
     private void onEvent(final BrowserChannel channel, final JsonObject msg) {
         final String type = msg.get("t").getAsString();
         if (!isHost) {
@@ -753,9 +742,6 @@ public final class WebSession {
                     return;
                 }
                 ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.startEvent()));
-            }
-            default -> {
-                return;
             }
         }
         channel.send(lobby.state());
@@ -837,17 +823,14 @@ public final class WebSession {
                 Logger.error(e, "Could not take a seat");
                 gui.close();
                 move(joining, new Menu());
-                final BrowserChannel b = browser;
-                if (b != null) {
-                    // The waiting card supplies "Could not take a seat", so this is the reason alone
-                    b.send(error(e.getMessage()));
-                }
+                // The waiting card supplies "Could not take a seat", so this is the reason alone
+                tell(error(e.getMessage()));
                 return;
             }
             if (!move(joining, new Setup(gui, true))) {
                 // The game went while the seat was being taken
                 gui.close();
-                local.close();
+                local.endMatch();
                 return;
             }
             applyChosenAvatar();
@@ -992,7 +975,7 @@ public final class WebSession {
     void gameGone() {
         final Stage now = stage;
         if (!(now instanceof Menu) && move(now, new Menu())) {
-            local.close();
+            local.endMatch();
         }
     }
 

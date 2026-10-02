@@ -6,6 +6,7 @@ import forge.game.phase.PhaseType;
 import forge.interfaces.IGameController;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences;
+import forge.gamemodes.match.YieldController;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.web.ToBrowser.ServerSettings;
 import org.tinylog.Logger;
@@ -115,7 +116,8 @@ final class WebSettings {
      * always highlighted the same way, because this client has no other sign of what can be played.</p>
      */
     static void applyAll(final PlayerSettings player, final IGameController controller) {
-        for (final FPref pref : PlayerSettings.PER_PLAYER_ON_HOST) {
+        // Every one is pushed after the engine's own seed, which read the shared preferences, so a guest plays by its own
+        for (final FPref pref : YieldController.SYNCED_PREFS) {
             final boolean always = pref == FPref.YIELD_AUTO_PASS_RESPECTS_INTERRUPTS || pref == FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS;
             applyTo(controller, pref, always ? "true" : player.get(pref));
         }

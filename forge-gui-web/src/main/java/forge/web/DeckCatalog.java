@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.primitives.Ints;
 import com.google.common.collect.MapMaker;
 import forge.StaticData;
 import forge.deck.CardPool;
@@ -66,7 +67,7 @@ final class DeckCatalog {
     private static final Map<String, String> COLOUR_LETTERS = Map.of(
             "White", "W", "Blue", "U", "Black", "B", "Red", "R", "Green", "G");
     /** The finder lists a deck's cards as they are: its problems are the verdict line's to state. */
-    private static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
+    static final Legality.Result NO_FLAGS = new Legality.Result(Map.of(), Map.of(), List.of());
     /** Mana values 0 to 5, then everything 6 and above in the last one. */
     private static final int CURVE_BUCKETS = 7;
 
@@ -77,15 +78,6 @@ final class DeckCatalog {
         Entry(final DeckProxy proxy) {
             this(proxy, false, null);
         }
-    }
-
-    /** The sanctioned formats a deck can be filtered by, which is a card-pool question and not the game type. */
-    static List<String> cardFormats() {
-        final List<String> out = new ArrayList<>();
-        for (final GameFormat f : FModel.getFormats().getSanctionedList()) {
-            out.add(f.getName());
-        }
-        return out;
     }
 
     /** Which of those formats a deck's cards are all legal in, from the formats core finds it legal in, which take in every sanctioned one. */
@@ -227,13 +219,8 @@ final class DeckCatalog {
     /**
      * Rebuilds the catalogue for a format and card pool, and returns every deck in it. A guest's list adds the decks its
      * browser keeps; the host's adds the decks it has loaded from links.
-     */
-    List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device) {
-        return refresh(format, pool, guest, device, null);
-    }
-
-    /**
-     * The same. At a Limited table the decks are event pools: the host's event decks and a guest's own, only those of
+     *
+     * At a Limited table the decks are event pools: the host's event decks and a guest's own, only those of
      * event when it is not null, as desktop's event-decks switch filters them.
      */
     List<DeckSummary> refresh(final GameType format, final GameFormat pool, final boolean guest, final Map<String, OnDevice> device,
@@ -453,22 +440,15 @@ final class DeckCatalog {
                 totalMana += cmc * n;
             }
         }
-        final List<Integer> buckets = new ArrayList<>();
-        final List<Integer> creatureBuckets = new ArrayList<>();
-        for (int i = 0; i < CURVE_BUCKETS; i++) {
-            buckets.add(curve[i]);
-            creatureBuckets.add(creatures[i]);
-        }
-        final List<TypeCount> typeCounts = new ArrayList<>();
-        for (final Map.Entry<String, Integer> e : types.entrySet()) {
-            typeCounts.add(new TypeCount(e.getKey(), e.getValue()));
-        }
         return new DeckStats(played(deck), count(main), count(deck.get(DeckSection.Sideboard)), lands,
-                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, buckets, creatureBuckets, typeCounts);
+                spells == 0 ? 0 : Math.round((totalMana * 100f) / spells) / 100f, Ints.asList(curve), Ints.asList(creatures),
+                types.entrySet().stream().map(e -> new TypeCount(e.getKey(), e.getValue())).toList());
     }
 
-    /** Sources that build a deck when you pick one. They are listed by name only: there is nothing to
-     *  measure, and asking each for a deck just to fill a row would build hundreds of them. */
+    /**
+     * Sources that build a deck when you pick one. They are listed by name only: there is nothing to measure, and
+     * asking each for a deck just to fill a row would build hundreds of them.
+     */
     private void addGenerators(final List<DeckSummary> out) {
         // The tokens the colour generator expects, shown under friendlier names
         final Map<String, String> colours = new LinkedHashMap<>();

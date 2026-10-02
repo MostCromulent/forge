@@ -24,8 +24,9 @@ The person running the server is the **host**; anyone who joins by link is a **g
 - **Constructed**, Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto, for up to four players.
 - The variants **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**.
 - **Draft** and **Sealed**, for up to eight, against the computer or with friends. The computer fills empty seats.
+- **Planar Conquest**, against the computer, on the same saves as the mobile app.
 
-Not yet: Quest, Adventure, Planar Conquest, puzzles, constructed gauntlets and Winston draft.
+Not yet: Quest, Adventure, puzzles, constructed gauntlets and Winston draft.
 
 ### Starting it
 
@@ -189,7 +190,3 @@ e2e suite and to playing it.
       npm ci
       npx playwright install chromium   # first time only
       npx playwright test
-
----
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)

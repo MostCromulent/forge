@@ -20,6 +20,7 @@ import forge.player.PersistentAutoDecisionStore;
 import forge.player.PlayerControllerHuman;
 import forge.util.collect.FCollectionView;
 
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -43,7 +44,7 @@ public class YieldController {
 
     /** Yield FPrefs synced per-PCH; enumerated here so the client snapshot includes every value, not just touched overrides.
      * Stored String-typed (see {@link forge.localinstance.properties.IPreferences}); consumers parse via {@link #getBoolPref}/{@link #getStringPref} according to the pref's expected type. */
-    private static final EnumSet<FPref> SYNCED_PREFS = EnumSet.of(
+    public static final Set<FPref> SYNCED_PREFS = Collections.unmodifiableSet(EnumSet.of(
             FPref.YIELD_INTERRUPT_ON_ATTACKERS,
             FPref.YIELD_INTERRUPT_ON_OPPONENT_SPELL,
             FPref.YIELD_INTERRUPT_ON_TARGETING,
@@ -62,7 +63,7 @@ public class YieldController {
             // Not yield prefs, but seeded the same way: the host runs preview scans on
             // the remote player's behalf and must use that client's highlight settings, not its own.
             FPref.UI_SHOW_ACTIONABLE_HIGHLIGHTS,
-            FPref.UI_SHOW_AUTOTAP_PREVIEW);
+            FPref.UI_SHOW_AUTOTAP_PREVIEW));
 
     private final PlayerControllerHuman owner;
 

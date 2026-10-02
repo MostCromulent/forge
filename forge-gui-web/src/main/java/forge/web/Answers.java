@@ -88,14 +88,6 @@ final class Answers {
         return out;
     }
 
-    static List<Integer> toList(final int[] values) {
-        final List<Integer> a = new ArrayList<>();
-        for (final int v : values) {
-            a.add(v);
-        }
-        return a;
-    }
-
     static int[] defaultCombatSplit(final List<CardView> blockers, final int damage, final boolean hasDefender) {
         final int n = blockers.size() + (hasDefender ? 1 : 0);
         final int[] split = new int[n];

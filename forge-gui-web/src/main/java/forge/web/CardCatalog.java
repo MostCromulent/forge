@@ -30,8 +30,10 @@ final class CardCatalog {
     static final List<String> HEADINGS = List.of("Creatures", "Planeswalkers", "Instants", "Sorceries", "Artifacts",
             "Enchantments", "Battles", "Lands");
 
-    /** What the browser asked for. colours is letters such as "BG"; type and mv are "any" or one value; sort is name, mv, colour or type. */
-    /** filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked. */
+    /**
+     * What the browser asked for. colours is letters such as "BG"; type is "any" or one value; sort is name, mv, colour
+     * or type. filters is search syntax the filter bar's chips add, read apart from the text so a typed name stays ranked.
+     */
     record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
@@ -89,13 +91,8 @@ final class CardCatalog {
     /**
      * A page of the catalogue for one deck. problemOf names why a card can't go in it, or null; such cards are left out
      * unless the query asks for everything. commanderOnly, when set, narrows to cards that can lead the deck.
+     * extras, when given, says what a collection adds to each row.
      */
-    CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
-            final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck) {
-        return query(request, q, problemOf, commanderOnly, inDeck, null);
-    }
-
-    /** extras, when given, says what a collection adds to each row. */
     CataloguePage query(final int request, final Query q, final Function<PaperCard, String> problemOf,
             final Predicate<PaperCard> commanderOnly, final ToIntFunction<String> inDeck, final Function<PaperCard, Extra> extras) {
         final String typed = q.text() == null ? "" : q.text().trim();
@@ -221,9 +218,14 @@ final class CardCatalog {
 
     /** A card's colours as WUBRG letters, or "C" for a colourless card. */
     static String letters(final ColorSet colours) {
-        final String out = (colours.hasWhite() ? "W" : "") + (colours.hasBlue() ? "U" : "") + (colours.hasBlack() ? "B" : "")
-                + (colours.hasRed() ? "R" : "") + (colours.hasGreen() ? "G" : "");
+        final String out = wubrg(colours);
         return out.isEmpty() ? "C" : out;
+    }
+
+    /** Colours as WUBRG letters, and none for colourless. */
+    static String wubrg(final ColorSet colours) {
+        return (colours.hasWhite() ? "W" : "") + (colours.hasBlue() ? "U" : "") + (colours.hasBlack() ? "B" : "")
+                + (colours.hasRed() ? "R" : "") + (colours.hasGreen() ? "G" : "");
     }
 
     /** Lower case, accents stripped, and nothing but letters, digits and spaces, as desktop's ListChooser compares names. */

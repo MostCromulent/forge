@@ -183,10 +183,6 @@ final class DeckEditor {
         return copyOf;
     }
 
-    String landed() {
-        return landed;
-    }
-
     /** Whether the deck exists where it is saved, so Done has a deck of its own to put on a seat. */
     boolean saved() {
         return saved;
@@ -207,10 +203,7 @@ final class DeckEditor {
         if (limit != null) {
             return limit;
         }
-        return change(name, () -> {
-            deck.getOrCreate(to).add(card, count);
-            return null;
-        });
+        return change(name, () -> deck.getOrCreate(to).add(card, count));
     }
 
     String remove(final String name, final DeckSection from, final int count) {
@@ -225,10 +218,7 @@ final class DeckEditor {
         if (have == 0) {
             return Localizer.getInstance().getMessage("lblWebEditorNoneToRemove", String.valueOf(name));
         }
-        return change(name, () -> {
-            take(pool, name, Math.min(count, have));
-            return null;
-        });
+        return change(name, () -> take(pool, name, Math.min(count, have)));
     }
 
     String move(final String name, final DeckSection from, final DeckSection to, final int count) {
@@ -246,7 +236,6 @@ final class DeckEditor {
         return change(name, () -> {
             final CardPool moving = take(pool, name, Math.min(count, have));
             deck.getOrCreate(to).addAll(moving);
-            return null;
         });
     }
 
@@ -286,7 +275,6 @@ final class DeckEditor {
             if (NEW_DECK.equals(deck.getName())) {
                 nameAfterCommander();
             }
-            return null;
         });
     }
 
@@ -313,7 +301,6 @@ final class DeckEditor {
         return change(name, () -> {
             take(pool, name, have);
             wanted.forEach((printing, n) -> pool.add(printing, n));
-            return null;
         });
     }
 
@@ -340,7 +327,6 @@ final class DeckEditor {
                     }
                 }
             }
-            return null;
         });
     }
 
@@ -385,10 +371,7 @@ final class DeckEditor {
                 return Localizer.getInstance().getMessage("lblWebEditorNameTaken", existing);
             }
         }
-        return change(null, () -> {
-            renameTo(name);
-            return null;
-        });
+        return change(null, () -> renameTo(name));
     }
 
     /** Changes what the deck is checked against. A change of format family moves the deck to that format's folder. */
@@ -396,10 +379,7 @@ final class DeckEditor {
         if (collection != null) {
             return Localizer.getInstance().getMessage(DECK_FIXED);
         }
-        return change(null, () -> {
-            moveTo(wanted);
-            return null;
-        });
+        return change(null, () -> moveTo(wanted));
     }
 
     String undo() {
@@ -472,22 +452,23 @@ final class DeckEditor {
 
     /** Adds another deck's cards, as far as the copy limit allows. */
     String addAll(final Deck other) {
-        return change(null, () -> {
-            for (final DeckSection section : collection != null ? List.of(DeckSection.Main) : List.of(DeckSection.Main, DeckSection.Sideboard)) {
-                final CardPool from = other.get(section);
-                if (from == null) {
-                    continue;
-                }
-                for (final Map.Entry<PaperCard, Integer> e : from) {
-                    final PaperCard card = owned(e.getKey());
-                    final int room = card == null ? 0 : room(card);
-                    if (room > 0) {
-                        deck.getOrCreate(section).add(card, Math.min(room, e.getValue()));
-                    }
+        return change(null, () -> addCards(other));
+    }
+
+    private void addCards(final Deck other) {
+        for (final DeckSection section : collection != null ? List.of(DeckSection.Main) : List.of(DeckSection.Main, DeckSection.Sideboard)) {
+            final CardPool from = other.get(section);
+            if (from == null) {
+                continue;
+            }
+            for (final Map.Entry<PaperCard, Integer> e : from) {
+                final PaperCard card = owned(e.getKey());
+                final int room = card == null ? 0 : room(card);
+                if (room > 0) {
+                    deck.getOrCreate(section).add(card, Math.min(room, e.getValue()));
                 }
             }
-            return null;
-        });
+        }
     }
 
     /** Swaps the deck's cards for another deck's, keeping its name and where it is saved. */
@@ -496,20 +477,10 @@ final class DeckEditor {
             // The main deck alone is replaced, and by what the collection can supply
             return change(null, () -> {
                 deck.getMain().clear();
-                for (final Map.Entry<PaperCard, Integer> e : other.getMain()) {
-                    final PaperCard card = owned(e.getKey());
-                    final int room = card == null ? 0 : room(card);
-                    if (room > 0) {
-                        deck.getMain().add(card, Math.min(room, e.getValue()));
-                    }
-                }
-                return null;
+                addCards(other);
             });
         }
-        return change(null, () -> {
-            replaceCards(other, List.of(DeckSection.Main, DeckSection.Sideboard, DeckSection.Commander));
-            return null;
-        });
+        return change(null, () -> replaceCards(other, List.of(DeckSection.Main, DeckSection.Sideboard, DeckSection.Commander)));
     }
 
     EditorState state(final boolean onSeat) {
@@ -524,17 +495,14 @@ final class DeckEditor {
                 cards(deck.get(DeckSection.Commander), legality), wanted, Legality.identityLetters(leaders),
                 groups(deck.getMain(), legality), cards(deck.get(DeckSection.Sideboard), legality), lands(),
                 DeckCatalog.stats(deck), legality.verdict(), legality.problemCount(), !undo.isEmpty(), landed, onSeat,
-                limited(), landSet, limited() ? landSets() : collection == null ? List.of()
+                limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner());
     }
 
-    private String change(final String cardName, final Supplier<String> op) {
+    private String change(final String cardName, final Runnable op) {
         final Snapshot before = new Snapshot(new Deck(deck, deck.getName()), check);
-        final String refused = op.get();
-        if (refused != null) {
-            return refused;
-        }
+        op.run();
         undo.push(before);
         if (undo.size() > MOST_UNDO) {
             undo.removeLast();
@@ -749,10 +717,6 @@ final class DeckEditor {
         }
         return codes.isEmpty() ? CardEdition.Predicates.getRandomSetWithAllBasicLands(StaticData.instance().getEditions()).getCode()
                 : codes.get(MyRandom.getRandom().nextInt(codes.size()));
-    }
-
-    private static List<LandSet> landSets() {
-        return LandSets.ALL;
     }
 
     /**

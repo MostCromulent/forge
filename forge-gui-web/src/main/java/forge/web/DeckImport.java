@@ -165,7 +165,7 @@ final class DeckImport {
         return new ImportResult(request, read.lines(), read.problems(), summary, read.name(), fetched);
     }
 
-    /** The known card name closest to an unknown one, or null when none is close enough to be the one meant. */
+    /** A line that names no card: with the closest known name offered, when one is close enough to be the one meant. */
     private static ImportProblem unknown(final int line, final String text, final boolean unsupported) {
         final String title = Localizer.getInstance().getMessage("lblWebImportLineText", line + 1, text);
         if (unsupported) {

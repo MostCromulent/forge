@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.common.primitives.Ints;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
@@ -1052,7 +1053,7 @@ public class WebGuiGame extends NetworkGuiGame {
         // Desktop's title: "Assign damage dealt by" the attacker
         final String title = Localizer.getInstance().getMessage("lbLAssignDamageDealtBy").replace("%s", attacker == null ? "" : attacker.getName());
         final DistributeRequest request = new DistributeRequest(title, damage, 0,
-                options(recipients, null), cardRef(attacker), maySkip, Answers.toList(Answers.defaultCombatSplit(blockers, damage, defender != null)));
+                options(recipients, null), cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)));
         final JsonElement reply = ask(request, Answers.amounts(recipients.size(), damage, 0, maySkip));
         if (reply.isJsonNull()) {
             return null;
@@ -1083,7 +1084,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final String title = Localizer.getInstance().getMessage("lbLAssignAmountForEffect", amountLabel,
                 effectSource == null ? "" : effectSource.getName());
         final DistributeRequest request = new DistributeRequest(title, amount, perMin, options(recipients, null),
-                cardRef(effectSource), false, Answers.toList(def));
+                cardRef(effectSource), false, Ints.asList(def));
         final JsonArray reply = ask(request, Answers.amounts(recipients.size(), amount, perMin, false)).getAsJsonArray();
         final Map<Object, Integer> result = new LinkedHashMap<>();
         for (int i = 0; i < recipients.size(); i++) {

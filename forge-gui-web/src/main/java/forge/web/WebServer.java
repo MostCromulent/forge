@@ -7,6 +7,8 @@ import com.google.common.primitives.Longs;
 import forge.ImageKeys;
 import forge.StaticData;
 import forge.gui.GuiBase;
+import forge.util.SleeveArt;
+import forge.localinstance.properties.ForgeConstants;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
@@ -227,11 +229,17 @@ public final class WebServer implements AutoCloseable {
         return original == null ? imageKey : original.getImageKey(imageKey.endsWith(ImageKeys.BACKFACE_POSTFIX));
     }
 
+    /** The art crop the shared fetcher has cached for a card, or null when it has not been downloaded yet. */
+    private static File sleeveArtFile(final String imageKey) {
+        final File f = new File(ForgeConstants.CACHE_SLEEVE_PICS_DIR, SleeveArt.cacheFileName(imageKey));
+        return f.isFile() ? f : null;
+    }
+
     /** As {@link #serveImage}: never wait on the download here, or the thread that serves every other
      *  request waits with it. */
     private void serveSleeveArt(final ChannelHandlerContext ctx, final String asked) throws IOException {
         final String key = artKey(asked);
-        final File cached = SleeveArtCache.file(key);
+        final File cached = sleeveArtFile(key);
         if (cached != null) {
             respondImage(ctx, cached);
             return;
@@ -244,7 +252,7 @@ public final class WebServer implements AutoCloseable {
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchSleeveArt(key, () -> {
             if (answered.compareAndSet(false, true)) {
-                final File fetched = SleeveArtCache.file(key);
+                final File fetched = sleeveArtFile(key);
                 try {
                     if (fetched != null) {
                         respondImage(ctx, fetched);
@@ -402,11 +410,6 @@ public final class WebServer implements AutoCloseable {
     }
 
     /** Answers a request; a cookie, when given, is the token the page was loaded with. */
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
-            final String cookieToken) {
-        respond(ctx, status, body, type, cookieToken, "no-cache");
-    }
-
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl) {
         respond(ctx, status, body, type, cookieToken, cacheControl, null);

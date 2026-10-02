@@ -72,7 +72,6 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import org.apache.commons.lang3.EnumUtils;
@@ -215,7 +214,7 @@ final class ConquestGame {
                         region = r.getName();
                     }
                 }
-                commanders.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), region));
+                commanders.add(new ConquestCardOption(card.getName(), card.getImageKey(false), CardCatalog.wubrg(card.getRules().getColorIdentity()), region));
             }
             commanders.sort(PICTURED_FIRST);
             commander = named(plane.getCommanders(), commanderName);
@@ -223,7 +222,7 @@ final class ConquestGame {
         if (commander != null) {
             walkers = new ArrayList<>();
             for (final PaperCard card : ConquestUtil.getStartingPlaneswalkerOptions(commander)) {
-                walkers.add(new ConquestCardOption(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()), null));
+                walkers.add(new ConquestCardOption(card.getName(), card.getImageKey(false), CardCatalog.wubrg(card.getRules().getColorIdentity()), null));
             }
             walkers.sort(PICTURED_FIRST);
         }
@@ -363,12 +362,12 @@ final class ConquestGame {
         for (final ConquestCommander c : data.getCommanders()) {
             final ConquestRecord record = c.getRecord();
             commanders.add(new ConquestCommanderRow(c.getName(), c.getCard().getImageKey(false),
-                    colors(c.getCard().getRules().getColorIdentity()), c.getOrigin(), record.getWins(), record.getLosses(),
+                    CardCatalog.wubrg(c.getCard().getRules().getColorIdentity()), c.getOrigin(), record.getWins(), record.getLosses(),
                     c.getDeck().getMain().countAll(), c.getDeckProblem(), c == lead));
         }
         final List<ConquestWalkerRow> walkers = new ArrayList<>();
         for (final PaperCard card : data.getSortedPlaneswalkers()) {
-            walkers.add(new ConquestWalkerRow(card.getName(), card.getImageKey(false), colors(card.getRules().getColorIdentity()),
+            walkers.add(new ConquestWalkerRow(card.getName(), card.getImageKey(false), CardCatalog.wubrg(card.getRules().getColorIdentity()),
                     card.equals(data.getPlaneswalker())));
         }
         return new ConquestParty(commanders, walkers);
@@ -390,10 +389,9 @@ final class ConquestGame {
     /** A commander's deck as the deck finder's panel shows one. */
     static DeckDetails deckDetails(final ConquestCommander commander) {
         final Deck deck = commander.getDeck();
-        final Legality.Result noFlags = new Legality.Result(Map.of(), Map.of(), List.of());
         return new DeckDetails("conquest:" + commander.getName(), commander.getName(), commander.getDeckProblem(),
-                colors(commander.getCard().getRules().getColorIdentity()), DeckCatalog.stats(deck),
-                DeckEditor.groups(deck.getMain(), noFlags), List.of(), null, 0, null);
+                CardCatalog.wubrg(commander.getCard().getRules().getColorIdentity()), DeckCatalog.stats(deck),
+                DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), List.of(), null, 0, null);
     }
 
     /** The cards owned and not exiled, or those exiled. */
@@ -510,8 +508,8 @@ final class ConquestGame {
         }
         return new ConquestAetherState(pools.locked().size(), pools.filtered().size(), pools.strict().size(),
                 List.of(byRarity[0], byRarity[1], byRarity[2], byRarity[3]), ConquestAether.cost(pools, filter), types, rarities, cmcs,
-                colors(filter.colors()), filter.type().name(), filter.rarity().name(), filter.cmc().name(),
-                colors(data.getSelectedCommander().getCard().getRules().getColorIdentity()),
+                CardCatalog.wubrg(filter.colors()), filter.type().name(), filter.rarity().name(), filter.cmc().name(),
+                CardCatalog.wubrg(data.getSelectedCommander().getCard().getRules().getColorIdentity()),
                 pulled == null ? null : new ConquestPackCard(pulled.getName(), pulled.getImageKey(false), pulled.getRarity().name(), 0),
                 problem);
     }
@@ -691,7 +689,7 @@ final class ConquestGame {
                 }
             }
             final ConquestRegion.ArtCard art = region.getArtCard();
-            regions.add(new ConquestRegionRow(region.getName(), art.card().getImageKey(art.backFace()), colors(region.getColorSet()),
+            regions.add(new ConquestRegionRow(region.getName(), art.card().getImageKey(art.backFace()), CardCatalog.wubrg(region.getColorSet()),
                     conquered, plane.getRowsPerRegion() * plane.getCols()));
         }
         final List<ConquestLocation> toChosen = chosen.equals(here) ? null : data.getPath(chosen);
@@ -732,16 +730,6 @@ final class ConquestGame {
 
     private static ConquestPlace place(final ConquestLocation loc) {
         return new ConquestPlace(loc.getRegionIndex(), loc.getRow(), loc.getCol());
-    }
-
-    private static String colors(final ColorSet set) {
-        final StringBuilder out = new StringBuilder();
-        if (set.hasWhite()) { out.append('W'); }
-        if (set.hasBlue()) { out.append('U'); }
-        if (set.hasBlack()) { out.append('B'); }
-        if (set.hasRed()) { out.append('R'); }
-        if (set.hasGreen()) { out.append('G'); }
-        return out.toString();
     }
 
     /** Selects a place the player could walk to; anything else is ignored. */

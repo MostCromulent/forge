@@ -177,7 +177,7 @@ public final class LocalGame {
     /** Takes a seat in a game another browser on this machine is hosting. Nothing is served from here. */
     public void openGuest(final String playerName, final WebGuiGame gui,
             final Runnable onUpdate, final BiConsumer<String, String> onChat, final Runnable onClosed) {
-        close();
+        endMatch();
         connect(playerName, gui, onUpdate, onChat, onClosed);
     }
 
@@ -237,21 +237,10 @@ public final class LocalGame {
     /** Sets a game up and starts it at once, which is what a test wants. */
     public void startMatch(final String playerName, final Deck playerDeck, final String aiName, final Deck aiDeck,
             final WebGuiGame gui) {
-        startMatch(List.of(
+        openHost(playerName, gui, () -> { }, (from, text) -> { });
+        seatAndStart(List.of(
                 new Seat(playerName, false, 0, 0, playerDeck),
-                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)),
-                GameType.Constructed, gui);
-    }
-
-    /** Seats are taken in the order given; exactly one must be the browser's. */
-    public void startMatch(final List<Seat> seats, final GameType format, final WebGuiGame gui) {
-        final Seat mine = seats.stream().filter(s -> !s.ai()).findFirst()
-                .orElseThrow(() -> new IllegalArgumentException("No seat for the browser"));
-        openHost(mine.name(), gui, () -> { }, (from, text) -> { });
-        if (format != GameType.Constructed) {
-            hosted.applyVariant(format);
-        }
-        seatAndStart(seats);
+                new Seat(aiName, true, storedIndex(FPref.UI_AVATARS, 1), storedIndex(FPref.UI_SLEEVES, 1), aiDeck)));
     }
 
     /** A sealed or draft match against computer seats, typed as limitedType, as desktop's offline limited screens start one. */
@@ -408,11 +397,6 @@ public final class LocalGame {
                 human.getInputQueue().onGameOver(true);
             }
         });
-    }
-
-    /** Leaves whatever game is open. The server stays up, ready for the next one. */
-    public void close() {
-        endMatch();
     }
 
     /** Gives up the seat for good. Only the host stops the server, because only the host started it. */
