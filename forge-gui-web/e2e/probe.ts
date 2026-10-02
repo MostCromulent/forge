@@ -22,7 +22,7 @@ import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { PROBE_DECK, PROBE_SEED, startServer, type Server } from './server';
-import { chooseDeck, enterName, gameStarted, hostTable, inviteLink } from './steps';
+import { enterName, gameStarted, hostTable } from './steps';
 import type { Actions } from '../src/main/ts/actions';
 import type { Model } from '../src/main/ts/model';
 
@@ -140,40 +140,11 @@ async function home(p: Probe): Promise<void> {
   await enterName(p.page, 'Alice');
 }
 
-/** A second browser joining the host's table by its invite link, under the name Bea. */
-async function seatGuest(p: Probe): Promise<Page> {
-  const guest = await (await p.browser.newContext({ viewport: VIEWPORT })).newPage();
-  listen(guest, 'guest');
-  await guest.goto(await inviteLink(p.page, p.server.url));
-  await enterName(guest, 'Bea');
-  await expect(p.page.locator('#seats')).toContainText('Bea');
-  return guest;
-}
-
 /** Match setup against the computer, with no decks chosen. */
 export async function lobby(p: Probe): Promise<void> {
   await home(p);
   await hostTable(p.page, false);
   p.mark('lobby');
-}
-
-/** Match setup with a guest seated; returns the guest's page. */
-export async function lobbyWithGuest(p: Probe): Promise<Page> {
-  await home(p);
-  await hostTable(p.page, true);
-  return seatGuest(p);
-}
-
-/** A networked match between the host and a guest, both past the goes-first screen; returns the guest's page. */
-export async function matchWithGuest(p: Probe): Promise<Page> {
-  const guest = await lobbyWithGuest(p);
-  await chooseDeck(p.page, p.page.locator('.plate.mine'));
-  await chooseDeck(guest, guest.locator('.plate.mine'));
-  for (const page of [p.page, guest]) await page.click('.plate.mine .ready-toggle');
-  await expect(p.page.locator('#play')).toBeEnabled();
-  await p.page.click('#play');
-  for (const page of [p.page, guest]) await gameStarted(page);
-  return guest;
 }
 
 /** The deck finder open on your own seat, with the probe's own deck chosen and illegal decks shown too. */
@@ -326,29 +297,6 @@ export async function passUntil<A>(p: Probe, what: string, test: (arg: A) => unk
   await p.snap(`timeout-${what.replace(/[^\w-]+/g, '-')}`).catch(() => {});
   const pages = await Promise.all([p.page, ...others].map(async (page, i) => `${i ? `other ${i}` : 'yours'}: ${await explain(page)}`));
   throw new Error(`Passed for ${timeout / 1000} s without ${what}. ${pages.join(' ')}`);
-}
-
-/**
- * An online Draft or Sealed table from Play with friends, set up with the full card pool, with a guest seated and
- * both players ready, one click from dealing ("Open packs" or "Start draft"). Returns the guest's page.
- */
-export async function eventTable(p: Probe, kind: 'draft' | 'sealed'): Promise<Page> {
-  const page = p.page;
-  await home(p);
-  await page.click('[data-mode=multiplayer]');
-  await page.click(`.chooser [data-kind=${kind}]`);
-  await expect(page.locator('.event-setup .wiz')).toBeVisible({ timeout: 30_000 });
-  await page.click('.tile-choice:has-text("Full card pool")');
-  const next = page.locator('.stp-open button:has-text("Continue")');
-  if (await next.count()) await next.click();
-  await page.click('.wfoot button:has-text("Save")');
-  await expect(page.locator('.event-head .event-product')).toBeVisible();
-  const guest = await seatGuest(p);
-  for (const on of [guest, page]) {
-    await on.click('.plate.mine .ready-toggle');
-    await expect(on.locator('.plate.mine .ready-toggle')).toContainText('Ready');
-  }
-  return guest;
 }
 
 /** An offline draft at its first pick. */
