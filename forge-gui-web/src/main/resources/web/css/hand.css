@@ -33,7 +33,6 @@ html[data-motion="reduced"] #hand .card .cost-badge.changed .pip::before { filte
 #hand .card.revealed .seen { display: block; }
 #hand .card:hover .seen { transform: scale(.67); }
 /* Another player's card you may play: their name across it, in their colour */
-#hand .card .owned-by { display: none; }
 #hand .card.foreign .owned-by { display: block; position: absolute; left: 6%; right: 6%; top: 13%; z-index: 3; padding: 1px 4px; border-radius: 4px;
   background: color-mix(in srgb, var(--owner-tint) 85%, #000); color: #0b0e14; font-size: calc(var(--hand-w) * 0.1); font-weight: 800; text-align: center;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 1px 4px #000a; }

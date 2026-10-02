@@ -137,10 +137,8 @@ html[data-motion="reduced"] :is(.backdrop, .dialog, .card-menu, .host-choice, .z
 .playmat-picker .mat .plain { background: radial-gradient(120% 90% at 50% 42%, #1a202c 0%, #0f131b 100%); }
 .playmat-picker .mat.on { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); background: var(--accent-soft); }
 .playmat-picker .brightness { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--muted); }
-.playmat-picker .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
-.playmat-picker .seg button { border: 0; border-radius: 0; padding: 5px 12px; font-size: 12.5px; background: var(--surface-2); color: var(--muted); }
-.playmat-picker .seg button + button { border-left: 1px solid var(--line); }
-.playmat-picker .seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-2); font-weight: 600; }
+.playmat-picker .seg { border-radius: 7px; }
+.playmat-picker .seg button { padding: 5px 12px; font-size: 12.5px; }
 .game-menu .card-menu-item.on { background: var(--surface-3); }
 /* The game menu's rows shade only under the pointer, grouped by rules: the table, passing, the match, dev mode */
 .game-menu .card-menu-item { align-items: center; }

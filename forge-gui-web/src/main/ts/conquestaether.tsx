@@ -29,7 +29,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const short = a.cost > (model.conquestBar?.shards ?? 0);
   const pull = (
     <button class="primary cq-ae-pull" disabled={!a.cost || !a.strict || short} onClick={() => ask({}, true)}>
-      {t('lblWebConquestPull')}<span class="dot">·</span>{shard(18)}{a.cost.toLocaleString('en-GB')}
+      {t('lblWebConquestPull')}<span class="cq-sep">·</span>{shard(18)}{a.cost.toLocaleString('en-GB')}
     </button>
   );
   return (

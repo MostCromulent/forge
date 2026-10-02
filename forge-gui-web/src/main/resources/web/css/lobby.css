@@ -6,7 +6,6 @@
 /* --- menu ------------------------------------------------------------- */
 
 .menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 24px; padding: 40px 20px; }
-.menu-page.start { align-content: center; }
 .wordmark-block { display: grid; justify-items: center; gap: 7px; }
 .menu-page .wordmark { font-size: 44px; line-height: 1; letter-spacing: .06em; font-family: Georgia, "Times New Roman", serif; }
 /* The one place Magic's five colours are pure decoration: no card art nearby and nothing encoded by hue */
@@ -396,8 +395,6 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .dk-cards { overflow: auto; padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-content: start; }
 .group { margin-bottom: 14px; }
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
-.line { display: flex; gap: 8px; font-size: 13px; padding: 1px 0; }
-.line .n { color: var(--muted); min-width: 16px; text-align: right; }
 .none { color: var(--muted); padding: 18px; }
 
 /* --- sleeve picker ---------------------------------------------------- */
@@ -441,9 +438,6 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 
 /* --- finder: filters, statistics and the card peek ---------------------- */
 
-.find-row { display: flex; gap: 10px; align-items: center; }
-.find-row .find { flex: 1; min-width: 0; }
-.find-row select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font: inherit; }
 .count-row { display: flex; gap: 10px; align-items: center; }
 .count-row .shown { flex: 1; }
 .count-row select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 13px; }
@@ -520,13 +514,6 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
 .saved.no-deck .art-tile { opacity: .4; pointer-events: none; }
 .no-deck-why { margin: 6px 0 0; color: var(--select); font-size: 12px; }
 
-.legal-only { display: flex; align-items: center; gap: 8px; padding: 0 10px; color: var(--text); font-size: 13px; cursor: pointer; }
-/* A switch: the checkbox drawn as a track and knob */
-.legal-only input { appearance: none; flex: none; position: relative; width: 32px; height: 18px; margin: 0; border-radius: 9px; background: var(--line); cursor: pointer; transition: background .15s; }
-.legal-only input::after { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform .15s, background .15s; }
-.legal-only input:checked { background: var(--accent-2); }
-.legal-only input:checked::after { transform: translateX(14px); background: var(--on-brass); }
-.legal-only input:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 
 /* The formats a deck's cards are legal in, as the desktop chooser words it */
 .deck-formats {
@@ -687,7 +674,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .finder-foot .linked-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
-.finder.dropping { position: relative; }
 .drop-over-finder {
   position: absolute; inset: 10px; z-index: 6; display: grid; place-items: center; pointer-events: none; font-size: 16px; font-weight: 700;
   border: 2px dashed var(--accent-2); border-radius: 12px; background: var(--accent-soft);

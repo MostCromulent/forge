@@ -64,7 +64,7 @@ export function Planes({ model, actions }: { model: Model; actions: Actions }) {
             ? <button class="primary cq-big" disabled={plane.current} onClick={() => go(false)}>{plane.current ? t('lblWebConquestCurrent') : t('lblPlaneswalk')}</button>
             : (
               <button class="primary cq-big" disabled={p.emblems < p.unlockCost} onClick={() => setAsking(true)}>
-                {t('lblWebConquestUnlock')}<span class="dot">·</span>{emblem(17)}{p.emblems} / {p.unlockCost}
+                {t('lblWebConquestUnlock')}<span class="cq-sep">·</span>{emblem(17)}{p.emblems} / {p.unlockCost}
               </button>
             )}
         </div>

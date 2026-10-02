@@ -5,7 +5,6 @@
 
 .cq-shell { height: 100vh; display: flex; flex-direction: column; }
 .cq-shell > .limited-error { margin: 8px 20px 0; }
-.cq-face { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: 50% 18%; }
 .cq-coin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
 .cq-coin img { width: 20px; height: 20px; }
 .cq-coin b { font-size: 13.5px; }
@@ -90,7 +89,7 @@ button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opa
 /* Where the player stands. It is ringed in white, and it is the one thing on the map that moves. */
 .cq-you { position: absolute; z-index: 6; pointer-events: none; display: grid; justify-items: center; transform: translate(-50%, -50%); }
 .cq-trail-in.walking .cq-you { transition: left .5s linear, top .5s linear; }
-.cq-you i { width: 58px; height: 58px; border-radius: 50%; background: #111 center 15% / cover; border: 3px solid #fff; box-shadow: 0 0 0 2px #0b0e14, 0 0 0 4px var(--accent-2), 0 0 24px 8px #ffffff66, 0 8px 16px #000; }
+.cq-you i { width: 58px; height: 58px; border-radius: 50%; background: var(--surface-2) center 15% / cover; border: 3px solid #fff; box-shadow: 0 0 0 2px #0b0e14, 0 0 0 4px var(--accent-2), 0 0 24px 8px #ffffff66, 0 8px 16px #000; }
 .cq-you::before { content: ''; position: absolute; left: 50%; top: 29px; width: 58px; height: 58px; margin: -29px; border-radius: 50%; border: 2px solid #fff; animation: cq-you-pulse 1.8s ease-out infinite; }
 @keyframes cq-you-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
 .cq-you b { margin-top: -9px; font: 800 9.5px/1 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #fff; color: #0b0e14; box-shadow: 0 2px 6px #000a; }
@@ -106,8 +105,7 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-panel { padding: 18px 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
 .cq-panel h3 { margin: 0; font-size: 20px; line-height: 1.2; text-wrap: balance; }
 .cq-where { display: flex; align-items: center; gap: 8px; }
-.cq-where .pips { display: inline-flex; gap: 2px; }
-.cq-art { height: 132px; padding: 0 10px 9px; border: 0; border-radius: 10px; background: #111 center 22% / cover; position: relative; display: flex; align-items: flex-end; box-shadow: 0 0 0 1px var(--line-bright); color: var(--text); text-align: left; opacity: 1; overflow: hidden; }
+.cq-art { height: 132px; padding: 0 10px 9px; border: 0; border-radius: 10px; background: var(--surface-2) center 22% / cover; position: relative; display: flex; align-items: flex-end; box-shadow: 0 0 0 1px var(--line-bright); color: var(--text); text-align: left; opacity: 1; overflow: hidden; }
 .cq-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, #0b0e14d9 100%); }
 .cq-art b { position: relative; z-index: 1; font-size: 14px; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
 .cq-desc { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
@@ -115,7 +113,7 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 /* The dock stands over the foot of the page, so the panel ends above it */
 .cq-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 20px 62px; display: grid; gap: 10px; background: color-mix(in srgb, var(--bg-deep) 35%, transparent); }
 .cq-mine { display: flex; align-items: center; gap: 10px; }
-.cq-face2 { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 9px; background: #111 center 20% / cover; box-shadow: 0 0 0 1px var(--line-bright); flex: none; }
+.cq-face2 { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 9px; background: var(--surface-2) center 20% / cover; box-shadow: 0 0 0 1px var(--line-bright); flex: none; }
 .cq-face2.round { border-radius: 50%; width: 34px; height: 34px; margin: 0 6px; }
 .cq-mine .t { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .cq-mine .t b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -242,7 +240,6 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-rv-card.dup.up .cq-rv-plus { display: flex; }
 /* A duplicate's shards on their way to the bar */
 .cq-mote { position: fixed; left: 0; top: 0; width: 22px; height: 22px; margin: -11px; z-index: 80; pointer-events: none; filter: drop-shadow(0 0 6px #7fe0ff); }
-.cq-coin.gain { border-color: var(--accent-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 30%, transparent); }
 
 html[data-motion="reduced"] :is(.cq-dl-glow, .cq-pk, .cq-pk-sheen, .cq-pk-speck, .cq-pk-hint) { animation: none; }
 html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
@@ -348,7 +345,7 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ticket-cards .cq-pic img { position: absolute; inset: 0; width: 100%; height: 100%; }
 
 .cq-purse > button { font-size: 12.5px; padding: 5px 12px; }
-.dot { opacity: .5; margin: 0 8px; }
+.cq-sep { opacity: .5; margin: 0 8px; }
 
 /* The Aether: the filters down the left, and what a pull would draw from in the middle */
 .cq-aether { position: relative; display: grid; grid-template-columns: 372px minmax(0, 1fr); min-height: 0; }
@@ -430,7 +427,4 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 
 /* A wedge on the dial's lower half is read from outside the dial, so its icon and label are turned the right way up */
 .cq-dl-wedge.low > * { transform: rotate(180deg); }
-.cq-dl-wedge.low { align-content: start; }
 .cq-dl-wedge.low .cq-dl-ic { order: 2; }
-/* A picture still on its way leaves a quiet surface, not a hole */
-.cq-art, .cq-face2, .cq-you i { background-color: var(--surface-2); }
