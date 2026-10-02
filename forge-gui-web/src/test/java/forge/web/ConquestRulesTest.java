@@ -396,6 +396,21 @@ public class ConquestRulesTest {
         throw new AssertionError("no such event on " + plane.getName());
     }
 
+    // Fails if a save written by today's code, which is also what mobile writes, no longer reads back as it was
+    // written: another place, balance, card count or commander deck
+    @Test
+    public void aSavedConquestStillLoads() throws Exception {
+        final ConquestData data = ConquestFixture.install();
+        assertEquals(data.getCurrentPlane().getName(), "Zendikar");
+        assertEquals(data.getPlaneswalkEmblems(), 1);
+        assertEquals(data.getAEtherShards(), 3000);
+        assertEquals(data.getUnlockedCardCount(), 42);
+        assertTrue(data.getCurrentPlaneData().hasConquered(new ConquestLocation(data.getCurrentPlane(), 0, 0, 0)));
+        FModel.getConquest().load(data);
+        assertEquals(data.getSelectedCommander().getName(), "A-Phylath, World Sculptor");
+        assertEquals(data.getSelectedCommander().getDeck().getMain().countAll(), 40);
+    }
+
     // Fails if deleting leaves the save listed
     @Test
     public void aDeletedConquestIsGone() {

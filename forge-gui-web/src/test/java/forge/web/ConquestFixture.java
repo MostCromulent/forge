@@ -8,11 +8,17 @@ import forge.gamemodes.planarconquest.ConquestPreferences;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
 import forge.gamemodes.planarconquest.ConquestUtil;
 import forge.item.PaperCard;
+import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /** Conquests made for a test, in the profile of whoever runs it, and removed afterwards. */
 final class ConquestFixture {
@@ -39,6 +45,31 @@ final class ConquestFixture {
         final PaperCard commander = plane.getCommanders().get(0);
         final PaperCard planeswalker = ConquestUtil.getStartingPlaneswalkerOptions(commander).iterator().next();
         final ConquestData data = FModel.getConquest().create(name, plane, planeswalker, commander);
+        made.add(data);
+        return data;
+    }
+
+    /**
+     * A conquest saved earlier, copied into the profile under a name of its own: Zendikar, its first event won once,
+     * one booster opened, 3000 shards, 1 emblem, 42 cards, and A-Phylath, World Sculptor leading a 40-card deck.
+     */
+    static ConquestData install() throws IOException, URISyntaxException {
+        if (currentBefore == null) {
+            currentBefore = FModel.getConquestPreferences().getPref(CQPref.CURRENT_CONQUEST);
+        }
+        final Path from = Path.of(ConquestFixture.class.getResource("/conquest/Fixture_conquest").toURI());
+        final Path to = Path.of(ForgeConstants.CONQUEST_SAVE_DIR, name().replace(' ', '_'));
+        try (Stream<Path> files = Files.walk(from)) {
+            for (final Path file : (Iterable<Path>) files::iterator) {
+                final Path target = to.resolve(from.relativize(file).toString());
+                if (Files.isDirectory(file)) {
+                    Files.createDirectories(target);
+                } else {
+                    Files.copy(file, target);
+                }
+            }
+        }
+        final ConquestData data = new ConquestData(to.toFile());
         made.add(data);
         return data;
     }

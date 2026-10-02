@@ -25,6 +25,8 @@ export interface Seed {
   prefs?: Record<string, string>;
   /** Constructed decks saved as the player's own, by name, in .dck text. */
   decks?: Record<string, string>;
+  /** Any other files, by their path under Forge's user folder, with their text. */
+  files?: Record<string, string>;
 }
 
 /** The player's own deck every probe server starts with: sixty basics, legal in Constructed. */
@@ -74,6 +76,10 @@ export async function startServer(onPort?: number, seed: Seed = {}): Promise<Ser
   for (const [name, text] of Object.entries(seed.decks ?? {})) {
     mkdirSync(join(user, 'decks', 'constructed'), { recursive: true });
     writeFileSync(join(user, 'decks', 'constructed', `${name}.dck`), text);
+  }
+  for (const [path, text] of Object.entries(seed.files ?? {})) {
+    mkdirSync(dirname(join(user, path)), { recursive: true });
+    writeFileSync(join(user, path), text);
   }
   const port = onPort ?? await freePort();
   const java: ChildProcess = spawn('java', [
