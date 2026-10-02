@@ -581,7 +581,8 @@ public final class WebSession {
             case "devConquestWheel" -> {
                 if (isHost && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
                     try {
-                        conquest.setNextWheel(ChaosWheelOutcome.valueOf(Wire.decode(msg, FromBrowser.DevConquestWheel.class).outcome()));
+                        final String outcome = Wire.decode(msg, FromBrowser.DevConquestWheel.class).outcome();
+                        conquest.setNextWheel(outcome == null || outcome.isEmpty() ? null : ChaosWheelOutcome.valueOf(outcome));
                     } catch (final IllegalArgumentException e) {
                         Logger.warn("Not a wheel outcome: {}", msg);
                     }

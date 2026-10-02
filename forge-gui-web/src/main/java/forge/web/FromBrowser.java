@@ -395,7 +395,7 @@ final class FromBrowser {
     record ConquestSelect(int region, int row, int col) {
     }
 
-    /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name. */
+    /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name, or empty to leave it to chance. */
     @Command("devConquestWheel")
     record DevConquestWheel(String outcome) {
     }

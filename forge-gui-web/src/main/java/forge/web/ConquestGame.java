@@ -168,7 +168,9 @@ final class ConquestGame {
             } else {
                 final ConquestPlane plane = model().getCurrentPlane();
                 pack = planeName(plane);
-                art = plane.getPlaneCards().isEmpty() ? null : plane.getPlaneCards().get(0).getImageKey(false);
+                // The plane has no picture of its own, so its pack wears its first region's
+                final ConquestRegion.ArtCard picture = plane.getRegions().get(0).getArtCard();
+                art = picture.card().getImageKey(picture.backFace());
             }
         }
         return new ConquestStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
