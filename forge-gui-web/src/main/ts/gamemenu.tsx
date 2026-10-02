@@ -176,11 +176,11 @@ export function AutoDecisionsDialog({ model, actions, close }: { model: Model; a
         <>
           <div class="setting">
             <div>{t('lblWebGameMenuPauseYields')}</div>
-            <OnOff on={all.yieldsOff} change={on => actions.autoDecisions('disableYields', undefined, on)} />
+            <OnOff on={all.yieldsOff} label={t('lblWebGameMenuPauseYields')} change={on => actions.autoDecisions('disableYields', undefined, on)} />
           </div>
           <div class="setting">
             <div>{t('lblWebGameMenuPauseTriggers')}</div>
-            <OnOff on={all.triggersOff} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
+            <OnOff on={all.triggersOff} label={t('lblWebGameMenuPauseTriggers')} change={on => actions.autoDecisions('disableTriggers', undefined, on)} />
           </div>
         </>
       )}

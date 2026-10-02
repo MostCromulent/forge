@@ -55,11 +55,17 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 /* A button just used, by click or by its key, dips dark for a moment so the press is seen to land */
 #prompt button.pressed { animation: pressed .18s ease-out; }
 @keyframes pressed { from { filter: brightness(.6); } }
-/* Options: one scrolling list with a search box, as the settings are too many for columns */
+/* Options: tabs down a side rail, each a short list, with a search box over all of them */
 #options .options-dialog { width: min(640px, 92vw); max-height: 86vh; display: grid; grid-template-rows: auto 1fr auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 #options header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
 #options header .search { flex: 1; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; padding: 5px 9px; }
 #options header .spacer { flex: 1; }
+#options .tabbed { width: min(720px, 92vw); height: min(560px, 86vh); }
+#options .split { display: grid; grid-template-columns: 168px minmax(0, 1fr); min-height: 0; }
+#options .rail { display: grid; align-content: start; gap: 2px; padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--line); }
+#options .rail button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--muted); font-size: 13px; text-align: left; }
+#options .rail button:hover { color: var(--text); background: var(--surface); }
+#options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); box-shadow: inset 3px 0 0 var(--accent-2); }
 #options .stops-dialog { width: min(440px, 92vw); }
 #options .decisions-dialog { width: min(620px, 92vw); }
 #options .decision { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
@@ -74,27 +80,25 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #options header .close { background: none; border: none; color: var(--muted); display: grid; place-items: center; padding: 4px; }
 #options svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #options .rows { overflow-y: auto; scrollbar-width: thin; padding: 6px 14px 12px; }
-/* Every setting is two columns: what it is, and its control filling a column of one width, so every control lines up */
-#options .options-dialog { --control: 248px; }
-#options .stops-dialog { --control: 116px; }
+/* Every setting is two columns: what it is, and its control at the right edge */
 #options h4 { display: flex; align-items: baseline; justify-content: space-between; margin: 20px 0 2px; color: var(--muted); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
 #options h4:first-child { margin-top: 8px; }
 #options .section-action { padding: 0; background: none; border: 0; color: var(--muted); font-size: 11px; letter-spacing: 0; text-transform: none; }
 #options .section-action:hover { color: var(--text); text-decoration: underline; }
-#options .setting { display: grid; grid-template-columns: minmax(0, 1fr) var(--control); align-items: center; gap: 8px 24px; min-height: 30px; padding: 9px 0; border-top: 1px solid var(--line); }
+#options .setting { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px 24px; min-height: 30px; padding: 9px 0; border-top: 1px solid var(--line); }
 #options h4 + .setting, #options .rows > .setting:first-child { border-top: 0; }
 #options .hint { color: var(--muted); font-size: 11.5px; line-height: 1.4; margin-top: 1px; }
-/* Choices, and on or off, are a recessed track of equal segments, with the chosen one raised in brass, or in grey when it is Off */
-#options .choice { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 2px; height: 30px; padding: 2px; box-sizing: border-box; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 8px; box-shadow: inset 0 1px 3px #000a; }
-#options .choice button { min-width: 0; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background .12s, color .12s; }
-#options .choice button:hover:not(.on) { background: #ffffff0d; color: var(--text); }
-#options .choice button.on { background: var(--brass); color: var(--on-brass); font-weight: 700; box-shadow: 0 1px 3px #000c, inset 0 1px 0 #ffffff59; }
-#options .choice button.on.off { background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); color: var(--text); box-shadow: 0 1px 3px #000c, inset 0 1px 0 #ffffff14; }
-#options .slider { display: grid; grid-template-columns: minmax(0, 1fr) 38px; align-items: center; gap: 8px; height: 28px; }
+/* On or off is a switch, lit gold when on, and a choice is a menu */
+#options .switch { justify-self: end; position: relative; width: 38px; height: 22px; padding: 0; border: 1px solid var(--line-bright); border-radius: 999px; background: var(--surface-2); }
+#options .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s; }
+#options .switch[aria-checked="true"] { background: var(--accent-2); border-color: var(--accent-2); }
+#options .switch[aria-checked="true"]::after { left: 18px; background: var(--on-brass); }
+#options .pick { justify-self: end; min-width: 150px; height: 30px; padding: 0 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-size: 12.5px; }
+#options .slider { display: grid; grid-template-columns: minmax(0, 1fr) 38px; align-items: center; gap: 8px; width: 220px; height: 28px; }
 #options .slider input { width: 100%; margin: 0; accent-color: var(--accent-2); }
 #options .slider span { color: var(--muted); font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
-/* A key is drawn as a keycap, and Edit as a button of the same make; both keep to the start of the column */
-#options .setting .key-bind, #options .setting .edit { justify-self: start; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
+/* A key is drawn as a keycap, and Edit as a button of the same make */
+#options .setting .key-bind, #options .setting .edit { justify-self: end; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
 #options .setting .key-bind:hover, #options .setting .edit:hover { border-color: var(--accent-2); }
 #options .key-bind { min-width: 56px; border-bottom-width: 3px; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
 #options .key-bind.listening { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); }
@@ -104,6 +108,9 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #options .css { width: 100%; box-sizing: border-box; resize: vertical; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px; }
 @media (max-width: 560px) {
   #options .setting { grid-template-columns: minmax(0, 1fr); }
+  #options .switch, #options .pick, #options .slider, #options .setting .key-bind, #options .setting .edit { justify-self: start; }
+  #options .split { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  #options .rail { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
 }
 #options footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
 /* Volume: a small panel over its button, for turning the sound down without the options list */

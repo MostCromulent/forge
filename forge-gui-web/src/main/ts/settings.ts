@@ -24,11 +24,11 @@ interface SettingBase {
   label: string;
   hint?: string;
   server?: boolean;
-  /** Set from the volume control beside the options button rather than in the options dialog. */
+  /** Also set from the volume control beside the options button. */
   volume?: boolean;
   /** Only the host has it: a guest's browser leaves it out of the options. */
   hostOnly?: boolean;
-  /** Set in a dialog opened from the game menu rather than in the options dialog. */
+  /** Also set in a dialog opened from the game menu. */
   menu?: 'stops' | 'decisions' | 'playmat';
 }
 
@@ -41,13 +41,13 @@ export type SettingDef = SettingBase & (
 );
 
 export const SETTINGS: SettingDef[] = [
-  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptOpponentSpell', label: t('lblWebOptionsInterruptOpponentSpell'), type: 'toggle', server: true, menu: 'stops', def: true },
-  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptTargeting', label: t('lblWebOptionsInterruptTargeting'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
-  { section: t('lblWebOptionsSectionInterrupts'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptOpponentSpell', label: t('lblWebOptionsInterruptOpponentSpell'), type: 'toggle', server: true, menu: 'stops', def: true },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTargeting', label: t('lblWebOptionsInterruptTargeting'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptTriggers', label: t('lblWebOptionsInterruptTriggers'), type: 'toggle', server: true, menu: 'stops', def: false },
+  { section: t('lblWebGameMenuStopsTitle'), key: 'interruptMassRemoval', label: t('lblWebOptionsInterruptMassRemoval'), type: 'toggle', server: true, menu: 'stops', def: false },
   {
-    section: t('lblPriority'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
+    section: t('lblWebGameMenuDecisionsTitle'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
     hint: t('lblWebOptionsAutoYieldModeHint'),
     options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
   },

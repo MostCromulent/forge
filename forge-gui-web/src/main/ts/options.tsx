@@ -1,4 +1,4 @@
-// The cog dialog: one scrolling list of settings with a search box
+// The cog dialog: settings in tabs down a side rail, with a search box that looks through every tab
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -22,20 +22,62 @@ function matching(defs: SettingDef[], typed: string): SettingDef[] {
   return ranked.map(i => defs[i]).sort((a, b) => (firstOf.get(a.section) ?? 0) - (firstOf.get(b.section) ?? 0));
 }
 
+// Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
+const TABS: { name: string; sections: string[]; icon: ComponentChildren }[] = [
+  {
+    name: t('lblWebOptionsSectionGameplay'),
+    sections: [t('lblWebOptionsSectionGameplay'), t('lblWebGameMenuStopsTitle'), t('lblWebGameMenuDecisionsTitle')],
+    icon: <><path d="M6 11h4M8 9v4M15 12h.01M18 10h.01" /><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258A4 4 0 0 0 17.32 5z" /></>,
+  },
+  { name: t('lblDisplay'), sections: [t('lblDisplay')], icon: <><rect width="20" height="14" x="2" y="3" rx="2" /><path d="M8 21h8M12 17v4" /></> },
+  {
+    name: t('lblWebOptionsSectionSound'), sections: [t('lblWebOptionsSectionSound')],
+    icon: <><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" /><path d="M16 9a5 5 0 0 1 0 6" /></>,
+  },
+  {
+    name: t('lblWebOptionsSectionKeys'), sections: [t('lblWebOptionsSectionKeys')],
+    icon: <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10" /></>,
+  },
+  { name: t('lblAdvanced'), sections: [t('lblAdvanced')], icon: <><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></> },
+];
+
+/** The tab last looked at, so the dialog opens where it was left. */
+let lastTab = 0;
+
 export function Options({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
+  const [at, setAt] = useState(lastTab);
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     search.current?.focus();
   }, []);
-  const shown = matching(SETTINGS.filter(def => !def.volume && !def.menu && !(def.hostOnly && isGuest())), query);
+  const searching = !!query.trim();
+  const tab = TABS[at];
+  const all = SETTINGS.filter(def => !(def.hostOnly && isGuest()));
+  // A tab lists its sections in its own order; a search looks through every tab
+  const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
+  const open = (i: number) => {
+    lastTab = i;
+    setAt(i);
+    setQuery('');
+  };
   return (
-    <OptionsDialog title={t('lblWebHeadOptions')} close={close}
+    <OptionsDialog title={t('lblWebHeadOptions')} kind="tabbed" close={close}
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
-      footer={<span class="hint">{t('lblWebOptionsFooter')}</span>}>
+      rail={TABS.map((tb, i) => (
+        <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
+          <svg viewBox="0 0 24 24" aria-hidden="true">{tb.icon}</svg>{tb.name}
+        </button>
+      ))}
+      footer={<>
+        <span class="hint">{t('lblWebOptionsFooter')}</span>
+        {!searching && shown[0]?.type === 'key' && <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button>}
+      </>}>
       {shown.flatMap((def, i) => [
-        ...(def.section !== shown[i - 1]?.section ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={def.type === 'key'} />] : []),
+        // A tab's first section goes by the tab's own name, so it has no heading
+        ...(def.section !== shown[i - 1]?.section && (searching || def.section !== tab.name)
+          ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />] : []),
         <Row key={def.key} def={def} />,
       ])}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
@@ -56,8 +98,8 @@ function SectionHeading({ name, keys }: { name: string; keys: boolean }) {
 export const CloseIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
 
 /** The frame the options dialog and the game menu's dialogs share, where label names the dialog when the title is a phrase. */
-export function OptionsDialog({ title, label, kind, head, footer, close, children }: {
-  title: string; label?: string; kind?: string; head?: ComponentChildren; footer: ComponentChildren; close: () => void;
+export function OptionsDialog({ title, label, kind, head, rail, footer, close, children }: {
+  title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer: ComponentChildren; close: () => void;
   children: ComponentChildren;
 }) {
   return (
@@ -68,7 +110,7 @@ export function OptionsDialog({ title, label, kind, head, footer, close, childre
           {head ?? <span class="spacer" />}
           <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={close}><CloseIcon /></button>
         </header>
-        <div class="rows">{children}</div>
+        {rail ? <div class="split"><nav class="rail" role="tablist">{rail}</nav><div class="rows">{children}</div></div> : <div class="rows">{children}</div>}
         <footer>{footer}</footer>
       </div>
     </div>
@@ -92,14 +134,8 @@ export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void 
   );
 }
 
-/** Off is marked in grey rather than gold, so a glance down the list finds what is switched on. */
-export function OnOff({ on, change }: { on: boolean; change: (on: boolean) => void }) {
-  return (
-    <div class="choice" role="radiogroup">
-      <button class={on ? '' : 'on off'} role="radio" aria-checked={!on} onClick={() => change(false)}>{t('lblOff')}</button>
-      <button class={on ? 'on' : ''} role="radio" aria-checked={on} onClick={() => change(true)}>{t('lblWebOptionsOn')}</button>
-    </div>
-  );
+export function OnOff({ on, label, change }: { on: boolean; label: string; change: (on: boolean) => void }) {
+  return <button class="switch" role="switch" aria-checked={on} aria-label={label} onClick={() => change(!on)} />;
 }
 
 function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
@@ -110,13 +146,12 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
   };
   switch (def.type) {
     case 'toggle':
-      return <OnOff on={!!value} change={change} />;
+      return <OnOff on={!!value} label={def.label} change={change} />;
     case 'choice':
       return (
-        <div class="choice" role="radiogroup">
-          {def.options.map(([v, label]) => <button key={v} class={String(value) === v ? 'on' : ''} role="radio"
-            aria-checked={String(value) === v} onClick={() => change(v)}>{label}</button>)}
-        </div>
+        <select class="pick" aria-label={def.label} value={String(value)} onChange={e => change(e.currentTarget.value)}>
+          {def.options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+        </select>
       );
     case 'css':
       // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
