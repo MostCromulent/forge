@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -25,6 +26,9 @@ final class SkinSprites {
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
+    private static BufferedImage conquestIcons;
+    private static final Set<FSkinProp> CONQUEST_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
+            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE);
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
     private SkinSprites() {
@@ -78,6 +82,27 @@ final class SkinSprites {
             return null;
         }
         return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
+    }
+
+    /** PNG bytes of one of Planar Conquest's icons, named by its FSkinProp, or null for any other name. */
+    static byte[] conquestPng(final String name) {
+        final FSkinProp prop;
+        try {
+            prop = FSkinProp.valueOf(name);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+        if (!CONQUEST_ICONS.contains(prop)) {
+            return null;
+        }
+        return encoded.computeIfAbsent("c" + name, k -> cell(conquestSheet(), prop, k));
+    }
+
+    private static synchronized BufferedImage conquestSheet() {
+        if (conquestIcons == null) {
+            conquestIcons = read(skinFile(ForgeConstants.SPRITE_PLANAR_CONQUEST_FILE));
+        }
+        return conquestIcons;
     }
 
     private static synchronized BufferedImage manaSheet() {

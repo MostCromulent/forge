@@ -637,6 +637,11 @@ public final class WebServer implements AutoCloseable {
                 respondOrNotFound(ctx, png, "image/png");
                 return;
             }
+            if ("/conquesticon".equals(path)) {
+                final List<String> icon = q.parameters().get("k");
+                respondOrNotFound(ctx, icon == null ? null : SkinSprites.conquestPng(icon.get(0)), "image/png");
+                return;
+            }
             if ("/sound".equals(path) || "/music".equals(path)) {
                 final List<String> name = q.parameters().get("name");
                 final List<String> track = q.parameters().get("track");
