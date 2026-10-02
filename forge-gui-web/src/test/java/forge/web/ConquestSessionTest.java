@@ -652,11 +652,24 @@ public class ConquestSessionTest extends SessionsTest {
     }
 
     private static JsonObject exile(final PaperCard card, final boolean retrieve) {
-        final JsonObject m = message("conquestExile", "retrieve", retrieve);
-        final JsonArray cards = new JsonArray();
-        cards.add(card.getImageKey(false));
-        m.add("cards", cards);
+        final JsonObject m = message("trade", "source", retrieve ? "exile" : "collection");
+        final JsonArray picks = new JsonArray();
+        final JsonObject pick = new JsonObject();
+        pick.addProperty("key", card.getImageKey(false));
+        pick.addProperty("count", 1);
+        picks.add(pick);
+        m.add("picks", picks);
         return m;
+    }
+
+    /** How many cards one of the campaign's lists holds. */
+    private static int listed(final JsonObject trading, final String source) {
+        for (final JsonElement l : trading.getAsJsonArray("lists")) {
+            if (source.equals(l.getAsJsonObject().get("source").getAsString())) {
+                return l.getAsJsonObject().get("count").getAsInt();
+            }
+        }
+        throw new AssertionError("There is no list of " + source);
     }
 
     private List<String> cardsOf(final Recorder host, final String source) throws InterruptedException {
@@ -677,12 +690,12 @@ public class ConquestSessionTest extends SessionsTest {
         host.forget();
         sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
                 "sort", "name", "offset", 0, "showAll", true, "source", "collection"));
-        sessions.onMessage(host, JsonCodec.message("conquestCollection"));
+        sessions.onMessage(host, JsonCodec.message("trading"));
         host.awaitMatching("catalogue", c -> true, "the collection was not listed");
-        host.awaitMatching("conquestCollection", c -> true, "the collection was not counted");
+        host.awaitMatching("trading", c -> true, "the collection was not counted");
         final List<String> types = new ArrayList<>();
         host.got.forEach(m -> types.add(m.get("t").getAsString()));
-        Assert.assertTrue(types.indexOf("catalogue") < types.indexOf("conquestCollection"), "the later message was answered first: " + types);
+        Assert.assertTrue(types.indexOf("catalogue") < types.indexOf("trading"), "the later message was answered first: " + types);
     }
 
     // Fails if a card a deck uses can be exiled, or a free card's exile and retrieval do not pay, charge and move it between the lists
@@ -703,7 +716,7 @@ public class ConquestSessionTest extends SessionsTest {
         final int cost = data.getRetrieveCost(List.of(spare));
         send(host, exile(spare, false));
         host.awaitMatching("campaignBar", b -> balance(b, "IMG_AETHER_SHARD") == shards + value, "the exile was not paid for");
-        Assert.assertEquals(host.awaitMatching("conquestCollection", c -> true, "the lists' sizes were not sent").get("exiled").getAsInt(), 1);
+        Assert.assertEquals(listed(host.awaitMatching("trading", c -> true, "the lists' sizes were not sent"), "exile"), 1);
         Assert.assertFalse(cardsOf(host, "collection").contains(spare.getName()), "an exiled card is still in the collection");
         Assert.assertEquals(cardsOf(host, "exile"), List.of(spare.getName()));
         final JsonObject row = host.awaitNewest("catalogue").getAsJsonArray("rows").get(0).getAsJsonObject();

@@ -4,7 +4,9 @@ import com.google.gson.JsonObject;
 import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.web.FromBrowser.CatalogueQuery;
+import forge.web.FromBrowser.TradePick;
 import forge.web.ToBrowser.CataloguePage;
+import forge.web.ToBrowser.Trading;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -54,6 +56,12 @@ interface Campaign {
     void left();
 
     CataloguePage cards(CatalogueQuery q);
+
+    /** The lists whose cards are traded, by size. */
+    Trading trading();
+
+    /** Trades picks out of the list of that source. Answers why it cannot, or null when it is done. */
+    String trade(String source, List<TradePick> picks);
 
     /** A message of the mode's own. save is null on the list of saved games. */
     void handle(BrowserChannel channel, JsonObject msg, String save, Host host);

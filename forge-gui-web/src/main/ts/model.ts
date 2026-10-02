@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, Trading, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -118,8 +118,8 @@ export interface Model {
   conquestReward: ConquestReward | null;
   /** The commanders and planeswalkers found, once the Commanders page has asked. */
   conquestParty: ConquestParty | null;
-  /** The sizes of the collection and the exile, once the Collection page has asked. */
-  conquestCollection: ConquestCollection | null;
+  /** The lists a campaign trades between, by size, once its trade page has asked. */
+  trading: Trading | null;
   /** What a new conquest may start with, as far as the form has asked. */
   conquestOptions: ConquestOptions | null;
   /** The four pages that are Conquest's own, each as its page last asked for it. */
@@ -142,7 +142,7 @@ export function createModel(): Model {
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
     campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, campaignBar: null, conquestState: null,
-    conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null, conquestOptions: null,
+    conquestResult: null, conquestReward: null, conquestParty: null, trading: null, conquestOptions: null,
     conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
   };
 }

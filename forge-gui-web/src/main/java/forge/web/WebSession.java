@@ -543,6 +543,21 @@ public final class WebSession {
                 }
             });
             case "campaignRename", "campaignDelete" -> onCampaign(() -> campaignShelf(channel, msg));
+            case "trading", "trade" -> onCampaign(() -> {
+                if (stage instanceof InCampaign c && c.save() != null) {
+                    final Campaign campaign = campaign(c.mode());
+                    if ("trade".equals(msg.get("t").getAsString())) {
+                        final FromBrowser.Trade trade = Wire.decode(msg, FromBrowser.Trade.class);
+                        final String problem = campaign.trade(trade.source(), trade.picks());
+                        if (problem != null) {
+                            channel.send(new Notice(problem, null, false));
+                        }
+                        // What was traded away may have been on any of the campaign's pages
+                        campaign.page().forEach(m -> channel.send(m));
+                    }
+                    channel.send(campaign.trading());
+                }
+            });
             // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
             case "devConquestWheel" -> {
                 if (isHost && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {

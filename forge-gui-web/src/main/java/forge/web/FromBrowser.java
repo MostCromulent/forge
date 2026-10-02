@@ -21,7 +21,7 @@ final class FromBrowser {
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
-        campaignLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection,
+        campaignLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, trading,
         conquestPlanes, conquestPrefs, conquestPrefsReset,
         editorClose, editorUndo }
 
@@ -172,7 +172,7 @@ final class FromBrowser {
     /** A page of the catalogue, where request is echoed back so a late answer to an old query is dropped. */
     @Command("catalogue")
     record CatalogueQuery(int request, String text, String colours, String type, String filters, String sort, int offset,
-            boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String plane) {
+            boolean showAll, @Nullable String identity, @Nullable String source, @Nullable String group) {
     }
 
     @Command("importRead")
@@ -379,6 +379,15 @@ final class FromBrowser {
     record CampaignDelete(String name) {
     }
 
+    /** A card picked from one of a campaign's lists, by its image key, which names a printing. */
+    record TradePick(String key, int count) {
+    }
+
+    /** Trades the picks out of a list: source is the list's name, as a catalogue query's is. */
+    @Command("trade")
+    record Trade(String source, List<TradePick> picks) {
+    }
+
     // ---- Planar Conquest ---------------------------------------------------------------------------------------
 
     /** Selects a place on the map. The player does not move. */
@@ -425,11 +434,6 @@ final class FromBrowser {
     /** Makes an owned planeswalker the one the player travels as. */
     @Command("conquestWalker")
     record ConquestWalker(String planeswalker) {
-    }
-
-    /** Exiles cards of the collection for shards, or brings exiled ones back. cards are image keys. */
-    @Command("conquestExile")
-    record ConquestExile(List<String> cards, boolean retrieve) {
     }
 
     /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name, or empty to leave it to chance. */

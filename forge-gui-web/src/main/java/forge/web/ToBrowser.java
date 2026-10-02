@@ -555,6 +555,15 @@ final class ToBrowser {
     record CampaignBar(String name, String line, List<Balance> balances) {
     }
 
+    /** One of a campaign's lists of cards, by the source its cards are asked for, and how many it holds. */
+    record TradeList(String source, int count) {
+    }
+
+    /** The lists a campaign trades between, a line on what a trade pays, and what the lists can also be narrowed by, if anything. */
+    @Message("trading")
+    record Trading(List<TradeList> lists, String note, @Nullable List<String> groups) {
+    }
+
     // ---- Planar Conquest ---------------------------------------------------------------------------------------
 
     /** The saved conquests, and the one played last. */
@@ -613,11 +622,6 @@ final class ToBrowser {
 
     @Message("conquestParty")
     record ConquestParty(List<ConquestCommanderRow> commanders, List<ConquestWalkerRow> planeswalkers) {
-    }
-
-    /** The Collection page's two lists by size, the planes its filter offers, and mobile's line on what exile pays. */
-    @Message("conquestCollection")
-    record ConquestCollection(int collection, int exiled, List<String> planes, String note) {
     }
 
     /** A battle's game ended. matchOver is false between the games of a chaos battle. */

@@ -398,7 +398,8 @@ final class ConquestGame implements Campaign {
         return cards;
     }
 
-    ConquestCollection collection() {
+    @Override
+    public Trading trading() {
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         final double base = prefs.getPrefInt(CQPref.AETHER_BASE_DUPLICATE_VALUE);
         final List<String> planes = new ArrayList<>();
@@ -411,7 +412,7 @@ final class ConquestGame implements Campaign {
         final String note = Localizer.getInstance().getMessage("lblExileRetrieveProportion",
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_EXILE_VALUE) / base),
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_RETRIEVE_COST) / base)).replace('\n', ' ');
-        return new ConquestCollection(cardsOf(false).size(), cardsOf(true).size(), planes, note);
+        return new Trading(List.of(new TradeList("collection", cardsOf(false).size()), new TradeList("exile", cardsOf(true).size())), note, planes);
     }
 
     /** A page of the collection or of the exile, each card with what exiling or retrieving it is worth. */
@@ -420,9 +421,9 @@ final class ConquestGame implements Campaign {
         final ConquestData data = model();
         final boolean exile = "exile".equals(q.source());
         final List<PaperCard> cards = cardsOf(exile);
-        if (q.plane() != null) {
+        if (q.group() != null) {
             for (final ConquestPlane plane : FModel.getPlanes()) {
-                if (planeName(plane).equals(q.plane())) {
+                if (planeName(plane).equals(q.group())) {
                     cards.removeIf(c -> !plane.getCardPool().contains(c));
                 }
             }
@@ -437,11 +438,13 @@ final class ConquestGame implements Campaign {
                 exile ? "exile" : "collection");
     }
 
-    /** Exiles cards of the collection, or brings exiled ones back. Answers why it cannot, or null when it is done. */
-    static String exile(final List<String> imageKeys, final boolean retrieve) {
+    /** Exiles cards of the collection, or from the exile brings them back. A conquest owns one of each card, so a pick's count says nothing. */
+    @Override
+    public String trade(final String source, final List<TradePick> picks) {
+        final boolean retrieve = "exile".equals(source);
         final ConquestData data = model();
         final List<PaperCard> cards = cardsOf(retrieve);
-        cards.removeIf(c -> !imageKeys.contains(c.getImageKey(false)));
+        cards.removeIf(c -> picks.stream().noneMatch(p -> p.key().equals(c.getImageKey(false))));
         if (cards.isEmpty()) {
             return null;
         }
@@ -817,7 +820,6 @@ final class ConquestGame implements Campaign {
                 }
             }
             case "conquestParty" -> channel.send(party());
-            case "conquestCollection" -> channel.send(collection());
             case "conquestAether" -> {
                 final ConquestAetherQuery q = Wire.decode(msg, ConquestAetherQuery.class);
                 channel.send(aether(q));
@@ -852,17 +854,6 @@ final class ConquestGame implements Campaign {
                     channel.send(party());
                     channel.send(state(List.of()));
                 }
-            }
-            case "conquestExile" -> {
-                final ConquestExile exile = Wire.decode(msg, ConquestExile.class);
-                final String problem = exile(exile.cards(), exile.retrieve());
-                if (problem != null) {
-                    channel.send(new Notice(problem, null, false));
-                }
-                // An exiled commander leaves the party, and may have been the one on the map
-                channel.send(bar());
-                channel.send(collection());
-                channel.send(state(List.of()));
             }
             case "conquestLead", "conquestViewDeck", "conquestEditDeck" -> {
                 final ConquestCommander commander = commander(msg.get("commander").getAsString());

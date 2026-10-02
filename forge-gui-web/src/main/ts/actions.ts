@@ -114,10 +114,10 @@ export interface Actions {
   /** Asks for a commander's deck, which arrives as a deck's details do. */
   conquestViewDeck(commander: string): void;
   conquestEditDeck(commander: string): void;
-  /** Asks for the sizes of the collection and the exile. */
-  conquestCollection(): void;
-  /** Exiles the cards of these image keys, or with retrieve brings them back. */
-  conquestExile(cards: string[], retrieve: boolean): void;
+  /** Asks for the sizes of the lists a campaign trades between. */
+  trading(): void;
+  /** Trades the picks out of the list of that source: for Conquest, exiles them or brings them back. */
+  trade(source: string, picks: { key: string; count: number }[]): void;
   /** Starts a finished match again from its first game. */
   restartGame(): void;
 
@@ -279,8 +279,8 @@ export function createActions(send: Send): Actions {
     conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),
     conquestViewDeck: commander => send({ t: 'conquestViewDeck', commander }),
     conquestEditDeck: commander => send({ t: 'conquestEditDeck', commander }),
-    conquestCollection: () => send({ t: 'conquestCollection' }),
-    conquestExile: (cards, retrieve) => send({ t: 'conquestExile', cards, retrieve }),
+    trading: () => send({ t: 'trading' }),
+    trade: (source, picks) => send({ t: 'trade', source, picks }),
     restartGame: () => send({ t: 'nextGame', decision: 'NEW' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),

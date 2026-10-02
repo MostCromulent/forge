@@ -261,7 +261,7 @@ function apply(msg: ServerMessage): void {
         model.campaignBar = null;
         model.conquestReward = null;
         model.conquestParty = null;
-        model.conquestCollection = null;
+        model.trading = null;
         model.conquestAether = null;
         model.conquestPlanes = null;
         model.conquestStats = null;
@@ -335,7 +335,7 @@ function apply(msg: ServerMessage): void {
     case 'conquestResult': model.conquestResult = msg; break;
     case 'conquestReward': model.conquestReward = msg; break;
     case 'conquestParty': model.conquestParty = msg; break;
-    case 'conquestCollection': model.conquestCollection = msg; break;
+    case 'trading': model.trading = msg; break;
     case 'conquestOptions': model.conquestOptions = msg; break;
     case 'conquestAether': model.conquestAether = msg; break;
     case 'conquestPlanes': model.conquestPlanes = msg; break;
