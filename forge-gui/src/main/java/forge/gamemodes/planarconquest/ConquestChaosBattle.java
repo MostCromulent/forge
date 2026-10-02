@@ -168,6 +168,10 @@ public class ConquestChaosBattle extends ConquestBattle {
         super.finish(model);
     }
 
+    public String getWorldName() {
+        return world == null ? null : world.getName();
+    }
+
     public ConquestAwardPool getAwardPool() {
         if (awardPool == null) { //delay initializing until needed
             awardPool = new ConquestAwardPool(world.getAllCards());

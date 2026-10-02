@@ -61,8 +61,10 @@ import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
+import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
+import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.util.storage.IStorage;
 import forge.util.Localizer;
 import forge.localinstance.properties.ForgePreferences.FPref;
@@ -309,6 +311,10 @@ public final class WebSession {
             final LimitedResult result = lastResult;
             if (result != null) {
                 channel.send(result);
+            }
+            final ToBrowser.ConquestResult conquestResult = p.back() instanceof Conquest ? conquest.result() : null;
+            if (conquestResult != null) {
+                channel.send(conquestResult);
             }
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
@@ -561,6 +567,21 @@ public final class WebSession {
             }
             // A match is started on the host UI thread, as a table's is
             case "conquestBattle" -> ui.invokeInEdtLater(() -> conquestBattle(channel));
+            case "conquestClaim" -> ui.invokeInEdtLater(() -> {
+                if (stage instanceof Conquest c && c.save() != null && conquest.claim()) {
+                    startConquestBattle(new ConquestChaosBattle());
+                }
+            });
+            // The wheel is the conquest's and not a game's, so this cheat is not one of DevMode's
+            case "devConquestWheel" -> {
+                if (isHost && FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED)) {
+                    try {
+                        conquest.setNextWheel(ChaosWheelOutcome.valueOf(Wire.decode(msg, FromBrowser.DevConquestWheel.class).outcome()));
+                    } catch (final IllegalArgumentException e) {
+                        Logger.warn("Not a wheel outcome: {}", msg);
+                    }
+                }
+            }
             // A cheat asks its questions as the game does and waits for the answers, so it runs on a thread of its own
             case "dev" -> {
                 if (isHost && stage instanceof Playing) {
@@ -1327,6 +1348,10 @@ public final class WebSession {
         } else {
             tell(conquest.bar());
             tell(conquest.state());
+            final ToBrowser.ConquestReward pending = conquest.reward();
+            if (pending != null) {
+                tell(pending);
+            }
         }
     }
 
@@ -1362,6 +1387,7 @@ public final class WebSession {
         if (b != null) {
             playing.gui().attach(b);
         }
+        playing.gui().onGameOver(() -> conquestGameOver());
         try {
             final ConquestController.PreparedBattle prepared = FModel.getConquest().prepareBattle(battle, null);
             if (prepared == null) {
@@ -1375,6 +1401,16 @@ public final class WebSession {
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
             sendConquest();
+        }
+    }
+
+    /** A game of the battle ended: recorded and rewarded here, where the game ran, so the browser decides nothing. */
+    private void conquestGameOver() {
+        final HostedMatch match = local.hostedMatch();
+        // The browser's own view will not do: who won the match is read from its Match, which a netplay client's lacks
+        final ToBrowser.ConquestResult result = conquest.gameOver(match == null ? null : match.getGameView());
+        if (result != null) {
+            tell(result);
         }
     }
 
@@ -1522,6 +1558,7 @@ public final class WebSession {
             stopGauntlet();
             if (playing.back() instanceof Conquest) {
                 FModel.getConquest().finishBattle();
+                conquest.left();
             }
             local.endMatch();
             if (move(from, playing.back()) && b != null) {

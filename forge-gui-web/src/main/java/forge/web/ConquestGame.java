@@ -2,28 +2,36 @@ package forge.web;
 
 import forge.card.ColorSet;
 import forge.game.GameType;
+import forge.game.GameView;
 import forge.gamemodes.planarconquest.ConquestBattle;
+import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestCommander;
 import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent;
+import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.gamemodes.planarconquest.ConquestEvent.ConquestEventRecord;
 import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.gamemodes.planarconquest.ConquestPlane;
 import forge.gamemodes.planarconquest.ConquestPlaneData;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
 import forge.gamemodes.planarconquest.ConquestRegion;
+import forge.gamemodes.planarconquest.ConquestRewardStep;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
 import forge.web.ToBrowser.ConquestBar;
 import forge.web.ToBrowser.ConquestCell;
 import forge.web.ToBrowser.ConquestLead;
+import forge.web.ToBrowser.ConquestPackCard;
 import forge.web.ToBrowser.ConquestPlace;
 import forge.web.ToBrowser.ConquestRegionRow;
+import forge.web.ToBrowser.ConquestResult;
+import forge.web.ToBrowser.ConquestReward;
 import forge.web.ToBrowser.ConquestSave;
 import forge.web.ToBrowser.ConquestSaves;
 import forge.web.ToBrowser.ConquestState;
+import forge.web.ToBrowser.ConquestStep;
 
 import java.io.File;
 import java.time.Instant;
@@ -34,11 +42,19 @@ import java.util.List;
 
 /**
  * One browser's view of the open conquest. The conquest itself is Forge's, one for the whole process; this holds only
- * what the session knows that the save does not: which place is selected and the last move's path.
+ * what the session knows that the save does not: which place is selected, the last move's path, and the result and
+ * reward the browser has yet to show.
  */
 final class ConquestGame {
     private ConquestLocation selection;
     private List<ConquestLocation> path = List.of();
+    /** The result of the game just ended, while its match is still open. */
+    private volatile ConquestResult result;
+    /** What the last won battle gave, until the browser says it has shown it. */
+    private volatile ConquestReward reward;
+    private volatile boolean chaosOwed;
+    /** Dev mode's choice of where the next wheel stops. */
+    private volatile ChaosWheelOutcome nextWheel;
 
     static ConquestData model() {
         return FModel.getConquest().getModel();
@@ -79,6 +95,76 @@ final class ConquestGame {
     void opened() {
         selection = null;
         path = List.of();
+        result = null;
+        reward = null;
+        chaosOwed = false;
+        nextWheel = null;
+    }
+
+    void setNextWheel(final ChaosWheelOutcome outcome) {
+        nextWheel = outcome;
+    }
+
+    ConquestResult result() {
+        return result;
+    }
+
+    ConquestReward reward() {
+        return reward;
+    }
+
+    /** A game of the active battle ended. hostGame is the host's own view, which alone knows the match. */
+    ConquestResult gameOver(final GameView hostGame) {
+        final ConquestController controller = FModel.getConquest();
+        final ConquestBattle battle = controller.getActiveBattle();
+        if (battle == null || hostGame == null) {
+            return null;
+        }
+        final ConquestBattle.Outcome outcome = controller.recordOutcome(hostGame);
+        boolean first = false;
+        if (outcome == ConquestBattle.Outcome.WON) {
+            final ChaosWheelOutcome wheel = nextWheel != null ? nextWheel : ChaosWheelOutcome.random();
+            nextWheel = null;
+            final List<ConquestRewardStep> steps = controller.claimRewards(battle, wheel);
+            first = steps.stream().anyMatch(s -> s.kind() == ConquestRewardStep.Kind.CONQUER_EMBLEMS);
+            chaosOwed = steps.stream().anyMatch(s -> s.kind() == ConquestRewardStep.Kind.CHAOS_BATTLE);
+            reward = new ConquestReward(steps.stream().map(s -> step(s, battle)).toList());
+        }
+        result = new ConquestResult(outcome == ConquestBattle.Outcome.WON, outcome != ConquestBattle.Outcome.UNFINISHED,
+                battle instanceof ConquestChaosBattle, battle.getEventName(), first);
+        return result;
+    }
+
+    /** The match is left: its result goes with it. */
+    void left() {
+        result = null;
+    }
+
+    /** The reward has been shown. True when it ended in a chaos battle that is now owed. */
+    boolean claim() {
+        reward = null;
+        final boolean owed = chaosOwed;
+        chaosOwed = false;
+        return owed;
+    }
+
+    private static ConquestStep step(final ConquestRewardStep s, final ConquestBattle battle) {
+        List<ConquestPackCard> cards = null;
+        String pack = null;
+        String art = null;
+        if (s.cards() != null) {
+            cards = s.cards().stream().map(r -> new ConquestPackCard(r.getCard().getName(), r.getCard().getImageKey(false),
+                    r.getCard().getRarity().name(), r.getReplacementShards())).toList();
+            if (s.chaos()) {
+                pack = ((ConquestChaosBattle) battle).getWorldName();
+            } else {
+                final ConquestPlane plane = model().getCurrentPlane();
+                pack = planeName(plane);
+                art = plane.getPlaneCards().isEmpty() ? null : plane.getPlaneCards().get(0).getImageKey(false);
+            }
+        }
+        return new ConquestStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
+                s.number(), s.total(), s.chaos(), pack, art);
     }
 
     ConquestBar bar() {
