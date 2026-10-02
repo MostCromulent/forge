@@ -10,11 +10,11 @@ import forge.game.GameType;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.input.InputPassPriority;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestCommander;
-import forge.gamemodes.planarconquest.ConquestController.PreparedBattle;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestLocation;
 import forge.gamemodes.planarconquest.ConquestPlane;
@@ -84,8 +84,8 @@ public class ConquestSessionTest extends SessionsTest {
             gui.attach(new FakeBrowser(gui, false, true));
             final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
             onUi(() -> {
-                final PreparedBattle p = FModel.getConquest().prepareBattle(battle, null);
-                local.startPrepared("Web Player", p.rules(), p.variants(), p.players(), p.human(), gui);
+                final PreparedMatch p = FModel.getConquest().prepareBattle(battle, null);
+                local.startPrepared("Web Player", p, gui);
             });
             body.accept(local.hostedMatch());
         } finally {
@@ -561,7 +561,7 @@ public class ConquestSessionTest extends SessionsTest {
                 "the map was not told the deck's new size");
         onUi(() -> {
             final ConquestLocation loc = data.getCurrentLocation();
-            final PreparedBattle prepared = FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
+            final PreparedMatch prepared = FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
             try {
                 Assert.assertEquals(prepared.human().getDeck().getMain().countByName(spare), 1, "the battle's deck lacks the card added");
             } finally {

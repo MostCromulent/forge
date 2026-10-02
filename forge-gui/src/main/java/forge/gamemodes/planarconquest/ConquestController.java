@@ -28,6 +28,7 @@ import forge.game.GameType;
 import forge.game.GameView;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.gamemodes.planarconquest.ConquestEvent.ConquestEventRecord;
 import forge.gamemodes.planarconquest.ConquestPreferences.CQPref;
@@ -128,10 +129,8 @@ public class ConquestController {
         prefs.save();
     }
 
-    public record PreparedBattle(GameRules rules, Set<GameType> variants, List<RegisteredPlayer> players, RegisteredPlayer human) {}
-
     /** Builds the match for a battle and marks it active; null while another is. gui may be null. */
-    public PreparedBattle prepareBattle(ConquestBattle battle, IGuiGame gui) {
+    public PreparedMatch prepareBattle(ConquestBattle battle, IGuiGame gui) {
         if (activeBattle != null) { return null; }
 
         final Set<GameType> variants = battle.getVariants();
@@ -190,14 +189,14 @@ public class ConquestController {
         rules.setManaBurn(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_MANABURN));
         rules.setOrderCombatants(FModel.getPreferences().getPrefBoolean(FPref.LEGACY_ORDER_COMBATANTS));
         activeBattle = battle;
-        return new PreparedBattle(rules, variants, starter, humanStart);
+        return new PreparedMatch(rules, variants, starter, humanStart);
     }
 
     public void startBattle(ConquestBattle battle) {
         if (activeBattle != null) { return; }
 
         final IGuiGame gui = GuiBase.getInterface().getNewGuiGame();
-        final PreparedBattle prepared = prepareBattle(battle, gui);
+        final PreparedMatch prepared = prepareBattle(battle, gui);
         final HostedMatch hostedMatch = GuiBase.getInterface().hostMatch();
         FThreads.invokeInEdtNowOrLater(() -> hostedMatch.startMatch(prepared.rules(), prepared.variants(), prepared.players(), prepared.human(), gui));
     }

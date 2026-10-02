@@ -13,13 +13,13 @@ import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
+import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestCommander;
-import forge.gamemodes.planarconquest.ConquestController;
 import forge.gamemodes.planarconquest.ConquestData;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.gamemodes.planarconquest.ConquestLocation;
@@ -1422,8 +1422,12 @@ public final class WebSession {
         startConquestBattle(conquest.battle());
     }
 
-    /** Starts a battle the conquest built, over netplay. Leaving it returns to the map. */
     private void startConquestBattle(final ConquestBattle battle) {
+        startCampaignMatch(() -> FModel.getConquest().prepareBattle(battle, null), this::conquestGameOver, () -> FModel.getConquest().cancelBattle());
+    }
+
+    /** Starts a match a campaign built, over netplay. Leaving it returns to the campaign's page. failed undoes what preparing it did. */
+    private void startCampaignMatch(final Supplier<PreparedMatch> prepare, final Runnable gameOver, final Runnable failed) {
         final Stage from = stage;
         if (!(from instanceof Conquest back)) {
             return;
@@ -1442,18 +1446,18 @@ public final class WebSession {
         if (b != null) {
             playing.gui().attach(b);
         }
-        playing.gui().onGameOver(() -> conquestGameOver());
+        playing.gui().onGameOver(gameOver);
         try {
-            final ConquestController.PreparedBattle prepared = FModel.getConquest().prepareBattle(battle, null);
+            final PreparedMatch prepared = prepare.get();
             if (prepared == null) {
                 throw new IllegalStateException("A battle is already being fought");
             }
             // The game names its winner by this name, and the board knows the seat by the session's
             prepared.human().getPlayer().setName(playerName());
-            local.startPrepared(playerName(), prepared.rules(), prepared.variants(), prepared.players(), prepared.human(), playing.gui());
+            local.startPrepared(playerName(), prepared, playing.gui());
         } catch (final RuntimeException ex) {
             Logger.error(ex, "Could not start the battle");
-            FModel.getConquest().cancelBattle();
+            failed.run();
             local.endMatch();
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));

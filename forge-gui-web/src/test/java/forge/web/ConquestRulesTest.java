@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
+import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.planarconquest.ConquestAether;
 import forge.gamemodes.planarconquest.ConquestAwardPool;
 import forge.gamemodes.planarconquest.ConquestBattle;
@@ -81,7 +82,7 @@ public class ConquestRulesTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final ConquestLocation loc = eventWhere(data.getCurrentPlane(), v -> v.contains(GameType.Commander));
         final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
-        final ConquestController.PreparedBattle prepared = FModel.getConquest().prepareBattle(battle, null);
+        final PreparedMatch prepared = FModel.getConquest().prepareBattle(battle, null);
         assertEquals(prepared.players().size(), 2);
         for (final RegisteredPlayer player : prepared.players()) {
             assertEquals(player.getStartingLife(), 30);
@@ -99,7 +100,7 @@ public class ConquestRulesTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final int before = data.getSelectedCommander().getDeck().getMain().countAll();
         final ConquestLocation loc = eventWhere(data.getCurrentPlane(), Set::isEmpty);
-        final ConquestController.PreparedBattle prepared =
+        final PreparedMatch prepared =
                 FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
         assertEquals(prepared.human().getDeck().getMain().countAll(), before + 1);
         assertEquals(data.getSelectedCommander().getDeck().getMain().countAll(), before);
@@ -111,7 +112,7 @@ public class ConquestRulesTest {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final int losses = data.getChaosBattleRecord().getLosses();
         final ConquestController conquest = FModel.getConquest();
-        final ConquestController.PreparedBattle prepared = conquest.prepareBattle(new ConquestChaosBattle(), null);
+        final PreparedMatch prepared = conquest.prepareBattle(new ConquestChaosBattle(), null);
         assertEquals(prepared.rules().getGamesPerMatch(), 3);
         conquest.finishBattle();
         assertEquals(data.getChaosBattleRecord().getLosses(), losses + 1);

@@ -11,7 +11,6 @@ import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckFormat;
 import forge.deck.DeckSection;
-import forge.game.GameRules;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.game.IHasGameType;
@@ -591,14 +590,14 @@ public abstract class GameLobby implements IHasGameType {
      * Starts a match whose players and rules a game mode built itself, with the human at one seat of this lobby.
      * The seats' decks and the lobby's variants are not read.
      */
-    public void startPrepared(final GameRules rules, final Set<GameType> variants, final List<RegisteredPlayer> players,
-            final RegisteredPlayer human, final int humanSeat) {
+    public void startPrepared(final PreparedMatch match, final int humanSeat) {
+        final RegisteredPlayer human = match.human();
         final Map<RegisteredPlayer, IGuiGame> guis = Maps.newHashMap();
         guis.put(human, getGui(humanSeat));
 
         hostedMatch = GuiBase.getInterface().hostMatch();
         hostedMatch.setOnMatchOver(this::onMatchOver);
-        hostedMatch.startMatch(rules, variants, players, guis, null);
+        hostedMatch.startMatch(match.rules(), match.variants(), match.players(), guis, null);
 
         for (final Player p : hostedMatch.getGame().getPlayers()) {
             if (p.getRegisteredPlayer() == human && p.getController() instanceof IGameController controller) {
