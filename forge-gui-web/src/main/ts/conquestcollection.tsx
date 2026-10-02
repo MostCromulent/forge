@@ -76,8 +76,8 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
           <button aria-pressed={exiled} onClick={() => setExiled(true)}>{t('lblExile')}{info && ` (${amount(info.exiled)})`}</button>
         </span>
         <input class="find" type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-        <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
-        <select aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
+        <ColourToggles label={t('lblColors')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
+        <select aria-label={t('lblCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
           {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
         </select>
         <select aria-label={t('lblAllPlanes')} value={plane} onChange={e => setPlane(e.currentTarget.value)}>

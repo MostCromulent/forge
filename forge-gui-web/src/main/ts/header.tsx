@@ -28,7 +28,7 @@ export interface SetupStep {
 export function SetupHead({ trail, title, aside, sub }: { trail: SetupStep[]; title: string; aside?: ComponentChildren; sub?: ComponentChildren }) {
   return (
     <div class="setup-head">
-      <nav class="crumb" aria-label={t('lblWebHeadGameSetup')}>
+      <nav class="crumb" aria-label={t('lblGameSetup')}>
         {trail.map((step, i) => (
           <>
             {i > 0 && <span aria-hidden="true">›</span>}

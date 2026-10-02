@@ -52,7 +52,7 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
 function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
   const saves = model.conquestSaves;
   const trail = [
-    { label: t('lblWebLimitedStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.conquestLeave(); } },
+    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.conquestLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.conquestLeave(); } },
     creating ? { label: t('lblPlanarConquest'), go: () => setCreating(false) } : { label: t('lblPlanarConquest') },
     ...(creating ? [{ label: t('lblWebConquestNew') }] : []),

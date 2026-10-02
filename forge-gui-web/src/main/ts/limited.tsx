@@ -23,7 +23,7 @@ export function Limited({ model, actions }: { model: Model; actions: Actions }) 
   const kind = draft ? t('lblDraft') : t('lblSealed');
   const toEvents = pool ? () => actions.poolClose() : creating ? () => setCreating(false) : undefined;
   const trail = [
-    { label: t('lblWebLimitedStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
+    { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.limitedLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.limitedLeave(); } },
     { label: kind, go: toEvents },
     ...(pool ? [{ label: pool.name }] : creating ? [{ label: t('lblWebEventNewEvent') }] : []),
@@ -173,7 +173,7 @@ const COLOUR_NAMES: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 
 /** A deck's colours in words: White–Green, or the count past three, or Colourless. */
 export function colourName(colors: string): string {
   const names = [...colors].map(c => COLOUR_NAMES[c]).filter(Boolean).map(key => t(key));
-  if (!names.length) return t('lblWebDraftColourless');
+  if (!names.length) return t('lblColorless');
   if (names.length > 3) return names.length === 5 ? t('lblWebLimitedAllFiveColours') : t('lblWebLimitedFourColours');
   return names.join('–');
 }

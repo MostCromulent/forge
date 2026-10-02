@@ -8,7 +8,7 @@ export type GroupBy = 'type' | 'mv' | 'colour';
 // Headings by colour, in this order; the letters stand for themselves, M for more than one colour and C for none
 const COLOUR_ORDER = ['W', 'U', 'B', 'R', 'G', 'M', 'C'];
 const COLOUR_HEADINGS: Record<string, TextKey> = {
-  W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen', M: 'lblWebDraftMulticolour', C: 'lblWebDraftColourless',
+  W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen', M: 'lblMulticolor', C: 'lblColorless',
 };
 
 /** The main deck under other headings. Lands keep a heading of their own whichever way the rest are grouped. */

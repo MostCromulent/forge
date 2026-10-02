@@ -47,7 +47,7 @@ const STEPS: [PhaseType, string, TextKey, TextKey][] = [
   ['COMBAT_DECLARE_ATTACKERS', 'atk', 'lblWebPhaseDeclareAttackers', 'lblAttackers'],
   ['COMBAT_DECLARE_BLOCKERS', 'blk', 'lblWebPhaseDeclareBlockers', 'lblBlockers'],
   ['COMBAT_FIRST_STRIKE_DAMAGE', 'fs', 'lblWebPhaseFirstStrikeDamage', 'lblWebPhaseFirstStrike'],
-  ['COMBAT_DAMAGE', 'dmg', 'lblWebPhaseCombatDamage', 'lblWebPhaseDamage'], ['COMBAT_END', 'eoc', 'lblWebPhaseEndOfCombat', 'lblWebPhaseEndCombat'],
+  ['COMBAT_DAMAGE', 'dmg', 'lblWebPhaseCombatDamage', 'lblDamage'], ['COMBAT_END', 'eoc', 'lblWebPhaseEndOfCombat', 'lblWebPhaseEndCombat'],
   ['MAIN2', 'main2', 'lblWebPhaseMain2', 'lblWebPhaseMain2'], ['END_OF_TURN', 'end', 'lblEndStep', 'lblEndStep'],
   ['CLEANUP', 'cleanup', 'lblWebPhaseCleanup', 'lblWebPhaseCleanup'],
 ];

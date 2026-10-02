@@ -195,7 +195,7 @@ export function DrawOfferQuestion({ model, actions }: { model: Model; actions: A
   const who = deref(model, offer.offerer)?.Name;
   return (
     <div class="backdrop">
-      <div class="dialog" role="dialog" aria-label={t('lblWebGameMenuDrawOffer')}>
+      <div class="dialog" role="dialog" aria-label={t('lblOfferDrawTitle')}>
         <h3>{who != null ? t('lblWebGameMenuOffersDraw', who) : t('lblWebGameMenuOpponentOffersDraw')}</h3>
         <p class="hint">{t('lblWebGameMenuDrawOnlyIfAll')}</p>
         <div class="actions">

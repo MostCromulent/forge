@@ -73,7 +73,7 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: t('lblDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',
-    options: [['mana', t('lblWebDraftGroupManaValue')], ['color', t('lblWebDraftGroupColour')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
+    options: [['mana', t('lblWebDraftGroupManaValue')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
   { section: t('lblDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
   {

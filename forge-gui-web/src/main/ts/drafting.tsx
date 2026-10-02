@@ -134,7 +134,7 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
       {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
-          <div class="dialog" role="alertdialog" aria-label={t('lblWebDraftLeaveTheDraft')}>
+          <div class="dialog" role="alertdialog" aria-label={t('lblLeaveDraft')}>
             <h3>{t('lblWebDraftLeaveTheDraftQ')}</h3>
             <p class="hint">{t('lblWebDraftPicksNotSaved')}</p>
             <div class="actions">
@@ -395,7 +395,7 @@ function Picks({ state, actions }: { state: DraftState; actions: Actions }) {
   );
 }
 
-const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblWebDraftGroupColour', type: 'lblType', mv: 'lblWebDraftGroupManaValue', pick: 'lblWebDraftGroupPickOrder' };
+const GROUP_NAMES: Record<GroupBy, TextKey> = { colour: 'lblColor', type: 'lblType', mv: 'lblWebDraftGroupManaValue', pick: 'lblWebDraftGroupPickOrder' };
 
 function PickSection({ title, held, by, cards, onDrop, move }: {
   title: string; held: Held[]; by: GroupBy; cards: boolean; onDrop: (drag: Drag) => void; move: (h: Held) => void;
@@ -466,7 +466,7 @@ function grouped(held: Held[], by: GroupBy): [string, Held[]][] {
     const c = h.card;
     const key = by === 'type' ? typeHeading(c.type)
       : by === 'mv' ? (c.mv >= 6 ? '6+' : String(c.mv))
-      : c.colors.length === 0 || c.colors === 'C' ? t('lblWebDraftColourless') : c.colors.length > 1 ? t('lblWebDraftMulticolour')
+      : c.colors.length === 0 || c.colors === 'C' ? t('lblColorless') : c.colors.length > 1 ? t('lblMulticolor')
       : COLOURS[c.colors] ? t(COLOURS[c.colors]) : c.colors;
     groups.set(key, [...(groups.get(key) ?? []), h]);
   }

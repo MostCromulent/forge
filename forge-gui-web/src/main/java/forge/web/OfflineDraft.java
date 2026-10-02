@@ -53,7 +53,7 @@ final class OfflineDraft {
         thread.execute(() -> {
             try {
                 draft = make.get();
-                product = draft.getProductName() == null ? Localizer.getInstance().getMessage("lblWebOfflineDraftFullPool") : draft.getProductName();
+                product = draft.getProductName() == null ? Localizer.getInstance().getMessage("lblWebSetupProductFull") : draft.getProductName();
                 draft.initializeBoosters();
                 advance(false);
             } catch (final RuntimeException e) {

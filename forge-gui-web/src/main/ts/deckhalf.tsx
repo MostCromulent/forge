@@ -186,7 +186,7 @@ function Line({ card, zone, landed, actions, handlers, mainOnly }: {
       <span class="ra">
         <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => removeOne(actions, card.name, zone)}>&minus;</button>
         <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
-        {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblWebEditorToMain') : t('lblWebEditorToSide')}</button>}
+        {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblMain') : t('lblSide')}</button>}
       </span>
     </div>
   );

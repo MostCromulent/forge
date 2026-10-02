@@ -181,7 +181,7 @@ function PastEvents({ events, actions, back }: { events: PastEvent[]; actions: A
             {deleting === p.id
               ? <>
                   <span class="past-ask">{t('lblWebEventDeleteItsPools')}</span>
-                  <button onClick={() => setDeleting(null)}>{t('lblWebEventKeep')}</button>
+                  <button onClick={() => setDeleting(null)}>{t('lblWebLimitedKeep')}</button>
                   <button class="danger" onClick={() => { setDeleting(null); actions.eventForget(p.id); }}>{t('lblDelete')}</button>
                 </>
               : <>

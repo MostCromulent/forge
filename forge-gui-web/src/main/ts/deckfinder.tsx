@@ -262,7 +262,7 @@ export function DeckFinder({ model, actions, seat, close }: {
             <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed}>
               <input ref={find} class="find" type="search" placeholder={t('lblWebFinderSearch')} autocomplete="off"
                 value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-              <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => filter.colours.has(c)}
+              <ColourToggles label={t('lblColors')} colourless pressed={c => filter.colours.has(c)}
                 toggle={c => change({ colours: toggled(filter.colours, c) })}
                 title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
             </FilterBar>
@@ -428,7 +428,7 @@ function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply:
   const [exactly, setExactly] = useState(value?.exactly ?? false);
   return (
     <>
-      <ColourToggles label={t('lblWebEditorColours')} pressed={c => letters.includes(c)}
+      <ColourToggles label={t('lblColors')} pressed={c => letters.includes(c)}
         toggle={letter => setLetters([...'WUBRG'].filter(c => (c === letter) !== letters.includes(c)).join(''))} />
       <OneOf options={[['within', t('lblWebFilterWithinNote')], ['exactly', t('lblWebFilterExactlyNote')]] as const}
         value={exactly ? 'exactly' : 'within'} pick={v => setExactly(v === 'exactly')} />

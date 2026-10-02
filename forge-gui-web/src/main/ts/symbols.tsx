@@ -20,7 +20,7 @@ export const Pip = ({ letter }: { letter: string }) => <i class={`pip pip-${lett
 
 /** The colours in the order Magic writes them, then colourless, each with the key of its name. */
 export const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
-  ['C', 'lblWebDraftColourless']];
+  ['C', 'lblColorless']];
 export const FIVE_COLOURS = COLOURS.slice(0, 5);
 
 /** A set with one item put in, or taken out if it was there. */

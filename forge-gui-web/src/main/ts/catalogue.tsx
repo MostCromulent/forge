@@ -24,11 +24,11 @@ const SEARCH_TIPS: [string, TextKey][] = [
   ['bolt', 'lblWebCatalogueTipName'],
   ['c:bg', 'lblWebCatalogueTipColours'],
   ['c=bg', 'lblWebCatalogueTipOnlyColours'],
-  ['t:creature', 'lblWebCatalogueTipType'],
+  ['t:creature', 'lblCreature'],
   ['o:"draw a card"', 'lblWebCatalogueTipRulesText'],
   ['mv<=3', 'lblWebCatalogueTipManaValue'],
   ['kw:flying', 'lblWebCatalogueTipKeyword'],
-  ['r:rare', 'lblWebCatalogueTipRarity'],
+  ['r:rare', 'lblRare'],
   ['s:mh2', 'lblWebCatalogueTipSet'],
   ['-t:land', 'lblWebCatalogueTipNot'],
   ['t:elf | t:goblin', 'lblWebCatalogueTipOr'],
@@ -125,8 +125,8 @@ export function Catalogue({ model, actions, state, handlers }: {
               </tbody>
             </table>
           </span>
-          <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
-          <select class="type-by" aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
+          <ColourToggles label={t('lblColors')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
+          <select class="type-by" aria-label={t('lblCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
             {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
           </select>
         </FilterBar>
@@ -229,7 +229,7 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
       panel: (f, set, done) => <AnyOf options={RARITIES.map(([r, name]) => [r, t(name)] as const)} value={f.rarity}
         apply={rarity => { set({ ...f, rarity }); done(); }} />,
     },
-    words('set', printing, t('lblWebFilterSet'), t('lblWebFilterSetCode')),
+    words('set', printing, t('lblSet'), t('lblWebFilterSetCode')),
     {
       // The commander's colours are the deck's rule, so the chip is fixed, except on a collection's deck, which has no such rule
       id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
@@ -298,8 +298,8 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, owned, a
             {limited
               ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
-                ? <span class="why">{limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebCatalogueCountOfLimit', count, limit)}</span>
-                : owned ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblWebEditorToSide')}</button>}
+                ? <span class="why">{limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebLegalityCopies', count, limit)}</span>
+                : owned ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
           </div>
         )}
     </div>
