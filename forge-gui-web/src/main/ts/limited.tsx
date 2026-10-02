@@ -1,7 +1,7 @@
 // The Limited pages against the computer: saved events, the setup form, and the opponents a pool's deck plays
 
 import { useEffect, useState } from 'preact/hooks';
-import { usePressOutside } from './hooks';
+import { Shelf } from './shelf';
 import { StepForm, draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from './setup';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { Pips } from './symbols';
@@ -60,58 +60,23 @@ export function shortDay(iso: string): string {
   return new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-/** The saved pools as cards, each with the one thing to do next, after a card that starts a new event. */
+/** The saved pools on the shelf: one with a deck is played, one without is built first. */
 function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
-  const [menu, setMenu] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  usePressOutside(menu !== null, '.ev-more', () => setMenu(null));
   return (
-    <div class="event-shelf">
-      <button class="ev new" onClick={create}>
-        <span class="plus" aria-hidden="true">+</span>
-        <b>{draft ? t('lblWebEventNewDraft') : t('lblWebEventNewSealedEvent')}</b>
-        <span>{draft ? t('lblWebLimitedNewDraftLine') : t('lblWebLimitedNewSealedLine')}</span>
-      </button>
-      {pools.map(p => (
-        <article key={p.name} class={p.built ? 'ev' : 'ev unbuilt'}>
-          <div class="ev-top">
-            <b>{p.name}</b>
-            {p.changed && <span class="sub">{t('lblWebLimitedSaved', shortDay(p.changed))}</span>}
-          </div>
-          <div class="ev-mid">
-            <span class="ev-line deck">
-              {p.built ? <><span class="pips"><Pips colors={p.colors} /></span>{t('lblWebLimitedDeckBuilt', p.deckSize)}</> : t('lblWebLimitedNoDeckYet')}
-            </span>
-            <span class="ev-line dim">{t(draft ? 'lblWebLimitedOpponentsDraft' : 'lblWebLimitedOpponentsPacks', p.opponents.length)}</span>
-          </div>
-          <div class="ev-foot">
-            {deleting === p.name
-              ? <>
-                  <span class="ev-ask">{t('lblWebLimitedDeletePoolAsk')}</span>
-                  <span class="sp" />
-                  <button onClick={() => setDeleting(null)}>{t('lblWebLimitedKeep')}</button>
-                  <button class="danger" onClick={() => { setDeleting(null); actions.poolDelete(p.name); }}>{t('lblDelete')}</button>
-                </>
-              : <>
-                  {p.built
-                    ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblPlay')}</button>
-                        <button onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedEditDeck')}</button></>
-                    : <button class="primary" onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedBuildDeck')}</button>}
-                  <span class="sp" />
-                  <span class="ev-more">
-                    <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', p.name)} aria-expanded={menu === p.name}
-                      onClick={() => setMenu(menu === p.name ? null : p.name)}>⋯</button>
-                    {menu === p.name && (
-                      <div class="ev-menu" role="menu">
-                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(p.name); }}>{t('lblWebLimitedDeletePool')}</button>
-                      </div>
-                    )}
-                  </span>
-                </>}
-          </div>
-        </article>
-      ))}
-    </div>
+    <Shelf rows={pools} cls={p => (p.built ? 'ev' : 'ev unbuilt')}
+      create={{ title: draft ? t('lblWebEventNewDraft') : t('lblWebEventNewSealedEvent'), line: draft ? t('lblWebLimitedNewDraftLine') : t('lblWebLimitedNewSealedLine'), go: create }}
+      sub={p => p.changed && <span class="sub">{t('lblWebLimitedSaved', shortDay(p.changed))}</span>}
+      mid={p => <>
+        <span class="ev-line deck">
+          {p.built ? <><span class="pips"><Pips colors={p.colors} /></span>{t('lblWebLimitedDeckBuilt', p.deckSize)}</> : t('lblWebLimitedNoDeckYet')}
+        </span>
+        <span class="ev-line dim">{t(draft ? 'lblWebLimitedOpponentsDraft' : 'lblWebLimitedOpponentsPacks', p.opponents.length)}</span>
+      </>}
+      foot={p => (p.built
+        ? <><button class="primary" onClick={() => actions.poolOpen(p.name)}>{t('lblPlay')}</button>
+            <button onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedEditDeck')}</button></>
+        : <button class="primary" onClick={() => actions.poolEdit(p.name)}>{t('lblWebLimitedBuildDeck')}</button>)}
+      remove={{ item: t('lblWebLimitedDeletePool'), ask: () => t('lblWebLimitedDeletePoolAsk'), keep: t('lblWebLimitedKeep'), go: p => actions.poolDelete(p.name) }} />
   );
 }
 

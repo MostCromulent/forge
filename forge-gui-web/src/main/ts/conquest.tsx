@@ -1,7 +1,7 @@
 // Planar Conquest: the saved conquests as a shelf, and inside one, a bar every page shares over the page itself.
 
 import { useEffect, useState } from 'preact/hooks';
-import { usePressOutside } from './hooks';
+import { Shelf as Cards } from './shelf';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { changeUi, ui, type ConquestTab } from './ui';
 import { skinIconUrl } from './images';
@@ -66,76 +66,31 @@ function Shelf({ model, actions, creating, setCreating }: { model: Model; action
 }
 
 function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; current: string | null; actions: Actions; create: () => void }) {
-  const [menu, setMenu] = useState<string | null>(null);
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState<string | null>(null);
-  usePressOutside(menu !== null, '.ev-more', () => setMenu(null));
   return (
-    <div class="event-shelf">
-      <button class="ev new" onClick={create}>
-        <span class="plus" aria-hidden="true">+</span>
-        <b>{t('lblWebConquestNew')}</b>
-      </button>
-      {saves.map(s => (
-        <article key={s.name} class={s.name === current ? 'ev cq-save current' : 'ev cq-save'}>
-          <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
-            <img class="cq-medal" alt="" src={artUrl(s.walkerImage)} onError={e => { e.currentTarget.hidden = true; }} />
-          </div>
-          <div class="ev-top">
-            {renaming === s.name
-              ? (
-                <form class="cq-rename" onSubmit={e => {
-                  e.preventDefault();
-                  const to = new FormData(e.currentTarget).get('name')?.toString().trim();
-                  setRenaming(null);
-                  if (to && to !== s.name) actions.campaignRename(s.name, to);
-                }}>
-                  <input name="name" defaultValue={s.name} maxLength={60} aria-label={t('lblConquestName')} autoFocus
-                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); }} />
-                  <button class="primary" type="submit">{t('lblRename')}</button>
-                  <button type="button" onClick={() => setRenaming(null)}>{t('lblCancel')}</button>
-                </form>
-              )
-              : <b>{s.name}</b>}
-            <span class="sub">{s.planeswalker} - {s.plane}</span>
-          </div>
-          <div class="ev-mid">
-            <div class="cq-pbar"><i style={{ width: `${s.total ? 100 * s.conquered / s.total : 0}%` }} /></div>
-            <span class="ev-line dim">
-              <b class="pct">{s.conquered} / {s.total}</b>
-              <span class="sp" />
-              {t('lblWebNCards', s.cards)}
-              <Purse icon="IMG_AETHER_SHARD" n={s.shards} label={t('lblAetherShards')} />
-              <Purse icon="IMG_PW_BADGE_COMMON" n={s.emblems} label={t('lblPlaneswalkEmblems')} />
-            </span>
-          </div>
-          <div class="ev-foot">
-            {deleting === s.name
-              ? <>
-                  <span class="ev-ask">{t('lblAreYouSuerDeleteConquest', s.name)}</span>
-                  <span class="sp" />
-                  <button onClick={() => setDeleting(null)}>{t('lblCancel')}</button>
-                  <button class="danger" onClick={() => { setDeleting(null); actions.campaignDelete(s.name); }}>{t('lblDelete')}</button>
-                </>
-              : <>
-                  <button class="primary" onClick={() => actions.campaignLoad(s.name)}>{t('lblPlay')}</button>
-                  {s.saved && <span class="ev-ask">{t('lblWebLimitedSaved', shortDay(s.saved))}</span>}
-                  <span class="sp" />
-                  <span class="ev-more">
-                    <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', s.name)} aria-expanded={menu === s.name}
-                      onClick={() => setMenu(menu === s.name ? null : s.name)}>⋯</button>
-                    {menu === s.name && (
-                      <div class="ev-menu" role="menu">
-                        <button role="menuitem" class="plain" onClick={() => { setMenu(null); setRenaming(s.name); }}>{t('lblRename')}</button>
-                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(s.name); }}>{t('lblDelete')}</button>
-                      </div>
-                    )}
-                  </span>
-                </>}
-          </div>
-        </article>
-      ))}
-    </div>
+    <Cards rows={saves} cls={s => (s.name === current ? 'ev cq-save current' : 'ev cq-save')}
+      create={{ title: t('lblWebConquestNew'), go: create }}
+      art={s => (
+        <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
+          <img class="cq-medal" alt="" src={artUrl(s.walkerImage)} onError={e => { e.currentTarget.hidden = true; }} />
+        </div>
+      )}
+      sub={s => <span class="sub">{s.planeswalker} - {s.plane}</span>}
+      mid={s => <>
+        <div class="cq-pbar"><i style={{ width: `${s.total ? 100 * s.conquered / s.total : 0}%` }} /></div>
+        <span class="ev-line dim">
+          <b class="pct">{s.conquered} / {s.total}</b>
+          <span class="sp" />
+          {t('lblWebNCards', s.cards)}
+          <Purse icon="IMG_AETHER_SHARD" n={s.shards} label={t('lblAetherShards')} />
+          <Purse icon="IMG_PW_BADGE_COMMON" n={s.emblems} label={t('lblPlaneswalkEmblems')} />
+        </span>
+      </>}
+      foot={s => <>
+        <button class="primary" onClick={() => actions.campaignLoad(s.name)}>{t('lblPlay')}</button>
+        {s.saved && <span class="ev-ask">{t('lblWebLimitedSaved', shortDay(s.saved))}</span>}
+      </>}
+      rename={{ field: t('lblConquestName'), go: (s, to) => actions.campaignRename(s.name, to) }}
+      remove={{ item: t('lblDelete'), ask: s => t('lblAreYouSuerDeleteConquest', s.name), keep: t('lblCancel'), go: s => actions.campaignDelete(s.name) }} />
   );
 }
 
