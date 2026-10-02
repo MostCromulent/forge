@@ -258,7 +258,7 @@ function apply(msg: ServerMessage): void {
       if (!msg.inMatch) model.conquestResult = null;
       if (msg.campaign !== 'conquest') {
         model.conquestState = null;
-        model.conquestBar = null;
+        model.campaignBar = null;
         model.conquestReward = null;
         model.conquestParty = null;
         model.conquestCollection = null;
@@ -330,7 +330,7 @@ function apply(msg: ServerMessage): void {
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
     case 'conquestSaves': model.conquestSaves = msg; break;
-    case 'conquestBar': model.conquestBar = msg; break;
+    case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'conquestResult': model.conquestResult = msg; break;
     case 'conquestReward': model.conquestReward = msg; break;

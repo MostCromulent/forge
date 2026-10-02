@@ -336,11 +336,14 @@ final class ConquestGame implements Campaign {
         return List.of(bar(), state(List.of()));
     }
 
-    ConquestBar bar() {
+    CampaignBar bar() {
         final ConquestData data = model();
         final ConquestPlane plane = data.getCurrentPlane();
-        return new ConquestBar(data.getName(), planeName(plane), data.getCurrentPlaneData().getConqueredCount(), plane.getEventCount(),
-                data.getAEtherShards(), data.getPlaneswalkEmblems());
+        final Localizer text = Localizer.getInstance();
+        return new CampaignBar(data.getName(),
+                planeName(plane) + " \u00b7 " + data.getCurrentPlaneData().getConqueredCount() + " / " + plane.getEventCount(),
+                List.of(new Balance("IMG_AETHER_SHARD", data.getAEtherShards(), text.getMessage("lblAetherShards")),
+                        new Balance("IMG_PW_BADGE_COMMON", data.getPlaneswalkEmblems(), text.getMessage("lblPlaneswalkEmblems"))));
     }
 
     /** The commanders and planeswalkers the conquest has found. */

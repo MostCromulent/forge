@@ -69,8 +69,8 @@ final class SkinSprites {
         return encoded.computeIfAbsent("k" + name, k -> cell(sheetFor(prop), prop, k));
     }
 
-    /** PNG bytes of one of Planar Conquest's icons, named by its FSkinProp, or null for any other name. */
-    static byte[] conquestPng(final String name) {
+    /** PNG bytes of one of the skin icons a campaign shows, named by its FSkinProp, or null for any other name. */
+    static byte[] iconPng(final String name) {
         final FSkinProp prop = prop(name);
         if (prop == null || !CONQUEST_ICONS.contains(prop)) {
             return null;

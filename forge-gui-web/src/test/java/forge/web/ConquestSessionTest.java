@@ -136,6 +136,16 @@ public class ConquestSessionTest extends SessionsTest {
         return host;
     }
 
+    /** How much of a balance the bar shows, by its icon. */
+    private static int balance(final JsonObject bar, final String icon) {
+        for (final JsonElement b : bar.getAsJsonArray("balances")) {
+            if (icon.equals(b.getAsJsonObject().get("icon").getAsString())) {
+                return b.getAsJsonObject().get("amount").getAsInt();
+            }
+        }
+        throw new AssertionError("The bar has no balance of " + icon);
+    }
+
     private static String str(final JsonObject o, final String field) {
         return o.has(field) && !o.get(field).isJsonNull() ? o.get(field).getAsString() : null;
     }
@@ -162,9 +172,9 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(cell(state, 0, 0, 0).get("state").getAsString(), "open");
         Assert.assertEquals(cell(state, 0, 1, 0).get("state").getAsString(), "fog");
         Assert.assertFalse(cell(state, 0, 1, 0).has("name"), "a place not yet found says what is there");
-        final JsonObject bar = host.awaitNewest("conquestBar");
-        Assert.assertEquals(bar.get("shards").getAsInt(), data.getAEtherShards());
-        Assert.assertEquals(bar.get("total").getAsInt(), 54);
+        final JsonObject bar = host.awaitNewest("campaignBar");
+        Assert.assertEquals(balance(bar, "IMG_AETHER_SHARD"), data.getAEtherShards());
+        Assert.assertTrue(str(bar, "line").endsWith("/ 54"), "the bar does not count the plane's 54 events: " + str(bar, "line"));
     }
 
     // Fails if selecting a place moves the player, or closes the portal of the place stood on
@@ -692,7 +702,7 @@ public class ConquestSessionTest extends SessionsTest {
         final int value = data.getExileValue(List.of(spare));
         final int cost = data.getRetrieveCost(List.of(spare));
         send(host, exile(spare, false));
-        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards + value, "the exile was not paid for");
+        host.awaitMatching("campaignBar", b -> balance(b, "IMG_AETHER_SHARD") == shards + value, "the exile was not paid for");
         Assert.assertEquals(host.awaitMatching("conquestCollection", c -> true, "the lists' sizes were not sent").get("exiled").getAsInt(), 1);
         Assert.assertFalse(cardsOf(host, "collection").contains(spare.getName()), "an exiled card is still in the collection");
         Assert.assertEquals(cardsOf(host, "exile"), List.of(spare.getName()));
@@ -707,7 +717,7 @@ public class ConquestSessionTest extends SessionsTest {
         data.rewardAEtherShards(shards + value);
 
         send(host, exile(spare, true));
-        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards + value - cost, "the retrieval was not charged");
+        host.awaitMatching("campaignBar", b -> balance(b, "IMG_AETHER_SHARD") == shards + value - cost, "the retrieval was not charged");
         Assert.assertFalse(data.isInExile(spare));
         Assert.assertTrue(cardsOf(host, "collection").contains(spare.getName()));
     }
@@ -911,7 +921,7 @@ public class ConquestSessionTest extends SessionsTest {
 
         send(host, message("conquestPlaneswalk", "plane", "Alara", "unlock", true));
         host.awaitMatching("conquestState", s -> "Alara".equals(s.get("plane").getAsString()), "the map is not the new plane's");
-        host.awaitMatching("conquestBar", b -> b.get("emblems").getAsInt() == few, "the bar does not show the emblems spent");
+        host.awaitMatching("campaignBar", b -> balance(b, "IMG_PW_BADGE_COMMON") == few, "the bar does not show the emblems spent");
         Assert.assertEquals(data.getPlaneswalkEmblems(), few);
         final ConquestData saved = new ConquestData(data.getDirectory());
         Assert.assertEquals(saved.getCurrentPlane().getName(), "Alara");
@@ -955,7 +965,7 @@ public class ConquestSessionTest extends SessionsTest {
         }
         Assert.assertTrue(has, "the card pulled is not owned");
         Assert.assertEquals(after.get("matching").getAsInt(), matching - 1);
-        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards - cost, "the bar does not show the shards spent");
+        host.awaitMatching("campaignBar", b -> balance(b, "IMG_AETHER_SHARD") == shards - cost, "the bar does not show the shards spent");
 
         data.spendAEtherShards(data.getAEtherShards());
         send(host, aether(shown, true));

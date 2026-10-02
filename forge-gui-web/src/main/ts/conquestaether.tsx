@@ -1,7 +1,8 @@
 // The Aether, where the server decides what matches the filters, what a pull costs and which card comes
 
 import { useEffect, useState } from 'preact/hooks';
-import { conquestIconUrl, imageUrl } from './images';
+import { skinIconUrl, imageUrl } from './images';
+import { balance } from './campaign';
 import { ColourToggles, Pip, Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -12,7 +13,7 @@ const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic']
 /** How many of the cards pulled this visit stay in view. */
 const MOST_RECENT = 12;
 
-const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')} style={{ width: `${size}px`, height: `${size}px` }} src={conquestIconUrl('IMG_AETHER_SHARD')} />;
+const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_AETHER_SHARD')} />;
 
 export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const a = model.conquestAether;
@@ -25,7 +26,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
   const toggle = (letter: string) => ask({ colors: [...'WUBRG'].filter(c => (c === letter) !== a.colors.includes(c)).join('') });
   // The price is on the button, so a pull that cannot be paid for is not offered
-  const short = a.cost > (model.conquestBar?.shards ?? 0);
+  const short = a.cost > balance(model.campaignBar, 'IMG_AETHER_SHARD');
   const pull = (
     <button class="primary cq-ae-pull" disabled={!a.cost || !a.strict || short} onClick={() => ask({}, true)}>
       {t('lblWebConquestPull')}<span class="cq-sep">·</span>{shard(18)}{a.cost.toLocaleString('en-GB')}
@@ -53,7 +54,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
           )
           : (
             <div class="cq-ae-core">
-              <img class="cq-ae-orb" alt="" src={conquestIconUrl('IMG_MULTIVERSE')} />
+              <img class="cq-ae-orb" alt="" src={skinIconUrl('IMG_MULTIVERSE')} />
               <div class="cq-chips">
                 {RARITIES.map((name, i) => <span key={name} class="cq-chip">{a.byRarity[i]} {t(name)}</span>)}
               </div>

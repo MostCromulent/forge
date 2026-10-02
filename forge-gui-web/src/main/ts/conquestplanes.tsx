@@ -2,14 +2,14 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
-import { conquestIconUrl } from './images';
+import { skinIconUrl } from './images';
 import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ConquestPlaneRow } from './protocol';
 import { t } from './text';
 
-const emblem = (size: number) => <img class="cq-shard" alt={t('lblPlaneswalkEmblems')} style={{ width: `${size}px`, height: `${size}px` }} src={conquestIconUrl('IMG_PW_BADGE_COMMON')} />;
+const emblem = (size: number) => <img class="cq-shard" alt={t('lblPlaneswalkEmblems')} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />;
 const share = (n: number, of: number): string => `${n} / ${of} (${of ? Math.round(100 * n / of) : 0}%)`;
 
 export function Planes({ model, actions }: { model: Model; actions: Actions }) {

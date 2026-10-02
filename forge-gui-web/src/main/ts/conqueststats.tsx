@@ -10,12 +10,12 @@ const amount = (n: number): string => n.toLocaleString('en-GB');
 export function Stats({ model, actions }: { model: Model; actions: Actions }) {
   const s = model.conquestStats;
   // The plane the player stands on is the one first shown
-  useEffect(() => { actions.conquestStats(model.conquestBar?.plane); }, []);
+  useEffect(() => { actions.conquestStats(model.conquestState?.plane); }, []);
   if (!s) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   return (
     <div class="cq-stats">
       <div class="cq-stats-head">
-        <div><span class="muted">{model.conquestBar?.name}</span><h2>{t('lblStatistics')}</h2></div>
+        <div><span class="muted">{model.campaignBar?.name}</span><h2>{t('lblStatistics')}</h2></div>
         <span class="seg" role="group">
           <button aria-pressed={!s.plane} onClick={() => actions.conquestStats(undefined)}>{t('lblAllPlanes')}</button>
           {s.planes.map(p => <button key={p} aria-pressed={p === s.plane} onClick={() => actions.conquestStats(p)}>{p}</button>)}

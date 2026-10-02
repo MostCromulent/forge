@@ -1,7 +1,7 @@
 // A conquest's cards, owned and exiled, where every price shown is the server's
 
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { conquestIconUrl, imageUrl } from './images';
+import { skinIconUrl, imageUrl } from './images';
 import { ColourToggles, toggled } from './symbols';
 import { TYPES as CARD_TYPES } from './catalogue';
 import { useDebounced } from './hooks';
@@ -19,7 +19,7 @@ const SHARD = '{AE}';
 /** A sentence of mobile's with the shard symbol drawn where it names it. */
 function Priced({ text }: { text: string }) {
   const [before, after] = text.split(SHARD);
-  return <>{before}<img class="cq-shard" alt={t('lblAetherShards')} src={conquestIconUrl('IMG_AETHER_SHARD')} />{after}</>;
+  return <>{before}<img class="cq-shard" alt={t('lblAetherShards')} src={skinIconUrl('IMG_AETHER_SHARD')} />{after}</>;
 }
 
 const amount = (n: number): string => n.toLocaleString('en-GB');
@@ -103,7 +103,7 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
         <div class="cq-sel-bar">
           <button onClick={() => setPicked(new Map())}>{t('lblCancel')}</button>
           <button class="primary" onClick={() => setAsking(true)}>
-            {title}<img class="cq-shard" alt={t('lblAetherShards')} src={conquestIconUrl('IMG_AETHER_SHARD')} />{amount(total)}
+            {title}<img class="cq-shard" alt={t('lblAetherShards')} src={skinIconUrl('IMG_AETHER_SHARD')} />{amount(total)}
           </button>
         </div>
       )}

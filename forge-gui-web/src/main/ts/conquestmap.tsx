@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
-import { conquestIconUrl, imageUrl } from './images';
+import { skinIconUrl, imageUrl } from './images';
 import { Pips } from './symbols';
 import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
 import { reducedMotion } from './conquestmotion';
@@ -130,7 +130,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
               return (
                 <button key={`b${r}`} class={done ? 'cq-banner done' : 'cq-banner'} disabled={!toggle || !done} onClick={toggle}
                   style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${at.w}px`, height: `${BH}px`, backgroundImage: `url("${artUrl(region.art)}")` }}>
-                  <b>{region.name}</b><span>{done && <img alt={t('lblWebConquestConquered')} src={conquestIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
+                  <b>{region.name}</b><span>{done && <img alt={t('lblWebConquestConquered')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
                 </button>
               );
             })}
@@ -176,7 +176,7 @@ function Reward({ cell }: { cell: ConquestCell }) {
   return (
     <div class="cq-reward-line">
       <span class="cq-kicker">{t('lblWebConquestReward')}</span>
-      {cell.state !== 'won' && <span class="cq-chip"><img alt={t('lblPlaneswalkEmblems')} src={conquestIconUrl('IMG_PW_BADGE_COMMON')} />1</span>}
+      {cell.state !== 'won' && <span class="cq-chip"><img alt={t('lblPlaneswalkEmblems')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />1</span>}
       <span class="cq-chip">{t('lblWebConquestChaosWheel')}</span>
     </div>
   );
@@ -186,7 +186,7 @@ function Chips({ cell }: { cell: ConquestCell }) {
   return (
     <div class="cq-chips">
       {(cell.variants ?? []).map(v => <span key={v} class="cq-chip">{variantName(v)}</span>)}
-      {cell.state === 'won' && <span class="cq-chip brass"><img alt="" src={conquestIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestConquered')}</span>}
+      {cell.state === 'won' && <span class="cq-chip brass"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestConquered')}</span>}
       <Record cell={cell} />
       {cell.opens && <span class="cq-chip brass">{t('lblWebConquestPortal')}: {cell.opens}</span>}
     </div>

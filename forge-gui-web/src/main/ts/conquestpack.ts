@@ -1,6 +1,6 @@
 // A booster pack over its cards, animated by hand with the Web Animations API, and the server decides which cards it holds
 
-import { conquestIconUrl, imageUrl } from './images';
+import { skinIconUrl, imageUrl } from './images';
 import { artUrl } from './sleeves';
 import { CHAOS_MARK } from './conquestwheel';
 import { reducedMotion } from './conquestmotion';
@@ -73,7 +73,7 @@ export function mountPack(host: HTMLElement, spec: PackSpec, hooks: PackHooks): 
     if (plus) {
       const shard = document.createElement('img');
       shard.alt = '';
-      shard.src = conquestIconUrl('IMG_AETHER_SHARD');
+      shard.src = skinIconUrl('IMG_AETHER_SHARD');
       plus.append(shard, String(c.shards));
     }
     const cls = ['cq-rv-card', c.shards && 'dup', isRare(c.rarity) && 'rare', c.rarity === 'MythicRare' && 'mythic'].filter(Boolean).join('.');

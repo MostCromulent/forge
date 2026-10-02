@@ -1,6 +1,6 @@
 // The Chaos Wheel as a dial, drawn and turned by hand, and the server decides where it stops
 
-import { conquestIconUrl } from './images';
+import { skinIconUrl } from './images';
 import { reducedMotion } from './conquestmotion';
 
 /** The wheel's eight spots, clockwise from the needle, as ConquestEvent.ChaosWheelOutcome orders them. */
@@ -15,7 +15,7 @@ const LINES = {
   pack: '<svg class="ln" viewBox="0 0 24 34"><path d="M4 2h16v30H4z"/><path d="M4 6.5h16M4 27.5h16"/><path d="M12 12.5l4 4.5-4 4.5-4-4.5z"/></svg>',
   shard: '<svg class="ln" viewBox="0 0 24 34"><path d="M12 2l7 10-7 20-7-20z"/><path d="M5 12h14M12 2l-3 10 3 20 3-20z"/></svg>',
 };
-const emblem = `<img alt="" src="${conquestIconUrl('IMG_PW_BADGE_COMMON')}">`;
+const emblem = `<img alt="" src="${skinIconUrl('IMG_PW_BADGE_COMMON')}">`;
 const ICONS: Record<WheelOutcome, string> = {
   CHAOS: LINES.chaos, BOOSTER: LINES.pack, SHARDS: LINES.shard, DOUBLE_BOOSTER: LINES.pack + LINES.pack, PLANESWALK: emblem, DOUBLE_SHARDS: LINES.shard + LINES.shard,
 };

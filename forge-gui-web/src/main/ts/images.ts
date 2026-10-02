@@ -62,8 +62,8 @@ export const symbolUrl = (symbol: string): string => `mana?s=${encodeURIComponen
 
 /** A keyword's icon, cut from the skin's ability sheet. The host names the icon; see FSkinProp.iconFromKeyword. */
 export const abilityUrl = (icon: string): string => `ability?k=${encodeURIComponent(icon)}`;
-/** One of Planar Conquest's icons, by its skin name: IMG_AETHER_SHARD, IMG_PW_BADGE_COMMON, IMG_SPELLBOOK or IMG_MULTIVERSE. */
-export const conquestIconUrl = (icon: string): string => `conquesticon?k=${encodeURIComponent(icon)}`;
+/** One of the skin icons a campaign shows, by its skin name, such as IMG_AETHER_SHARD. */
+export const skinIconUrl = (icon: string): string => `skinicon?k=${encodeURIComponent(icon)}`;
 
 export function hideOnError(img: HTMLImageElement): void {
   img.addEventListener('error', () => { img.hidden = true; });

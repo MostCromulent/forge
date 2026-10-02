@@ -4,7 +4,8 @@ import { useEffect, useState } from 'preact/hooks';
 import { usePressOutside } from './hooks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { changeUi, ui, type ConquestTab } from './ui';
-import { conquestIconUrl } from './images';
+import { skinIconUrl } from './images';
+import { CampaignBar, Purse } from './campaign';
 import { shortDay } from './limited';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
@@ -19,7 +20,7 @@ import { Reveal, wheelLabels, type Owed } from './conquestreward';
 import { setting } from './settings';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { ConquestBar, ConquestSave } from './protocol';
+import type { ConquestSave } from './protocol';
 import { t, type TextKey } from './text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the map. */
@@ -27,7 +28,7 @@ const BALANCE_ICONS = ['IMG_AETHER_SHARD', 'IMG_PW_BADGE_COMMON'];
 
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
-  useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = conquestIconUrl(icon); }, []);
+  useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = skinIconUrl(icon); }, []);
   // The form that starts a conquest takes the shelf's place, and gives it back when left or when its conquest opens
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (open) setCreating(false); }, [open]);
@@ -140,41 +141,9 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
   );
 }
 
-/** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
-export function Purse({ icon, n, label }: { icon: string; n: number; label: string }) {
-  return <span class="cq-coin" title={label}><img alt={label} src={conquestIconUrl(icon)} /><b>{n.toLocaleString('en-GB')}</b></span>;
-}
-
 const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLANESWALK', 'CHAOS'] as const;
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
-
-/** The bar every page of a conquest shares: its name and plane, the tabs, and the two balances. */
-function CampaignBar({ bar, actions, prefs, under }: { bar: ConquestBar; actions: Actions; prefs: () => void; under: boolean }) {
-  return (
-    <div class="cq-bar" inert={under}>
-      <div class="cq-id"><b>{bar.name}</b><span>{bar.plane} · {bar.conquered} / {bar.total}</span></div>
-      <nav class="cq-tabs">
-        {TABS.map(([tab, name]) => (
-          <button key={tab} class="cq-tab" aria-current={tab === ui.conquestTab ? 'page' : undefined}
-            onClick={() => changeUi(u => { u.conquestTab = tab; })}>{t(name)}</button>
-        ))}
-      </nav>
-      <div class="cq-purse">
-        {setting('devMode') && (
-          // Dev mode: where the next Chaos Wheel stops, so each reward can be looked at
-          <select class="cq-dev" aria-label={t('lblWebConquestDevWheel')} title={t('lblWebConquestDevWheel')} onChange={e => actions.devConquestWheel(e.currentTarget.value)}>
-            <option value="">{t('lblWebConquestDevWheel')}</option>
-            {DEV_WHEEL.map(o => <option key={o} value={o}>{wheelLabels()[o]}</option>)}
-          </select>
-        )}
-        <Purse icon="IMG_AETHER_SHARD" n={bar.shards} label={t('lblAetherShards')} />
-        <Purse icon="IMG_PW_BADGE_COMMON" n={bar.emblems} label={t('lblPlaneswalkEmblems')} />
-        <button onClick={prefs}>{t('lblWebConquestPreferences')}</button>
-      </div>
-    </div>
-  );
-}
 
 /** The page of the open tab. */
 function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions: Actions }) {
@@ -196,11 +165,18 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   // The preferences set the prices every page shows, so the page behind them asks again when they close
   const [priced, setPriced] = useState(0);
   useEffect(() => { if (!reward) setOwed({ shards: 0, emblems: 0 }); }, [reward]);
-  if (!model.conquestBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
-  const bar = model.conquestBar;
+  if (!model.campaignBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
+  const bar = model.campaignBar;
   return <>
-    <CampaignBar actions={actions} prefs={() => setPrefs(true)} under={!!reward}
-      bar={reward ? { ...bar, shards: bar.shards - owed.shards, emblems: bar.emblems - owed.emblems } : bar} />
+    <CampaignBar bar={bar} tabs={TABS} tab={ui.conquestTab} setTab={tab => changeUi(u => { u.conquestTab = tab; })}
+      held={reward ? { IMG_AETHER_SHARD: owed.shards, IMG_PW_BADGE_COMMON: owed.emblems } : {}} prefs={() => setPrefs(true)} under={!!reward}
+      extra={setting('devMode') && (
+        // Dev mode: where the next Chaos Wheel stops, so each reward can be looked at
+        <select class="cq-dev" aria-label={t('lblWebConquestDevWheel')} title={t('lblWebConquestDevWheel')} onChange={e => actions.devConquestWheel(e.currentTarget.value)}>
+          <option value="">{t('lblWebConquestDevWheel')}</option>
+          {DEV_WHEEL.map(o => <option key={o} value={o}>{wheelLabels()[o]}</option>)}
+        </select>
+      )} />
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}><Page key={priced} tab={ui.conquestTab} model={model} actions={actions} /></div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}

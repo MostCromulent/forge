@@ -1,7 +1,7 @@
 // The reward is already in the save and its steps are the server's, so this only shows them and tells the bar what is yet to be shown
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
-import { conquestIconUrl, imageUrl } from './images';
+import { skinIconUrl, imageUrl } from './images';
 import { mountPack, type Pack } from './conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
 import { pendingAmounts } from './conquestpending';
@@ -74,7 +74,7 @@ function Gift({ icon, amount, title, text, button, next }: { icon: string; amoun
   return (
     <div class="dialog cq-gift">
       <h3>{title}</h3>
-      <div class="cq-gift-what"><img alt="" src={conquestIconUrl(icon)} />{amount !== undefined && <b>{amount.toLocaleString('en-GB')}</b>}</div>
+      <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{amount.toLocaleString('en-GB')}</b>}</div>
       {text && <p>{text}</p>}
       <button class="primary" onClick={next}>{button}</button>
     </div>
@@ -93,7 +93,7 @@ function WheelStop({ step, emblem, next }: { step: ConquestStep; emblem: number;
   };
   return (
     <div class="cq-wheel-stop">
-      {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={conquestIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
+      {emblem > 0 && <p class="cq-wheel-first"><img alt="" src={skinIconUrl('IMG_PW_BADGE_COMMON')} />{t('lblWebConquestFirstConquest')}</p>}
       <div class="cq-wheel-host" ref={host} />
       <div class="cq-reveal-foot">
         {phase === 'stopped'
@@ -114,7 +114,7 @@ function flyShards(from: DOMRect, arrived: () => void): void {
   const mote = document.createElement('img');
   mote.className = 'cq-mote';
   mote.alt = '';
-  mote.src = conquestIconUrl('IMG_AETHER_SHARD');
+  mote.src = skinIconUrl('IMG_AETHER_SHARD');
   document.body.append(mote);
   const x0 = from.left + from.width / 2, y0 = from.top + from.height * .4;
   mote.animate([{ transform: `translate(${x0}px, ${y0}px) scale(1.4)`, opacity: 1 },
@@ -150,7 +150,7 @@ function PackStop({ step, release, zoom, next }: { step: ConquestStep; release: 
       <div class="cq-pack-host" ref={host} />
       <div class="cq-reveal-foot">
         {phase === 'shown' && duplicates > 0 && (
-          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={conquestIconUrl('IMG_AETHER_SHARD')} /><b>{duplicates.toLocaleString('en-GB')}</b></span>
+          <span class="cq-dup-line">{t('lblReceivedAetherShardsForDuplicateCards')}<img alt="" src={skinIconUrl('IMG_AETHER_SHARD')} /><b>{duplicates.toLocaleString('en-GB')}</b></span>
         )}
         {phase === 'shown'
           ? <button class="primary cq-big" onClick={e => { e.stopPropagation(); next(); }}>{t('lblGreat')}</button>

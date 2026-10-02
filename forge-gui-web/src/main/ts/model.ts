@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, ConquestBar, ConquestPlanes, ConquestPrefs, ConquestStats, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -111,7 +111,7 @@ export interface Model {
   campaignSave: string | null;
   currentConquest: string | null;
   conquestSaves: ConquestSaves | null;
-  conquestBar: ConquestBar | null;
+  campaignBar: CampaignBar | null;
   conquestState: ConquestState | null;
   /** The result of a battle's game, while its match is open; and what a won battle gave, until it has been shown. */
   conquestResult: ConquestResult | null;
@@ -141,7 +141,7 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
-    campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
+    campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, campaignBar: null, conquestState: null,
     conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null, conquestOptions: null,
     conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
   };

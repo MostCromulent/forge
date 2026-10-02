@@ -544,6 +544,17 @@ final class ToBrowser {
     record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean nextRound) {
     }
 
+    // ---- Campaigns: what Planar Conquest and any mode like it share ---------------------------------------------
+
+    /** One of a campaign's currencies: its skin icon's name, how much the player has, and its name for a reader who cannot see the icon. */
+    record Balance(String icon, int amount, String label) {
+    }
+
+    /** What the bar over every page of a campaign shows: the save's name, a line under it, and its balances. */
+    @Message("campaignBar")
+    record CampaignBar(String name, String line, List<Balance> balances) {
+    }
+
     // ---- Planar Conquest ---------------------------------------------------------------------------------------
 
     /** The saved conquests, and the one played last. */
@@ -567,11 +578,6 @@ final class ToBrowser {
     @Message("conquestOptions")
     record ConquestOptions(List<ConquestPlaneOption> planes, @Nullable List<ConquestCardOption> commanders,
             @Nullable List<ConquestCardOption> planeswalkers, int startShards, @Nullable String plane, @Nullable String commander) {
-    }
-
-    /** What the bar over every Conquest page shows. */
-    @Message("conquestBar")
-    record ConquestBar(String name, String plane, int conquered, int total, int shards, int emblems) {
     }
 
     record ConquestPlace(int region, int row, int col) {

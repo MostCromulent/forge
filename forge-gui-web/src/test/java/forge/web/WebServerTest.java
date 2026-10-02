@@ -118,9 +118,9 @@ public class WebServerTest {
     // Fails if the Conquest icon route serves none of Conquest's icons, or serves a sprite that is not one of them
     @Test
     public void conquestIconsAreServedAndNothingElseIs() throws Exception {
-        Assert.assertEquals(get("/conquesticon?k=IMG_AETHER_SHARD&token=secret", null).statusCode(), 200);
-        Assert.assertEquals(get("/conquesticon?k=IMG_MANA_W&token=secret", null).statusCode(), 404);
-        Assert.assertEquals(get("/conquesticon?k=nonsense&token=secret", null).statusCode(), 404);
+        Assert.assertEquals(get("/skinicon?k=IMG_AETHER_SHARD&token=secret", null).statusCode(), 200);
+        Assert.assertEquals(get("/skinicon?k=IMG_MANA_W&token=secret", null).statusCode(), 404);
+        Assert.assertEquals(get("/skinicon?k=nonsense&token=secret", null).statusCode(), 404);
     }
 
     private WebSocket openSocket(final String origin, final List<String> texts) throws Exception {
