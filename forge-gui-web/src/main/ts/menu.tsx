@@ -81,6 +81,15 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
           blurb={t(computer ? 'lblWebMenuSealedVsAi' : 'lblWebMenuSealedFriends')}
           resume={computer && model.sealedPools > 0 ? () => actions.limitedOpen('sealed', true) : undefined} />
       </div>
+      {computer && <>
+        <h3 class="chooser-more">{t('lblWebConquestCampaigns')}</h3>
+        <div class="chooser-kinds">
+          <Kind id="conquest" name={t('lblPlanarConquest')} blurb={t('lblWebConquestBlurb')} onClick={() => actions.conquestOpen(false)}
+            resume={model.currentConquest ? () => actions.conquestOpen(true) : undefined}
+            resumeLabel={model.currentConquest ? t('lblWebConquestResume', model.currentConquest) : undefined} />
+          <Kind id="quest" name={t('lblQuestMode')} blurb={t('lblWebConquestQuestSoon')} />
+        </div>
+      </>}
     </div>
   );
 }
@@ -91,16 +100,21 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
   draft: <><rect x="7" y="16" width="14" height="22" rx="2" /><rect x="27" y="16" width="14" height="22" rx="2" /><path d="M17 9h13l-3-3M31 45H18l3 3" /></>,
   sealed: <><path d="M13 22v19h22V22" /><path d="M13 22l2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5 2.75-2.5 2.75 2.5" />
     <rect x="16" y="6" width="10" height="15" rx="1.5" transform="rotate(-12 21 13.5)" /><rect x="23" y="5" width="10" height="15" rx="1.5" transform="rotate(10 28 12.5)" /></>,
+  // A ringed world for Conquest; a pennant on its staff for Quest
+  conquest: <><circle cx="24" cy="24" r="11" /><ellipse cx="24" cy="24" rx="20" ry="6.5" transform="rotate(-18 24 24)" /></>,
+  quest: <><path d="M13 42V7" /><path d="M13 9h22l-6 7 6 7H13" /></>,
 };
 
 /**
  * A kind of game, with a way back into the event of that kind saved last along its foot when there is one. The card
- * is two buttons in one frame, as a button cannot hold another.
+ * is two buttons in one frame, as a button cannot hold another. A kind with nothing to open is shown greyed.
  */
-function Kind({ id, name, blurb, resume, onClick }: { id: string; name: string; blurb: string; resume?: () => void; onClick: () => void }) {
+function Kind({ id, name, blurb, resume, resumeLabel, onClick }: {
+  id: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+}) {
   return (
     <div class="mode kind-card">
-      <button class="kind-main" data-kind={id} onClick={onClick}>
+      <button class="kind-main" data-kind={id} disabled={!onClick} onClick={onClick}>
         <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
@@ -110,7 +124,7 @@ function Kind({ id, name, blurb, resume, onClick }: { id: string; name: string; 
       {resume && (
         <button class="kind-resume" onClick={resume}>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M10 9l5 3-5 3z" /></svg>
-          {t('lblWebMenuResumeLastEvent')}
+          {resumeLabel ?? t('lblWebMenuResumeLastEvent')}
         </button>
       )}
     </div>

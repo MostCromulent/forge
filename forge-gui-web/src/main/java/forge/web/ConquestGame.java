@@ -200,10 +200,13 @@ final class ConquestGame {
                     conquered, plane.getRowsPerRegion() * plane.getCols()));
         }
         final List<ConquestLocation> toChosen = chosen.equals(here) ? null : data.getPath(chosen);
+        // A move's path is for the marker to walk once, so a reload does not walk it again
+        final List<ConquestLocation> walked = path;
+        path = List.of();
         final ConquestCommander commander = data.getSelectedCommander();
         return new ConquestState(planeName(plane), plane.getRowsPerRegion(), plane.getCols(), regions, cells, place(here),
                 data.getPlaneswalker().getDisplayName(), data.getPlaneswalker().getImageKey(false), place(chosen),
-                toChosen == null ? 0 : toChosen.size() - 1, path.stream().map(ConquestGame::place).toList(),
+                toChosen == null ? 0 : toChosen.size() - 1, walked.stream().map(ConquestGame::place).toList(),
                 new ConquestLead(commander.getDisplayName(), commander.getCard().getImageKey(false),
                         commander.getDeck().getMain().countAll(), commander.getDeckProblem()));
     }

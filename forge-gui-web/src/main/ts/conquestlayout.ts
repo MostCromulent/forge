@@ -1,0 +1,33 @@
+// Where a plane's regions and places stand on the Conquest map. Sizes are in pixels.
+
+import type { ConquestState } from './protocol';
+
+export const TW = 100, TH = 150, G = 14, BH = 92, GAP = 32, SPINE = 62, X0 = 4, Y0 = 8;
+export interface Layout {
+  width: number;
+  height: number;
+  regions: { x: number; w: number; folded: boolean }[];
+  at(region: number, row: number, col: number): { x: number; y: number };
+}
+
+/**
+ * Where everything stands. A region's steps run along the road and its lanes down it. Open regions stand 46 apart, an
+ * open one and a folded one 30, and folded ones 10.
+ */
+export function layout(state: Pick<ConquestState, 'rows' | 'cols' | 'regions'>, folded: (region: number) => boolean): Layout {
+  const w = state.rows * TW + (state.rows - 1) * G;
+  const h = state.cols * TH + (state.cols - 1) * G;
+  const top = Y0 + BH + GAP;
+  const regions: Layout['regions'] = [];
+  let x = X0;
+  state.regions.forEach((_, r) => {
+    const f = folded(r);
+    regions.push({ x, w: f ? SPINE : w, folded: f });
+    const last = r === state.regions.length - 1;
+    x += (f ? SPINE : w) + (last ? 0 : f ? 10 : folded(r + 1) ? 30 : 46);
+  });
+  return {
+    width: x + X0, height: top + h + 20, regions,
+    at: (r, row, col) => ({ x: regions[r].x + row * (TW + G), y: top + col * (TH + G) }),
+  };
+}

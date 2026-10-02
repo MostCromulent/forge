@@ -90,6 +90,12 @@ const actions: Actions = {
     model.error = null;
     wire.sealedCreate(c);
   },
+  // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
+  conquestClaim: () => {
+    model.conquestReward = null;
+    wire.conquestClaim();
+    schedule();
+  },
 };
 
 // The page's own actions and model, for the browser console and for e2e probes, which drive the game by what it is
@@ -228,6 +234,16 @@ function apply(msg: ServerMessage): void {
       // A gauntlet's result belongs to the game it followed; every new match arrives with a hello
       model.limitedResult = null;
       model.eventKind = msg.eventKind ?? null;
+      model.inConquest = msg.inConquest;
+      model.conquest = msg.conquest ?? null;
+      model.currentConquest = msg.currentConquest ?? null;
+      // A battle's result belongs to its match, and a conquest's pages to the conquest
+      if (!msg.inMatch) model.conquestResult = null;
+      if (!msg.inConquest) {
+        model.conquestState = null;
+        model.conquestBar = null;
+        model.conquestReward = null;
+      }
       model.drafting = msg.drafting;
       if (!msg.drafting) {
         model.draft = null;
@@ -290,6 +306,11 @@ function apply(msg: ServerMessage): void {
     case 'cardPoolDetails': model.cardPoolDetails = msg; break;
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
+    case 'conquestSaves': model.conquestSaves = msg; break;
+    case 'conquestBar': model.conquestBar = msg; break;
+    case 'conquestState': model.conquestState = msg; break;
+    case 'conquestResult': model.conquestResult = msg; break;
+    case 'conquestReward': model.conquestReward = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;
@@ -441,6 +462,7 @@ function render(): void {
   byId('editor').hidden = page !== 'editor';
   byId('limited').hidden = page !== 'limited';
   byId('drafting').hidden = page !== 'drafting';
+  byId('conquest').hidden = page !== 'conquest';
   byId('match').hidden = page !== 'match';
   renderScreens(model, actions, dismissNotice);
   // The name page comes before the player's volumes are known

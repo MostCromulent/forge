@@ -78,6 +78,25 @@ export interface Actions {
   gauntletNext(): void;
   gauntletRestart(): void;
 
+  // Planar Conquest
+  /** Opens the saved conquests, or with resume, the one played last. */
+  conquestOpen(resume: boolean): void;
+  conquestLoad(name: string): void;
+  /** Back from a conquest to the saved ones, or from those to the start page. */
+  conquestLeave(): void;
+  /** Selects a place on the map; the player does not move. */
+  conquestSelect(region: number, row: number, col: number): void;
+  /** Walks to the selected place. */
+  conquestMove(): void;
+  /** Fights the event the player stands on. */
+  conquestBattle(): void;
+  /** Says a won battle's reward has been shown. */
+  conquestClaim(): void;
+  /** Dev mode: where the next Chaos Wheel stops. */
+  devConquestWheel(outcome: string): void;
+  /** Starts a finished match again from its first game. */
+  restartGame(): void;
+
   // Online draft and sealed, at a table
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
   openLimitedTable(kind: 'sealed' | 'draft'): void;
@@ -212,6 +231,15 @@ export function createActions(send: Send): Actions {
     poolPlay: (name, mode, opponent, count, games) => send({ t: 'poolPlay', name, mode, opponent, count, games }),
     gauntletNext: () => send({ t: 'gauntletNext' }),
     gauntletRestart: () => send({ t: 'gauntletRestart' }),
+    conquestOpen: resume => send({ t: 'conquestOpen', resume }),
+    conquestLoad: name => send({ t: 'conquestLoad', name }),
+    conquestLeave: () => send({ t: 'conquestLeave' }),
+    conquestSelect: (region, row, col) => send({ t: 'conquestSelect', region, row, col }),
+    conquestMove: () => send({ t: 'conquestMove' }),
+    conquestBattle: () => send({ t: 'conquestBattle' }),
+    conquestClaim: () => send({ t: 'conquestClaim' }),
+    devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
+    restartGame: () => send({ t: 'nextGame', decision: 'NEW' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),
     setArchenemy: index => send({ t: 'setArchenemy', index }),

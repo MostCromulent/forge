@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { CardPoolDetails, CardPoolGroup, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestBar, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -109,6 +109,16 @@ export interface Model {
   /** The card pool picker's lines and old snapshots, asked for the first time it opens. */
   cardPoolDetails: CardPoolDetails | null;
   limitedPools: LimitedPools | null;
+  /** On the Planar Conquest pages; conquest names the one that is open, and currentConquest the one a Resume would open. */
+  inConquest: boolean;
+  conquest: string | null;
+  currentConquest: string | null;
+  conquestSaves: ConquestSaves | null;
+  conquestBar: ConquestBar | null;
+  conquestState: ConquestState | null;
+  /** The result of a battle's game, while its match is open; and what a won battle gave, until it has been shown. */
+  conquestResult: ConquestResult | null;
+  conquestReward: ConquestReward | null;
 }
 
 export function createModel(): Model {
@@ -123,6 +133,8 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
+    inConquest: false, conquest: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
+    conquestResult: null, conquestReward: null,
   };
 }
 

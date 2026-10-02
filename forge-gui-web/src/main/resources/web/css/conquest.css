@@ -1,0 +1,130 @@
+/* Planar Conquest. The saved conquests reuse the Limited shelf (limited.css); everything else is here. */
+
+.chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.kind-main:disabled { opacity: .45; cursor: default; }
+
+.cq-shell { height: 100vh; display: flex; flex-direction: column; }
+.cq-shell > .limited-error { margin: 8px 20px 0; }
+.cq-face { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; object-position: 50% 18%; }
+.cq-coin { display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px 3px 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-variant-numeric: tabular-nums; }
+.cq-coin img { width: 20px; height: 20px; }
+.cq-coin b { font-size: 13.5px; }
+.cq-save .ev-line .cq-coin { margin-left: 6px; }
+
+/* The bar every page of a conquest shares */
+.cq-bar { display: flex; align-items: stretch; gap: 22px; padding: 0 20px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); }
+.cq-id { display: grid; align-content: center; gap: 1px; padding: 9px 0; min-width: 190px; }
+.cq-id b { font-size: 15px; }
+.cq-id span { font-size: 12px; color: var(--muted); }
+.cq-tabs { display: flex; align-items: stretch; gap: 2px; }
+.cq-tab { background: none; border: 0; border-radius: 0; padding: 0 14px; color: var(--muted); font-size: 13.5px; font-weight: 600; border-bottom: 2px solid transparent; }
+.cq-tab:hover:not(:disabled) { color: var(--text); }
+.cq-tab:disabled { opacity: .45; }
+.cq-tab[aria-current="page"] { color: var(--accent-2); border-bottom-color: var(--accent-2); background: linear-gradient(180deg, transparent, var(--accent-soft)); }
+.cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.cq-main { flex: 1; min-height: 0; display: grid; }
+
+.cq-kicker { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cq-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line-bright); background: var(--surface-2); white-space: nowrap; }
+.cq-chip img { width: 13px; height: 13px; }
+.cq-chip.brass { border-color: color-mix(in srgb, var(--accent-2) 55%, #000); color: var(--accent-2); background: var(--accent-soft); font-weight: 600; }
+.cq-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cq-reward-line { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+
+/* The map: the plane as a road, left to right */
+.cq-map { display: grid; grid-template-columns: minmax(0, 1fr) 352px; min-height: 0; }
+.cq-stage { position: relative; min-width: 0; overflow: hidden; display: flex; flex-direction: column; background: radial-gradient(100% 80% at 50% 40%, #131a26 0%, #080b11 100%); }
+.cq-map-head { display: flex; align-items: baseline; gap: 14px; padding: 18px 28px 12px; }
+.cq-map-head h2 { margin: 0; font-size: 22px; font-family: Georgia, "Times New Roman", serif; letter-spacing: .02em; }
+.cq-map-head .muted { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cq-trail { flex: 1; overflow-x: auto; overflow-y: auto; padding: 0 24px 6px; scrollbar-width: thin; scrollbar-color: #6b7890 #ffffff0f; }
+.cq-trail-in { position: relative; }
+.cq-trail-in.walking .cq-tile { cursor: default; }
+
+.cq-banner { position: absolute; border: 0; border-radius: 12px; background: #111 center 40% / cover; overflow: hidden; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; padding: 10px 14px; color: var(--text); text-align: left; opacity: 1; }
+.cq-banner::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, #0b0e1400 25%, #0b0e14cc 100%); }
+.cq-banner > * { position: relative; }
+.cq-banner b { font: 700 20px/1 Georgia, "Times New Roman", serif; letter-spacing: .02em; text-shadow: 0 2px 6px #000; }
+.cq-banner span { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #d6dde6; font-variant-numeric: tabular-nums; }
+.cq-banner span img { width: 16px; height: 16px; }
+.cq-banner.done span { color: var(--accent-2); font-weight: 700; }
+/* A banner or an empty place is a button that does nothing, and is not dimmed for it */
+button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
+
+/* A tile is the opponent's picture and nothing else. What can be fought next is in full colour with a lit gold edge;
+   conquered ground keeps its picture but steps back; what has not been found is an empty place. */
+.cq-tile { position: absolute; padding: 8px; border: 0; border-radius: 9px; background: #141a26 center 20% / cover; overflow: hidden; display: flex; align-items: flex-end; text-align: left; color: var(--text); opacity: 1; transition: transform .12s, box-shadow .12s, filter .12s; }
+.cq-tile span { position: relative; z-index: 1; font-size: 11.5px; font-weight: 600; line-height: 1.2; text-shadow: 0 1px 3px #000; }
+.cq-tile.open { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 45%, transparent); }
+.cq-tile.open::before, .cq-tile.here::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, #0b0e14e6 100%); }
+.cq-tile.won { filter: saturate(.45) brightness(.7); box-shadow: 0 0 0 1px #ffffff40; }
+.cq-tile.won:is(.hover, .here, .sel) { filter: none; }
+.cq-tile.fog { background: none; box-shadow: inset 0 0 0 1px #ffffff12; cursor: default; }
+.cq-tile.hover { box-shadow: 0 0 0 2px #fff, 0 10px 24px #000c; transform: translateY(-3px); z-index: 5; }
+.cq-tile.open.hover { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent-2), 0 10px 24px #000c; }
+.cq-tile.sel { box-shadow: 0 0 0 2px #fff; z-index: 4; }
+.cq-tile.open.sel { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent-2); }
+.cq-tile.here { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--accent-2), 0 0 30px 4px color-mix(in srgb, var(--accent-2) 60%, transparent); z-index: 4; }
+
+/* A region nobody has reached, or one that is finished, folded to a spine */
+.cq-spine { position: absolute; padding: 0 0 12px; border: 0; border-radius: 12px; overflow: hidden; background: #0d1118; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 10px; color: var(--muted); box-shadow: inset 0 0 0 1px #ffffff12; opacity: 1; }
+.cq-spine i { position: absolute; inset: 0; background: #111 center / cover; opacity: .2; filter: grayscale(.8); }
+.cq-spine b { position: relative; writing-mode: vertical-rl; transform: rotate(180deg); font: 700 16px/1 Georgia, "Times New Roman", serif; letter-spacing: .04em; color: #aeb8c6; white-space: nowrap; }
+.cq-spine span { position: relative; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.cq-spine:hover i { opacity: .4; }
+.cq-spine.done i { opacity: .7; filter: none; }
+.cq-spine.done span { color: var(--accent-2); font-weight: 700; }
+.cq-spine.done b { color: #fff; text-shadow: 0 1px 4px #000; }
+
+/* Ties between places that touch: light across conquered ground, gold toward what it has opened */
+.cq-tie { position: absolute; z-index: 1; height: 4px; margin-top: -2px; pointer-events: none; }
+.cq-tie.down { width: 4px; height: auto; margin: 0 0 0 -2px; }
+.cq-tie.won { background: #c3ccd9; }
+.cq-tie.open { background: var(--accent-2); box-shadow: 0 0 8px color-mix(in srgb, var(--accent-2) 60%, transparent); }
+
+/* Where the player stands. It is ringed in white, and it is the one thing on the map that moves. */
+.cq-you { position: absolute; z-index: 6; pointer-events: none; display: grid; justify-items: center; transform: translate(-50%, -50%); }
+.cq-trail-in.walking .cq-you { transition: left .5s linear, top .5s linear; }
+.cq-you i { width: 58px; height: 58px; border-radius: 50%; background: #111 center 15% / cover; border: 3px solid #fff; box-shadow: 0 0 0 2px #0b0e14, 0 0 0 4px var(--accent-2), 0 0 24px 8px #ffffff66, 0 8px 16px #000; }
+.cq-you::before { content: ''; position: absolute; left: 50%; top: 29px; width: 58px; height: 58px; margin: -29px; border-radius: 50%; border: 2px solid #fff; animation: cq-you-pulse 1.8s ease-out infinite; }
+@keyframes cq-you-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
+.cq-you b { margin-top: -9px; font: 800 9.5px/1 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #fff; color: #0b0e14; box-shadow: 0 2px 6px #000a; }
+@media (prefers-reduced-motion: reduce) { .cq-you::before { animation: none; opacity: 0; } }
+html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
+
+/* What a tile says when pointed at */
+.cq-hov { position: absolute; z-index: 8; display: grid; gap: 8px; padding: 11px 13px 12px; border-radius: 10px; background: var(--surface-3); border: 1px solid var(--line-bright); box-shadow: 0 14px 34px #000d; pointer-events: none; }
+.cq-hov > b { font-size: 14.5px; line-height: 1.25; }
+
+/* The selected event, beside the map */
+.cq-side { border-left: 1px solid var(--line); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+.cq-panel { padding: 18px 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
+.cq-panel h3 { margin: 0; font-size: 20px; line-height: 1.2; text-wrap: balance; }
+.cq-where { display: flex; align-items: center; gap: 8px; }
+.cq-where .pips { display: inline-flex; gap: 2px; }
+.cq-art { height: 132px; padding: 0 10px 9px; border: 0; border-radius: 10px; background: #111 center 22% / cover; position: relative; display: flex; align-items: flex-end; box-shadow: 0 0 0 1px var(--line-bright); color: var(--text); text-align: left; opacity: 1; overflow: hidden; }
+.cq-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, #0b0e14d9 100%); }
+.cq-art b { position: relative; z-index: 1; font-size: 14px; text-shadow: 0 1px 3px #000, 0 0 10px #000; }
+.cq-desc { margin: 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+.cq-steps { margin: 0; font-size: 12.5px; color: var(--text); }
+/* The dock stands over the foot of the page, so the panel ends above it */
+.cq-foot { margin-top: auto; border-top: 1px solid var(--line); padding: 14px 20px 62px; display: grid; gap: 10px; background: color-mix(in srgb, var(--bg-deep) 35%, transparent); }
+.cq-mine { display: flex; align-items: center; gap: 10px; }
+.cq-face2 { width: 46px; height: 46px; padding: 0; border: 0; border-radius: 9px; background: #111 center 20% / cover; box-shadow: 0 0 0 1px var(--line-bright); flex: none; }
+.cq-face2.round { border-radius: 50%; width: 34px; height: 34px; margin: 0 6px; }
+.cq-mine .t { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.cq-mine .t b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cq-mine .t span { font-size: 12px; color: var(--muted); }
+.cq-mine > button:last-child { font-size: 12.5px; padding: 4px 10px; }
+.cq-big { padding: 11px 16px; font-size: 16px; }
+.cq-warn, .cq-mine .t .cq-warn { margin: 0; font-size: 12.5px; color: var(--select); }
+.cq-zoom { max-height: min(86vh, 720px); border-radius: 4.5% / 3.2%; box-shadow: 0 24px 60px #000; }
+
+.cq-reward { min-width: 320px; }
+.cq-reward ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.cq-reward .buttons { display: flex; justify-content: flex-end; }
+
+@media (max-width: 900px) {
+  .cq-map { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .cq-side { border-left: 0; border-top: 1px solid var(--line); }
+}
