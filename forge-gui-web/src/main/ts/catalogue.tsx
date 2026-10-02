@@ -89,7 +89,8 @@ export function Catalogue({ model, actions, state, handlers }: {
     actions.queryCatalogue(0, { ...query, offset: 0 });
   }, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity, state.check, state.identity, state.commanderWanted]);
 
-  const page = model.catalogue;
+  // A page of a conquest's collection, left from that page, is not this deck's catalogue
+  const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
   const rows = page?.rows ?? [];
   const counts = countsInDeck(state);
   const canAdd = (row: CatalogueRow) => !row.problem && roomFor(state, row, counts.get(row.name) ?? 0) > 0;

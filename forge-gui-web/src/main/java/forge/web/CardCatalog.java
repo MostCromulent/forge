@@ -136,7 +136,7 @@ final class CardCatalog {
             page.add(toBrowser(row, problemOf.apply(row.card()), inDeck.applyAsInt(row.card().getName()),
                     extras == null ? null : extras.apply(row.card())));
         }
-        return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty());
+        return new CataloguePage(request, page, ordered.size(), from, ordered.isEmpty() ? hidden : 0, !text.isEmpty(), null);
     }
 
     /** Whether a query uses Forge's search syntax: a term the advanced parser reads, an or, a bracket, or a term left out with a minus. */

@@ -228,9 +228,11 @@ final class ToBrowser {
     /**
      * A page of the deck editor's catalogue. hiddenBySwitch counts the cards the deck can't use that matched, sent only
      * when nothing else did. ranked says the rows are in best-match order for a name, rather than in the sort asked for.
+     * source is the list of a conquest's cards the page is of, and null for the open deck's catalogue.
      */
     @Message("catalogue")
-    record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked) {
+    record CataloguePage(int request, List<CatalogueRow> rows, int total, int offset, int hiddenBySwitch, boolean ranked,
+            @Nullable String source) {
     }
 
     /** The deck open in the editor, or none when the editor is closed. */

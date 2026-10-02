@@ -37,7 +37,6 @@ let restored = false;
 let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 let catalogueRequest = 0;
-let catalogueSource = '';
 let importRequest = 0;
 // The game is paced where it runs: it holds for the player on a pass they have something new to see before
 // (autopass.ts). The one pause made here is a new turn's, whose banner shows before anything the turn does
@@ -79,14 +78,7 @@ const actions: Actions = {
     wire.answerHostChoice(id, value);
     schedule();
   },
-  queryCatalogue: (_, q) => {
-    // A first page from another list (the editor's, the collection's, the exile's) has nothing to add to the one shown
-    if (q.offset === 0 && (q.source ?? '') !== catalogueSource) {
-      catalogueSource = q.source ?? '';
-      model.catalogue = null;
-    }
-    wire.queryCatalogue(++catalogueRequest, q);
-  },
+  queryCatalogue: (_, q) => wire.queryCatalogue(++catalogueRequest, q),
   readImport: (_, text, format, cardPool, unrestricted) => wire.readImport(++importRequest, text, format, cardPool, unrestricted),
   fetchImport: (_, url) => wire.fetchImport(++importRequest, url),
   commitImport: c => {
@@ -97,6 +89,15 @@ const actions: Actions = {
     model.nameTaken = null;
     model.error = null;
     wire.sealedCreate(c);
+  },
+  // A visit to the Aether starts from its own filters, and the card the last visit pulled is not this one's
+  conquestAether: q => {
+    if (!q.type) model.conquestAether = null;
+    wire.conquestAether(q);
+  },
+  conquestPlaneswalk: (plane, unlock) => {
+    model.error = null;
+    wire.conquestPlaneswalk(plane, unlock);
   },
   // What the last one was refused for is no longer what the page should say
   conquestCreate: c => {
@@ -266,6 +267,9 @@ function apply(msg: ServerMessage): void {
         model.conquestReward = null;
         model.conquestParty = null;
         model.conquestCollection = null;
+        model.conquestAether = null;
+        model.conquestPlanes = null;
+        model.conquestStats = null;
         ui.conquestTab = 'map';
       }
       model.drafting = msg.drafting;
@@ -338,6 +342,10 @@ function apply(msg: ServerMessage): void {
     case 'conquestParty': model.conquestParty = msg; break;
     case 'conquestCollection': model.conquestCollection = msg; break;
     case 'conquestOptions': model.conquestOptions = msg; break;
+    case 'conquestAether': model.conquestAether = msg; break;
+    case 'conquestPlanes': model.conquestPlanes = msg; break;
+    case 'conquestStats': model.conquestStats = msg; break;
+    case 'conquestPrefs': model.conquestPrefs = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;

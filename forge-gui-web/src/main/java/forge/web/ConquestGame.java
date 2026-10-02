@@ -420,9 +420,12 @@ final class ConquestGame {
         }
         // A card that cannot be exiled says why, and is listed all the same
         final Function<PaperCard, String> problem = exile ? c -> null : c -> data.getExileProblem(List.of(c));
-        return CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
+        final CataloguePage page = CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), true), problem, null, name -> 0, c -> new CardCatalog.Extra(data.isNewCard(c) ? Boolean.TRUE : null,
                 exile ? data.getRetrieveCost(List.of(c)) : data.getExileValue(List.of(c))));
+        // The page says which list it is of, so the browser never shows one list's cards as another's
+        return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(),
+                exile ? "exile" : "collection");
     }
 
     /** Exiles cards of the collection, or brings exiled ones back. Answers why it cannot, or null when it is done. */

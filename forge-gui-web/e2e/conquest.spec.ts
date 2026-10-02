@@ -149,3 +149,38 @@ test('a conquest is started, renamed and deleted', async ({ page }) => {
   await expect(card('Probe renamed')).toHaveCount(0);
   await expect(card('Fixture conquest')).toHaveCount(1);
 });
+
+// Fails if a card cannot be pulled from the Aether for the price on its button, the planes are not listed with the
+// one stood on marked, the statistics do not show their eight figures, or the preferences do not open and close
+test('the Aether, the planes, the statistics and the preferences open', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=conquest]');
+  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+
+  await page.locator('.cq-tab', { hasText: 'The Aether' }).click();
+  const pull = page.locator('.cq-ae-pull');
+  const cost = Number((await pull.innerText()).replace(/\D/g, ''));
+  expect(cost).toBeGreaterThan(0);
+  await pull.click();
+  await expect(page.locator('.cq-ae-card b')).not.toBeEmpty();
+  await expect(page.locator('.cq-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
+  await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
+
+  await page.locator('.cq-tab', { hasText: 'Planeswalk' }).click();
+  await expect(page.locator('.cq-plane-card:not(.locked)')).toHaveCount(1);
+  await expect(page.locator('.cq-plane-card:not(.locked)')).toContainText('Zendikar');
+  await page.locator('.cq-plane-card.locked').first().click();
+  // One emblem does not buy a plane, so the button says what is held against the cost and cannot be pressed
+  await expect(page.locator('.cq-planes .cq-foot button')).toBeDisabled();
+
+  await page.locator('.cq-tab', { hasText: 'Statistics' }).click();
+  await expect(page.locator('.cq-figure')).toHaveCount(8);
+  await expect(page.locator('.cq-tables table').first()).toContainText('1 / 9');
+
+  await page.getByRole('button', { name: 'Preferences' }).click();
+  await expect(page.locator('.cq-pref')).toHaveCount(20);
+  await page.locator('.cq-prefs').getByRole('button', { name: 'OK' }).click();
+  await expect(page.locator('.cq-prefs')).toHaveCount(0);
+});

@@ -53,7 +53,8 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
   }, [text, query.colours, type, plane, exiled, info?.collection, info?.exiled]);
   useEffect(() => { setPicked(new Map()); setAsking(false); }, [exiled, info?.collection, info?.exiled]);
 
-  const page = model.catalogue;
+  // The catalogue is shared with the deck editor and the other list, whose page may still be the one held
+  const page = model.catalogue?.source === query.source ? model.catalogue : null;
   const rows = page?.rows ?? [];
   const more = (e: Event) => {
     const el = e.currentTarget as HTMLElement;

@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { CardPoolDetails, CardPoolGroup, ConquestBar, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, ConquestBar, ConquestPlanes, ConquestPrefs, ConquestStats, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -125,6 +125,11 @@ export interface Model {
   conquestCollection: ConquestCollection | null;
   /** What a new conquest may start with, as far as the form has asked. */
   conquestOptions: ConquestOptions | null;
+  /** The four pages that are Conquest's own, each as its page last asked for it. */
+  conquestAether: ConquestAetherState | null;
+  conquestPlanes: ConquestPlanes | null;
+  conquestStats: ConquestStats | null;
+  conquestPrefs: ConquestPrefs | null;
 }
 
 export function createModel(): Model {
@@ -141,6 +146,7 @@ export function createModel(): Model {
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
     inConquest: false, conquest: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
     conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null, conquestOptions: null,
+    conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
   };
 }
 

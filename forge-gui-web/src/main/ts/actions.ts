@@ -99,6 +99,16 @@ export interface Actions {
   /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
   conquestOptions(plane?: string, commander?: string): void;
   conquestCreate(c: { name: string; plane: string; commander: string; planeswalker: string }): void;
+  /** Asks what the Aether holds under these filters, or with pull spends the shards for a card. An empty type asks for the filters a visit starts with. */
+  conquestAether(q: { colors: string; type: string; rarity: string; cmc: string; pull: boolean }): void;
+  conquestPlanes(): void;
+  /** Travels to a plane, with unlock spending the emblems to unlock it first. */
+  conquestPlaneswalk(plane: string, unlock: boolean): void;
+  /** Asks for the statistics of a plane, or of every plane. */
+  conquestStats(plane?: string): void;
+  conquestPrefs(): void;
+  conquestPref(key: string, value: number): void;
+  conquestPrefsReset(): void;
   /** Asks for the commanders and planeswalkers found. */
   conquestParty(): void;
   conquestLead(commander: string): void;
@@ -259,6 +269,13 @@ export function createActions(send: Send): Actions {
     conquestDelete: name => send({ t: 'conquestDelete', name }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
+    conquestAether: q => send({ t: 'conquestAether', ...q }),
+    conquestPlanes: () => send({ t: 'conquestPlanes' }),
+    conquestPlaneswalk: (plane, unlock) => send({ t: 'conquestPlaneswalk', plane, unlock }),
+    conquestStats: plane => send({ t: 'conquestStats', plane }),
+    conquestPrefs: () => send({ t: 'conquestPrefs' }),
+    conquestPref: (key, value) => send({ t: 'conquestPref', key, value }),
+    conquestPrefsReset: () => send({ t: 'conquestPrefsReset' }),
     conquestParty: () => send({ t: 'conquestParty' }),
     conquestLead: commander => send({ t: 'conquestLead', commander }),
     conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),

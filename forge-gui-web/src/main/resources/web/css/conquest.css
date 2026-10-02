@@ -340,3 +340,84 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-ticket-art { margin: 0 18px 10px; height: 120px; border-radius: 9px; border: 1px solid var(--line); background: #111 center 35% / cover; }
 .cq-ticket-cards { margin: 0 18px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cq-ticket-cards img { width: 100%; aspect-ratio: 63 / 88; border-radius: 6px; background: var(--surface-2); }
+
+.cq-purse > button { font-size: 12.5px; padding: 5px 12px; }
+.dot { opacity: .5; margin: 0 8px; }
+
+/* The Aether: the filters down the left, and what a pull would draw from in the middle */
+.cq-aether { position: relative; display: grid; grid-template-columns: 372px minmax(0, 1fr); min-height: 0; }
+.cq-ae-filters { border-right: 1px solid var(--line); background: var(--surface); padding: 20px 20px 80px; display: grid; gap: 20px; align-content: start; overflow-y: auto; }
+.cq-ae-filters h4 { margin: 0 0 7px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cq-ae-filters h4 span { display: inline-flex; align-items: center; gap: 5px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--faint); }
+.cq-ae-filters .colours { margin: 0; }
+.cq-opts { display: grid; gap: 7px; }
+.cq-opts.two { grid-template-columns: 1fr 1fr; }
+.cq-opt { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: var(--bg); text-align: left; font-size: 13px; line-height: 1.35; }
+.cq-opt b { flex: 1; font-weight: 500; }
+.cq-opt .r { display: inline-flex; align-items: center; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cq-opt[aria-checked="true"] { border-color: var(--accent-2); background: var(--accent-soft); }
+.cq-opt[aria-checked="true"] b { color: var(--accent-2); font-weight: 700; }
+.cq-ae-stage { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px 24px 150px; overflow-y: auto; background: radial-gradient(70% 60% at 50% 45%, #1a1030 0%, #080b11 100%); }
+.cq-ae-core, .cq-ae-card { display: grid; justify-items: center; gap: 16px; }
+.cq-ae-orb { width: 230px; height: 230px; filter: drop-shadow(0 0 40px #8040ff55); }
+.cq-ae-pull { display: inline-flex; align-items: center; padding: 13px 28px; font-size: 17px; font-variant-numeric: tabular-nums; }
+.cq-ae-pull .cq-shard { margin-right: 8px; }
+.cq-ae-count { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cq-ae-face { padding: 0; border: 0; background: none; border-radius: 12px; }
+.cq-ae-face img { display: block; width: 250px; aspect-ratio: 63 / 88; border-radius: 12px; background: var(--surface-2); box-shadow: 0 16px 44px #000c, 0 0 40px #8040ff44; }
+.cq-ae-card .what { display: flex; align-items: center; gap: 10px; font-size: 16px; }
+.cq-ae-card .what .new-card { position: static; }
+.cq-ae-recent { position: absolute; left: 24px; bottom: 66px; display: flex; gap: 10px; }
+.cq-ae-recent button { padding: 0; border: 0; background: none; border-radius: 4px; }
+.cq-ae-recent img { display: block; width: 52px; aspect-ratio: 63 / 88; border-radius: 4px; background: var(--surface-2); }
+
+/* Planeswalk: every plane as a tile, and the one being looked at beside them */
+.cq-planes { display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
+.cq-planes-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 12px; align-content: start; }
+.cq-planes-list h4 { margin: 6px 0 0; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cq-planes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); grid-auto-rows: max-content; gap: 12px; }
+.cq-plane-card { position: relative; display: grid; padding: 0; overflow: hidden; border-radius: 11px; background: var(--surface); text-align: left; }
+.cq-plane-card .a { height: 104px; background: #111 center 35% / cover; }
+.cq-plane-card.locked .a { filter: grayscale(1) brightness(.6); }
+.cq-plane-card .t { padding: 10px 12px 12px; display: grid; gap: 6px; }
+.cq-plane-card .t b { font-size: 14.5px; }
+.cq-plane-card .l { display: flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cq-plane-card .l .sp { flex: 1; }
+.cq-plane-card .tag { position: absolute; left: 8px; top: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
+.cq-plane-card .lock { position: absolute; right: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: #0b0e14cc; border: 1px solid var(--line-bright); }
+.cq-plane-card .lock svg { width: 14px; height: 14px; fill: none; stroke: var(--text); stroke-width: 1.3; }
+.cq-plane-card[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.cq-plane-art { position: relative; height: 190px; flex: none; background: #111 center 35% / cover; display: flex; align-items: flex-end; padding: 0 20px 12px; }
+.cq-plane-art::before { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, var(--surface) 100%); }
+.cq-plane-art h3 { position: relative; margin: 0; font: 700 26px/1.1 Georgia, "Times New Roman", serif; text-shadow: 0 2px 8px #000; }
+
+/* Statistics */
+.cq-stats { overflow-y: auto; padding: 24px max(24px, calc((100% - 1180px) / 2)) 90px; display: grid; gap: 14px; align-content: start; }
+.cq-stats-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.cq-stats-head h2 { margin: 4px 0 0; font-size: 22px; }
+.cq-stats-head .seg { flex-wrap: wrap; }
+.cq-stats-head .seg button { padding: 3px 10px; font-size: 12px; }
+.cq-figures { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.cq-figure { padding: 14px 16px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); display: grid; gap: 6px; }
+.cq-figure p { margin: 0; font-variant-numeric: tabular-nums; }
+.cq-figure p b { font-size: 26px; }
+.cq-figure p span { font-size: 12.5px; color: var(--muted); }
+.cq-tables { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; align-items: start; }
+.cq-tables table { width: 100%; border-collapse: collapse; border: 1px solid var(--line); border-radius: 11px; overflow: hidden; background: var(--surface); font-size: 13px; }
+.cq-tables th { padding: 9px 10px; text-align: right; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.cq-tables td { padding: 8px 10px; text-align: right; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.cq-tables th:first-child, .cq-tables td:first-child { text-align: left; }
+@media (max-width: 900px) { .cq-figures { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Conquest's preferences, as a dialog */
+.dialog.cq-prefs { padding: 0; width: min(92vw, 760px); gap: 0; }
+.cq-prefs header, .cq-prefs footer { display: flex; align-items: center; gap: 10px; padding: 14px 20px; }
+.cq-prefs header { justify-content: space-between; border-bottom: 1px solid var(--line); }
+.cq-prefs footer { border-top: 1px solid var(--line); font-size: 12.5px; }
+.cq-prefs footer span { flex: 1; }
+.cq-prefs-body { padding: 16px 20px; columns: 2; column-gap: 28px; }
+.cq-prefs-body section { break-inside: avoid; display: grid; gap: 6px; margin-bottom: 14px; }
+.cq-prefs-body h4 { margin: 0 0 2px; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.cq-pref { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.cq-pref input { width: 72px; padding: 5px 8px; text-align: right; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-variant-numeric: tabular-nums; }
+.cq-pref.bad input { border-color: var(--select); }

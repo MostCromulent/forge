@@ -8,7 +8,7 @@ import { conquestIconUrl, imageUrl } from './images';
 import { Pips } from './symbols';
 import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
 import { reducedMotion } from './conquestmotion';
-import { changeUi } from './ui';
+import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from './protocol';
 import { t, type TextKey } from './text';
@@ -69,7 +69,12 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
 
   // A region nobody has reached, or one that is finished, stands folded until the player opens it. The one the player
   // stands in is always open, and so is every one the marker is walking through.
-  const [opened, setOpened] = useState<Record<number, boolean>>({});
+  // What the player chose is kept by plane, and outlives a visit to another page
+  const opened: Record<number, boolean> = {};
+  state.regions.forEach((_, r) => {
+    const chosen = ui.conquestOpened[`${state.plane}:${r}`];
+    if (chosen !== undefined) opened[r] = chosen;
+  });
   const keepOpen = new Set([state.at.region, ...(walk ? state.path.map(p => p.region) : [])]);
   const folded = (r: number): boolean => isFolded(state, r, opened, keepOpen);
   const l = layout(state, folded);
@@ -118,7 +123,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
               const at = l.regions[r];
               const done = region.conquered === region.total;
               const count = `${region.conquered} / ${region.total}`;
-              const toggle = r === state.at.region ? undefined : () => setOpened({ ...opened, [r]: folded(r) });
+              const toggle = r === state.at.region ? undefined : () => { const open = folded(r); changeUi(u => { u.conquestOpened[`${state.plane}:${r}`] = open; }); };
               if (at.folded) {
                 return (
                   <button key={`s${r}`} class={done ? 'cq-spine done' : 'cq-spine'} title={region.name} onClick={toggle}

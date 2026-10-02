@@ -9,6 +9,10 @@ import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
 import { Collection } from './conquestcollection';
 import { NewConquest } from './conquestnew';
+import { Aether } from './conquestaether';
+import { Planes } from './conquestplanes';
+import { Stats } from './conqueststats';
+import { Prefs } from './conquestprefs';
 import { artUrl } from './sleeves';
 import { Reveal, wheelLabels, type Owed } from './conquestreward';
 import { setting } from './settings';
@@ -142,17 +146,15 @@ export function Purse({ icon, n, label }: { icon: string; n: number; label: stri
 const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLANESWALK', 'CHAOS'] as const;
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
-/** The pages that exist so far. */
-const BUILT = new Set<ConquestTab>(['map', 'party', 'collection']);
 
 /** The bar every page of a conquest shares: its name and plane, the tabs, and the two balances. */
-function CampaignBar({ bar, actions }: { bar: ConquestBar; actions: Actions }) {
+function CampaignBar({ bar, actions, prefs }: { bar: ConquestBar; actions: Actions; prefs: () => void }) {
   return (
     <div class="cq-bar">
       <div class="cq-id"><b>{bar.name}</b><span>{bar.plane} · {bar.conquered} / {bar.total}</span></div>
       <nav class="cq-tabs">
         {TABS.map(([tab, name]) => (
-          <button key={tab} class="cq-tab" aria-current={tab === ui.conquestTab ? 'page' : undefined} disabled={!BUILT.has(tab)}
+          <button key={tab} class="cq-tab" aria-current={tab === ui.conquestTab ? 'page' : undefined}
             onClick={() => changeUi(u => { u.conquestTab = tab; })}>{t(name)}</button>
         ))}
       </nav>
@@ -166,26 +168,38 @@ function CampaignBar({ bar, actions }: { bar: ConquestBar; actions: Actions }) {
         )}
         <Purse icon="IMG_AETHER_SHARD" n={bar.shards} label={t('lblAetherShards')} />
         <Purse icon="IMG_PW_BADGE_COMMON" n={bar.emblems} label={t('lblPlaneswalkEmblems')} />
+        <button onClick={prefs}>{t('lblWebConquestPreferences')}</button>
       </div>
     </div>
   );
+}
+
+/** The page of the open tab. */
+function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions: Actions }) {
+  switch (tab) {
+    case 'aether': return <Aether model={model} actions={actions} />;
+    case 'party': return <Party model={model} actions={actions} />;
+    case 'collection': return <Collection model={model} actions={actions} />;
+    case 'planes': return <Planes model={model} actions={actions} />;
+    case 'stats': return <Stats model={model} actions={actions} />;
+    default: return <ConquestMap actions={actions} state={model.conquestState!} />;
+  }
 }
 
 function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   // What a reward being revealed has yet to show. The server's balances already hold it all, so the bar shows less.
   const [owed, setOwed] = useState<Owed>({ shards: 0, emblems: 0 });
   const reward = model.conquestReward;
+  const [prefs, setPrefs] = useState(false);
   useEffect(() => { if (!reward) setOwed({ shards: 0, emblems: 0 }); }, [reward]);
   if (!model.conquestBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const bar = model.conquestBar;
   return <>
-    <CampaignBar actions={actions} bar={reward ? { ...bar, shards: bar.shards - owed.shards, emblems: bar.emblems - owed.emblems } : bar} />
+    <CampaignBar actions={actions} prefs={() => setPrefs(true)}
+      bar={reward ? { ...bar, shards: bar.shards - owed.shards, emblems: bar.emblems - owed.emblems } : bar} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main">
-      {ui.conquestTab === 'party' ? <Party model={model} actions={actions} />
-        : ui.conquestTab === 'collection' ? <Collection model={model} actions={actions} />
-        : <ConquestMap actions={actions} state={model.conquestState} />}
-    </div>
+    <div class="cq-main"><Page tab={ui.conquestTab} model={model} actions={actions} /></div>
+    {prefs && <Prefs model={model} actions={actions} close={() => setPrefs(false)} />}
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.conquestClaim()} />}
   </>;
 }

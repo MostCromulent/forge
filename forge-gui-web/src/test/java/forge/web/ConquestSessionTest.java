@@ -662,8 +662,10 @@ public class ConquestSessionTest extends SessionsTest {
         sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
                 "sort", "name", "offset", 0, "showAll", true, "source", source));
         final List<String> names = new ArrayList<>();
-        host.awaitMatching("catalogue", c -> true, "the " + source + " was not listed").getAsJsonArray("rows")
-                .forEach(r -> names.add(r.getAsJsonObject().get("name").getAsString()));
+        final JsonObject page = host.awaitMatching("catalogue", c -> true, "the " + source + " was not listed");
+        // The browser holds one catalogue page for the editor and both lists, and tells them apart by this
+        Assert.assertEquals(str(page, "source"), source);
+        page.getAsJsonArray("rows").forEach(r -> names.add(r.getAsJsonObject().get("name").getAsString()));
         return names;
     }
 
