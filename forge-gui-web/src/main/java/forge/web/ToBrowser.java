@@ -698,6 +698,55 @@ final class ToBrowser {
     record ConquestResult(boolean won, boolean matchOver, boolean chaos, String event, boolean firstConquest) {
     }
 
+    /** An option of one of the Aether's filters. cost is what a pull at that rarity costs. */
+    record ConquestOption(String key, String label, @Nullable Integer cost) {
+    }
+
+    /**
+     * The Aether as the filters leave it. locked counts the plane's cards still to find, matching those the filters
+     * allow, strict those of exactly the rarity asked for, without which nothing can be pulled, and byRarity the
+     * matching ones from common to mythic rare. cost is what a pull costs, 0 when nothing matches. pulled is the card
+     * a pull gave, and problem why it gave none.
+     */
+    @Message("conquestAether")
+    record ConquestAetherState(int locked, int matching, int strict, List<Integer> byRarity, int cost, List<ConquestOption> types,
+            List<ConquestOption> rarities, List<ConquestOption> cmcs, String colors, String type, String rarity, String cmc,
+            String commanderColors, @Nullable ConquestPackCard pulled, @Nullable String problem) {
+    }
+
+    record ConquestPlaneRow(String name, String art, String description, boolean unlocked, boolean current, int conquered,
+            int events, List<String> regions) {
+    }
+
+    /** Every plane that can be reached, with what the next unlock costs and the emblems held. */
+    @Message("conquestPlanes")
+    record ConquestPlanes(List<ConquestPlaneRow> planes, int unlockCost, int emblems) {
+    }
+
+    /** A figure of the statistics: its amount, and what it is out of when it is a share. */
+    record ConquestFigure(String label, int amount, @Nullable Integer of) {
+    }
+
+    record ConquestRegionStat(String name, int conquered, int events, int wins, int losses) {
+    }
+
+    record ConquestCommanderStat(String name, int wins, int losses) {
+    }
+
+    /** plane is the one the figures are for, null for all of them. planes are those that can be asked for. */
+    @Message("conquestStats")
+    record ConquestStats(List<ConquestFigure> figures, List<String> planes, @Nullable String plane,
+            List<ConquestRegionStat> regions, List<ConquestCommanderStat> commanders) {
+    }
+
+    record ConquestPrefRow(String key, String label, String group, int value) {
+    }
+
+    /** Conquest's preferences, which every conquest shares. problem is why the last change was refused. */
+    @Message("conquestPrefs")
+    record ConquestPrefs(List<ConquestPrefRow> rows, @Nullable String problem) {
+    }
+
     /** A card of a booster: shards is what a duplicate became, 0 for a card that is new. */
     record ConquestPackCard(String name, String image, String rarity, int shards) {
     }
@@ -724,7 +773,8 @@ final class ToBrowser {
             ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
             DraftState.class, LimitedResult.class,
             ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class,
-            ConquestParty.class, ConquestCollection.class, ConquestOptions.class);
+            ConquestParty.class, ConquestCollection.class, ConquestOptions.class,
+            ConquestAetherState.class, ConquestPlanes.class, ConquestStats.class, ConquestPrefs.class);
 
     static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
             OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);

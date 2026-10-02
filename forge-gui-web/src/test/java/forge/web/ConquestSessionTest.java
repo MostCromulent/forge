@@ -899,4 +899,163 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(names(saves, "saves").contains(data.getName()));
         Assert.assertFalse(data.getDirectory().exists());
     }
+
+    // Fails if a plane can be unlocked without the emblems for it or entered while locked; or if unlocking with
+    // enough does not spend the cost once, move the player there and save; or if going back costs anything
+    @Test(timeOut = 120_000)
+    public void unlockingSpendsOnce() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final ConquestPlane alara = FModel.getPlanes().get("Alara");
+        final int cost = data.getPlaneUnlockCost();
+        final int few = data.getPlaneswalkEmblems();
+        Assert.assertTrue(few < cost, "the fixture can already afford a plane");
+        host.forget();
+        sessions.onMessage(host, message("conquestPlaneswalk", "plane", "Alara", "unlock", true));
+        host.awaitMatching("error", e -> true, "an unlock that cannot be paid for was not refused");
+        Assert.assertFalse(data.isPlaneUnlocked(alara));
+        Assert.assertEquals(data.getPlaneswalkEmblems(), few);
+        Assert.assertEquals(data.getCurrentPlane().getName(), "Zendikar");
+
+        data.rewardPlaneswalkEmblems(cost);
+        host.forget();
+        sessions.onMessage(host, message("conquestPlaneswalk", "plane", "Alara", "unlock", false));
+        host.awaitMatching("error", e -> true, "a locked plane was entered without unlocking it");
+        Assert.assertEquals(data.getCurrentPlane().getName(), "Zendikar");
+        Assert.assertEquals(data.getPlaneswalkEmblems(), few + cost);
+
+        host.forget();
+        sessions.onMessage(host, message("conquestPlaneswalk", "plane", "Alara", "unlock", true));
+        host.awaitMatching("conquestState", s -> "Alara".equals(s.get("plane").getAsString()), "the map is not the new plane's");
+        host.awaitMatching("conquestBar", b -> b.get("emblems").getAsInt() == few, "the bar does not show the emblems spent");
+        Assert.assertEquals(data.getPlaneswalkEmblems(), few);
+        final ConquestData saved = new ConquestData(data.getDirectory());
+        Assert.assertEquals(saved.getCurrentPlane().getName(), "Alara");
+        Assert.assertEquals(saved.getPlaneswalkEmblems(), few);
+        Assert.assertTrue(saved.isPlaneUnlocked(alara));
+
+        // An unlocked plane is gone back to for nothing, whichever way it is asked for
+        host.forget();
+        sessions.onMessage(host, message("conquestPlaneswalk", "plane", "Zendikar", "unlock", true));
+        host.awaitMatching("conquestState", s -> "Zendikar".equals(s.get("plane").getAsString()), "the player did not go back");
+        Assert.assertEquals(data.getPlaneswalkEmblems(), few);
+    }
+
+    private static JsonObject aether(final JsonObject shown, final boolean pull) {
+        return message("conquestAether", "colors", shown == null ? "" : shown.get("colors").getAsString(), "type", shown == null ? "" : shown.get("type").getAsString(),
+                "rarity", shown == null ? "" : shown.get("rarity").getAsString(), "cmc", shown == null ? "" : shown.get("cmc").getAsString(), "pull", pull);
+    }
+
+    // Fails if a pull does not cost what the page showed, does not add the card it names to the cards owned, or
+    // leaves the count of matching cards as it was; or if a pull with no shards gives a card
+    @Test(timeOut = 120_000)
+    public void aPullSpendsAndUnlocks() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final int shards = data.getAEtherShards();
+        final int owned = data.getUnlockedCardCount();
+        host.forget();
+        sessions.onMessage(host, aether(null, false));
+        final JsonObject shown = host.awaitMatching("conquestAether", a -> true, "the Aether was not sent");
+        final int cost = shown.get("cost").getAsInt();
+        final int matching = shown.get("matching").getAsInt();
+        Assert.assertTrue(cost > 0 && matching > 0, "the fixture's starting filters match nothing");
+        Assert.assertEquals(shown.get("type").getAsString(), "CREATURE");
+        Assert.assertEquals(shown.getAsJsonArray("rarities").size(), 4);
+
+        host.forget();
+        sessions.onMessage(host, aether(shown, true));
+        final JsonObject after = host.awaitMatching("conquestAether", a -> a.has("pulled"), "the pull gave no card");
+        final String name = after.getAsJsonObject("pulled").get("name").getAsString();
+        Assert.assertEquals(data.getAEtherShards(), shards - cost);
+        Assert.assertEquals(data.getUnlockedCardCount(), owned + 1);
+        boolean has = false;
+        for (final PaperCard card : data.getUnlockedCards()) {
+            has |= card.getName().equals(name);
+        }
+        Assert.assertTrue(has, "the card pulled is not owned");
+        Assert.assertEquals(after.get("matching").getAsInt(), matching - 1);
+        host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards - cost, "the bar does not show the shards spent");
+
+        data.spendAEtherShards(data.getAEtherShards());
+        host.forget();
+        sessions.onMessage(host, aether(shown, true));
+        final JsonObject refused = host.awaitMatching("conquestAether", a -> true, "the Aether did not answer");
+        Assert.assertFalse(refused.has("pulled"), "a pull with no shards gave a card");
+        Assert.assertTrue(refused.has("problem"));
+        Assert.assertEquals(data.getUnlockedCardCount(), owned + 1);
+        Assert.assertEquals(data.getAEtherShards(), 0);
+    }
+
+    // Fails if a preference that breaks a rule, is negative or is not one of the page's is saved, or a good one is not
+    @Test(timeOut = 120_000)
+    public void aPreferenceIsCheckedBeforeItIsSaved() throws Exception {
+        final forge.gamemodes.planarconquest.ConquestPreferences prefs = FModel.getConquestPreferences();
+        final int commons = prefs.getPrefInt(CQPref.BOOSTER_COMMONS);
+        final int pull = prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST);
+        // The preferences are the real profile's, and the reset below would lose whatever its owner had set
+        final java.util.Map<CQPref, String> before = new java.util.EnumMap<>(CQPref.class);
+        for (final CQPref pref : CQPref.values()) {
+            before.put(pref, prefs.getPref(pref));
+        }
+        final Recorder host = hostInConquest(ConquestFixture.create("Zendikar"));
+        final String current = prefs.getPref(CQPref.CURRENT_CONQUEST);
+        try {
+            host.forget();
+            sessions.onMessage(host, message("conquestPref", "key", "BOOSTER_COMMONS", "value", 14));
+            host.awaitMatching("conquestPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
+            Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
+            host.forget();
+            sessions.onMessage(host, message("conquestPref", "key", "AETHER_BASE_PULL_COST", "value", -1));
+            host.awaitMatching("conquestPrefs", p -> p.has("problem"), "a negative value was not refused");
+            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
+            host.forget();
+            sessions.onMessage(host, message("conquestPref", "key", "CURRENT_CONQUEST", "value", 1));
+            host.awaitMatching("conquestPrefs", p -> true, "the preferences were not sent");
+            Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "a preference that is not the page's was written");
+
+            host.forget();
+            sessions.onMessage(host, message("conquestPref", "key", "AETHER_BASE_PULL_COST", "value", pull + 50));
+            final JsonObject saved = host.awaitMatching("conquestPrefs", p -> !p.has("problem"), "a good value was refused");
+            Assert.assertEquals(saved.getAsJsonArray("rows").size(), 20);
+            Assert.assertEquals(new forge.gamemodes.planarconquest.ConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull + 50);
+
+            host.forget();
+            sessions.onMessage(host, JsonCodec.message("conquestPrefsReset"));
+            host.awaitMatching("conquestPrefs", p -> true, "the reset did not answer");
+            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), Integer.parseInt(CQPref.AETHER_BASE_PULL_COST.getDefault()));
+            Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");
+        } finally {
+            // Which conquest is current is the fixture's to put back
+            before.remove(CQPref.CURRENT_CONQUEST);
+            before.forEach(prefs::setPref);
+            prefs.save();
+        }
+    }
+
+    // Fails if a plane's statistics do not list its regions with what is conquered in each, or the figures for
+    // every plane carry one plane's regions
+    @Test(timeOut = 120_000)
+    public void statisticsNameTheRegions() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        host.forget();
+        sessions.onMessage(host, message("conquestStats", "plane", "Zendikar"));
+        final JsonObject stats = host.awaitMatching("conquestStats", s -> true, "the statistics were not sent");
+        final List<String> regions = names(stats, "regions");
+        final List<String> wanted = new ArrayList<>();
+        data.getCurrentPlane().getRegions().forEach(r -> wanted.add(r.getName()));
+        Assert.assertEquals(regions, wanted);
+        Assert.assertEquals(stats.getAsJsonArray("regions").get(0).getAsJsonObject().get("conquered").getAsInt(), 1);
+        Assert.assertEquals(stats.getAsJsonArray("regions").get(0).getAsJsonObject().get("wins").getAsInt(), 1);
+        Assert.assertEquals(stats.getAsJsonArray("figures").size(), 8);
+        Assert.assertTrue(stats.getAsJsonArray("planes").toString().contains("Zendikar"));
+
+        host.forget();
+        sessions.onMessage(host, JsonCodec.message("conquestStats"));
+        final JsonObject all = host.awaitMatching("conquestStats", s -> true, "the statistics for every plane were not sent");
+        Assert.assertFalse(all.has("plane"));
+        Assert.assertEquals(all.getAsJsonArray("regions").size(), 0);
+        Assert.assertEquals(all.getAsJsonArray("commanders").size(), 2, "one commander and the chaos battles");
+    }
 }

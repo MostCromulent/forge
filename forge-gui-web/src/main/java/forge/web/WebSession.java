@@ -589,7 +589,8 @@ public final class WebSession {
                 }
             }
             case "conquestParty", "conquestCollection", "conquestLead", "conquestWalker", "conquestViewDeck", "conquestEditDeck",
-                    "conquestExile" -> {
+                    "conquestExile", "conquestAether", "conquestPlanes", "conquestPlaneswalk", "conquestStats", "conquestPrefs",
+                    "conquestPref", "conquestPrefsReset" -> {
                 if (stage instanceof Conquest c && c.save() != null) {
                     conquestPages(channel, msg);
                 }
@@ -1421,6 +1422,35 @@ public final class WebSession {
         switch (type) {
             case "conquestParty" -> channel.send(conquest.party());
             case "conquestCollection" -> channel.send(conquest.collection());
+            case "conquestAether" -> {
+                final FromBrowser.ConquestAetherQuery q = Wire.decode(msg, FromBrowser.ConquestAetherQuery.class);
+                channel.send(conquest.aether(q));
+                if (q.pull()) {
+                    channel.send(conquest.bar());
+                }
+            }
+            case "conquestPlanes" -> channel.send(conquest.planes());
+            case "conquestPlaneswalk" -> {
+                final FromBrowser.ConquestPlaneswalk go = Wire.decode(msg, FromBrowser.ConquestPlaneswalk.class);
+                final String problem = conquest.planeswalk(go.plane(), go.unlock());
+                if (problem != null) {
+                    channel.send(error(problem));
+                    return;
+                }
+                channel.send(conquest.bar());
+                channel.send(conquest.state(List.of()));
+                channel.send(conquest.planes());
+            }
+            case "conquestStats" -> channel.send(ConquestGame.stats(Wire.decode(msg, FromBrowser.ConquestStatsQuery.class).plane()));
+            case "conquestPrefs" -> channel.send(ConquestGame.prefs(null));
+            case "conquestPref" -> {
+                final FromBrowser.ConquestPref pref = Wire.decode(msg, FromBrowser.ConquestPref.class);
+                channel.send(ConquestGame.prefs(ConquestGame.setPref(pref.key(), pref.value())));
+            }
+            case "conquestPrefsReset" -> {
+                ConquestGame.resetPrefs();
+                channel.send(ConquestGame.prefs(null));
+            }
             case "conquestWalker" -> {
                 if (ConquestGame.setPlaneswalker(Wire.decode(msg, FromBrowser.ConquestWalker.class).planeswalker())) {
                     channel.send(conquest.party());

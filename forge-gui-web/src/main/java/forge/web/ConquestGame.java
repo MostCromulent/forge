@@ -1,9 +1,11 @@
 package forge.web;
 
+import forge.card.CardRarity;
 import forge.card.ColorSet;
 import forge.deck.Deck;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.planarconquest.ConquestAether;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
 import forge.gamemodes.planarconquest.ConquestCommander;
@@ -21,6 +23,9 @@ import forge.gamemodes.planarconquest.ConquestRecord;
 import forge.gamemodes.planarconquest.ConquestRegion;
 import forge.gamemodes.planarconquest.ConquestRewardStep;
 import forge.gamemodes.planarconquest.ConquestUtil;
+import forge.gamemodes.planarconquest.ConquestUtil.CMCFilter;
+import forge.gamemodes.planarconquest.ConquestUtil.RarityFilter;
+import forge.gamemodes.planarconquest.ConquestUtil.TypeFilter;
 import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
@@ -32,6 +37,16 @@ import forge.web.ToBrowser.ConquestCollection;
 import forge.web.ToBrowser.ConquestCommanderRow;
 import forge.web.ToBrowser.ConquestParty;
 import forge.web.ToBrowser.ConquestWalkerRow;
+import forge.web.ToBrowser.ConquestAetherState;
+import forge.web.ToBrowser.ConquestCommanderStat;
+import forge.web.ToBrowser.ConquestFigure;
+import forge.web.ToBrowser.ConquestOption;
+import forge.web.ToBrowser.ConquestPlaneRow;
+import forge.web.ToBrowser.ConquestPlanes;
+import forge.web.ToBrowser.ConquestPrefRow;
+import forge.web.ToBrowser.ConquestPrefs;
+import forge.web.ToBrowser.ConquestRegionStat;
+import forge.web.ToBrowser.ConquestStats;
 import forge.web.ToBrowser.DeckDetails;
 import forge.web.ToBrowser.ConquestBar;
 import forge.web.ToBrowser.ConquestCardOption;
@@ -57,6 +72,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+
+import org.apache.commons.lang3.EnumUtils;
 
 /**
  * One browser's view of the open conquest. The conquest itself is Forge's, one for the whole process; this holds only
@@ -163,8 +180,7 @@ final class ConquestGame {
         final List<ConquestPlaneOption> planes = new ArrayList<>();
         for (final ConquestPlane p : FModel.getPlanes()) {
             if (!p.isUnreachable()) {
-                final String description = p.getDescription() == null ? "" : p.getDescription().replace("\\n", " ");
-                planes.add(new ConquestPlaneOption(planeName(p), art(p), description, p.getEventCount()));
+                planes.add(new ConquestPlaneOption(planeName(p), art(p), description(p), p.getEventCount()));
             }
         }
         final ConquestPlane plane = plane(planeName);
@@ -427,6 +443,208 @@ final class ConquestGame {
             data.exile(cards);
         }
         return null;
+    }
+
+    /** The Aether under these filters, after a pull if one is asked for. */
+    ConquestAetherState aether(final FromBrowser.ConquestAetherQuery q) {
+        final ConquestData data = model();
+        final ConquestAether.Filter start = ConquestAether.Filter.startingFor(data.getSelectedCommander());
+        // A query that names no type is the visit's first, and takes the filters mobile starts with
+        final boolean first = q.type() == null || q.type().isEmpty();
+        final ConquestAether.Filter filter = first ? start : new ConquestAether.Filter(
+                ColorSet.fromNames((q.colors() == null ? "" : q.colors()).toCharArray()),
+                EnumUtils.getEnum(TypeFilter.class, q.type(), start.type()),
+                EnumUtils.getEnum(RarityFilter.class, q.rarity(), start.rarity()),
+                EnumUtils.getEnum(CMCFilter.class, q.cmc(), start.cmc()));
+        PaperCard pulled = null;
+        String problem = null;
+        if (q.pull()) {
+            final ConquestAether.Pools before = ConquestAether.pools(data, filter);
+            pulled = ConquestAether.pull(data, filter);
+            if (pulled == null) {
+                problem = Localizer.getInstance().getMessage(before.filtered().isEmpty() || before.strict().isEmpty()
+                        ? "lblWebConquestNothingToPull" : "lblWebConquestTooFewShards");
+            }
+        }
+        final ConquestAether.Pools pools = ConquestAether.pools(data, filter);
+        // A land of basic rarity is pulled as a common, and a special as a rare, as the pull itself counts them
+        final int[] byRarity = new int[4];
+        for (final PaperCard card : pools.filtered()) {
+            final CardRarity rarity = card.getRarity();
+            byRarity[rarity == CardRarity.MythicRare ? 3 : rarity == CardRarity.Rare || rarity == CardRarity.Special ? 2
+                    : rarity == CardRarity.Uncommon ? 1 : 0]++;
+        }
+        final List<ConquestOption> types = new ArrayList<>();
+        for (final TypeFilter t : TypeFilter.values()) {
+            types.add(new ConquestOption(t.name(), t.toString(), null));
+        }
+        final List<ConquestOption> rarities = new ArrayList<>();
+        for (final RarityFilter r : RarityFilter.values()) {
+            rarities.add(new ConquestOption(r.name(), r.toString(), ConquestUtil.getShardValue(r.getRarity(), CQPref.AETHER_BASE_PULL_COST)));
+        }
+        final List<ConquestOption> cmcs = new ArrayList<>();
+        for (final CMCFilter c : CMCFilter.values()) {
+            // The heading already says what the range is of
+            cmcs.add(new ConquestOption(c.name(), c.toString().replace("Mana Value ", ""), null));
+        }
+        return new ConquestAetherState(pools.locked().size(), pools.filtered().size(), pools.strict().size(),
+                List.of(byRarity[0], byRarity[1], byRarity[2], byRarity[3]), ConquestAether.cost(pools, filter), types, rarities, cmcs,
+                colors(filter.colors()), filter.type().name(), filter.rarity().name(), filter.cmc().name(),
+                colors(data.getSelectedCommander().getCard().getRules().getColorIdentity()),
+                pulled == null ? null : new ConquestPackCard(pulled.getName(), pulled.getImageKey(false), pulled.getRarity().name(), 0),
+                problem);
+    }
+
+    /** Every plane that can be reached: those unlocked, with what is conquered there, and those still locked. */
+    ConquestPlanes planes() {
+        final ConquestData data = model();
+        final List<ConquestPlaneRow> rows = new ArrayList<>();
+        for (final ConquestPlane plane : FModel.getPlanes()) {
+            if (plane.isUnreachable()) {
+                continue;
+            }
+            final ConquestPlaneData planeData = data.getPlaneData(plane);
+            final List<String> regions = new ArrayList<>();
+            plane.getRegions().forEach(r -> regions.add(r.getName()));
+            rows.add(new ConquestPlaneRow(planeName(plane), art(plane), description(plane), planeData != null, plane == data.getCurrentPlane(),
+                    planeData == null ? 0 : planeData.getConqueredCount(), plane.getEventCount(), regions));
+        }
+        return new ConquestPlanes(rows, data.getPlaneUnlockCost(), data.getPlaneswalkEmblems());
+    }
+
+    private static String description(final ConquestPlane plane) {
+        return plane.getDescription() == null ? "" : plane.getDescription().replace("\\n", " ");
+    }
+
+    /** Travels to a plane, unlocking it first when that is asked for and paid. Answers why it cannot, or null when the player is there. */
+    String planeswalk(final String planeName, final boolean unlock) {
+        final ConquestData data = model();
+        final ConquestPlane plane = plane(planeName);
+        if (plane == null || (!data.isPlaneUnlocked(plane) && !unlock)) {
+            return Localizer.getInstance().getMessage("lblWebConquestCannotGo");
+        }
+        if (!data.isPlaneUnlocked(plane)) {
+            if (!data.spendPlaneswalkEmblems(data.getPlaneUnlockCost())) {
+                return Localizer.getInstance().getMessage("lblWebConquestTooFewEmblems");
+            }
+            data.unlockPlane(plane);
+        }
+        data.planeswalkTo(plane);
+        data.saveData();
+        selection = null;
+        return null;
+    }
+
+    /** The statistics of a plane the conquest has unlocked, or of them all. */
+    static ConquestStats stats(final String planeName) {
+        final ConquestData data = model();
+        final ConquestPlane asked = plane(planeName);
+        final ConquestPlane plane = asked != null && data.isPlaneUnlocked(asked) ? asked : null;
+        final ConquestData.Stats s = data.getStats(plane);
+        final Localizer l = Localizer.getInstance();
+        final List<ConquestFigure> figures = List.of(
+                new ConquestFigure(l.getMessage("lblAetherShards"), s.shards(), null),
+                new ConquestFigure(l.getMessage("lblPlaneswalkEmblems"), s.emblems(), null),
+                new ConquestFigure(l.getMessage("lblTotalWins"), s.wins(), null),
+                new ConquestFigure(l.getMessage("lblTotalLosses"), s.losses(), null),
+                new ConquestFigure(l.getMessage("lblConqueredEvents"), s.conquered(), s.events()),
+                new ConquestFigure(l.getMessage("lblUnlockedCards"), s.unlockedCards(), s.cards()),
+                new ConquestFigure(l.getMessage("lblCommanders"), s.commanders(), s.allCommanders()),
+                new ConquestFigure(l.getMessage("lblPlaneswalkers"), s.planeswalkers(), s.allPlaneswalkers()));
+        final List<String> planes = new ArrayList<>();
+        for (final ConquestPlane p : FModel.getPlanes()) {
+            if (data.isPlaneUnlocked(p)) {
+                planes.add(planeName(p));
+            }
+        }
+        final List<ConquestRegionStat> regions = new ArrayList<>();
+        if (plane != null) {
+            final ConquestPlaneData planeData = data.getPlaneData(plane);
+            for (int r = 0; r < plane.getRegions().size(); r++) {
+                int conquered = 0;
+                int wins = 0;
+                int losses = 0;
+                for (int row = 0; row < plane.getRowsPerRegion(); row++) {
+                    for (int col = 0; col < plane.getCols(); col++) {
+                        final ConquestEventRecord record = planeData.getEventRecord(r, row, col);
+                        if (record != null) {
+                            conquered += record.hasConquered() ? 1 : 0;
+                            wins += record.getTotalWins();
+                            losses += record.getTotalLosses();
+                        }
+                    }
+                }
+                regions.add(new ConquestRegionStat(plane.getRegions().get(r).getName(), conquered, plane.getRowsPerRegion() * plane.getCols(), wins, losses));
+            }
+        }
+        final List<ConquestCommanderStat> commanders = new ArrayList<>();
+        for (final ConquestCommander c : data.getCommanders()) {
+            commanders.add(new ConquestCommanderStat(c.getName(), c.getRecord().getWins(), c.getRecord().getLosses()));
+        }
+        commanders.add(new ConquestCommanderStat(l.getMessage("lblChaosBattles"), data.getChaosBattleRecord().getWins(), data.getChaosBattleRecord().getLosses()));
+        return new ConquestStats(figures, planes, plane == null ? null : planeName(plane), regions, commanders);
+    }
+
+    /** A preference of Conquest's as its page lists it, under mobile's label and group. */
+    private record PrefField(CQPref pref, String label, String group) {
+    }
+
+    /** Mobile's preferences, in its order. The conquest played last is a preference too, and is not one of these. */
+    private static final List<PrefField> PREFS = List.of(
+            new PrefField(CQPref.AETHER_BASE_DUPLICATE_VALUE, "lblBaseDuplicateValue", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_BASE_EXILE_VALUE, "lblBaseExileValue", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_BASE_RETRIEVE_COST, "lblBaseRetrieveCost", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_BASE_PULL_COST, "lblBasePullCost", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_UNCOMMON_MULTIPLIER, "lblUncommonMultiplier", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_RARE_MULTIPLIER, "lblRareMultiplier", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_MYTHIC_MULTIPLIER, "lblMythicMultiplier", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_START_SHARDS, "lblStartingShards", "lblAetherShards"),
+            new PrefField(CQPref.AETHER_WHEEL_SHARDS, "lblChaosWheelShardValue", "lblAetherShards"),
+            new PrefField(CQPref.BOOSTER_COMMONS, "lblCommons", "lblBoosterPacks"),
+            new PrefField(CQPref.BOOSTER_UNCOMMONS, "lblUncommons", "lblBoosterPacks"),
+            new PrefField(CQPref.BOOSTER_RARES, "lblRares", "lblBoosterPacks"),
+            new PrefField(CQPref.BOOSTERS_PER_MYTHIC, "lblBoostersPerMythic", "lblBoosterPacks"),
+            new PrefField(CQPref.PLANESWALK_CONQUER_EMBLEMS, "lblBaseConquerReward", "lblPlaneswalkEmblems"),
+            new PrefField(CQPref.PLANESWALK_WHEEL_EMBLEMS, "lblChaosWheelBonus", "lblPlaneswalkEmblems"),
+            new PrefField(CQPref.PLANESWALK_FIRST_UNLOCK, "lblFirstPlaneUnlockCost", "lblPlaneswalkEmblems"),
+            new PrefField(CQPref.PLANESWALK_UNLOCK_INCREASE, "lblCostIncreasePerUnlock", "lblPlaneswalkEmblems"),
+            new PrefField(CQPref.CHAOS_BATTLE_WINS_MEDIUMAI, "lblWinsforMediumAI", "lblChaosBattles"),
+            new PrefField(CQPref.CHAOS_BATTLE_WINS_HARDAI, "lblWinsforHardAI", "lblChaosBattles"),
+            new PrefField(CQPref.CHAOS_BATTLE_WINS_EXPERTAI, "lblWinsforExpertAI", "lblChaosBattles"));
+
+    static ConquestPrefs prefs(final String problem) {
+        final ConquestPreferences prefs = FModel.getConquestPreferences();
+        final Localizer l = Localizer.getInstance();
+        final List<ConquestPrefRow> rows = new ArrayList<>();
+        for (final PrefField f : PREFS) {
+            rows.add(new ConquestPrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPrefInt(f.pref())));
+        }
+        return new ConquestPrefs(rows, problem);
+    }
+
+    /** Sets a preference and saves. Answers why it cannot, or null when it is set. */
+    static synchronized String setPref(final String key, final int value) {
+        final ConquestPreferences prefs = FModel.getConquestPreferences();
+        for (final PrefField f : PREFS) {
+            if (f.pref().name().equals(key)) {
+                final String problem = value < 0 ? Localizer.getInstance().getMessage("lblWebConquestPrefNegative")
+                        : prefs.validatePreference(f.pref(), value);
+                if (problem == null) {
+                    prefs.setPref(f.pref(), String.valueOf(value));
+                    prefs.save();
+                }
+                return problem;
+            }
+        }
+        return null;
+    }
+
+    static synchronized void resetPrefs() {
+        final ConquestPreferences prefs = FModel.getConquestPreferences();
+        for (final PrefField f : PREFS) {
+            prefs.setPref(f.pref(), f.pref().getDefault());
+        }
+        prefs.save();
     }
 
     /** The map as it stands. walked is the move just made, for the marker to walk, and is empty otherwise. */

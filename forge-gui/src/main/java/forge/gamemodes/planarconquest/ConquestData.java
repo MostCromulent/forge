@@ -179,7 +179,8 @@ public final class ConquestData {
         getCurrentPlaneData().setLocation(currentLocation0);
     }
 
-    private ConquestPlaneData getPlaneData(ConquestPlane plane) {
+    /** What has been done on a plane, or null while it is locked. */
+    public ConquestPlaneData getPlaneData(ConquestPlane plane) {
         return planeDataMap.get(plane.getName());
     }
     public ConquestPlaneData getCurrentPlaneData() {

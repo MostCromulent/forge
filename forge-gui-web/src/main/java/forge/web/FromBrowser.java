@@ -24,7 +24,8 @@ final class FromBrowser {
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
-        conquestLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection }
+        conquestLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection,
+        conquestPlanes, conquestPrefs, conquestPrefsReset }
 
     @Command
     record Bare(Plain t) {
@@ -399,6 +400,29 @@ final class FromBrowser {
     record ConquestSelect(int region, int row, int col) {
     }
 
+    /**
+     * The Aether's filters: colours as WUBRG letters, and the names of a TypeFilter, a RarityFilter and a CMCFilter.
+     * An empty type asks for the filters a visit starts with. pull spends the shards and takes a card.
+     */
+    @Command("conquestAether")
+    record ConquestAetherQuery(String colors, String type, String rarity, String cmc, boolean pull) {
+    }
+
+    /** Travels to an unlocked plane, or with unlock spends the emblems to unlock it first. */
+    @Command("conquestPlaneswalk")
+    record ConquestPlaneswalk(String plane, boolean unlock) {
+    }
+
+    /** Asks for the statistics of a plane, or of every plane. */
+    @Command("conquestStats")
+    record ConquestStatsQuery(@Nullable String plane) {
+    }
+
+    /** Sets one of Conquest's preferences, by its CQPref name. */
+    @Command("conquestPref")
+    record ConquestPref(String key, int value) {
+    }
+
     @Command("conquestRename")
     record ConquestRename(String name, String to) {
     }
@@ -459,5 +483,6 @@ final class FromBrowser {
             EventDecksOnly.class, EventHostAgain.class, EventForget.class,
             ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class,
             ConquestSetLead.class, ConquestWalker.class, ConquestViewDeck.class, ConquestExile.class, ConquestEditDeck.class,
-            ConquestRename.class, ConquestDelete.class, ConquestOptionsQuery.class, ConquestCreate.class);
+            ConquestRename.class, ConquestDelete.class, ConquestOptionsQuery.class, ConquestCreate.class,
+            ConquestAetherQuery.class, ConquestPlaneswalk.class, ConquestStatsQuery.class, ConquestPref.class);
 }
