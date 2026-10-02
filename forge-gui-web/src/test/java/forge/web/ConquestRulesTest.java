@@ -2,6 +2,7 @@ package forge.web;
 
 import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
+import forge.gamemodes.planarconquest.ConquestAether;
 import forge.gamemodes.planarconquest.ConquestAwardPool;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestChaosBattle;
@@ -259,6 +260,46 @@ public class ConquestRulesTest {
         assertEquals(data.getPlaneUnlockCost(), first);
         data.unlockPlane(FModel.getPlanes().get("Alara"));
         assertEquals(data.getPlaneUnlockCost(), first + more);
+    }
+
+    // Fails if a pull is free, gives a card the filter does not allow, or leaves the card locked
+    @Test
+    public void aPullCostsItsPriceAndUnlocksAMatchingCard() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestAether.Filter filter = ConquestAether.Filter.startingFor(data.getSelectedCommander());
+        final ConquestAether.Pools pools = ConquestAether.pools(data, filter);
+        assertFalse(pools.strict().isEmpty(), "the starting filter matches nothing on Zendikar");
+        final int cost = ConquestAether.cost(pools, filter);
+        assertEquals(cost, FModel.getConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST));
+        assertTrue(cost > 0);
+        final int shards = data.getAEtherShards();
+        final PaperCard card = ConquestAether.pull(data, filter);
+        assertNotNull(card);
+        assertTrue(pools.filtered().contains(card));
+        assertTrue(data.hasUnlockedCard(card));
+        assertEquals(data.getAEtherShards(), shards - cost);
+        assertFalse(ConquestAether.pools(data, filter).locked().contains(card));
+    }
+
+    // Fails if a pull happens without the shards to pay for it
+    @Test
+    public void aPullNeedsItsShards() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        data.spendAEtherShards(data.getAEtherShards());
+        final int cards = data.getUnlockedCardCount();
+        assertNull(ConquestAether.pull(data, ConquestAether.Filter.startingFor(data.getSelectedCommander())));
+        assertEquals(data.getUnlockedCardCount(), cards);
+        assertEquals(data.getAEtherShards(), 0);
+    }
+
+    // Fails if basic lands can be pulled, or a card already owned is offered again
+    @Test
+    public void theAetherHoldsOnlyLockedCardsThatAreNotBasicLands() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        for (final PaperCard card : ConquestAether.pools(data, ConquestAether.Filter.startingFor(data.getSelectedCommander())).locked()) {
+            assertFalse(card.getRules().getType().isBasicLand());
+            assertFalse(data.hasUnlockedCard(card));
+        }
     }
 
     private static ConquestBattle wonBattle(final ConquestData data) {
