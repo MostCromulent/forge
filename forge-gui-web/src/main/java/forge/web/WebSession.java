@@ -1401,12 +1401,13 @@ public final class WebSession {
             case "conquestRename" -> {
                 final FromBrowser.ConquestRename rename = Wire.decode(msg, FromBrowser.ConquestRename.class);
                 final String problem = ConquestGame.rename(rename.name(), rename.to());
-                if (problem != null) {
-                    channel.send(error(problem));
-                }
                 channel.send(ConquestGame.saves());
                 // The start page's Resume names the conquest played last
                 channel.send(hello());
+                // Last, since the browser forgets an error at every hello
+                if (problem != null) {
+                    channel.send(error(problem));
+                }
             }
             default -> {
                 ConquestGame.delete(Wire.decode(msg, FromBrowser.ConquestDelete.class).name());
@@ -1416,7 +1417,7 @@ public final class WebSession {
         }
     }
 
-    /** The Commanders and Collection pages of the open conquest. */
+    /** The pages of the open conquest, other than its map. */
     private void conquestPages(final BrowserChannel channel, final JsonObject msg) {
         final String type = msg.get("t").getAsString();
         switch (type) {
@@ -1507,7 +1508,8 @@ public final class WebSession {
     }
 
     private void conquestBattle(final BrowserChannel channel) {
-        if (!(stage instanceof Conquest c) || c.save() == null) {
+        // A reward still to be shown may end in a chaos battle, which comes before any other
+        if (!(stage instanceof Conquest c) || c.save() == null || conquest.reward() != null) {
             return;
         }
         final String problem = conquest.battleProblem();

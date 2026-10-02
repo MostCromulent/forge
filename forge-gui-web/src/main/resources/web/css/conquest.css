@@ -22,6 +22,10 @@
 .cq-tab:disabled { opacity: .45; }
 .cq-tab[aria-current="page"] { color: var(--accent-2); border-bottom-color: var(--accent-2); background: linear-gradient(180deg, transparent, var(--accent-soft)); }
 .cq-purse { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.cq-under { display: contents; }
+/* The balances stay in view over a reward's reveal, which counts into them */
+.cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
+.cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
 .cq-dev { font-size: 12px; padding: 3px 6px; max-width: 130px; }
 .cq-main { flex: 1; min-height: 0; display: grid; }
 

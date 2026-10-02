@@ -12,12 +12,15 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
   const [typed, setTyped] = useState<Record<string, string>>({});
   const [last, setLast] = useState<string | null>(null);
   useEffect(() => { actions.conquestPrefs(); }, []);
-  useEffect(() => { if (p && !p.problem) setTyped({}); }, [p]);
+  // An accepted value leaves its own field to the server's; whatever is being typed in another stays
+  useEffect(() => {
+    if (p && !p.problem && last) setTyped(({ [last]: _, ...rest }) => rest);
+  }, [p]);
   if (!p) return null;
   const groups = [...new Set(p.rows.map(r => r.group))];
-  const save = (key: string) => {
-    const text = typed[key];
-    if (text === undefined || text.trim() === '' || !Number.isInteger(Number(text))) return;
+  // The field's own text, since a blur can come before the typing has been drawn
+  const save = (key: string, text: string, was: number) => {
+    if (text.trim() === '' || !Number.isInteger(Number(text)) || Number(text) === was) return;
     setLast(key);
     actions.conquestPref(key, Number(text));
   };
@@ -34,8 +37,8 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
                   <span>{r.label}</span>
                   <input type="number" min={0} step={1} value={typed[r.key] ?? String(r.value)}
                     onInput={e => setTyped({ ...typed, [r.key]: e.currentTarget.value })}
-                    onBlur={() => save(r.key)}
-                    onKeyDown={e => { if (e.key === 'Enter') save(r.key); }} />
+                    onBlur={e => save(r.key, e.currentTarget.value, r.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') save(r.key, e.currentTarget.value, r.value); }} />
                 </label>
               ))}
             </section>

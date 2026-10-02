@@ -352,6 +352,11 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
 
+        // Until the reward has been shown no other battle starts, since it may end in one that cannot be refused
+        sessions.onMessage(again, JsonCodec.message("conquestBattle"));
+        onUi(() -> { });
+        Assert.assertNull(FModel.getConquest().getActiveBattle(), "a battle started over a reward still to be shown");
+
         again.forget();
         sessions.onMessage(again, JsonCodec.message("conquestClaim"));
         final Recorder third = connect("host");
@@ -885,8 +890,11 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestData other = ConquestFixture.create("Zendikar");
         host.forget();
         sessions.onMessage(host, message("conquestRename", "name", to, "to", other.getName()));
-        host.awaitMatching("error", e -> true, "a name in use was not refused");
+        final JsonObject refused = host.awaitMatching("error", e -> true, "a name in use was not refused");
         Assert.assertTrue(saveDir(to).isDirectory());
+        // The browser forgets an error at every hello, so the refusal is the last thing said
+        awaitTrue(() -> host.got.size() >= 3, "the shelf was not sent again with the refusal");
+        Assert.assertSame(host.got.get(host.got.size() - 1), refused, "the refusal was followed by a hello, which wipes it from the page");
     }
 
     // Fails if a deleted conquest is still listed, or its folder is still there
@@ -1004,7 +1012,8 @@ public class ConquestSessionTest extends SessionsTest {
         final String current = prefs.getPref(CQPref.CURRENT_CONQUEST);
         try {
             host.forget();
-            sessions.onMessage(host, message("conquestPref", "key", "BOOSTER_COMMONS", "value", 14));
+            sessions.onMessage(host, message("conquestPref", "key", "BOOSTER_COMMONS", "value",
+                    16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
             host.awaitMatching("conquestPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
             Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
             host.forget();
@@ -1059,5 +1068,16 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(all.has("plane"));
         Assert.assertEquals(all.getAsJsonArray("regions").size(), 0);
         Assert.assertEquals(all.getAsJsonArray("commanders").size(), 2, "one commander and the chaos battles");
+    }
+
+    // Fails if a name with a path in it reaches a folder that is not one of the saves, which a delete would remove
+    @Test
+    public void aNameWithAPathInItFindsNothing() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final String folder = data.getDirectory().getName();
+        Assert.assertNotNull(ConquestGame.find(data.getName()));
+        Assert.assertNull(ConquestGame.find("../saves/" + folder));
+        Assert.assertNull(ConquestGame.find("..\\saves\\" + folder));
+        Assert.assertNull(ConquestGame.find(folder + "/."));
     }
 }

@@ -28,12 +28,15 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
   useEffect(() => { if (open) setCreating(false); }, [open]);
   return (
     <div class={open ? 'cq-shell' : 'limited-page'}>
-      <PageHeader class="limited-head">
-        <div class="head-right">
-          <HeadControls />
-          <button onClick={() => (creating && !open ? setCreating(false) : actions.conquestLeave())}>{t('lblBack')}</button>
-        </div>
-      </PageHeader>
+      {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
+      <div class="cq-under" inert={open && !!model.conquestReward}>
+        <PageHeader class="limited-head">
+          <div class="head-right">
+            <HeadControls />
+            <button onClick={() => (creating && !open ? setCreating(false) : actions.conquestLeave())}>{t('lblBack')}</button>
+          </div>
+        </PageHeader>
+      </div>
       {open ? <Campaign model={model} actions={actions} />
         : <Shelf model={model} actions={actions} creating={creating} setCreating={setCreating} />}
     </div>
@@ -148,9 +151,9 @@ const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
 
 /** The bar every page of a conquest shares: its name and plane, the tabs, and the two balances. */
-function CampaignBar({ bar, actions, prefs }: { bar: ConquestBar; actions: Actions; prefs: () => void }) {
+function CampaignBar({ bar, actions, prefs, under }: { bar: ConquestBar; actions: Actions; prefs: () => void; under: boolean }) {
   return (
-    <div class="cq-bar">
+    <div class="cq-bar" inert={under}>
       <div class="cq-id"><b>{bar.name}</b><span>{bar.plane} · {bar.conquered} / {bar.total}</span></div>
       <nav class="cq-tabs">
         {TABS.map(([tab, name]) => (
@@ -191,15 +194,17 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   const [owed, setOwed] = useState<Owed>({ shards: 0, emblems: 0 });
   const reward = model.conquestReward;
   const [prefs, setPrefs] = useState(false);
+  // The preferences set the prices every page shows, so the page behind them asks again when they close
+  const [priced, setPriced] = useState(0);
   useEffect(() => { if (!reward) setOwed({ shards: 0, emblems: 0 }); }, [reward]);
   if (!model.conquestBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const bar = model.conquestBar;
   return <>
-    <CampaignBar actions={actions} prefs={() => setPrefs(true)}
+    <CampaignBar actions={actions} prefs={() => setPrefs(true)} under={!!reward}
       bar={reward ? { ...bar, shards: bar.shards - owed.shards, emblems: bar.emblems - owed.emblems } : bar} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main"><Page tab={ui.conquestTab} model={model} actions={actions} /></div>
-    {prefs && <Prefs model={model} actions={actions} close={() => setPrefs(false)} />}
+    <div class="cq-main" inert={!!reward}><Page key={priced} tab={ui.conquestTab} model={model} actions={actions} /></div>
+    {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.conquestClaim()} />}
   </>;
 }

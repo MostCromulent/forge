@@ -2,7 +2,7 @@
 // each booster as a pack to open, and what else the wheel paid. All of it is already in the save; the steps are the
 // server's, and this only shows them. The bar is told what has yet to be shown, so its balances rise as it is.
 
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';
 import { mountPack, type Pack } from './conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
@@ -53,7 +53,8 @@ export function Reveal({ reward, onOwed, done }: { reward: ConquestReward; onOwe
   const packShards = step?.kind === 'BOOSTER' ? (step.cards ?? []).reduce((sum, c) => sum + c.shards, 0) : 0;
   const after = pendingAmounts(steps, at + 1);
   const owedShards = after.shards + packShards - released, owedEmblems = after.emblems;
-  useEffect(() => onOwed({ shards: owedShards, emblems: owedEmblems }), [owedShards, owedEmblems]);
+  // Before the first paint, or the bar would show for a frame everything the reveal is about to give
+  useLayoutEffect(() => onOwed({ shards: owedShards, emblems: owedEmblems }), [owedShards, owedEmblems]);
 
   if (!step) return null;
   return (
@@ -127,6 +128,9 @@ function PackStop({ step, release, zoom, next }: { step: ConquestStep; release: 
   const host = useRef<HTMLDivElement>(null);
   const pack = useRef<Pack | null>(null);
   const [phase, setPhase] = useState<'sealed' | 'opening' | 'shown'>('sealed');
+  // Shards still in flight when the pack is left have been counted already, and are not the next pack's
+  const here = useRef(true);
+  useEffect(() => () => { here.current = false; }, []);
   const cards = step.cards ?? [];
   const duplicates = cards.reduce((sum, c) => sum + c.shards, 0);
   useEffect(() => {
@@ -134,7 +138,7 @@ function PackStop({ step, release, zoom, next }: { step: ConquestStep; release: 
       name: step.chaos ? t('lblWebConquestChaos') : step.pack ?? '', sub: step.chaos ? step.pack ?? '' : t('lblWebConquestBoosterPack'),
       art: step.chaos ? null : step.art ?? null, chaos: step.chaos, cards, hint: t('lblWebConquestClickToOpen'),
     }, {
-      flipped: (card, rect) => { if (card.shards) flyShards(rect, () => release(card.shards)); },
+      flipped: (card, rect) => { if (card.shards) flyShards(rect, () => { if (here.current) release(card.shards); }); },
       zoom: card => zoom(card.image),
       opening: () => setPhase('opening'),
       shown: () => setPhase('shown'),

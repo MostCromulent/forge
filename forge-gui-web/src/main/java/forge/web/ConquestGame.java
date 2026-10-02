@@ -65,6 +65,7 @@ import forge.web.ToBrowser.ConquestState;
 import forge.web.ToBrowser.ConquestStep;
 
 import java.io.File;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -119,13 +120,25 @@ final class ConquestGame {
     /** The save of a name, or null when there is none or it cannot be read. */
     static ConquestData find(final String name) {
         final File dir = name == null ? null : saveDir(name);
-        final ConquestData data = dir != null && dir.isDirectory() ? new ConquestData(dir) : null;
+        // The name is the browser's: one with a path in it would reach a folder that is not a save, to open, rename or delete
+        final ConquestData data = dir != null && dir.isDirectory() && isSave(dir, name.replace(' ', '_')) ? new ConquestData(dir) : null;
         return data != null && readable(data) ? data : null;
     }
 
     /** A save whose file could not be read is left with nothing in it, and has no page to show. */
     private static boolean readable(final ConquestData data) {
         return data.getPlaneswalker() != null && data.getCurrentLocation() != null;
+    }
+
+    /** Whether a folder is the saves folder's own child of exactly that name, however its path was written. */
+    private static boolean isSave(final File dir, final String child) {
+        try {
+            final File saves = new File(ForgeConstants.CONQUEST_SAVE_DIR).getCanonicalFile();
+            final File canonical = dir.getCanonicalFile();
+            return saves.equals(canonical.getParentFile()) && canonical.getName().equals(child);
+        } catch (final IOException e) {
+            return false;
+        }
     }
 
     private static File saveDir(final String name) {

@@ -66,17 +66,26 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   // The emblem of the first conquest is held back from the bar until the reveal shows it, with the wheel
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-wheel-first')).toBeVisible();
+  // Nothing behind the reveal can be reached, so the reward is gone through to its end
+  const back = page.locator('.cq-shell .page-head button', { hasText: 'Back' });
+  await back.focus();
+  expect(await back.evaluate(el => el === document.activeElement)).toBe(false);
+  // The balances stay in view over it, and the emblem of the first conquest has reached them
+  const emblems = page.locator('.cq-purse .cq-coin').nth(1);
+  await expect(emblems.locator('b')).toHaveText('2');
+  const layer = (selector: string) => page.locator(selector).evaluate(el => Number(getComputedStyle(el).zIndex));
+  expect(await layer('.cq-purse')).toBeGreaterThan(await layer('.cq-reveal'));
   await reveal.getByRole('button', { name: 'Spin' }).click();
   await expect(reveal.locator('.cq-dl.done')).toBeVisible({ timeout: 15_000 });
-  await reveal.getByRole('button', { name: 'Great' }).click();
+  await reveal.getByRole('button', { name: 'Great', exact: true }).click();
 
   // A booster: the pack is opened, every card turns face up, and the reveal ends on the map
   await reveal.locator('.cq-pk').click({ force: true });
-  await expect(reveal.getByRole('button', { name: 'Great' })).toBeVisible({ timeout: 30_000 });
+  await expect(reveal.getByRole('button', { name: 'Great', exact: true })).toBeVisible({ timeout: 30_000 });
   const cards = await reveal.locator('.cq-rv-card').count();
   expect(cards).toBeGreaterThan(0);
   await expect(reveal.locator('.cq-rv-card.up')).toHaveCount(cards);
-  await reveal.getByRole('button', { name: 'Great' }).click();
+  await reveal.getByRole('button', { name: 'Great', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(page.locator('.cq-tile.won')).toHaveCount(2);
 
@@ -167,6 +176,13 @@ test('the Aether, the planes, the statistics and the preferences open', async ({
   await expect(page.locator('.cq-ae-card b')).not.toBeEmpty();
   await expect(page.locator('.cq-purse')).toContainText((3000 - cost).toLocaleString('en-GB'));
   await expect(page.locator('.cq-ae-recent img')).toHaveCount(1);
+
+  // A price changed in the preferences is the price the page behind them shows when they close
+  await page.getByRole('button', { name: 'Preferences' }).click();
+  await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').fill(String(cost + 50));
+  await page.locator('.cq-pref', { hasText: 'Base Pull Cost' }).locator('input').blur();
+  await page.locator('.cq-prefs').getByRole('button', { name: 'OK' }).click();
+  await expect(page.locator('.cq-ae-pull')).toContainText(String(cost + 50));
 
   await page.locator('.cq-tab', { hasText: 'Planeswalk' }).click();
   await expect(page.locator('.cq-plane-card:not(.locked)')).toHaveCount(1);
