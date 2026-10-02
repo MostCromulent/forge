@@ -211,3 +211,6 @@ html[data-motion="reduced"] .press-ring { animation: none; }
 span.deck-name { border-bottom: 0 !important; }
 .editor-head .check-fixed { color: var(--muted); font-size: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
 .land-row .land-set { font-size: 12px; padding: 2px 22px 2px 8px; max-width: 220px; }
+/* A deck built from a game mode's own cards: whose it is before its name, and the cards not yet played with */
+.editor-head .deck-owner { color: var(--muted); font-size: 14px; }
+.new-card { position: absolute; left: -4px; top: 10px; padding: 2px 7px; border-radius: 999px; background: var(--accent-2); color: #1a1405; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; box-shadow: 0 2px 6px #000a; }

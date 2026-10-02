@@ -17,6 +17,8 @@ export interface Picker {
 /** How an open zone is ordered: as the zone holds them, by name, or by card type. */
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
+export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
+
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
   openPiles: Set<string>;
@@ -59,6 +61,8 @@ export interface UiState {
   cardText: boolean;
   /** The side column's panels. Kept in the browser across sessions. */
   sidePanels: { log: boolean; chat: boolean };
+  /** Which page of the open conquest is showing. It outlives the deck editor, which takes the page's place for a while. */
+  conquestTab: ConquestTab;
   /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
   draftHidden: boolean;
 }
@@ -88,6 +92,7 @@ export const ui: UiState = {
   faceIndex: 0,
   cardText: false,
   sidePanels: { log: true, chat: true, ...storedSidePanels() },
+  conquestTab: 'map',
   draftHidden: false,
 };
 

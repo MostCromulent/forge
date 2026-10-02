@@ -94,6 +94,17 @@ export interface Actions {
   conquestClaim(): void;
   /** Dev mode: where the next Chaos Wheel stops. */
   devConquestWheel(outcome: string): void;
+  /** Asks for the commanders and planeswalkers found. */
+  conquestParty(): void;
+  conquestLead(commander: string): void;
+  conquestWalker(planeswalker: string): void;
+  /** Asks for a commander's deck, which arrives as a deck's details do. */
+  conquestViewDeck(commander: string): void;
+  conquestEditDeck(commander: string): void;
+  /** Asks for the sizes of the collection and the exile. */
+  conquestCollection(): void;
+  /** Exiles the cards of these image keys, or with retrieve brings them back. */
+  conquestExile(cards: string[], retrieve: boolean): void;
   /** Starts a finished match again from its first game. */
   restartGame(): void;
 
@@ -239,6 +250,13 @@ export function createActions(send: Send): Actions {
     conquestBattle: () => send({ t: 'conquestBattle' }),
     conquestClaim: () => send({ t: 'conquestClaim' }),
     devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
+    conquestParty: () => send({ t: 'conquestParty' }),
+    conquestLead: commander => send({ t: 'conquestLead', commander }),
+    conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),
+    conquestViewDeck: commander => send({ t: 'conquestViewDeck', commander }),
+    conquestEditDeck: commander => send({ t: 'conquestEditDeck', commander }),
+    conquestCollection: () => send({ t: 'conquestCollection' }),
+    conquestExile: (cards, retrieve) => send({ t: 'conquestExile', cards, retrieve }),
     restartGame: () => send({ t: 'nextGame', decision: 'NEW' }),
     setFormat: format => send({ t: 'setFormat', format }),
     setVariant: (variant, on) => send({ t: 'setVariant', variant, on }),

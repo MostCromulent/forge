@@ -37,6 +37,7 @@ let restored = false;
 let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 let catalogueRequest = 0;
+let catalogueSource = '';
 let importRequest = 0;
 // The game is paced where it runs: it holds for the player on a pass they have something new to see before
 // (autopass.ts). The one pause made here is a new turn's, whose banner shows before anything the turn does
@@ -78,7 +79,14 @@ const actions: Actions = {
     wire.answerHostChoice(id, value);
     schedule();
   },
-  queryCatalogue: (_, q) => wire.queryCatalogue(++catalogueRequest, q),
+  queryCatalogue: (_, q) => {
+    // A first page from another list (the editor's, the collection's, the exile's) has nothing to add to the one shown
+    if (q.offset === 0 && (q.source ?? '') !== catalogueSource) {
+      catalogueSource = q.source ?? '';
+      model.catalogue = null;
+    }
+    wire.queryCatalogue(++catalogueRequest, q);
+  },
   readImport: (_, text, format, cardPool, unrestricted) => wire.readImport(++importRequest, text, format, cardPool, unrestricted),
   fetchImport: (_, url) => wire.fetchImport(++importRequest, url),
   commitImport: c => {
@@ -243,6 +251,9 @@ function apply(msg: ServerMessage): void {
         model.conquestState = null;
         model.conquestBar = null;
         model.conquestReward = null;
+        model.conquestParty = null;
+        model.conquestCollection = null;
+        ui.conquestTab = 'map';
       }
       model.drafting = msg.drafting;
       if (!msg.drafting) {
@@ -311,6 +322,8 @@ function apply(msg: ServerMessage): void {
     case 'conquestState': model.conquestState = msg; break;
     case 'conquestResult': model.conquestResult = msg; break;
     case 'conquestReward': model.conquestReward = msg; break;
+    case 'conquestParty': model.conquestParty = msg; break;
+    case 'conquestCollection': model.conquestCollection = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;

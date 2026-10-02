@@ -14,7 +14,7 @@ export interface FilterKind<F> {
   label: string;
   /** The words on its chip while it is in use, or null while it is not. */
   chip: (f: F) => string | null;
-  /** Where a chip set by something other than the player comes from, which gilds it. */
+  /** Where a chip set by something other than the player comes from, which gilds it. Empty gilds it and names nothing. */
   from?: (f: F) => string | null;
   /** A filter the table fixes has a chip but no ×. */
   fixed?: (f: F) => boolean;
@@ -56,7 +56,7 @@ export function FilterBar<F>({ kinds, filter, set, clearAll, narrowed, children 
       {inUse.map(k => {
         const from = k.from?.(filter) ?? null;
         return (
-          <span key={k.id} class={from ? 'chip set-by' : 'chip'}>
+          <span key={k.id} class={from !== null ? 'chip set-by' : 'chip'}>
             <button class="chip-body" onClick={() => setOpen({ kind: k.id })}>
               <span class="k">{from ? `${from} · ${k.label}` : k.label}</span><b>{k.chip(filter)}</b>
             </button>

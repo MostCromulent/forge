@@ -251,3 +251,54 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
   .cq-map { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .cq-side { border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* Commanders and planeswalkers: one plate for both, and the one being looked at beside them */
+.cq-party { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 372px; min-height: 0; }
+.cq-party-list { padding: 18px 24px 80px; overflow-y: auto; display: grid; gap: 22px; align-content: start; }
+.cq-party-list h4 { margin: 0 0 10px; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; gap: 10px; align-items: baseline; }
+.cq-party-list h4 span { letter-spacing: 0; text-transform: none; font-weight: 400; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.cq-party-list .find { width: 260px; }
+.cq-cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.cq-cmd { display: grid; grid-template-columns: 96px minmax(0, 1fr); padding: 0; overflow: hidden; border-radius: 11px; background: var(--surface); text-align: left; position: relative; }
+.cq-cmd .a { background: #111 center 20% / cover; min-height: 104px; }
+.cq-cmd .t { padding: 10px 12px; display: grid; gap: 4px; align-content: center; min-width: 0; }
+.cq-cmd .t b { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cq-cmd .t .l { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cq-cmd .t .l .cq-warn { font-size: 11.5px; }
+.cq-cmd[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.cq-cmd .tag { position: absolute; right: 8px; bottom: 8px; background: #0b0e14e6; text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; }
+.cq-cmd-detail { padding: 20px; display: grid; gap: 12px; align-content: start; overflow-y: auto; }
+.cq-cmd-detail img.card { width: 216px; aspect-ratio: 63 / 88; border-radius: 11px; justify-self: center; box-shadow: 0 12px 30px #000b; }
+.cq-cmd-detail h3 { margin: 0; font-size: 18px; }
+.cq-cmd-detail .dk-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0; overflow: visible; }
+.cq-two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cq-two button[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); }
+
+/* The collection and the exile: a grid of cards, each with what it is worth */
+.cq-coll { position: relative; display: flex; flex-direction: column; min-height: 0; }
+.cq-coll-bar { display: flex; align-items: center; gap: 12px; padding: 14px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.cq-coll-bar .find { width: 260px; }
+.cq-coll-bar select { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; font: inherit; }
+.cq-coll-bar .colours { margin: 0; align-self: center; }
+.cq-coll-note { font-size: 12.5px; color: var(--muted); margin-left: auto; }
+.cq-coll-grid { flex: 1; overflow-y: auto; padding: 18px 24px 130px; display: grid; grid-template-columns: repeat(auto-fill, 148px); gap: 16px 14px; justify-content: center; align-content: start; }
+.cq-cc { position: relative; padding: 0; border: 0; background: none; border-radius: 8px; display: flex; flex-direction: column; gap: 5px; text-align: left; color: var(--text); }
+.cq-cc:disabled { opacity: 1; cursor: default; }
+/* The name shows until the picture has arrived, and when there is none */
+.cq-cc .cq-pic { position: relative; display: block; flex: none; width: 100%; aspect-ratio: 63 / 88; border-radius: 7px; background: var(--surface-2); box-shadow: 0 4px 12px #0009; overflow: hidden; }
+.cq-cc .cq-pic .nm { position: absolute; left: 9px; right: 9px; top: 9px; font-size: 12px; color: var(--muted); }
+.cq-cc .cq-pic img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cq-cc .val { font-size: 11.5px; color: var(--muted); display: flex; align-items: center; gap: 4px; padding: 0 2px; font-variant-numeric: tabular-nums; }
+.cq-cc.sel .cq-pic { box-shadow: 0 0 0 3px var(--accent-2), 0 0 18px var(--accent-glow); }
+.cq-cc.sel::after { content: '\2713'; position: absolute; right: 6px; top: 6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-2); color: #1a1405; font-weight: 800; font-size: 13px; box-shadow: 0 2px 6px #000c; }
+.cq-cc.used .cq-pic img { filter: brightness(.6); }
+.cq-cc .inuse { position: absolute; left: 6px; right: 6px; bottom: 30px; font-size: 10.5px; padding: 3px 6px; border-radius: 5px; background: #0b0e14e6; border: 1px solid var(--line-bright); text-align: center; }
+.cq-shard { width: 14px; height: 14px; vertical-align: -2px; margin: 0 3px; }
+.cq-sel-bar { position: absolute; left: 50%; bottom: 66px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 14px; padding: 10px 12px 10px 18px; border-radius: 12px; background: var(--surface-3); border: 1px solid var(--accent-2); box-shadow: 0 16px 44px #000d; font-size: 13.5px; }
+.cq-sel-bar .primary { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
+.cq-sel-bar .cq-shard { width: 16px; height: 16px; margin-left: 8px; }
+.cq-exile-total { margin: 0; font-size: 14px; }
+.cq-exile-total .cq-shard { width: 18px; height: 18px; vertical-align: -3px; }
+.cq-cards-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; max-height: 46vh; overflow-y: auto; }
+.cq-cards-list li { display: flex; gap: 10px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
+.cq-cards-list li span { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }

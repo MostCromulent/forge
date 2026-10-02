@@ -8,6 +8,7 @@ import { conquestIconUrl, imageUrl } from './images';
 import { Pips } from './symbols';
 import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
 import { reducedMotion } from './conquestmotion';
+import { changeUi } from './ui';
 import type { Actions } from './actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from './protocol';
 import { t, type TextKey } from './text';
@@ -230,7 +231,7 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
             <b>{lead.name}</b>
             {lead.problem ? <span class="cq-warn">{t('lblWebConquestInvalidDeck')}</span> : <span>{t('lblWebConquestDeckCards', lead.deckSize)}</span>}
           </div>
-          <button disabled>{t('lblWebConquestChange')}</button>
+          <button onClick={() => changeUi(u => { u.conquestTab = 'party'; })}>{t('lblWebConquestChange')}</button>
         </div>
         {(cell.variants ?? []).includes('Planeswalker') && (
           <div class="cq-mine">

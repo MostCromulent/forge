@@ -90,7 +90,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         void file.text().then(text => changeUi(u => { u.importer = { from: 'editor', text }; }));
       }}>
       <PageHeader class="editor-head">
-        {state.limited
+        {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
+        {state.limited || state.collection
           ? <span class="deck-name">{state.name}</span>
           : renaming
           ? <RenameField name={state.name} done={name => {
@@ -100,18 +101,25 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
           : <button class="deck-name" title={t('lblRename')} onClick={() => setRenaming(true)}>{state.name}</button>}
         {state.limited
           ? <span class="check-fixed">{t('lblWebEditorLimitedFixed')}</span>
+          : state.collection ? <span class="check-fixed">{state.check}</span>
           : <CheckControl model={model} state={state} actions={actions} />}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={t('lblWebEditorUndoTip')}>&#8630; {t('lblUndo')}</button>
           <div class="menu-anchor">
             <button aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}>{t('lblDeck')} &#8964;</button>
-            {menu === 'menu' && state.limited && (
+            {menu === 'menu' && state.limited && !state.collection && (
               <div class="deck-menu" role="menu">
                 <button role="menuitem" onClick={() => { setMenu(null); setDialog('text'); }}>{t('lblWebEditorCopyAsText')}</button>
               </div>
             )}
-            {menu === 'menu' && !state.limited && (
+            {menu === 'menu' && state.collection && (
+              <div class="deck-menu" role="menu">
+                <button role="menuitem" onClick={() => { setMenu(null); changeUi(u => { u.importer = { from: 'editor' }; }); }}>{t('lblWebEditorImportList')}</button>
+                <button role="menuitem" onClick={() => { setMenu(null); setDialog('text'); }}>{t('lblWebEditorCopyAsText')}</button>
+              </div>
+            )}
+            {menu === 'menu' && !state.limited && !state.collection && (
               <div class="deck-menu" role="menu">
                 <button role="menuitem" onClick={() => setMenu('new')}>{t('lblWebEditorNewDeck')}</button>
                 <button role="menuitem" onClick={() => { setMenu(null); openAnother(); }}>{t('lblWebEditorOpenAnother')}</button>

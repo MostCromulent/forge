@@ -87,3 +87,33 @@ test('a conquest battle is fought and comes back to the map', async ({ page }) =
   await page.waitForTimeout(1500);
   await expect(page.locator('.cq-reveal')).toHaveCount(0);
 });
+
+// Fails if a commander's deck cannot be opened from the Commanders page in the editor over the conquest's cards, changed
+// and left again with its new size shown, or a card of the collection cannot be exiled for the shards it is priced at
+test('a deck is edited and a card is exiled', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=conquest]');
+  await page.locator('.cq-save', { hasText: 'Fixture conquest' }).getByRole('button', { name: 'Play' }).click();
+  await page.locator('.cq-tab', { hasText: 'Commanders' }).click();
+  await expect(page.locator('.cq-cmd[aria-pressed=true]')).toContainText('40 cards');
+  await page.getByRole('button', { name: 'Edit Deck' }).click();
+
+  await expect(page.locator('.editor-head .deck-owner')).toContainText('Fixture conquest');
+  await expect(page.locator('.main-zone > h4 .count')).toHaveText('40');
+  await page.locator('.catalogue .slot:not(.indeck) .tile').first().click();
+  await expect(page.locator('.main-zone > h4 .count')).toHaveText('41');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.locator('.cq-cmd[aria-pressed=true]')).toContainText('41 cards');
+
+  await page.locator('.cq-tab', { hasText: 'Collection' }).click();
+  const free = page.locator('.cq-cc:not(.used)').first();
+  const value = Number((await free.locator('.val').innerText()).replace(/\D/g, ''));
+  expect(value).toBeGreaterThan(0);
+  await free.click();
+  await page.locator('.cq-sel-bar .primary').click();
+  await page.locator('.cq-exile').getByRole('button', { name: 'OK' }).click();
+  await expect(page.locator('.cq-coll-bar .seg button').nth(1)).toContainText('(1)');
+  await expect(page.locator('.cq-purse')).toContainText((3000 + value).toLocaleString('en-GB'));
+});

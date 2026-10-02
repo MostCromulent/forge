@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
-import { changeUi } from './ui';
+import { changeUi, ui, type ConquestTab } from './ui';
 import { conquestIconUrl, imageUrl } from './images';
 import { shortDay } from './limited';
 import { ConquestMap } from './conquestmap';
+import { Party } from './conquestparty';
+import { Collection } from './conquestcollection';
 import { Reveal, wheelLabels, type Owed } from './conquestreward';
 import { setting } from './settings';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ConquestBar, ConquestSave } from './protocol';
-import { t } from './text';
+import { t, type TextKey } from './text';
 
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.conquest !== null;
@@ -73,7 +75,10 @@ export function Purse({ icon, n, label }: { icon: string; n: number; label: stri
 }
 
 const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLANESWALK', 'CHAOS'] as const;
-const TABS = ['lblTheMultiverse', 'lblTheAether', 'lblCommanders', 'lblCollection', 'lblPlaneswalk', 'lblStatistics'] as const;
+const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
+  ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
+/** The pages that exist so far. */
+const BUILT = new Set<ConquestTab>(['map', 'party', 'collection']);
 
 /** The bar every page of a conquest shares: its name and plane, the tabs, and the two balances. */
 function CampaignBar({ bar, actions }: { bar: ConquestBar; actions: Actions }) {
@@ -81,7 +86,10 @@ function CampaignBar({ bar, actions }: { bar: ConquestBar; actions: Actions }) {
     <div class="cq-bar">
       <div class="cq-id"><b>{bar.name}</b><span>{bar.plane} · {bar.conquered} / {bar.total}</span></div>
       <nav class="cq-tabs">
-        {TABS.map((key, i) => <button key={key} class="cq-tab" aria-current={i === 0 ? 'page' : undefined} disabled={i !== 0}>{t(key)}</button>)}
+        {TABS.map(([tab, name]) => (
+          <button key={tab} class="cq-tab" aria-current={tab === ui.conquestTab ? 'page' : undefined} disabled={!BUILT.has(tab)}
+            onClick={() => changeUi(u => { u.conquestTab = tab; })}>{t(name)}</button>
+        ))}
       </nav>
       <div class="cq-purse">
         {setting('devMode') && (
@@ -108,7 +116,11 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   return <>
     <CampaignBar actions={actions} bar={reward ? { ...bar, shards: bar.shards - owed.shards, emblems: bar.emblems - owed.emblems } : bar} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main"><ConquestMap actions={actions} state={model.conquestState} /></div>
+    <div class="cq-main">
+      {ui.conquestTab === 'party' ? <Party model={model} actions={actions} />
+        : ui.conquestTab === 'collection' ? <Collection model={model} actions={actions} />
+        : <ConquestMap actions={actions} state={model.conquestState} />}
+    </div>
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.conquestClaim()} />}
   </>;
 }

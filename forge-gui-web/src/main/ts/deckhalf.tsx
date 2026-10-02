@@ -43,6 +43,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
             ? t('lblWebEditorSizesLimited', state.stats.total, state.stats.lands, state.stats.sideboard)
+            : state.collection ? t('lblWebConquestSizes', state.stats.main, state.stats.lands)
             : t('lblWebEditorSizes', state.stats.total, state.stats.sideboard, state.stats.lands)}</p>
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
@@ -77,7 +78,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
               <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
               {g.cards.map(c => cards
                 ? <Stack key={c.name} card={c} zone="Main" landed={state.landed === c.name} handlers={handlers} />
-                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}
+                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={!!state.collection} />)}
             </div>
           ))}
         </div>
@@ -94,7 +95,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
               onClick={() => actions.edit({ op: 'lands', count: 0, lands: [{ name: l.name, count: l.count + 1 }] })}>+</button>
           </span>
         ))}
-        {state.limited && <>
+        {state.landSets.length > 0 && <>
           <select class="land-set" aria-label={t('lblWebEditorBasicLandsFrom')} value={state.landSet ?? ''}
             onChange={e => actions.edit({ op: 'landSet', name: e.currentTarget.value, count: 0 })}>
             {state.landSets.map(s => <option key={s.code} value={s.code}>{s.name}</option>)}
@@ -103,7 +104,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
             onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>{t('lblWebEditorSuggestLands')}</button>
         </>}
       </div>
-      {!state.limited && <div class="zone side-zone" data-zone="Sideboard">
+      {!state.limited && !state.collection && <div class="zone side-zone" data-zone="Sideboard">
         <h4><span class="zn">{t('lblSideboard')}</span><span class="count">{state.stats.sideboard}</span></h4>
         {cards
           ? (
@@ -126,8 +127,10 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
 }
 
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
+  // A collection's deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
+  const kept = !!state.collection;
   return (
-    <div class="zone commander-zone" data-zone="Commander">
+    <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>
       <h4><span class="zn">{t('lblCommander')}</span><span class="count">{state.commanders.length}</span></h4>
       {state.commanders.length === 0
         ? (
@@ -141,7 +144,7 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
         )
         : state.commanders.map(c => (
           <div key={c.name} class="commander" data-image={c.image} data-card={c.name} data-from="Commander"
-            {...handlers(c.name, 'Commander', c.image, 1)}>
+            {...(kept ? {} : handlers(c.name, 'Commander', c.image, 1))}>
             <img alt="" src={imageUrl(c.image)} />
             <div>
               <div class="cname">{c.name} <span class="cost"><SymbolText text={c.cost} /></span></div>
@@ -150,7 +153,7 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
                 ? t('lblWebEditorIdentityNote', state.identity.split('').join(' '))
                 : t('lblWebEditorIdentityColourlessNote')}</p>
             </div>
-            <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>
+            {!kept && <button class="small" onClick={() => actions.edit({ op: 'move', name: c.name, from: 'Commander', to: 'Main', count: 1 })}>{t('lblWebEditorChangeCommander')}</button>}
           </div>
         ))}
     </div>
@@ -169,8 +172,8 @@ function Stack({ card, zone, landed, handlers }: { card: EditorCard; zone: 'Main
 }
 
 /** One card in a section: its count, name and cost, and while the pointer is on it, one fewer, one more, and a move to the other section. */
-function Line({ card, zone, landed, actions, handlers }: {
-  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers;
+function Line({ card, zone, landed, actions, handlers, mainOnly }: {
+  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean;
 }) {
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   return (
@@ -184,7 +187,7 @@ function Line({ card, zone, landed, actions, handlers }: {
       <span class="ra">
         <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => removeOne(actions, card.name, zone)}>&minus;</button>
         <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
-        <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblWebEditorToMain') : t('lblWebEditorToSide')}</button>
+        {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblWebEditorToMain') : t('lblWebEditorToSide')}</button>}
       </span>
     </div>
   );

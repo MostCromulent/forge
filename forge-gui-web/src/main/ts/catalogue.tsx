@@ -50,10 +50,10 @@ export function countsInDeck(state: EditorState): Map<string, number> {
   return counts;
 }
 
-/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. */
+/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. A collection holds one of each. */
 export function copyLimit(state: EditorState, name: string): number {
   if (BASICS.has(name)) return Infinity;
-  return !state.unrestricted && COMMANDER_FORMATS.has(state.format) ? 1 : 4;
+  return state.collection || (!state.unrestricted && COMMANDER_FORMATS.has(state.format)) ? 1 : 4;
 }
 
 /** How many more of a card the deck can take: what the pool has left in limited mode, otherwise the copy limit's room. */
@@ -70,10 +70,14 @@ export function Catalogue({ model, actions, state, handlers }: {
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [sort, setSort] = useState('name');
-  const [filter, setFilter] = useState<CatalogueFilter>(NO_FILTER);
+  // A deck built from a collection may hold any card owned; the list opens on those its commander's colours allow
+  const owned = !!state.collection;
+  const opening: CatalogueFilter = owned ? { ...NO_FILTER, identity: state.identity || 'C' } : NO_FILTER;
+  const [filter, setFilter] = useState<CatalogueFilter>(opening);
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
   const asked = useRef(0);
-  const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll };
+  const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
+    identity: owned ? filter.identity ?? undefined : undefined };
 
   useEffect(() => {
     const timer = setTimeout(() => setText(typed), SEARCH_DEBOUNCE_MS);
@@ -83,7 +87,7 @@ export function Catalogue({ model, actions, state, handlers }: {
   useEffect(() => {
     asked.current = 0;
     actions.queryCatalogue(0, { ...query, offset: 0 });
-  }, [text, query.colours, type, query.filters, sort, filter.showAll, state.check, state.identity, state.commanderWanted]);
+  }, [text, query.colours, type, query.filters, sort, filter.showAll, query.identity, state.check, state.identity, state.commanderWanted]);
 
   const page = model.catalogue;
   const rows = page?.rows ?? [];
@@ -105,12 +109,13 @@ export function Catalogue({ model, actions, state, handlers }: {
     }
   };
   const kinds = catalogueKinds(state);
-  const narrowed = !!typed || colours.size > 0 || type !== 'any' || kinds.some(k => k.chip(filter) !== null && !k.fixed?.(filter));
+  const narrowed = !!typed || colours.size > 0 || type !== 'any'
+    || kinds.some(k => k.id !== 'identity' && k.chip(filter) !== null && !k.fixed?.(filter));
   const clearAll = () => {
     setTyped('');
     setColours(new Set());
     setType('any');
-    setFilter(NO_FILTER);
+    setFilter(opening);
   };
   return (
     <section class="catalogue" data-zone="catalogue">
@@ -159,7 +164,7 @@ export function Catalogue({ model, actions, state, handlers }: {
         {view === 'cards'
           ? rows.map(row => <Tile key={row.name} row={row} count={counts.get(row.name) ?? 0} top={row === top}
               limit={copyLimit(state, row.name)} room={roomFor(state, row, counts.get(row.name) ?? 0)} limited={state.limited}
-              commanderWanted={state.commanderWanted} add={add} remove={remove}
+              commanderWanted={state.commanderWanted} owned={owned} add={add} remove={remove}
               makeCommander={makeCommander} handlers={handlers} />)
           : <Table rows={rows} counts={counts} state={state} add={add} remove={remove} handlers={handlers} />}
       </div>
@@ -181,10 +186,13 @@ interface CatalogueFilter {
   toughness: Range;
   colourCount: Range;
   showAll: boolean;
+  /** A collection's deck: only cards within these colours, as letters. */
+  identity: string | null;
 }
 
 const NO_FILTER: CatalogueFilter = {
   mv: null, rarity: [], set: null, rules: null, subtype: null, power: null, toughness: null, colourCount: null, showAll: false,
+  identity: null,
 };
 const RARITIES: [string, TextKey][] = [['common', 'lblCommon'], ['uncommon', 'lblUncommon'], ['rare', 'lblRare'], ['mythic', 'lblMythic']];
 
@@ -238,13 +246,25 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     },
     words('set', printing, t('lblWebFilterSet'), t('lblWebFilterSetCode')),
     {
-      // The commander's colours are the deck's rule, so they show here but change only with the commander
+      // The commander's colours are the deck's rule, so they show here but change only with the commander. A
+      // collection's deck has no such rule, and its chip can be taken off.
       id: 'identity', group: deck, label: t('lblWebFilterIdentity'),
-      chip: () => state.identity.split('').join(' '),
+      chip: f => (state.collection ? f.identity?.split('').join(' ') ?? null : state.identity.split('').join(' ')),
       from: () => t('lblWebFilterFromCommander'),
+      fixed: () => !state.collection,
+      clear: f => ({ ...f, identity: null }),
+      panel: (f, set, done) => (state.collection
+        ? <OneOf options={[['within', (state.identity || 'C').split('').join(' ')], ['any', t('lblWebConquestAnyColours')]] as const}
+            value={f.identity ? 'within' : 'any'} pick={v => { set({ ...f, identity: v === 'within' ? state.identity || 'C' : null }); done(); }} />
+        : <p class="fnote">{t('lblWebFilterSetByCommander')}</p>),
+    },
+    {
+      id: 'source', group: deck, label: t('lblCollection'),
+      chip: () => (state.collection ? '' : null),
+      from: () => '',
       fixed: () => true,
       clear: f => f,
-      panel: () => <p class="fnote">{t('lblWebFilterSetByCommander')}</p>,
+      panel: () => <p class="fnote">{t('lblWebConquestOwnedNote')}</p>,
     },
     {
       id: 'unusable', group: deck, label: t('lblWebFilterUnusable'),
@@ -255,7 +275,8 @@ function catalogueKinds(state: EditorState): FilterKind<CatalogueFilter>[] {
     },
   ];
   // A limited deck's catalogue is its pool, where nothing is unusable; only a chosen commander sets an identity
-  return kinds.filter(k => (k.id !== 'unusable' || !state.limited) && (k.id !== 'identity' || (!!state.identity && !state.commanderWanted)));
+  return kinds.filter(k => (k.id !== 'unusable' || !(state.limited || state.collection)) && (k.id !== 'source' || !!state.collection)
+    && (k.id !== 'identity' || !!state.collection || (!!state.identity && !state.commanderWanted)));
 }
 
 /** Lifts the card being added out of the catalogue, as a draft pick is lifted, to fly to its line in the deck. */
@@ -266,8 +287,8 @@ function liftCard(name: string, to: string): void {
   else if (at?.dataset.image) liftFromLine(imageUrl(at.dataset.image), at.getBoundingClientRect(), `${to}:${name}`);
 }
 
-function Tile({ row, count, top, limit, room, limited, commanderWanted, add, remove, makeCommander, handlers }: {
-  row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean;
+function Tile({ row, count, top, limit, room, limited, commanderWanted, owned, add, remove, makeCommander, handlers }: {
+  row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean; owned: boolean;
   add: (name: string, to?: 'Main' | 'Sideboard') => void; remove: (name: string) => void; makeCommander: (name: string) => void;
   handlers: CardHandlers;
 }) {
@@ -280,6 +301,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, add, rem
         <span class="tile-name">{row.name}</span>
         <img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} />
         {count > 0 && <span class="badge">{count}</span>}
+        {row.isNew && <span class="new-card">{t('lblNew')}</span>}
       </button>
       {row.problem && <span class="flag">! {row.problem}</span>}
       {commanderWanted
@@ -293,7 +315,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, add, rem
               ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
                 ? <span class="why">{limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebCatalogueCountOfLimit', count, limit)}</span>
-                : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblWebEditorToSide')}</button>}
+                : owned ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblWebEditorToSide')}</button>}
           </div>
         )}
     </div>

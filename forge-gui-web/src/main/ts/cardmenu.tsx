@@ -51,6 +51,17 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   const anywhere = (['Main', 'Sideboard', 'Commander'] as DeckSection[]).find(z => cardIn(state, z, at.name));
+  // A collection's deck is its main deck alone, each card in the printing owned
+  if (state.collection) {
+    return (
+      <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
+        <span class="menu-cap">{at.name}</span>
+        {zone === null
+          ? <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
+          : <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuRemoveOne')}</button>}
+      </div>
+    );
+  }
   // A pool's cards only move between the pool and the deck: there is no sideboard of its own, commander or printing to choose
   if (state.limited) {
     return (
