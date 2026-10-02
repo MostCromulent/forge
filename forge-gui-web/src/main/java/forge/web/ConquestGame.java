@@ -53,7 +53,7 @@ final class ConquestGame implements Campaign {
     /** The result of the game just ended, while its match is still open. */
     private volatile ConquestResult result;
     /** What the last won battle gave, until the browser says it has shown it. */
-    private volatile ConquestReward reward;
+    private volatile Reward reward;
     private volatile boolean chaosOwed;
     /** Dev mode's choice of where the next wheel stops. */
     private volatile ChaosWheelOutcome nextWheel;
@@ -272,7 +272,7 @@ final class ConquestGame implements Campaign {
     }
 
     @Override
-    public ConquestReward reward() {
+    public Reward reward() {
         return reward;
     }
 
@@ -291,7 +291,7 @@ final class ConquestGame implements Campaign {
             final List<ConquestRewardStep> steps = controller.claimRewards(battle, wheel);
             first = steps.stream().anyMatch(s -> s.kind() == ConquestRewardStep.Kind.CONQUER_EMBLEMS);
             chaosOwed = steps.stream().anyMatch(s -> s.kind() == ConquestRewardStep.Kind.CHAOS_BATTLE);
-            reward = new ConquestReward(steps.stream().map(s -> step(s, battle)).toList());
+            reward = new Reward(steps.stream().map(s -> step(s, battle)).toList());
         }
         result = new ConquestResult(outcome == ConquestBattle.Outcome.WON, outcome != ConquestBattle.Outcome.UNFINISHED,
                 battle instanceof ConquestChaosBattle, battle.getEventName(), first);
@@ -304,20 +304,23 @@ final class ConquestGame implements Campaign {
         result = null;
     }
 
-    /** The reward has been shown. True when it ended in a chaos battle that is now owed. */
-    boolean claim() {
+    /** A reward that ended in a chaos battle is followed by it, with no choice in the matter. */
+    @Override
+    public void claim(final Host host) {
         reward = null;
         final boolean owed = chaosOwed;
         chaosOwed = false;
-        return owed;
+        if (owed) {
+            startBattle(new ConquestChaosBattle(), host);
+        }
     }
 
-    private static ConquestStep step(final ConquestRewardStep s, final ConquestBattle battle) {
-        List<ConquestPackCard> cards = null;
+    private static RewardStep step(final ConquestRewardStep s, final ConquestBattle battle) {
+        List<PackCard> cards = null;
         String pack = null;
         String art = null;
         if (s.cards() != null) {
-            cards = s.cards().stream().map(r -> new ConquestPackCard(r.getCard().getName(), r.getCard().getImageKey(false),
+            cards = s.cards().stream().map(r -> new PackCard(r.getCard().getName(), r.getCard().getImageKey(false),
                     r.getCard().getRarity().name(), r.getReplacementShards())).toList();
             if (s.chaos()) {
                 pack = ((ConquestChaosBattle) battle).getWorldName();
@@ -327,8 +330,14 @@ final class ConquestGame implements Campaign {
                 art = art(plane);
             }
         }
-        return new ConquestStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
-                s.number(), s.total(), s.chaos(), pack, art);
+        // A booster pays shards for its duplicates
+        final String icon = switch (s.kind()) {
+            case SHARDS, BOOSTER -> "IMG_AETHER_SHARD";
+            case EMBLEMS, CONQUER_EMBLEMS -> "IMG_PW_BADGE_COMMON";
+            default -> null;
+        };
+        return new RewardStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
+                s.number(), s.total(), s.chaos(), pack, art, icon);
     }
 
     @Override
@@ -506,7 +515,7 @@ final class ConquestGame implements Campaign {
                 List.of(byRarity[0], byRarity[1], byRarity[2], byRarity[3]), ConquestAether.cost(pools, filter), types, rarities, cmcs,
                 CardCatalog.wubrg(filter.colors()), filter.type().name(), filter.rarity().name(), filter.cmc().name(),
                 CardCatalog.wubrg(data.getSelectedCommander().getCard().getRules().getColorIdentity()),
-                pulled == null ? null : new ConquestPackCard(pulled.getName(), pulled.getImageKey(false), pulled.getRarity().name(), 0),
+                pulled == null ? null : new PackCard(pulled.getName(), pulled.getImageKey(false), pulled.getRarity().name(), 0),
                 problem);
     }
 
@@ -813,11 +822,6 @@ final class ConquestGame implements Campaign {
                     return;
                 }
                 startBattle(battle(), host);
-            }
-            case "conquestClaim" -> {
-                if (claim()) {
-                    startBattle(new ConquestChaosBattle(), host);
-                }
             }
             case "conquestParty" -> channel.send(party());
             case "conquestAether" -> {

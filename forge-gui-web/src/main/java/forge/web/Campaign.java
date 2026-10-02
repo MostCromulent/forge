@@ -6,6 +6,7 @@ import forge.gamemodes.match.PreparedMatch;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
 import forge.web.ToBrowser.CataloguePage;
+import forge.web.ToBrowser.Reward;
 import forge.web.ToBrowser.Trading;
 
 import java.util.List;
@@ -44,7 +45,10 @@ interface Campaign {
     List<Record> page();
 
     /** What the last match gave and has yet to be shown, or null. */
-    Record reward();
+    Reward reward();
+
+    /** The reward has been shown, and the campaign goes on to whatever it leads to. */
+    void claim(Host host);
 
     /** A game of the campaign's match ended: recorded and rewarded here. hostGame is the host's own view, which alone knows the match. */
     Record gameOver(GameView hostGame);

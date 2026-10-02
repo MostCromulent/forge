@@ -637,7 +637,7 @@ final class ToBrowser {
     @Message("conquestAether")
     record ConquestAetherState(int locked, int matching, int strict, List<Integer> byRarity, int cost, List<ConquestOption> types,
             List<ConquestOption> rarities, List<ConquestOption> cmcs, String colors, String type, String rarity, String cmc,
-            String commanderColors, @Nullable ConquestPackCard pulled, @Nullable String problem) {
+            String commanderColors, @Nullable PackCard pulled, @Nullable String problem) {
     }
 
     record ConquestPlaneRow(String name, String art, String description, boolean unlocked, boolean current, int conquered,
@@ -674,17 +674,17 @@ final class ToBrowser {
     }
 
     /** A card of a booster: shards is what a duplicate became, 0 for a card that is new. */
-    record ConquestPackCard(String name, String image, String rarity, int shards) {
+    record PackCard(String name, String image, String rarity, int shards) {
     }
 
-    /** kind is a ConquestRewardStep.Kind name, and a chaos booster has no art. */
-    record ConquestStep(String kind, int amount, @Nullable String outcome, @Nullable List<ConquestPackCard> cards,
-            int number, int total, boolean chaos, @Nullable String pack, @Nullable String art) {
+    /** One thing a reward shows. kind is the mode's name for it, and icon names the balance its amount, or its cards' shards, were paid into. */
+    record RewardStep(String kind, int amount, @Nullable String outcome, @Nullable List<PackCard> cards,
+            int number, int total, boolean chaos, @Nullable String pack, @Nullable String art, @Nullable String icon) {
     }
 
-    /** What a won battle gave, already in the save, for the browser to reveal. */
-    @Message("conquestReward")
-    record ConquestReward(List<ConquestStep> steps) {
+    /** What a match gave, already in the save, for the browser to reveal step by step. */
+    @Message("reward")
+    record Reward(List<RewardStep> steps) {
     }
 
     /** Every message record, which is what the TypeScript is generated from. */

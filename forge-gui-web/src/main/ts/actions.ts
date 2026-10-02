@@ -91,7 +91,7 @@ export interface Actions {
   /** Fights the event the player stands on. */
   conquestBattle(): void;
   /** Says a won battle's reward has been shown. */
-  conquestClaim(): void;
+  rewardClaim(): void;
   /** Dev mode: where the next Chaos Wheel stops. */
   devConquestWheel(outcome: string): void;
   /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
@@ -263,7 +263,7 @@ export function createActions(send: Send): Actions {
     conquestSelect: (region, row, col) => send({ t: 'conquestSelect', region, row, col }),
     conquestMove: () => send({ t: 'conquestMove' }),
     conquestBattle: () => send({ t: 'conquestBattle' }),
-    conquestClaim: () => send({ t: 'conquestClaim' }),
+    rewardClaim: () => send({ t: 'rewardClaim' }),
     devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),

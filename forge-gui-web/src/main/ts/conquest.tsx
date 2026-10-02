@@ -35,7 +35,7 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
   return (
     <div class={open ? 'cq-shell' : 'limited-page'}>
       {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
-      <div class="cq-under" inert={open && !!model.conquestReward}>
+      <div class="cq-under" inert={open && !!model.reward}>
         <PageHeader class="limited-head">
           <div class="head-right">
             <HeadControls />
@@ -159,17 +159,17 @@ function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions
 
 function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   // What a reward being revealed has yet to show. The server's balances already hold it all, so the bar shows less.
-  const [owed, setOwed] = useState<Owed>({ shards: 0, emblems: 0 });
-  const reward = model.conquestReward;
+  const [owed, setOwed] = useState<Owed>({});
+  const reward = model.reward;
   const [prefs, setPrefs] = useState(false);
   // The preferences set the prices every page shows, so the page behind them asks again when they close
   const [priced, setPriced] = useState(0);
-  useEffect(() => { if (!reward) setOwed({ shards: 0, emblems: 0 }); }, [reward]);
+  useEffect(() => { if (!reward) setOwed({}); }, [reward]);
   if (!model.campaignBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const bar = model.campaignBar;
   return <>
     <CampaignBar bar={bar} tabs={TABS} tab={ui.conquestTab} setTab={tab => changeUi(u => { u.conquestTab = tab; })}
-      held={reward ? { IMG_AETHER_SHARD: owed.shards, IMG_PW_BADGE_COMMON: owed.emblems } : {}} prefs={() => setPrefs(true)} under={!!reward}
+      held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward}
       extra={setting('devMode') && (
         // Dev mode: where the next Chaos Wheel stops, so each reward can be looked at
         <select class="cq-dev" aria-label={t('lblWebConquestDevWheel')} title={t('lblWebConquestDevWheel')} onChange={e => actions.devConquestWheel(e.currentTarget.value)}>
@@ -180,6 +180,6 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}><Page key={priced} tab={ui.conquestTab} model={model} actions={actions} /></div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
-    {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.conquestClaim()} />}
+    {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
   </>;
 }

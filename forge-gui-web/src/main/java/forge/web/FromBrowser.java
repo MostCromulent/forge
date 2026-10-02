@@ -21,7 +21,7 @@ final class FromBrowser {
     /** Messages that are only their name. */
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
-        campaignLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, trading,
+        campaignLeave, conquestMove, conquestBattle, rewardClaim, conquestParty, trading,
         conquestPlanes, conquestPrefs, conquestPrefsReset,
         editorClose, editorUndo }
 

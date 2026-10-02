@@ -6,10 +6,11 @@ import { mountPack, type Pack } from './conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
 import { pendingAmounts } from './conquestpending';
 import { reducedMotion } from './conquestmotion';
-import type { ConquestReward, ConquestStep } from './protocol';
+import type { Reward, RewardStep } from './protocol';
 import { t } from './text';
 
-export interface Owed { shards: number; emblems: number }
+/** What the reveal has yet to show, by the icon of the balance it was paid into. */
+export type Owed = Record<string, number>;
 
 export const wheelLabels = (): Record<WheelOutcome, string> => ({
   CHAOS: t('lblChaos'), BOOSTER: t('lblWebConquestWheelBooster'), DOUBLE_BOOSTER: t('lblWebConquestWheelBoosters'),
@@ -17,9 +18,9 @@ export const wheelLabels = (): Record<WheelOutcome, string> => ({
 });
 
 /** A step with nothing of its own to show: the packs before it have already said what their duplicates became. */
-const silent = (step: ConquestStep): boolean => step.kind === 'DUPLICATE_SHARDS';
+const silent = (step: RewardStep): boolean => step.kind === 'DUPLICATE_SHARDS';
 
-export function Reveal({ reward, onOwed, done }: { reward: ConquestReward; onOwed: (owed: Owed) => void; done: () => void }) {
+export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed: Owed) => void; done: () => void }) {
   const steps = reward.steps;
   // The emblem of a first conquest is shown over the wheel that follows it, so the two are one stop
   const first = steps[0]?.kind === 'CONQUER_EMBLEMS' && steps[1]?.kind === 'WHEEL' ? 1 : 0;
@@ -49,10 +50,10 @@ export function Reveal({ reward, onOwed, done }: { reward: ConquestReward; onOwe
 
   // The step on show has paid, except a pack, which pays card by card
   const packShards = step?.kind === 'BOOSTER' ? (step.cards ?? []).reduce((sum, c) => sum + c.shards, 0) : 0;
-  const after = pendingAmounts(steps, at + 1);
-  const owedShards = after.shards + packShards - released, owedEmblems = after.emblems;
+  const owed = pendingAmounts(steps, at + 1);
+  if (step?.kind === 'BOOSTER' && step.icon) owed[step.icon] = (owed[step.icon] ?? 0) + packShards - released;
   // Before the first paint, or the bar would show for a frame everything the reveal is about to give
-  useLayoutEffect(() => onOwed({ shards: owedShards, emblems: owedEmblems }), [owedShards, owedEmblems]);
+  useLayoutEffect(() => onOwed(owed), [JSON.stringify(owed)]);
 
   if (!step) return null;
   return (
@@ -81,7 +82,7 @@ function Gift({ icon, amount, title, text, button, next }: { icon: string; amoun
   );
 }
 
-function WheelStop({ step, emblem, next }: { step: ConquestStep; emblem: number; next: () => void }) {
+function WheelStop({ step, emblem, next }: { step: RewardStep; emblem: number; next: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const wheel = useRef<Wheel | null>(null);
   const spot = useRef(spotFor(step.outcome ?? ''));
@@ -122,7 +123,7 @@ function flyShards(from: DOMRect, arrived: () => void): void {
     { duration: 600, easing: 'cubic-bezier(.5,0,.3,1)' }).finished.then(() => { mote.remove(); arrived(); }, () => mote.remove());
 }
 
-function PackStop({ step, release, zoom, next }: { step: ConquestStep; release: (shards: number) => void; zoom: (image: string) => void; next: () => void }) {
+function PackStop({ step, release, zoom, next }: { step: RewardStep; release: (shards: number) => void; zoom: (image: string) => void; next: () => void }) {
   const host = useRef<HTMLDivElement>(null);
   const pack = useRef<Pack | null>(null);
   const [phase, setPhase] = useState<'sealed' | 'opening' | 'shown'>('sealed');

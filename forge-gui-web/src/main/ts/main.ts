@@ -109,9 +109,9 @@ const actions: Actions = {
     wire.campaignDelete(name);
   },
   // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
-  conquestClaim: () => {
-    model.conquestReward = null;
-    wire.conquestClaim();
+  rewardClaim: () => {
+    model.reward = null;
+    wire.rewardClaim();
     schedule();
   },
 };
@@ -259,7 +259,7 @@ function apply(msg: ServerMessage): void {
       if (msg.campaign !== 'conquest') {
         model.conquestState = null;
         model.campaignBar = null;
-        model.conquestReward = null;
+        model.reward = null;
         model.conquestParty = null;
         model.trading = null;
         model.conquestAether = null;
@@ -333,7 +333,7 @@ function apply(msg: ServerMessage): void {
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'conquestResult': model.conquestResult = msg; break;
-    case 'conquestReward': model.conquestReward = msg; break;
+    case 'reward': model.reward = msg; break;
     case 'conquestParty': model.conquestParty = msg; break;
     case 'trading': model.trading = msg; break;
     case 'conquestOptions': model.conquestOptions = msg; break;

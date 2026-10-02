@@ -543,6 +543,11 @@ public final class WebSession {
                 }
             });
             case "campaignRename", "campaignDelete" -> onCampaign(() -> campaignShelf(channel, msg));
+            case "rewardClaim" -> onCampaign(() -> {
+                if (stage instanceof InCampaign c && c.save() != null) {
+                    campaign(c.mode()).claim(campaignHost);
+                }
+            });
             case "trading", "trade" -> onCampaign(() -> {
                 if (stage instanceof InCampaign c && c.save() != null) {
                     final Campaign campaign = campaign(c.mode());
@@ -1336,7 +1341,7 @@ public final class WebSession {
             tell(campaign.saves());
         } else {
             campaign.page().forEach(this::tell);
-            final Record pending = campaign.reward();
+            final ToBrowser.Reward pending = campaign.reward();
             if (pending != null) {
                 tell(pending);
             }

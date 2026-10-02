@@ -1,15 +1,15 @@
 // The balances the server sends already hold the whole reward, so the bar shows them less whatever has yet to be revealed
 
-import type { ConquestStep } from './protocol';
+import type { RewardStep } from './protocol';
 
-/** The shards and emblems of every step at index from or later. A pack's duplicates are owed card by card. */
-export function pendingAmounts(steps: ConquestStep[], from: number): { shards: number; emblems: number } {
-  let shards = 0, emblems = 0;
+/** What every step at index from or later pays, by the icon of the balance it pays into. A pack pays through its cards, one by one. */
+export function pendingAmounts(steps: RewardStep[], from: number): Record<string, number> {
+  const owed: Record<string, number> = {};
+  const add = (icon: string | undefined, n: number) => { if (icon && n) owed[icon] = (owed[icon] ?? 0) + n; };
   for (const step of steps.slice(from)) {
-    // DUPLICATE_SHARDS repeats what the packs before it already hold
-    if (step.kind === 'SHARDS') shards += step.amount;
-    else if (step.kind === 'CONQUER_EMBLEMS' || step.kind === 'EMBLEMS') emblems += step.amount;
-    else if (step.kind === 'BOOSTER') for (const card of step.cards ?? []) shards += card.shards;
+    // A step with no icon pays nothing of its own: Conquest's closing total repeats what the packs before it hold
+    if (step.cards) for (const card of step.cards) add(step.icon, card.shards);
+    else add(step.icon, step.amount);
   }
-  return { shards, emblems };
+  return owed;
 }

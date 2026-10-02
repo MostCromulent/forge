@@ -4,7 +4,7 @@ import { skinIconUrl, imageUrl } from './images';
 import { artUrl } from './sleeves';
 import { CHAOS_MARK } from './conquestwheel';
 import { reducedMotion } from './conquestmotion';
-import type { ConquestPackCard } from './protocol';
+import type { PackCard } from './protocol';
 
 export interface PackSpec {
   name: string;
@@ -13,18 +13,18 @@ export interface PackSpec {
   /** The art's image key, or null for a chaos pack, which carries the chaos mark instead. */
   art: string | null;
   chaos: boolean;
-  cards: ConquestPackCard[];
+  cards: PackCard[];
   hint: string;
 }
 
 export interface PackHooks {
   /** A card has turned face up, at this place on the screen. */
-  flipped(card: ConquestPackCard, at: DOMRect): void;
+  flipped(card: PackCard, at: DOMRect): void;
   /** The pack has been clicked and is opening. */
   opening(): void;
   /** Every card is face up. */
   shown(): void;
-  zoom(card: ConquestPackCard): void;
+  zoom(card: PackCard): void;
 }
 
 export interface Pack {

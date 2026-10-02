@@ -328,11 +328,11 @@ public class ConquestSessionTest extends SessionsTest {
 
         host.forget();
         sessions.onMessage(reloaded, JsonCodec.message("leave"));
-        final JsonObject reward = reloaded.awaitMatching("conquestReward", r -> true, "the reward was not sent with the map");
+        final JsonObject reward = reloaded.awaitMatching("reward", r -> true, "the reward was not sent with the map");
         Assert.assertEquals(reward.getAsJsonArray("steps").size(), 3);
 
         final Recorder again = connect("host");
-        final JsonObject resent = again.awaitMatching("conquestReward", r -> true, "a reload lost the reward");
+        final JsonObject resent = again.awaitMatching("reward", r -> true, "a reload lost the reward");
         Assert.assertEquals(resent, reward);
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
@@ -342,10 +342,10 @@ public class ConquestSessionTest extends SessionsTest {
         onUi(() -> { });
         Assert.assertNull(FModel.getConquest().getActiveBattle(), "a battle started over a reward still to be shown");
 
-        send(again, JsonCodec.message("conquestClaim"));
+        send(again, JsonCodec.message("rewardClaim"));
         final Recorder third = connect("host");
         third.awaitMatching("conquestState", s -> true, "the map was not sent");
-        Assert.assertFalse(third.got.stream().anyMatch(m -> "conquestReward".equals(m.get("t").getAsString())),
+        Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())),
                 "an acknowledged reward was sent again");
     }
 
@@ -380,8 +380,8 @@ public class ConquestSessionTest extends SessionsTest {
         computerLoses(host);
         host.awaitMatching("conquestResult", r -> true, "no result was sent");
         send(host, JsonCodec.message("leave"));
-        host.awaitMatching("conquestReward", r -> true, "the reward was not sent");
-        send(host, JsonCodec.message("conquestClaim"));
+        host.awaitMatching("reward", r -> true, "the reward was not sent");
+        send(host, JsonCodec.message("rewardClaim"));
         host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the chaos battle did not start");
         awaitPriority(host);
         Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRules().getGamesPerMatch(), 3);

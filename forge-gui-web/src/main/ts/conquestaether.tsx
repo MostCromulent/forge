@@ -6,7 +6,7 @@ import { balance } from './campaign';
 import { ColourToggles, Pip, Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { ConquestAetherState, ConquestOption, ConquestPackCard } from './protocol';
+import type { ConquestAetherState, ConquestOption, PackCard } from './protocol';
 import { t, type TextKey } from './text';
 
 const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic'];
@@ -17,7 +17,7 @@ const shard = (size: number) => <img class="cq-shard" alt={t('lblAetherShards')}
 
 export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const a = model.conquestAether;
-  const [recent, setRecent] = useState<ConquestPackCard[]>([]);
+  const [recent, setRecent] = useState<PackCard[]>([]);
   const [zoom, setZoom] = useState<string | null>(null);
   useEffect(() => { actions.conquestAether({ colors: '', type: '', rarity: '', cmc: '', pull: false }); }, []);
   useEffect(() => { if (a?.pulled) setRecent(r => [a.pulled!, ...r].slice(0, MOST_RECENT)); }, [a?.pulled]);
