@@ -4,8 +4,10 @@ import com.google.common.primitives.Ints;
 import forge.deck.Deck;
 import forge.game.Game;
 import forge.game.GameEndReason;
+import forge.game.GameRules;
 import forge.game.GameType;
 import forge.game.player.Player;
+import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.LobbySlot;
@@ -30,6 +32,7 @@ import org.tinylog.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -259,6 +262,13 @@ public final class LocalGame {
         hosted.setLimitedMode(true);
         hosted.setLimitedType(limitedType);
         seatAndStart(seats);
+    }
+
+    /** A match a game mode prepared itself, played from the browser's seat as every other web match is. */
+    public void startPrepared(final String playerName, final GameRules rules, final Set<GameType> variants,
+            final List<RegisteredPlayer> players, final RegisteredPlayer human, final WebGuiGame gui) {
+        openHost(playerName, gui, () -> { }, (from, text) -> { });
+        hosted.startPrepared(rules, variants, players, human, webSeat);
     }
 
     private void seatAndStart(final List<Seat> seats) {
