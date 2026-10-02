@@ -587,6 +587,10 @@ public class ConquestSessionTest extends SessionsTest {
         edited(host, message("editorEdit", "op", "move", "name", commander.getName(), "from", "Commander", "to", "Main", "count", 1));
         edited(host, message("editorEdit", "op", "commander", "name", spares.get(0).getName(), "count", 1));
         edited(host, message("editorRename", "name", "Another name"));
+        edited(host, message("editorDeck", "op", "duplicate"));
+        edited(host, message("editorDeck", "op", "delete"));
+        edited(host, message("editorCheck", "format", "Commander", "unrestricted", false));
+        Assert.assertEquals(edited(host, message("editorCheck", "format", "Constructed", "unrestricted", true)).get("format").getAsString(), "PlanarConquest");
         final JsonObject replaced = edited(host, message("importCommit", "text",
                 "Commander\n1 " + commander.getName() + "\n\nDeck\n1 " + spares.get(0).getName() + "\n", "name", "Imported",
                 "format", "PlanarConquest", "unrestricted", false, "action", "replace"));
@@ -597,6 +601,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(stored.get(DeckSection.Commander).toFlatList(), List.of(commander.getCard()));
         Assert.assertNull(storedDeck("Another name"));
         Assert.assertNull(storedDeck("Imported"));
+        Assert.assertEquals(FModel.getConquest().getDecks().size(), 1, "the deck was copied");
         Assert.assertSame(commander.getDeck(), stored, "the commander does not hold the deck that was saved");
     }
 
@@ -621,6 +626,8 @@ public class ConquestSessionTest extends SessionsTest {
         final String stranger = stranger(data).getName();
         final int forests = data.getSelectedCommander().getDeck().getMain().countByName("Forest");
         final String list = "1 " + owned.getName() + " (" + otherPrinting.getEdition() + ")\n1 " + stranger + "\n5 Forest\n";
+        Assert.assertNotEquals(DeckImport.read(list, Check.of(GameType.PlanarConquest, null)).deck().getMain().toFlatList().get(0), owned,
+                "the list names the printing owned, so it shows nothing");
         editing(host);
         host.forget();
         sessions.onMessage(host, message("importRead", "request", 7, "text", list, "format", "PlanarConquest", "unrestricted", false));
@@ -686,6 +693,14 @@ public class ConquestSessionTest extends SessionsTest {
         final JsonObject row = host.awaitNewest("catalogue").getAsJsonArray("rows").get(0).getAsJsonObject();
         Assert.assertEquals(row.get("value").getAsInt(), cost);
 
+        // With too few shards the card stays where it is, and mobile's sentence says why
+        data.spendAEtherShards(data.getAEtherShards());
+        host.forget();
+        sessions.onMessage(host, exile(spare, true));
+        host.awaitMatching("notice", n -> true, "a retrieval that cannot be paid for was not refused");
+        Assert.assertTrue(data.isInExile(spare));
+        data.rewardAEtherShards(shards + value);
+
         host.forget();
         sessions.onMessage(host, exile(spare, true));
         host.awaitMatching("conquestBar", b -> b.get("shards").getAsInt() == shards + value - cost, "the retrieval was not charged");
@@ -717,5 +732,45 @@ public class ConquestSessionTest extends SessionsTest {
             Assert.assertEquals(c.get("selected").getAsBoolean(), c.get("name").getAsString().equals(second.getName()));
         }
         Assert.assertEquals(new ConquestData(made.getDirectory()).getSelectedCommander().getName(), second.getName());
+    }
+
+    // Fails if a card the rules allow any number of can go into a conquest's deck more times than it is owned, by
+    // adding it again or by importing a list that asks for many
+    @Test(timeOut = 120_000)
+    public void aCardIsNotAddedMoreTimesThanItIsOwned() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        final PaperCard rats = FModel.getMagicDb().getCommonCards().getCard("Relentless Rats");
+        data.unlockCard(rats);
+        final String deck = data.getSelectedCommander().getName();
+        editing(host);
+        edited(host, message("editorEdit", "op", "add", "name", rats.getName(), "to", "Main", "count", 1));
+        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1);
+        edited(host, message("editorEdit", "op", "add", "name", rats.getName(), "to", "Main", "count", 1));
+        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1, "a second copy was added of a card owned once");
+        edited(host, message("importCommit", "text", "20 " + rats.getName() + "\n", "name", "Imported", "format", "PlanarConquest",
+                "unrestricted", false, "action", "add"));
+        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1, "an import added copies that are not owned");
+    }
+
+    // Fails if a list read for a conquest's deck is read against the format the importer's control sends, under
+    // which an owned legendary creature is taken for the list's commander and never reaches the deck
+    @Test(timeOut = 120_000)
+    public void anImportIsReadAsAConquestDeckWhateverFormatIsAsked() throws Exception {
+        final Recorder host = hostInConquest(ConquestFixture.install());
+        final ConquestData data = FModel.getConquest().getModel();
+        PaperCard legend = null;
+        for (final PaperCard card : data.getCurrentPlane().getCommanders()) {
+            if (!data.hasUnlockedCard(card)) {
+                legend = card;
+            }
+        }
+        data.unlockCard(legend);
+        final String deck = data.getSelectedCommander().getName();
+        editing(host);
+        edited(host, message("importCommit", "text", "1 " + legend.getName() + "\n", "name", "Imported", "format", "Commander",
+                "unrestricted", false, "action", "add"));
+        Assert.assertEquals(storedDeck(deck).getMain().countByName(legend.getName()), 1, "the owned legendary creature did not reach the deck");
+        Assert.assertEquals(storedDeck(deck).get(DeckSection.Commander).toFlatList(), List.of(data.getSelectedCommander().getCard()));
     }
 }

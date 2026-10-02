@@ -130,7 +130,10 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
           <label class="namefield">{t('lblWebEditorDeckName')}
             <input value={name} maxLength={60} onInput={e => setTypedName(e.currentTarget.value)} />
           </label>
-          <CheckSelect model={model} value={check} change={(format, pool, none) => setCheck(none ? 'none' : `${format}|${pool ?? ''}`)} />
+          {/* A deck built from a collection is of one format, which the server reads the list as */}
+          {from === 'editor' && model.editor?.collection
+            ? <span class="check-fixed">{model.editor.check}</span>
+            : <CheckSelect model={model} value={check} change={(format, pool, none) => setCheck(none ? 'none' : `${format}|${pool ?? ''}`)} />}
         </div>
         <div class="imp-body">
           <div class="paste">

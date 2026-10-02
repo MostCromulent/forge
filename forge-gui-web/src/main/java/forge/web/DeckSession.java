@@ -123,8 +123,10 @@ final class DeckSession {
             // Reading a list looks up misspelt names across every card, which is too slow for the socket thread
             case "importRead" -> {
                 final ImportRead read = Wire.decode(msg, ImportRead.class);
-                final Check check = check(read.format(), read.cardPool(), read.unrestricted());
-                final DeckEditor.Collection collection = openCollection();
+                final DeckEditor onCollection = collectionEditor();
+                final DeckEditor.Collection collection = onCollection == null ? null : onCollection.collection();
+                // A collection's deck is of one format, whatever the importer's control says
+                final Check check = onCollection != null ? onCollection.check() : check(read.format(), read.cardPool(), read.unrestricted());
                 ui.runBackgroundTask("Import", () -> channel.send(DeckImport.result(read.request(), DeckImport.read(read.text(), check, collection), check, null)));
             }
             // Fetching waits on a web site
@@ -272,9 +274,9 @@ final class DeckSession {
         channel.send(new EditorMessage(editor.state(false)));
     }
 
-    /** The collection the open deck is built from, or null. */
-    private synchronized DeckEditor.Collection openCollection() {
-        return editor == null ? null : editor.collection();
+    /** The editor, when the deck open in it is built from a collection, or null. */
+    private synchronized DeckEditor collectionEditor() {
+        return editor != null && editor.collection() != null ? editor : null;
     }
 
     /** Puts away an editor open on a collection whose owner is being left. channel may be null. */
@@ -403,8 +405,8 @@ final class DeckSession {
 
     /** Saves an imported deck, then does what the player asked: puts it on a seat, opens it, or adds it to the open deck. */
     private synchronized void commit(final BrowserChannel channel, final ImportCommit c) {
-        final Check check = check(c.format(), c.cardPool(), c.unrestricted());
-        final DeckEditor.Collection collection = openCollection();
+        final DeckEditor.Collection collection = editor == null ? null : editor.collection();
+        final Check check = collection != null ? editor.check() : check(c.format(), c.cardPool(), c.unrestricted());
         final Deck deck = DeckImport.read(c.text(), check, collection).deck();
         // A list read against a collection is for the deck open on it, and makes no deck of its own
         if (collection != null && c.action() != FromBrowser.ImportAction.add && c.action() != FromBrowser.ImportAction.replace) {

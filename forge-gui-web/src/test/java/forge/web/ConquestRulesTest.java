@@ -442,4 +442,13 @@ public class ConquestRulesTest {
         data.exile(List.of(more.get(0)));
         assertSame(data.getSelectedCommander(), third);
     }
+
+    // Fails if the last commander can be exiled, which would leave the conquest with nobody to lead it and no way to open
+    @Test
+    public void theLastCommanderCannotBeExiled() {
+        final ConquestData data = ConquestFixture.create("Zendikar");
+        final ConquestCommander only = data.getSelectedCommander();
+        only.getDeck().getMain().clear();
+        assertNotNull(data.getExileProblem(List.of(only.getCard())));
+    }
 }

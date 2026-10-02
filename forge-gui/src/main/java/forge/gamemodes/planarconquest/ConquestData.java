@@ -299,6 +299,10 @@ public final class ConquestData {
 
     /** Why these cards cannot be exiled, or null if they can. */
     public String getExileProblem(Collection<PaperCard> cards) {
+        // A conquest with no commander has nobody to select, and cannot be opened
+        if (!commanders.isEmpty() && commanders.stream().allMatch(commander -> cards.contains(commander.getCard()))) {
+            return Localizer.getInstance().getMessage("lblLastCommanderCannotBeExiled");
+        }
         for (PaperCard card : cards) {
             if (planeswalker == card) {
                 return Localizer.getInstance().getMessage("lblCurrentPlaneswalkerCannotBeExiled");

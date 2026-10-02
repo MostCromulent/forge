@@ -795,11 +795,10 @@ final class DeckEditor {
     private int room(final PaperCard card) {
         final DeckFormat df = check.deckFormat();
         final int most = df.getMaxCardCopies(card);
-        if (most == Integer.MAX_VALUE) {
-            return Integer.MAX_VALUE;
-        }
-        final int byLimit = most - deck.getAllCardsInASinglePool(df.hasCommander(), false).countByName(card.getName());
-        if (collection == null) {
+        final int byLimit = most == Integer.MAX_VALUE ? Integer.MAX_VALUE
+                : most - deck.getAllCardsInASinglePool(df.hasCommander(), false).countByName(card.getName());
+        // A basic land is free; any other card, however many the rules allow, is only as many as are owned
+        if (collection == null || BASICS.containsKey(card.getName())) {
             return byLimit;
         }
         // The Commander section holds an owned copy too
@@ -837,6 +836,9 @@ final class DeckEditor {
             return null;
         }
         final int most = check.deckFormat().getMaxCardCopies(card);
+        if (most == Integer.MAX_VALUE) {
+            return Localizer.getInstance().getMessage("lblWebConquestNoneLeft", card.getName());
+        }
         return most == 1 ? Localizer.getInstance().getMessage("lblWebEditorOnlyOne", card.getName())
                 : Localizer.getInstance().getMessage("lblWebEditorCopiesAlready", most - room, most);
     }
