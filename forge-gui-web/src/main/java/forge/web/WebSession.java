@@ -1605,7 +1605,7 @@ public final class WebSession {
         // The winner of a match's last game is the match's winner
         final boolean wonMatch = game.isMatchOver() && won;
         lastResult = new LimitedResult(gauntlet.getCurrentRound(), gauntlet.getRounds(), gauntlet.getWins(), gauntlet.getLosses(),
-                game.isMatchOver(), wonMatch, wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
+                game.isMatchOver(), wonMatch && gauntlet.getCurrentRound() < gauntlet.getRounds());
         tell(lastResult);
     }
 

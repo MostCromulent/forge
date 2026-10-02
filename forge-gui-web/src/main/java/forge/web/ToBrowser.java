@@ -249,7 +249,7 @@ final class ToBrowser {
     record EditorState(String name, String check, String format, @Nullable String cardPool, boolean unrestricted,
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
-            @Nullable String verdict, int problemCount, boolean canUndo, @Nullable String landed, boolean onSeat,
+            @Nullable String verdict, boolean canUndo, @Nullable String landed,
             boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection) {
     }
 
@@ -387,8 +387,8 @@ final class ToBrowser {
     record GameStarted(Ref first) {
     }
 
-    static final List<Class<? extends Record>> EVENTS = List.of(CardMoved.class, CardDamaged.class,
-            PlayerDamaged.class, AttackersDeclared.class, Shuffled.class, GameStarted.class);
+    static final List<Class<? extends Record>> EVENTS = Wire.marked(ToBrowser.class, Event.class);
+
 
     @Message("prompt")
     record Prompt(String message, boolean priority, @Nullable Ref card, PromptButton ok, PromptButton cancel,
@@ -610,7 +610,7 @@ final class ToBrowser {
      * match was won with rounds still to play.
      */
     @Message("limitedResult")
-    record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean wonMatch, boolean nextRound) {
+    record LimitedResult(int round, int rounds, int wins, int losses, boolean matchOver, boolean nextRound) {
     }
 
     // ---- Planar Conquest ---------------------------------------------------------------------------------------
@@ -768,19 +768,11 @@ final class ToBrowser {
     }
 
     /** Every message record, which is what the TypeScript is generated from. */
-    static final List<Class<? extends Record>> MESSAGES = List.of(Hello.class, Presence.class, ErrorMessage.class, Notice.class,
-            Decks.class, DeckMatches.class, DeckDetailsMessage.class, ExtraChoices.class, LobbyMessage.class, Addresses.class, ChatLine.class,
-            CardSearch.class, Printings.class, HostChoice.class, StateMessage.class, Prompt.class, Playable.class,
-            Zones.class, Controls.class, DevState.class, DevDump.class, LogMessage.class, Detail.class, PlayerDetail.class, StackMenu.class, Sound.class,
-            Flash.class, GameOver.class, DrawOffer.class, AutoDecisions.class, CataloguePage.class, EditorMessage.class,
-            ImportResult.class, NameTaken.class, DeviceDeck.class, CardPools.class, CardPoolDetails.class, LimitedOptions.class, LimitedPools.class,
-            DraftState.class, LimitedResult.class,
-            ConquestSaves.class, ConquestBar.class, ConquestState.class, ConquestResult.class, ConquestReward.class,
-            ConquestParty.class, ConquestCollection.class, ConquestOptions.class,
-            ConquestAetherState.class, ConquestPlanes.class, ConquestStats.class, ConquestPrefs.class);
+    static final List<Class<? extends Record>> MESSAGES = Wire.marked(ToBrowser.class, Message.class);
 
-    static final List<Class<? extends Record>> REQUESTS = List.of(ChoicesRequest.class, OrderRequest.class, ManipulateRequest.class,
-            OptionRequest.class, TextRequest.class, DistributeRequest.class, SideboardRequest.class, AutoPassRequest.class);
+
+
+    static final List<Class<? extends Record>> REQUESTS = Wire.marked(ToBrowser.class, Request.class);
 
     /** The answer a request takes when nobody gives one, read back off its JSON. */
     static JsonElement defaultOf(final JsonObject request) {

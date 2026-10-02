@@ -94,7 +94,7 @@ final class DeckSession {
         if (editor == null) {
             return;
         }
-        channel.send(new EditorMessage(editor.state(editorSeat != null)));
+        channel.send(new EditorMessage(editor.state()));
         if (editor.target() instanceof DeckEditor.Device d) {
             channel.send(deviceDeck(d.id(), editor.deck(), editor.check().format()));
         }
@@ -163,7 +163,7 @@ final class DeckSession {
             channel.send(new Notice(refused, null, false));
         }
         if (editor != null) {
-            channel.send(new EditorMessage(editor.state(editorSeat != null)));
+            channel.send(new EditorMessage(editor.state()));
         }
     }
 
@@ -237,7 +237,7 @@ final class DeckSession {
         editorSeat = null;
         editorPath = "";
         if (channel != null) {
-            channel.send(new EditorMessage(editor.state(false)));
+            channel.send(new EditorMessage(editor.state()));
         }
     }
 
@@ -261,7 +261,7 @@ final class DeckSession {
         editorTable = lobby.table();
         editorPath = "";
         if (channel != null) {
-            channel.send(new EditorMessage(editor.state(false)));
+            channel.send(new EditorMessage(editor.state()));
         }
     }
 
@@ -273,7 +273,7 @@ final class DeckSession {
         eventPool = false;
         editorSeat = null;
         editorPath = "";
-        channel.send(new EditorMessage(editor.state(false)));
+        channel.send(new EditorMessage(editor.state()));
     }
 
     /** The editor, when the deck open in it is built from a collection, or null. */
@@ -420,7 +420,7 @@ final class DeckSession {
                 if (refused != null) {
                     channel.send(new Notice(refused, null, false));
                 }
-                channel.send(new EditorMessage(editor.state(editorSeat != null)));
+                channel.send(new EditorMessage(editor.state()));
             }
             return;
         }
@@ -454,7 +454,7 @@ final class DeckSession {
                 lobby.sendDecks(channel);
                 open(new EditorOpen(relisted(key, deck), null, c.seat(), false), check, channel);
                 if (editor != null) {
-                    channel.send(new EditorMessage(editor.state(editorSeat != null)));
+                    channel.send(new EditorMessage(editor.state()));
                 }
             }
             default -> lobby.sendDecks(channel);

@@ -710,11 +710,6 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override public void showCombat() { }
     @Override public void finishGame() { }
     @Override public void alertUser() { }
-    @Override public void enableOverlay() { }
-    @Override public void disableOverlay() { }
-    @Override public void showManaPool(final PlayerView player) { }
-    @Override public void hideManaPool(final PlayerView player) { }
-    @Override public void updateShards(final Iterable<PlayerView> shardsUpdate) { }
     @Override public void setPanelSelection(final CardView hostCard) { }
     @Override public void setPlayerAvatar(final LobbyPlayer player, final IHasIcon ihi) { }
     @Override public GameState getGamestate() { return null; }

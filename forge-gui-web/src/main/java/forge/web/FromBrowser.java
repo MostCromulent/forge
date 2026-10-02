@@ -25,7 +25,8 @@ final class FromBrowser {
     enum Plain { decks, claimHost, join, lobby, invite, leaveLobby, addresses, cardPoolDetails, netDecks, leave, quit, limitedLeave, poolClose, draftDiscard, gauntletNext, gauntletRestart, eventStart, eventNew,
         ok, cancel, endTurn, stopYield, autoPass, undo, concede,
         conquestLeave, conquestMove, conquestBattle, conquestClaim, conquestParty, conquestCollection,
-        conquestPlanes, conquestPrefs, conquestPrefsReset }
+        conquestPlanes, conquestPrefs, conquestPrefsReset,
+        editorClose, editorUndo }
 
     @Command
     record Bare(Plain t) {
@@ -138,12 +139,6 @@ final class FromBrowser {
     /** Opens a deck from the finder by key, or a new deck for a format. seat is the seat whose finder it came from; copy edits a copy. */
     @Command("editorOpen")
     record EditorOpen(@Nullable String key, @Nullable String newFormat, @Nullable Integer seat, boolean copy) {
-    }
-
-    enum EditorPlain { editorClose, editorUndo }
-
-    @Command
-    record EditorBare(EditorPlain t) {
     }
 
     enum EditOp { add, remove, move, commander, printings, lands, landSet, suggestLands }
@@ -440,9 +435,14 @@ final class FromBrowser {
     record ConquestCreate(String name, String plane, String commander, String planeswalker) {
     }
 
-    /** Makes a commander the one battles are fought with. */
-    @Command("conquestLead")
-    record ConquestSetLead(String commander) {
+    enum CommanderAction { conquestLead, conquestViewDeck, conquestEditDeck }
+
+    /**
+     * Something done with a commander: made the one battles are fought with, its deck asked for (answered as a deck's
+     * details are), or its deck opened in the editor over the conquest's cards.
+     */
+    @Command
+    record ConquestCommanderCommand(CommanderAction t, String commander) {
     }
 
     /** Makes an owned planeswalker the one the player travels as. */
@@ -450,19 +450,9 @@ final class FromBrowser {
     record ConquestWalker(String planeswalker) {
     }
 
-    /** Asks for a commander's deck, answered as a deck's details are. */
-    @Command("conquestViewDeck")
-    record ConquestViewDeck(String commander) {
-    }
-
     /** Exiles cards of the collection for shards, or brings exiled ones back. cards are image keys. */
     @Command("conquestExile")
     record ConquestExile(List<String> cards, boolean retrieve) {
-    }
-
-    /** Opens a commander's deck in the editor, over the conquest's cards. */
-    @Command("conquestEditDeck")
-    record ConquestEditDeck(String commander) {
     }
 
     /** Dev mode: the outcome the next wheel stops on, a ChaosWheelOutcome name, or empty to leave it to chance. */
@@ -471,18 +461,5 @@ final class FromBrowser {
     }
 
     /** Every command record, which is what the TypeScript is generated from. */
-    static final List<Class<? extends Record>> COMMANDS = List.of(Bare.class, SetName.class, Say.class, Ready.class,
-            SeatCommand.class, SetSeat.class, SetFormat.class, SetCardPool.class, SetVariant.class, SetArchenemy.class, SetSeatExtra.class, AskExtraChoices.class, AskDeckDetails.class, DeckQuery.class, HostChoiceAnswer.class,
-            SearchCards.class, AskPrintings.class, SleeveArt.class, Start.class, Reply.class, SelectCard.class,
-            KeyCommand.class, StackYield.class, PhaseCommand.class, SetStops.class, UseMana.class, SetSetting.class, Dev.class,
-            NextGame.class, DrawOfferCommand.class, AutoDecisionCommand.class, BrowseFormat.class, EditorOpen.class,
-            EditorBare.class, EditorEdit.class, EditorRename.class, EditorCheck.class, EditorDeck.class, DeckDelete.class, CatalogueQuery.class,
-            ImportRead.class, ImportFetch.class, ImportCommit.class, DeviceDecks.class, LimitedOpen.class, SealedCreate.class,
-            PoolOpen.class, PoolEdit.class, PoolDelete.class, PoolPlay.class,
-            DraftStart.class, DraftPick.class, DraftMove.class, DraftSave.class, SetLimited.class, EventSetup.class, BenchSeat.class, SetPlayerCount.class, SetMatchLength.class, SetMaxBracket.class,
-            EventDecksOnly.class, EventHostAgain.class, EventForget.class,
-            ConquestOpen.class, ConquestLoad.class, ConquestSelect.class, DevConquestWheel.class,
-            ConquestSetLead.class, ConquestWalker.class, ConquestViewDeck.class, ConquestExile.class, ConquestEditDeck.class,
-            ConquestRename.class, ConquestDelete.class, ConquestOptionsQuery.class, ConquestCreate.class,
-            ConquestAetherQuery.class, ConquestPlaneswalk.class, ConquestStatsQuery.class, ConquestPref.class);
+    static final List<Class<? extends Record>> COMMANDS = Wire.marked(FromBrowser.class, Command.class);
 }

@@ -483,7 +483,7 @@ final class DeckEditor {
         return change(null, () -> replaceCards(other, List.of(DeckSection.Main, DeckSection.Sideboard, DeckSection.Commander)));
     }
 
-    EditorState state(final boolean onSeat) {
+    EditorState state() {
         final DeckFormat df = check.deckFormat();
         // A collection's deck has a commander its format knows nothing of, whose colours the catalogue starts narrowed to
         final List<PaperCard> leaders = collection != null ? deck.getCommanders() : Legality.commanders(deck, check);
@@ -494,7 +494,7 @@ final class DeckEditor {
                 target instanceof Device ? "device" : "storage", copyOf,
                 cards(deck.get(DeckSection.Commander), legality), wanted, Legality.identityLetters(leaders),
                 groups(deck.getMain(), legality), cards(deck.get(DeckSection.Sideboard), legality), lands(),
-                DeckCatalog.stats(deck), legality.verdict(), legality.problemCount(), !undo.isEmpty(), landed, onSeat,
+                DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
                 collection == null ? null : collection.owner());

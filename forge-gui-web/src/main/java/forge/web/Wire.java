@@ -7,6 +7,7 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 
+import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -15,9 +16,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.RecordComponent;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * How the protocol's records become JSON and back. Every message the browser receives or sends is a record in
@@ -78,6 +81,13 @@ final class Wire {
     @Target(ElementType.RECORD_COMPONENT)
     @interface Ts {
         String value();
+    }
+
+    /** A holder's records that carry a mark, by name, which is the order the browser's types are written in. */
+    @SuppressWarnings("unchecked")
+    static List<Class<? extends Record>> marked(final Class<?> holder, final Class<? extends Annotation> mark) {
+        return Stream.of(holder.getDeclaredClasses()).filter(c -> c.isAnnotationPresent(mark))
+                .sorted(Comparator.comparing(Class::getSimpleName)).<Class<? extends Record>>map(c -> (Class<? extends Record>) c).toList();
     }
 
     private static final Gson GSON = new Gson();
