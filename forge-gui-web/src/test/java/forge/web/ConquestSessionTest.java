@@ -25,6 +25,7 @@ import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.Localizer;
 import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -312,9 +313,9 @@ public class ConquestSessionTest extends SessionsTest {
         final Recorder host = inBattle(data);
         sessions.onMessage(host, message("devConquestWheel", "outcome", "SHARDS"));
         computerLoses(host);
-        final JsonObject result = host.awaitMatching("conquestResult", r -> true, "no result was sent");
+        final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
         Assert.assertTrue(result.get("won").getAsBoolean());
-        Assert.assertTrue(result.get("firstConquest").getAsBoolean());
+        Assert.assertTrue(str(result, "line").endsWith(Localizer.getInstance().getMessage("lblWebConquestFirstConquest")), "the result does not say the event is conquered");
         final ConquestData model = FModel.getConquest().getModel();
         Assert.assertTrue(model.getCurrentPlaneData().hasConquered(model.getCurrentLocation()));
         Assert.assertEquals(model.getPlaneswalkEmblems(), emblems);
@@ -322,7 +323,7 @@ public class ConquestSessionTest extends SessionsTest {
 
         // A reload on the result screen shows the same result and records nothing again
         final Recorder reloaded = connect("host");
-        Assert.assertEquals(reloaded.awaitMatching("conquestResult", r -> true, "a reload lost the result"), result);
+        Assert.assertEquals(reloaded.awaitMatching("campaignResult", r -> true, "a reload lost the result"), result);
         Assert.assertEquals(model.getCurrentPlaneData().getEventRecord(model.getCurrentLocation()).getTotalWins(), 1);
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
 
@@ -349,6 +350,25 @@ public class ConquestSessionTest extends SessionsTest {
                 "an acknowledged reward was sent again");
     }
 
+    private static List<String> buttons(final JsonObject result) {
+        final List<String> actions = new ArrayList<>();
+        result.getAsJsonArray("buttons").forEach(b -> actions.add(b.getAsJsonObject().get("action").getAsString()));
+        return actions;
+    }
+
+    // Fails if a lost event does not offer to fight it again before leaving, or a won one offers anything but to leave
+    @Test(timeOut = 180_000)
+    public void theResultSaysWhichButtonsItOffers() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final Recorder host = inBattle(ConquestFixture.create("Zendikar"));
+        sessions.onMessage(host, JsonCodec.message("concede"));
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("restart", "leave"));
+        send(host, message("nextGame", "decision", "NEW"));
+        awaitPriority(host);
+        computerLoses(host);
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("leave"));
+    }
+
     // Fails if a lost Commander event restarted from the result screen does not start again at 30 life, or the loss is not recorded
     @Test(timeOut = 180_000)
     public void retryKeepsTheBattlesSetUp() throws Exception {
@@ -359,7 +379,7 @@ public class ConquestSessionTest extends SessionsTest {
         data.saveData();
         final Recorder host = inBattle(data);
         sessions.onMessage(host, JsonCodec.message("concede"));
-        final JsonObject result = host.awaitMatching("conquestResult", r -> true, "no result was sent");
+        final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
         Assert.assertFalse(result.get("won").getAsBoolean());
         Assert.assertEquals(FModel.getConquest().getModel().getCurrentPlaneData().getEventRecord(loc).getTotalLosses(), 1);
         send(host, message("nextGame", "decision", "NEW"));
@@ -378,7 +398,7 @@ public class ConquestSessionTest extends SessionsTest {
         final Recorder host = inBattle(data);
         sessions.onMessage(host, message("devConquestWheel", "outcome", "CHAOS"));
         computerLoses(host);
-        host.awaitMatching("conquestResult", r -> true, "no result was sent");
+        host.awaitMatching("campaignResult", r -> true, "no result was sent");
         send(host, JsonCodec.message("leave"));
         host.awaitMatching("reward", r -> true, "the reward was not sent");
         send(host, JsonCodec.message("rewardClaim"));

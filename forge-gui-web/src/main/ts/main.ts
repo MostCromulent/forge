@@ -255,7 +255,7 @@ function apply(msg: ServerMessage): void {
       model.campaignSave = msg.campaignSave ?? null;
       model.currentConquest = msg.currentConquest ?? null;
       // A battle's result belongs to its match, and a conquest's pages to the conquest
-      if (!msg.inMatch) model.conquestResult = null;
+      if (!msg.inMatch) model.campaignResult = null;
       if (msg.campaign !== 'conquest') {
         model.conquestState = null;
         model.campaignBar = null;
@@ -332,7 +332,7 @@ function apply(msg: ServerMessage): void {
     case 'conquestSaves': model.conquestSaves = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
-    case 'conquestResult': model.conquestResult = msg; break;
+    case 'campaignResult': model.campaignResult = msg; break;
     case 'reward': model.reward = msg; break;
     case 'conquestParty': model.conquestParty = msg; break;
     case 'trading': model.trading = msg; break;

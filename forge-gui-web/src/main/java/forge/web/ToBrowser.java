@@ -555,6 +555,15 @@ final class ToBrowser {
     record CampaignBar(String name, String line, List<Balance> balances) {
     }
 
+    /** A button of the result screen: action is nextGame, leave, restart, or quit, which leaves a match that is not over. */
+    record ResultButton(String label, String action, boolean primary) {
+    }
+
+    /** A game of a campaign's match ended. line is what the result screen says under its heading, when the mode has something to say. */
+    @Message("campaignResult")
+    record CampaignResult(boolean won, boolean matchOver, @Nullable String line, List<ResultButton> buttons) {
+    }
+
     /** One of a campaign's lists of cards, by the source its cards are asked for, and how many it holds. */
     record TradeList(String source, int count) {
     }
@@ -622,11 +631,6 @@ final class ToBrowser {
 
     @Message("conquestParty")
     record ConquestParty(List<ConquestCommanderRow> commanders, List<ConquestWalkerRow> planeswalkers) {
-    }
-
-    /** A battle's game ended. matchOver is false between the games of a chaos battle. */
-    @Message("conquestResult")
-    record ConquestResult(boolean won, boolean matchOver, boolean chaos, String event, boolean firstConquest) {
     }
 
     /** An option of one of the Aether's filters. cost is what a pull at that rarity costs. */

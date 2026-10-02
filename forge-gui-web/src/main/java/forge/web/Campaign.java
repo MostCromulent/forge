@@ -5,6 +5,7 @@ import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
+import forge.web.ToBrowser.CampaignResult;
 import forge.web.ToBrowser.CataloguePage;
 import forge.web.ToBrowser.Reward;
 import forge.web.ToBrowser.Trading;
@@ -51,10 +52,10 @@ interface Campaign {
     void claim(Host host);
 
     /** A game of the campaign's match ended: recorded and rewarded here. hostGame is the host's own view, which alone knows the match. */
-    Record gameOver(GameView hostGame);
+    CampaignResult gameOver(GameView hostGame);
 
     /** The result of the game just ended, while its match is still open, or null. */
-    Record result();
+    CampaignResult result();
 
     /** The match is left: its result goes with it. */
     void left();

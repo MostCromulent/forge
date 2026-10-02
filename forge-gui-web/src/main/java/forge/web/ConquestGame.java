@@ -51,7 +51,7 @@ import org.apache.commons.lang3.EnumUtils;
 final class ConquestGame implements Campaign {
     private ConquestLocation selection;
     /** The result of the game just ended, while its match is still open. */
-    private volatile ConquestResult result;
+    private volatile CampaignResult result;
     /** What the last won battle gave, until the browser says it has shown it. */
     private volatile Reward reward;
     private volatile boolean chaosOwed;
@@ -267,7 +267,7 @@ final class ConquestGame implements Campaign {
     }
 
     @Override
-    public ConquestResult result() {
+    public CampaignResult result() {
         return result;
     }
 
@@ -277,7 +277,7 @@ final class ConquestGame implements Campaign {
     }
 
     @Override
-    public ConquestResult gameOver(final GameView hostGame) {
+    public CampaignResult gameOver(final GameView hostGame) {
         final ConquestController controller = FModel.getConquest();
         final ConquestBattle battle = controller.getActiveBattle();
         if (battle == null || hostGame == null) {
@@ -293,8 +293,24 @@ final class ConquestGame implements Campaign {
             chaosOwed = steps.stream().anyMatch(s -> s.kind() == ConquestRewardStep.Kind.CHAOS_BATTLE);
             reward = new Reward(steps.stream().map(s -> step(s, battle)).toList());
         }
-        result = new ConquestResult(outcome == ConquestBattle.Outcome.WON, outcome != ConquestBattle.Outcome.UNFINISHED,
-                battle instanceof ConquestChaosBattle, battle.getEventName(), first);
+        final boolean won = outcome == ConquestBattle.Outcome.WON;
+        final boolean over = outcome != ConquestBattle.Outcome.UNFINISHED;
+        final boolean chaos = battle instanceof ConquestChaosBattle;
+        final Localizer text = Localizer.getInstance();
+        final List<ResultButton> buttons = new ArrayList<>();
+        // As mobile ends a battle: a win is acknowledged, and a lost event can be fought again but a chaos battle cannot
+        if (!over) {
+            buttons.add(new ResultButton(text.getMessage("btnContinue"), "nextGame", true));
+            buttons.add(new ResultButton(text.getMessage("lblQuit"), "quit", false));
+        } else if (won || chaos) {
+            buttons.add(new ResultButton(text.getMessage(won ? "lblGreat" : "lblOK"), "leave", true));
+        } else {
+            buttons.add(new ResultButton(text.getMessage("lblRetry"), "restart", true));
+            buttons.add(new ResultButton(text.getMessage("lblQuit"), "leave", false));
+        }
+        final String event = battle.getEventName();
+        result = new CampaignResult(won, over,
+                !won || chaos ? null : first ? event + " \u00b7 " + text.getMessage("lblWebConquestFirstConquest") : event, buttons);
         return result;
     }
 

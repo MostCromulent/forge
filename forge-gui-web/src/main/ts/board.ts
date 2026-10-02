@@ -790,10 +790,10 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   }
   // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
   const limited = model.limitedResult;
-  // A conquest battle's result says which buttons the ending offers, so the panel waits for it
-  const conquest = model.conquestResult;
-  if (model.campaignSave && !conquest) return;
-  const drawnFor = `${!!limited}/${conquest ? `${conquest.won}:${conquest.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
+  // A campaign's result says which buttons the ending offers, so the panel waits for it
+  const campaign = model.campaignResult;
+  if (model.campaignSave && !campaign) return;
+  const drawnFor = `${!!limited}/${campaign ? `${campaign.won}:${campaign.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
   if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
   root.dataset.drawnFor = drawnFor;
   root.hidden = false;
@@ -846,9 +846,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   q(root, '.word').textContent = word;
   q(root, '.sub').textContent = limited
     ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
-    : conquest && conquest.won && !conquest.chaos
-      ? (conquest.firstConquest ? `${conquest.event} · ${t('lblWebConquestFirstConquest')}` : conquest.event)
-      : sub;
+    : campaign?.line ?? sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
@@ -857,20 +855,16 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     b.onclick = onClick;
     buttons.append(b);
   };
-  // A conquest battle ends as mobile's does: a win is acknowledged, and a lost event can be fought again but a chaos battle cannot
-  if (conquest) {
-    if (!conquest.matchOver) {
-      add(t('btnContinue'), true, () => actions.nextGame());
-    } else if (conquest.won) {
-      add(t('lblGreat'), true, () => actions.leave());
-    } else if (conquest.chaos) {
-      add(t('lblOK'), true, () => actions.leave());
-    } else {
-      add(t('lblRetry'), true, () => actions.restartGame());
-    }
-    add(t('lblWebBoardViewBattlefield'), false, () => view(true));
-    if (!conquest.matchOver) add(t('lblQuit'), false, () => { actions.quitMatch(); actions.leave(); });
-    else if (!conquest.won && !conquest.chaos) add(t('lblQuit'), false, () => actions.leave());
+  // A campaign's match ends as its mode says, and the battlefield can be looked at whatever the mode offers
+  if (campaign) {
+    const does: Record<string, () => void> = {
+      nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(),
+      quit: () => { actions.quitMatch(); actions.leave(); },
+    };
+    campaign.buttons.forEach((b, i) => {
+      add(b.label, b.primary, does[b.action]);
+      if (i === 0) add(t('lblWebBoardViewBattlefield'), false, () => view(true));
+    });
     return;
   }
   if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());

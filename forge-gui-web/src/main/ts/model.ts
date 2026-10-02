@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, Trading, ConquestOptions, ConquestParty, ConquestResult, Reward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, ConquestPrefs, ConquestStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -114,7 +114,7 @@ export interface Model {
   campaignBar: CampaignBar | null;
   conquestState: ConquestState | null;
   /** The result of a battle's game, while its match is open; and what a won battle gave, until it has been shown. */
-  conquestResult: ConquestResult | null;
+  campaignResult: CampaignResult | null;
   reward: Reward | null;
   /** The commanders and planeswalkers found, once the Commanders page has asked. */
   conquestParty: ConquestParty | null;
@@ -142,7 +142,7 @@ export function createModel(): Model {
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
     campaign: null, campaignSave: null, currentConquest: null, conquestSaves: null, campaignBar: null, conquestState: null,
-    conquestResult: null, reward: null, conquestParty: null, trading: null, conquestOptions: null,
+    campaignResult: null, reward: null, conquestParty: null, trading: null, conquestOptions: null,
     conquestAether: null, conquestPlanes: null, conquestStats: null, conquestPrefs: null,
   };
 }
