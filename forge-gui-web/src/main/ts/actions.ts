@@ -94,6 +94,11 @@ export interface Actions {
   conquestClaim(): void;
   /** Dev mode: where the next Chaos Wheel stops. */
   devConquestWheel(outcome: string): void;
+  conquestRename(name: string, to: string): void;
+  conquestDelete(name: string): void;
+  /** Asks what a new conquest may start with: the planes, a plane's commanders, a commander's planeswalkers. */
+  conquestOptions(plane?: string, commander?: string): void;
+  conquestCreate(c: { name: string; plane: string; commander: string; planeswalker: string }): void;
   /** Asks for the commanders and planeswalkers found. */
   conquestParty(): void;
   conquestLead(commander: string): void;
@@ -250,6 +255,10 @@ export function createActions(send: Send): Actions {
     conquestBattle: () => send({ t: 'conquestBattle' }),
     conquestClaim: () => send({ t: 'conquestClaim' }),
     devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
+    conquestRename: (name, to) => send({ t: 'conquestRename', name, to }),
+    conquestDelete: name => send({ t: 'conquestDelete', name }),
+    conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
+    conquestCreate: c => send({ t: 'conquestCreate', ...c }),
     conquestParty: () => send({ t: 'conquestParty' }),
     conquestLead: commander => send({ t: 'conquestLead', commander }),
     conquestWalker: planeswalker => send({ t: 'conquestWalker', planeswalker }),

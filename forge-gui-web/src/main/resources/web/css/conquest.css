@@ -302,3 +302,41 @@ html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
 .cq-cards-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; max-height: 46vh; overflow-y: auto; }
 .cq-cards-list li { display: flex; gap: 10px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
 .cq-cards-list li span { margin-left: auto; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* A saved conquest's card: its plane's art across the head, with the planeswalker over it */
+.cq-save { grid-template-rows: auto auto 1fr auto; }
+.cq-save.current { border-color: color-mix(in srgb, var(--accent-2) 60%, #000); }
+.cq-save-art { position: relative; height: 92px; border-radius: 11px 11px 0 0; background: #111 center 30% / cover; }
+.cq-save-art::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(180deg, transparent 35%, var(--surface) 100%); }
+.cq-medal { position: absolute; right: 14px; top: 18px; z-index: 1; width: 46px; height: 46px; border-radius: 50%; object-fit: cover; object-position: 50% 18%; border: 2px solid var(--accent-2); box-shadow: 0 0 0 3px #0b0e14, 0 6px 14px #000a; background: var(--surface-2); }
+.cq-save .ev-top { padding-top: 6px; }
+.cq-save .ev-line .sp { flex: 1; }
+.cq-save .pct { font-variant-numeric: tabular-nums; color: var(--text); }
+.cq-pbar { height: 5px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.cq-pbar i { display: block; height: 100%; min-width: 4px; border-radius: 3px; background: var(--accent-2); }
+.cq-save .ev-menu button.plain { color: var(--text); }
+.cq-rename { display: flex; gap: 6px; }
+.cq-rename input { flex: 1; min-width: 0; background: var(--surface-2); border: 1px solid var(--line-bright); border-radius: 6px; padding: 6px 9px; color: var(--text); font: inherit; font-weight: 650; }
+.cq-rename button { padding: 6px 10px; font-size: 12.5px; }
+
+/* Starting a conquest: planes as tiles, commanders and planeswalkers as rows, and the ticket's picture */
+.cq-plane-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: max-content; gap: 8px; max-height: 372px; overflow-y: auto; padding: 2px; }
+.cq-plane { display: grid; gap: 2px; padding: 0 0 9px; overflow: hidden; border-radius: 9px; background: var(--bg); text-align: left; }
+.cq-plane .a { height: 70px; margin-bottom: 6px; background: #111 center 35% / cover; }
+.cq-plane b { padding: 0 10px; font-size: 13.5px; }
+.cq-plane span { padding: 0 10px; font-size: 11.5px; color: var(--muted); }
+.cq-plane:hover, .cq-plane:focus-visible { border-color: var(--accent-2); box-shadow: 0 0 0 1px var(--accent-2); }
+.cq-plane:hover b, .cq-plane:focus-visible b { color: var(--accent-2); }
+.cq-plane-desc { margin: 10px 0 0; min-height: 3.1em; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.cq-pick { display: grid; gap: 8px; }
+.cq-pick input { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; color: var(--text); font: inherit; }
+.cq-pick-list { display: grid; grid-auto-rows: max-content; gap: 4px; max-height: 410px; overflow-y: auto; padding: 2px; }
+.cq-pick-row { display: grid; grid-template-columns: 40px minmax(0, 1.3fr) 92px minmax(0, 1fr); align-items: center; gap: 12px; padding: 4px 12px 4px 4px; border-radius: 8px; background: var(--bg); text-align: left; }
+.cq-pick-row > i { width: 40px; height: 40px; border-radius: 5px; background: #111 center 20% / cover; }
+.cq-pick-row b { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cq-pick-row .r { font-size: 12px; color: var(--muted); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cq-pick-row:hover, .cq-pick-row:focus-visible { border-color: var(--accent-2); background: var(--accent-soft); }
+.cq-pick-row:hover b { color: var(--accent-2); }
+.cq-ticket-art { margin: 0 18px 10px; height: 120px; border-radius: 9px; border: 1px solid var(--line); background: #111 center 35% / cover; }
+.cq-ticket-cards { margin: 0 18px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cq-ticket-cards img { width: 100%; aspect-ratio: 63 / 88; border-radius: 6px; background: var(--surface-2); }

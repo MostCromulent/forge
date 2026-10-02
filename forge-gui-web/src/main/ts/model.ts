@@ -1,7 +1,7 @@
 // The browser's copy of the game: every object the server has sent, the prompt, the open questions and the table.
 // Messages from the server change it here, and everything on the page is drawn from it.
 
-import type { CardPoolDetails, CardPoolGroup, ConquestBar, ConquestCollection, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestBar, ConquestCollection, ConquestOptions, ConquestParty, ConquestResult, ConquestReward, ConquestSaves, ConquestState, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -123,6 +123,8 @@ export interface Model {
   conquestParty: ConquestParty | null;
   /** The sizes of the collection and the exile, once the Collection page has asked. */
   conquestCollection: ConquestCollection | null;
+  /** What a new conquest may start with, as far as the form has asked. */
+  conquestOptions: ConquestOptions | null;
 }
 
 export function createModel(): Model {
@@ -138,7 +140,7 @@ export function createModel(): Model {
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
     inConquest: false, conquest: null, currentConquest: null, conquestSaves: null, conquestBar: null, conquestState: null,
-    conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null,
+    conquestResult: null, conquestReward: null, conquestParty: null, conquestCollection: null, conquestOptions: null,
   };
 }
 

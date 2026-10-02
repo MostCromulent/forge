@@ -8,6 +8,8 @@ import { shortDay } from './limited';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
 import { Collection } from './conquestcollection';
+import { NewConquest } from './conquestnew';
+import { artUrl } from './sleeves';
 import { Reveal, wheelLabels, type Owed } from './conquestreward';
 import { setting } from './settings';
 import type { Actions } from './actions';
@@ -17,55 +19,118 @@ import { t, type TextKey } from './text';
 
 export function Conquest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.conquest !== null;
+  // The form that starts a conquest takes the shelf's place, and gives it back when left or when its conquest opens
+  const [creating, setCreating] = useState(false);
+  useEffect(() => { if (open) setCreating(false); }, [open]);
   return (
     <div class={open ? 'cq-shell' : 'limited-page'}>
       <PageHeader class="limited-head">
         <div class="head-right">
           <HeadControls />
-          <button onClick={() => actions.conquestLeave()}>{t('lblBack')}</button>
+          <button onClick={() => (creating && !open ? setCreating(false) : actions.conquestLeave())}>{t('lblBack')}</button>
         </div>
       </PageHeader>
-      {open ? <Campaign model={model} actions={actions} /> : <Shelf model={model} actions={actions} />}
+      {open ? <Campaign model={model} actions={actions} />
+        : <Shelf model={model} actions={actions} creating={creating} setCreating={setCreating} />}
     </div>
   );
 }
 
-/** The saved conquests as cards, each with the one thing to do next. */
-function Shelf({ model, actions }: { model: Model; actions: Actions }) {
-  const saves = model.conquestSaves?.saves;
+/** The saved conquests as cards, each with the one thing to do next, after a card that starts a new one. */
+function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
+  const saves = model.conquestSaves;
   const trail = [
     { label: t('lblWebLimitedStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.conquestLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.conquestLeave(); } },
-    { label: t('lblPlanarConquest') },
+    creating ? { label: t('lblPlanarConquest'), go: () => setCreating(false) } : { label: t('lblPlanarConquest') },
+    ...(creating ? [{ label: t('lblWebConquestNew') }] : []),
   ];
   return <>
-    <SetupHead trail={trail} title={t('lblWebConquestYours')} />
-    {model.error && <p class="limited-error">{model.error}</p>}
-    {!saves ? <p class="muted pools-wait">{t('lblWebConquestReading')}</p>
-      : !saves.length ? <p class="muted pools-wait">{t('lblWebConquestNone')}</p>
-      : <div class="event-shelf">{saves.map(s => <SaveCard key={s.name} save={s} actions={actions} />)}</div>}
+    <SetupHead trail={trail} title={creating ? t('lblWebConquestNew') : t('lblWebConquestYours')} />
+    {model.error && !creating && <p class="limited-error">{model.error}</p>}
+    {creating ? <NewConquest model={model} actions={actions} />
+      : !saves ? <p class="muted pools-wait">{t('lblWebConquestReading')}</p>
+      : <Saves saves={saves.saves} current={saves.current ?? null} actions={actions} create={() => setCreating(true)} />}
   </>;
 }
 
-function SaveCard({ save, actions }: { save: ConquestSave; actions: Actions }) {
+function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; current: string | null; actions: Actions; create: () => void }) {
+  const [menu, setMenu] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  // The menu closes on any press outside it, as the table's menus do
+  useEffect(() => {
+    if (menu === null) return;
+    const outside = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.ev-more')) setMenu(null); };
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [menu]);
   return (
-    <article class="ev cq-save">
-      <div class="ev-top">
-        <b>{save.name}</b>
-        {save.saved && <span class="sub">{t('lblWebConquestSaved', shortDay(save.saved))}</span>}
-      </div>
-      <div class="ev-mid">
-        <span class="ev-line"><img class="cq-face" alt="" src={imageUrl(save.walkerImage)} />{save.planeswalker} - {save.plane}</span>
-        <span class="ev-line dim">
-          {save.progress} · {t('lblWebConquestCards', save.cards)}
-          <Purse icon="IMG_AETHER_SHARD" n={save.shards} label={t('lblAetherShards')} />
-          <Purse icon="IMG_PW_BADGE_COMMON" n={save.emblems} label={t('lblPlaneswalkEmblems')} />
-        </span>
-      </div>
-      <div class="ev-foot">
-        <button class="primary" onClick={() => actions.conquestLoad(save.name)}>{t('lblWebLimitedPlay')}</button>
-      </div>
-    </article>
+    <div class="event-shelf">
+      <button class="ev new" onClick={create}>
+        <span class="plus" aria-hidden="true">+</span>
+        <b>{t('lblWebConquestNew')}</b>
+      </button>
+      {saves.map(s => (
+        <article key={s.name} class={s.name === current ? 'ev cq-save current' : 'ev cq-save'}>
+          <div class="cq-save-art" style={{ backgroundImage: `url("${artUrl(s.art)}")` }}>
+            <img class="cq-medal" alt="" src={imageUrl(s.walkerImage)} />
+          </div>
+          <div class="ev-top">
+            {renaming === s.name
+              ? (
+                <form class="cq-rename" onSubmit={e => {
+                  e.preventDefault();
+                  const to = new FormData(e.currentTarget).get('name')?.toString().trim();
+                  setRenaming(null);
+                  if (to && to !== s.name) actions.conquestRename(s.name, to);
+                }}>
+                  <input name="name" defaultValue={s.name} maxLength={60} aria-label={t('lblConquestName')} autoFocus
+                    onKeyDown={e => { if (e.key === 'Escape') setRenaming(null); }} />
+                  <button class="primary" type="submit">{t('lblRename')}</button>
+                  <button type="button" onClick={() => setRenaming(null)}>{t('lblCancel')}</button>
+                </form>
+              )
+              : <b>{s.name}</b>}
+            <span class="sub">{s.planeswalker} - {s.plane}</span>
+          </div>
+          <div class="ev-mid">
+            <div class="cq-pbar"><i style={{ width: s.progress }} /></div>
+            <span class="ev-line dim">
+              <b class="pct">{s.progress}</b>
+              <span class="sp" />
+              {t('lblWebConquestCards', s.cards)}
+              <Purse icon="IMG_AETHER_SHARD" n={s.shards} label={t('lblAetherShards')} />
+              <Purse icon="IMG_PW_BADGE_COMMON" n={s.emblems} label={t('lblPlaneswalkEmblems')} />
+            </span>
+          </div>
+          <div class="ev-foot">
+            {deleting === s.name
+              ? <>
+                  <span class="ev-ask">{t('lblAreYouSuerDeleteConquest', s.name)}</span>
+                  <span class="sp" />
+                  <button onClick={() => setDeleting(null)}>{t('lblCancel')}</button>
+                  <button class="danger" onClick={() => { setDeleting(null); actions.conquestDelete(s.name); }}>{t('lblDelete')}</button>
+                </>
+              : <>
+                  <button class="primary" onClick={() => actions.conquestLoad(s.name)}>{t('lblWebLimitedPlay')}</button>
+                  {s.saved && <span class="ev-ask">{t('lblWebConquestSaved', shortDay(s.saved))}</span>}
+                  <span class="sp" />
+                  <span class="ev-more">
+                    <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', s.name)} aria-expanded={menu === s.name}
+                      onClick={() => setMenu(menu === s.name ? null : s.name)}>⋯</button>
+                    {menu === s.name && (
+                      <div class="ev-menu" role="menu">
+                        <button role="menuitem" class="plain" onClick={() => { setMenu(null); setRenaming(s.name); }}>{t('lblRename')}</button>
+                        <button role="menuitem" onClick={() => { setMenu(null); setDeleting(s.name); }}>{t('lblDelete')}</button>
+                      </div>
+                    )}
+                  </span>
+                </>}
+          </div>
+        </article>
+      ))}
+    </div>
   );
 }
 

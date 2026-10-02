@@ -98,6 +98,19 @@ const actions: Actions = {
     model.error = null;
     wire.sealedCreate(c);
   },
+  // What the last one was refused for is no longer what the page should say
+  conquestCreate: c => {
+    model.error = null;
+    wire.conquestCreate(c);
+  },
+  conquestRename: (name, to) => {
+    model.error = null;
+    wire.conquestRename(name, to);
+  },
+  conquestDelete: name => {
+    model.error = null;
+    wire.conquestDelete(name);
+  },
   // A reward that has been shown leaves the model at once, so its dialog closes without waiting for the server
   conquestClaim: () => {
     model.conquestReward = null;
@@ -324,6 +337,7 @@ function apply(msg: ServerMessage): void {
     case 'conquestReward': model.conquestReward = msg; break;
     case 'conquestParty': model.conquestParty = msg; break;
     case 'conquestCollection': model.conquestCollection = msg; break;
+    case 'conquestOptions': model.conquestOptions = msg; break;
     case 'draft':
       model.draft = msg;
       model.error = null;

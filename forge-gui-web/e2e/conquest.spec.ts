@@ -117,3 +117,35 @@ test('a deck is edited and a card is exiled', async ({ page }) => {
   await expect(page.locator('.cq-coll-bar .seg button').nth(1)).toContainText('(1)');
   await expect(page.locator('.cq-purse')).toContainText((3000 + value).toLocaleString('en-GB'));
 });
+
+// Fails if a conquest cannot be started from the form and opened on its map, or cannot then be renamed and deleted
+// from the list of saved conquests
+test('a conquest is started, renamed and deleted', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=conquest]');
+  await page.locator('.ev.new').click();
+  await page.locator('.cq-plane').first().click();
+  await page.locator('.cq-pick-row').first().click();
+  await expect(page.locator('.stp.done')).toHaveCount(2);
+  await page.locator('.cq-pick-row').first().click();
+  await page.locator('.stp-open input[type=text]').fill('Probe conquest');
+  await page.locator('.stp-open').getByRole('button', { name: 'Continue' }).click();
+  await page.locator('.ticket-foot .primary').click();
+  await expect(page.locator('.cq-id b')).toHaveText('Probe conquest', { timeout: 30_000 });
+  await expect(page.locator('.cq-tile.open')).toHaveCount(1);
+
+  await page.getByRole('button', { name: 'Back' }).click();
+  const card = (name: string) => page.locator('.cq-save', { hasText: name });
+  await card('Probe conquest').locator('.more').click();
+  await page.getByRole('menuitem', { name: 'Rename' }).click();
+  await card('Rename').locator('input').fill('Probe renamed');
+  await card('Rename').getByRole('button', { name: 'Rename' }).click();
+  await expect(card('Probe renamed')).toHaveCount(1);
+  await card('Probe renamed').locator('.more').click();
+  await page.getByRole('menuitem', { name: 'Delete' }).click();
+  await card('Probe renamed').getByRole('button', { name: 'Delete' }).click();
+  await expect(card('Probe renamed')).toHaveCount(0);
+  await expect(card('Fixture conquest')).toHaveCount(1);
+});

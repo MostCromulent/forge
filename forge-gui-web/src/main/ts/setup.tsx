@@ -10,6 +10,8 @@ import { t, type TextKey } from './text';
 export interface Step<V> {
   id: string;
   label: string;
+  /** What the step is called once it is folded or still to come, when the question is too long for a line's label. */
+  short?: string;
   /** What the question is about, shown while it is still to come. */
   hint: string;
   /** The answers this step owns, cleared when it or an earlier step is answered again. */
@@ -51,7 +53,11 @@ function reopen<V>(steps: Step<V>[], v: V, id: string): V {
  * with no value yet says so.
  */
 export interface Ticket<V> {
-  title: string;
+  /** The small words over the title; "Your event" when left out. */
+  kicker?: string;
+  title: string | ((v: V) => string);
+  /** A picture of the choices so far, between the title and the rows. */
+  picture?: (v: V) => JSX.Element | null;
   rows: (v: V) => [string, string | null][];
   /** What the button does, under it. */
   note: string;
@@ -69,8 +75,12 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
     return (
       <div class="wiz-ticket">
         {questions}
-        <aside class="ticket" aria-label={t('lblWebSetupYourEvent')}>
-          <div class="ticket-head"><span class="ticket-kicker">{t('lblWebSetupYourEvent')}</span><b>{ticket.title}</b></div>
+        <aside class="ticket" aria-label={ticket.kicker ?? t('lblWebSetupYourEvent')}>
+          <div class="ticket-head">
+            <span class="ticket-kicker">{ticket.kicker ?? t('lblWebSetupYourEvent')}</span>
+            <b>{typeof ticket.title === 'string' ? ticket.title : ticket.title(value)}</b>
+          </div>
+          {ticket.picture?.(value)}
           <dl>
             {ticket.rows(value).map(([name, v]) => <>
               <dt key={name}>{name}</dt><dd class={v === null ? 'pending' : undefined}>{v ?? t('lblWebSetupNotChosenYet')}</dd>
@@ -79,7 +89,7 @@ export function StepForm<V>({ title, steps, value, onChange, sentence, action, s
           <div class="ticket-foot">
             {problem}
             {button}
-            <small>{ticket.note}</small>
+            {ticket.note && <small>{ticket.note}</small>}
           </div>
         </aside>
       </div>
@@ -111,7 +121,7 @@ function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; val
           return (
             <div key={step.id} class="stp done">
               <span class="num" aria-hidden="true">✓</span>
-              <span class="lab">{step.label}</span>
+              <span class="lab">{step.short ?? step.label}</span>
               <span class="val">{step.answer(value)}</span>
               <button class="link" onClick={() => onChange(reopen(steps, value, step.id))}>{t('lblEdit')}</button>
             </div>
@@ -127,7 +137,7 @@ function Questions<V>({ steps, value, onChange, title }: { steps: Step<V>[]; val
         }
         return (
           <div key={step.id} class="stp todo">
-            <span class="num">{i + 1}</span><span class="lab">{step.label}</span><span class="val">{step.hint}</span>
+            <span class="num">{i + 1}</span><span class="lab">{step.short ?? step.label}</span><span class="val">{step.hint}</span>
           </div>
         );
       })}
@@ -574,7 +584,7 @@ function PackCount({ extra, done }: { extra: boolean; done: (n: number) => void 
   );
 }
 
-function TextStep({ placeholder, initial, done }: { placeholder: string; initial: string; done: (text: string) => void }) {
+export function TextStep({ placeholder, initial, done }: { placeholder: string; initial: string; done: (text: string) => void }) {
   const [text, setText] = useState(initial);
   const ok = text.trim().length > 0;
   return (
