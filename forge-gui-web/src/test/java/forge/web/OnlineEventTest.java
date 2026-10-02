@@ -93,8 +93,7 @@ public class OnlineEventTest extends SessionsTest {
         host.awaitLobby(l -> l.getAsJsonArray("seats").get(hostSeat).getAsJsonObject().get("ready").getAsBoolean(),
                 "the host never showed as ready");
 
-        host.forget();
-        sessions.onMessage(host, JsonCodec.message("eventStart"));
+        send(host, JsonCodec.message("eventStart"));
         host.awaitMatching("error", e -> e.get("message").getAsString().contains("Guest"),
                 "the event started with the guest not ready");
 

@@ -40,8 +40,6 @@ final class ScriptedBrowser implements BrowserChannel {
     private final Set<Integer> answered = ConcurrentHashMap.newKeySet();
     private final AtomicInteger requests = new AtomicInteger();
     private final AtomicInteger retries = new AtomicInteger();
-    /** Set once the game has refused the same click this many times running; the prompt it stalled on. */
-    volatile String stuck;
     private final AtomicLong promptVersion = new AtomicLong();
     private volatile boolean released;
     private volatile JsonObject lastPrompt;
@@ -51,24 +49,6 @@ final class ScriptedBrowser implements BrowserChannel {
     ScriptedBrowser(final WebGuiGame gui, final long holdMillis) {
         this.gui = gui;
         this.holdMillis = holdMillis;
-    }
-
-    /** The turn the browser has been told about, or 0 before the first one. */
-    int turn() {
-        final JsonObject game = model.objectsCopy().get(root);
-        return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
-    }
-
-    /** The most permanents any one player has, as the browser knows it. */
-    int widestBattlefield() {
-        int widest = 0;
-        final Map<Integer, JsonObject> objects = model.objectsCopy();
-        for (final JsonObject o : objects.values()) {
-            if (o.has("Battlefield")) {
-                widest = Math.max(widest, o.getAsJsonArray("Battlefield").size());
-            }
-        }
-        return widest;
     }
 
     void release(final String... cardNames) {
@@ -156,7 +136,6 @@ final class ScriptedBrowser implements BrowserChannel {
                 return;
             }
             if (retries.incrementAndGet() > MAX_RETRIES) {
-                stuck = prompt.toString();
                 return;
             }
             actOnLatestPrompt();

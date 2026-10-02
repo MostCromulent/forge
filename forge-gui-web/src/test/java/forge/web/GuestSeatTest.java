@@ -29,9 +29,7 @@ public class GuestSeatTest extends SessionsTest {
         hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean(),
                 "asking for the host's seat did not take it");
         // Another test may have left the host at a table, which a reconnect is shown again; only the new one counts
-        hostBrowser.forget();
-
-        sessions.onMessage(hostBrowser, message("setName", "name", "Host"));
+        send(hostBrowser, message("setName", "name", "Host"));
         sessions.onMessage(hostBrowser, JsonCodec.message("invite"));
         final JsonObject hosted = hostBrowser.awaitLobbyWithSeat();
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
@@ -73,7 +71,7 @@ public class GuestSeatTest extends SessionsTest {
         // The guest's deck is theirs, chosen from their own list, and the host has to see it or cannot start
         sessions.onMessage(guestBrowser, JsonCodec.message("decks"));
         final String deck = legalDeck(guestBrowser.awaitNewest("decks"));
-        final JsonObject choose = seatMessage("setSeat", guestSeat);
+        final JsonObject choose = message("setSeat", "index", guestSeat);
         choose.addProperty("deck", deck);
         sessions.onMessage(guestBrowser, choose);
         final JsonObject table = hostBrowser.awaitLobby(l -> l.getAsJsonArray("seats").size() > guestSeat
@@ -97,8 +95,7 @@ public class GuestSeatTest extends SessionsTest {
     public void aGuestFollowsTheHostIntoTheMatch() throws Exception {
         final Recorder host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
-        host.forget();
-        sessions.onMessage(host, JsonCodec.message("invite"));
+        send(host, JsonCodec.message("invite"));
         final JsonObject hosted = host.awaitLobbyWithSeat();
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
 
@@ -110,7 +107,7 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(host, JsonCodec.message("decks"));
         final String deck = legalDeck(host.awaitNewest("decks"));
         for (final Recorder browser : List.of(host, guest)) {
-            final JsonObject choose = seatMessage("setSeat", (browser == host ? hosted : seated).get("mySeat").getAsInt());
+            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
             sessions.onMessage(browser, choose);
             sessions.onMessage(browser, message("ready", "ready", true));
@@ -135,12 +132,6 @@ public class GuestSeatTest extends SessionsTest {
         final JsonObject controls = guest.awaitNewest("controls", "the guest was never sent its controls");
         Assert.assertEquals(controls.get("myStops").toString(), "[\"MAIN2\"]",
                 "the match did not open with the stops the guest set in match setup");
-    }
-
-    /** The guest's own seat in a lobby table. */
-    private static JsonObject mySeat(final JsonObject table) {
-        final int mine = table.get("mySeat").getAsInt();
-        return mine < 0 ? null : table.getAsJsonArray("seats").get(mine).getAsJsonObject();
     }
 
     /** The first deck in a list that is built and legal, rather than generated when the game starts. */
@@ -177,12 +168,6 @@ public class GuestSeatTest extends SessionsTest {
             }
         }
         return out.toString();
-    }
-
-    private static JsonObject seatMessage(final String type, final int index) {
-        final JsonObject m = JsonCodec.message(type);
-        m.addProperty("index", index);
-        return m;
     }
 
     // Fails if lowering the count removes a seat a person holds, or keeps an open seat over a computer's

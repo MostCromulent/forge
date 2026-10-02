@@ -107,11 +107,6 @@ final class Recorder implements BrowserChannel {
         return found(awaitNewest(type, wanted), why);
     }
 
-    JsonObject awaitAfter(final int from, final String type, final Predicate<JsonObject> wanted, final String why)
-            throws InterruptedException {
-        return found(awaitAfter(from, type, wanted), why);
-    }
-
     JsonObject awaitLobby(final Predicate<JsonObject> wanted, final String why) throws InterruptedException {
         return found(awaitLobby(wanted), why);
     }

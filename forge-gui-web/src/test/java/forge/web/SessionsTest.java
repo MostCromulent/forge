@@ -66,13 +66,18 @@ abstract class SessionsTest {
         return browser;
     }
 
+    /** Sends a browser's message with what it was told before forgotten, so a wait that follows is answered by what this brings. */
+    void send(final Recorder browser, final JsonObject message) {
+        browser.forget();
+        sessions.onMessage(browser, message);
+    }
+
     /** The host, named Host, at a fresh table of its own that open ("lobby" or "invite") starts. */
     Recorder hostAt(final String open) throws InterruptedException {
         final Recorder host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
-        host.forget();
-        sessions.onMessage(host, JsonCodec.message(open));
+        send(host, JsonCodec.message(open));
         // The table an earlier test left can still speak until the new one is open, and only then is a command taken
         final JsonObject opening = host.awaitMatching("hello", h -> h.get("joining").getAsBoolean(), "the host's table never started opening");
         final JsonObject opened = host.awaitMatching("hello", h -> host.got.indexOf(h) > host.got.indexOf(opening)

@@ -11,7 +11,6 @@ import forge.game.phase.PhaseType;
 import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.net.DeltaPacket;
-import forge.gui.GuiBase;
 import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -24,10 +23,6 @@ public class ActiveClientTest {
     @BeforeClass
     public void setUp() {
         WebTestSupport.initModel();
-    }
-
-    private static void onUi(final Runnable r) {
-        GuiBase.getInterface().invokeInEdtAndWait(r);
     }
 
     // Basics only: the AI does nothing, and the cards a test needs are placed with a GameState, never drawn
