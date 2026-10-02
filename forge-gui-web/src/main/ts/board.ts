@@ -846,7 +846,10 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   }
   // A gauntlet's result and the match's score follow the game's end, so a panel drawn before they arrive is drawn again
   const limited = model.limitedResult;
-  const drawnFor = `${!!limited}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
+  // A conquest battle's result says which buttons the ending offers, so the panel waits for it
+  const conquest = model.conquestResult;
+  if (model.conquest && !conquest) return;
+  const drawnFor = `${!!limited}/${conquest ? `${conquest.won}:${conquest.matchOver}` : ''}/${model.matchScore.map(s => `${s.player.ref}:${s.won}`).join(',')}`;
   if (!root.hidden && root.dataset.drawnFor === drawnFor) return;
   root.dataset.drawnFor = drawnFor;
   root.hidden = false;
@@ -899,7 +902,9 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   q(root, '.word').textContent = word;
   q(root, '.sub').textContent = limited
     ? t('lblWebBoardGauntletResult', sub, limited.round, limited.rounds, limited.wins, limited.losses)
-    : sub;
+    : conquest && conquest.won && !conquest.chaos
+      ? (conquest.firstConquest ? `${conquest.event} · ${t('lblWebConquestFirstConquest')}` : conquest.event)
+      : sub;
   const buttons = q(root, '.actions');
   const add = (label: string, primary: boolean, onClick: () => void) => {
     const b = document.createElement('button');
@@ -908,6 +913,23 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     b.onclick = onClick;
     buttons.append(b);
   };
+  // A conquest battle ends as mobile's does: a win is acknowledged, a lost event can be fought again, and a chaos
+  // battle goes on to its next game
+  if (conquest) {
+    if (!conquest.matchOver) {
+      add(t('btnContinue'), true, () => actions.nextGame());
+    } else if (conquest.won) {
+      add(t('lblGreat'), true, () => actions.leave());
+    } else if (conquest.chaos) {
+      add(t('lblOK'), true, () => actions.leave());
+    } else {
+      add(t('lblRetry'), true, () => actions.restartGame());
+    }
+    add(t('lblWebBoardViewBattlefield'), false, () => view(true));
+    if (!conquest.matchOver) add(t('lblQuit'), false, () => { actions.quitMatch(); actions.leave(); });
+    else if (!conquest.won && !conquest.chaos) add(t('lblQuit'), false, () => actions.leave());
+    return;
+  }
   if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());
   if (!matchOver) add(t('lblWebBoardNextGame'), true, () => actions.nextGame());
   add(t('lblWebBoardViewBattlefield'), false, () => view(true));

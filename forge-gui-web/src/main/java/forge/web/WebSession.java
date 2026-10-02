@@ -1075,7 +1075,10 @@ public final class WebSession {
                 now instanceof Event, now instanceof Event e ? e.pool() : null, isHost ? OfflineEvents.sealed().size() : 0,
                 now instanceof Event e ? e.kind() : null, offlineDraft != null || (now instanceof Setup && onlineDrafting()),
                 isHost ? OfflineEvents.storage("draft").size() : 0,
-                now instanceof Conquest, now instanceof Conquest c ? c.save() : null, isHost ? ConquestGame.currentName() : null,
+                now instanceof Conquest,
+                // The open conquest is named in its battles too, so the result screen knows whose ending it shows
+                now instanceof Conquest c ? c.save() : now instanceof Playing p && p.back() instanceof Conquest c ? c.save() : null,
+                isHost ? ConquestGame.currentName() : null,
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }
@@ -1393,6 +1396,8 @@ public final class WebSession {
             if (prepared == null) {
                 throw new IllegalStateException("A battle is already being fought");
             }
+            // The game names its winner by this name, and the board knows the seat by the session's
+            prepared.human().getPlayer().setName(playerName());
             local.startPrepared(playerName(), prepared.rules(), prepared.variants(), prepared.players(), prepared.human(), playing.gui());
         } catch (final RuntimeException ex) {
             Logger.error(ex, "Could not start the battle");
