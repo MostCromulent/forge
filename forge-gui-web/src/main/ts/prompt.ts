@@ -3,7 +3,7 @@ import { deref, game, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { hoverable } from './detail';
 import { stepName } from './phasebar';
-import { byId, q } from './dom';
+import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
 import { isSilent } from './volume';
 import { countdown, finishCountdown } from './autopass';
@@ -64,9 +64,7 @@ function buildGlints(root: HTMLElement): void {
 /** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
 function showPressed(button: Element | null): void {
   if (!(button instanceof HTMLButtonElement) || button.disabled) return;
-  button.classList.remove('pressed');
-  void button.offsetWidth;
-  button.classList.add('pressed');
+  replay(button, 'pressed');
 }
 
 /** The same feedback for a key that stands in for a prompt button: "ok", "cancel", "end-turn" or "undo". */
@@ -282,7 +280,5 @@ function setButton(button: HTMLButtonElement, spec: PromptButton | undefined): v
 
 export function flash(): void {
   const root = byId('prompt');
-  root.classList.remove('flash');
-  void root.offsetWidth;
-  root.classList.add('flash');
+  replay(root, 'flash');
 }

@@ -8,7 +8,7 @@ import { store, stored } from './storage';
 import { imageUrl } from './images';
 import { Curve } from './deckhalf';
 import { CardGroup } from './importer';
-import { Pip, Pips } from './symbols';
+import { ColourToggles, Pips, toggled } from './symbols';
 import { changeUi, ui } from './ui';
 import { DECK_FORMATS } from './editor';
 import { normalize, rankByName } from './search';
@@ -19,9 +19,6 @@ import { Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from '.
 import { t, type TextKey } from './text';
 
 const SEARCH_DEBOUNCE_MS = 200;
-// Colour identity, in the order Magic writes it, plus colourless
-const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
-  ['C', 'lblWebEditorColourless']];
 /** Every net-deck category is its own source, so they answer to one facet and list their categories under it. */
 export const NET = 'net';
 const isNet = (source: string) => source.startsWith(`${NET} `);
@@ -275,18 +272,9 @@ export function DeckFinder({ model, actions, seat, close }: {
             <FilterBar kinds={kinds} filter={filter} set={setFilter} clearAll={clearAll} narrowed={narrowed}>
               <input ref={find} class="find" type="search" placeholder={t('lblWebFinderSearch')} autocomplete="off"
                 value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-              <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
-                {COLOURS.map(([letter, name]) => (
-                  <button key={letter} class="colour" aria-label={t(name)} aria-pressed={filter.colours.has(letter)}
-                    title={t('lblWebFinderColourDecks', t(name), decks.filter(d => (d.colors ?? '').includes(letter)).length)} onClick={() => {
-                      const colours = new Set(filter.colours);
-                      if (!colours.delete(letter)) colours.add(letter);
-                      change({ colours });
-                    }}>
-                    <Pip letter={letter} />
-                  </button>
-                ))}
-              </div>
+              <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => filter.colours.has(c)}
+                toggle={c => change({ colours: toggled(filter.colours, c) })}
+                title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
             </FilterBar>
             <div class="count-row">
               <p class="shown">{list.length === decks.length ? t('lblWebFinderDeckCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
@@ -450,14 +438,8 @@ function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply:
   const [exactly, setExactly] = useState(value?.exactly ?? false);
   return (
     <>
-      <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
-        {COLOURS.filter(([letter]) => letter !== 'C').map(([letter, name]) => (
-          <button key={letter} class="colour" aria-label={t(name)} aria-pressed={letters.includes(letter)}
-            onClick={() => setLetters([...'WUBRG'].filter(c => (c === letter) !== letters.includes(c)).join(''))}>
-            <Pip letter={letter} />
-          </button>
-        ))}
-      </div>
+      <ColourToggles label={t('lblWebEditorColours')} pressed={c => letters.includes(c)}
+        toggle={letter => setLetters([...'WUBRG'].filter(c => (c === letter) !== letters.includes(c)).join(''))} />
       <OneOf options={[['within', t('lblWebFilterWithinNote')], ['exactly', t('lblWebFilterExactlyNote')]] as const}
         value={exactly ? 'exactly' : 'within'} pick={v => setExactly(v === 'exactly')} />
       <div class="fapply"><button class="primary" onClick={() => apply({ letters, exactly })}>{t('lblWebFilterApply')}</button></div>

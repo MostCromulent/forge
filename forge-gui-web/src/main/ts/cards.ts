@@ -6,7 +6,7 @@ import { hoverable } from './detail';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
 import { reconcile } from './render';
-import { q } from './dom';
+import { q, replay } from './dom';
 import type { CardView, KeywordText, PlayerView, Ref } from './protocol';
 import { t } from './text';
 
@@ -114,9 +114,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     : /Battle/.test(type) ? `${state.Defense ?? ''}` : '';
   // A pump, a counter or a loyalty change is a number the player must notice
   if (pt.textContent && power + toughness && pt.textContent !== power + toughness) {
-    pt.classList.remove('changed');
-    void pt.offsetWidth;
-    pt.classList.add('changed');
+    replay(pt, 'changed');
   }
   // Above or below what the card is on its own, as a pump, a counter or a shrink leaves it; damage counts as below
   const shift = (now: number, base: number | undefined) => (base === undefined || now === base ? '' : now > base ? 'up' : 'down');
@@ -276,9 +274,7 @@ function showDamage(el: HTMLElement, damage: number): void {
   if (damage <= before) {
     return;
   }
-  el.classList.remove('struck');
-  void el.offsetWidth;
-  el.classList.add('struck');
+  replay(el, 'struck');
   const hit = document.createElement('span');
   hit.className = 'hit-number';
   hit.textContent = `-${damage - before}`;

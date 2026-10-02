@@ -3,7 +3,7 @@
 
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from './images';
-import { commanderTax, game, me, opponents, players, zone, deref, stateOf, isLocal, type Model } from './model';
+import { commanderTax, game, me, players, zone, deref, stateOf, isLocal, type Model } from './model';
 import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -17,7 +17,7 @@ import { artUrl } from './sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from './looks';
 import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
-import { byId, q } from './dom';
+import { byId, q, replay } from './dom';
 import { setting } from './settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
@@ -609,9 +609,7 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
     return;
   }
   const hurt = change < 0;
-  el.classList.remove('hurt', 'healed');
-  void el.offsetWidth;
-  el.classList.add(hurt ? 'hurt' : 'healed');
+  replay(el, hurt ? 'hurt' : 'healed', 'hurt', 'healed');
   const float = document.createElement('span');
   float.className = `life-change ${hurt ? 'hurt' : 'healed'}`;
   float.textContent = `${hurt ? '' : '+'}${change}`;
@@ -625,9 +623,7 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
 
 // Damage to another player washes red round their portrait and shakes it, the board's own hit made small
 function hitAvatar(avatar: HTMLElement, amount: number): void {
-  avatar.classList.remove('hit', 'hit-hard');
-  void avatar.offsetWidth;
-  avatar.classList.add(amount >= 5 ? 'hit-hard' : 'hit');
+  replay(avatar, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
   avatar.addEventListener('animationend', e => {
     if (e.target === avatar) avatar.classList.remove('hit', 'hit-hard');
   });
@@ -640,9 +636,7 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
 // Damage to your own life shakes the board and washes the edges, so it cannot be missed
 function takeHit(amount: number): void {
   const match = byId('match');
-  match.classList.remove('hit', 'hit-hard');
-  void match.offsetWidth;
-  match.classList.add(amount >= 5 ? 'hit-hard' : 'hit');
+  replay(match, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
   match.addEventListener('animationend', () => match.classList.remove('hit', 'hit-hard'), { once: true });
   const flash = document.createElement('div');
   flash.className = 'hit-flash';

@@ -5,7 +5,7 @@ import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
 import { imageUrl } from './images';
-import { Pip, Pips } from './symbols';
+import { FIVE_COLOURS, Pip, Pips } from './symbols';
 import { Curve } from './deckhalf';
 import { CardGroup } from './importer';
 import { peekAt } from './deckfinder';
@@ -13,9 +13,8 @@ import { AnyOf, FilterBar, type FilterKind, OneOf } from './filters';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ConquestCommanderRow, ConquestWalkerRow } from './protocol';
-import { t, type TextKey } from './text';
+import { t } from './text';
 
-const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen']];
 
 /** What both lists are narrowed by: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */
 interface PartyFilter { colours: string[]; plane: string | null }
@@ -51,7 +50,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
       id: 'identity', group: t('lblCommanders'), label: t('lblWebFilterIdentity'),
       chip: f => (f.colours.length ? f.colours.join(' ') : null),
       clear: f => ({ ...f, colours: [] }),
-      panel: (f, set, done) => <AnyOf options={COLOURS.map(([c, name]) => [c, t(name)] as const)} value={f.colours}
+      panel: (f, set, done) => <AnyOf options={FIVE_COLOURS.map(([c, name]) => [c, t(name)] as const)} value={f.colours}
         apply={colours => { set({ ...f, colours }); done(); }} />,
     },
     {

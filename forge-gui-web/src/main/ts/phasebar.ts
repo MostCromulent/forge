@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { deref, game, isLocal, me, opponents, players, type Model } from './model';
 import { playerAvatarUrl } from './looks';
-import { byId, q } from './dom';
+import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
 import { t, tNodes, type TextKey } from './text';
 import type { Actions } from './actions';
@@ -368,9 +368,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
     // Your wait pulses once every PULSE_EVERY_S, restarted by taking the class off and putting it back
     if (yours && seconds >= PULSE_EVERY_S && seconds % PULSE_EVERY_S === 0 && lastPulse !== seconds) {
       lastPulse = seconds;
-      chip.classList.remove('pulse');
-      void chip.offsetWidth;
-      chip.classList.add('pulse');
+      replay(chip, 'pulse');
     }
   };
   show();

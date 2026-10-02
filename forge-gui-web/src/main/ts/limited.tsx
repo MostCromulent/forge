@@ -2,6 +2,7 @@
 // makes beside it, and the list of opponents a pool's deck plays. The deck itself is built in the deck editor.
 
 import { useEffect, useState } from 'preact/hooks';
+import { usePressOutside } from './hooks';
 import { StepForm, draftCombo, draftSteps, draftTicket, sealedAction, sealedSteps, sealedTicket, type DraftValue, type SealedValue } from './setup';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { Pips } from './symbols';
@@ -64,13 +65,7 @@ export function shortDay(iso: string): string {
 function Events({ pools, draft, actions, create }: { pools: PoolRow[]; draft: boolean; actions: Actions; create: () => void }) {
   const [menu, setMenu] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  // The menu closes on any press outside it, as the table's menus do
-  useEffect(() => {
-    if (menu === null) return;
-    const outside = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.ev-more')) setMenu(null); };
-    document.addEventListener('pointerdown', outside);
-    return () => document.removeEventListener('pointerdown', outside);
-  }, [menu]);
+  usePressOutside(menu !== null, '.ev-more', () => setMenu(null));
   return (
     <div class="event-shelf">
       <button class="ev new" onClick={create}>

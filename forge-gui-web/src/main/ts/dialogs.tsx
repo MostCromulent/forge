@@ -8,6 +8,7 @@ import { imageUrl } from './images';
 import { hoverCard } from './detail';
 import { rankByName } from './search';
 import { SymbolText } from './symbols';
+import { useDebounced } from './hooks';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -226,23 +227,17 @@ function InlineCard({ imageKey, name, title, picked, onClick }: {
 // Naming a card offers every card face, so long lists get a search box and draw only the first matches
 const SEARCH_FROM = 20;
 const SHOW_AT_MOST = 200;
-// Drawing a long list costs an image request per option, so typing waits for a pause
-const SEARCH_DELAY_MS = 200;
 
 function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; answer: Answer }) {
   const reveal = req.kind === 'reveal';
   const [picked, setPicked] = useState<ReadonlySet<number>>(() => new Set(reveal ? [] : req.selected));
   const [typed, setTyped] = useState('');
-  const [query, setQuery] = useState('');
+  const query = useDebounced(typed);
   const searchable = req.options.length > SEARCH_FROM;
   const search = useRef<HTMLInputElement>(null);
   useEffect(() => {
     search.current?.focus();
   }, []);
-  useEffect(() => {
-    const timer = setTimeout(() => setQuery(typed), SEARCH_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
   const toggle = (i: number) => {
     if (reveal) return;
     setPicked(old => {

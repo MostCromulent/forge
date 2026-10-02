@@ -6,7 +6,7 @@
 export type Destination = 'Graveyard' | 'Exile';
 
 /** A tapped card is drawn turned and at this size (board.css). */
-const TAPPED_SCALE = 0.9;
+export const TAPPED_SCALE = 0.9;
 /** The card has fully gone this long after it starts to go: when the zone tile may show it. */
 const GONE_MS: Record<Destination, number> = { Graveyard: 870, Exile: 540 };
 

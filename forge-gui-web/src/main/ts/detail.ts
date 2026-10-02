@@ -2,7 +2,7 @@ import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSym
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { frameColour } from './cards';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './rulestext';
-import { byId, q } from './dom';
+import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -192,9 +192,7 @@ function drawDetail(model: Model): void {
   const text = ui.cardText || !src;
   // Turned to its other side, the same card plays a flip; moving to another card does not
   if (shown?.hover === hover && shown.text !== text) {
-    zoom.classList.remove('flipping');
-    void zoom.offsetWidth;
-    zoom.classList.add('flipping');
+    replay(zoom, 'flipping');
   }
   shown = { hover, text };
   zoom.classList.toggle('image-only', !text);

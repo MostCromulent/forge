@@ -36,7 +36,7 @@ export function setSymbolText(el: HTMLElement, text: string | null | undefined):
   appendSymbolText(el, text ?? '');
 }
 
-export function appendSymbolText(el: HTMLElement, text: string, className?: string): void {
+export function appendSymbolText(el: HTMLElement, text: string): void {
   for (const part of symbolParts(text)) {
     if (part.symbol) {
       const img = document.createElement('img');
@@ -46,9 +46,6 @@ export function appendSymbolText(el: HTMLElement, text: string, className?: stri
       el.append(img);
     } else {
       const span = document.createElement('span');
-      if (className) {
-        span.className = className;
-      }
       span.textContent = part.text;
       el.append(span);
     }

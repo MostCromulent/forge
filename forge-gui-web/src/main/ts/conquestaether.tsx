@@ -3,13 +3,12 @@
 
 import { useEffect, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';
-import { Pip, Pips } from './symbols';
+import { ColourToggles, Pip, Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { ConquestAetherState, ConquestOption, ConquestPackCard } from './protocol';
 import { t, type TextKey } from './text';
 
-const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen']];
 const RARITIES: TextKey[] = ['lblCommon', 'lblUncommon', 'lblRare', 'lblMythic'];
 /** How many of the cards pulled this visit stay in view. */
 const MOST_RECENT = 12;
@@ -25,7 +24,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   if (!a) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const ask = (patch: Partial<Pick<ConquestAetherState, 'colors' | 'type' | 'rarity' | 'cmc'>>, pull = false) =>
     actions.conquestAether({ colors: a.colors, type: a.type, rarity: a.rarity, cmc: a.cmc, pull, ...patch });
-  const toggle = (letter: string) => ask({ colors: COLOURS.map(([c]) => c).filter(c => (c === letter) !== a.colors.includes(c)).join('') });
+  const toggle = (letter: string) => ask({ colors: [...'WUBRG'].filter(c => (c === letter) !== a.colors.includes(c)).join('') });
   // The price is on the button, so a pull that cannot be paid for is not offered
   const short = a.cost > (model.conquestBar?.shards ?? 0);
   const pull = (
@@ -38,11 +37,7 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
       <aside class="cq-ae-filters">
         <div>
           <h4>{t('lblColor')}<span>{t('lblWebConquestPlayableIn')} <span class="pips">{a.commanderColors ? <Pips colors={a.commanderColors} /> : <Pip letter="C" />}</span></span></h4>
-          <div class="colours" role="group" aria-label={t('lblColor')}>
-            {COLOURS.map(([letter, name]) => (
-              <button key={letter} class="colour" aria-label={t(name)} aria-pressed={a.colors.includes(letter)} onClick={() => toggle(letter)}><Pip letter={letter} /></button>
-            ))}
-          </div>
+          <ColourToggles label={t('lblColor')} pressed={c => a.colors.includes(c)} toggle={toggle} />
         </div>
         <Options title={t('lblType')} options={a.types} chosen={a.type} pick={type => ask({ type })} />
         <Options title={t('lblRarity')} options={a.rarities} chosen={a.rarity} pick={rarity => ask({ rarity })} />

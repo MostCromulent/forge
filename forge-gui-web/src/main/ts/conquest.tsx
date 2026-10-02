@@ -1,9 +1,10 @@
 // Planar Conquest: the saved conquests as a shelf, and inside one, a bar every page shares over the page itself.
 
 import { useEffect, useState } from 'preact/hooks';
+import { usePressOutside } from './hooks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
 import { changeUi, ui, type ConquestTab } from './ui';
-import { conquestIconUrl, imageUrl } from './images';
+import { conquestIconUrl } from './images';
 import { shortDay } from './limited';
 import { ConquestMap } from './conquestmap';
 import { Party } from './conquestparty';
@@ -69,13 +70,7 @@ function Saves({ saves, current, actions, create }: { saves: ConquestSave[]; cur
   const [menu, setMenu] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-  // The menu closes on any press outside it, as the table's menus do
-  useEffect(() => {
-    if (menu === null) return;
-    const outside = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.ev-more')) setMenu(null); };
-    document.addEventListener('pointerdown', outside);
-    return () => document.removeEventListener('pointerdown', outside);
-  }, [menu]);
+  usePressOutside(menu !== null, '.ev-more', () => setMenu(null));
   return (
     <div class="event-shelf">
       <button class="ev new" onClick={create}>

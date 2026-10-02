@@ -5,7 +5,8 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl } from './images';
 import { lift, liftFromLine } from './flight';
-import { Pip, SymbolText } from './symbols';
+import { ColourToggles, SymbolText, toggled } from './symbols';
+import { useDebounced } from './hooks';
 import { AnyOf, Between, FilterBar, type FilterKind, OneOf, rangeWords, Words } from './filters';
 import type { Actions } from './actions';
 import type { CardHandlers } from './drag';
@@ -14,10 +15,7 @@ import type { CatalogueRow, EditorState } from './protocol';
 import { store, stored } from './storage';
 import { t, type TextKey } from './text';
 
-const SEARCH_DEBOUNCE_MS = 200;
-const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
-  ['C', 'lblWebEditorColourless']];
-const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
+export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
   ['instant', 'lblInstants'], ['sorcery', 'lblSorceries'], ['artifact', 'lblArtifacts'], ['enchantment', 'lblEnchantments'],
   ['battle', 'lblBattles'], ['land', 'lblLands']];
 const SORTS: [string, TextKey][] = [['name', 'lblWebEditorSortName'], ['mv', 'lblWebCatalogueSortManaValue'], ['colour', 'lblWebEditorSortColour'],
@@ -66,7 +64,7 @@ export function Catalogue({ model, actions, state, handlers }: {
   model: Model; actions: Actions; state: EditorState; handlers: CardHandlers;
 }) {
   const [typed, setTyped] = useState('');
-  const [text, setText] = useState('');
+  const text = useDebounced(typed);
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [sort, setSort] = useState('name');
@@ -79,10 +77,6 @@ export function Catalogue({ model, actions, state, handlers }: {
   const query = { text, colours: [...colours].join(''), type, filters: asSyntax(filter), sort, showAll: filter.showAll,
     identity: owned ? filter.identity ?? undefined : undefined };
 
-  useEffect(() => {
-    const timer = setTimeout(() => setText(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
   // The deck's rules decide which cards show, so a new commander or check asks again
   useEffect(() => {
     asked.current = 0;
@@ -133,15 +127,7 @@ export function Catalogue({ model, actions, state, handlers }: {
               </tbody>
             </table>
           </span>
-          <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
-            {COLOURS.map(([letter, name]) => (
-              <button key={letter} class="colour" aria-label={t(name)} aria-pressed={colours.has(letter)} onClick={() => {
-                const next = new Set(colours);
-                if (!next.delete(letter)) next.add(letter);
-                setColours(next);
-              }}><Pip letter={letter} /></button>
-            ))}
-          </div>
+          <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
           <select class="type-by" aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
             {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
           </select>

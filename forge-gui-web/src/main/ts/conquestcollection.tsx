@@ -3,19 +3,17 @@
 
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { conquestIconUrl, imageUrl } from './images';
-import { Pip } from './symbols';
+import { ColourToggles, toggled } from './symbols';
+import { TYPES as CARD_TYPES } from './catalogue';
+import { useDebounced } from './hooks';
 import { showNotice } from './notices';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { CatalogueRow } from './protocol';
-import { t, type TextKey } from './text';
+import { t } from './text';
 
-const SEARCH_DEBOUNCE_MS = 200;
-const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
-  ['C', 'lblWebEditorColourless']];
-const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
-  ['instant', 'lblInstants'], ['sorcery', 'lblSorceries'], ['artifact', 'lblArtifacts'], ['enchantment', 'lblEnchantments'],
-  ['land', 'lblLands']];
+/** A conquest's planes hold no battles. */
+const TYPES = CARD_TYPES.filter(([id]) => id !== 'battle');
 /** Where mobile's sentences put the shard symbol. */
 const SHARD = '{AE}';
 
@@ -31,7 +29,7 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
   const info = model.conquestCollection;
   const [exiled, setExiled] = useState(false);
   const [typed, setTyped] = useState('');
-  const [text, setText] = useState('');
+  const text = useDebounced(typed);
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [plane, setPlane] = useState('');
@@ -43,10 +41,6 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
     source: exiled ? 'exile' : 'collection', plane: plane || undefined };
 
   useEffect(() => { actions.conquestCollection(); }, []);
-  useEffect(() => {
-    const timer = setTimeout(() => setText(typed), SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [typed]);
   // The lists change when a card is exiled or brought back, which the counts say
   useEffect(() => {
     asked.current = 0;
@@ -83,15 +77,7 @@ export function Collection({ model, actions }: { model: Model; actions: Actions 
           <button aria-pressed={exiled} onClick={() => setExiled(true)}>{t('lblExile')}{info && ` (${amount(info.exiled)})`}</button>
         </span>
         <input class="find" type="search" placeholder={t('lblSearch')} autocomplete="off" value={typed} onInput={e => setTyped(e.currentTarget.value)} />
-        <div class="colours" role="group" aria-label={t('lblWebEditorColours')}>
-          {COLOURS.map(([letter, name]) => (
-            <button key={letter} class="colour" aria-label={t(name)} aria-pressed={colours.has(letter)} onClick={() => {
-              const next = new Set(colours);
-              if (!next.delete(letter)) next.add(letter);
-              setColours(next);
-            }}><Pip letter={letter} /></button>
-          ))}
-        </div>
+        <ColourToggles label={t('lblWebEditorColours')} colourless pressed={c => colours.has(c)} toggle={c => setColours(toggled(colours, c))} />
         <select aria-label={t('lblWebCatalogueCardType')} value={type} onChange={e => setType(e.currentTarget.value)}>
           {TYPES.map(([id, name]) => <option key={id} value={id}>{t(name)}</option>)}
         </select>

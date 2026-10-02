@@ -8,7 +8,7 @@ import type { CardMoved, GameEvent, Place } from './protocol';
 import type { CardView, PlayerView } from './protocol';
 import { cssUrl, playerSleeveUrl } from './looks';
 import { echoSound } from './audio';
-import { unmake } from './leaving';
+import { TAPPED_SCALE, unmake } from './leaving';
 import type { Model } from './model';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
@@ -80,8 +80,6 @@ const STAGGER_MS = 110;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;
 const POP_MS = 220;
-/** A tapped card is drawn turned and at this size (board.css), so its outline is this much of the card's length. */
-const TAPPED_SCALE = 0.9;
 const EASE = 'cubic-bezier(.2,.7,.3,1)';
 /** Names a card's own trip among its animations, so a second trip replaces the first rather than stacking on it. */
 const FLIGHT = 'flight';

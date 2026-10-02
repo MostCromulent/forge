@@ -13,6 +13,13 @@ export function byId<T extends HTMLElement = HTMLElement>(id: string): T {
   return el as T;
 }
 
+/** Plays a class's CSS animation again from its start, first taking off the classes it replaces. */
+export function replay(el: HTMLElement, add: string, ...remove: string[]): void {
+  el.classList.remove(add, ...remove);
+  void el.offsetWidth;
+  el.classList.add(add);
+}
+
 /** Hands the player a file to save, holding text. */
 export function saveText(text: string, fileName: string, type: string): void {
   const link = document.createElement('a');
