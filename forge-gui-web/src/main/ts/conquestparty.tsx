@@ -17,7 +17,7 @@ import { t, type TextKey } from './text';
 
 const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen']];
 
-/** What both lists are narrowed by: any of these colours, and for a commander the plane it comes from. */
+/** What both lists are narrowed by: any of these colours, and for a commander the plane it comes from. A planeswalker has no origin. */
 interface PartyFilter { colours: string[]; plane: string | null }
 const NO_FILTER: PartyFilter = { colours: [], plane: null };
 
@@ -44,7 +44,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
   const words = typed.trim().toLowerCase();
   const shown = (name: string, colors: string, origin?: string): boolean => name.toLowerCase().includes(words)
     && (!filter.colours.length || filter.colours.some(c => colors.includes(c)))
-    && (!filter.plane || (origin !== undefined && planeOf(origin) === filter.plane));
+    && (!filter.plane || origin === undefined || planeOf(origin) === filter.plane);
   const planes = [...new Set(party.commanders.map(c => planeOf(c.origin)).filter(Boolean))].sort();
   const kinds: FilterKind<PartyFilter>[] = [
     {
