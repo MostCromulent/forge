@@ -110,6 +110,25 @@ export function changeUiNow(change: (state: UiState) => void): void {
   drawNow();
 }
 
+/**
+ * Changes the arrangement inside a view transition, which eases what CSS cannot, such as a change of grid areas or of page.
+ * `mark` names, once the change is drawn, the attributes the root carries while it runs, which pick the animation in CSS.
+ */
+export function eased(change: (state: UiState) => void, mark: () => Record<string, string> = () => ({})): void {
+  if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
+    changeUi(change);
+    return;
+  }
+  const root = document.documentElement;
+  let marks: Record<string, string> = {};
+  const transition = document.startViewTransition(() => {
+    changeUiNow(change);
+    marks = mark();
+    Object.assign(root.dataset, marks);
+  });
+  transition.finished.finally(() => { for (const key of Object.keys(marks)) delete root.dataset[key]; });
+}
+
 /** Changes the arrangement and draws the table again. */
 export function changeUi(change: (state: UiState) => void): void {
   change(ui);

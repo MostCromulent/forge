@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { Shelf as Cards } from './shelf';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES } from './header';
-import { changeUi, ui, type ConquestTab } from './ui';
+import { changeUi, eased, ui, type ConquestTab } from './ui';
 import { skinIconUrl } from './images';
 import { CampaignBar, Prefs, Purse, Stats } from './campaign';
 import { shortDay } from './limited';
@@ -31,7 +31,7 @@ export function Conquest({ model, actions }: { model: Model; actions: Actions })
   const [creating, setCreating] = useState(false);
   useEffect(() => { if (open) setCreating(false); }, [open]);
   return (
-    <div class={open ? 'cq-shell' : 'limited-page'}>
+    <div key={open ? 'open' : 'shelf'} class={open ? 'cq-shell' : 'limited-page'}>
       {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
       <div class="cq-under" inert={open && !!model.reward}>
         <PageHeader class="limited-head">
@@ -98,6 +98,13 @@ const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLAN
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
 
+/** A change of tab slides the page the way the tabs run (conquest.css). */
+function tabTo(tab: ConquestTab): void {
+  const order = TABS.map(([id]) => id);
+  const way = order.indexOf(tab) > order.indexOf(ui.conquestTab) ? 'on' : 'back';
+  if (tab !== ui.conquestTab) eased(u => { u.conquestTab = tab; }, () => ({ cqTab: way }));
+}
+
 /** The page of the open tab. */
 function Page({ tab, model, actions }: { tab: ConquestTab; model: Model; actions: Actions }) {
   switch (tab) {
@@ -121,7 +128,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   if (!model.campaignBar || !model.conquestState) return <p class="muted pools-wait">{t('lblWebConquestReading')}</p>;
   const bar = model.campaignBar;
   return <>
-    <CampaignBar bar={bar} tabs={TABS} tab={ui.conquestTab} setTab={tab => changeUi(u => { u.conquestTab = tab; })}
+    <CampaignBar bar={bar} tabs={TABS} tab={ui.conquestTab} setTab={tabTo}
       held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward}
       extra={setting('devMode') && (
         // Dev mode: where the next Chaos Wheel stops, so each reward can be looked at
@@ -131,7 +138,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
         </select>
       )} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main" inert={!!reward}><Page key={priced} tab={ui.conquestTab} model={model} actions={actions} /></div>
+    <div class="cq-main" inert={!!reward}><Page key={`${priced} ${model.conquestState.plane}`} tab={ui.conquestTab} model={model} actions={actions} /></div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
   </>;

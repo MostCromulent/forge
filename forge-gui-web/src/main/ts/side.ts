@@ -1,7 +1,7 @@
 // The column beside the board, holding the game log and, in a networked game, the chat dock, each of which collapses to its tab
 
 import { byId, q } from './dom';
-import { changeUi, changeUiNow, rememberSidePanels, ui, type UiState } from './ui';
+import { changeUi, eased, rememberSidePanels, ui, type UiState } from './ui';
 import type { Model } from './model';
 import { isSilent } from './volume';
 import { t } from './text';
@@ -42,29 +42,21 @@ export function initSide(): void {
   volume.title = t('lblWebHeadVolume');
   volume.onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
   for (const panel of PANELS) {
-    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => eased(u => {
+    q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => folding(u => {
       u.sidePanels[panel] = !u.sidePanels[panel];
       rememberSidePanels();
     });
   }
 }
 
-/** CSS cannot ease a change of grid areas, so a view transition eases between the two layouts, with the new one drawn at once. */
-function eased(change: (state: UiState) => void): void {
-  if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
-    changeUi(change);
-    return;
-  }
-  const root = document.documentElement;
+/** CSS cannot ease a change of grid areas, so the column slides off the right edge as it folds, and back in as it opens (board.css). */
+function folding(change: (state: UiState) => void): void {
   const match = byId('match');
   const wasFolded = match.classList.contains('side-folded');
-  const transition = document.startViewTransition(() => {
-    changeUiNow(change);
-    // The column slides off the right edge as it folds, and back in as it opens (board.css)
+  eased(change, (): Record<string, string> => {
     const folded = match.classList.contains('side-folded');
-    if (folded !== wasFolded) root.dataset.side = folded ? 'shut' : 'open';
+    return folded === wasFolded ? {} : { side: folded ? 'shut' : 'open' };
   });
-  transition.finished.finally(() => delete root.dataset.side);
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
