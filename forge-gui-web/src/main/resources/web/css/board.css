@@ -91,6 +91,8 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 /* Whose turn it is lights in gold, as it does everywhere else, rather than in the player's own colour */
 /* Your seat has no panel of its own, so on your turn it takes the same frame and light as theirs */
 #match.many #me { border: 1px solid transparent; border-radius: 10px; }
+/* The frame runs on under the hand and off the bottom edge, so the whole foot of the screen reads as yours; the padding keeps the cards where they were */
+#match.many #me { --under: calc(var(--hand-h) * .8 + 8px + 16px); margin-bottom: calc(var(--under) * -1); padding-bottom: var(--under); }
 #match.many #me.turn, .seat.compact.turn { border-color: color-mix(in srgb, var(--accent-2) 70%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-2) 20%, transparent), 0 0 22px color-mix(in srgb, var(--accent-2) 14%, transparent); }
 /* The tiles hang from the top of the portrait, as the player across the table has theirs */
 .seat.compact .player { align-items: flex-start; flex-wrap: wrap; }
