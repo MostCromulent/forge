@@ -16,6 +16,7 @@ export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb:
   { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
   { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
+  { id: 'steppe', name: 'lblWebPlaymatSteppe', image: '/playmats/dawn-steppe.jpg', thumb: '/playmats/dawn-steppe-thumb.jpg' },
 ];
 export type SettingValue = string | number | boolean;
 
