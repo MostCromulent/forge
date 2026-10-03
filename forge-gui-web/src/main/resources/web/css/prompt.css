@@ -65,7 +65,11 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #options .rail { display: grid; align-content: start; gap: 2px; padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--line); }
 #options .rail button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--muted); font-size: 13px; text-align: left; }
 #options .rail button:hover { color: var(--text); background: var(--surface); }
-#options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); box-shadow: inset 3px 0 0 var(--accent-2); }
+#options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); }
+/* The open tab's gold edge is an element of its own, so a change of tab glides it to the next, and the page slides (dialogs.css) */
+#options .rail button { position: relative; }
+#options .rail-mark { position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--accent-2); view-transition-name: rail-mark; }
+#options .split .rows { view-transition-name: rail-page; }
 #options .stops-dialog { width: min(440px, 92vw); }
 #options .decisions-dialog { width: min(620px, 92vw); }
 #options .decision { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }

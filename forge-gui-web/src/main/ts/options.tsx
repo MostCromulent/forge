@@ -7,6 +7,8 @@ import { keyName, rebind, type KeyBindings } from './keys';
 import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
 import { t, textLanguage } from './text';
+import { easedLocal } from './ui';
+import { useClosing } from './closing';
 
 // A setting found only through its section or its hint ranks after label matches, and each section stays together in its usual place
 function matching(defs: SettingDef[], typed: string): SettingDef[] {
@@ -56,11 +58,12 @@ export function Options({ close }: { close: () => void }) {
   const all = SETTINGS.filter(def => !(def.hostOnly && isGuest()));
   // A tab lists its sections in its own order; a search looks through every tab
   const shown = searching ? matching(all, query) : tab.sections.flatMap(section => all.filter(def => def.section === section));
-  const open = (i: number) => {
+  // The rail runs down the side, so the next tab's page comes up from below and an earlier one down from above (dialogs.css)
+  const open = (i: number) => easedLocal(() => {
     lastTab = i;
     setAt(i);
     setQuery('');
-  };
+  }, (): Record<string, string> => (i === at ? {} : { rail: i > at ? 'on' : 'back' }));
   return (
     <OptionsDialog title={t('lblWebHeadOptions')} kind="tabbed" close={close}
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
@@ -68,6 +71,7 @@ export function Options({ close }: { close: () => void }) {
       rail={TABS.map((tb, i) => (
         <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
           <svg viewBox="0 0 24 24" aria-hidden="true">{tb.icon}</svg>{tb.name}
+          {!searching && i === at && <span class="rail-mark" />}
         </button>
       ))}
       footer={<>
@@ -102,13 +106,14 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
   title: string; label?: string; kind?: string; head?: ComponentChildren; rail?: ComponentChildren; footer: ComponentChildren; close: () => void;
   children: ComponentChildren;
 }) {
+  const { closing, shut, gone } = useClosing(close);
   return (
-    <div id="options" class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <div id="options" class={closing ? 'backdrop closing' : 'backdrop'} onAnimationEnd={gone} onMouseDown={e => { if (e.target === e.currentTarget) shut(); }}>
       <div class={kind ? `options-dialog ${kind}` : 'options-dialog'} role="dialog" aria-label={label ?? title}>
         <header>
           <b>{title}</b>
           {head ?? <span class="spacer" />}
-          <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={close}><CloseIcon /></button>
+          <button class="close" title={t('lblWebOptionsCloseEsc')} onClick={shut}><CloseIcon /></button>
         </header>
         {rail ? <div class="split"><nav class="rail" role="tablist">{rail}</nav><div class="rows">{children}</div></div> : <div class="rows">{children}</div>}
         <footer>{footer}</footer>

@@ -9,6 +9,7 @@ import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import { ICONS } from './gamemenu';
+import { leave } from './closing';
 import { t } from './text';
 import type { CardView, GameEvent, StackItemView, YieldAction } from './protocol';
 
@@ -272,7 +273,7 @@ function renderMenu(model: Model): void {
     return;
   }
   menuDrawn = wanted;
-  document.getElementById('stack-menu')?.remove();
+  leave(document.querySelector('#stack-menu:not(.closing)'));
   if (!at || !answer || !wanted) {
     return;
   }

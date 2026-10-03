@@ -94,6 +94,12 @@ button.primary:active:not(:disabled) { box-shadow: none; transform: translateY(1
 #banner { position: fixed; top: 0; left: 50%; transform: translateX(-50%); background: var(--danger); color: #000; padding: 4px 16px; border-radius: 0 0 6px 6px; z-index: 100; }
 /* Over the table, under any dialog or window, so a notice never covers what it would have you look at */
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 38; }
+/* A notice slides in from the edge it sits against, and back out as it goes (main.ts) */
+.notice { animation: notice-in .22s cubic-bezier(.2,.7,.3,1); }
+.notice.leaving { animation: notice-out .18s ease-in forwards; pointer-events: none; }
+@keyframes notice-in { from { opacity: 0; translate: 24px 0; } }
+@keyframes notice-out { to { opacity: 0; translate: 24px 0; } }
+html[data-motion="reduced"] .notice { animation: none; }
 .notice { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; max-width: 320px; cursor: pointer; }
 /* An error is edged in red, apart from the amber the connection banner uses */
 .notice.error { border: 1.5px solid var(--error); box-shadow: 0 0 12px color-mix(in srgb, var(--error) 30%, transparent); }

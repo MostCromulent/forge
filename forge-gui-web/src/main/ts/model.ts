@@ -72,7 +72,7 @@ export interface Model {
   /** A name this browser remembered has been offered to the server, whose answer is not in yet. */
   nameSent: boolean;
   /** Messages from the server, each until it is dismissed or times out. */
-  notices: { id: number; notice: Notice; view?: () => void; label?: string }[];
+  notices: { id: number; notice: Notice; view?: () => void; label?: string; leaving?: boolean }[];
   /** A draw offer while it is open. */
   drawOffer: DrawOffer | null;
   /** The auto-yields and trigger answers the player has set, as last asked for. */

@@ -8,6 +8,7 @@ import type { Actions } from './actions';
 import type { AutoDecision } from './protocol';
 import { deref, type Model } from './model';
 import { t, type TextKey } from './text';
+import { useClosing } from './closing';
 
 // Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
 export const ICONS = {
@@ -32,6 +33,7 @@ export function GameMenu({ model, actions, close, open }: {
   const [dev, setDev] = useState(false);
   const [mats, setMats] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
+  const { closing, shut, gone } = useClosing(close);
   // Above the button that opened it, right edges aligned, since the prompt sits in the bottom-right corner
   useLayoutEffect(() => {
     const button = document.querySelector('#prompt .more')?.getBoundingClientRect();
@@ -42,7 +44,8 @@ export function GameMenu({ model, actions, close, open }: {
   }, []);
   const offer = model.drawOffer;
   return (
-    <div class="backdrop anchored" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
+    <div class={closing ? 'backdrop anchored closing' : 'backdrop anchored'} onAnimationEnd={gone}
+      onMouseDown={e => { if (e.target === e.currentTarget) shut(); }}>
       <div ref={menu} class={dev ? 'card-menu game-menu dev' : 'card-menu game-menu'} role="menu" aria-label={dev ? t('lblWebDevMode') : t('lblGame')}>
         {dev ? <DevItems model={model} actions={actions} back={() => setDev(false)} close={close} setUp={() => open('devSetup')} /> : <>
         <button type="button" role="menuitem" class={mats ? 'card-menu-item on' : 'card-menu-item'} aria-expanded={mats}

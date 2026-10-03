@@ -3,7 +3,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
-import { changeUi, ui } from './ui';
+import { changeUi, eased, ui } from './ui';
 import { avatarUrl } from './looks';
 import { HeadControls, PageHeader, SetupHead, WAY_NAMES, Wordmark } from './header';
 import type { Actions } from './actions';
@@ -16,7 +16,8 @@ const MAX_NAME_LENGTH = 24;
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const choosing = ui.menuChoice;
-  const setChoosing = (way: 'play' | 'friends' | null) => changeUi(u => { u.menuChoice = way; });
+  // A step deeper slides forward, and the trail back slides back (dialogs.css)
+  const setChoosing = (way: 'play' | 'friends' | null) => eased(u => { u.menuChoice = way; }, () => ({ way: way ? 'on' : 'back' }));
   // A new name arriving means the change went through
   useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
   if (ui.renaming) {

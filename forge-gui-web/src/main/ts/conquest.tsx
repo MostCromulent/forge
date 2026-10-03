@@ -128,11 +128,11 @@ function DevWheel({ actions }: { actions: Actions }) {
   );
 }
 
-/** A change of tab slides the page the way the tabs run (conquest.css). */
+/** A change of tab slides the page the way the tabs run (dialogs.css). */
 function tabTo(tab: ConquestTab): void {
   const order = TABS.map(([id]) => id);
   const way = order.indexOf(tab) > order.indexOf(ui.conquestTab) ? 'on' : 'back';
-  if (tab !== ui.conquestTab) eased(u => { u.conquestTab = tab; }, () => ({ cqTab: way }));
+  if (tab !== ui.conquestTab) eased(u => { u.conquestTab = tab; }, () => ({ way }));
 }
 
 /** The page of the open tab. */

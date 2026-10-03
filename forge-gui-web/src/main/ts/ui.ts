@@ -115,18 +115,30 @@ export function changeUiNow(change: (state: UiState) => void): void {
  * `mark` names, once the change is drawn, the attributes the root carries while it runs, which pick the animation in CSS.
  */
 export function eased(change: (state: UiState) => void, mark: () => Record<string, string> = () => ({})): void {
+  transition(() => changeUiNow(change), () => changeUi(change), mark);
+}
+
+/** As eased, for a change held in a component's own state, which Preact draws a moment after it is made rather than at once. */
+export function easedLocal(change: () => void, mark: () => Record<string, string>): void {
+  transition(async () => {
+    change();
+    await new Promise(drawn => setTimeout(drawn));
+  }, change, mark);
+}
+
+function transition(update: () => void | Promise<void>, still: () => void, mark: () => Record<string, string>): void {
   if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
-    changeUi(change);
+    still();
     return;
   }
   const root = document.documentElement;
   let marks: Record<string, string> = {};
-  const transition = document.startViewTransition(() => {
-    changeUiNow(change);
+  const running = document.startViewTransition(async () => {
+    await update();
     marks = mark();
     Object.assign(root.dataset, marks);
   });
-  transition.finished.finally(() => { for (const key of Object.keys(marks)) delete root.dataset[key]; });
+  running.finished.finally(() => { for (const key of Object.keys(marks)) delete root.dataset[key]; });
 }
 
 /** Changes the arrangement and draws the table again. */

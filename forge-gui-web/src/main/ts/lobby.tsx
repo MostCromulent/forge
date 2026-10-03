@@ -52,7 +52,8 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => actions.startMatch(ui.spectate)} />
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
-          {lobby.seats.map((s, i) => <Plate key={i} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
+          {/* Keyed by who sits there too, so a seat added or newly taken comes in afresh (lobby.css) */}
+          {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
@@ -133,7 +134,7 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
   // A deck led by a commander shows the commander, which says more about it than its sleeve does
   const commander = seat.commander;
   return (
-    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
+    <div class={`plate${mine ? ' mine' : ''}${waiting ? ' waiting' : ''}${!mine && !waiting && seat.type !== 'AI' ? ' guest' : ''}${seat.benched ? ' benched' : ''}${leaving ? ' leaving' : ''}`}>
       <div class="sleeve-slot" hidden={beforePools} data-image={commander ?? undefined}>
         {/* Nothing is sleeved until a deck is chosen, so the slot stands empty rather than showing a sleeve */}
         <button class={`sleeve${hasDeck || dealt ? '' : ' empty'}${seat.sleeveArt && !commander ? ' card-art' : ''}`} title={dealt ? '' : t('lblWebLobbyChooseDeck')}

@@ -16,8 +16,8 @@ export function showNotice(notice: Notice, view?: () => void, label?: string): v
 }
 
 export function Notices({ model, dismiss }: { model: Model; dismiss: (id: number) => void }) {
-  return <>{model.notices.map(({ id, notice, view, label }) => (
-    <div key={id} class={notice.error ? 'notice error' : 'notice'} onClick={() => dismiss(id)}>
+  return <>{model.notices.map(({ id, notice, view, label, leaving }) => (
+    <div key={id} class={`notice${notice.error ? ' error' : ''}${leaving ? ' leaving' : ''}`} onClick={() => dismiss(id)}>
       <b>{notice.title ?? ''}</b>
       {notice.message && <div>{notice.message}</div>}
       {view && <button class="notice-view" onClick={view}>{label ?? t('lblWebNoticesViewCards')}</button>}

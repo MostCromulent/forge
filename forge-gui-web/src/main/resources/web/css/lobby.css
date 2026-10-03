@@ -160,6 +160,12 @@ button.ghost:hover { color: var(--text); background: var(--surface-2); }
   box-shadow: 0 2px 8px #000c; rotate: var(--turn); transition: rotate .25s ease, translate .25s ease; }
 .modes .mode.plaque.wide:hover .plaque-fan i { rotate: calc(var(--turn) * 1.6); translate: 0 -3px; }
 html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque::before { transition: none; }
+/* The plaques fall into place one after another; a step along the trail slides the page instead (dialogs.css) */
+.menu-page { view-transition-name: page; }
+.modes .mode.plaque { animation: box-in .22s ease-out both; }
+.modes .mode.plaque:nth-child(2) { animation-delay: 45ms; }
+.modes .mode.plaque:nth-child(3) { animation-delay: 90ms; }
+html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.plaque { animation: none; }
 
 .mode {
   display: flex;
@@ -230,6 +236,12 @@ html[data-motion="reduced"] .modes .mode.plaque, html[data-motion="reduced"] .mo
   border: 1px solid var(--line);
   border-radius: 12px;
 }
+
+/* A seat rises in as it is added, and someone taking one lights it once in gold */
+.plate { animation: box-in .2s ease-out; }
+.plate.guest { animation: box-in .2s ease-out, seat-taken .9s ease-in-out .2s; }
+@keyframes seat-taken { 50% { box-shadow: 0 0 0 2px var(--accent-2), 0 0 18px color-mix(in srgb, var(--accent-2) 35%, transparent); } }
+html[data-motion="reduced"] .plate { animation: none; }
 
 /* Your own seat is washed with the accent rather than merely outlined in it */
 .plate.mine { border-color: var(--accent-2); background: linear-gradient(100deg, var(--accent-soft) 0%, var(--surface) 46%); }

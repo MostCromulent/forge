@@ -463,6 +463,8 @@ function offerRememberedName(): void {
 
 let noticeId = 0;
 const NOTICE_MS = 6000;
+/** As long as a notice's way out (theme.css). */
+const NOTICE_OUT_MS = 180;
 
 // An error stays until the player dismisses it; anything else goes by itself
 function notify(notice: Notice, view?: () => void, ms = NOTICE_MS, label?: string): void {
@@ -471,8 +473,15 @@ function notify(notice: Notice, view?: () => void, ms = NOTICE_MS, label?: strin
   if (!notice.error) setTimeout(() => dismissNotice(id), ms);
 }
 
+// A notice slides out before it goes (theme.css); dismissed again on its way out, it goes at once
 function dismissNotice(id: number): void {
-  model.notices = model.notices.filter(n => n.id !== id);
+  const going = model.notices.find(n => n.id === id);
+  if (going && !going.leaving && document.documentElement.dataset.motion !== 'reduced') {
+    model.notices = model.notices.map(n => (n.id === id ? { ...n, leaving: true } : n));
+    setTimeout(() => dismissNotice(id), NOTICE_OUT_MS);
+  } else {
+    model.notices = model.notices.filter(n => n.id !== id);
+  }
   schedule();
 }
 
