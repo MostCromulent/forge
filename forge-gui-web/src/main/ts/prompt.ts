@@ -8,7 +8,8 @@ import { changeUi, ui } from './ui';
 import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
 import { keyName } from './keys';
-import { boundKeys } from './settings';
+import { boundKeys, setting } from './settings';
+import { isPortrait } from './form';
 import { notePick } from './overlay';
 import type { PlayerView, PromptButton, Ref } from './protocol';
 import { t } from './text';
@@ -110,11 +111,14 @@ function drawPrompt(model: Model, actions: Actions): void {
     q(root, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
     buildGlints(root);
+    // Long text is cut to two lines in the phone's dock, and a tap shows the rest
+    q(root, '.message').onclick = () => root.classList.toggle('open');
     const card = q<HTMLImageElement>(root, '.prompt-card');
     hideOnError(card);
     hoverable(card);
     built = true;
   }
+  root.classList.toggle('swapped', !!setting('swapPrompt'));
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
   q(root, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));
@@ -122,6 +126,8 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (model.prompt !== shown) {
     shown = model.prompt;
     root.dataset.seq = String(++arrived);
+    root.classList.remove('open');
+    if (isPortrait()) replay(root, 'pulse');
   }
   root.classList.toggle('spectating', !!model.spectating);
   if (model.spectating) {

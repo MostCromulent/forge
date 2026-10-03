@@ -5,6 +5,7 @@ import { changeUi, eased, rememberSidePanels, ui, type UiState } from './ui';
 import type { Model } from './model';
 import { isSilent } from './volume';
 import { t } from './text';
+import { isPortrait } from './form';
 
 const PANELS = ['log', 'chat'] as const;
 
@@ -41,6 +42,11 @@ export function initSide(): void {
   const volume = q(side, '#side-tools .volume');
   volume.title = t('lblWebHeadVolume');
   volume.onclick = () => changeUi(u => { u.volumeOpen = !u.volumeOpen; });
+  const menu = Object.assign(document.createElement('button'), { id: 'menu-button', title: t('lblWebPortraitMenu') });
+  menu.setAttribute('aria-label', t('lblWebPortraitMenu'));
+  menu.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+  menu.onclick = () => changeUi(u => { u.menuSheet = u.menuSheet ? null : 'log'; });
+  byId('match').append(menu);
   for (const panel of PANELS) {
     q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => folding(u => {
       u.sidePanels[panel] = !u.sidePanels[panel];
@@ -59,11 +65,20 @@ function folding(change: (state: UiState) => void): void {
   });
 }
 
+/** On a phone the prompt is the board's own bottom row, so it leaves the column, which is not shown there. */
+function placePrompt(): void {
+  const prompt = byId('prompt');
+  const home = isPortrait() ? byId('match') : byId('side');
+  if (prompt.parentElement !== home) home.append(prompt);
+  if (isPortrait()) byId('match').style.setProperty('--dock-h', `${prompt.offsetHeight}px`);
+}
+
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */
 let drawn = '';
 
 // Chat is there only in a game others can join, and its dock is one of the screens (screens.tsx)
 export function renderSide(model: Model): void {
+  placePrompt();
   const volume = q(byId('side-tools'), '.volume');
   const silent = String(isSilent());
   if (volume.dataset.silent !== silent) {

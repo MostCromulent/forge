@@ -42,3 +42,26 @@ probe('a long-press asks for no ability menu', async p => {
   await card.dispatchEvent('contextmenu', { bubbles: true, cancelable: true });
   expect(await p.page.evaluate(() => (window as unknown as { menus: number }).menus)).toBe(0);
 }, WIDE_TOUCH);
+
+const box = async (page: Page, sel: string) => (await page.locator(sel).boundingBox())!;
+
+probe('the prompt is a dock with OK and Cancel in opposite corners', async p => {
+  await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  const dock = await box(p.page, '#prompt');
+  const ok = await box(p.page, '#prompt .ok');
+  const cancel = await box(p.page, '#prompt .cancel');
+  expect(dock.y + dock.height).toBeLessThanOrEqual(664);
+  expect(dock.width).toBe(390);
+  expect(ok.x).toBeLessThan(8);
+  expect(cancel.x + cancel.width).toBeGreaterThan(382);
+  expect(ok.height).toBeGreaterThanOrEqual(44);
+  expect(await p.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+}, PHONE);
+
+probe('the swap setting puts OK on the right', async p => {
+  await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.evaluate(() => localStorage.setItem('forge.settings', JSON.stringify({ ...JSON.parse(localStorage.getItem('forge.settings') ?? '{}'), swapPrompt: true })));
+  await p.page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(p.page.locator('#prompt .ok')).toBeVisible();
+  expect((await box(p.page, '#prompt .ok')).x).toBeGreaterThan(280);
+}, PHONE);

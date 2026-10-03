@@ -64,6 +64,8 @@ export interface UiState {
   conquestOpened: Record<string, boolean>;
   /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
   draftHidden: boolean;
+  /** The phone's menu sheet, and which of its tabs shows. */
+  menuSheet: 'log' | 'chat' | 'zones' | 'players' | null;
 }
 
 const SIDE_KEY = 'forge.sidePanels';
@@ -94,6 +96,7 @@ export const ui: UiState = {
   conquestTab: 'map',
   conquestOpened: {},
   draftHidden: false,
+  menuSheet: null,
 };
 
 let redraw: () => void = () => {};
@@ -160,6 +163,7 @@ export function resetMatchUi(): void {
   ui.optionsOpen = false;
   ui.gameMenu = null;
   ui.volumeOpen = false;
+  ui.menuSheet = null;
   ui.picker = null;
   ui.hover = null;
   ui.faceIndex = 0;
