@@ -166,3 +166,25 @@ probe('on a wide touch screen a long-press opens a panel that can be closed', as
   await zoom.locator('.sheet-close').tap();
   await expect(zoom).toBeHidden();
 }, WIDE_TOUCH);
+
+probe('the hand opens as a drawer, a card is played from it, and it closes for the target', async p => {
+  await settledBoard(p, 'humanhand=Lightning Bolt;Forest;Giant Growth\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
+  const strip = await box(p.page, '#hand');
+  expect(strip.height).toBeLessThanOrEqual(60);
+  await p.page.locator('#hand').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  const drawer = await box(p.page, '#hand');
+  const dock = await box(p.page, '#prompt');
+  expect(Math.round(drawer.y + drawer.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
+  const bolt = p.page.locator('#hand .card', { hasText: 'Lightning Bolt' });
+  expect((await bolt.boundingBox())!.width).toBeGreaterThanOrEqual(90);
+  await bolt.tap();
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
+  await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
+  await expect(p.page.locator('#opponent .card.selectable')).toBeVisible();
+  // Called off, with the card still in hand, the drawer comes back
+  await p.page.locator('#prompt .cancel').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  await p.page.locator('#hand-head .close').tap();
+  await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
+}, PHONE);

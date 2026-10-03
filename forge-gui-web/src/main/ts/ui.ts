@@ -66,6 +66,8 @@ export interface UiState {
   draftHidden: boolean;
   /** The hovered card or player is pinned open as a sheet, as a rested finger asks on a phone. */
   inspect: boolean;
+  /** The hand is open as a drawer over the board, on a phone. */
+  handOpen: boolean;
   /** The phone's menu sheet, and which of its tabs shows. */
   menuSheet: 'log' | 'chat' | 'zones' | 'players' | null;
 }
@@ -99,6 +101,7 @@ export const ui: UiState = {
   conquestOpened: {},
   draftHidden: false,
   inspect: false,
+  handOpen: false,
   menuSheet: null,
 };
 
@@ -170,6 +173,7 @@ export function resetMatchUi(): void {
   ui.picker = null;
   ui.hover = null;
   ui.inspect = false;
+  ui.handOpen = false;
   ui.faceIndex = 0;
 }
 

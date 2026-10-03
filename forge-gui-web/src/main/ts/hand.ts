@@ -3,11 +3,14 @@
 import { commandKind } from './command';
 import { reconcile } from './render';
 import { createCard, frameColour, updateCard, type CardClick } from './cards';
-import { deref, isLocal, players, stateOf, zone, type Model } from './model';
+import { deref, derefAll, game, isLocal, players, stateOf, zone, type Model } from './model';
+import { isPortrait } from './form';
+import { sheet, swipeDown } from './sheet';
+import { changeUi, ui } from './ui';
 import { logTints } from './log';
 import { setting } from './settings';
 import { byId, q } from './dom';
-import type { CardView, PlayerView, ZoneType } from './protocol';
+import type { CardView, PlayerView, StackItemView, ZoneType } from './protocol';
 import { t } from './text';
 
 // {2}{W} counts as three; a hybrid shard counts as one and X as nothing
@@ -48,6 +51,72 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
   return found;
 }
 
+/** The question open when the drawer was opened, so only a new one closes it. */
+let askedWhenOpen: object | null = null;
+/** The card last tapped in the drawer, which is opened again if that card's play is called off. */
+let played: number | null = null;
+const NO_PROMPT = {};
+
+const closeDrawer = () => {
+  played = null;
+  changeUi(u => { u.handOpen = false; });
+};
+
+/** On a phone the hand is a strip of card tops, and opens into a drawer to be read and played from. */
+function drawerHead(root: HTMLElement): HTMLElement {
+  let head = document.getElementById('hand-head');
+  if (!head) {
+    head = Object.assign(document.createElement('div'), { id: 'hand-head' });
+    head.innerHTML = '<b></b><span class="on-stack"></span><button class="close"></button>';
+    q(head, '.close').textContent = t('lblClose');
+    q(head, '.close').onclick = closeDrawer;
+    root.before(head);
+    swipeDown(head, closeDrawer);
+    root.addEventListener('click', e => {
+      if (!isPortrait()) return;
+      if (ui.handOpen) {
+        played = Number((e.target as Element).closest<HTMLElement>('.card')?.dataset.key ?? NaN);
+        return;
+      }
+      // The strip is too small to pick a card from, so a tap anywhere on it opens the drawer
+      e.stopPropagation();
+      played = null;
+      changeUi(u => { u.handOpen = true; });
+    }, true);
+  }
+  return head;
+}
+
+/** Whether the hand shows as the open drawer this frame, having closed it for a new question or opened it again for one called off. */
+function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: number): boolean {
+  const head = drawerHead(root);
+  const portrait = isPortrait();
+  const asked = model.prompt;
+  if (ui.handOpen && askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority) {
+    // What was tapped asks its next question on the board, so the drawer gets out of the way
+    ui.handOpen = false;
+  } else if (!ui.handOpen && played !== null && asked?.priority) {
+    ui.handOpen = portrait && held.some(c => c.$key === played);
+    played = null;
+  }
+  askedWhenOpen = ui.handOpen ? askedWhenOpen ?? asked ?? NO_PROMPT : null;
+  const open = portrait && ui.handOpen;
+  root.classList.toggle('sheet', open);
+  root.classList.toggle('strip', portrait && !open);
+  head.hidden = !open;
+  sheet('hand', open, closeDrawer);
+  if (portrait) root.setAttribute('aria-label', t('lblWebPortraitHandTitle', count));
+  else root.removeAttribute('aria-label');
+  if (!open) return false;
+  q(head, 'b').textContent = `${t('lblWebPortraitHand')} ${count}`;
+  // What is about to resolve is said here, since the drawer covers the stack
+  const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
+  const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
+  q(head, '.on-stack').textContent = top ? t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '') : '';
+  head.style.bottom = `${innerHeight - root.getBoundingClientRect().top - head.offsetHeight}px`;
+  return true;
+}
+
 export function renderHand(model: Model, player: PlayerView | undefined, select: CardClick): void {
   const root = byId('hand');
   const elsewhere = fromElsewhere(model, player);
@@ -76,6 +145,9 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     // A card another player may look at has been revealed to them
     el.classList.toggle('revealed', (c.PlayerMayLook ?? []).some(r => !!r && !model.localPlayers.includes(r.ref)));
   });
+  if (drawDrawer(root, model, held, cards.length)) {
+    return;
+  }
   const cardWidth = (root.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
   // The room the hand keeps clear for the prompt beside it is not room for cards
   const style = getComputedStyle(root);

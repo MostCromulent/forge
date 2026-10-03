@@ -82,6 +82,16 @@ html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
 html[data-form="portrait"] #hand { height: 52px; padding-top: 6px; overflow: hidden; }
 html[data-form="portrait"] #hand::before { display: none; }
+html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
+#hand-head { display: none; }
+/* Open, it is a drawer: three cards to a row, at a size that can be read, under a line saying what is on the stack */
+html[data-form="portrait"] #match #hand.sheet { --hand-w: min(105px, 28vw); --hand-h: calc(var(--hand-w) * 88 / 63 * 1); height: auto; max-height: calc((100dvh - var(--dock-h, 110px)) * .6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  justify-items: center; align-items: start; gap: 12px 8px; padding: 56px 12px 12px; overflow-y: auto; }
+html[data-form="portrait"] #hand.sheet .card { margin: 0; transform: none; }
+html[data-form="portrait"] #hand.sheet .card::after { content: none; }
+html[data-form="portrait"] #hand-head:not([hidden]) { display: flex; align-items: center; gap: 8px; position: fixed; left: 0; right: 0; z-index: 51; height: 44px; padding: 0 8px 0 16px; box-sizing: border-box; }
+html[data-form="portrait"] #hand-head .on-stack { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-2); font-size: 12px; }
+html[data-form="portrait"] #hand-head .close { min-width: 64px; min-height: 44px; margin-left: auto; }
 
 /* A sheet rises from the top of the dock, never over it */
 html[data-form="portrait"] :is(#match, #dialog-layer) .sheet { position: fixed; left: 0; right: 0; bottom: var(--dock-h, 110px); top: auto; z-index: 50; width: auto; max-width: none; max-height: calc(100dvh - var(--dock-h, 110px) - 40px); margin: 0; box-sizing: border-box;
