@@ -417,7 +417,7 @@ function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl:
 /** How far apart the heads of arrows at one target sit, at most, so each can still be told from the others. */
 const HEAD_GAP = 6;
 
-/** Arrows at one target land round one point on its edge, spaced in the order their sources stand so they never cross. */
+/** Arrows at one target aim at its middle and stop at its edge, spaced in the order their sources stand so they never cross. */
 function drawQueued(ctx: CanvasRenderingContext2D): void {
   const byTarget = new Map<HTMLElement, typeof queued>();
   for (const q of queued) byTarget.set(q.to, [...byTarget.get(q.to) ?? [], q]);
@@ -425,22 +425,41 @@ function drawQueued(ctx: CanvasRenderingContext2D): void {
     const from = arrows.map(q => center(q.from));
     const middle = { x: from.reduce((n, p) => n + p.x, 0) / from.length, y: from.reduce((n, p) => n + p.y, 0) / from.length };
     const c = center(to);
-    // Sources on opposite sides can average out onto the target itself, which has no edge facing it
-    const land = edge(to, Math.hypot(middle.x - c.x, middle.y - c.y) < 1 ? from[0] : middle, 6);
-    // Across the way the arrows come in: each is placed along it by where its source stands
-    const len = Math.hypot(land.x - middle.x, land.y - middle.y) || 1;
-    const across = { x: -(land.y - middle.y) / len, y: (land.x - middle.x) / len };
+    // Across the way the arrows come in: each aims a little off the middle by where its source stands
+    const len = Math.hypot(c.x - middle.x, c.y - middle.y) || 1;
+    const across = { x: -(c.y - middle.y) / len, y: (c.x - middle.x) / len };
     const order = arrows.map((_, i) => i)
       .sort((i, j) => (from[i].x - from[j].x) * across.x + (from[i].y - from[j].y) * across.y);
     const gap = Math.min(HEAD_GAP, 28 / arrows.length);
     order.forEach((i, rank) => {
       const q = arrows[i];
       const off = (rank - (arrows.length - 1) / 2) * gap;
-      const b = { x: land.x + across.x * off, y: land.y + across.y * off };
-      arrow(ctx, edge(q.from, b, 2), b, q.kind, q.grows ? growth(q.from, q.to, q.kind) : 1);
+      const aim = { x: c.x + across.x * off, y: c.y + across.y * off };
+      const a = edge(q.from, aim, 2);
+      arrow(ctx, a, aim, q.kind, reach(a, aim, to, 6) * (q.grows ? growth(q.from, q.to, q.kind) : 1));
     });
   }
   queued = [];
+}
+
+/** How far along the arrow's curve it first comes within pad of the target: a portrait by its circle, a card by its box. */
+function reach(a: Point, b: Point, to: HTMLElement, pad: number): number {
+  const r = to.getBoundingClientRect();
+  const c = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  const round = to.classList.contains('avatar');
+  const bend = bendOf(a, b);
+  for (let t = 0; t <= 1; t += 0.005) {
+    const u = 1 - t;
+    const p = { x: u * u * a.x + 2 * u * t * bend.x + t * t * b.x, y: u * u * a.y + 2 * u * t * bend.y + t * t * b.y };
+    if (round ? Math.hypot(p.x - c.x, p.y - c.y) <= r.width / 2 + pad : within(r, p, pad)) return t;
+  }
+  return 1;
+}
+
+/** The control point of an arrow's curve. A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line. */
+function bendOf(a: Point, b: Point): Point {
+  const bow = 0.34;
+  return { x: (a.x + b.x) / 2 + (b.y - a.y) * bow, y: (a.y + b.y) / 2 - (b.x - a.x) * bow };
 }
 
 /** How long an arrow takes to reach its target when it first appears. */
@@ -466,10 +485,8 @@ function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind): number {
 }
 
 function arrow(ctx: CanvasRenderingContext2D, a: Point, full: Point, kind: ArrowKind, grown = 1): void {
-  // A deeper bow keeps two arrows between the same rows apart and reads as a throw rather than a ruler line
-  const bow = 0.34;
-  const whole = { x: (a.x + full.x) / 2 + (full.y - a.y) * bow, y: (a.y + full.y) / 2 - (full.x - a.x) * bow };
-  // A growing arrow is the same curve cut short at how far it has got, so it follows the path it will end on
+  const whole = bendOf(a, full);
+  // A growing arrow, or one stopped at its target's edge, is the same curve cut short at how far it has got, so it follows the path it will end on
   const u = 1 - grown;
   const end = grown < 1 ? { x: u * u * a.x + 2 * u * grown * whole.x + grown * grown * full.x, y: u * u * a.y + 2 * u * grown * whole.y + grown * grown * full.y } : full;
   const bend = grown < 1 ? { x: a.x + (whole.x - a.x) * grown, y: a.y + (whole.y - a.y) * grown } : whole;
