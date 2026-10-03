@@ -85,9 +85,9 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 #match.quads #opponent > .seat:nth-child(3) { grid-area: q3; }
 /* That seat is on your side of the table, so its lands lie nearest the bottom edge as yours do */
 #match.quads #opponent > .seat:nth-child(3) .battlefield { flex-direction: column-reverse; align-self: end; }
-/* A compact seat: the player's details in a row across the top, in their colour, and their cards below */
+/* A compact seat: the player's details in a row across the top, in their colour, and their cards below, framed but unfilled as yours is */
 .seat.compact { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); align-items: stretch; gap: 8px; padding: 8px 10px; border-radius: 10px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent); border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 54px; }
+  border: 1px solid color-mix(in srgb, var(--tint) 22%, var(--line)); --tile-w: 54px; }
 /* Whose turn it is lights in gold, as it does everywhere else, rather than in the player's own colour */
 /* Your seat has no panel of its own, so on your turn it takes the same frame and light as theirs */
 #match.many #me { border: 1px solid transparent; border-radius: 10px; }
