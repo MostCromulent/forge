@@ -66,6 +66,9 @@ function CardMenu({ req, answer }: { req: ChoicesRequest; answer: Answer }) {
   );
 }
 
+/** The questions that lay out cards, which can fold away to show the board. */
+const FOLDABLE = new Set<Request['kind']>(['choices', 'reveal', 'order', 'manipulate', 'distribute']);
+
 function RequestDialog({ req, model, answer }: { req: Request; model: Model; answer: Answer }) {
   const body = (() => {
     switch (req.kind) {
@@ -89,15 +92,31 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
   const message = 'message' in req ? req.message : undefined;
   // A list of what one card can do belongs on that card, the way desktop opens its menu under the cursor
   const at = (req.kind === 'choices' || req.kind === 'reveal') && (req.atX || req.atY) ? { x: req.atX ?? 0, y: req.atY ?? 0 } : null;
-  return (
-    <div class={at ? 'backdrop anchored' : 'backdrop'}>
+  // A question about cards folds to a bar, as the zone window does, so the board under it can be read before answering;
+  // the dialog stays drawn while folded, so what was set in it is still there when it opens again
+  const [folded, setFolded] = useState(false);
+  const foldable = !at && FOLDABLE.has(req.kind);
+  const title = <SymbolText text={heading || message || ''} />;
+  return <>
+    <div class={at ? 'backdrop anchored' : 'backdrop'} hidden={folded}>
       <div class={at ? 'dialog at-card' : 'dialog'} style={at ? { left: `${at.x}px`, top: `${at.y}px` } : undefined}>
-        <h3><SymbolText text={heading || message || ''} /></h3>
+        <div class="dialog-head">
+          <h3>{title}</h3>
+          {foldable && <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>}
+        </div>
         {heading && message && <p><SymbolText text={message} /></p>}
         {body}
       </div>
     </div>
-  );
+    {folded && (
+      <div class="reveal-back minimised">
+        <section class="zone-bar">
+          <span class="zone-dot" aria-hidden="true" /><b>{title}</b>
+          <button class="zone-unfold primary" onClick={() => setFolded(false)}>{t('lblWebZoneShowCards')}</button>
+        </section>
+      </div>
+    )}
+  </>;
 }
 
 function Button({ primary, disabled, onClick, children }: {
@@ -437,8 +456,8 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
           </div>
         ))}
       </div>
-      <p class="hint">{t('lblWebDialogLeftToAssign', left)}</p>
       <ButtonRow>
+        <span class={left ? 'dist-left' : 'dist-left done'}>{t('lblWebDialogLeftToAssign', left)}</span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
         <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <kbd>{keyName(boundKeys().ok)}</kbd></Button>

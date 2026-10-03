@@ -38,9 +38,12 @@ html[data-rail="back"]::view-transition-new(rail-page) { animation-name: rail-in
 @keyframes rail-in-back { from { opacity: 0; translate: 0 -16px; } }
 html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .deck-menu, .host-choice, .zone-panel, .zone-bar,
   #menu > *, #lobby > *, #editor > *, #limited > *, #drafting > *, #conquest > *) { animation: none; }
+.backdrop[hidden] { display: none; }
 .backdrop { position: fixed; inset: 0; background: #0009; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; z-index: 50; }
 .dialog { margin: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 20px; max-width: min(90vw, 900px); max-height: calc(100vh - 32px); overflow: auto; display: grid; gap: 10px; }
 .dialog h3 { margin: 0; }
+.dialog-head { display: flex; align-items: center; gap: 16px; }
+.dialog-head h3 { flex: 1; }
 .dialog .hint { margin: 0; color: var(--muted); font-size: 12px; }
 .dialog .options { display: flex; flex-wrap: wrap; gap: 8px; }
 .dialog .options.grid { display: grid; grid-template-columns: repeat(3, max-content); gap: 12px 16px; align-items: start; justify-content: center; }
@@ -51,7 +54,11 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .picked { box-shadow: 0 0 0 3px var(--pick); }
 .dialog .text-option.picked { background: var(--brass); color: var(--on-brass); }
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
-.dialog .dist-row { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; align-items: flex-end; }
+/* Damage or counters split between targets: room round the cards, and what is left to assign beside the buttons that need it gone */
+.dialog:has(.dist-row) { padding: 20px 24px; gap: 20px; }
+.dialog .dist-row { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; align-items: flex-end; padding: 4px 8px; }
+.dialog .dist-left { margin-right: auto; align-self: center; color: var(--accent-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dialog .dist-left.done { color: var(--muted); font-weight: 400; }
 /* Room under each card for a tab on its foot, such as Blocking, above its steppers */
 .dialog .dist-target { display: grid; justify-items: center; gap: 16px; }
 /* A player offered in a dialog, the size of a card beside the cards: their portrait with their life on it, and their name */
@@ -66,8 +73,10 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
   border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .player-option .po-name { max-width: 100%; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The steppers span the card above them, edge to edge, so each count reads as that card's */
-.dialog .dist-step { width: var(--card-w); display: flex; align-items: center; justify-content: space-between; }
-.dialog .dist-step button { width: 30px; padding: 4px 0; }
+.dialog .dist-step { width: var(--card-w); display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line-bright);
+  border-radius: 8px; background: var(--surface-2); overflow: hidden; }
+.dialog .dist-step button { width: 30px; padding: 5px 0; border: 0; border-radius: 0; background: none; }
+.dialog .dist-step button:hover { background: var(--surface-3); }
 .dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }

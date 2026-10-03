@@ -538,7 +538,7 @@ html[data-motion="reduced"] .stack-item.awaiting { animation: none; }
 /* An open zone takes the whole screen and dims the board, and folded, the scrim goes and only the bar stays */
 #zones { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; background: var(--scrim-deep); }
 /* Folded, the bar waits where the stack shows, near the board's top right rather than under the hand */
-#zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap) + 8px) 0 0; pointer-events: none; }
+#zones.minimised, .reveal-back.minimised { background: none; place-items: start end; padding: 56px calc(var(--side-gap, 270px) + 8px) 0 0; pointer-events: none; }
 #zones.minimised > *, .reveal-back.minimised > * { pointer-events: auto; }
 /* A zone opened while something is on the stack is usually that spell asking, so the stack stays above the scrim with the zone beside it */
 #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 41; }
