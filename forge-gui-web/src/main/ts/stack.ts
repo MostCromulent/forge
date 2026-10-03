@@ -1,7 +1,8 @@
 import { reconcile } from './render';
 import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from './images';
-import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
+import { game, deref, derefAll, me, stackPick, stateOf, type Model } from './model';
+import { isPortrait } from './form';
 import { hoverCard, hoverable, inspectCard } from './detail';
 import { journeys } from './motion';
 import { stackTargets } from './overlay';
@@ -26,6 +27,21 @@ const awaiting = new Map<string, { src: string; zoom: string; since: number }>()
 /** How long a spell may go on awaiting once its caster has priority again; past this its item is not coming. */
 const SETTLE_MS = 900;
 
+/** The model last drawn, and what the phone's chip remembers between draws: how many items it held, and the question it was folded during. */
+let current: Model | null = null;
+let countSeen = 0;
+let foldedFor: object | null = null;
+
+function fold(folded: boolean): void {
+  foldedFor = folded ? current?.prompt ?? null : null;
+  changeUi(u => { u.stackCollapsed = folded; });
+}
+
+/** A tap on the board puts the phone's list away, so the cards under it can be reached. */
+export function foldStack(): void {
+  if (isPortrait() && !ui.stackCollapsed) fold(true);
+}
+
 export function initStack(actionsFor: Actions): void {
   actions = actionsFor;
   document.addEventListener('click', e => {
@@ -40,7 +56,11 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   if (!root.firstChild) {
     root.innerHTML = '<div class="head"><b></b><span class="count"></span><button class="collapse"></button></div><div class="pile"></div>';
     q(root, '.head b').textContent = t('lblStack');
-    q(root, '.collapse').onclick = () => changeUi(u => { u.stackCollapsed = !u.stackCollapsed; });
+    q(root, '.collapse').onclick = () => fold(!ui.stackCollapsed);
+    // On a phone the whole head is the chip that opens and folds the list
+    q(root, '.head').onclick = e => {
+      if (isPortrait() && !(e.target as Element).closest('.collapse')) fold(!ui.stackCollapsed);
+    };
     window.addEventListener('resize', () => place(root));
   }
   const items: StackItemView[] = derefAll(model, game(model)?.Stack);
@@ -50,6 +70,26 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   if (ui.hoveredStackItem !== null && !items.some(i => i.$key === ui.hoveredStackItem)) {
     ui.hoveredStackItem = null;
   }
+  current = model;
+  const portrait = isPortrait();
+  root.classList.toggle('chip', portrait);
+  const count = items.length + awaiting.size;
+  if (portrait) {
+    // The list opens for a new arrival while you may answer it, unless you folded it during this same question
+    if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
+    const top = items[0];
+    const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
+    q(root, '.head b').textContent = top
+      ? `${t('lblStack')} \u00b7 ${t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '')}`
+      : t('lblStack');
+    // Over whichever half of the board holds fewer of the top item's targets, so they stay in view
+    const targets = top ? stackTargets(model, top) : [];
+    const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;
+    root.classList.toggle('over-them', mine > targets.length - mine);
+  } else {
+    q(root, '.head b').textContent = t('lblStack');
+  }
+  countSeen = count;
   const collapsed = ui.stackCollapsed;
   showPanel(root, items.length + awaiting.size > 0);
   root.classList.toggle('collapsed', collapsed);
@@ -144,6 +184,15 @@ function renderStorm(stack: HTMLElement, count: number, stacked: boolean): void 
 
 // The panel hangs from the top of the board and stops short of the hand
 function place(root: HTMLElement): void {
+  if (isPortrait()) {
+    // It takes the phase strip's place while anything is on it, and its list opens down over your cards or up over theirs
+    const strip = byId('phase-strip').getBoundingClientRect();
+    const above = root.classList.contains('over-them') && !ui.stackCollapsed;
+    root.style.top = above ? 'auto' : `${Math.round(strip.top)}px`;
+    root.style.bottom = above ? `${Math.round(innerHeight - strip.bottom)}px` : 'auto';
+    return;
+  }
+  root.style.top = root.style.bottom = '';
   const hand = byId('hand').getBoundingClientRect();
   q(root, '.pile').style.setProperty('--stack-room', `${Math.max(120, hand.top - root.getBoundingClientRect().top - 48)}px`);
 }
@@ -250,6 +299,15 @@ function updateItem(el: HTMLElement, model: Model, item: StackItemView): void {
 function layout(pile: HTMLElement, n: number): void {
   const items = [...pile.children] as HTMLElement[];
   if (!items.length) {
+    return;
+  }
+  // A phone lists the stack, each item saying its number; the cascade of cards is a desktop's
+  if (isPortrait()) {
+    pile.style.height = '';
+    items.forEach((el, i) => {
+      el.style.top = '';
+      el.dataset.n = String(i + 1);
+    });
     return;
   }
   const h = items.findIndex(el => Number(el.dataset.key) === ui.hoveredStackItem);

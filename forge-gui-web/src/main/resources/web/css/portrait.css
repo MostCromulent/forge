@@ -159,3 +159,22 @@ html[data-form="portrait"] .card-menu kbd { display: none; }
 @keyframes card-pressed { from { filter: brightness(1.5); } }
 /* Who went first is marked under the portrait, clear of the life total beside it */
 html[data-form="portrait"] #match .seat .avatar.first::after { right: auto; left: -6px; top: auto; bottom: -9px; font-size: 9px; padding: 0 4px; }
+
+/* The stack: a chip hung from the phase strip naming what resolves next, which opens to a list */
+html[data-form="portrait"] #match #stack.chip { left: 6px; right: 6px; width: auto; z-index: 26; padding: 0 8px; gap: 0; box-sizing: border-box; }
+html[data-form="portrait"] #match #stack.chip .head { min-height: 44px; gap: 8px; padding: 0; border: 0; letter-spacing: 0; text-transform: none; font-size: 13px; }
+html[data-form="portrait"] #stack.chip .head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-form="portrait"] #stack.chip .head .collapse { margin-left: 0; min-width: 56px; min-height: 36px; font-size: 12px; }
+html[data-form="portrait"] #stack.chip .pile { display: grid; gap: 6px; max-height: 30dvh; overflow-y: auto; padding-bottom: 8px; transition: none; }
+html[data-form="portrait"] #stack.chip.collapsed .pile { display: none; }
+html[data-form="portrait"] #stack.chip .stack-item { position: relative; left: auto; width: auto; height: auto; min-height: 56px; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; column-gap: 8px; align-items: center; padding: 4px 6px 4px 4px; transform: none; box-shadow: none; }
+html[data-form="portrait"] #stack.chip .stack-item img { grid-column: 1; grid-row: 1 / 3; width: 38px; height: 53px; border-radius: 4px; }
+html[data-form="portrait"] #stack.chip .stack-item .frame { position: static; grid-column: 2; padding: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-form="portrait"] #stack.chip .stack-item .caption { position: static; grid-column: 2; background: none; padding: 0; border-radius: 0; }
+html[data-form="portrait"] #stack.chip .stack-item .await { position: static; grid-column: 2; grid-row: 1 / 3; background: none; padding: 0; text-align: left; }
+html[data-form="portrait"] #stack.chip .stack-item::after { content: attr(data-n); grid-column: 3; grid-row: 1 / 3; }
+html[data-form="portrait"] #match #storm { display: none; }
+/* A target's tags: the top of the stack is filled and the rest outlined, so they differ in brightness and shape */
+.target-tags { position: absolute; left: -6px; top: -6px; z-index: 6; display: flex; gap: 2px; pointer-events: none; }
+.target-tag, html[data-form="portrait"] #stack.chip .stack-item::after { min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; font: 800 10px/14px system-ui, sans-serif; text-align: center; background: var(--bg-deep); color: var(--text); border: 2px solid var(--text); }
+.target-tag.top, html[data-form="portrait"] #stack.chip .stack-item[data-n="1"]::after { background: var(--accent-2); color: var(--on-brass); border-color: var(--accent-2); }

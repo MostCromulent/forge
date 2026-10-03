@@ -14,3 +14,12 @@ export function repeatTap(key: number, now: number): boolean {
   if (!repeat) last = { key, at: now };
   return repeat;
 }
+
+/** For each thing targeted, the numbers of the stack items that target it, the top of the stack being 1. */
+export function tagsFor(items: readonly { key: number; targets: readonly number[] }[]): Map<number, number[]> {
+  const tags = new Map<number, number[]>();
+  items.forEach((item, i) => {
+    for (const target of item.targets) tags.set(target, [...(tags.get(target) ?? []), i + 1]);
+  });
+  return tags;
+}

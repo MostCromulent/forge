@@ -7,7 +7,7 @@ import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
 import { followPointer, hoverPlayer, hoverable, inspectCard, inspectPlayer } from './detail';
-import { renderStack } from './stack';
+import { foldStack, renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
 import { renderPhaseBar, stopWaiting } from './phasebar';
@@ -77,6 +77,7 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
       replay(el, 'pressed');
     }
     notePick(key);
+    foldStack();
     actions.selectCard(key, menu, e?.clientX ?? 0, e?.clientY ?? 0);
   };
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield

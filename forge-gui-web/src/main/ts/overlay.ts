@@ -3,6 +3,8 @@ import { setting } from './settings';
 import { byId } from './dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from './ui';
+import { isPortrait } from './form';
+import { tagsFor } from './portrait';
 import type { CardView, Ref, Refs, StackItemView, TrackedObject } from './protocol';
 
 // Attack, block and target arrows differ in brightness as well as hue, so they stay apart for red-green colour blindness
@@ -135,7 +137,13 @@ function paintArrows(model: Model): void {
   placeCharges(landed ? new Set() : chargingAtPlayer(model), landed);
   // A block being dragged is drawn whatever the arrows setting, as it is the player's own hand on the board
   drawDrag(ctx);
-  drawAim(ctx, model);
+  // A phone names targets with numbered tags, since an arrow from the stack would cross the whole board and cover what it points at
+  const phone = isPortrait();
+  if (phone) paintTags(model);
+  else {
+    clearTags();
+    drawAim(ctx, model);
+  }
   const mode = setting('arrows');
   if (mode === '0') {
     drawQueued(ctx);
@@ -147,7 +155,7 @@ function paintArrows(model: Model): void {
     // A blocked attacker's block arrow is what matters now, so it loses its arrow at the defender
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
     attackers.forEach(attacker => {
-      if (!atFace.has(attacker.ref) && !blocked) {
+      if (!phone && !atFace.has(attacker.ref) && !blocked) {
         ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack);
       }
       for (const blocker of present(band.blockers)) {
@@ -165,13 +173,46 @@ function paintArrows(model: Model): void {
       forced.forEach(attacker => ribbon(ctx, elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
-  const item = ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
+  const item = !phone && ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
   if (item) {
     const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
     const targets = stackTargets(model, item);
     targets.forEach(target => ribbon(ctx, from, elementFor(target.$key), KINDS.target));
   }
   drawQueued(ctx);
+}
+
+function clearTags(): void {
+  for (const el of document.querySelectorAll('.target-tags')) el.remove();
+}
+
+/** Each target wears the number of every stack item aimed at it, the top of the stack being 1. */
+function paintTags(model: Model): void {
+  const items = derefAll(model, game(model)?.Stack) as StackItemView[];
+  const tags = tagsFor(items.map(i => ({ key: i.$key, targets: stackTargets(model, i).map(o => o.$key) })));
+  const want = new Map<HTMLElement, number[]>();
+  for (const [key, numbers] of tags) {
+    const el = elementFor(key);
+    // A card in an opponent's seat that is not showing is marked on that opponent's tab
+    const shown = el && el.offsetParent !== null ? el
+      : document.querySelector<HTMLElement>(`.seat-tab[data-key="${el?.closest<HTMLElement>('.seat')?.dataset.player ?? key}"]`);
+    if (shown) want.set(shown, [...(want.get(shown) ?? []), ...numbers]);
+  }
+  for (const old of document.querySelectorAll<HTMLElement>('.target-tags')) {
+    if (!want.has(old.parentElement as HTMLElement)) old.remove();
+  }
+  for (const [el, numbers] of want) {
+    const text = [...new Set(numbers)].sort((a, b) => a - b).join(',');
+    let box = el.querySelector<HTMLElement>(':scope > .target-tags');
+    if (box?.dataset.tags === text) continue;
+    if (!box) {
+      box = document.createElement('span');
+      box.className = 'target-tags';
+      el.append(box);
+    }
+    box.dataset.tags = text;
+    box.replaceChildren(...text.split(',').map(n => Object.assign(document.createElement('b'), { className: n === '1' ? 'target-tag top' : 'target-tag', textContent: n })));
+  }
 }
 
 const present = (refs: Refs | null | undefined): Ref[] => (refs ?? []).filter((r): r is Ref => !!r);

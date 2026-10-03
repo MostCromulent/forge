@@ -199,3 +199,22 @@ probe('your bar and the costs over your hand do not overlap', async p => {
   const tile = (await p.page.locator('#me .zone-tile').first().boundingBox())!;
   expect(tile.height / tile.width).toBeGreaterThan(1.3);
 }, PHONE);
+
+probe('a spell on the stack shows as a chip under the strip, and its target wears its number', async p => {
+  await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
+  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
+  await p.page.locator('#opponent .card.selectable').first().tap();
+  await p.until('the bolt is paid for or on the stack', () => !!window.forge.model.prompt?.paying || document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0);
+  if (await p.page.evaluate(() => !!window.forge.model.prompt?.paying)) await p.page.locator('#prompt .ok').tap();
+  await p.until('the bolt is on the stack', () => document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0, undefined, p.page, 20_000);
+  const head = await box(p.page, '#stack .head');
+  expect(head.height).toBeGreaterThanOrEqual(44);
+  expect(head.x + head.width).toBeLessThanOrEqual(390);
+  await expect(p.page.locator('#stack .head')).toContainText('Lightning Bolt');
+  await expect(p.page.locator('#opponent .card .target-tag.top')).toHaveText('1');
+  const dock = await box(p.page, '#prompt');
+  const stack = await box(p.page, '#stack');
+  expect(stack.y + stack.height).toBeLessThanOrEqual(dock.y + 1);
+}, PHONE);

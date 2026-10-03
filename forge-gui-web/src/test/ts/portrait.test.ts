@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repeatTap, tapInspects } from '../../main/ts/portrait';
+import { repeatTap, tagsFor, tapInspects } from '../../main/ts/portrait';
 
 describe('tapInspects', () => {
   const card = { playable: false, selectable: false, mine: false };
@@ -27,5 +27,15 @@ describe('repeatTap', () => {
   it('takes a tap on another card at once', () => {
     expect(repeatTap(8, 2000)).toBe(false);
     expect(repeatTap(9, 2100)).toBe(false);
+  });
+});
+
+describe('tagsFor', () => {
+  it('numbers stack items from the top and lists every item that targets a thing', () => {
+    const tags = tagsFor([{ key: 90, targets: [5, 6] }, { key: 91, targets: [6] }, { key: 92, targets: [] }]);
+    expect(tags.get(5)).toEqual([1]);
+    expect(tags.get(6)).toEqual([1, 2]);
+    expect(tags.has(92)).toBe(false);
+    expect(tags.size).toBe(2);
   });
 });
