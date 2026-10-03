@@ -84,3 +84,25 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     expect(dock.y + dock.height).toBeLessThanOrEqual(phone.viewport!.height);
   }, phone);
 }
+
+probe('a tap on the phase strip opens stops as a sheet above the dock, and Back closes it', async p => {
+  await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  const strip = await box(p.page, '#phase-strip .pill');
+  expect(strip.x + strip.width).toBeLessThanOrEqual(390);
+  expect(strip.height).toBeGreaterThanOrEqual(44);
+  await p.page.locator('#phase-strip .pill').tap();
+  const stops = p.page.locator('#phase-strip .stops');
+  await expect(stops).toBeVisible();
+  const sheet = await box(p.page, '#phase-strip .stops');
+  const dock = await box(p.page, '#prompt');
+  expect(sheet.width).toBe(390);
+  expect(Math.round(sheet.y + sheet.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
+  for (const cell of await stops.locator('.cell').all()) {
+    const b = (await cell.boundingBox())!;
+    expect(Math.min(b.width, b.height)).toBeGreaterThanOrEqual(44);
+  }
+  await expect(stops.locator('.until-row button')).toHaveCount(5);
+  await p.page.goBack();
+  await expect(stops).toBeHidden();
+  await expect(p.page.locator('#match')).toBeVisible();
+}, PHONE);

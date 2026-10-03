@@ -6,6 +6,8 @@ import { changeUi, ui } from './ui';
 import { t, tNodes, type TextKey } from './text';
 import type { Actions } from './actions';
 import type { GameView, PhaseType, TurnMarker } from './protocol';
+import { isPortrait } from './form';
+import { sheet, swipeDown } from './sheet';
 
 // A pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
 
@@ -133,6 +135,8 @@ export function renderPhaseBar(model: Model, g: GameView, actions: Actions): voi
 
   const panel = q(root, '.stops');
   panel.hidden = !open;
+  panel.classList.toggle('sheet', isPortrait());
+  sheet('stops', isPortrait() && open, () => changeUi(u => { u.stopsOpen = false; }));
   // Opens away from the player who is acting, so their half of the board stays visible
   panel.classList.toggle('above', myTurn);
   if (open) {
@@ -167,6 +171,7 @@ function build(root: HTMLElement): void {
       changeUi(u => { u.stopsOpen = false; });
     }
   });
+  swipeDown(q(root, '.stops'), () => changeUi(u => { u.stopsOpen = false; }));
 }
 
 function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number, myTurn: boolean, actions: Actions): void {
@@ -387,7 +392,11 @@ function stopsGrid(model: Model, step: number, myTurn: boolean, theirs: Theirs):
     return `${gap(i)}<td class="${i === step ? 'now' : ''}"><button class="cell" data-phase="${s[0]}" data-mine="${r.mine}" title="${escapeHtml(title)}">${cell}</button></td>`;
   }).join('') + `<td class="row-tools"><button class="row-tool" data-clear data-mine="${r.mine}">${escapeHtml(t('lblWebOptionsClear'))}</button>`
     + `<button class="row-tool" data-defaults data-mine="${r.mine}">${escapeHtml(t('lblWebPhaseDefaults'))}</button></td></tr>`).join('');
-  return `<div class="title">${escapeHtml(t('lblWebPhaseStops'))}</div><table>${groups}${head}${body}</table>`
+  // A finger has no right-click, so passing until a phase is a labelled button, which only a phone shows
+  const until = `<div class="until-row"><span>${escapeHtml(t('lblWebPortraitPassUntil'))}</span>`
+    + PHASES.map(p => `<button data-phase="${STEPS[p.steps[0]][0]}" data-mine="${myTurn}" class="${marker && marker.mine === myTurn && p.steps.some(i => STEPS[i][0] === marker.phase) ? 'on' : ''}">${escapeHtml(t(p.name))}</button>`).join('')
+    + '</div>';
+  return `<div class="title">${escapeHtml(t('lblWebPhaseStops'))}</div><div class="grid-scroll"><table>${groups}${head}${body}</table></div>${until}`
     + `<div class="hint">${escapeHtml(t('lblWebPhaseStopsHint'))}</div>`;
 }
 
@@ -401,6 +410,9 @@ function wireGrid(panel: HTMLElement, actions: Actions): void {
       e.preventDefault();
       actions.toggleMarker(phase, mine);
     };
+  }
+  for (const b of panel.querySelectorAll<HTMLElement>('.until-row button')) {
+    b.onclick = () => actions.toggleMarker(b.dataset.phase as PhaseType, b.dataset.mine === 'true');
   }
   for (const b of panel.querySelectorAll<HTMLElement>('.row-tool')) {
     const mine = b.dataset.mine === 'true';

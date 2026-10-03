@@ -82,3 +82,40 @@ html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
 html[data-form="portrait"] #hand { height: 52px; padding-top: 6px; overflow: hidden; }
 html[data-form="portrait"] #hand::before { display: none; }
+
+/* A sheet rises from the top of the dock, never over it */
+html[data-form="portrait"] :is(#match, #dialog-layer) .sheet { position: fixed; left: 0; right: 0; bottom: var(--dock-h, 110px); top: auto; z-index: 50; width: auto; max-width: none; max-height: calc(100dvh - var(--dock-h, 110px) - 40px); margin: 0; box-sizing: border-box;
+  overflow-y: auto; overscroll-behavior: contain; background: var(--surface); border: 0; border-top: 1px solid var(--line-bright); border-radius: 16px 16px 0 0; box-shadow: 0 -16px 40px #000c; padding: 22px 12px 12px; transform: none; }
+html[data-form="portrait"] :is(#match, #dialog-layer) .sheet::before { content: ''; position: absolute; top: 8px; bottom: auto; left: 50%; width: 40px; height: 5px; margin-left: -20px; border: 0; border-radius: 3px; background: var(--line-bright); transform: none; }
+html[data-form="portrait"] :is(#match, #dialog-layer) .sheet[hidden] { display: none; }
+
+/* The strip: whose turn, the step, and what is either side of it. A tap anywhere on it opens the stops. */
+html[data-form="portrait"] #phase-strip { padding: 0 6px; }
+html[data-form="portrait"] #phase-strip .pill { width: 100%; height: 44px; box-sizing: border-box; border-radius: 22px; gap: 4px; padding: 0 8px 0 4px; min-width: 0; }
+html[data-form="portrait"] #phase-strip .owner { min-width: 0; flex: 0 1 auto; padding-right: 8px; }
+html[data-form="portrait"] #phase-strip .owner b { overflow: hidden; text-overflow: ellipsis; }
+html[data-form="portrait"] #phase-strip .track { margin-left: auto; }
+html[data-form="portrait"] #phase-strip .phase .mark { width: 22px; }
+html[data-form="portrait"] #phase-strip .caret { display: none; }
+/* Waiting and passing chips sit over the strip's ends, since there is no room beside it */
+html[data-form="portrait"] #phase-strip .waiting { right: auto; left: 12px; top: -14px; transform: none; z-index: 3; }
+html[data-form="portrait"] #phase-strip .until { left: auto; right: 6px; top: 0; transform: none; z-index: 3; height: 44px; min-width: 44px; padding: 0 12px; border-radius: 22px; }
+/* The stops grid in a sheet: every cell takes a finger, and the grid scrolls sideways inside the sheet */
+.until-row { display: none; }
+html[data-form="portrait"] #phase-strip .stops .grid-scroll { overflow-x: auto; overscroll-behavior-x: contain; margin: 0 -12px; padding: 0 12px; }
+html[data-form="portrait"] #phase-strip .stops :is(td, th) { height: 44px; }
+html[data-form="portrait"] #phase-strip .stops th { min-width: 44px; width: 44px; }
+html[data-form="portrait"] #phase-strip .stops th.group { height: auto; }
+html[data-form="portrait"] #phase-strip .stops .cell { min-width: 44px; height: 44px; }
+html[data-form="portrait"] #phase-strip .stops .square { width: 18px; height: 18px; }
+html[data-form="portrait"] #phase-strip .stops .row-tool { height: 44px; padding: 0 12px; font-size: 12px; }
+html[data-form="portrait"] .until-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 0 4px; }
+html[data-form="portrait"] .until-row span { width: 100%; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+html[data-form="portrait"] .until-row button { min-height: 44px; flex: 1 1 30%; }
+html[data-form="portrait"] .until-row button.on { background: var(--brass); color: var(--on-brass); }
+@media (hover: none) {
+  /* It tells a mouse what its buttons do */
+  #phase-strip .stops .hint { display: none; }
+}
+/* Your own hand is on show just below, so its count is not said twice */
+html[data-form="portrait"] #match #me .hand-fan { display: none; }
