@@ -27,7 +27,9 @@
 /* The balances stay in view over a reward's reveal, which counts into them */
 .cq-shell:has(.cq-reveal) .cq-purse { position: relative; z-index: 55; }
 .cq-shell:has(.cq-reveal) .cq-purse > :not(.cq-coin) { visibility: hidden; }
-.cq-dev { font-size: 12px; padding: 3px 6px; max-width: 130px; }
+.cq-dev { font-size: 12px; padding: 3px 8px; white-space: nowrap; }
+.cq-purse .deck-menu { width: 170px; }
+.cq-purse .deck-menu [aria-checked="true"] { color: var(--accent-2); }
 .cq-main { flex: 1; min-height: 0; display: grid; view-transition-name: cq-page; }
 /* A change of tab slides the page the way the tabs run (conquest.tsx), on the side column's timing */
 html[data-cq-tab]::view-transition-old(cq-page) { animation: .24s cubic-bezier(.2,.7,.3,1) both cq-page-out; }
@@ -68,6 +70,8 @@ html[data-cq-tab] .cq-main > *, html[data-motion="reduced"] :is(#conquest > *, .
 .cq-banner.done span { color: var(--accent-2); font-weight: 700; }
 /* A banner or an empty place is a button that does nothing, and is not dimmed for it */
 button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opacity: 1; cursor: default; }
+/* Any region but yours folds back to its spine from its banner */
+button.cq-banner:not(:disabled):hover { filter: brightness(1.15); }
 
 /* What can be fought next is in full colour with a lit gold edge, conquered ground is dimmed, and the unfound is an empty place */
 .cq-tile { position: absolute; padding: 8px; border: 0; border-radius: 9px; background: #141a26 center 20% / cover; overflow: hidden; display: flex; align-items: flex-end; text-align: left; color: var(--text); opacity: 1; transition: transform .12s, box-shadow .12s, filter .12s; }

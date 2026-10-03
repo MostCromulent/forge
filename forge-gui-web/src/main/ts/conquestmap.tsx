@@ -128,7 +128,7 @@ export function ConquestMap({ actions, state }: { actions: Actions; state: Conqu
                 );
               }
               return (
-                <button key={`b${r}`} class={done ? 'cq-banner done' : 'cq-banner'} disabled={!toggle || !done} onClick={toggle}
+                <button key={`b${r}`} class={done ? 'cq-banner done' : 'cq-banner'} disabled={!toggle} onClick={toggle}
                   style={{ left: `${at.x}px`, top: `${Y0}px`, width: `${at.w}px`, height: `${BH}px`, backgroundImage: `url("${artUrl(region.art)}")` }}>
                   <b>{region.name}</b><span>{done && <img alt={t('lblWebConquestConquered')} src={skinIconUrl('IMG_PW_BADGE_COMMON')} />}{count}</span>
                 </button>

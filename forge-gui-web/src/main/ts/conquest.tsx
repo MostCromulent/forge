@@ -98,6 +98,36 @@ const DEV_WHEEL = ['BOOSTER', 'DOUBLE_BOOSTER', 'SHARDS', 'DOUBLE_SHARDS', 'PLAN
 const TABS: [ConquestTab, TextKey][] = [['map', 'lblTheMultiverse'], ['aether', 'lblTheAether'], ['party', 'lblCommanders'],
   ['collection', 'lblCollection'], ['planes', 'lblPlaneswalk'], ['stats', 'lblStatistics']];
 
+/** Dev mode: where the next Chaos Wheel stops, so each reward can be looked at, in a menu drawn as the deck editor's is. */
+function DevWheel({ actions }: { actions: Actions }) {
+  const [open, setOpen] = useState(false);
+  const [chosen, setChosen] = useState('');
+  useEffect(() => {
+    if (!open) return;
+    const away = () => setOpen(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  const labels: Record<string, string> = wheelLabels();
+  const name = (o: string) => (o ? labels[o] : t('lblWebConquestDevWheel'));
+  return (
+    <div class="menu-anchor" onPointerDown={e => e.stopPropagation()}>
+      <button class="cq-dev" aria-expanded={open} title={t('lblWebConquestDevWheel')} onClick={() => setOpen(!open)}>{name(chosen)} &#8964;</button>
+      {open && (
+        <div class="deck-menu" role="menu">
+          {['', ...DEV_WHEEL].map(o => (
+            <button key={o} role="menuitemradio" aria-checked={o === chosen} onClick={() => {
+              setChosen(o);
+              setOpen(false);
+              actions.devConquestWheel(o);
+            }}>{name(o)}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** A change of tab slides the page the way the tabs run (conquest.css). */
 function tabTo(tab: ConquestTab): void {
   const order = TABS.map(([id]) => id);
@@ -130,13 +160,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   return <>
     <CampaignBar bar={bar} tabs={TABS} tab={ui.conquestTab} setTab={tabTo}
       held={reward ? owed : {}} prefs={() => setPrefs(true)} under={!!reward}
-      extra={setting('devMode') && (
-        // Dev mode: where the next Chaos Wheel stops, so each reward can be looked at
-        <select class="cq-dev" aria-label={t('lblWebConquestDevWheel')} title={t('lblWebConquestDevWheel')} onChange={e => actions.devConquestWheel(e.currentTarget.value)}>
-          <option value="">{t('lblWebConquestDevWheel')}</option>
-          {DEV_WHEEL.map(o => <option key={o} value={o}>{wheelLabels()[o]}</option>)}
-        </select>
-      )} />
+      extra={setting('devMode') && <DevWheel actions={actions} />} />
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}><Page key={`${priced} ${model.conquestState.plane}`} tab={ui.conquestTab} model={model} actions={actions} /></div>
     {prefs && <Prefs model={model} actions={actions} close={() => { setPrefs(false); setPriced(priced + 1); }} />}
