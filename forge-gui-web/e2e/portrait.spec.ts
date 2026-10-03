@@ -24,8 +24,9 @@ probe('a desktop window does not', async p => {
 const WIDE_TOUCH = { viewport: { width: 1280, height: 800 }, hasTouch: true };
 
 probe('a tap on a card opens no hover preview', async p => {
-  await board(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
-  const card = p.page.locator('#opponent .card').first();
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
+  // Your own land: a tap on it acts, so nothing but a hover could open a preview
+  const card = p.page.locator('#me .battlefield .card').first();
   await card.tap();
   // A phone's browser follows a tap with the mouse events a pointer would have made, which Chromium's emulation leaves out
   await card.dispatchEvent('mouseenter');
@@ -153,3 +154,15 @@ probe('a prompt that picks cards closes the sheet', async p => {
   await expect(p.page.locator('#zoom.sheet')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeVisible();
 }, PHONE);
+
+probe('on a wide touch screen a long-press opens a panel that can be closed', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
+  await hold(p.page, p.page.locator('#opponent .card').first());
+  const zoom = p.page.locator('#zoom.sheet');
+  await expect(zoom).toBeVisible();
+  const at = await box(p.page, '#zoom');
+  expect(at.x).toBeGreaterThan(0);
+  expect(at.x + at.width).toBeLessThan(1280);
+  await zoom.locator('.sheet-close').tap();
+  await expect(zoom).toBeHidden();
+}, WIDE_TOUCH);
