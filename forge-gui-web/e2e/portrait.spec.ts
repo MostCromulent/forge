@@ -86,7 +86,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
       .filter(c => !c.classList.contains('tapped')).map(c => c.getBoundingClientRect().width)));
     expect(narrow).toBeGreaterThanOrEqual(39.5);
     expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
-    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(60);
+    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(72);
     const dock = await box(p.page, '#prompt');
     expect(dock.y + dock.height).toBeLessThanOrEqual(phone.viewport!.height);
   }, phone);
@@ -187,4 +187,15 @@ probe('the hand opens as a drawer, a card is played from it, and it closes for t
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
   await p.page.locator('#hand-head .close').tap();
   await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
+}, PHONE);
+
+probe('your bar and the costs over your hand do not overlap', async p => {
+  await settledBoard(p, 'humanhand=Giant Growth;Lightning Bolt;Counterspell\nhumanbattlefield=Forest;Forest;Grizzly Bears;Hill Giant\naibattlefield=Mountain');
+  const bar = await box(p.page, '#me .player');
+  const hand = await box(p.page, '#hand');
+  expect(Math.round(bar.y + bar.height)).toBeLessThanOrEqual(Math.round(hand.y) + 1);
+  const cost = await box(p.page, '#hand .card .cost-badge:not(:empty)');
+  expect(cost.y).toBeGreaterThanOrEqual(hand.y);
+  const tile = await box(p.page, '#me .zone-tile');
+  expect(tile.height / tile.width).toBeGreaterThan(1.3);
 }, PHONE);

@@ -48,10 +48,10 @@ html[data-form="portrait"] #prompt.pulse { animation: dock-pulse .5s ease-out; }
 html[data-motion="reduced"] #prompt.pulse { animation: none; }
 
 /* Each player is a bar: portrait, life and name, then the zones as chips. The opponent's is the top row, and yours sits over your hand. */
-html[data-form="portrait"] #match .seat { --card-w: 52px; --card-h: 73px; --min-card-w: 40px; --tile-w: 44px; grid-template-rows: auto minmax(0, 1fr); gap: 0; align-items: stretch; padding: 0 6px; }
+html[data-form="portrait"] #match .seat { --card-w: 52px; --card-h: 73px; --min-card-w: 40px; --tile-w: 42px; grid-template-rows: auto minmax(0, 1fr); gap: 0; align-items: stretch; padding: 0 6px; }
 html[data-form="portrait"] #me { --card-w: 60px; --card-h: 84px; grid-template-rows: minmax(0, 1fr) auto; }
 html[data-form="portrait"] #match #me .player { order: 2; }
-html[data-form="portrait"] #match .seat .player { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 56px; }
+html[data-form="portrait"] #match .seat .player { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 62px; }
 html[data-form="portrait"] #opponent.seat .player { padding-right: 46px; }
 html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 40px auto auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 0; flex: 0 1 auto; }
 html[data-form="portrait"] #match .seat .player-id .avatar { grid-row: 1; width: 40px; height: 40px; align-self: center; }
@@ -62,8 +62,9 @@ html[data-form="portrait"] #match .seat .avatar .life { left: calc(100% + 8px); 
 html[data-form="portrait"] #match .seat .player-id .name { grid-row: 1; grid-column: 2; min-width: 34px; max-width: 84px; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
 html[data-form="portrait"] #match .seat .player-id .hand-fan { grid-row: 1; grid-column: 3; margin: 0; min-width: 44px; min-height: 44px; align-self: center; }
 html[data-form="portrait"] #match .seat .zone-tiles { order: 1; margin-left: auto; gap: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-html[data-form="portrait"] #match .seat .zone-tile { height: 44px; }
-html[data-form="portrait"] #match .seat .zone-tile .zone-name { font-size: 8.5px; letter-spacing: 0; padding: 0 1px; left: 1px; right: 1px; top: 1px; }
+/* A zone keeps the shape of a card, so its top card is seen whole, and is wide enough to take a finger */
+html[data-form="portrait"] #match .seat .zone-tile { height: 58px; }
+html[data-form="portrait"] #match .seat .zone-tile .zone-name { font-size: 7.5px; letter-spacing: -.01em; padding: 1px 0; left: 1px; right: 1px; top: 1px; white-space: nowrap; }
 html[data-form="portrait"] #match .seat .zone-tile .zone-count { font-size: 11px; min-width: 16px; padding: 0 3px; right: 1px; bottom: 1px; }
 /* Counters, emblems and floating mana take a line of their own, and only when there are any */
 html[data-form="portrait"] #match .seat .player-extra { position: static; order: 2; flex: 1 0 100%; flex-direction: row; align-items: center; gap: 6px; min-height: 24px; overflow-x: auto; scrollbar-width: none; }
@@ -80,7 +81,9 @@ html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-
 html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 /* The hand as a strip of card tops, until its drawer opens */
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
-html[data-form="portrait"] #hand { height: 52px; padding-top: 6px; overflow: hidden; }
+/* The strip keeps room above its cards for their costs, which stand on a card's top edge */
+html[data-form="portrait"] #hand { height: 64px; padding-top: 18px; box-sizing: border-box; overflow: hidden; }
+html[data-form="portrait"] #hand.strip .card .cost-badge .sym { width: 12px; height: 12px; }
 html[data-form="portrait"] #hand::before { display: none; }
 html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
 #hand-head { display: none; }
@@ -154,3 +157,5 @@ html[data-form="portrait"] .card-menu kbd { display: none; }
   #match .card.pressed { animation: card-pressed .25s ease-out; }
 }
 @keyframes card-pressed { from { filter: brightness(1.5); } }
+/* Who went first is marked under the portrait, clear of the life total beside it */
+html[data-form="portrait"] #match .seat .avatar.first::after { right: auto; left: -6px; top: auto; bottom: -9px; font-size: 9px; padding: 0 4px; }

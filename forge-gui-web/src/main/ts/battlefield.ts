@@ -128,7 +128,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     ? Math.max(0, player.getBoundingClientRect().right + 16 - field.getBoundingClientRect().left - px(fieldStyle, 'padding-left')) : 0;
   const room = width - block;
   // A compact seat keeps its player's details in a row above the cards, and its own padding round both
-  const header = root.classList.contains('compact') ? q(root, '.player').offsetHeight + 8 : 0;
+  // So does a phone's seat, whose player is a bar across it
+  const header = root.classList.contains('compact') ? player.offsetHeight + 8 : minWidth ? player.offsetHeight : 0;
   const seatPad = px(style, 'padding-top') + px(style, 'padding-bottom');
   // The room by the pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried
   const mine = root.id === 'me';
