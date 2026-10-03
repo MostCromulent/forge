@@ -832,6 +832,10 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 /* A card you could act on now, and what Auto would tap, are marked paler and thinner than a card a prompt is asking for */
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent), var(--lift, 0 0 #0000); }
+/* A pile holds only cards Auto would tap alike (battlefield.ts), so every copy fanned behind the top one wears the ring, and its count, in the same colour, says how many */
+.card.pile.auto-tap:not(.selectable)::before, .card.pile.auto-tap:not(.selectable)::after, .card.pile.auto-tap:not(.selectable) .pile-edge {
+  box-shadow: 0 0 0 3px var(--playable, #66ccff), 0 1px 4px #000a; }
+.card.pile.auto-tap:not(.selectable) .count:not(.opened) { background: var(--playable, #66ccff); border-color: var(--playable, #66ccff); color: #04121c; }
 .card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent), var(--lift, 0 0 #0000); }
 /* While a prompt offers a pick, what it offers stays as it is and everything else dims, and the gold ring marks what is already chosen */
 #match.picking .card.selectable { outline: none; }
