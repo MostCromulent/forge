@@ -76,20 +76,22 @@ export function renderHand(model: Model, player: PlayerView | undefined, select:
     // A card another player may look at has been revealed to them
     el.classList.toggle('revealed', (c.PlayerMayLook ?? []).some(r => !!r && !model.localPlayers.includes(r.ref)));
   });
-  // A shallow arc: at most 2 degrees per card from the middle, 10 at the ends
-  const mid = (cards.length - 1) / 2;
-  const perCard = mid > 0 ? Math.min(2, 10 / mid) : 0;
-  [...root.children].forEach((child, i) => {
-    const el = child as HTMLElement;
-    el.style.setProperty('--tilt', `${(i - mid) * perCard}deg`);
-    el.style.setProperty('--drop', `${((i - mid) * perCard) ** 2 * 0.12}px`);
-  });
-  const first = root.firstElementChild as HTMLElement | null;
-  if (!first || cards.length < 2) return;
-  const cardWidth = first.offsetWidth;
+  const cardWidth = (root.firstElementChild as HTMLElement | null)?.offsetWidth ?? 0;
   // The room the hand keeps clear for the prompt beside it is not room for cards
   const style = getComputedStyle(root);
   const width = root.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-  const step = Math.min(6, (width - 16 - cards.length * cardWidth) / (cards.length - 1));
+  // Each card covers a fifth of the one before it, and more when the row would overflow
+  const step = cards.length > 1 ? Math.min(-0.2 * cardWidth, (width - 16 - cards.length * cardWidth) / (cards.length - 1)) : 0;
   root.style.setProperty('--step', `${step}px`);
+  // At most 3 degrees per card from the middle, 12 at the ends
+  const mid = (cards.length - 1) / 2;
+  const perCard = mid > 0 ? Math.min(3, 12 / mid) : 0;
+  // Each card drops as far as its tilt would carry it if the whole hand turned about one point below the screen
+  const radius = perCard > 0 ? (cardWidth + step) / Math.sin(perCard * Math.PI / 180) : 0;
+  [...root.children].forEach((child, i) => {
+    const tilt = (i - mid) * perCard;
+    const el = child as HTMLElement;
+    el.style.setProperty('--tilt', `${tilt}deg`);
+    el.style.setProperty('--drop', `${radius * (1 - Math.cos(tilt * Math.PI / 180))}px`);
+  });
 }
