@@ -10,6 +10,7 @@ import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import { isAiming } from './overlay';
 import { hovers } from './press';
+import { closeSheets, sheet, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
@@ -52,6 +53,7 @@ function afterRest(show: () => void): void {
 
 // el carries data-key, data-zoom (empty when the viewer may not see the card) and data-from for a card in hand that is elsewhere
 export function hoverCard(el: HTMLElement | null): void {
+  if (ui.inspect) return;
   if (!el || !el.dataset.zoom) {
     clearTimeout(opening);
     byId('zoom').classList.remove('settling');
@@ -84,6 +86,26 @@ function showCard(el: HTMLElement): void {
   }
 }
 
+/** Opens a card's details and keeps them open, which is what a rested finger asks for. */
+export function inspectCard(el: HTMLElement): void {
+  if (!el.dataset.zoom && !el.dataset.key) return;
+  clearTimeout(opening);
+  closeSheets('detail');
+  showCard(el);
+  changeUi(u => { u.inspect = true; });
+}
+
+export function inspectPlayer(key: number): void {
+  clearTimeout(opening);
+  closeSheets('detail');
+  changeUi(u => { u.hover = { player: key }; u.faceIndex = 0; u.inspect = true; });
+  actions?.inspectPlayer(key);
+}
+
+export function closeInspect(): void {
+  changeUi(u => { u.hover = null; u.faceIndex = 0; u.inspect = false; });
+}
+
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
   // A tap also sends mouse events, and a preview that follows a mouse has no place under a finger
   el.addEventListener('pointerenter', e => { if (hovers(e)) hoverCard(target); });
@@ -101,6 +123,7 @@ export function followPointer(e: MouseEvent): void {
 
 // Hovering an avatar shows desktop's player details (life, counters, hand size, commander damage and tax)
 export function hoverPlayer(key: number | null): void {
+  if (ui.inspect) return;
   clearTimeout(opening);
   if (key === null) {
     changeUi(u => { u.hover = null; u.faceIndex = 0; });
@@ -115,14 +138,28 @@ export function hoverPlayer(key: number | null): void {
 }
 
 export function renderDetail(model: Model): void {
-  if (hoverGone() || (ui.hover && 'player' in ui.hover && isAiming())) {
+  if (hoverGone() || (ui.hover && 'player' in ui.hover && isAiming() && !ui.inspect)) {
     ui.hover = null;
     byId('zoom').classList.remove('settling');
   }
+  // A question that picks from the board needs the board, so a pinned sheet gives way to it
+  const p = model.prompt;
+  if (ui.inspect && p && p !== askedWhenPinned && !p.paying && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0)) {
+    ui.hover = null;
+  }
+  if (!ui.hover) ui.inspect = false;
+  askedWhenPinned = ui.inspect ? askedWhenPinned ?? p ?? NO_PROMPT : null;
   drawDetail(model);
   const hover = ui.hover;
   const zoom = byId('zoom');
-  if (hover && 'card' in hover && hover.at) {
+  const pinned = ui.inspect && !!hover;
+  zoom.classList.toggle('sheet', pinned);
+  sheet('detail', pinned, closeInspect);
+  if (pinned) {
+    zoom.classList.remove('placed', 'settling');
+    zoom.style.left = zoom.style.top = '';
+    drawSheetActions(zoom, model);
+  } else if (hover && 'card' in hover && hover.at) {
     placeZoom(zoom, hover.at);
   } else if (hover && 'player' in hover) {
     placeAtPointer(zoom);
@@ -130,6 +167,72 @@ export function renderDetail(model: Model): void {
     zoom.classList.remove('placed');
     zoom.style.left = zoom.style.top = '';
   }
+}
+
+/** The prompt that was open when the sheet was pinned, so only a new question closes it. */
+let askedWhenPinned: object | null = null;
+const NO_PROMPT = {};
+
+/** What a mouse does with a click, a right-click and its keys, as buttons under the card. */
+function drawSheetActions(zoom: HTMLElement, model: Model): void {
+  let bar = zoom.querySelector<HTMLElement>('.sheet-actions');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.className = 'sheet-actions';
+    bar.innerHTML = '<button class="sheet-prev">‹</button><span class="sheet-at"></span><button class="sheet-next">›</button>'
+      + '<button class="sheet-act"></button><button class="sheet-abilities"></button><button class="sheet-flip"></button><button class="sheet-close"></button>';
+    zoom.append(bar);
+    q(bar, '.sheet-prev').setAttribute('aria-label', t('lblWebPortraitPreviousCard'));
+    q(bar, '.sheet-next').setAttribute('aria-label', t('lblWebPortraitNextCard'));
+    q(bar, '.sheet-close').textContent = t('lblClose');
+    q(bar, '.sheet-close').onclick = closeInspect;
+    q(bar, '.sheet-flip').onclick = () => changeUi(u => { u.cardText = !u.cardText; });
+    swipeDown(zoom, closeInspect);
+  }
+  const hover = ui.hover;
+  const at = hover && 'card' in hover ? hover.at : undefined;
+  const card = at?.closest<HTMLElement>('.card') ?? null;
+  const stacked = at?.closest<HTMLElement>('.stack-item:not(.awaiting)') ?? null;
+  // Its neighbours in the same zone, in the order the page shows them
+  const row = card ? [...card.closest('.battlefield, #hand, .cards')?.querySelectorAll<HTMLElement>('.card[data-key]') ?? []].filter(c => c.offsetParent !== null) : [];
+  const index = card ? row.indexOf(card) : -1;
+  const prev = q<HTMLButtonElement>(bar, '.sheet-prev');
+  const next = q<HTMLButtonElement>(bar, '.sheet-next');
+  prev.hidden = next.hidden = q(bar, '.sheet-at').hidden = row.length < 2 || index < 0;
+  prev.disabled = index <= 0;
+  next.disabled = index >= row.length - 1;
+  prev.onclick = () => inspectCard(row[index - 1]);
+  next.onclick = () => inspectCard(row[index + 1]);
+  q(bar, '.sheet-at').textContent = t('lblWebPortraitCardOf', index + 1, row.length);
+  const key = hover && 'card' in hover ? hover.card : null;
+  const playable = !!card?.classList.contains('playable');
+  const selectable = !!card?.classList.contains('selectable');
+  const act = q<HTMLButtonElement>(bar, '.sheet-act');
+  act.hidden = key === null || (!playable && !selectable);
+  act.textContent = t(selectable ? 'lblWebPortraitChoose' : 'lblWebPortraitPlay');
+  act.onclick = () => {
+    closeInspect();
+    if (key !== null) actions?.selectCard(key, false, 0, 0);
+  };
+  const more = q<HTMLButtonElement>(bar, '.sheet-abilities');
+  more.hidden = !(stacked || (key !== null && playable));
+  more.textContent = t(stacked ? 'lblWebPortraitStackOptions' : 'lblWebPortraitAbilities');
+  // The host answers either with a menu, which a phone draws along the bottom edge
+  more.onclick = () => {
+    closeInspect();
+    if (stacked) {
+      const item = Number(stacked.dataset.key);
+      changeUi(u => { u.stackMenuAt = { key: item, x: innerWidth / 2, y: innerHeight / 2 }; });
+      actions?.askStackMenu(item);
+    } else if (key !== null) {
+      actions?.selectCard(key, true, innerWidth / 2, innerHeight / 2);
+    }
+  };
+  const flip = q<HTMLButtonElement>(bar, '.sheet-flip');
+  flip.hidden = key === null || !model.cardDetails.has(key) || !(hover && 'card' in hover && hover.src);
+  flip.textContent = t(ui.cardText ? 'lblWebPortraitShowImage' : 'lblWebPortraitShowRules');
+  // A card with more than one face turns to the next when it is tapped
+  q<HTMLElement>(zoom, '.shot').onclick = () => nextFace(model);
 }
 
 /** The gap kept between a card and its preview, and between the preview and the edges it must stay inside. */
@@ -174,6 +277,7 @@ function drawDetail(model: Model): void {
   zoom.hidden = !hover;
   if (!hover) return;
   ensureZoom(zoom);
+  zoom.querySelector<HTMLElement>('.sheet-actions')?.toggleAttribute('hidden', !ui.inspect);
   q(zoom, '.cmdr-taken').hidden = true;
   if ('player' in hover) {
     drawPlayer(zoom, model.playerDetails.get(hover.player));
@@ -404,7 +508,7 @@ function ensureZoom(zoom: HTMLElement): void {
   // The preview is placed before its image arrives, and grows when it does, so it is placed again to stay on screen
   img.addEventListener('load', () => {
     const hover = ui.hover;
-    if (hover && 'card' in hover && hover.at) placeZoom(zoom, hover.at);
+    if (!ui.inspect && hover && 'card' in hover && hover.at) placeZoom(zoom, hover.at);
   });
 }
 

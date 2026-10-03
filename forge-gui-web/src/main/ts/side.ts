@@ -70,7 +70,8 @@ function placePrompt(): void {
   const prompt = byId('prompt');
   const home = isPortrait() ? byId('match') : byId('side');
   if (prompt.parentElement !== home) home.append(prompt);
-  if (isPortrait()) byId('match').style.setProperty('--dock-h', `${prompt.offsetHeight}px`);
+  // Read by every sheet, some of which are drawn outside the board
+  if (isPortrait()) document.documentElement.style.setProperty('--dock-h', `${prompt.offsetHeight}px`);
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */

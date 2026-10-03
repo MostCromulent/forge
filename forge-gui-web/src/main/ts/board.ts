@@ -6,7 +6,7 @@ import { commanderTax, game, me, players, zone, deref, stateOf, isLocal, type Mo
 import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
-import { followPointer, hoverPlayer, hoverable } from './detail';
+import { followPointer, hoverPlayer, hoverable, inspectCard, inspectPlayer } from './detail';
 import { renderStack } from './stack';
 import { renderPlanes } from './planes';
 import { isArchenemy, renderOngoing, resetSchemes, revealSchemes } from './schemes';
@@ -24,7 +24,8 @@ import type { Actions } from './actions';
 import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 import { notePick } from './overlay';
-import { hovers } from './press';
+import { hovers, isTouch, longPress } from './press';
+import { repeatTap, tapInspects } from './portrait';
 import { t, type TextKey } from './text';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
@@ -61,9 +62,22 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   byId('match').classList.toggle('picking', !!p && !p.paying
     && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
+  const picking = byId('match').classList.contains('picking');
+  const mine = me(model)?.$key;
   const select: CardClick = (el, menu, e) => {
-    notePick(Number(el.dataset.key));
-    actions.selectCard(Number(el.dataset.key), menu, e?.clientX ?? 0, e?.clientY ?? 0);
+    const key = Number(el.dataset.key);
+    if (isTouch(e) && !menu) {
+      if (repeatTap(key, performance.now())) return;
+      const card = model.objects.get(key) as CardView | undefined;
+      if (tapInspects({ playable: el.classList.contains('playable'), selectable: el.classList.contains('selectable'), mine: card?.Controller?.ref === mine }, picking)) {
+        inspectCard(el);
+        return;
+      }
+      // Shown at once, since the host's answer can be a moment away
+      replay(el, 'pressed');
+    }
+    notePick(key);
+    actions.selectCard(key, menu, e?.clientX ?? 0, e?.clientY ?? 0);
   };
   // Attachments can cross players (an aura on an opponent's creature), so slots are built from every battlefield
   const onField = players(model).flatMap(p => zone(model, p, 'Battlefield'));
@@ -217,6 +231,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     });
     avatarEl.addEventListener('pointermove', e => { if (hovers(e)) followPointer(e); });
     avatarEl.addEventListener('pointerleave', e => { if (hovers(e)) hoverPlayer(null); });
+    avatarEl.addEventListener('pointerdown', e => longPress(e, () => inspectPlayer(Number(root.dataset.player))));
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
     // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {

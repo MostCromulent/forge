@@ -119,3 +119,26 @@ html[data-form="portrait"] .until-row button.on { background: var(--brass); colo
 }
 /* Your own hand is on show just below, so its count is not said twice */
 html[data-form="portrait"] #match #me .hand-fan { display: none; }
+
+/* The hover preview, pinned open as a sheet: the card, then what a mouse would do to it as buttons */
+html[data-form="portrait"] #match #zoom.sheet { --zoom-w: min(62vw, calc((100dvh - var(--dock-h, 110px) - 250px) * 63 / 88)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
+html[data-form="portrait"] #match #zoom.sheet > .hint { display: none; }
+.sheet-actions { display: none; }
+html[data-form="portrait"] #zoom.sheet .sheet-actions:not([hidden]) { display: grid; grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 8px; width: 100%; align-items: center; }
+html[data-form="portrait"] .sheet-actions button { min-height: 48px; min-width: 0; grid-column: span 2; }
+html[data-form="portrait"] .sheet-actions :is(.sheet-prev, .sheet-next) { grid-column: span 1; min-height: 44px; font-size: 22px; line-height: 1; padding: 0; }
+html[data-form="portrait"] .sheet-actions .sheet-at { grid-column: span 2; text-align: center; color: var(--muted); font-size: 12px; }
+html[data-form="portrait"] .sheet-actions .sheet-act { background: var(--brass); color: var(--on-brass); font-weight: 800; border-color: var(--accent); }
+html[data-form="portrait"] .sheet-actions [hidden] { display: none; }
+/* A lone button in its row takes the whole of it */
+html[data-form="portrait"] .sheet-actions .sheet-act:not([hidden]):has(+ .sheet-abilities[hidden]), html[data-form="portrait"] .sheet-actions .sheet-close:only-of-type { grid-column: 1 / -1; }
+html[data-form="portrait"] .sheet-actions .sheet-flip[hidden] + .sheet-close { grid-column: 1 / -1; }
+/* A card's own menu and the stack's, which open at the pointer on a desktop */
+html[data-form="portrait"] #dialog-layer .backdrop.anchored .card-menu, html[data-form="portrait"] #stack-menu { position: fixed; left: 0 !important; right: 0; top: auto !important; bottom: var(--dock-h, 110px); width: auto; max-width: none; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 12px; }
+html[data-form="portrait"] :is(.card-menu, #stack-menu) .card-menu-item { min-height: 48px; }
+html[data-form="portrait"] .card-menu kbd { display: none; }
+/* A tapped card answers at once, before the host does */
+@media (hover: none) {
+  #match .card.pressed { animation: card-pressed .25s ease-out; }
+}
+@keyframes card-pressed { from { filter: brightness(1.5); } }

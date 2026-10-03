@@ -1,7 +1,8 @@
 // One card on the page, built here by every zone that shows one, so a card looks the same wherever it is
 
 import { combatShown, commanderTax, deref, stateOf, type Model } from './model';
-import { hoverable } from './detail';
+import { hoverable, inspectCard } from './detail';
+import { longPress } from './press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
 import { playerSleeveUrl, cssUrl } from './looks';
 import { reconcile } from './render';
@@ -30,6 +31,7 @@ export function createCard(onClick: CardClick): HTMLDivElement {
     onClick(el, true, e);
   });
   hoverable(el);
+  el.addEventListener('pointerdown', e => longPress(e, () => inspectCard(el)));
   return el;
 }
 

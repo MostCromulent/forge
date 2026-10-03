@@ -2,10 +2,10 @@ import { reconcile } from './render';
 import { lastPicture } from './cards';
 import { cardImageSrc, noImageOnError, setImage } from './images';
 import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
-import { hoverCard, hoverable } from './detail';
+import { hoverCard, hoverable, inspectCard } from './detail';
 import { journeys } from './motion';
 import { stackTargets } from './overlay';
-import { hovers } from './press';
+import { hovers, longPress } from './press';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
@@ -185,6 +185,7 @@ function createAwaiting(key: string): HTMLElement {
   img.dataset.key = key;
   img.dataset.zoom = spell?.zoom ?? '';
   hoverable(el, img);
+  el.addEventListener('pointerdown', e => longPress(e, () => inspectCard(img)));
   return el;
 }
 
@@ -210,6 +211,7 @@ function createItem(model: Model): HTMLElement {
     layout(pile, pile.childElementCount);
     hoverCard(img);
   });
+  el.addEventListener('pointerdown', e => longPress(e, () => inspectCard(img)));
   // Desktop's stack menu: auto-yield, always accept or decline your optional trigger, yield to the stack
   el.addEventListener('contextmenu', e => {
     e.preventDefault();

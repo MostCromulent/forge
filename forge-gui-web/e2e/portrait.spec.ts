@@ -1,6 +1,12 @@
 import { expect, type Page } from '@playwright/test';
-import { board, probe, PHONE, SMALL_PHONE } from './probe';
+import { act, board, probe, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
 import { hold } from './steps';
+
+/** A board set up from a state arrives in pieces, and a card touched before the last piece lands is one about to be replaced. */
+async function settledBoard(p: Probe, state: string, table?: Table): Promise<void> {
+  await board(p, state, table);
+  await p.page.waitForTimeout(1500);
+}
 
 const form = (page: Page) => page.evaluate(() => document.documentElement.dataset.form ?? '');
 
@@ -105,4 +111,45 @@ probe('a tap on the phase strip opens stops as a sheet above the dock, and Back 
   await p.page.goBack();
   await expect(stops).toBeHidden();
   await expect(p.page.locator('#match')).toBeVisible();
+}, PHONE);
+
+probe('a long-press on a card opens its details as a sheet above the dock', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
+  await hold(p.page, p.page.locator('#opponent .card').first());
+  const zoom = p.page.locator('#zoom.sheet');
+  await expect(zoom).toBeVisible();
+  await expect(zoom.locator('.name')).toHaveText('Grizzly Bears');
+  const sheet = await box(p.page, '#zoom');
+  const dock = await box(p.page, '#prompt');
+  expect(sheet.width).toBe(390);
+  expect(Math.round(sheet.y + sheet.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
+  await zoom.locator('.sheet-close').tap();
+  await expect(zoom).toBeHidden();
+}, PHONE);
+
+probe('a long-press inspects and does not play', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  const forest = p.page.locator('#me .battlefield .card').first();
+  await hold(p.page, forest);
+  await expect(p.page.locator('#zoom.sheet')).toBeVisible();
+  await p.page.waitForTimeout(600);
+  // A tap would have tapped the land for mana
+  await expect(forest).not.toHaveClass(/tapped/);
+}, PHONE);
+
+probe('a tap on an opponent\'s card with nothing asked opens its details', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
+  await p.page.locator('#opponent .card').first().tap();
+  await expect(p.page.locator('#zoom.sheet .name')).toHaveText('Grizzly Bears');
+}, PHONE);
+
+probe('a prompt that picks cards closes the sheet', async p => {
+  await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
+  await p.page.locator('#opponent .card').first().tap();
+  await expect(p.page.locator('#zoom.sheet')).toBeVisible();
+  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
+  await expect(p.page.locator('#zoom.sheet')).toBeHidden();
+  await expect(p.page.locator('#prompt .cancel')).toBeVisible();
 }, PHONE);

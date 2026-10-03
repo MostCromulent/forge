@@ -64,6 +64,8 @@ export interface UiState {
   conquestOpened: Record<string, boolean>;
   /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
   draftHidden: boolean;
+  /** The hovered card or player is pinned open as a sheet, as a rested finger asks on a phone. */
+  inspect: boolean;
   /** The phone's menu sheet, and which of its tabs shows. */
   menuSheet: 'log' | 'chat' | 'zones' | 'players' | null;
 }
@@ -96,6 +98,7 @@ export const ui: UiState = {
   conquestTab: 'map',
   conquestOpened: {},
   draftHidden: false,
+  inspect: false,
   menuSheet: null,
 };
 
@@ -166,6 +169,7 @@ export function resetMatchUi(): void {
   ui.menuSheet = null;
   ui.picker = null;
   ui.hover = null;
+  ui.inspect = false;
   ui.faceIndex = 0;
 }
 

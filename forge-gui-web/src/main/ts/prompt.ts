@@ -1,7 +1,8 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images';
 import { deref, game, type Model } from './model';
 import { playerAvatarUrl } from './looks';
-import { hoverable } from './detail';
+import { hoverable, inspectCard } from './detail';
+import { longPress } from './press';
 import { stepName } from './phasebar';
 import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
@@ -113,6 +114,10 @@ function drawPrompt(model: Model, actions: Actions): void {
     buildGlints(root);
     // Long text is cut to two lines in the phone's dock, and a tap shows the rest
     q(root, '.message').onclick = () => root.classList.toggle('open');
+    q(root, '.message').addEventListener('pointerdown', e => longPress(e, () => {
+      const about = q<HTMLImageElement>(root, '.prompt-card');
+      if (about.dataset.zoom) inspectCard(about);
+    }));
     const card = q<HTMLImageElement>(root, '.prompt-card');
     hideOnError(card);
     hoverable(card);
