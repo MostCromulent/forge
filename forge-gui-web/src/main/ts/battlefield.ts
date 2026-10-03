@@ -101,6 +101,9 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const fan = px(fieldStyle, '--fan');
   const glow = px(fieldStyle, '--glow');
   const supportIndent = px(fieldStyle, '--support-indent');
+  // A phone sets a floor in pixels, below which a card can be neither read nor tapped
+  const minWidth = px(style, '--min-card-w');
+  const minFit = minWidth ? Math.max(MIN_FIT, minWidth / w) : MIN_FIT;
   const slotW = h * 0.9 + 2 * air;
   // A group's width at a card size of 1, on one line or split over two
   const groupUnit = (g: GroupStats, lines: number) => {
@@ -111,7 +114,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // Between a group's two lines, room for an attacker on the back line to step forward into, with its chevron
   const lineGap = (fit: number) => 14 + (h - w * 0.9) / 2 * fit;
   const live = (z: Zone) => z.filter(g => g.slots > 0);
-  const rowGap = (r: number) => (r === 1 ? 52 : 40);
+  const rowGap = (r: number) => px(fieldStyle, r === 1 ? '--row-gap-1' : '--row-gap-0') || (r === 1 ? 52 : 40);
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
     live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
   // What is behind a card fans out to its left only, so it costs a row width and never height
@@ -143,7 +146,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const fitOn = (lines: number) =>
       Math.min(cap, (room - inner) / Math.max(1, g.reduce((n, x) => n + groupUnit(x, lines), 0)));
     const one = fitOn(1);
-    const floor = (fit: number) => Math.max(MIN_FIT, fit);
+    const floor = (fit: number) => Math.max(minFit, fit);
     if (!two) return { fit: floor(one), lines: 1, raw: one };
     const split = fitOn(2);
     const was = Number(z[0].el.dataset.lines ?? '1');
@@ -179,7 +182,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
 
   // Each layout that fits the height is judged by its smallest zone before the smallest size is applied, so less overflow wins
   const tried: { cap: number; sizes: Sized[][]; smallest: number; split: number }[] = [];
-  for (let cap = MAX_FIT; cap >= MIN_FIT - 1e-9; cap -= STEP) {
+  for (let cap = MAX_FIT; cap >= minFit - 1e-9; cap -= STEP) {
     for (const twoA of [false, true]) {
       for (const twoB of [false, true]) {
         const sizes = [layRow(0, cap, twoA), layRow(1, cap, twoB)];
@@ -196,7 +199,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const best = tried.filter(t => t.smallest >= top - SMALLEST_SLACK)
     .sort((a, b) => b.cap - a.cap || a.split - b.split || b.smallest - a.smallest)[0];
   // Past the smallest size nothing fits; the smallest cards, split where they can be, scroll rather than shrink
-  const chosen = best ?? { cap: MIN_FIT, sizes: [layRow(0, MIN_FIT, true), layRow(1, MIN_FIT, true)] };
+  const chosen = best ?? { cap: minFit, sizes: [layRow(0, minFit, true), layRow(1, minFit, true)] };
   field.classList.toggle('crowded', !best);
   root.style.setProperty('--fit', chosen.cap.toFixed(2));
   let shrinking = false;
@@ -206,7 +209,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const indent = r === 0 && live(row[1]).length ? supportIndent : 0;
     const across = zones.reduce((n, z) => n + zoneWidth(z, chosen.sizes[r][row.indexOf(z)], rowGap(r)), 0)
       + rowGap(r) * Math.max(0, zones.length - 1) + indent;
-    const shift = Math.max(0, 2 * block + across - width);
+    // On a phone a row too wide for the board starts at its edge and scrolls
+    const shift = minWidth ? 0 : Math.max(0, 2 * block + across - width);
     row[0][0].el.parentElement?.style.setProperty('padding-left', shift ? `${shift}px` : '');
   });
   rows.forEach((row, r) => row.forEach((zone, z) => {

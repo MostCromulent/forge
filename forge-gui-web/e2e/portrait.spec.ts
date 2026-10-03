@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { board, probe, PHONE } from './probe';
+import { board, probe, PHONE, SMALL_PHONE } from './probe';
 import { hold } from './steps';
 
 const form = (page: Page) => page.evaluate(() => document.documentElement.dataset.form ?? '');
@@ -65,3 +65,22 @@ probe('the swap setting puts OK on the right', async p => {
   await expect(p.page.locator('#prompt .ok')).toBeVisible();
   expect((await box(p.page, '#prompt .ok')).x).toBeGreaterThan(280);
 }, PHONE);
+
+// Different names, so the cards stand apart rather than folding into piles
+const CROWD = 'humanbattlefield=' + ['Grizzly Bears', 'Runeclaw Bear', 'Hill Giant', 'Gray Ogre', 'Goblin Piker', 'Raging Goblin', 'Craw Wurm', 'Scathe Zombies',
+  'Ironroot Treefolk', 'Giant Spider', 'Wall of Wood', 'Elvish Warrior', 'Forest', 'Forest', 'Forest', 'Forest'].join(';')
+  + '\naibattlefield=' + ['Hill Giant', 'Gray Ogre', 'Goblin Piker', 'Raging Goblin', 'Craw Wurm', 'Scathe Zombies', 'Giant Spider', 'Wall of Wood', 'Mountain', 'Mountain'].join(';');
+
+for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
+  probe(`a crowded board keeps its cards 40px wide at ${name}`, async p => {
+    await board(p, CROWD);
+    await p.page.waitForTimeout(1200);
+    const narrow = await p.page.evaluate(() => Math.min(...[...document.querySelectorAll<HTMLElement>('#match .battlefield .card')]
+      .filter(c => !c.classList.contains('tapped')).map(c => c.getBoundingClientRect().width)));
+    expect(narrow).toBeGreaterThanOrEqual(39.5);
+    expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
+    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(60);
+    const dock = await box(p.page, '#prompt');
+    expect(dock.y + dock.height).toBeLessThanOrEqual(phone.viewport!.height);
+  }, phone);
+}

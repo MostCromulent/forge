@@ -24,6 +24,7 @@ import type { Actions } from './actions';
 import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from './protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 import { notePick } from './overlay';
+import { hovers } from './press';
 import { t, type TextKey } from './text';
 
 // The Mana property counts the pool by Forge's mana bit (ManaAtom): the five colours as MagicColor has them, and colourless its own bit
@@ -210,12 +211,12 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       actions.selectPlayer(Number(root.dataset.player));
     };
     avatarEl.addEventListener('pointerenter', e => {
-      if (e.pointerType !== 'mouse') return;
+      if (!hovers(e)) return;
       followPointer(e);
       hoverPlayer(Number(root.dataset.player));
     });
-    avatarEl.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') followPointer(e); });
-    avatarEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hoverPlayer(null); });
+    avatarEl.addEventListener('pointermove', e => { if (hovers(e)) followPointer(e); });
+    avatarEl.addEventListener('pointerleave', e => { if (hovers(e)) hoverPlayer(null); });
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
     // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {

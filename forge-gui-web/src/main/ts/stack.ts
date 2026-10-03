@@ -5,6 +5,7 @@ import { game, deref, derefAll, stackPick, stateOf, type Model } from './model';
 import { hoverCard, hoverable } from './detail';
 import { journeys } from './motion';
 import { stackTargets } from './overlay';
+import { hovers } from './press';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
@@ -202,7 +203,7 @@ function createItem(model: Model): HTMLElement {
     }
   });
   el.addEventListener('pointerenter', e => {
-    if (e.pointerType !== 'mouse') return;
+    if (!hovers(e)) return;
     const pile = el.parentElement as HTMLElement;
     // Lifted at once, rather than on the next frame, so the pile answers the pointer as it moves along it
     ui.hoveredStackItem = Number(el.dataset.key);
@@ -217,7 +218,7 @@ function createItem(model: Model): HTMLElement {
     actions?.askStackMenu(key);
   });
   el.addEventListener('pointerleave', e => {
-    if (e.pointerType !== 'mouse') return;
+    if (!hovers(e)) return;
     const pile = el.parentElement as HTMLElement;
     ui.hoveredStackItem = null;
     layout(pile, pile.childElementCount);

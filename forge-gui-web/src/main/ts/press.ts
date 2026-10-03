@@ -9,6 +9,9 @@ let touching = false;
 let touchEnded = -Infinity;
 let swallowClick = false;
 
+/** A pointer that can rest over something without pressing it. A phone has none, whatever events its browser makes up. */
+export const hovers = (e: PointerEvent): boolean => e.pointerType === 'mouse' && matchMedia('(any-hover: hover)').matches;
+
 export const isTouch = (e: Event | undefined): boolean => (e as PointerEvent | undefined)?.pointerType === 'touch';
 
 export function initPress(): void {

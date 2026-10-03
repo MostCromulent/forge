@@ -9,6 +9,7 @@ import { boundKeys } from './settings';
 import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import { isAiming } from './overlay';
+import { hovers } from './press';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
@@ -85,8 +86,8 @@ function showCard(el: HTMLElement): void {
 
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
   // A tap also sends mouse events, and a preview that follows a mouse has no place under a finger
-  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') hoverCard(target); });
-  el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hoverCard(null); });
+  el.addEventListener('pointerenter', e => { if (hovers(e)) hoverCard(target); });
+  el.addEventListener('pointerleave', e => { if (hovers(e)) hoverCard(null); });
 }
 
 /** Where the pointer is over an avatar; the player's details are put beside it, and follow it. */
