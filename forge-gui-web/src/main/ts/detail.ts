@@ -84,8 +84,9 @@ function showCard(el: HTMLElement): void {
 }
 
 export function hoverable(el: HTMLElement, target: HTMLElement = el): void {
-  el.addEventListener('mouseenter', () => hoverCard(target));
-  el.addEventListener('mouseleave', () => hoverCard(null));
+  // A tap also sends mouse events, and a preview that follows a mouse has no place under a finger
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') hoverCard(target); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hoverCard(null); });
 }
 
 /** Where the pointer is over an avatar; the player's details are put beside it, and follow it. */

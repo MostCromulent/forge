@@ -201,7 +201,8 @@ function createItem(model: Model): HTMLElement {
       actions?.answer(pick.id, [index]);
     }
   });
-  el.addEventListener('mouseenter', () => {
+  el.addEventListener('pointerenter', e => {
+    if (e.pointerType !== 'mouse') return;
     const pile = el.parentElement as HTMLElement;
     // Lifted at once, rather than on the next frame, so the pile answers the pointer as it moves along it
     ui.hoveredStackItem = Number(el.dataset.key);
@@ -215,7 +216,8 @@ function createItem(model: Model): HTMLElement {
     changeUi(u => { u.stackMenuAt = { key, x: e.clientX, y: e.clientY }; });
     actions?.askStackMenu(key);
   });
-  el.addEventListener('mouseleave', () => {
+  el.addEventListener('pointerleave', e => {
+    if (e.pointerType !== 'mouse') return;
     const pile = el.parentElement as HTMLElement;
     ui.hoveredStackItem = null;
     layout(pile, pile.childElementCount);

@@ -188,9 +188,6 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .drag-chip.no img { filter: grayscale(1) brightness(.6); }
 .drag-chip.rm { border-color: var(--danger); }
 .drag-chip.rm .verb { color: var(--danger); }
-.press-ring { position: fixed; z-index: 90; width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--accent-2); border-right-color: transparent; pointer-events: none; animation: press-ring .5s linear; }
-@keyframes press-ring { from { transform: rotate(0); } to { transform: rotate(1turn); } }
-html[data-motion="reduced"] .press-ring { animation: none; }
 .tile, .ed-line, .commander, .cat-table tr { touch-action: pan-y; user-select: none; }
 
 /* --- the card menu and the printing picker ------------------------------------- */

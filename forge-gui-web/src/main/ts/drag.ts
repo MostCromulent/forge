@@ -22,7 +22,6 @@ export interface Verdict {
 }
 
 const THRESHOLD_PX = 4;
-const LONG_PRESS_MS = 500;
 const COMMANDER_FORMATS = new Set(['Commander', 'Brawl', 'Oathbreaker', 'TinyLeaders']);
 // A refusal's words follow this mark, which also tells the zone to show it as refusing
 const REFUSED = '⊘';
@@ -119,37 +118,6 @@ export type CardHandlers = (name: string, from: Zone, image: string, count: numb
   onPointerDown: (e: PointerEvent) => void;
   onContextMenu: (e: MouseEvent) => void;
 };
-
-/** Opens something after a finger rests on an element, with a ring filling while it waits. A touch that moves is a scroll. */
-export function longPress(e: PointerEvent, open: (x: number, y: number) => void): void {
-  if (e.pointerType !== 'touch') {
-    return;
-  }
-  const x = e.clientX;
-  const y = e.clientY;
-  const ring = document.createElement('div');
-  ring.className = 'press-ring';
-  ring.style.left = `${x - 20}px`;
-  ring.style.top = `${y - 20}px`;
-  document.body.append(ring);
-  const timer = setTimeout(() => {
-    cancel();
-    open(x, y);
-  }, LONG_PRESS_MS);
-  const moved = (ev: PointerEvent) => {
-    if (Math.hypot(ev.clientX - x, ev.clientY - y) > 8) cancel();
-  };
-  function cancel(): void {
-    clearTimeout(timer);
-    ring.remove();
-    document.removeEventListener('pointermove', moved);
-    document.removeEventListener('pointerup', cancel);
-    document.removeEventListener('pointercancel', cancel);
-  }
-  document.addEventListener('pointermove', moved);
-  document.addEventListener('pointerup', cancel);
-  document.addEventListener('pointercancel', cancel);
-}
 
 function makeChip(carried: Carried, image: string): HTMLElement {
   const chip = document.createElement('div');

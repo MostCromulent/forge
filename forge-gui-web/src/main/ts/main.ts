@@ -5,6 +5,7 @@ import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } fr
 import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm } from './form';
+import { initPress } from './press';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
@@ -131,6 +132,7 @@ initNotices((notice, view, label) => {
   notify(notice, view, NOTICE_MS, label);
   schedule();
 });
+initPress();
 initDetail(actions);
 initStack(actions);
 initOverlay(schedule);

@@ -209,9 +209,13 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
       notePick(Number(root.dataset.player));
       actions.selectPlayer(Number(root.dataset.player));
     };
-    avatarEl.addEventListener('mouseenter', e => { followPointer(e); hoverPlayer(Number(root.dataset.player)); });
-    avatarEl.addEventListener('mousemove', followPointer);
-    avatarEl.addEventListener('mouseleave', () => hoverPlayer(null));
+    avatarEl.addEventListener('pointerenter', e => {
+      if (e.pointerType !== 'mouse') return;
+      followPointer(e);
+      hoverPlayer(Number(root.dataset.player));
+    });
+    avatarEl.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') followPointer(e); });
+    avatarEl.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hoverPlayer(null); });
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
     // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {

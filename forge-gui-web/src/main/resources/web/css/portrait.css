@@ -1,1 +1,13 @@
 /* A phone or tablet held upright (form.ts sets data-form). Nothing here applies to the desktop layout. */
+/* The browser's own answers to a finger: pull to refresh, double-tap zoom, and the long-press callout */
+html[data-form="portrait"], html[data-form="portrait"] body { overscroll-behavior: none; }
+@media (hover: none) {
+  #match { touch-action: manipulation; }
+  #match :is(.card, .avatar, .zone-tile, .stack-item, #phase-strip, #prompt, img) { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  /* A hover stays on the last thing tapped, so the ones that move or grow a card are cancelled */
+  #hand .card:hover { transform: translateX(var(--shift, 0px)) translateY(var(--drop, 0px)) rotate(var(--tilt, 0deg)); z-index: auto; box-shadow: var(--lift, none); }
+  #hand .card:hover::after { content: none; }
+  #hand .card:is(:has(~ .card:hover), :hover ~ .card, :has(+ .card:hover), :hover + .card) { --shift: 0px; }
+  #hand .card:hover :is(.cost-badge, .seen) { transform: none; }
+  #prompt kbd { display: none; }
+}
