@@ -73,6 +73,8 @@ export interface UiState {
   seatChosenTurn: number;
   /** The permanents each opponent had when their seat was last showing, by player key. */
   seenOnField: Map<number, Set<number>>;
+  /** On a phone, the player whose zones are open from their bar, where only the counts are kept on show. */
+  zonesFor: number | null;
   /** The phone's menu sheet, and which of its tabs shows. */
   menuSheet: 'log' | 'chat' | 'zones' | 'players' | null;
 }
@@ -108,6 +110,7 @@ export const ui: UiState = {
   inspect: false,
   handOpen: false,
   openSeat: null,
+  zonesFor: null,
   seatChosenTurn: 0,
   seenOnField: new Map(),
   menuSheet: null,
@@ -183,6 +186,7 @@ export function resetMatchUi(): void {
   ui.inspect = false;
   ui.handOpen = false;
   ui.openSeat = null;
+  ui.zonesFor = null;
   ui.seatChosenTurn = 0;
   ui.seenOnField.clear();
   ui.faceIndex = 0;

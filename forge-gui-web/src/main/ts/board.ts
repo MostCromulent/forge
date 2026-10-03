@@ -286,6 +286,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
         <div class="name"><span class="who"></span><span class="role-tag" hidden></span></div>
         <button class="hand-fan" hidden><span class="backs"><i></i><i></i><i></i></span><span class="hand-count"></span></button>
         </div>
+        <button class="zones-pill"></button>
         <div class="zone-tiles"></div>
         <div class="player-extra">
         <div class="player-counters"></div>
@@ -318,6 +319,9 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
     avatarEl.addEventListener('pointerleave', e => { if (hovers(e)) hoverPlayer(null); });
     avatarEl.addEventListener('pointerdown', e => longPress(e, () => inspectPlayer(Number(root.dataset.player))));
     q(root, '.hand-fan').onclick = () => togglePile(Number(root.dataset.player), 'Hand');
+    const pill = q(root, '.zones-pill');
+    pill.innerHTML = PILL_ZONES.map(([zoneName, icon]) => `<span data-zone="${zoneName}"><svg viewBox="0 0 24 24" aria-hidden="true">${icon}</svg><b></b></span>`).join('');
+    pill.onclick = () => changeUi(u => { u.zonesFor = u.zonesFor === Number(root.dataset.player) ? null : Number(root.dataset.player); });
     // Your line sits beside your hand, so the hand starts where the line ends, however wide its zones make it
     if (root.id === 'me') {
       new ResizeObserver(() => byId('match').style.setProperty('--line-w', `${q(root, '.player').offsetWidth + 32}px`))
@@ -349,6 +353,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
   renderZoneTiles(q(root, '.zone-tiles'), model, player, select);
+  renderZonesPill(root, model, player);
   renderManaPool(q(root, '.mana'), player, isLocal(model, player), actions);
   showCommanderDamage(avatar, model, player);
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
@@ -457,6 +462,40 @@ export function graveyardTitle(count: number, types: string[]): string {
   if (!types.length) return t('lblWebBoardGraveyardTitle', cards);
   const kinds = t(types.length === 1 ? 'lblWebBoardOneCardType' : 'lblWebBoardCardTypes', types.length);
   return t('lblWebBoardGraveyardTitleTypes', cards, kinds, types.join(', '));
+}
+
+// Drawn on the same 24-unit grid as the other icons: a fan of cards for the hand, a deck, a headstone, and a ring for exile
+const PILL_ZONES: [ZoneType, string][] = [
+  ['Hand', '<rect x="9" y="6" width="9" height="13" rx="1.5" transform="rotate(14 13.5 12.5)"/><rect x="5.5" y="6" width="9" height="13" rx="1.5" transform="rotate(-10 10 12.5)"/>'],
+  ['Library', '<rect x="5" y="7" width="11" height="14" rx="1.6"/><path d="M8.5 4h8.3a1.7 1.7 0 0 1 1.7 1.7V17"/>'],
+  ['Graveyard', '<path d="M7 21V10a5 5 0 0 1 10 0v11"/><path d="M4.5 21h15M12 9.5v5M10 11.5h4"/>'],
+  ['Exile', '<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.2"/>'],
+];
+let pillWired = false;
+
+/** A phone has no room to keep each zone's tile on show, so a player's bar carries the counts, and a tap opens the tiles over the board. */
+function renderZonesPill(root: HTMLElement, model: Model, player: PlayerView): void {
+  if (!pillWired) {
+    pillWired = true;
+    // Put away by a tap anywhere else, and by the tap that chooses a tile
+    document.addEventListener('click', e => {
+      if (ui.zonesFor !== null && !(e.target instanceof Element && e.target.closest('.zones-pill'))) changeUi(u => { u.zonesFor = null; });
+    });
+  }
+  const pill = q(root, '.zones-pill');
+  for (const span of pill.querySelectorAll<HTMLElement>('span')) {
+    q(span, 'b').textContent = String(zone(model, player, span.dataset.zone as ZoneType).length);
+  }
+  // Your own hand is on show along the bottom, so only another player's is counted here
+  q(pill, '[data-zone="Hand"]').hidden = isLocal(model, player);
+  const tiles = q(root, '.zone-tiles');
+  // Lit when a zone behind it wants the player: a commander to cast, or a pile that holds more zones than the pill names
+  pill.classList.toggle('lit', !!tiles.querySelector('.zone-tile.selectable, .zone-tile[data-cast="yes"]'));
+  pill.classList.toggle('more', tiles.childElementCount > PILL_ZONES.length - 1);
+  const open = isPortrait() && ui.zonesFor === player.$key;
+  root.classList.toggle('zones-open', open);
+  pill.setAttribute('aria-expanded', String(open));
+  pill.setAttribute('aria-label', PILL_ZONES.filter(([z]) => z !== 'Hand' || !isLocal(model, player)).map(([z]) => `${zoneTitle(z)} ${zone(model, player, z).length}`).join(', '));
 }
 
 function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, select: CardClick): void {

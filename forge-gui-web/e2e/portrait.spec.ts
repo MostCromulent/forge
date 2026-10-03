@@ -8,6 +8,19 @@ async function settledBoard(p: Probe, state: string, table?: Table): Promise<voi
   await p.page.waitForTimeout(1500);
 }
 
+/** Plays the first card in hand, as a tap on it would, again if the page was still showing a new turn's banner and held the tap back. */
+async function castFirstInHand(p: Probe): Promise<void> {
+  for (let tries = 0; tries < 6; tries++) {
+    const key = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+    await act(p.page, 'selectCard', key, false, 0, 0);
+    const asked = await p.page.waitForFunction(() => {
+      const prompt = window.forge.model.prompt;
+      return !!prompt && (!prompt.priority || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0);
+    }, undefined, { timeout: 1500 }).then(() => true, () => false);
+    if (asked) return;
+  }
+}
+
 const form = (page: Page) => page.evaluate(() => document.documentElement.dataset.form ?? '');
 
 probe('a phone held upright gets the portrait form', async p => {
@@ -86,7 +99,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
       .filter(c => !c.classList.contains('tapped')).map(c => c.getBoundingClientRect().width)));
     expect(narrow).toBeGreaterThanOrEqual(39.5);
     expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
-    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(72);
+    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(88);
     const dock = await box(p.page, '#prompt');
     expect(dock.y + dock.height).toBeLessThanOrEqual(phone.viewport!.height);
   }, phone);
@@ -148,8 +161,7 @@ probe('a prompt that picks cards closes the sheet', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
   await p.page.locator('#opponent .card').first().tap();
   await expect(p.page.locator('#zoom.sheet')).toBeVisible();
-  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
-  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(p.page.locator('#zoom.sheet')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeVisible();
@@ -196,14 +208,37 @@ probe('your bar and the costs over your hand do not overlap', async p => {
   expect(Math.round(bar.y + bar.height)).toBeLessThanOrEqual(Math.round(hand.y) + 1);
   const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
   expect(cost.y).toBeGreaterThanOrEqual(hand.y);
-  const tile = (await p.page.locator('#me .zone-tile').first().boundingBox())!;
-  expect(tile.height / tile.width).toBeGreaterThan(1.3);
+  // A cost's symbol fills its pip, so it cannot sit off-centre in it
+  const pip = (await p.page.locator('#hand .card .cost-badge .pip').first().boundingBox())!;
+  const sym = (await p.page.locator('#hand .card .cost-badge .sym').first().boundingBox())!;
+  expect(Math.abs(pip.width - sym.width)).toBeLessThan(1.5);
+}, PHONE);
+
+probe('a bar keeps its zones as counts, and a tap opens them', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\nhumangraveyard=Grizzly Bears;Hill Giant\naibattlefield=Mountain');
+  for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(88);
+  await expect(p.page.locator('#me .zone-tile').first()).toBeHidden();
+  const pill = p.page.locator('#me .zones-pill');
+  await expect(pill.locator('[data-zone="Graveyard"] b')).toHaveText('2');
+  // The counts are the table's outer edge: under your portrait, over the opponent's
+  const mine = (await pill.boundingBox())!;
+  expect(mine.y).toBeGreaterThanOrEqual((await box(p.page, '#me .avatar')).y + 40);
+  const theirs = await box(p.page, '#opponent .zones-pill');
+  expect(theirs.y + theirs.height).toBeLessThanOrEqual((await box(p.page, '#opponent .avatar')).y + 1);
+  await pill.tap();
+  const tile = p.page.locator('#me .zone-tile[data-zone="Graveyard"]');
+  await expect(tile).toBeVisible();
+  const at = (await tile.boundingBox())!;
+  expect(at.height / at.width).toBeGreaterThan(1.3);
+  expect(at.x + at.width).toBeLessThanOrEqual(390);
+  await tile.tap();
+  await expect(p.page.locator('#zones .zone-panel')).toBeVisible();
+  await expect(tile).toBeHidden();
 }, PHONE);
 
 probe('a spell on the stack shows as a chip under the strip, and its target wears its number', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
-  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
-  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await p.page.locator('#opponent .card.selectable').first().tap();
   await p.until('the bolt is paid for or on the stack', () => !!window.forge.model.prompt?.paying || document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0);
@@ -222,7 +257,7 @@ probe('a spell on the stack shows as a chip under the strip, and its target wear
 const FOUR = { players: 4 };
 
 probe('three opponents are tabs, and a new permanent marks a hidden tab', async p => {
-  await settledBoard(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp', FOUR);
+  await settledBoard(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   const tabs = p.page.locator('#seat-tabs .seat-tab');
   await expect(tabs).toHaveCount(3);
   await expect(p.page.locator('#opponent .seat:not([hidden])')).toHaveCount(1);
@@ -234,7 +269,7 @@ probe('three opponents are tabs, and a new permanent marks a hidden tab', async 
   for (const n of [1, 2, 0]) await tabs.nth(n).tap();
   await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
   // The dev state replaces the whole board, so every card in the hidden seats is new
-  await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp', FOUR);
+  await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   await expect(tabs.nth(1).locator('.new')).toHaveText('+2');
   await tabs.nth(1).tap();
   await expect(tabs.nth(1).locator('.new')).toBeEmpty();
@@ -242,9 +277,8 @@ probe('three opponents are tabs, and a new permanent marks a hidden tab', async 
 }, PHONE);
 
 probe('a hidden opponent can be chosen from the dock', async p => {
-  await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp', FOUR);
-  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
-  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
+  await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectablePlayers.length ?? 0) > 0);
   // Two of the three opponents are in hidden tabs, and each has a button in the dock
   await expect(p.page.locator('#prompt .choose-players button')).toHaveCount(2);
@@ -252,13 +286,12 @@ probe('a hidden opponent can be chosen from the dock', async p => {
 }, PHONE);
 
 probe('a question about one hidden opponent\'s cards brings their tab forward', async p => {
-  await settledBoard(p, 'p0hand=Murder\np0battlefield=Swamp;Swamp;Swamp\np1battlefield=Mountain\np2battlefield=Island;Hill Giant\np3battlefield=Swamp', FOUR);
+  await settledBoard(p, 'p0hand=Murder\np0battlefield=Swamp;Swamp;Swamp\np1battlefield=Mountain\np2battlefield=Island;Hill Giant\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   const tabs = p.page.locator('#seat-tabs .seat-tab');
   // Looked away from the only player with a creature, in this same turn
   await tabs.nth(0).tap();
   await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
-  const murder = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
-  await act(p.page, 'selectCard', murder, false, 0, 0);
+  await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(tabs.nth(1)).toHaveClass(/\bon\b/);
   await expect(p.page.locator('#opponent .seat:not([hidden]) .card.selectable')).toBeVisible();

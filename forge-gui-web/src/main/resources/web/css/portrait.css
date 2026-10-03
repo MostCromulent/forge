@@ -23,7 +23,7 @@ html[data-form="portrait"] #menu-button svg { width: 22px; height: 22px; fill: n
 /* The dock, as Forge mobile lays its prompt out: OK and Cancel in opposite corners, the message between them */
 html[data-form="portrait"] #prompt { grid-area: prompt; position: relative; right: auto; bottom: auto; width: auto; margin: 0; align-self: stretch; z-index: 60; border-radius: 0; border-width: 1px 0 0; border-color: var(--accent);
   padding: 0 0 env(safe-area-inset-bottom); box-shadow: 0 -8px 24px #0008; backdrop-filter: none; background: var(--surface);
-  display: grid; grid-template-columns: 96px minmax(0, 1fr) 96px; grid-template-rows: 44px minmax(56px, auto) auto; gap: 0;
+  display: grid; grid-template-columns: 96px minmax(0, 1fr) 96px; grid-template-rows: 44px minmax(44px, auto) auto; gap: 0;
   grid-template-areas: "step tools tools" "ok body cancel" "players players players"; }
 html[data-form="portrait"] #prompt.swapped { grid-template-areas: "step tools tools" "cancel body ok" "players players players"; }
 html[data-form="portrait"] #prompt.waiting { border-color: var(--accent-2); }
@@ -36,7 +36,7 @@ html[data-form="portrait"] #prompt .tools svg { width: 20px; height: 20px; }
 html[data-form="portrait"] #prompt .buttons { display: contents; }
 html[data-form="portrait"] #prompt .ok { grid-area: ok; }
 html[data-form="portrait"] #prompt .cancel { grid-area: cancel; max-width: none; }
-html[data-form="portrait"] #prompt :is(.ok, .cancel) { height: auto; min-height: 56px; min-width: 0; border-radius: 0; font-size: 13px; padding: 0 4px; align-self: stretch; }
+html[data-form="portrait"] #prompt :is(.ok, .cancel) { height: auto; min-height: 44px; min-width: 0; border-radius: 0; font-size: 13px; padding: 0 4px; align-self: stretch; }
 html[data-form="portrait"] #prompt :is(.ok, .cancel) .label { white-space: normal; text-align: center; line-height: 1.1; }
 html[data-form="portrait"] #prompt .prompt-body { grid-area: body; align-self: center; padding: 4px 10px; min-width: 0; }
 html[data-form="portrait"] #prompt .prompt-card { display: none; }
@@ -52,28 +52,40 @@ html[data-motion="reduced"] #prompt.pulse { animation: none; }
 html[data-form="portrait"] #match .seat { --card-w: 52px; --card-h: 73px; --min-card-w: 40px; --tile-w: 42px; grid-template-rows: auto minmax(0, 1fr); gap: 0; align-items: stretch; padding: 0 6px; }
 html[data-form="portrait"] #match #me { --card-w: 60px; --card-h: 84px; grid-template-rows: minmax(0, 1fr) auto; }
 html[data-form="portrait"] #match #me .player { order: 2; }
-html[data-form="portrait"] #match .seat .player { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 62px; }
+html[data-form="portrait"] #match .seat .player { position: relative; left: auto; top: auto; bottom: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; }
 html[data-form="portrait"] #opponent.seat .player { padding-right: 46px; }
-html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 40px auto auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 0; flex: 1 1 0; overflow: hidden; padding: 6px 0 9px 6px; margin-left: -6px; }
+html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 40px auto auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 0; flex: 1 1 0; overflow: hidden; padding: 3px 0 7px 6px; margin-left: -6px; }
 html[data-form="portrait"] #match .seat .player-id .avatar { grid-row: 1; width: 40px; height: 40px; align-self: center; }
 html[data-form="portrait"] #match .seat .avatar .initial { font-size: 18px; }
 html[data-form="portrait"] #match .seat .avatar .ai-badge { width: 18px; height: 18px; left: -5px; top: -5px; padding: 2px; }
 /* The life total stands beside the portrait, large, with the name under it */
 html[data-form="portrait"] #match .seat .avatar .life { left: calc(100% + 8px); bottom: auto; top: -2px; padding: 0; border: 0; background: none; font-size: 20px; line-height: 1; font-weight: 800; }
 html[data-form="portrait"] #match .seat .player-id .name { grid-row: 1; grid-column: 2; min-width: 34px; max-width: 84px; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
-html[data-form="portrait"] #match .seat .player-id .hand-fan { grid-row: 1; grid-column: 3; margin: 0; min-width: 44px; min-height: 44px; align-self: center; }
-html[data-form="portrait"] #match .seat .zone-tiles { order: 1; flex: none; margin-left: auto; gap: 4px; max-width: 62%; overflow-x: auto; scrollbar-width: none; }
-/* A zone keeps the shape of a card, so its top card is seen whole, and is wide enough to take a finger */
-html[data-form="portrait"] #match .seat .zone-tile { height: 58px; }
-html[data-form="portrait"] #match .seat .zone-tile .zone-name { font-size: 7.5px; letter-spacing: -.01em; padding: 1px 0; left: 1px; right: 1px; top: 1px; white-space: nowrap; }
-html[data-form="portrait"] #match .seat .zone-tile .zone-count { font-size: 11px; min-width: 16px; padding: 0 3px; right: 1px; bottom: 1px; }
+html[data-form="portrait"] #match .seat .player-id .hand-fan { grid-row: 1; grid-column: 3; margin: 0; min-width: 44px; min-height: 40px; align-self: center; }
+/* There is no room to keep every zone's tile on show, so their counts take a slim line at the table's edge: above the opponent's portrait, below yours. A tap opens the tiles over the board. */
+.zones-pill { display: none; }
+html[data-form="portrait"] #match .seat .zones-pill { order: -2; flex: 1 0 100%; position: relative; display: flex; align-items: center; justify-content: flex-start; gap: 14px; height: 22px; padding: 0 6px; border: 0; border-radius: 8px; background: none; color: var(--text); font-weight: 700; font-size: 13px; }
+html[data-form="portrait"] #match #me .zones-pill { order: 3; }
+/* Slim to look at, with more of it to touch */
+html[data-form="portrait"] .zones-pill::before { content: ''; position: absolute; inset: -7px 0; }
+html[data-form="portrait"] .zones-pill span { display: flex; align-items: center; gap: 3px; }
+html[data-form="portrait"] .zones-pill span[hidden] { display: none; }
+html[data-form="portrait"] .zones-pill svg { width: 15px; height: 15px; fill: none; stroke: var(--muted); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+html[data-form="portrait"] .zones-pill.more::after { content: '+'; color: var(--muted); }
+html[data-form="portrait"] #match .seat .zones-pill.lit { box-shadow: inset 0 0 0 1px var(--select), 0 0 8px color-mix(in srgb, var(--select) 45%, transparent); }
+html[data-form="portrait"] #match .seat .zones-pill[aria-expanded="true"] { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--accent-2); }
+html[data-form="portrait"] #match .seat .zone-tiles { display: none; }
+html[data-form="portrait"] #match .seat.zones-open .zone-tiles { --tile-w: 62px; display: grid; position: absolute; left: 0; top: 30px; z-index: 28; gap: 6px; padding: 8px; max-width: calc(100vw - 12px); box-sizing: border-box; overflow-x: auto;
+  background: var(--surface); border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 12px 34px #000c; }
+html[data-form="portrait"] #match #me.zones-open .zone-tiles { top: auto; bottom: 30px; }
+html[data-form="portrait"] #match .seat.zones-open .zone-tile { height: calc(var(--tile-w) * 1.4); }
 /* Counters, emblems and floating mana take a line of their own, and only when there are any */
 html[data-form="portrait"] #match .seat .player-extra { position: static; order: 2; flex: 1 0 100%; flex-direction: row; align-items: center; gap: 6px; min-height: 24px; overflow-x: auto; scrollbar-width: none; }
 html[data-form="portrait"] #match #me .player-extra { order: -1; }
 html[data-form="portrait"] #match .seat .player-extra :is(.player-counter, .emblem, .cmd-tile, .mana-chips > *) { position: relative; }
 html[data-form="portrait"] #match .seat .player-extra :is(.player-counter, .emblem, .cmd-tile, .mana-chips > *)::after { content: ''; position: absolute; inset: -10px -3px; }
 /* The cards: less air between the rows than a desktop has to give */
-html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-gap-1: 16px; --fit-spare: 22px; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-gap-1: 16px; --fit-spare: 18px; gap: 0; padding: 9px 5px 12px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
 html[data-form="portrait"] #match .seat .battlefield.crowded { overflow-y: auto; }
 html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-height: 0; }
 /* Your line no longer stands beside the hand, so the hand keeps none of its room */
@@ -129,8 +141,8 @@ html[data-form="portrait"] .until-row button.on { background: var(--brass); colo
   /* It tells a mouse what its buttons do */
   #phase-strip .stops .hint { display: none; }
 }
-/* Your own hand is on show just below, so its count is not said twice */
-html[data-form="portrait"] #match #me .hand-fan { display: none; }
+/* A hand's size is one of the counts on the player's line, so it is not said beside the portrait too */
+html[data-form="portrait"] #match .seat .hand-fan { display: none; }
 
 /* The hover preview pinned open by a rested finger: the card, then what a mouse would do to it as buttons.
    On a wide touch screen it is a panel in the middle; on a phone it is a sheet over the dock. */
@@ -208,3 +220,7 @@ html[data-form="portrait"] #match.many #me { margin-bottom: 0; padding-bottom: 0
 /* The attacker a tap on your creature will block, which the game may have picked for you */
 .combat-tag { display: none; }
 html[data-form="portrait"] .battlefield .card .combat-tag:not(:empty) { display: block; position: absolute; left: 50%; top: -9px; transform: translateX(-50%); z-index: 4; padding: 0 5px; border-radius: 8px; background: var(--pick); color: var(--on-brass); font: 800 8.5px/14px system-ui, sans-serif; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+/* A cost's symbol is its own disc; the lobby's colour pip, which shares the class name, would lay a larger grey one behind it */
+html[data-form="portrait"] #hand .card .cost-badge .pip { width: auto; height: auto; background: none; }
+/* Your attackers step up toward the strip, so the room for it is at the top of your half */
+html[data-form="portrait"] #match #me .battlefield { padding: 16px 5px 5px; }

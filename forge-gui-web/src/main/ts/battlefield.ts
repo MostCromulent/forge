@@ -134,6 +134,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   // The room by the pill for an attacker's step grows with the cards (board.css), so it is worked out for each size tried
   const mine = root.id === 'me';
   const fieldPad = (fit: number) => {
+    // A phone gives the field's padding in its own styles, tighter than the room worked out below
+    if (minWidth) return px(fieldStyle, 'padding-top') + px(fieldStyle, 'padding-bottom');
     const chevron = w * fit * 0.38;
     return mine ? Math.max(glow + 6, chevron - 2) + glow : glow + Math.max(glow + 20, chevron + 14);
   };
