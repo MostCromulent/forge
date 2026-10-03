@@ -92,7 +92,6 @@ button.cq-banner:disabled, button.cq-tile:disabled, button.cq-art:disabled { opa
 .cq-you::before { content: ''; position: absolute; left: 50%; top: 29px; width: 58px; height: 58px; margin: -29px; border-radius: 50%; border: 2px solid #fff; animation: cq-you-pulse 1.8s ease-out infinite; }
 @keyframes cq-you-pulse { from { transform: scale(1); opacity: .9; } to { transform: scale(1.9); opacity: 0; } }
 .cq-you b { margin-top: -9px; font: 800 9.5px/1 system-ui, sans-serif; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #fff; color: #0b0e14; box-shadow: 0 2px 6px #000a; }
-@media (prefers-reduced-motion: reduce) { .cq-you::before { animation: none; opacity: 0; } }
 html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 
 /* What a tile says when pointed at */
@@ -241,10 +240,6 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 
 html[data-motion="reduced"] :is(.cq-dl-glow, .cq-pk, .cq-pk-sheen, .cq-pk-speck, .cq-pk-hint) { animation: none; }
 html[data-motion="reduced"] .cq-pk-glow { filter: blur(6px); }
-@media (prefers-reduced-motion: reduce) {
-  .cq-dl-glow, .cq-pk, .cq-pk-sheen, .cq-pk-speck, .cq-pk-hint { animation: none; }
-  .cq-pk-glow { filter: blur(6px); }
-}
 
 @media (max-width: 900px) {
   .cq-map { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
