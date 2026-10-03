@@ -1,6 +1,6 @@
 // One card on the page, built here by every zone that shows one, so a card looks the same wherever it is
 
-import { combatShown, commanderTax, deref, stateOf, type Model } from './model';
+import { combatShown, commanderTax, deref, game, stateOf, type Model } from './model';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from './press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from './images';
@@ -19,7 +19,7 @@ const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a
 export function createCard(onClick: CardClick): HTMLDivElement {
   const el = document.createElement('div');
   el.className = 'card';
-  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
+  el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
   q(el, '.sick').title = t('lblWebCardSummoningSick');
   q(el, '.seen').title = t('lblWebCardRevealed');
   q(el, '.block-tab').textContent = t('lblWebCardBlocking');
@@ -76,7 +76,11 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   el.classList.toggle('playable', has(model.playable?.cards, card.$key));
   el.classList.toggle('auto-tap', has(model.playable?.autoTap, card.$key));
   el.classList.toggle('highlighted', (model.prompt?.highlighted ?? []).includes(card.$key));
-  el.classList.toggle('attacking', !!card.Attacking && combatShown(model));
+  const attacking = !!card.Attacking && combatShown(model);
+  el.classList.toggle('attacking', attacking);
+  // On a phone the attacker a tap on your creature will block says so, since the game may have picked it for you
+  const blockThis = attacking && game(model)?.Phase === 'COMBAT_DECLARE_BLOCKERS' && (model.prompt?.highlighted ?? []).includes(card.$key);
+  q(el, '.combat-tag').textContent = blockThis ? t('lblWebPortraitBlockingThis') : '';
   el.classList.toggle('blocking', !!card.Blocking);
   el.classList.toggle('phased', !!card.PhasedOut);
   // The zoom shows the card large, so it keeps the full image

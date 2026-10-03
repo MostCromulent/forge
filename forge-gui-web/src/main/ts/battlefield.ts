@@ -181,6 +181,8 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     return Math.max(...row.map((z, i) => (live(z).length ? zoneHeight(z, sizes[i]) : 0)));
   };
 
+  // A phone has less to spare, and says how much
+  const spare = px(fieldStyle, '--fit-spare') || 32 + 24;
   // Each layout that fits the height is judged by its smallest zone before the smallest size is applied, so less overflow wins
   const tried: { cap: number; sizes: Sized[][]; smallest: number; split: number }[] = [];
   for (let cap = MAX_FIT; cap >= minFit - 1e-9; cap -= STEP) {
@@ -188,7 +190,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       for (const twoB of [false, true]) {
         const sizes = [layRow(0, cap, twoA), layRow(1, cap, twoB)];
         // The 32px above the rows and 24px between them leave some to spare, as a board filled to the pixel scrolls on rounding
-        const tall = rowHeight(0, sizes[0], cap) + rowHeight(1, sizes[1], cap) + 32 + 24;
+        const tall = rowHeight(0, sizes[0], cap) + rowHeight(1, sizes[1], cap) + spare;
         if (tall > height(cap)) continue;
         const flat = sizes.flat();
         tried.push({ cap, sizes, smallest: Math.min(...flat.map(s => s.raw)), split: flat.filter(s => s.lines === 2).length });

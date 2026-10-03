@@ -28,8 +28,9 @@ html[data-form="portrait"] #prompt { grid-area: prompt; position: relative; righ
 html[data-form="portrait"] #prompt.swapped { grid-template-areas: "step tools tools" "cancel body ok" "players players players"; }
 html[data-form="portrait"] #prompt.waiting { border-color: var(--accent-2); }
 html[data-form="portrait"] #prompt .glints { display: none; }
-html[data-form="portrait"] #prompt .step { grid-area: step; align-self: center; margin: 0; padding-left: 12px; white-space: nowrap; }
-html[data-form="portrait"] #prompt .tools { grid-area: tools; margin: 0; padding-right: 4px; }
+/* The step's name runs on under the tools' column as far as the tools themselves */
+html[data-form="portrait"] #prompt .step { grid-row: 1; grid-column: 1 / -1; align-self: center; margin: 0; padding-left: 12px; max-width: calc(100% - 200px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-form="portrait"] #prompt .tools { grid-row: 1; grid-column: 1 / -1; justify-self: end; margin: 0; padding-right: 4px; }
 html[data-form="portrait"] #prompt .tools button { width: 44px; height: 44px; }
 html[data-form="portrait"] #prompt .tools svg { width: 20px; height: 20px; }
 html[data-form="portrait"] #prompt .buttons { display: contents; }
@@ -49,7 +50,7 @@ html[data-motion="reduced"] #prompt.pulse { animation: none; }
 
 /* Each player is a bar: portrait, life and name, then the zones as chips. The opponent's is the top row, and yours sits over your hand. */
 html[data-form="portrait"] #match .seat { --card-w: 52px; --card-h: 73px; --min-card-w: 40px; --tile-w: 42px; grid-template-rows: auto minmax(0, 1fr); gap: 0; align-items: stretch; padding: 0 6px; }
-html[data-form="portrait"] #me { --card-w: 60px; --card-h: 84px; grid-template-rows: minmax(0, 1fr) auto; }
+html[data-form="portrait"] #match #me { --card-w: 60px; --card-h: 84px; grid-template-rows: minmax(0, 1fr) auto; }
 html[data-form="portrait"] #match #me .player { order: 2; }
 html[data-form="portrait"] #match .seat .player { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 62px; }
 html[data-form="portrait"] #opponent.seat .player { padding-right: 46px; }
@@ -72,10 +73,8 @@ html[data-form="portrait"] #match #me .player-extra { order: -1; }
 html[data-form="portrait"] #match .seat .player-extra :is(.player-counter, .emblem, .cmd-tile, .mana-chips > *) { position: relative; }
 html[data-form="portrait"] #match .seat .player-extra :is(.player-counter, .emblem, .cmd-tile, .mana-chips > *)::after { content: ''; position: absolute; inset: -10px -3px; }
 /* The cards: less air between the rows than a desktop has to give */
-html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-gap-1: 16px; gap: 2px; padding: 4px 2px; max-height: none; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
+html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-gap-1: 16px; --fit-spare: 22px; gap: 2px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
 html[data-form="portrait"] #match .seat .battlefield.crowded { overflow-y: auto; }
-html[data-form="portrait"] #opponent .battlefield { padding-bottom: 6px; }
-html[data-form="portrait"] #me .battlefield { padding-top: 14px; }
 html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-height: 0; }
 /* Your line no longer stands beside the hand, so the hand keeps none of its room */
 html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
@@ -205,3 +204,7 @@ html[data-form="portrait"] #match #opponent.many > .seat[hidden] { display: none
 html[data-form="portrait"] #match #opponent.tabbed > .seat { border-radius: 0 0 10px 10px; border-width: 0; margin: 0; }
 html[data-form="portrait"] #match #opponent.tabbed .player { padding-right: 0; }
 html[data-form="portrait"] #match.many #me { margin-bottom: 0; padding-bottom: 0; border: 0; --under: 0px; }
+
+/* The attacker a tap on your creature will block, which the game may have picked for you */
+.combat-tag { display: none; }
+html[data-form="portrait"] .battlefield .card .combat-tag:not(:empty) { display: block; position: absolute; left: 50%; top: -9px; transform: translateX(-50%); z-index: 4; padding: 0 5px; border-radius: 8px; background: var(--pick); color: var(--on-brass); font: 800 8.5px/14px system-ui, sans-serif; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
