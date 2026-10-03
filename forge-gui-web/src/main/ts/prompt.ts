@@ -202,7 +202,8 @@ function drawPrompt(model: Model, actions: Actions): void {
 /** Offers as buttons the players a prompt lets you pick who have no seat on the board, which draws only one opponent. */
 function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly Ref[], actions: Actions): void {
   const box = q(root, '.choose-players');
-  const offBoard = choices.filter(r => !document.querySelector(`.seat[data-player="${r.ref}"]`));
+  // A seat in a hidden tab cannot be tapped, so its player is offered here as one with no seat is
+  const offBoard = choices.filter(r => !document.querySelector(`.seat[data-player="${r.ref}"]:not([hidden])`));
   const key = offBoard.map(r => r.ref).join(',');
   if (box.dataset.key === key) {
     return;

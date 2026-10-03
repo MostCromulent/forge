@@ -1,5 +1,5 @@
 import { expect, type Page } from '@playwright/test';
-import { act, board, probe, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
+import { act, board, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
 import { hold } from './steps';
 
 /** A board set up from a state arrives in pieces, and a card touched before the last piece lands is one about to be replaced. */
@@ -217,4 +217,49 @@ probe('a spell on the stack shows as a chip under the strip, and its target wear
   const dock = await box(p.page, '#prompt');
   const stack = await box(p.page, '#stack');
   expect(stack.y + stack.height).toBeLessThanOrEqual(dock.y + 1);
+}, PHONE);
+
+const FOUR = { players: 4 };
+
+probe('three opponents are tabs, and a new permanent marks a hidden tab', async p => {
+  await settledBoard(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp', FOUR);
+  const tabs = p.page.locator('#seat-tabs .seat-tab');
+  await expect(tabs).toHaveCount(3);
+  await expect(p.page.locator('#opponent .seat:not([hidden])')).toHaveCount(1);
+  for (const tab of await tabs.all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  const dock = await box(p.page, '#prompt');
+  expect(dock.y + dock.height).toBeLessThanOrEqual(664);
+  // Each seat is looked at once, so what it holds now is what was seen
+  for (const n of [1, 2, 0]) await tabs.nth(n).tap();
+  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
+  // The dev state replaces the whole board, so every card in the hidden seats is new
+  await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp', FOUR);
+  await expect(tabs.nth(1).locator('.new')).toHaveText('+2');
+  await tabs.nth(1).tap();
+  await expect(tabs.nth(1).locator('.new')).toBeEmpty();
+  await expect(p.page.locator('#opponent .seat:not([hidden]) .card', { hasText: 'Grizzly Bears' })).toBeVisible();
+}, PHONE);
+
+probe('a hidden opponent can be chosen from the dock', async p => {
+  await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp', FOUR);
+  const bolt = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+  await act(p.page, 'selectCard', bolt, false, 0, 0);
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectablePlayers.length ?? 0) > 0);
+  // Two of the three opponents are in hidden tabs, and each has a button in the dock
+  await expect(p.page.locator('#prompt .choose-players button')).toHaveCount(2);
+  await expect(p.page.locator('#seat-tabs .seat-tab.asked')).toHaveCount(2);
+}, PHONE);
+
+probe('a question about one hidden opponent\'s cards brings their tab forward', async p => {
+  await settledBoard(p, 'p0hand=Murder\np0battlefield=Swamp;Swamp;Swamp\np1battlefield=Mountain\np2battlefield=Island;Hill Giant\np3battlefield=Swamp', FOUR);
+  const tabs = p.page.locator('#seat-tabs .seat-tab');
+  // Looked away from the only player with a creature, in this same turn
+  await tabs.nth(0).tap();
+  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
+  const murder = await p.page.evaluate(() => Number(document.querySelector<HTMLElement>('#hand .card')?.dataset.key));
+  await act(p.page, 'selectCard', murder, false, 0, 0);
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
+  await expect(tabs.nth(1)).toHaveClass(/\bon\b/);
+  await expect(p.page.locator('#opponent .seat:not([hidden]) .card.selectable')).toBeVisible();
 }, PHONE);

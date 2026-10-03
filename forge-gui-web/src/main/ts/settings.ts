@@ -78,6 +78,7 @@ export const SETTINGS: SettingDef[] = [
     options: [['mana', t('lblWebDraftGroupManaValue')], ['color', t('lblColor')], ['draw', t('lblWebOptionsDrawn')]], def: 'mana',
   },
   { section: t('lblDisplay'), key: 'handSize', label: t('lblWebOptionsHandSize'), type: 'slider', min: 70, max: 130, def: 100 },
+  { section: t('lblDisplay'), key: 'tabNewCards', label: t('lblWebOptionsTabNewCards'), hint: t('lblWebOptionsTabNewCardsHint'), type: 'toggle', def: true },
   { section: t('lblDisplay'), key: 'swapPrompt', label: t('lblWebOptionsSwapPrompt'), hint: t('lblWebOptionsSwapPromptHint'), type: 'toggle', def: false },
   {
     section: t('lblDisplay'), key: 'previewSize', label: t('lblWebOptionsPreviewSize'), hint: t('lblWebOptionsPreviewSizeHint'), type: 'choice',

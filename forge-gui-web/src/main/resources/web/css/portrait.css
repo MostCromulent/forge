@@ -53,7 +53,7 @@ html[data-form="portrait"] #me { --card-w: 60px; --card-h: 84px; grid-template-r
 html[data-form="portrait"] #match #me .player { order: 2; }
 html[data-form="portrait"] #match .seat .player { position: static; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 0 8px; min-height: 62px; }
 html[data-form="portrait"] #opponent.seat .player { padding-right: 46px; }
-html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 40px auto auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 0; flex: 0 1 auto; }
+html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 40px auto auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 0; flex: 1 1 0; overflow: hidden; padding: 6px 0 9px 6px; margin-left: -6px; }
 html[data-form="portrait"] #match .seat .player-id .avatar { grid-row: 1; width: 40px; height: 40px; align-self: center; }
 html[data-form="portrait"] #match .seat .avatar .initial { font-size: 18px; }
 html[data-form="portrait"] #match .seat .avatar .ai-badge { width: 18px; height: 18px; left: -5px; top: -5px; padding: 2px; }
@@ -61,7 +61,7 @@ html[data-form="portrait"] #match .seat .avatar .ai-badge { width: 18px; height:
 html[data-form="portrait"] #match .seat .avatar .life { left: calc(100% + 8px); bottom: auto; top: -2px; padding: 0; border: 0; background: none; font-size: 20px; line-height: 1; font-weight: 800; }
 html[data-form="portrait"] #match .seat .player-id .name { grid-row: 1; grid-column: 2; min-width: 34px; max-width: 84px; font-size: 11px; font-weight: 700; color: var(--muted); padding-bottom: 2px; }
 html[data-form="portrait"] #match .seat .player-id .hand-fan { grid-row: 1; grid-column: 3; margin: 0; min-width: 44px; min-height: 44px; align-self: center; }
-html[data-form="portrait"] #match .seat .zone-tiles { order: 1; margin-left: auto; gap: 4px; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+html[data-form="portrait"] #match .seat .zone-tiles { order: 1; flex: none; margin-left: auto; gap: 4px; max-width: 62%; overflow-x: auto; scrollbar-width: none; }
 /* A zone keeps the shape of a card, so its top card is seen whole, and is wide enough to take a finger */
 html[data-form="portrait"] #match .seat .zone-tile { height: 58px; }
 html[data-form="portrait"] #match .seat .zone-tile .zone-name { font-size: 7.5px; letter-spacing: -.01em; padding: 1px 0; left: 1px; right: 1px; top: 1px; white-space: nowrap; }
@@ -178,3 +178,30 @@ html[data-form="portrait"] #match #storm { display: none; }
 .target-tags { position: absolute; left: -6px; top: -6px; z-index: 6; display: flex; gap: 2px; pointer-events: none; }
 .target-tag, html[data-form="portrait"] #stack.chip .stack-item::after { min-width: 18px; height: 18px; padding: 0 4px; box-sizing: border-box; border-radius: 9px; font: 800 10px/14px system-ui, sans-serif; text-align: center; background: var(--bg-deep); color: var(--text); border: 2px solid var(--text); }
 .target-tag.top, html[data-form="portrait"] #stack.chip .stack-item[data-n="1"]::after { background: var(--accent-2); color: var(--on-brass); border-color: var(--accent-2); }
+
+/* Opponents as tabs: one seat shows, and the rest say what changed while they were out of sight */
+#seat-tabs { display: none; }
+html[data-form="portrait"] #seat-tabs:not([hidden]) { grid-area: tabs; display: flex; gap: 4px; padding: 8px 50px 0 6px; }
+html[data-form="portrait"] .seat-tab { flex: 1; min-width: 0; min-height: 48px; position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 6px; align-items: center; text-align: left; padding: 4px 6px;
+  border-radius: 10px 10px 0 0; border: 1px solid var(--line); border-bottom: 0; background: var(--surface); }
+html[data-form="portrait"] .seat-tab img { grid-row: 1 / 3; width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+html[data-form="portrait"] .seat-tab .life { font-size: 16px; line-height: 1; }
+html[data-form="portrait"] .seat-tab .who { font-size: 11px; color: var(--tint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html[data-form="portrait"] .seat-tab.on { background: var(--surface-3); border-color: var(--accent-2); }
+html[data-form="portrait"] .seat-tab.turn .life { color: var(--accent-2); }
+html[data-form="portrait"] .seat-tab :is(.new, .aim):not(:empty) { position: absolute; right: -2px; padding: 0 5px; border-radius: 8px; font: 800 9px/15px system-ui, sans-serif; white-space: nowrap; }
+html[data-form="portrait"] .seat-tab .new:not(:empty) { top: -6px; background: var(--accent-2); color: var(--on-brass); }
+html[data-form="portrait"] .seat-tab .aim:not(:empty) { bottom: -5px; background: #fff; color: var(--bg-deep); z-index: 2; }
+html[data-form="portrait"] .seat-tab .dot { display: none; }
+html[data-form="portrait"] .seat-tab.asked .dot { display: block; position: absolute; left: 4px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--select); box-shadow: 0 0 0 2px var(--bg-deep); }
+html[data-form="portrait"] .seat-tab.flash { animation: tab-flash .6s ease-out; }
+@keyframes tab-flash { 30% { filter: brightness(1.9); } }
+html[data-motion="reduced"] .seat-tab.flash { animation: none; }
+/* One seat fills the opponents' row, whatever the table-layout setting says */
+html[data-form="portrait"] #match:is(.many, .quads) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "tabs" "opp" "phase" "me" "hand" "prompt"; }
+html[data-form="portrait"] #match #opponent.many { display: grid; grid-area: opp; grid-auto-flow: row; grid-auto-columns: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+html[data-form="portrait"] #match #opponent.many > .seat { grid-area: auto; }
+html[data-form="portrait"] #match #opponent.many > .seat[hidden] { display: none; }
+html[data-form="portrait"] #match #opponent.tabbed > .seat { border-radius: 0 0 10px 10px; border-width: 0; margin: 0; }
+html[data-form="portrait"] #match #opponent.tabbed .player { padding-right: 0; }
+html[data-form="portrait"] #match.many #me { margin-bottom: 0; padding-bottom: 0; border: 0; --under: 0px; }

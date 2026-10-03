@@ -273,7 +273,15 @@ export async function untilPriority(page: Page, others: Page[] = [], timeout = 6
     for (const other of others) {
       if (await other.evaluate(() => !!window.forge.model.prompt?.ok?.enabled)) await act(other, 'ok');
     }
-    if (last && (!last.priority || last.stack)) {
+    // With more than two players the winner of the toss names who goes first, which OK does not answer
+    const starter = await page.evaluate(() => {
+      const m = window.forge.model;
+      return m.prompt?.starterChoice && m.prompt.selectablePlayers.length ? m.localPlayers[0] : null;
+    });
+    if (starter !== null) {
+      await act(page, 'selectPlayer', starter);
+      await page.waitForFunction(() => !window.forge.model.prompt?.starterChoice, undefined, { timeout: 5000 }).catch(() => {});
+    } else if (last && (!last.priority || last.stack)) {
       await act(page, 'ok');
       // Answered once: the next look waits for the prompt to change, rather than answering the same one twice
       await page.waitForFunction(m => window.forge.model.prompt?.message !== m, last.message, { timeout: 5000 }).catch(() => {});

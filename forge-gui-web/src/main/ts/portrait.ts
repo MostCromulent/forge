@@ -23,3 +23,19 @@ export function tagsFor(items: readonly { key: number; targets: readonly number[
   });
   return tags;
 }
+
+/** How many of the cards there now were not there when the seat was last looked at. */
+export function newCards(seen: ReadonlySet<number> | undefined, now: readonly number[]): number {
+  return seen ? now.filter(key => !seen.has(key)).length : 0;
+}
+
+/** Which opponent's seat a phone shows: the one a new question is about, else the one whose turn it is, else where the player left it. */
+export function seatToOpen(s: { open: number | null; seats: readonly number[]; active: number | null; turn: number; chosenTurn: number;
+  promptSeats: readonly number[]; promptIsNew: boolean }): number | null {
+  if (!s.seats.length) return null;
+  if (s.promptIsNew && s.promptSeats.length === 1 && s.seats.includes(s.promptSeats[0])) return s.promptSeats[0];
+  const open = s.open !== null && s.seats.includes(s.open) ? s.open : null;
+  if (open !== null && s.chosenTurn === s.turn) return open;
+  if (s.active !== null && s.seats.includes(s.active)) return s.active;
+  return open ?? s.seats[0];
+}

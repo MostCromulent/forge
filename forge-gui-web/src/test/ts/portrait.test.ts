@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { repeatTap, tagsFor, tapInspects } from '../../main/ts/portrait';
+import { newCards, repeatTap, seatToOpen, tagsFor, tapInspects } from '../../main/ts/portrait';
 
 describe('tapInspects', () => {
   const card = { playable: false, selectable: false, mine: false };
@@ -37,5 +37,37 @@ describe('tagsFor', () => {
     expect(tags.get(6)).toEqual([1, 2]);
     expect(tags.has(92)).toBe(false);
     expect(tags.size).toBe(2);
+  });
+});
+
+describe('newCards', () => {
+  it('counts what arrived, even when as many left', () => {
+    expect(newCards(new Set([1, 2, 3]), [2, 3, 4])).toBe(1);
+  });
+  it('counts nothing for a seat never looked at', () => {
+    expect(newCards(undefined, [1, 2])).toBe(0);
+  });
+});
+
+describe('seatToOpen', () => {
+  const base = { open: 11, seats: [11, 12, 13], active: 12, turn: 4, chosenTurn: 0, promptSeats: [] as number[], promptIsNew: false };
+  it('follows the turn to an opponent', () => {
+    expect(seatToOpen(base)).toBe(12);
+  });
+  it('stays where the player chose during this turn', () => {
+    expect(seatToOpen({ ...base, chosenTurn: 4 })).toBe(11);
+  });
+  it('opens the one seat a new prompt is about, whatever was chosen', () => {
+    expect(seatToOpen({ ...base, chosenTurn: 4, promptSeats: [13], promptIsNew: true })).toBe(13);
+  });
+  it('does not move for a prompt spread over several seats', () => {
+    expect(seatToOpen({ ...base, chosenTurn: 4, promptSeats: [12, 13], promptIsNew: true })).toBe(11);
+  });
+  it('opens the first seat when none is open or the open one has gone', () => {
+    expect(seatToOpen({ ...base, open: null, active: null })).toBe(11);
+    expect(seatToOpen({ ...base, open: 99, active: null })).toBe(11);
+  });
+  it('does not follow your own turn', () => {
+    expect(seatToOpen({ ...base, active: 1 })).toBe(11);
   });
 });
