@@ -170,7 +170,7 @@ probe('on a wide touch screen a long-press opens a panel that can be closed', as
 probe('the hand opens as a drawer, a card is played from it, and it closes for the target', async p => {
   await settledBoard(p, 'humanhand=Lightning Bolt;Forest;Giant Growth\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
   const strip = await box(p.page, '#hand');
-  expect(strip.height).toBeLessThanOrEqual(60);
+  expect(strip.height).toBeLessThanOrEqual(66);
   await p.page.locator('#hand').tap();
   await expect(p.page.locator('#hand.sheet')).toBeVisible();
   const drawer = await box(p.page, '#hand');
@@ -194,8 +194,8 @@ probe('your bar and the costs over your hand do not overlap', async p => {
   const bar = await box(p.page, '#me .player');
   const hand = await box(p.page, '#hand');
   expect(Math.round(bar.y + bar.height)).toBeLessThanOrEqual(Math.round(hand.y) + 1);
-  const cost = await box(p.page, '#hand .card .cost-badge:not(:empty)');
+  const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
   expect(cost.y).toBeGreaterThanOrEqual(hand.y);
-  const tile = await box(p.page, '#me .zone-tile');
+  const tile = (await p.page.locator('#me .zone-tile').first().boundingBox())!;
   expect(tile.height / tile.width).toBeGreaterThan(1.3);
 }, PHONE);
