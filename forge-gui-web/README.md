@@ -15,7 +15,7 @@ It is built for a computer with a mouse and keyboard; phones and tablets aren't 
   <img src="docs/victory.webp" width="49%" alt="The end of a game">
 </p>
 <p>
-  <img src="docs/playmats.webp" width="49%" alt="Choosing a playmat during a game">
+  <img src="docs/hand.webp" width="49%" alt="A card raised from the hand, on a playmat">
   <img src="docs/conquest.webp" width="49%" alt="The map of a Planar Conquest">
 </p>
 
