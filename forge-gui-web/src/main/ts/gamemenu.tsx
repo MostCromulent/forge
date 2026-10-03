@@ -10,7 +10,8 @@ import { deref, type Model } from './model';
 import { t, type TextKey } from './text';
 
 // Icons from Lucide (ISC, see web/licenses/lucide-license.txt)
-const ICONS = {
+export const ICONS = {
+  check: '<path d="M20 6 9 17l-5-5"/>',
   playmat: '<rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/>',
   interrupts: '<circle cx="12" cy="12" r="10"/><path d="M10 15V9M14 15V9"/>',
   yields: '<path d="m6 17 5-5-5-5"/><path d="m13 17 5-5-5-5"/>',

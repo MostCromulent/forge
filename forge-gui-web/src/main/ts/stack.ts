@@ -8,6 +8,7 @@ import { stackTargets } from './overlay';
 import { byId, q } from './dom';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
+import { ICONS } from './gamemenu';
 import { t } from './text';
 import type { CardView, GameEvent, StackItemView, YieldAction } from './protocol';
 
@@ -277,11 +278,28 @@ function renderMenu(model: Model): void {
   }
   const menu = document.createElement('div');
   menu.id = 'stack-menu';
+  menu.className = 'card-menu game-menu';
+  menu.setAttribute('role', 'menu');
   menu.style.left = `${at.x}px`;
   menu.style.top = `${at.y}px`;
+  const items: StackItemView[] = derefAll(model, game(model)?.Stack);
+  const source = deref(model, items.find(i => i.$key === at.key)?.SourceCard);
+  const name = source && stateOf(model, source).Name;
+  if (name) {
+    const title = document.createElement('p');
+    title.className = 'card-menu-title';
+    title.textContent = name;
+    menu.append(title);
+  }
+  // A choice the game remembers carries a tick, shown or not, so every label starts at the same place as a pass's
   const item = (label: string, action: YieldAction, checked?: boolean) => {
     const b = document.createElement('button');
-    b.textContent = (checked === undefined ? '' : checked ? '✓ ' : '    ') + label;
+    b.type = 'button';
+    b.className = 'card-menu-item';
+    b.setAttribute('role', checked === undefined ? 'menuitem' : 'menuitemcheckbox');
+    if (checked !== undefined) b.setAttribute('aria-checked', String(checked));
+    b.innerHTML = `<svg class="menu-icon${checked === undefined ? '' : ' tick'}" viewBox="0 0 24 24" aria-hidden="true">${checked === undefined ? ICONS.yields : ICONS.check}</svg>`;
+    b.append(label);
     b.onclick = () => {
       actions?.stackYield(answer.key, action);
       changeUi(u => { u.stackMenuAt = null; });
@@ -292,6 +310,12 @@ function renderMenu(model: Model): void {
   if (answer.trigger !== undefined) {
     item(t('lblWebStackAlwaysAccept'), 'alwaysYes', answer.trigger === 'ACCEPT');
     item(t('lblWebStackAlwaysDecline'), 'alwaysNo', answer.trigger === 'DECLINE');
+  }
+  if (answer.autoYield !== undefined || answer.trigger !== undefined) {
+    const sep = document.createElement('div');
+    sep.className = 'card-menu-sep';
+    sep.setAttribute('role', 'separator');
+    menu.append(sep);
   }
   item(t('lblWebStackYieldUntilResolves'), 'yieldToStack');
   item(t('lblWebStackYieldUntilEmpty'), 'yieldToEntireStack');

@@ -919,9 +919,10 @@ body.dragging-block #zoom { display: none; }
 .card.pile .count, .card .count.opened { display: grid; }
 .card .count.opened { background: #0e1116e6; border: 1px dashed var(--accent-2); color: var(--muted); box-shadow: none; }
 .card:hover { z-index: 5; }
-#stack-menu { position: fixed; z-index: 70; display: grid; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 4px; box-shadow: 0 10px 30px #000c; }
-#stack-menu button { text-align: left; border: none; background: none; padding: 6px 10px; white-space: pre; }
-#stack-menu button:hover { background: var(--surface-2); }
+/* A stack item's menu is drawn as the game menu is, above the stack it opens over */
+#stack-menu { z-index: 70; }
+#stack-menu .tick { color: var(--accent-2); }
+#stack-menu [aria-checked="false"] .tick { visibility: hidden; }
 /* A spell whose cost is still being paid waits over the board */
 .card.paying { transform-origin: 0 0; outline: 2px solid var(--accent-2); outline-offset: 0; border-radius: var(--radius); box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 6px color-mix(in srgb, var(--accent-2) 30%, transparent); animation: paying 1.4s ease-in-out infinite; }
 @keyframes paying { 50% { box-shadow: 0 0 0 4px #0e1116, 0 12px 28px #000c, 0 0 10px color-mix(in srgb, var(--accent-2) 45%, transparent); } }
