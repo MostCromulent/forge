@@ -4,6 +4,7 @@ import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
 import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
+import { initForm } from './form';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
@@ -122,6 +123,10 @@ Object.assign(window, { forge: { actions, model } });
 const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule, render);
+initForm(() => {
+  window.dispatchEvent(new Event('resize'));
+  schedule();
+});
 initNotices((notice, view, label) => {
   notify(notice, view, NOTICE_MS, label);
   schedule();

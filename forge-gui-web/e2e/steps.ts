@@ -88,3 +88,16 @@ export async function buildLimitedDeck(page: Page): Promise<void> {
     await expect.poll(size).toBeGreaterThan(before);
   }
 }
+
+/** A finger rested on something, which Playwright's tap cannot do. Chromium only. */
+export async function hold(page: Page, target: Locator, ms = 650): Promise<void> {
+  const box = await target.boundingBox();
+  if (!box) throw new Error('Nothing to hold: the element is not on the page.');
+  const x = Math.round(box.x + box.width / 2);
+  const y = Math.round(box.y + box.height / 2);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await page.waitForTimeout(ms);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await cdp.detach();
+}

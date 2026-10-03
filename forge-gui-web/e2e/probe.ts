@@ -18,7 +18,7 @@
 // The server serves the page from the source folder, so a TS or CSS change needs only `npm run build` before a probe.
 // Java and new language keys need the jar rebuilt, which cannot happen while any server is running from it.
 
-import { expect, test, type Browser, type Page } from '@playwright/test';
+import { expect, test, type Browser, type BrowserContextOptions, type Page } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { PROBE_DECK, PROBE_SEED, startServer, type Server } from './server';
@@ -48,6 +48,9 @@ export interface Probe {
 }
 
 const VIEWPORT = { width: 1440, height: 900 };
+/** A phone in its browser, toolbars showing, which is the height a portrait layout has to fit. */
+export const PHONE: BrowserContextOptions = { viewport: { width: 390, height: 664 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
+export const SMALL_PHONE: BrowserContextOptions = { viewport: { width: 360, height: 640 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 };
 const SHOTS = join(import.meta.dirname, '..', 'target', 'probe');
 function listen(page: Page, who: string): void {
   page.on('pageerror', e => console.log(`[${who} page error] ${e.message}`));
@@ -75,7 +78,7 @@ export function explain(page: Page): Promise<string> {
   });
 }
 
-export function probe(title: string, body: (p: Probe) => Promise<void>): void {
+export function probe(title: string, body: (p: Probe) => Promise<void>, device: BrowserContextOptions = { viewport: VIEWPORT }): void {
   test(title, async ({ browser }) => {
     test.setTimeout(600_000);
     const began = Date.now();
@@ -88,7 +91,7 @@ export function probe(title: string, body: (p: Probe) => Promise<void>): void {
     };
     const server = await startServer(undefined, PROBE_SEED);
     mark('server');
-    const context = await browser.newContext({ viewport: VIEWPORT });
+    const context = await browser.newContext(device);
     const page = await context.newPage();
     listen(page, 'host');
     const dir = join(SHOTS, title.replace(/[^\w-]+/g, '-'));
