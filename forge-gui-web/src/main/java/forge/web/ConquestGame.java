@@ -671,14 +671,14 @@ final class ConquestGame implements Campaign {
         return new CampaignPrefs(l.getMessage("lblConquestPreference"), rows, l.getMessage("lblWebConquestPrefsShared"), problem, true);
     }
 
-    /** Every one of Conquest's preferences is a whole number, and the page sends nothing else. */
+    /** Every one of Conquest's preferences is a whole number. */
     @Override
     public synchronized String setPref(final String key, final String text) {
         final int value;
         try {
             value = Integer.parseInt(text.trim());
         } catch (final NumberFormatException e) {
-            return null;
+            return Localizer.getInstance().getMessage("lblWebPrefWholeNumber");
         }
         final ConquestPreferences prefs = FModel.getConquestPreferences();
         for (final PrefField f : PREFS) {

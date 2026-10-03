@@ -96,7 +96,8 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
   const groups = [...new Set(p.rows.map(r => r.group))];
   // The field's own text, since a blur can come before the typing has been drawn
   const save = (key: string, text: string, was: string) => {
-    if (text.trim() === '' || !Number.isInteger(Number(text)) || Number(text) === Number(was)) return;
+    // What a value may be is the mode's to say, and its refusal comes back as the problem line
+    if (text.trim() === '' || Number(text) === Number(was)) return;
     setLast(key);
     actions.campaignPref(key, text.trim());
   };

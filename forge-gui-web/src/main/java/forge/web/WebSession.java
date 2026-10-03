@@ -31,7 +31,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -105,8 +107,8 @@ public final class WebSession {
     private volatile LimitedResult lastResult;
     /** What this session alone knows of the open conquest: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
-    /** One thread for everything a campaign does: its model is Forge's own and nothing guards it, and its answers go out in the order asked. */
-    private final ExecutorService campaignWork = Executors.newSingleThreadExecutor(r -> {
+    /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
+    private final ExecutorService campaignWork = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
         final Thread t = new Thread(r, "WebCampaign");
         t.setDaemon(true);
         return t;

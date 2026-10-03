@@ -703,6 +703,17 @@ public class ConquestSessionTest extends SessionsTest {
         return names;
     }
 
+    // Fails if the thread a session keeps for campaign work outlives the work, so every session that ever used one holds a thread
+    @Test(timeOut = 120_000)
+    public void campaignWorkLeavesNoThreadBehind() throws Exception {
+        onTheShelf();
+        final long end = System.currentTimeMillis() + 30_000;
+        while (Thread.getAllStackTraces().keySet().stream().anyMatch(t -> "WebCampaign".equals(t.getName()) && t.isAlive())) {
+            Assert.assertTrue(System.currentTimeMillis() < end, "a campaign thread is still alive half a minute after its work");
+            Thread.sleep(250);
+        }
+    }
+
     // Fails if a conquest's messages are answered out of the order they were sent, as work on separate threads allows
     @Test(timeOut = 120_000)
     public void messagesAreAnsweredInTheOrderSent() throws Exception {
@@ -1039,6 +1050,9 @@ public class ConquestSessionTest extends SessionsTest {
             Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
             send(host, pref("AETHER_BASE_PULL_COST", -1));
             host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a negative value was not refused");
+            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
+            send(host, message("campaignPref", "key", "AETHER_BASE_PULL_COST", "value", "1.5"));
+            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a value that is not a whole number was not refused");
             Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
             send(host, pref("CURRENT_CONQUEST", 1));
             host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent");
