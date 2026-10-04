@@ -6,7 +6,7 @@ import { saveText } from './dom';
 import { keyName, rebind, type KeyBindings } from './keys';
 import { SETTINGS, boundKeys, defaultKeys, isGuest, set, setKeys, setting, type SettingDef } from './settings';
 import { normalize, rankByName } from './search';
-import { t } from './text';
+import { t, textLanguage } from './text';
 import { easedLocal } from './ui';
 import { useClosing } from './closing';
 
@@ -168,10 +168,15 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
         <div class="slider">
           <input type="range" min={def.min} max={def.max} step={def.step ?? 5} value={Number(value)}
             onInput={e => change(Number(e.currentTarget.value))} />
-          <span>{t('lblWebOptionsPercent', Number(value))}</span>
+          <span>{def.unit === 'seconds' ? t('lblWebOptionsSeconds', seconds(Number(value))) : t('lblWebOptionsPercent', Number(value))}</span>
         </div>
       );
   }
+}
+
+/** A delay in milliseconds as seconds, to one or two decimal places: 1.5, 0.25, 0.0. */
+function seconds(ms: number): string {
+  return new Intl.NumberFormat(textLanguage(), { minimumFractionDigits: 1, maximumFractionDigits: 2 }).format(ms / 1000);
 }
 
 // A theme is a plain CSS file: load one, save the current one, or edit it here. Typed CSS lands at once.

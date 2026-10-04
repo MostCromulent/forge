@@ -19,7 +19,8 @@ import { initDetail, nextFace, renderDetail } from './detail';
 import { initStack } from './stack';
 import { initOverlay, drawOverlay } from './overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './blockdrag';
-import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
+import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
+import { asksPlayer, worthSeeing } from './pace';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId, saveText } from './dom';
@@ -48,11 +49,11 @@ const send = connect(receive, online => {
   }
 });
 
-// While a new turn is announced the prompt on screen is the last turn's, so an answer to it would land on a question not yet seen
+// While messages are held the prompt on screen is an earlier board's, so an answer to it would land on a question not yet seen
 const HELD_INPUT = new Set(['selectCard', 'selectPlayer', 'useMana', 'ok', 'cancel', 'endTurn', 'undo']);
 const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
-  else console.warn(`Not sent while a new turn is announced: ${msg.t}`);
+  else console.warn(`Not sent while the page catches up: ${msg.t}`);
 });
 const actions: Actions = {
   ...wire,
@@ -205,8 +206,10 @@ function runKey(command: KeyCommand): void {
   }
 }
 
-/** What has arrived since a new turn began, while its banner shows. */
+/** What has arrived since a new turn began, while its banner shows, or behind a board that is still being shown. */
 let held: ServerMessage[] | null = null;
+/** Until when the board on screen stays up, because it shows another player's play. */
+let showUntil = 0;
 /** Longer than any banner, so it only matters if the banner's own release is lost. */
 const HOLD_LIMIT_MS = 4000;
 
@@ -214,15 +217,25 @@ function receive(msg: ServerMessage): void {
   if (!held) {
     // Each release is for this turn's hold only, so an earlier banner ending late cannot free a later turn early
     const releaseThis = () => { if (held?.[0] === msg) release(); };
-    if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
+    if (msg.t === 'state' && !msg.full && Date.now() < showUntil) {
+      held = [msg];
+      setTimeout(releaseThis, showUntil - Date.now());
+    } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
       held = [msg];
       // The banner's end releases the turn; this only guards the page against a release that never comes
       setTimeout(releaseThis, HOLD_LIMIT_MS);
     } else {
       apply(msg);
+      if (msg.t === 'state' && worthSeeing(msg.events, msg.localPlayers)) {
+        showUntil = Date.now() + Number(setting('pace'));
+      } else if (msg.t === 'request' || (msg.t === 'prompt' && asksPlayer(msg))) {
+        // Asked something, the player is looking at the board as it stands, and what they do next is shown at once
+        showUntil = 0;
+      }
     }
   } else if (msg.t === 'hello') {
     // A new table or a reconnection starts over, so nothing waits behind the old turn
+    showUntil = 0;
     release();
     apply(msg);
   } else {

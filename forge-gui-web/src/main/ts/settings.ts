@@ -37,7 +37,7 @@ interface SettingBase {
 export type SettingDef = SettingBase & (
   | { type: 'toggle'; def: boolean }
   | { type: 'choice'; options: [string, string][]; def: string }
-  | { type: 'slider'; min: number; max: number; def: number; step?: number }
+  | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
 );
@@ -52,6 +52,10 @@ export const SETTINGS: SettingDef[] = [
     section: t('lblWebGameMenuDecisionsTitle'), key: 'autoYieldMode', label: t('lblWebOptionsAutoYieldMode'), type: 'choice', server: true, menu: 'decisions',
     hint: t('lblWebOptionsAutoYieldModeHint'),
     options: [['ability', t('lblWebOptionsPerAbility')], ['card', t('lblWebOptionsPerCard')]], def: 'ability',
+  },
+  {
+    section: t('lblWebOptionsSectionGameplay'), key: 'pace', label: t('lblWebOptionsPace'), hint: t('lblWebOptionsPaceHint'),
+    type: 'slider', min: 0, max: 3000, step: 250, unit: 'seconds', def: 1000,
   },
   {
     section: t('lblWebOptionsSectionGameplay'), key: 'autoTapPreview', label: t('lblWebOptionsAutoTapPreview'), type: 'toggle', server: true, def: false,

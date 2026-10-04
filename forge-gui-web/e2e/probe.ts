@@ -92,6 +92,12 @@ export function probe(title: string, body: (p: Probe) => Promise<void>, device: 
     const server = await startServer(undefined, PROBE_SEED);
     mark('server');
     const context = await browser.newContext(device);
+    // A test answers faster than a person reads, so the pause on an opponent's play is off unless a test sets it
+    await context.addInitScript(() => {
+      try {
+        if (!localStorage.getItem('forge.settings')) localStorage.setItem('forge.settings', '{"pace":0}');
+      } catch { /* a blank page has no storage */ }
+    });
     const page = await context.newPage();
     listen(page, 'host');
     const dir = join(SHOTS, title.replace(/[^\w-]+/g, '-'));
