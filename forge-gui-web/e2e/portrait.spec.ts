@@ -594,3 +594,24 @@ probe('a block is declared by taps: the attacker, then your creature', async p =
   await p.page.locator('#me .battlefield .card', { hasText: 'Wall of Stone' }).tap({ force: true });
   await expect(p.page.locator('#me .card.blocking')).toHaveCount(1);
 }, PHONE);
+
+probe('a zone the game opens for a choice, with a spell on the stack, is a whole sheet whose cards can be tapped', async p => {
+  await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
+  await castFirstInHand(p);
+  // Paid for, then let resolve: one answer at a time, since a second sent early would land on the choice itself
+  const shown = () => p.page.evaluate(() => document.querySelectorAll('#zones .card.selectable').length > 0);
+  for (let i = 0; i < 20 && !await shown(); i++) {
+    if (await p.page.evaluate(() => { const q = window.forge.model.prompt; return !!q && (q.paying || q.priority) && !!q.ok?.enabled; })) await act(p.page, 'ok');
+    await p.page.waitForTimeout(700);
+  }
+  expect(await shown()).toBe(true);
+  await p.page.waitForTimeout(500);
+  const panel = await box(p.page, '#zones .zone-panel');
+  const dock = await box(p.page, '#prompt');
+  expect(panel.width).toBe(390);
+  expect(panel.y + panel.height).toBeLessThanOrEqual(dock.y + 2);
+  const card = p.page.locator('#zones .card.selectable').first();
+  const at = (await card.boundingBox())!;
+  expect(at.y + at.height).toBeLessThanOrEqual(dock.y + 2);
+  await card.tap();
+}, PHONE);
