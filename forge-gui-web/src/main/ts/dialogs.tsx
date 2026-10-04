@@ -295,7 +295,6 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
         {req.options.map((o, i) => chosen.includes(i) ? null
           : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
       </div>
-      <p class="hint">{t('lblWebDialogChosenOrder')}</p>
       <div class="options ordered">
         {chosen.map((i, pos) => (
           <div key={i} class={dropAt === pos ? 'ordered-item drop-here' : 'ordered-item'} draggable

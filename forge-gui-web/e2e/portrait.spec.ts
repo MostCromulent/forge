@@ -610,6 +610,9 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
   const dock = await box(p.page, '#prompt');
   expect(panel.width).toBe(390);
   expect(panel.y + panel.height).toBeLessThanOrEqual(dock.y + 2);
+  // The stack's chip does not lie over the sheet
+  expect(await p.page.evaluate(() => { const r = document.querySelector('#zones .zone-panel header')!.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 20, r.y + 10); return !!hit?.closest('#zones'); })).toBe(true);
+  for (const each of await p.page.locator('#zones .card.selectable').all()) await each.tap({ trial: true, timeout: 3000 });
   const card = p.page.locator('#zones .card.selectable').first();
   const at = (await card.boundingBox())!;
   expect(at.y + at.height).toBeLessThanOrEqual(dock.y + 2);

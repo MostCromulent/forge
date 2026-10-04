@@ -367,7 +367,8 @@ html[data-form="portrait"] #game-over.viewing { padding-bottom: calc(var(--dock-
 html[data-form="portrait"] #game-over .to-result { min-height: 48px; pointer-events: auto; }
 /* A row that runs on past the edge fades there, to say there is more */
 html[data-form="portrait"] :is(#phase-strip .stops .grid-scroll, .finder .rail) { padding-right: 32px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }
-/* A zone opened beside the stack on a desktop keeps the whole width here; the stack's chip stays above its scrim */
+/* A zone opened beside the stack on a desktop keeps the whole width here, and lies over the stack's chip, which would cover its cards */
+html[data-form="portrait"] #match:has(#zones:not([hidden]):not(.minimised)) #stack:not([hidden]) { z-index: 26; }
 html[data-form="portrait"] #match:has(#stack:not([hidden])) #zones:not(.minimised) { padding-right: 0; }
 html[data-form="portrait"] #match:has(#stack:not([hidden])) #zones:not(.minimised) .zone-panel { width: 100%; }
 /* The zone's sheet is held to the room above the dock, and its cards scroll inside it */
