@@ -377,3 +377,6 @@ html[data-form="portrait"] .zone-panel .zone-sort select { min-height: 32px; pad
 /* While a dialog or a zone asks the question, the dock keeps only its tools */
 html[data-form="portrait"] #prompt.blocked { grid-template-rows: 44px auto; }
 html[data-form="portrait"] #prompt.blocked :is(.ok, .cancel, .prompt-body) { display: none; }
+/* Cards being put in order go four to a row on a phone */
+html[data-form="portrait"] #dialog-layer .dialog .ordered { gap: 30px 6px; justify-content: flex-start; }
+html[data-form="portrait"] #dialog-layer .dialog .ordered .card { --fit: 1; width: calc((100vw - 56px) / 4); height: calc((100vw - 56px) / 4 * 88 / 63); }

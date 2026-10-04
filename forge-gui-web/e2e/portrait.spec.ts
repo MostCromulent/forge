@@ -624,3 +624,34 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
   expect(at.y + at.height).toBeLessThanOrEqual(dock.y + 2);
   await card.tap();
 }, PHONE);
+
+for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as const) {
+  probe(`cards are put in order along a row on ${name}`, async p => {
+    await settledBoard(p, 'humanhand=Diabolic Vision\nhumanbattlefield=Island;Swamp\nhumanlibrary=Forest;Mountain;Plains;Island;Swamp;Hill Giant;Grizzly Bears\naibattlefield=Mountain');
+    await castFirstInHand(p);
+    const asked = () => p.page.evaluate(() => document.querySelectorAll('#zones .card.selectable').length > 0);
+    for (let i = 0; i < 20 && !await asked(); i++) {
+      if (await p.page.evaluate(() => { const q = window.forge.model.prompt; return !!q && (q.paying || q.priority) && !!q.ok?.enabled; })) await act(p.page, 'ok');
+      await p.page.waitForTimeout(700);
+    }
+    await p.page.locator('#zones .card.selectable').first().click();
+    const items = p.page.locator('#dialog-layer .dialog .ordered-item');
+    await expect(items).toHaveCount(4);
+    await p.page.waitForTimeout(400);
+    // One row, read left to right
+    const boxes = await Promise.all((await items.all()).map(async i => (await i.boundingBox())!));
+    for (const b of boxes) expect(Math.abs(b.y - boxes[0].y)).toBeLessThan(2);
+    expect(boxes[1].x).toBeGreaterThan(boxes[0].x);
+    const width = p.page.viewportSize()!.width;
+    expect(boxes[3].x + boxes[3].width).toBeLessThanOrEqual(width);
+    // The third card is chosen and moved one place toward the front
+    const third = await items.nth(2).locator('.card').getAttribute('data-key');
+    await items.nth(2).locator('.card').click();
+    await expect(items.nth(2)).toHaveClass(/selected/);
+    await p.page.locator('#dialog-layer .order-move .earlier').click();
+    await expect(items.nth(1).locator('.card')).toHaveAttribute('data-key', third!);
+    await expect(items.nth(1).locator('.order-number')).toHaveText('2');
+    await p.page.locator('#dialog-layer .dialog .actions button').last().click();
+    await expect(p.page.locator('#dialog-layer .dialog')).toHaveCount(0);
+  }, device);
+}

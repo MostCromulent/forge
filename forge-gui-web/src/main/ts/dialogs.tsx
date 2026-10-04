@@ -282,22 +282,45 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const [chosen, setChosen] = useState<number[]>(() => [...req.selected]);
   const [remember, setRemember] = useState(false);
   const [dropAt, setDropAt] = useState<number | null>(null);
+  /** The card tapped to be moved, by its place among the options. */
+  const [held, setHeld] = useState<number | null>(null);
   const dragFrom = useRef<number | null>(null);
   const move = (from: number, to: number) => setChosen(list => {
     const next = [...list];
     next.splice(to, 0, next.splice(from, 1)[0]);
     return next;
   });
+  const at = held === null ? -1 : chosen.indexOf(held);
+  const step = (by: number) => {
+    if (at >= 0 && at + by >= 0 && at + by < chosen.length) move(at, at + by);
+  };
+  // The arrow keys carry the card that is held along the row
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      stepRef.current(e.key === 'ArrowLeft' ? -1 : 1);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+  const waiting = req.options.some((_, i) => !chosen.includes(i));
+  // A card may leave the row only when the question lets some be left out
+  const optional = req.min < req.options.length;
   return (
     <>
-      <p class="hint">{req.top || t('lblWebDialogPickInOrder')}</p>
-      <div class="options">
-        {req.options.map((o, i) => chosen.includes(i) ? null
-          : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
-      </div>
+      {waiting && <>
+        <p class="hint">{t('lblWebDialogPickInOrder')}</p>
+        <div class="options">
+          {req.options.map((o, i) => chosen.includes(i) ? null
+            : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
+        </div>
+      </>}
       <div class="options ordered">
         {chosen.map((i, pos) => (
-          <div key={i} class={dropAt === pos ? 'ordered-item drop-here' : 'ordered-item'} draggable
+          <div key={i} class={`ordered-item${dropAt === pos ? ' drop-here' : ''}${held === i ? ' selected' : ''}`} draggable
             onDragStart={e => {
               dragFrom.current = pos;
               if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
@@ -313,13 +336,24 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
               if (dragFrom.current !== null && dragFrom.current !== pos) move(dragFrom.current, pos);
               dragFrom.current = null;
             }}>
-            {/* The number is the order they go back in, which is the question the dialog is asking */}
+            <OptionView model={model} opt={req.options[i]} onClick={() => setHeld(h => (h === i ? null : i))} />
+            {/* The number is the order they go in, which is the question the dialog is asking */}
             <span class="order-number">{pos + 1}</span>
-            <OptionView model={model} opt={req.options[i]} onClick={() => setChosen(list => list.filter(c => c !== i))} />
-            <Button onClick={() => { if (pos > 0) move(pos, pos - 1); }}>↑</Button>
+            {pos === 0 && req.top && <span class="order-end">{req.top}</span>}
           </div>
         ))}
       </div>
+      {at >= 0 && (
+        <div class="order-move">
+          <button class="earlier" disabled={at === 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
+          <span class="order-held">{req.options[chosen[at]].name ?? req.options[chosen[at]].label ?? ''}</span>
+          {optional && <button class="order-out" onClick={() => {
+            setChosen(list => list.filter(c => c !== held));
+            setHeld(null);
+          }}>{t('lblRemove')}</button>}
+          <button class="later" disabled={at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
+        </div>
+      )}
       {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>}
       <ButtonRow>
         <Button primary disabled={chosen.length < req.min || chosen.length > req.max}
