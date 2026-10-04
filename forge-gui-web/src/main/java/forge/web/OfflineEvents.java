@@ -8,7 +8,6 @@ import forge.deck.Deck;
 import forge.deck.DeckGroup;
 import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.limited.CustomLimited;
-import forge.gamemodes.limited.DraftProducts;
 import forge.gamemodes.limited.LimitedPoolType;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.gamemodes.limited.ThemedChaosDraft;

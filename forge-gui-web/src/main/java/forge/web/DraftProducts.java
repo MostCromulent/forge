@@ -1,7 +1,11 @@
-package forge.gamemodes.limited;
+package forge.web;
 
 import forge.StaticData;
 import forge.card.CardEdition;
+import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.limited.CustomLimited;
+import forge.gamemodes.limited.SealedCardPoolGenerator;
+import forge.gamemodes.limited.ThemedChaosDraft;
 import forge.model.CardBlock;
 import forge.localinstance.properties.ForgePreferences;
 import forge.model.FModel;
@@ -12,7 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 /** What a limited event can be built from, read without prompting, for a frontend that asks for every choice at once. */
-public final class DraftProducts {
+final class DraftProducts {
     private DraftProducts() {
     }
 

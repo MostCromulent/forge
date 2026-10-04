@@ -1,7 +1,6 @@
 package forge.web;
 
 import forge.deck.CardPool;
-import forge.gamemodes.limited.DraftProducts;
 import forge.gamemodes.limited.SealedCardPoolGenerator;
 import forge.item.PaperCard;
 import forge.model.CardBlock;
