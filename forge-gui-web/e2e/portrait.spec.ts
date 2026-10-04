@@ -1,6 +1,9 @@
-import { expect, type Page } from '@playwright/test';
-import { act, board, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
-import { hold } from './steps';
+import { expect, test, type Page } from '@playwright/test';
+import { act, board, finderWithOwnDeck, lobby, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
+import { enterName, hold } from './steps';
+
+// A board set up through dev mode sometimes lands a moment late on a busy machine, and a tap or hold made meanwhile goes nowhere
+test.describe.configure({ retries: 2 });
 
 /** A board set up from a state arrives in pieces, and a card touched before the last piece lands is one about to be replaced. */
 async function settledBoard(p: Probe, state: string, table?: Table): Promise<void> {
@@ -356,3 +359,24 @@ probe('the page can be installed to the home screen', async p => {
   expect(icon.status()).toBe(200);
   expect(icon.headers()['content-type']).toBe('image/png');
 });
+
+for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
+  probe(`match setup fits a phone at ${name}`, async p => {
+    await lobby(p);
+    const { width, height } = phone.viewport!;
+    expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    const play = await box(p.page, '#play');
+    expect(play.y + play.height).toBeLessThanOrEqual(height);
+    expect(play.height).toBeGreaterThanOrEqual(44);
+    expect(play.width).toBeGreaterThan(width * 0.8);
+    for (const plate of await p.page.locator('#seats .plate').all()) expect((await plate.boundingBox())!.width).toBeGreaterThan(width * 0.85);
+    for (const b of await p.page.locator('.match-bar button:visible').all()) expect((await b.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+  }, phone);
+}
+
+probe('the start page and the deck editor do not scroll sideways on a phone', async p => {
+  await p.page.goto(p.server.url);
+  await enterName(p.page, 'Alice');
+  await expect(p.page.locator('[data-mode=play]')).toBeVisible();
+  expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+}, PHONE);

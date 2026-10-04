@@ -268,3 +268,33 @@ html[data-form="portrait"] #dialog-layer .game-menu { max-height: calc(100dvh - 
 @media (max-height: 499px) and (pointer: coarse) {
   body:has(#match:not([hidden])):not(:has(:is(input, textarea):focus)) #turn-upright { display: grid; place-items: center; position: fixed; inset: 0; z-index: 99; padding: 24px; text-align: center; background: var(--bg-deep); font-size: 18px; }
 }
+
+/* Setup on a phone: the options as rows, the seats one under another, and Play along the bottom edge */
+html[data-form="portrait"] .lobby-main { justify-items: stretch; padding: 20px 12px calc(140px + env(safe-area-inset-bottom)); }
+html[data-form="portrait"] .lobby-main > :is(.setup-head, .match-bar, .event-head) { width: auto; min-width: 0; }
+html[data-form="portrait"] .setup-head { margin-bottom: 12px; }
+html[data-form="portrait"] .setup-head .crumb { flex-wrap: wrap; }
+html[data-form="portrait"] .match-bar .fields { display: grid; grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] .match-bar .field { grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 52px; padding: 4px 12px; border-right: 0; border-bottom: 1px solid var(--line); }
+html[data-form="portrait"] .match-bar .field:last-child { border-bottom: 0; }
+html[data-form="portrait"] .match-bar .field-value { min-height: 44px; }
+html[data-form="portrait"] .match-bar .count { width: 100%; }
+html[data-form="portrait"] .match-bar .count button { flex: 1; min-height: 44px; font-size: 14px; }
+html[data-form="portrait"] #lobby .seats, html[data-form="portrait"] #lobby .seats[data-count] { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 10px; }
+html[data-form="portrait"] #lobby .seats .plate, html[data-form="portrait"] #lobby .seats[data-count] .plate { width: auto; min-width: 0; padding: 10px; gap: 10px; }
+html[data-form="portrait"] #lobby .seats .plate .sleeve { width: 76px; height: 106px; flex: none; }
+html[data-form="portrait"] #lobby .plate button { min-height: 44px; }
+html[data-form="portrait"] #lobby .play-row { justify-items: stretch; margin-top: 10px; }
+/* Play keeps the bottom edge, in reach whatever the page is scrolled to; what says why it cannot start stays with the seats */
+html[data-form="portrait"] #lobby .play { position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 20; min-width: 0; min-height: 52px; box-shadow: 0 0 0 12px var(--bg); }
+html[data-form="portrait"] #lobby .not-yet { margin-top: 0; max-width: none; }
+/* The table's chat folds to its bar, which stands over Play */
+html[data-form="portrait"] body:has(#lobby:not([hidden])) #dock .dock { bottom: calc(76px + env(safe-area-inset-bottom)); }
+html[data-form="portrait"] #dock .dock { right: 12px; left: auto; max-width: calc(100vw - 24px); box-sizing: border-box; }
+html[data-form="portrait"] #dock .dock.folded { min-height: 44px; width: auto; }
+html[data-form="portrait"] #dock .dock.open { left: 12px; width: auto; max-height: 60dvh; }
+html[data-form="portrait"] .page-head button { min-width: 44px; min-height: 44px; }
+/* Screens with no phone layout yet scroll inside themselves, never the page */
+html[data-form="portrait"] :is(#editor, #limited, #drafting, #conquest) { max-width: 100vw; overflow-x: auto; }
+/* Pinned over the seats, a Play that cannot be pressed yet is dimmed without being seen through */
+html[data-form="portrait"] #lobby .play:disabled { opacity: 1; filter: saturate(.35) brightness(.55); }
