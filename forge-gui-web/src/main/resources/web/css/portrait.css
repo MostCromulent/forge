@@ -374,3 +374,4 @@ html[data-form="portrait"] #match:has(#stack:not([hidden])) #zones:not(.minimise
 /* The zone's sheet is held to the room above the dock, and its cards scroll inside it */
 html[data-form="portrait"] #match #zones:not(.minimised) { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; }
 html[data-form="portrait"] #match #zones:not(.minimised) .zone-shelf { max-height: 92%; min-height: 0; flex: 0 1 auto; }
+html[data-form="portrait"] .zone-panel .zone-sort select { min-height: 32px; padding: 2px 8px; }
