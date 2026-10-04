@@ -249,7 +249,9 @@ html[data-form="portrait"] #match #zones .zone-shelf { max-height: 86%; width: 1
 html[data-form="portrait"] #match #zones .zone-panel { width: 100%; max-width: none; border-radius: 16px 16px 0 0; border-width: 1px 0 0; box-sizing: border-box; }
 html[data-form="portrait"] .zone-panel .cards { --fit: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; }
 html[data-form="portrait"] .zone-panel :is(header, footer) { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
-html[data-form="portrait"] .zone-panel .zone-find { order: 9; flex: 1 0 100%; width: auto; min-width: 0; box-sizing: border-box; }
+/* Show board and the search share the second line */
+html[data-form="portrait"] .zone-panel .zone-fold { order: 8; }
+html[data-form="portrait"] .zone-panel .zone-find { order: 9; flex: 1 1 120px; width: auto; min-width: 0; box-sizing: border-box; }
 html[data-form="portrait"] .zone-panel .zone-gap { display: none; }
 html[data-form="portrait"] .zone-panel .zone-sort { margin-left: auto; }
 html[data-form="portrait"] .zone-panel :is(button, input, select) { min-height: 44px; }
