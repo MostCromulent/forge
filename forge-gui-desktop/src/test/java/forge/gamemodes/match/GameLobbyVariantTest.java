@@ -2,15 +2,12 @@ package forge.gamemodes.match;
 
 import forge.deck.Deck;
 import forge.game.GameType;
-import forge.game.player.Player;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.net.TestDeckLoader;
 import forge.net.TestUtils;
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
-
-import java.util.List;
 
 public class GameLobbyVariantTest {
     @BeforeClass
@@ -33,16 +30,6 @@ public class GameLobbyVariantTest {
         return lobby;
     }
 
-    /** Starts the match and returns its players; the game is ended again before returning. */
-    private static List<Player> startWith(final LocalLobby lobby) {
-        final Runnable start = lobby.startGame();
-        Assert.assertNotNull(start, "the lobby refused to start");
-        start.run();
-        final List<Player> players = List.copyOf(lobby.getHostedMatch().getGame().getPlayers());
-        lobby.getHostedMatch().endCurrentGame();
-        return players;
-    }
-
     /** Fails if removing seats after the role moved drives lastArchenemy to -1 and the next removal throws. */
     @Test
     public void removingSeatsKeepsOneArchenemy() {
@@ -58,10 +45,5 @@ public class GameLobbyVariantTest {
             archenemies += lobby.getSlot(i).isArchenemy() ? 1 : 0;
         }
         Assert.assertEquals(archenemies, 1);
-    }
-
-    private static boolean registeredArchenemy(final Player p) {
-        final Iterable<?> schemes = p.getRegisteredPlayer().getSchemes();
-        return schemes != null && schemes.iterator().hasNext();
     }
 }

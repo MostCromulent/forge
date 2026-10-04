@@ -442,7 +442,7 @@ final class DeckSession {
     /** Saves to the host's decks, or to the decks loaded from links; null when the name is taken and the browser must be asked. */
     private String saveOnHost(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
         final boolean linked = c.url() != null;
-        final IStorage<Deck> storage = linked ? DeckUrlLoader.storage() : storages.of(check.format());
+        final IStorage<Deck> storage = linked ? DeckUrlLoader.getStorage() : storages.of(check.format());
         synchronized (DeckCatalog.DECKS) {
             final String taken = DeckStore.taken(storage, deck.getName());
             if (taken != null && c.clash() == null) {

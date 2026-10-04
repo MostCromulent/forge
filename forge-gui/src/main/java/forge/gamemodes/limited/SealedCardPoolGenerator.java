@@ -190,17 +190,8 @@ public class SealedCardPoolGenerator {
 
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
     public static SealedCardPoolGenerator cubeCobra(final String cubeId, final int packs) {
-        final CustomLimited imported;
-        try {
-            imported = new CubeImporter(cubeId).importCube();
-        } catch (Exception e) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblErrorImportingCube") + ": " + e.getMessage(), e);
-        }
-        if (imported == null) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
-        }
         final SealedCardPoolGenerator gen = new SealedCardPoolGenerator();
-        gen.setupCubeCobra(imported, packs);
+        gen.setupCubeCobra(BoosterDraft.importCube(cubeId), packs);
         return gen;
     }
 

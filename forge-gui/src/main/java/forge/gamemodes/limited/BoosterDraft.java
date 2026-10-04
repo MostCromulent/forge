@@ -137,6 +137,12 @@ public class BoosterDraft implements IBoosterDraft {
 
     /** Throws IllegalArgumentException, with a message a player can read, when the cube can't be imported. */
     public static BoosterDraft cubeCobra(final String cubeId) {
+        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Import);
+        draft.setupCube(importCube(cubeId));
+        return draft;
+    }
+
+    static CustomLimited importCube(final String cubeId) {
         final CustomLimited imported;
         try {
             imported = new CubeImporter(cubeId).importCube();
@@ -146,9 +152,7 @@ public class BoosterDraft implements IBoosterDraft {
         if (imported == null) {
             throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblFailedToImportCube") + ": " + cubeId);
         }
-        final BoosterDraft draft = new BoosterDraft(LimitedPoolType.Import);
-        draft.setupCube(imported);
-        return draft;
+        return imported;
     }
 
     /** A block offered for drafting: it has draft packs, and it is not Conspiracy, whose draft-time prompts only a local GUI can answer. */

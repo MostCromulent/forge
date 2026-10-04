@@ -6,7 +6,6 @@ import forge.deck.io.DeckStorage;
 import forge.game.GameType;
 import forge.localinstance.properties.ForgeConstants;
 import forge.util.Localizer;
-import forge.util.storage.IStorage;
 import forge.util.storage.StorageImmediatelySerialized;
 
 import java.io.BufferedReader;
@@ -55,11 +54,6 @@ public final class DeckUrlLoader {
         final StorageImmediatelySerialized<Deck> storage = getStorage();
         storage.add(deck);
         return new DeckProxy(deck, localizer.getMessage("lblUrlDeck"), GameType.Constructed, storage);
-    }
-
-    /** The decks loaded from links, for checking whether a name is taken there. */
-    public static IStorage<Deck> storage() {
-        return getStorage();
     }
 
     public static String loadImportText(final String deckUrl) throws IOException {
@@ -183,7 +177,7 @@ public final class DeckUrlLoader {
         }
     }
 
-    private static StorageImmediatelySerialized<Deck> getStorage() {
+    public static StorageImmediatelySerialized<Deck> getStorage() {
         return new StorageImmediatelySerialized<>("URL decks",
                 new DeckStorage(new File(ForgeConstants.DECK_BASE_DIR + URL_DECK_DIR_NAME + ForgeConstants.PATH_SEPARATOR),
                         ForgeConstants.DECK_BASE_DIR));
