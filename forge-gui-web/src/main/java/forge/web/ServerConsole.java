@@ -49,6 +49,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** The desktop window that starts and stops the server, without which a player who closes their tab has no sign Forge still runs. */
 final class ServerConsole implements IProgressBar {
@@ -78,6 +80,12 @@ final class ServerConsole implements IProgressBar {
     private final StatsBox stats = new StatsBox();
     private final JButton imagesButton = new JButton(Localizer.getInstance().getMessage("lblWebImagesButton"));
     private final CardImageDownloads images = new CardImageDownloads(label -> SwingUtilities.invokeLater(() -> imagesButton.setText(label)));
+    /** One thread, so two quick clicks on the port option reach the router in the order they were made. */
+    private final ExecutorService router = Executors.newSingleThreadExecutor(work -> {
+        final Thread t = new Thread(work, "ForgePortForward");
+        t.setDaemon(true);
+        return t;
+    });
     private volatile ServerTraffic traffic;
     private JFrame frame;
     private JTextPane text;
@@ -129,7 +137,11 @@ final class ServerConsole implements IProgressBar {
         images.ready();
         SwingUtilities.invokeLater(() -> imagesButton.setEnabled(true));
         driven.onForwarding(this::forwarding);
-        running();
+        if (driven.running()) {
+            running();
+        } else {
+            stopped();
+        }
     }
 
     /** The port is bound: the lamp is lit and the links are worth copying. */
@@ -196,7 +208,8 @@ final class ServerConsole implements IProgressBar {
                 }
             } catch (final InterruptedException e) {
                 Thread.currentThread().interrupt();
-            } catch (final RuntimeException e) {
+            } catch (final Exception e) {
+                // Netty rethrows a failed bind's checked exception without declaring it
                 Logger.error(e, "Could not {} the server", up ? "stop" : "start");
             }
             if (service.running()) {
@@ -304,7 +317,7 @@ final class ServerConsole implements IProgressBar {
         forwardPort.setEnabled(false);
         forwardPort.addActionListener(e -> {
             final boolean on = forwardPort.isSelected();
-            inBackground("ForgePortForward", () -> service.forwardPort(on));
+            router.execute(() -> service.forwardPort(on));
         });
         final JPanel forwardRow = new JPanel();
         forwardRow.setLayout(new BoxLayout(forwardRow, BoxLayout.LINE_AXIS));

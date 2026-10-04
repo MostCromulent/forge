@@ -48,11 +48,19 @@ public final class WebMain {
             if (console != null) {
                 console.starting(Localizer.getInstance().getMessage("lblWebConsoleStartingServer"));
             }
-            service.start();
+            try {
+                service.start();
+            } catch (final Exception e) {
+                // The console stays up to show why and to start again; without one there is nothing to wait for
+                if (console == null) {
+                    throw e;
+                }
+                Logger.error(e, "Could not start the server");
+            }
             if (console != null) {
                 console.attach(service);
             }
-            if (!Boolean.getBoolean("forge.web.noBrowser")) {
+            if (service.running() && !Boolean.getBoolean("forge.web.noBrowser")) {
                 openBrowser(service.url(), ui);
             }
             quit.await();

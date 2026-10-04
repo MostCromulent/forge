@@ -46,7 +46,14 @@ final class WebService {
             return;
         }
         final WebSessions fresh = new WebSessions(ui, idleMillis, onQuit);
-        final WebServer bound = new WebServer(fresh, hostToken, guestToken);
+        final WebServer bound;
+        try {
+            bound = new WebServer(fresh, hostToken, guestToken);
+        } catch (final Exception e) {
+            // The sessions' idle timer would otherwise quit Forge a few seconds after the port could not be bound
+            fresh.shutdown();
+            throw e;
+        }
         fresh.setServer(bound);
         if (consoleShown) {
             fresh.visibleElsewhere();
