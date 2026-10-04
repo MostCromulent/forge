@@ -308,9 +308,6 @@ html[data-form="portrait"] :is(#editor, #limited, #drafting, #conquest) { max-wi
 /* Pinned over the seats, a Play that cannot be pressed yet is dimmed without being seen through */
 html[data-form="portrait"] #lobby .play:disabled { opacity: 1; filter: saturate(.35) brightness(.55); }
 
-/* What a question lets you choose is ringed as well as left bright, since on a small board the dimming alone is easy to miss */
-html[data-form="portrait"] #match.picking .card.selectable { outline: 2px dashed var(--select); outline-offset: 1px; }
-html[data-form="portrait"] #match.picking .avatar.selectable { box-shadow: 0 0 0 3px var(--select); }
 /* A turned card turns its marker with it, which is turned back and set on the edge that faces up */
 html[data-form="portrait"] .battlefield .card.tapped .combat-tag:not(:empty) { left: -9px; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
 html[data-form="portrait"] .battlefield .card.tapped :is(.count, .pt) { rotate: -90deg; }
