@@ -50,7 +50,7 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .options .section { grid-column: 1 / -1; width: 100%; margin-top: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .dialog .options .section:first-child { margin-top: 0; }
 /* The cards being put in order run along a row, first to last, and onto a second row when one is not enough */
-.dialog .ordered { gap: 30px 12px; padding: 10px 2px 26px; }
+.dialog .ordered { gap: 30px 12px; padding: 10px 2px 38px; }
 .dialog .ordered-item { position: relative; transition: transform .12s ease; }
 .dialog .ordered-item.selected { transform: translateY(-8px); outline: 2px solid var(--select); outline-offset: 2px; }
 .dialog .row { display: flex; align-items: center; gap: 8px; }
