@@ -28,7 +28,7 @@ html[data-form="portrait"] #prompt { grid-area: prompt; position: relative; righ
 html[data-form="portrait"] #prompt.swapped { grid-template-areas: "cancel step ok" "cancel body ok" "players players players"; }
 html[data-form="portrait"] #prompt.waiting { border-color: var(--accent-2); }
 html[data-form="portrait"] #prompt .glints { display: none; }
-html[data-form="portrait"] #prompt .step { grid-area: step; align-self: end; margin: 0; padding: 1px 10px 0; font-size: 9px; line-height: 10px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+html[data-form="portrait"] #prompt .step { grid-area: step; align-self: end; margin: 0; padding: 3px 10px 0; font-size: 9px; line-height: 10px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The tools ride on your own bar, at its right end */
 html[data-form="portrait"] #match > .tools { grid-area: me; align-self: end; justify-self: end; z-index: 7; height: 44px; margin: 0 2px 0 0; gap: 0; }
 html[data-form="portrait"] #match > .tools[hidden] { display: none; }
@@ -43,9 +43,9 @@ html[data-form="portrait"] #prompt .ok { grid-area: ok; }
 html[data-form="portrait"] #prompt .cancel { grid-area: cancel; max-width: none; }
 html[data-form="portrait"] #prompt :is(.ok, .cancel) { height: auto; min-height: 44px; min-width: 0; border-radius: 0; font-size: 13px; padding: 0 4px; align-self: stretch; }
 html[data-form="portrait"] #prompt :is(.ok, .cancel) .label { white-space: normal; text-align: center; line-height: 1.1; }
-html[data-form="portrait"] #prompt .prompt-body { grid-area: body; align-self: start; padding: 0 10px 1px; min-width: 0; }
+html[data-form="portrait"] #prompt .prompt-body { grid-area: body; align-self: start; padding: 0 10px 2px; min-width: 0; }
 html[data-form="portrait"] #prompt .prompt-card { display: none; }
-html[data-form="portrait"] #prompt .message { max-height: none; font-size: 12.5px; line-height: 1.25; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+html[data-form="portrait"] #prompt .message { max-height: none; font-size: 12px; line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 html[data-form="portrait"] #prompt.open .message { -webkit-line-clamp: unset; max-height: 40dvh; overflow-y: auto; }
 html[data-form="portrait"] #prompt .choose-players { grid-area: players; padding: 6px 8px; }
 /* A new question pulses the dock once, in brightness */
@@ -102,6 +102,8 @@ html[data-form="portrait"] #hand { height: 64px; padding-top: 18px; box-sizing: 
 html[data-form="portrait"] #hand.strip .card .cost-badge .sym { width: 12px; height: 12px; }
 html[data-form="portrait"] #hand::before { display: none; }
 html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
+/* A card whose picture has yet to arrive keeps its name to the one line the strip shows */
+html[data-form="portrait"] #hand.strip .card .frame .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #hand-head { display: none; }
 /* Open, it is a drawer: four cards to a row, so a full hand shows at once, under a line saying what is on the stack */
 html[data-form="portrait"] #match #hand.sheet { --hand-w: calc((100vw - 48px) / 4); --hand-h: calc(var(--hand-w) * 88 / 63); height: auto; max-height: calc((100dvh - var(--dock-h, 110px)) * .6); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -124,7 +126,9 @@ html[data-form="portrait"] #phase-strip .pill { position: relative; width: 100%;
 /* Slim to look at, with more of it to touch */
 html[data-form="portrait"] #phase-strip .pill::before { content: ''; position: absolute; inset: -6px 0; }
 html[data-form="portrait"] #phase-strip .owner { min-width: 0; flex: 0 1 auto; padding-right: 8px; }
-html[data-form="portrait"] #phase-strip .owner b { overflow: hidden; text-overflow: ellipsis; }
+/* Short of room, the turn's number gives way before the name of whose turn it is */
+html[data-form="portrait"] #phase-strip .owner b { flex: none; }
+html[data-form="portrait"] #phase-strip .owner .turn { min-width: 0; overflow: hidden; white-space: nowrap; }
 html[data-form="portrait"] #phase-strip .track { margin-left: auto; }
 html[data-form="portrait"] #phase-strip .phase .mark { width: 22px; }
 html[data-form="portrait"] #phase-strip .caret { display: none; }
@@ -171,6 +175,10 @@ html[data-form="portrait"] #match #zoom.sheet { --zoom-w: min(62vw, calc((100dvh
 /* A card's own menu and the stack's, which open at the pointer on a desktop */
 html[data-form="portrait"] #dialog-layer .backdrop.anchored .card-menu, html[data-form="portrait"] #stack-menu { position: fixed; left: 0 !important; right: 0; top: auto !important; bottom: var(--dock-h, 110px); width: auto; max-width: none; box-sizing: border-box; border-radius: 16px 16px 0 0; padding: 12px; }
 html[data-form="portrait"] :is(.card-menu, #stack-menu) .card-menu-item { min-height: 48px; }
+/* The game's menu is a short list, so its rows stand close */
+html[data-form="portrait"] #dialog-layer .backdrop.anchored .game-menu { padding: 6px 12px; }
+html[data-form="portrait"] #dialog-layer .game-menu .card-menu-item { min-height: 40px; padding-top: 0; padding-bottom: 0; }
+html[data-form="portrait"] #dialog-layer .game-menu .card-menu-sep { margin: 1px 4px; }
 html[data-form="portrait"] .card-menu kbd { display: none; }
 /* A tapped card answers at once, before the host does */
 @media (hover: none) {
@@ -369,6 +377,8 @@ html[data-form="portrait"] #stack.chip.over-them .pile { padding: 8px 0 0; }
 /* An item whose picture has not arrived gives its room to its words */
 html[data-form="portrait"] #stack.chip .stack-item.noimg { grid-template-columns: 0 minmax(0, 1fr) auto; column-gap: 4px; }
 /* Looking over the final board, the way back stands clear of the dock */
+/* With the game over there is nothing to answer or pass, so the dock and the tools give up their room */
+html[data-form="portrait"] #match:has(#game-over:not([hidden])) :is(#prompt, #match > .tools) { display: none; }
 html[data-form="portrait"] #game-over.viewing { padding-bottom: calc(var(--dock-h, 110px) + 12px); }
 html[data-form="portrait"] #game-over .to-result { min-height: 48px; pointer-events: auto; }
 /* A row that runs on past the edge fades there, to say there is more */

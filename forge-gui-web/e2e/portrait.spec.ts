@@ -545,12 +545,17 @@ probe('after viewing the final battlefield, the way back to the result can be ta
     const m = window.forge.model;
     return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
   });
+  // A long step name does not cut short whose turn it is
+  expect(await p.page.evaluate(() => { const b = document.querySelector<HTMLElement>('#phase-strip .owner b')!; return b.scrollWidth <= b.clientWidth; })).toBe(true);
   await p.page.locator('#me .battlefield .card').first().tap({ force: true });
   await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
   const view = p.page.locator('#game-over .actions button', { hasText: 'View battlefield' });
   await expect(view).toBeVisible();
   await p.page.waitForTimeout(1200);
   await view.tap();
+  // Nothing is left to answer or pass, so the dock and the tools are gone
+  await expect(p.page.locator('#prompt')).toBeHidden();
+  await expect(p.page.locator('#match > .tools')).toBeHidden();
   await p.page.locator('#game-over .to-result').tap({ timeout: 5000 });
   await expect(p.page.locator('#game-over .actions button', { hasText: 'Quit match' })).toBeVisible();
 }, PHONE);
