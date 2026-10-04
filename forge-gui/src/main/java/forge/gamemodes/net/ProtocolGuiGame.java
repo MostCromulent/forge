@@ -419,12 +419,6 @@ public class ProtocolGuiGame extends NetworkGuiGame implements IHasForgeLog {
     }
 
     @Override
-    public boolean confirmAutoPass(final int delayMs) {
-        final Boolean result = syncAndSendAndWait(ProtocolMethod.confirmAutoPass, delayMs);
-        return result == null || result;
-    }
-
-    @Override
     public boolean confirm(final CardView c, final String question, final boolean defaultIsYes, final List<String> options) {
         final Boolean result = syncAndSendAndWait(ProtocolMethod.confirm, c, question, defaultIsYes, options);
         return result != null ? result : defaultIsYes;

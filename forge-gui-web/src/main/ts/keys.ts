@@ -5,7 +5,7 @@ import type { UiState } from './ui';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
-  | 'ok' | 'cancel' | 'passNow' | 'stopAutoPass' | 'autoPassOff' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
+  | 'ok' | 'cancel' | 'toggleAutoPass' | 'endTurn' | 'undo' | 'nextFace' | 'cardText' | 'startMatch'
   | 'closeCardMenu' | `pickCardMenu${Digit}` | 'closeReveal' | 'confirmDistribute' | 'editorUndo' | 'closeImporter' | 'closeBrowse';
 
 type Digit = '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
@@ -49,7 +49,7 @@ export interface KeyPress {
   modified: boolean;
 }
 
-export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing = false, keys = DEFAULT_KEYS): KeyCommand | null {
+export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys = DEFAULT_KEYS): KeyCommand | null {
   if (press.modified) {
     // The one held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
     const editing = !!model.editor && !model.inMatch && !ui.importer;
@@ -101,13 +101,6 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, passing =
   }
   if (key === keys.cardText) {
     return 'cardText';
-  }
-  // A pass on its way: its button takes the keys the prompt's would
-  if (passing) {
-    if (ok) return 'passNow';
-    // Desktop's key for auto-pass turns it off here, which also stops the pass under way
-    if (key === keys.autoPass) return 'autoPassOff';
-    return escape ? 'stopAutoPass' : null;
   }
   // A card's menu of abilities: Escape closes it, and its items are numbered as desktop's are
   const menu = cardMenu(model);

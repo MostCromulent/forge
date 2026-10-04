@@ -1745,12 +1745,16 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                 // pause slightly longer for spells and abilities on the stack resolving
                 delay = FControlGamePlayback.resolveDelay;
             }
-            // The GUI takes the pause and may show it coming; a player who stops it is asked after all
-            if (getGui().confirmAutoPass(delay)) {
-                getGui().awaitNextInput();
-                netLog.trace("Returning null (mayAutoPass) for player {}", player.getName());
-                return null;
+            if (delay > 0) {
+                try {
+                    Thread.sleep(delay);
+                } catch (final InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
+            getGui().awaitNextInput();
+            netLog.trace("Returning null (mayAutoPass) for player {}", player.getName());
+            return null;
         }
 
         netLog.trace("Creating InputPassPriority for player {}", player.getName());

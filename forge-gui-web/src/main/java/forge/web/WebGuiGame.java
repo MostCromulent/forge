@@ -78,8 +78,6 @@ public class WebGuiGame extends NetworkGuiGame {
     // Netplay drops a click's trigger event on its way to the host, so the ability menu reads the click from here
     private final AtomicReference<BrowserClick> lastClick = new AtomicReference<>();
     private final PromptState prompt = new PromptState(this::send);
-    /** Something the player would want to see has happened since they last held priority or watched a pass. */
-    private volatile boolean unseen;
     /** A number the browser gave that the list it was picked from did not hold, kept for the typed prompt that follows. */
     private Integer typedNumber;
     // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
@@ -323,9 +321,6 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public void handleGameEvent(final GameEvent event) {
         // FControlGameEventHandler would post to the host UI thread, so the log, the sound and the animations are sent from here
-        if (BrowserEvents.worthSeeing(event, this::isLocalPlayer)) {
-            unseen = true;
-        }
         if (event instanceof GameEventGameOutcome outcome) {
             score = matchScore(outcome.matchSummary());
             // The outcome can come after the game is seen to be over, so the ending is told again with the score
@@ -486,10 +481,6 @@ public class WebGuiGame extends NetworkGuiGame {
     @Override
     public void showPromptMessage(final PlayerView playerView, final String message, final CardView card) {
         prompt.message(message, card);
-        // Holding priority, the player is looking at the board as it stands
-        if (prompt.priority()) {
-            unseen = false;
-        }
     }
 
     @Override
@@ -828,18 +819,6 @@ public class WebGuiGame extends NetworkGuiGame {
         final OptionRequest request = new OptionRequest(title, message, card != null && isInMirror(card) ? cardRef(card) : null,
                 new ArrayList<>(labels), def);
         return ask(request, Answers.singleIndex(labels.size())).getAsInt();
-    }
-
-    /** Holds an automatic pass for the browser to confirm while the player has not seen what happened, unless they asked for a yield. */
-    @Override
-    public boolean confirmAutoPass(final int delayMs) {
-        final IGameController controller = getGameController();
-        final YieldController yields = controller == null ? null : controller.getYieldController();
-        if (!unseen || (yields != null && yields.isYieldActive())) {
-            return super.confirmAutoPass(delayMs);
-        }
-        unseen = false;
-        return ask(new AutoPassRequest(delayMs, true), JsonElement::isJsonPrimitive).getAsBoolean();
     }
 
     @Override

@@ -4,13 +4,11 @@ import forge.game.GameEntityView;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventAttackersDeclared;
-import forge.game.event.GameEventBlockersDeclared;
 import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardDamaged;
 import forge.game.event.GameEventGameStarted;
 import forge.game.event.GameEventPlayerDamaged;
 import forge.game.event.GameEventShuffle;
-import forge.game.event.GameEventSpellAbilityCast;
 import forge.game.player.PlayerView;
 import forge.game.zone.ZoneType;
 import forge.game.zone.ZoneView;
@@ -27,11 +25,8 @@ import forge.web.ToBrowser.Ref;
 import forge.web.ToBrowser.Shuffled;
 
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.function.Predicate;
 
 /** The game events the browser can animate, which travel with the state change they caused. */
 final class BrowserEvents {
@@ -75,43 +70,6 @@ final class BrowserEvents {
             return new GameStarted(Ref.player(e.firstTurn().getId()));
         }
         return null;
-    }
-
-    /** Zones everyone can see into, where a card arriving or leaving is something to look at. */
-    private static final Set<ZoneType> OPEN = EnumSet.of(ZoneType.Battlefield, ZoneType.Stack, ZoneType.Graveyard,
-            ZoneType.Exile, ZoneType.Command);
-
-    /** Whether the player would want to see an event before priority passes for them: another player acting in the open, or any damage. */
-    static boolean worthSeeing(final GameEvent event, final Predicate<PlayerView> mine) {
-        if (event instanceof GameEventSpellAbilityCast e) {
-            return e.si() != null && !mine.test(e.si().getActivatingPlayer());
-        }
-        // Forge declares attackers every combat, even when nobody attacks
-        if (event instanceof GameEventAttackersDeclared e) {
-            return !mine.test(e.player()) && !e.attackersMap().isEmpty();
-        }
-        if (event instanceof GameEventBlockersDeclared e) {
-            return !mine.test(e.defendingPlayer());
-        }
-        if (event instanceof GameEventCardChangeZone e) {
-            return e.card() != null && !mine.test(mover(e)) && (isOpen(e.from()) || isOpen(e.to()));
-        }
-        return event instanceof GameEventCardDamaged || event instanceof GameEventPlayerDamaged;
-    }
-
-    /** A card that has just left a zone can arrive as a copy with no controller, so then it is whoever owns the zones it moved between. */
-    private static PlayerView mover(final GameEventCardChangeZone e) {
-        if (e.card().getController() != null) {
-            return e.card().getController();
-        }
-        if (e.from() != null && e.from().player() != null) {
-            return e.from().player();
-        }
-        return e.to() == null ? null : e.to().player();
-    }
-
-    private static boolean isOpen(final ZoneView zone) {
-        return zone != null && OPEN.contains(zone.zoneType());
     }
 
     static Place place(final ZoneView zone) {

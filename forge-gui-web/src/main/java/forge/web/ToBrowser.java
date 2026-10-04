@@ -494,11 +494,6 @@ final class ToBrowser {
             @Name("default") List<Integer> defaultAnswer) {
     }
 
-    /** Priority is about to pass by itself after at least delay, and the answer is whether to go ahead. */
-    @Request("autoPass")
-    record AutoPassRequest(int delay, @Name("default") boolean defaultAnswer) {
-    }
-
     /** What the sealed setup form can offer, as desktop's sealed dialogs list it. */
     @Message("limitedOptions")
     record LimitedOptions(List<SealedBlock> blocks, List<SealedBlock> fantasyBlocks, List<LimitedEdition> prereleases,

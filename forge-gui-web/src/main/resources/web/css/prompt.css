@@ -125,12 +125,6 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #volume .volume-row input.off { accent-color: var(--muted); opacity: .7; }
 /* A rare long answer is cut short rather than pushing its partner out of the console; the full text is its title */
 #prompt .buttons .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
-/* A pass on its way: the pass button fills over the countdown, and the game goes on when it is full */
-#prompt .ok { position: relative; overflow: hidden; }
-#prompt .ok > * { position: relative; z-index: 1; }
-#prompt .ok.filling::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, #0000001f, #00000059); transform-origin: left; animation: pass-fill var(--fill-ms, 1s) linear forwards; }
-@keyframes pass-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
-#prompt.auto-passing .step { color: var(--muted); }
 /* Players a prompt lets you pick who have no seat on the board to click */
 #prompt .choose-players { display: flex; flex-wrap: wrap; gap: 6px; }
 #prompt .choose-player { display: flex; align-items: center; gap: 7px; padding: 3px 10px 3px 3px; border-radius: 999px; font-size: 12.5px; font-weight: 600; }

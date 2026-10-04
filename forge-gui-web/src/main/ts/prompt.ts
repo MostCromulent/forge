@@ -6,7 +6,6 @@ import { longPress } from './press';
 import { stepName } from './phasebar';
 import { byId, q, replay } from './dom';
 import { changeUi, ui } from './ui';
-import { countdown, finishCountdown } from './autopass';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys, setting } from './settings';
@@ -159,29 +158,6 @@ function drawPrompt(model: Model, actions: Actions): void {
   q(root, '.more').classList.toggle('open', !!ui.gameMenu);
   const ok = q<HTMLButtonElement>(root, '.ok');
   const cancel = q<HTMLButtonElement>(root, '.cancel');
-  const passing = countdown();
-  root.classList.toggle('auto-passing', !!passing);
-  if (passing) {
-    q(root, '.step').textContent = t('lblWebPromptPassing');
-    q(root, '.message').textContent = t('lblWebPromptNothingToPlay');
-    renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
-    setButton(ok, { label: t('lblWebPromptPass'), enabled: true });
-    // Stopping means auto-pass is not wanted just now, so the button turns it off, under its own key
-    setButton(cancel, { label: t('lblCancel'), enabled: true });
-    q(root, '.buttons .cancel kbd').textContent = keyName(keys.autoPass);
-    ok.onclick = () => finishCountdown(true);
-    cancel.onclick = () => {
-      finishCountdown(false);
-      if (model.controls?.autoPass) actions.toggleAutoPass();
-    };
-    fill(ok, passing.id, passing.ms);
-    root.classList.add('waiting');
-    root.classList.remove('priority');
-    renderPlayerChoices(root, model, [], actions);
-    return;
-  }
-  fill(ok, null, 0);
-  q(root, '.buttons .cancel kbd').textContent = 'Esc';
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
   const p = model.prompt;
@@ -230,21 +206,6 @@ function renderPlayerChoices(root: HTMLElement, model: Model, choices: readonly 
     };
     return button;
   }));
-}
-
-// The pass button fills over the countdown, from empty, once for each pass on its way
-function fill(button: HTMLButtonElement, id: number | null, ms: number): void {
-  const key = id === null ? '' : String(id);
-  if (button.dataset.countdown === key) {
-    return;
-  }
-  button.dataset.countdown = key;
-  button.classList.remove('filling');
-  if (id !== null) {
-    button.style.setProperty('--fill-ms', `${ms}ms`);
-    void button.offsetWidth;
-    button.classList.add('filling');
-  }
 }
 
 // The card the prompt is about (the spell being targeted, the trigger being paid for), as desktop shows it

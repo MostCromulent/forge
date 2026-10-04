@@ -300,17 +300,6 @@ public interface IGuiGame {
     void awaitNextInput();
     void cancelAwaitNextInput();
 
-    /**
-     * Priority is about to be passed for the player without asking. Called for every such pass, with the pause the
-     * game would take first so it does not jump ahead too fast, which may be none. Taking that pause belongs to the
-     * GUI, because the GUI is what can show the pass coming and let the player stop it; {@code AbstractGuiGame}
-     * simply waits, which is what the game used to do itself. Returns false if the player stopped it, in which case
-     * they are asked for priority as usual.
-     */
-    default boolean confirmAutoPass(final int delayMs) {
-        return true;
-    }
-
     /** Signal to start a client-side elapsed timer for waiting display. */
     void showWaitingTimer(PlayerView forPlayer, String waitingForPlayerName);
 

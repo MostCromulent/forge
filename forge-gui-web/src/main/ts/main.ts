@@ -21,7 +21,6 @@ import { initOverlay, drawOverlay } from './overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest } from './settings';
 import { applyAudioSettings, playMusic, playSound } from './audio';
-import { countdown, dropCountdown, finishCountdown, initAutoPass, startCountdown } from './autopass';
 import { createStopMemory, localStopStore } from './stopmemory';
 import { byId, saveText } from './dom';
 import { initNotices } from './notices';
@@ -39,7 +38,6 @@ let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 let catalogueRequest = 0;
 let importRequest = 0;
-// The game is paced where it runs (autopass.ts), and the one pause made here is a new turn's, while its banner shows
 const send = connect(receive, online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty
@@ -56,7 +54,6 @@ const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
   else console.warn(`Not sent while a new turn is announced: ${msg.t}`);
 });
-initAutoPass((id, go) => wire.answer(id, go), () => schedule());
 const actions: Actions = {
   ...wire,
   ok: () => afterBlockDrags(() => wire.ok()),
@@ -158,7 +155,7 @@ document.addEventListener('keydown', e => {
     key: e.key,
     typing: !!target && (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target.isContentEditable),
     modified: e.ctrlKey || e.altKey || e.metaKey,
-  }, model, ui, !!countdown(), boundKeys());
+  }, model, ui, boundKeys());
   if (!command) {
     return;
   }
@@ -190,9 +187,6 @@ function runKey(command: KeyCommand): void {
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': pressPromptButton('ok'); actions.ok(); break;
     case 'cancel': pressPromptButton('cancel'); actions.cancel(); break;
-    case 'passNow': pressPromptButton('ok'); finishCountdown(true); break;
-    case 'stopAutoPass': pressPromptButton('cancel'); finishCountdown(false); break;
-    case 'autoPassOff': pressPromptButton('cancel'); finishCountdown(false); if (model.controls?.autoPass) actions.toggleAutoPass(); break;
     case 'toggleAutoPass': pressPromptButton('auto-pass'); actions.toggleAutoPass(); break;
     case 'endTurn': pressPromptButton('end-turn'); if (model.controls?.untilEndOfTurn) actions.stopYield(); else actions.endTurn(); break;
     case 'undo': pressPromptButton('undo'); actions.undo(); break;
@@ -309,7 +303,6 @@ function apply(msg: ServerMessage): void {
       model.networked = msg.networked;
       // The server replays open requests after every hello
       model.requests.clear();
-      dropCountdown();
       if (!msg.inMatch) {
         model.objects.clear();
         model.gameOver = false;
@@ -426,12 +419,7 @@ function apply(msg: ServerMessage): void {
     case 'prompt': model.prompt = msg; break;
     case 'zones': model.zones = msg.show; break;
     case 'request':
-      // A pass on its way is shown on the pass button, not asked in a dialog
-      if (msg.kind === 'autoPass') {
-        startCountdown(msg);
-      } else {
-        model.requests.set(msg.id, msg);
-      }
+      model.requests.set(msg.id, msg);
       break;
     case 'drawOffer': model.drawOffer = msg.open ? msg : null; break;
     case 'autoDecisions': model.autoDecisions = msg; break;
@@ -439,7 +427,6 @@ function apply(msg: ServerMessage): void {
       model.gameOver = true;
       model.matchScore = msg.score;
       model.drawOffer = null;
-      dropCountdown();
       break;
     case 'sound': playSound(msg); return;
     case 'playable':
