@@ -343,19 +343,17 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
           </div>
         ))}
       </div>
-      {at >= 0 && (
-        <div class="order-move">
-          <button class="earlier" disabled={at === 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
-          <span class="order-held">{req.options[chosen[at]].name ?? req.options[chosen[at]].label ?? ''}</span>
-          {optional && <button class="order-out" onClick={() => {
+      {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>}
+      <ButtonRow>
+        {/* Always there, so holding a card moves nothing else in the dialog */}
+        <span class="order-move">
+          <button class="earlier" disabled={at <= 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
+          <button class="later" disabled={at < 0 || at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
+          {optional && <button disabled={at < 0} onClick={() => {
             setChosen(list => list.filter(c => c !== held));
             setHeld(null);
           }}>{t('lblRemove')}</button>}
-          <button class="later" disabled={at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
-        </div>
-      )}
-      {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>}
-      <ButtonRow>
+        </span>
         <Button primary disabled={chosen.length < req.min || chosen.length > req.max}
           onClick={() => answer({ indices: chosen, remember })}>{t('lblWebDialogConfirm')}</Button>
       </ButtonRow>
