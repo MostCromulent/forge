@@ -716,3 +716,30 @@ probe('the question of who goes first leaves the dock, which can also answer it,
   expect(ask.y + ask.height).toBeLessThanOrEqual((await box(p.page, '#prompt')).y + 1);
   await p.page.locator('#prompt .ok').tap({ trial: true, timeout: 3000 });
 }, PHONE);
+
+probe('a start tile\'s icon stands clear of its name', async p => {
+  await p.page.goto(p.server.url);
+  await p.page.locator('#player-name').fill('Alice');
+  await p.page.keyboard.press('Enter');
+  await expect(p.page.locator('.modes .mode.plaque').first()).toBeVisible();
+  await p.page.waitForTimeout(600);
+  for (const tile of await p.page.locator('.modes .mode.plaque').all()) {
+    const icon = (await tile.locator('.mode-art').boundingBox())!;
+    const name = (await tile.locator('.mode-name').boundingBox())!;
+    expect(icon.x + icon.width <= name.x || icon.y + icon.height <= name.y).toBe(true);
+  }
+}, PHONE);
+
+probe('the board holds still behind the hand\'s drawer, and its cards keep to their half after it', async p => {
+  await settledBoard(p, 'humanhand=Polluted Mire;Shock;Counterspell\nhumanbattlefield=Swamp;Swamp;Skittering Skirge\naibattlefield=Island;Island;Island;Grizzly Bears');
+  const strip = await box(p.page, '#phase-strip');
+  await p.page.locator('#hand').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  await p.page.waitForTimeout(500);
+  expect((await box(p.page, '#phase-strip')).y).toBe(strip.y);
+  await p.page.locator('#hand .card').first().tap();
+  await expect(p.page.locator('#dialog-layer .card-menu')).toBeVisible();
+  await p.page.waitForTimeout(500);
+  const creature = await box(p.page, '#me .group.creatures .card');
+  expect(creature.y).toBeGreaterThanOrEqual(strip.y + strip.height);
+}, PHONE);

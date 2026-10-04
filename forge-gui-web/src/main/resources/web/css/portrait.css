@@ -110,6 +110,8 @@ html[data-form="portrait"] #match #hand.sheet { --hand-w: calc((100vw - 48px) / 
   justify-items: center; align-items: start; gap: 24px 8px; padding: 64px 12px 12px; overflow-y: auto; }
 html[data-form="portrait"] #hand.sheet .card { margin: 0; transform: none; }
 html[data-form="portrait"] #hand.sheet .card::after { content: none; }
+/* The drawer leaves the board's rows, so the strip's row is held open for it and the board behind does not move */
+html[data-form="portrait"] #match:has(#hand.sheet) { grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr) 64px auto; }
 html[data-form="portrait"] #hand-head:not([hidden]) { display: flex; align-items: center; gap: 8px; position: fixed; left: 0; right: 0; z-index: 51; height: 44px; padding: 0 8px 0 16px; box-sizing: border-box; }
 html[data-form="portrait"] #hand-head .on-stack { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-2); font-size: 12px; }
 html[data-form="portrait"] #hand-head .close { min-width: 64px; min-height: 44px; margin-left: auto; }
@@ -360,7 +362,10 @@ html[data-form="portrait"] .finder-foot .use { flex: 1; }
 
 /* The start page's choices are shorter, and a chooser's are a row each, so more than one fits a screen */
 html[data-form="portrait"] .modes { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-html[data-form="portrait"] .modes .mode.plaque { height: 150px; }
+/* Each tile is a row, its icon beside the words, since a tile this short has no room for the icon above them */
+html[data-form="portrait"] .modes .mode.plaque:not(.wide) { height: auto; min-height: 112px; flex-direction: row; align-items: center; justify-content: flex-start; padding-left: 78px; }
+html[data-form="portrait"] .modes .mode.plaque:not(.wide) .mode-art { top: 50%; transform: translateY(-50%); }
+html[data-form="portrait"] .modes .mode.plaque:not(.wide) .mode-text { flex: 1; min-width: 0; }
 html[data-form="portrait"] .chooser-kinds { grid-template-columns: minmax(0, 1fr); gap: 10px; }
 html[data-form="portrait"] .kind-main { flex-direction: row; align-items: stretch; }
 html[data-form="portrait"] .kind-main .mode-art { flex: none; width: 84px; height: auto; min-height: 84px; border-bottom: 0; border-right: 1px solid var(--line-bright); }

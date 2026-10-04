@@ -48,8 +48,13 @@ export function initSide(): void {
   menu.onclick = () => changeUi(u => { u.menuSheet = u.menuSheet ? null : 'log'; });
   byId('match').append(menu);
   // The dock's height is read by every sheet, some drawn outside the board, and changes with what the prompt says
+  let refit = 0;
   new ResizeObserver(() => {
-    if (isPortrait()) document.documentElement.style.setProperty('--dock-h', `${byId('prompt').offsetHeight}px`);
+    if (!isPortrait()) return;
+    document.documentElement.style.setProperty('--dock-h', `${byId('prompt').offsetHeight}px`);
+    // The board's halves take what the dock leaves, so their cards are fitted again once it has settled
+    clearTimeout(refit);
+    refit = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 200);
   }).observe(byId('prompt'));
   for (const panel of PANELS) {
     q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => folding(u => {
