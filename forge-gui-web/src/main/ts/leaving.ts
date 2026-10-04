@@ -6,6 +6,8 @@ export type Destination = 'Graveyard' | 'Exile';
 export const TAPPED_SCALE = 0.9;
 /** The card has fully gone this long after it starts to go: when the zone tile may show it. */
 const GONE_MS: Record<Destination, number> = { Graveyard: 870, Exile: 540 };
+/** The exile zone's colour (theme.css), for the light an exiled card gives off. */
+const EXILE_RGB = '207,214,234';
 
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; age: number; rgb: string; size: number }
 
@@ -177,17 +179,41 @@ function soot(job: Job): (t: number) => boolean {
   };
 }
 
-/** Exile: a hole opens inside the card and pulls the card into it in a spiral, then closes with a flash. */
+/** Exile: a rim of light comes up round the card, a hole opens inside it and pulls both in in a spiral, then closes with a flash. */
 function wormhole(job: Job): (t: number) => boolean {
-  const { pw, ph, src, out, dpr } = job;
+  const { ctx, pw, ph, src, out, dpr } = job;
   const px = out.data;
+  const RIM = 3 * dpr, RIM_IN = 270;
+  const rim = document.createElement('canvas');
+  rim.width = pw;
+  rim.height = ph;
+  const rc = rim.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
+  rc.strokeStyle = `rgb(${EXILE_RGB})`;
+  rc.lineWidth = RIM;
+  rc.beginPath();
+  rc.roundRect(RIM / 2, RIM / 2, pw - RIM, ph - RIM, Math.max(0, pw * 0.05 - RIM / 2));
+  rc.stroke();
+  // The rim is bent through the hole as the card is, on a layer of its own so that it can glow
+  const rimSrc = rc.getImageData(0, 0, pw, ph).data, rimOut = rc.getImageData(0, 0, pw, ph), rpx = rimOut.data;
+  const [red, green, blue] = EXILE_RGB.split(',').map(Number);
+  for (let j = 0; j < rpx.length; j += 4) {
+    rpx[j] = red; rpx[j + 1] = green; rpx[j + 2] = blue;
+  }
+  const drawRim = (alpha: number, scale = 1) => {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = `rgb(${EXILE_RGB})`;
+    ctx.shadowBlur = 9 * dpr;
+    drawCard(job, rim, 0, 0, scale);
+    ctx.restore();
+  };
   const BREATH = 120, OPEN = 150, PULL = 400, CLOSE = 150, FLASH = 380;
   const closeAt = OPEN + PULL * 0.52, flashAt = closeAt + CLOSE * 0.4;
   const TWIST = 4.5, DRAG = 2.4, AMP = 0.24, GLOW = 0.55, BAND = 0.12, FEATHER = 3 * dpr;
   const cx = pw / 2, cy = ph / 2, reach = Math.hypot(cx, cy);
   const sample = (sx: number, sy: number, to: number[]) => {
     if (sx < 0 || sy < 0 || sx >= pw - 1 || sy >= ph - 1) {
-      to[0] = to[1] = to[2] = to[3] = 0;
+      to[0] = to[1] = to[2] = to[3] = to[4] = 0;
       return;
     }
     const x0 = sx | 0, y0 = sy | 0, fx = sx - x0, fy = sy - y0, i0 = (y0 * pw + x0) * 4, i1 = i0 + 4, i2 = i0 + pw * 4, i3 = i2 + 4;
@@ -195,11 +221,16 @@ function wormhole(job: Job): (t: number) => boolean {
       const top = src[i0 + c] + (src[i1 + c] - src[i0 + c]) * fx, bot = src[i2 + c] + (src[i3 + c] - src[i2 + c]) * fx;
       to[c] = top + (bot - top) * fy;
     }
+    to[4] = rimSrc[i0 + 3];
   };
-  const o = [0, 0, 0, 0], i = [0, 0, 0, 0];
+  // The fifth of each is how much rim lies at the point
+  const o = [0, 0, 0, 0, 0], i = [0, 0, 0, 0, 0];
   return t => {
+    const shown = clamp(t / RIM_IN), rimAlpha = shown * shown * (3 - 2 * shown);
     if (t < BREATH) {
-      drawCard(job, job.base, 0, 0, 1 + Math.sin(t / BREATH * Math.PI) * 0.012);
+      const scale = 1 + Math.sin(t / BREATH * Math.PI) * 0.012;
+      drawCard(job, job.base, 0, 0, scale);
+      drawRim(rimAlpha, scale);
       return false;
     }
     const a = t - BREATH;
@@ -229,19 +260,23 @@ function wormhole(job: Job): (t: number) => boolean {
           i[0] = 4 + (i[0] * (i[3] / 255) - 4) * dim + 225 * lit;
           i[1] = 5 + (i[1] * (i[3] / 255) - 5) * dim + 225 * lit;
           i[2] = 12 + (i[2] * (i[3] / 255) - 12) * dim + 225 * lit;
+          i[4] *= dim * (i[3] / 255);
           i[3] = Math.max(i[3] * dim, voidA * (1 - dim) + i[3] * dim);
         }
         // Across the feather the two blend, so the card bends into the hole with no line between them
         const f = clamp((d + FEATHER) / (2 * FEATHER)), s = f * f * (3 - 2 * f);
         for (let c = 0; c < 4; c++) px[j + c] = i[c] + (o[c] - i[c]) * s;
+        rpx[j + 3] = i[4] + (o[4] - i[4]) * s;
       }
     }
     drawCard(job, worked(job));
+    rc.putImageData(rimOut, 0, 0);
+    drawRim(rimAlpha);
     return false;
   };
 }
 
-/** The light let out as the hole closes: a hot point and its halo, up fast and down slower, sized to the card. */
+/** The light let out as the hole closes: a hot point and its halo in exile's colour, up fast and down slower, sized to the card. */
 function flash(job: Job, q: number): boolean {
   const { ctx, w, h, pad } = job;
   const x = pad + w / 2, y = pad + h / 2, size = 2.2 * w / 150;
@@ -250,9 +285,9 @@ function flash(job: Job, q: number): boolean {
   ctx.globalCompositeOperation = 'lighter';
   const radius = 6 + 16 * f * size;
   const halo = ctx.createRadialGradient(x, y, 0, x, y, radius);
-  halo.addColorStop(0, `rgba(235,242,255,${(0.9 * f).toFixed(3)})`);
-  halo.addColorStop(0.35, `rgba(200,216,250,${(0.35 * f).toFixed(3)})`);
-  halo.addColorStop(1, 'rgba(180,200,240,0)');
+  halo.addColorStop(0, `rgba(${EXILE_RGB},${(0.9 * f).toFixed(3)})`);
+  halo.addColorStop(0.35, `rgba(${EXILE_RGB},${(0.55 * f).toFixed(3)})`);
+  halo.addColorStop(1, `rgba(${EXILE_RGB},0)`);
   ctx.fillStyle = halo;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
