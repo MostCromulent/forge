@@ -97,9 +97,9 @@ html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-
 html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 /* The hand as a strip of card tops, until its drawer opens */
 html[data-form="portrait"] #match { --hand-w: 50px; --hand-h: 70px; }
-/* The strip keeps room above its cards for their costs, which stand on a card's top edge */
-html[data-form="portrait"] #hand { height: 64px; padding-top: 18px; box-sizing: border-box; overflow: hidden; }
-html[data-form="portrait"] #hand.strip .card .cost-badge .sym { width: 12px; height: 12px; }
+/* A card prints its own cost, so none floats over it here, except in the drawer one the game has changed */
+html[data-form="portrait"] #hand { height: 52px; padding-top: 6px; box-sizing: border-box; overflow: hidden; }
+html[data-form="portrait"] #hand .card .cost-badge:not(.changed), html[data-form="portrait"] #hand.strip .card .cost-badge { display: none; }
 html[data-form="portrait"] #hand::before { display: none; }
 html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
 /* A card whose picture has yet to arrive keeps its name to the one line the strip shows */
@@ -107,11 +107,11 @@ html[data-form="portrait"] #hand.strip .card .frame .name { white-space: nowrap;
 #hand-head { display: none; }
 /* Open, it is a drawer: four cards to a row, so a full hand shows at once, under a line saying what is on the stack */
 html[data-form="portrait"] #match #hand.sheet { --hand-w: calc((100vw - 48px) / 4); --hand-h: calc(var(--hand-w) * 88 / 63); height: auto; max-height: calc((100dvh - var(--dock-h, 110px)) * .6); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  justify-items: center; align-items: start; gap: 24px 8px; padding: 64px 12px 12px; overflow-y: auto; }
+  justify-items: center; align-items: start; gap: 18px 8px; padding: 64px 12px 12px; overflow-y: auto; }
 html[data-form="portrait"] #hand.sheet .card { margin: 0; transform: none; }
 html[data-form="portrait"] #hand.sheet .card::after { content: none; }
 /* The drawer leaves the board's rows, so the strip's row is held open for it and the board behind does not move */
-html[data-form="portrait"] #match:has(#hand.sheet) { grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr) 64px auto; }
+html[data-form="portrait"] #match:has(#hand.sheet) { grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr) 52px auto; }
 html[data-form="portrait"] #hand-head:not([hidden]) { display: flex; align-items: center; gap: 8px; position: fixed; left: 0; right: 0; z-index: 51; height: 44px; padding: 0 8px 0 16px; box-sizing: border-box; }
 html[data-form="portrait"] #hand-head .on-stack { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--accent-2); font-size: 12px; }
 html[data-form="portrait"] #hand-head .close { min-width: 64px; min-height: 44px; margin-left: auto; }
@@ -245,7 +245,7 @@ html[data-form="portrait"] #hand .card .cost-badge .pip { width: auto; height: a
 html[data-form="portrait"] #match #me .battlefield { padding: 16px 5px 5px; }
 
 /* The menu: the log, the chat and the players, with the options and conceding at its foot */
-html[data-form="portrait"] #dialog-layer .menu-sheet { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; height: min(70dvh, calc(100dvh - var(--dock-h, 110px) - 40px)); padding: 22px 0 0; overflow: hidden; }
+html[data-form="portrait"] #dialog-layer .menu-sheet { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; height: auto; max-height: min(70dvh, calc(100dvh - var(--dock-h, 110px) - 40px)); padding: 22px 0 0; overflow: hidden; }
 html[data-form="portrait"] .menu-tabs { display: flex; gap: 4px; margin: 0 12px; padding: 4px; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 10px; }
 html[data-form="portrait"] .menu-tabs button { flex: 1; min-height: 44px; background: none; border: 0; color: var(--muted); font-weight: 700; }
 html[data-form="portrait"] .menu-tabs .on { background: var(--surface-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent-2); }

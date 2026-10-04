@@ -203,17 +203,17 @@ probe('the hand opens as a drawer, a card is played from it, and it closes for t
   await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
 }, PHONE);
 
-probe('your bar and the costs over your hand do not overlap', async p => {
+probe('your bar and your hand do not overlap, and the strip floats no costs over its cards', async p => {
   await settledBoard(p, 'humanhand=Giant Growth;Lightning Bolt;Counterspell\nhumanbattlefield=Forest;Forest;Grizzly Bears;Hill Giant\naibattlefield=Mountain');
   const bar = await box(p.page, '#me .player');
   const hand = await box(p.page, '#hand');
   expect(Math.round(bar.y + bar.height)).toBeLessThanOrEqual(Math.round(hand.y) + 1);
-  const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
-  expect(cost.y).toBeGreaterThanOrEqual(hand.y);
-  // A cost's symbol fills its pip, so it cannot sit off-centre in it
-  const pip = (await p.page.locator('#hand .card .cost-badge .pip').first().boundingBox())!;
-  const sym = (await p.page.locator('#hand .card .cost-badge .sym').first().boundingBox())!;
-  expect(Math.abs(pip.width - sym.width)).toBeLessThan(1.5);
+  // The cards print their own costs, so the strip is only as tall as the card tops it shows
+  await expect(p.page.locator('#hand .card .cost-badge:visible')).toHaveCount(0);
+  expect(hand.height).toBeLessThanOrEqual(52);
+  await p.page.locator('#hand').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  await expect(p.page.locator('#hand .card .cost-badge:visible')).toHaveCount(0);
 }, PHONE);
 
 probe('a bar keeps its zones as counts, and a tap opens them', async p => {
@@ -314,6 +314,10 @@ probe('the menu sheet holds the log, and conceding asks twice', async p => {
   const dock = await box(p.page, '#prompt');
   expect(at.width).toBe(390);
   expect(Math.round(at.y + at.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
+  // The sheet is only as tall as what its tab holds
+  await sheet.locator('.menu-tabs button').nth(1).tap();
+  await p.page.waitForTimeout(300);
+  expect((await box(p.page, '.menu-sheet')).height).toBeLessThan(300);
   await sheet.locator('.concede').tap();
   await expect(p.page.locator('#game-over')).toBeHidden();
   await sheet.locator('.concede').tap();
@@ -677,8 +681,9 @@ probe('a drawer scrolled to its end leaves the strip showing the tops of the car
   await expect(p.page.locator('#hand.strip')).toBeVisible();
   await p.page.waitForTimeout(300);
   const hand = await box(p.page, '#hand');
-  const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
-  expect(cost.y).toBeGreaterThanOrEqual(hand.y);
+  const top = (await p.page.locator('#hand .card').first().boundingBox())!;
+  expect(top.y).toBeGreaterThanOrEqual(hand.y);
+  expect(top.y).toBeLessThan(hand.y + 30);
 }, PHONE);
 
 for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
