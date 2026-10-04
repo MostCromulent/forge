@@ -606,10 +606,16 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
   }
   expect(await shown()).toBe(true);
   await p.page.waitForTimeout(500);
+  // The dock's two buttons can do nothing while the choice is open, so they give their room to it
+  await expect(p.page.locator('#prompt .ok')).toBeHidden();
+  await expect(p.page.locator('#prompt .cancel')).toBeHidden();
+  await expect(p.page.locator('#prompt .more')).toBeVisible();
+  expect((await box(p.page, '#prompt')).height).toBeLessThanOrEqual(50);
   const panel = await box(p.page, '#zones .zone-panel');
   const dock = await box(p.page, '#prompt');
   expect(panel.width).toBe(390);
   expect(panel.y + panel.height).toBeLessThanOrEqual(dock.y + 2);
+  expect(panel.y + panel.height).toBeGreaterThanOrEqual(dock.y - 2);
   // The stack's chip does not lie over the sheet
   expect(await p.page.evaluate(() => { const r = document.querySelector('#zones .zone-panel header')!.getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 20, r.y + 10); return !!hit?.closest('#zones'); })).toBe(true);
   for (const each of await p.page.locator('#zones .card.selectable').all()) await each.tap({ trial: true, timeout: 3000 });

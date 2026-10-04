@@ -47,6 +47,10 @@ export function initSide(): void {
   menu.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
   menu.onclick = () => changeUi(u => { u.menuSheet = u.menuSheet ? null : 'log'; });
   byId('match').append(menu);
+  // The dock's height is read by every sheet, some drawn outside the board, and changes with what the prompt says
+  new ResizeObserver(() => {
+    if (isPortrait()) document.documentElement.style.setProperty('--dock-h', `${byId('prompt').offsetHeight}px`);
+  }).observe(byId('prompt'));
   for (const panel of PANELS) {
     q(side, `.side-toggle[data-panel="${panel}"]`).onclick = () => folding(u => {
       u.sidePanels[panel] = !u.sidePanels[panel];
@@ -70,8 +74,6 @@ function placePrompt(): void {
   const prompt = byId('prompt');
   const home = isPortrait() ? byId('match') : byId('side');
   if (prompt.parentElement !== home) home.append(prompt);
-  // Read by every sheet, some of which are drawn outside the board
-  if (isPortrait()) document.documentElement.style.setProperty('--dock-h', `${prompt.offsetHeight}px`);
 }
 
 /** Folded, per panel, as last drawn; the board is only told to reflow when that changes. */

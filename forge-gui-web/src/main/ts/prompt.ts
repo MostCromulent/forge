@@ -1,5 +1,5 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from './images';
-import { deref, game, type Model } from './model';
+import { deref, game, oldestRequest, type Model } from './model';
 import { playerAvatarUrl } from './looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from './press';
@@ -74,6 +74,9 @@ export function renderPrompt(model: Model, actions: Actions): void {
   const root = byId('prompt');
   const before = built ? root.offsetHeight : 0;
   drawPrompt(model, actions);
+  // On a phone, while a dialog or a zone asks the question and neither button can answer it, the buttons give up their room
+  const asking = !!oldestRequest(model) || (model.zones.length > 0 && !ui.zonesMinimised);
+  root.classList.toggle('blocked', isPortrait() && asking && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
   const after = root.offsetHeight;
   if (!before || Math.abs(after - before) < 3 || document.documentElement.dataset.motion === 'reduced') return;
   for (const a of root.getAnimations()) if (a.id === 'prompt-resize') a.cancel();

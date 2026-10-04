@@ -377,3 +377,6 @@ html[data-form="portrait"] #match:has(#stack:not([hidden])) #zones:not(.minimise
 html[data-form="portrait"] #match #zones:not(.minimised) { display: flex; flex-direction: column; justify-content: flex-end; align-items: stretch; }
 html[data-form="portrait"] #match #zones:not(.minimised) .zone-shelf { max-height: 92%; min-height: 0; flex: 0 1 auto; }
 html[data-form="portrait"] .zone-panel .zone-sort select { min-height: 32px; padding: 2px 8px; }
+/* While a dialog or a zone asks the question, the dock keeps only its tools */
+html[data-form="portrait"] #prompt.blocked { grid-template-rows: 44px auto; }
+html[data-form="portrait"] #prompt.blocked :is(.ok, .cancel, .prompt-body) { display: none; }
