@@ -112,7 +112,6 @@ probe('a tap on the phase strip opens stops as a sheet above the dock, and Back 
   await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
   const strip = await box(p.page, '#phase-strip .pill');
   expect(strip.x + strip.width).toBeLessThanOrEqual(390);
-  expect(strip.height).toBeGreaterThanOrEqual(44);
   await p.page.locator('#phase-strip .pill').tap();
   const stops = p.page.locator('#phase-strip .stops');
   await expect(stops).toBeVisible();
@@ -219,15 +218,20 @@ probe('your bar and the costs over your hand do not overlap', async p => {
 
 probe('a bar keeps its zones as counts, and a tap opens them', async p => {
   await settledBoard(p, 'humanbattlefield=Forest\nhumangraveyard=Grizzly Bears;Hill Giant\naibattlefield=Mountain');
-  for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(88);
+  for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(48);
   await expect(p.page.locator('#me .zone-tile').first()).toBeHidden();
   const pill = p.page.locator('#me .zones-pill');
   await expect(pill.locator('[data-zone="Graveyard"] b')).toHaveText('2');
-  // The counts are the table's outer edge: under your portrait, over the opponent's
-  const mine = (await pill.boundingBox())!;
-  expect(mine.y).toBeGreaterThanOrEqual((await box(p.page, '#me .avatar')).y + 40);
-  const theirs = await box(p.page, '#opponent .zones-pill');
-  expect(theirs.y + theirs.height).toBeLessThanOrEqual((await box(p.page, '#opponent .avatar')).y + 1);
+  // The counts follow the name along each bar
+  for (const seat of ['#me', '#opponent']) {
+    const counts = await box(p.page, `${seat} .zones-pill`);
+    const bar = await box(p.page, `${seat} .player`);
+    const face = await box(p.page, `${seat} .avatar`);
+    expect(counts.x).toBeGreaterThan(face.x + face.width);
+    expect(counts.y).toBeGreaterThanOrEqual(bar.y - 1);
+    expect(counts.y + counts.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
+    expect(counts.height).toBeGreaterThanOrEqual(44);
+  }
   await pill.tap();
   const tile = p.page.locator('#me .zone-tile[data-zone="Graveyard"]');
   await expect(tile).toBeVisible();
@@ -609,10 +613,11 @@ probe('a zone the game opens for a choice, with a spell on the stack, is a whole
   // The dock's two buttons can do nothing while the choice is open, so they give their room to it
   await expect(p.page.locator('#prompt .ok')).toBeHidden();
   await expect(p.page.locator('#prompt .cancel')).toBeHidden();
-  await expect(p.page.locator('#prompt .more')).toBeVisible();
-  expect((await box(p.page, '#prompt')).height).toBeLessThanOrEqual(50);
+  await expect(p.page.locator('#match > .tools .more')).toBeVisible();
+  await expect(p.page.locator('#prompt')).toBeHidden();
   const panel = await box(p.page, '#zones .zone-panel');
-  const dock = await box(p.page, '#prompt');
+  // The dock has given up its row, so the sheet runs to the foot of the screen
+  const dock = { y: 664 };
   expect(panel.width).toBe(390);
   expect(panel.y + panel.height).toBeLessThanOrEqual(dock.y + 2);
   expect(panel.y + panel.height).toBeGreaterThanOrEqual(dock.y - 2);
@@ -670,3 +675,27 @@ probe('a drawer scrolled to its end leaves the strip showing the tops of the car
   const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
   expect(cost.y).toBeGreaterThanOrEqual(hand.y);
 }, PHONE);
+
+for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
+  probe(`the fixed rows of a phone's board are one line each at ${name}`, async p => {
+    await settledBoard(p, 'humanhand=Counterspell;Giant Growth;Shock\nhumanbattlefield=Island;Island;Grizzly Bears;Hill Giant\naibattlefield=Plains;Plains;Goblin Piker;Craw Wurm');
+    for (const bar of ['#opponent .player', '#me .player']) expect((await box(p.page, bar)).height).toBeLessThanOrEqual(48);
+    expect((await box(p.page, '#phase-strip .pill')).height).toBeLessThanOrEqual(34);
+    expect((await box(p.page, '#prompt')).height).toBeLessThanOrEqual(46);
+    // The tools ride on your own bar, each still a finger wide enough to hit
+    const bar = await box(p.page, '#me .player');
+    for (const tool of ['.end-turn', '.auto-pass', '.undo', '.more']) {
+      const at = await box(p.page, `#match > .tools ${tool}`);
+      expect(at.y).toBeGreaterThanOrEqual(bar.y - 1);
+      expect(at.y + at.height).toBeLessThanOrEqual(bar.y + bar.height + 1);
+      expect(at.x + at.width).toBeLessThanOrEqual(phone.viewport!.width);
+      expect(at.height).toBeGreaterThanOrEqual(44);
+    }
+    const counts = await box(p.page, '#me .zones-pill');
+    expect(counts.x + counts.width).toBeLessThanOrEqual((await box(p.page, '#match > .tools')).x + 1);
+    // What the rows gave up goes to the cards
+    const card = (await p.page.locator('#me .battlefield .card').first().boundingBox())!;
+    expect(card.height).toBeGreaterThanOrEqual(78);
+    expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
+  }, phone);
+}

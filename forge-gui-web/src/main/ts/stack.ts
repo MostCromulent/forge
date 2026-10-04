@@ -200,8 +200,10 @@ function place(root: HTMLElement): void {
     // It takes the phase strip's place while anything is on it, and its list opens down over your cards or up over theirs
     const strip = byId('phase-strip').getBoundingClientRect();
     const above = root.classList.contains('over-them') && !ui.stackCollapsed;
-    root.style.top = above ? 'auto' : `${Math.round(strip.top)}px`;
-    root.style.bottom = above ? `${Math.round(innerHeight - strip.bottom)}px` : 'auto';
+    // The chip's head is taller than the strip, to take a finger, so it is centred on it
+    const over = Math.max(0, (q(root, '.head').offsetHeight - strip.height) / 2);
+    root.style.top = above ? 'auto' : `${Math.round(strip.top - over)}px`;
+    root.style.bottom = above ? `${Math.round(innerHeight - strip.bottom - over)}px` : 'auto';
     return;
   }
   root.style.top = root.style.bottom = '';

@@ -26,6 +26,8 @@ const ICONS = {
 const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[name]}</svg>`;
 
 let built = false;
+/** The row of tools, which a phone moves out of the prompt and onto the player's bar. */
+let tools: HTMLElement;
 /** The prompt last drawn, and how many have arrived: a script waits for a newer one rather than for time to pass. */
 let shown: Model['prompt'] = null;
 let arrived = 0;
@@ -62,7 +64,7 @@ function showPressed(button: Element | null): void {
 
 /** The same feedback for a key that stands in for a prompt button: "ok", "cancel", "end-turn" or "undo". */
 export function pressPromptButton(name: string): void {
-  showPressed(document.querySelector(`#prompt .${name}`));
+  showPressed(document.querySelector(`#match :is(#prompt, .tools) .${name}`));
 }
 
 /** How long the console takes to grow or shrink to a new prompt. */
@@ -75,7 +77,8 @@ export function renderPrompt(model: Model, actions: Actions): void {
   drawPrompt(model, actions);
   // On a phone, while a dialog or a zone asks the question and neither button can answer it, the buttons give up their room
   const asking = !!oldestRequest(model) || (model.zones.length > 0 && !ui.zonesMinimised);
-  root.classList.toggle('blocked', isPortrait() && asking && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
+  root.classList.toggle('blocked', isPortrait() && asking && !model.prompt?.selectablePlayers?.length
+    && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
   const after = root.offsetHeight;
   if (!before || Math.abs(after - before) < 3 || document.documentElement.dataset.motion === 'reduced') return;
   for (const a of root.getAnimations()) if (a.id === 'prompt-resize') a.cancel();
@@ -107,12 +110,14 @@ function drawPrompt(model: Model, actions: Actions): void {
         <button class="ok primary"><span class="label"></span><kbd>Space</kbd></button>
         <button class="cancel"><span class="label"></span><kbd>Esc</kbd></button>
       </div>`;
-    q(root, '.auto-pass').title = t('lblWebPromptAutoPassTip');
-    q(root, '.more').title = t('lblWebPromptGameMenuTip');
-    q(root, '.auto-pass').onclick = () => actions.toggleAutoPass();
-    q(root, '.undo').onclick = () => actions.undo();
-    q(root, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
+    tools = q(root, '.tools');
+    q(tools, '.auto-pass').title = t('lblWebPromptAutoPassTip');
+    q(tools, '.more').title = t('lblWebPromptGameMenuTip');
+    q(tools, '.auto-pass').onclick = () => actions.toggleAutoPass();
+    q(tools, '.undo').onclick = () => actions.undo();
+    q(tools, '.more').onclick = () => changeUi(u => { u.gameMenu = u.gameMenu ? null : 'menu'; });
     root.addEventListener('click', e => showPressed((e.target as Element).closest('button')));
+    tools.addEventListener('click', e => { if (!root.contains(tools)) showPressed((e.target as Element).closest('button')); });
     buildGlints(root);
     // Long text is cut to two lines in the phone's dock, and a tap shows the rest
     q(root, '.message').onclick = () => root.classList.toggle('open');
@@ -125,10 +130,13 @@ function drawPrompt(model: Model, actions: Actions): void {
     hoverable(card);
     built = true;
   }
+  // On a phone the tools ride on the player's own bar, which leaves the dock one row
+  if (isPortrait() && tools.parentElement === root) byId('match').append(tools);
+  else if (!isPortrait() && tools.parentElement !== root) q(root, '.step').before(tools);
   root.classList.toggle('swapped', !!setting('swapPrompt'));
   // The player can choose these keys in the options, so the labels follow whatever they chose
   const keys = boundKeys();
-  q(root, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));
+  q(tools, '.undo').title = t('lblWebPromptUndoTip', keyName(keys.undo));
   q(root, '.buttons .ok kbd').textContent = keyName(keys.ok);
   if (model.prompt !== shown) {
     shown = model.prompt;
@@ -137,6 +145,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     if (isPortrait()) replay(root, 'pulse');
   }
   root.classList.toggle('spectating', !!model.spectating);
+  tools.hidden = !!model.spectating;
   if (model.spectating) {
     renderPlayerChoices(root, model, [], actions);
     q(root, '.step').textContent = stepName(game(model)?.Phase);
@@ -144,18 +153,18 @@ function drawPrompt(model: Model, actions: Actions): void {
     return;
   }
   const autoPass = !!model.controls?.autoPass;
-  const autoPassButton = q(root, '.auto-pass');
+  const autoPassButton = q(tools, '.auto-pass');
   autoPassButton.classList.toggle('on', autoPass);
   autoPassButton.title = t(autoPass ? 'lblWebPromptAutoPassOnTip' : 'lblWebPromptAutoPassOffTip', keyName(keys.autoPass));
   // Lit while the turn is being passed through, as auto-pass is while it is on
   const endingTurn = !!model.controls?.untilEndOfTurn;
-  const endTurnButton = q(root, '.end-turn');
+  const endTurnButton = q(tools, '.end-turn');
   endTurnButton.classList.toggle('on', endingTurn);
   // A second press stops the pass it started
   endTurnButton.onclick = () => (endingTurn ? actions.stopYield() : actions.endTurn());
   endTurnButton.title = endingTurn ? t('lblWebPromptEndingTurnTip')
     : t('lblWebPromptEndTurnTip', keyName(keys.endTurn));
-  q(root, '.more').classList.toggle('open', !!ui.gameMenu);
+  q(tools, '.more').classList.toggle('open', !!ui.gameMenu);
   const ok = q<HTMLButtonElement>(root, '.ok');
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   ok.onclick = () => actions.ok();

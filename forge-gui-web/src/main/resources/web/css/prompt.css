@@ -17,17 +17,17 @@
 @keyframes glint-core { from { stroke-dashoffset: 8; } to { stroke-dashoffset: -992; } }
 html[data-motion="reduced"] #prompt .glints { display: none; }
 /* The tools keep a row of their own, so a long step name never pushes them out of the console */
-#prompt .tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin: -4px -6px -6px 0; }
+#match .tools { display: flex; align-items: center; justify-content: flex-end; gap: 2px; margin: -4px -6px -6px 0; }
 #prompt .step { margin: 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--accent-2); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-#prompt .tools button { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; border-radius: 6px; }
-#prompt .tools button:hover { background: var(--surface-2); }
-#prompt .tools svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-#prompt .tools button:hover svg { stroke: var(--text); }
+#match .tools button { width: 26px; height: 24px; padding: 0; display: grid; place-items: center; background: none; border-color: transparent; border-radius: 6px; }
+#match .tools button:hover { background: var(--surface-2); }
+#match .tools svg { width: 16px; height: 16px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+#match .tools button:hover svg { stroke: var(--text); }
 /* A pass that is running is lit brass; the three game actions stand apart from the game menu by a rule */
-#prompt .tools .on, #prompt .tools .on:hover { background: var(--brass); }
-#prompt .tools .on svg, #prompt .tools .on:hover svg { stroke: var(--on-brass); }
-#prompt .tools .more.open { background: var(--surface-2); }
-#prompt .tools .tools-gap { width: 1px; height: 14px; margin: 0 4px; background: var(--line-bright); }
+#match .tools .on, #match .tools .on:hover { background: var(--brass); }
+#match .tools .on svg, #match .tools .on:hover svg { stroke: var(--on-brass); }
+#match .tools .more.open { background: var(--surface-2); }
+#match .tools .tools-gap { width: 1px; height: 14px; margin: 0 4px; background: var(--line-bright); }
 #prompt .prompt-body { display: flex; gap: 10px; align-items: flex-start; }
 #prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
 #prompt .prompt-card { width: 44px; border-radius: 4px; flex: none; }

@@ -36,7 +36,7 @@ export function GameMenu({ model, actions, close, open }: {
   const { closing, shut, gone } = useClosing(close);
   // Above the button that opened it, right edges aligned, since the prompt sits in the bottom-right corner
   useLayoutEffect(() => {
-    const button = document.querySelector('#prompt .more')?.getBoundingClientRect();
+    const button = document.querySelector('#match .tools .more')?.getBoundingClientRect();
     const el = menu.current;
     if (!button || !el) return;
     el.style.right = `${Math.max(8, innerWidth - button.right)}px`;
@@ -96,7 +96,7 @@ function PlaymatPicker({ beside }: { beside: { current: HTMLDivElement | null } 
   const panel = useRef<HTMLDivElement>(null);
   // Placed from the button, as the menu is, since this runs before the menu has placed itself
   useLayoutEffect(() => {
-    const button = document.querySelector('#prompt .more')?.getBoundingClientRect();
+    const button = document.querySelector('#match .tools .more')?.getBoundingClientRect();
     const el = panel.current;
     if (!button || !el || !beside.current) return;
     el.style.right = `${Math.max(8, innerWidth - button.right) + beside.current.offsetWidth + 8}px`;
