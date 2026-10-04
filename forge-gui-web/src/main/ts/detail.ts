@@ -227,7 +227,10 @@ function drawSheetActions(zoom: HTMLElement, model: Model): void {
     }
   };
   const flip = q<HTMLButtonElement>(bar, '.sheet-flip');
-  flip.hidden = key === null || !model.cardDetails.has(key) || !(hover && 'card' in hover && hover.src);
+  const details = key !== null ? model.cardDetails.get(key) : undefined;
+  // A card with no rules text has nothing on its other side, unless that side is the one showing
+  const hasText = !!(details?.faces[ui.faceIndex] ?? details?.faces[0])?.text;
+  flip.hidden = !details || !(hover && 'card' in hover && hover.src) || (!hasText && !ui.cardText);
   flip.textContent = t(ui.cardText ? 'lblWebPortraitShowImage' : 'lblWebPortraitShowRules');
   // A card with more than one face turns to the next when it is tapped
   q<HTMLElement>(zoom, '.shot').onclick = () => nextFace(model);

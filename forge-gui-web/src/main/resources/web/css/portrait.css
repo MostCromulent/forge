@@ -75,9 +75,9 @@ html[data-form="portrait"] .zones-pill.more::after { content: '+'; color: var(--
 html[data-form="portrait"] #match .seat .zones-pill.lit { box-shadow: inset 0 0 0 1px var(--select), 0 0 8px color-mix(in srgb, var(--select) 45%, transparent); }
 html[data-form="portrait"] #match .seat .zones-pill[aria-expanded="true"] { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--accent-2); }
 html[data-form="portrait"] #match .seat .zone-tiles { display: none; }
-html[data-form="portrait"] #match .seat.zones-open .zone-tiles { --tile-w: 62px; display: grid; position: absolute; left: 0; top: 30px; z-index: 28; gap: 6px; padding: 8px; max-width: calc(100vw - 12px); box-sizing: border-box; overflow-x: auto;
+html[data-form="portrait"] #match .seat.zones-open .zone-tiles { --tile-w: 62px; display: grid; position: absolute; left: 0; top: calc(100% + 4px); z-index: 28; gap: 6px; padding: 8px; max-width: calc(100vw - 12px); box-sizing: border-box; overflow-x: auto;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 12px 34px #000c; }
-html[data-form="portrait"] #match #me.zones-open .zone-tiles { top: auto; bottom: 30px; }
+html[data-form="portrait"] #match #me.zones-open .zone-tiles { top: auto; bottom: calc(100% + 4px); }
 html[data-form="portrait"] #match .seat.zones-open .zone-tile { height: calc(var(--tile-w) * 1.4); }
 /* Counters, emblems and floating mana take a line of their own, and only when there are any */
 html[data-form="portrait"] #match .seat .player-extra { position: static; order: 2; flex: 1 0 100%; flex-direction: row; align-items: center; gap: 6px; min-height: 24px; overflow-x: auto; scrollbar-width: none; }
@@ -122,6 +122,8 @@ html[data-form="portrait"] #phase-strip .track { margin-left: auto; }
 html[data-form="portrait"] #phase-strip .phase .mark { width: 22px; }
 html[data-form="portrait"] #phase-strip .caret { display: none; }
 /* Waiting and passing chips sit over the strip's ends, since there is no room beside it */
+/* The dock already says who is waited on, so only the chip that says others wait on you is kept, over the strip's end */
+html[data-form="portrait"] #phase-strip .waiting:not(.you) { display: none; }
 html[data-form="portrait"] #phase-strip .waiting { right: auto; left: 12px; top: -14px; transform: none; z-index: 3; }
 html[data-form="portrait"] #phase-strip .until { left: auto; right: 6px; top: 0; transform: none; z-index: 3; height: 44px; min-width: 44px; padding: 0 12px; border-radius: 22px; }
 /* The stops grid in a sheet: every cell takes a finger, and the grid scrolls sideways inside the sheet */
@@ -354,3 +356,14 @@ html[data-form="portrait"] .kind-main .mode-text { flex: 1; min-width: 0; }
 html[data-form="portrait"] #menu { padding-bottom: 64px; }
 /* A deck's row keeps its name, size and whether it is legal; its formats and where it came from are in the filters */
 html[data-form="portrait"] .finder .dk-hit :is(.deck-formats, .tag) { display: none; }
+
+/* The stack's list opens up over the opponent's half with its chip still on the strip */
+html[data-form="portrait"] #match #stack.chip.over-them:not(.collapsed) { display: flex; flex-direction: column-reverse; }
+html[data-form="portrait"] #stack.chip.over-them .pile { padding: 8px 0 0; }
+/* An item whose picture has not arrived gives its room to its words */
+html[data-form="portrait"] #stack.chip .stack-item.noimg { grid-template-columns: 0 minmax(0, 1fr) auto; column-gap: 4px; }
+/* Looking over the final board, the way back stands clear of the dock */
+html[data-form="portrait"] #game-over.viewing { padding-bottom: calc(var(--dock-h, 110px) + 12px); }
+html[data-form="portrait"] #game-over .to-result { min-height: 48px; pointer-events: auto; }
+/* A row that runs on past the edge fades there, to say there is more */
+html[data-form="portrait"] :is(#phase-strip .stops .grid-scroll, .finder .rail) { padding-right: 32px; -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent); }

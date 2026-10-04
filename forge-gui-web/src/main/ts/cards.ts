@@ -46,9 +46,9 @@ export function frameColour(colours: number, type: string): string {
 }
 
 /** The last picture each card was shown with, for a spell whose card is hidden by the time its cast is seen. */
-const pictures = new Map<number, { src: string; zoom: string }>();
+const pictures = new Map<number, { src: string; zoom: string; name: string }>();
 
-export function lastPicture(key: number): { src: string; zoom: string } | undefined {
+export function lastPicture(key: number): { src: string; zoom: string; name: string } | undefined {
   return pictures.get(key);
 }
 
@@ -90,7 +90,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
     el.classList.remove('noimg');
   }
   el.dataset.zoom = src;
-  if (small) pictures.set(card.$key, { src: small, zoom: src });
+  if (small) pictures.set(card.$key, { src: small, zoom: src, name: state.Name ?? '' });
   el.style.setProperty('--pile-img', small ? cssUrl(small) : 'none');
   q(el, '.name').textContent = visible ? (state.Name ?? '') : '';
   setCost(q(el, '.cost'), visible ? state.ManaCost ?? '' : '');

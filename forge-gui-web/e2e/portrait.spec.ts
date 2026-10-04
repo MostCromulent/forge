@@ -534,3 +534,63 @@ probe('a card that asks how to play it puts the hand away for its menu', async p
   await item.tap();
   await expect(item).toHaveCount(0);
 }, PHONE);
+
+probe('after viewing the final battlefield, the way back to the result can be tapped', async p => {
+  await settledBoard(p, 'humanbattlefield=Grizzly Bears\nailife=1\naibattlefield=Mountain');
+  await passUntil(p, 'attackers are asked for', () => {
+    const m = window.forge.model;
+    return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
+  });
+  await p.page.locator('#me .battlefield .card').first().tap({ force: true });
+  await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
+  const view = p.page.locator('#game-over .actions button', { hasText: 'View battlefield' });
+  await expect(view).toBeVisible();
+  await p.page.waitForTimeout(1200);
+  await view.tap();
+  await p.page.locator('#game-over .to-result').tap({ timeout: 5000 });
+  await expect(p.page.locator('#game-over .actions button', { hasText: 'Quit match' })).toBeVisible();
+}, PHONE);
+
+probe('an opponent\'s open zones do not cover their portrait, and their spell\'s list does not cover your cards', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest;Grizzly Bears\naihand=Hill Giant\naibattlefield=Mountain;Mountain;Mountain;Mountain\nactiveplayer=ai\nactivephase=UPKEEP');
+  await p.page.locator('#opponent .zones-pill').tap();
+  await expect(p.page.locator('#opponent .zone-tiles')).toBeVisible();
+  const tiles = await box(p.page, '#opponent .zone-tiles');
+  const face = await box(p.page, '#opponent .avatar');
+  expect(tiles.y).toBeGreaterThanOrEqual(face.y + face.height - 1);
+  await p.page.locator('#opponent .zones-pill').tap();
+  await passUntil(p, 'the opponent casts', () => document.querySelectorAll('#stack .stack-item:not(.awaiting)').length > 0);
+  await p.page.waitForTimeout(600);
+  const list = await box(p.page, '#stack');
+  const mine = await box(p.page, '#me .battlefield .group.creatures .card');
+  expect(list.y + list.height).toBeLessThanOrEqual(mine.y + 1);
+  // The chip itself stays on the strip, whichever way its list opens
+  const head = await box(p.page, '#stack .head');
+  const strip = await box(p.page, '#phase-strip');
+  expect(Math.abs(head.y - strip.y)).toBeLessThan(8);
+}, PHONE);
+
+probe('the stack chip names a spell while its target is chosen', async p => {
+  await settledBoard(p, 'humanhand=Lightning Bolt\nhumanbattlefield=Mountain\naibattlefield=Grizzly Bears');
+  await castFirstInHand(p);
+  await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
+  await expect(p.page.locator('#stack .head b')).toContainText('Lightning Bolt');
+}, PHONE);
+
+probe('a block is declared by taps: the attacker, then your creature', async p => {
+  await settledBoard(p, 'humanlife=5\nhumanbattlefield=Wall of Stone\naibattlefield=Craw Wurm;Hill Giant\nactiveplayer=ai\nactivephase=MAIN1');
+  await passUntil(p, 'blockers are asked for', () => document.getElementById('match')!.classList.contains('declaring-blocks'), undefined, [], 90_000);
+  const attackers = p.page.locator('#opponent .card.attacking');
+  await expect(attackers).toHaveCount(2);
+  // The game picks one attacker itself, and a tap on the other moves the pick
+  const other = p.page.locator('#opponent .card.attacking:not(.highlighted)');
+  await expect(other).toHaveCount(1);
+  const key = await other.getAttribute('data-key');
+  await other.tap({ force: true });
+  const picked = p.page.locator(`#opponent .card[data-key="${key}"]`);
+  await expect(picked).toHaveClass(/highlighted/);
+  await expect(picked.locator('.combat-tag')).toHaveText('Blocking this');
+  await expect(p.page.locator('#zoom.sheet')).toHaveCount(0);
+  await p.page.locator('#me .battlefield .card', { hasText: 'Wall of Stone' }).tap({ force: true });
+  await expect(p.page.locator('#me .card.blocking')).toHaveCount(1);
+}, PHONE);

@@ -23,7 +23,7 @@ const PUSH_Y = 26;
 let actions: Actions | null = null;
 
 /** Spells being cast, by card key, with a kept picture because the card is missing from the browser's game until its cost is paid. */
-const awaiting = new Map<string, { src: string; zoom: string; since: number }>();
+const awaiting = new Map<string, { src: string; zoom: string; since: number; name: string }>();
 /** How long a spell may go on awaiting once its caster has priority again; past this its item is not coming. */
 const SETTLE_MS = 900;
 
@@ -86,17 +86,18 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     }
     const top = items[0];
     const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
-    // A spell still being paid for has no item yet, and is named from its card
-    const paying = top ? undefined : model.objects.get(Number([...awaiting.keys()][0])) as CardView | undefined;
+    // A spell still being paid for has no item yet, and is named from the card it was cast from
+    const paying = top ? '' : [...awaiting.values()][0]?.name ?? '';
     q(root, '.head b').textContent = top
       ? `${t('lblStack')} \u00b7 ${t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '')}`
-      : paying ? `${t('lblStack')} \u00b7 ${stateOf(model, paying).Name ?? ''}` : t('lblStack');
+      : paying ? `${t('lblStack')} \u00b7 ${paying}` : t('lblStack');
     // The dock is drawn after this and can change height, which moves the strip the chip sits on
     requestAnimationFrame(() => place(root));
-    // Over whichever half of the board holds fewer of the top item's targets, so they stay in view
+    // Over whichever half of the board holds fewer of the top item's targets, so they stay in view; with nothing to choose
+    // between them it opens over the opponent's, since yours is where an answer comes from
     const targets = top ? stackTargets(model, top) : [];
     const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;
-    root.classList.toggle('over-them', mine > targets.length - mine);
+    root.classList.toggle('over-them', mine >= targets.length - mine);
   } else {
     q(root, '.head b').textContent = t('lblStack');
   }
@@ -219,7 +220,8 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
     const picture = img?.getAttribute('src') ? { src: img.getAttribute('src') as string, zoom: img.dataset.zoom ?? '' }
       : lastPicture(Number(key));
     if (move.to?.zone === 'Stack' && mine && !onStack.has(key) && picture) {
-      awaiting.set(key, { ...picture, since: Date.now() });
+      // Its name is kept too, for the phone's chip to say
+      awaiting.set(key, { ...picture, since: Date.now(), name: lastPicture(Number(key))?.name ?? '' });
     } else {
       awaiting.delete(key);
     }
