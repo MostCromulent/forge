@@ -108,8 +108,8 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
     // Opened for a question, it goes with the question
     openedFor = null;
     ui.handOpen = false;
-  } else if (ui.handOpen && askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority) {
-    // What was tapped asks its next question on the board, so the drawer gets out of the way
+  } else if (ui.handOpen && (model.requests.size > 0 || (askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority))) {
+    // What was tapped asks its next question on the board, in a menu or in a dialog, so the drawer gets out of the way
     ui.handOpen = false;
   } else if (!ui.handOpen && played !== null && asked?.priority) {
     ui.handOpen = portrait && held.some(c => c.$key === played);

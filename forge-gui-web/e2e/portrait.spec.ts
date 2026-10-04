@@ -479,8 +479,10 @@ probe('a deck is chosen in the finder by taps, with nothing off the screen', asy
 }, PHONE);
 
 probe('a choice of cards from your hand opens the hand by itself', async p => {
-  await settledBoard(p, 'humanhand=Faithless Looting;Forest;Giant Growth\nhumanbattlefield=Mountain\naibattlefield=Mountain');
-  await castFirstInHand(p);
+  await settledBoard(p, 'humanhand=Faithless Looting;Giant Growth;Shock\nhumanbattlefield=Mountain\naibattlefield=Mountain');
+  // By name and once: the hand is sorted, and a second tap would land on the discard this is about
+  const looting = await p.page.evaluate(() => Number([...document.querySelectorAll<HTMLElement>('#hand .card')].find(c => c.textContent?.includes('Faithless'))?.dataset.key));
+  await act(p.page, 'selectCard', looting, false, 0, 0);
   await p.until('a card from hand is asked for', () => {
     const prompt = window.forge.model.prompt;
     if (prompt?.paying && prompt.ok?.enabled) window.forge.actions.ok();
@@ -517,4 +519,18 @@ probe('the result of a game fits the screen', async p => {
     expect(at.x).toBeGreaterThanOrEqual(8);
     expect(at.x + at.width).toBeLessThanOrEqual(382);
   }
+}, PHONE);
+
+probe('a card that asks how to play it puts the hand away for its menu', async p => {
+  await settledBoard(p, 'humanhand=Fireblast;Forest\nhumanbattlefield=Mountain;Mountain;Mountain;Mountain;Mountain;Mountain\naibattlefield=Grizzly Bears');
+  await p.page.locator('#hand').tap();
+  await p.page.locator('#hand.sheet .card', { hasText: 'Fireblast' }).tap();
+  const item = p.page.locator('#dialog-layer .card-menu:not(.game-menu) .card-menu-item').first();
+  await expect(item).toBeVisible();
+  await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
+  const menu = await box(p.page, '#dialog-layer .card-menu:not(.game-menu)');
+  const dock = await box(p.page, '#prompt');
+  expect(menu.y + menu.height).toBeLessThanOrEqual(dock.y + 2);
+  await item.tap();
+  await expect(item).toHaveCount(0);
 }, PHONE);
