@@ -31,6 +31,7 @@ const SETTLE_MS = 900;
 let current: Model | null = null;
 let countSeen = 0;
 let foldedFor: object | null = null;
+let foldedForPick: object | null = null;
 
 function fold(folded: boolean): void {
   foldedFor = folded ? current?.prompt ?? null : null;
@@ -77,11 +78,21 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   if (portrait) {
     // The list opens for a new arrival while you may answer it, unless you folded it during this same question
     if (count > countSeen && model.prompt?.priority && foldedFor !== model.prompt) ui.stackCollapsed = false;
+    // A question answered on the board or from the hand needs the room the list would lie over
+    const asked = model.prompt;
+    if (asked && asked !== foldedForPick && !asked.priority && !asked.paying && (asked.selectable.length > 0 || asked.selectablePlayers.length > 0)) {
+      foldedForPick = asked;
+      ui.stackCollapsed = true;
+    }
     const top = items[0];
     const source = top ? deref(model, top.SourceCard) as CardView | undefined : undefined;
+    // A spell still being paid for has no item yet, and is named from its card
+    const paying = top ? undefined : model.objects.get(Number([...awaiting.keys()][0])) as CardView | undefined;
     q(root, '.head b').textContent = top
       ? `${t('lblStack')} \u00b7 ${t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '')}`
-      : t('lblStack');
+      : paying ? `${t('lblStack')} \u00b7 ${stateOf(model, paying).Name ?? ''}` : t('lblStack');
+    // The dock is drawn after this and can change height, which moves the strip the chip sits on
+    requestAnimationFrame(() => place(root));
     // Over whichever half of the board holds fewer of the top item's targets, so they stay in view
     const targets = top ? stackTargets(model, top) : [];
     const mine = targets.filter(o => o.$key === me(model)?.$key || document.querySelector(`#me .card[data-key="${o.$key}"]`)).length;

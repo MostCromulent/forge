@@ -454,3 +454,67 @@ probe('after a reload in a match, Leave still leaves', async p => {
   await p.page.locator('#leave-ask .leave').tap();
   await expect.poll(() => p.page.url()).not.toContain(new URL(p.server.url).host);
 }, PHONE);
+
+probe('a deck is chosen in the finder by taps, with nothing off the screen', async p => {
+  await lobby(p);
+  const plate = p.page.locator('.plate.mine');
+  await plate.locator('.sleeve').tap();
+  const finder = p.page.locator('.finder');
+  await expect(finder).toBeVisible();
+  // It rises into place over a moment
+  await p.page.waitForTimeout(500);
+  expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  for (const part of ['.finder', '.finder .results', '.finder .dk-hits', '.finder-foot .use']) {
+    const at = await box(p.page, part);
+    expect(at.x).toBeGreaterThanOrEqual(0);
+    expect(at.x + at.width).toBeLessThanOrEqual(390);
+    expect(at.y + at.height).toBeLessThanOrEqual(664);
+  }
+  await p.page.locator('.dk-hit:not(.generated)').first().tap();
+  const use = p.page.locator('.finder-foot .use');
+  expect((await use.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await use.tap();
+  await expect(finder).toHaveCount(0);
+  await expect(plate.locator('.deck-name')).not.toHaveText('');
+}, PHONE);
+
+probe('a choice of cards from your hand opens the hand by itself', async p => {
+  await settledBoard(p, 'humanhand=Faithless Looting;Forest;Giant Growth\nhumanbattlefield=Mountain\naibattlefield=Mountain');
+  await castFirstInHand(p);
+  await p.until('a card from hand is asked for', () => {
+    const prompt = window.forge.model.prompt;
+    if (prompt?.paying && prompt.ok?.enabled) window.forge.actions.ok();
+    return !!prompt && !prompt.priority && !prompt.paying && prompt.selectable.length > 0;
+  }, undefined, p.page, 30_000);
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  // The stack's list would lie over the board the choice is about, so it is folded
+  await expect(p.page.locator('#stack.chip:not(.collapsed) .pile')).toHaveCount(0);
+  const pick = p.page.locator('#hand.sheet .card.selectable').first();
+  await expect(pick).toBeVisible();
+  await pick.tap();
+  await p.until('the choice is taken', () => (window.forge.model.prompt?.selectable.length ?? 0) < 4 || !!window.forge.model.prompt?.priority);
+}, PHONE);
+
+probe('the result of a game fits the screen', async p => {
+  await settledBoard(p, 'humanbattlefield=Grizzly Bears\nailife=1\naibattlefield=Mountain');
+  await passUntil(p, 'attackers are asked for', () => {
+    const m = window.forge.model;
+    return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
+  });
+  await p.page.locator('#me .battlefield .card').first().tap({ force: true });
+  await passUntil(p, 'the game ends', () => window.forge.model.gameOver);
+  const word = p.page.locator('#game-over .word');
+  await expect(word).toBeVisible();
+  await p.page.waitForTimeout(1500);
+  for (const part of ['#game-over .word', '#game-over .actions']) {
+    const at = await box(p.page, part);
+    expect(at.x).toBeGreaterThanOrEqual(0);
+    expect(at.x + at.width).toBeLessThanOrEqual(390);
+  }
+  for (const button of await p.page.locator('#game-over .actions button:visible').all()) {
+    const at = (await button.boundingBox())!;
+    expect(at.height).toBeGreaterThanOrEqual(44);
+    expect(at.x).toBeGreaterThanOrEqual(8);
+    expect(at.x + at.width).toBeLessThanOrEqual(382);
+  }
+}, PHONE);

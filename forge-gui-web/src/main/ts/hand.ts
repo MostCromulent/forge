@@ -55,6 +55,8 @@ function fromElsewhere(model: Model, player: PlayerView | undefined): Map<number
 let askedWhenOpen: object | null = null;
 /** The card last tapped in the drawer, which is opened again if that card's play is called off. */
 let played: number | null = null;
+/** The question the drawer opened itself for. */
+let openedFor: object | null = null;
 const NO_PROMPT = {};
 
 const closeDrawer = () => {
@@ -92,7 +94,21 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   const head = drawerHead(root);
   const portrait = isPortrait();
   const asked = model.prompt;
-  if (ui.handOpen && askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority) {
+  // A question answered with cards from the hand, a discard say, needs them at a size that can be told apart and tapped
+  const fromHand = portrait && !!asked && !asked.priority && !asked.paying && asked.selectableMin > 0
+    && asked.selectable.some(r => held.some(c => c.$key === r.ref));
+  if (fromHand) {
+    if (asked !== openedFor) {
+      openedFor = asked;
+      ui.handOpen = true;
+      askedWhenOpen = asked;
+      played = null;
+    }
+  } else if (openedFor) {
+    // Opened for a question, it goes with the question
+    openedFor = null;
+    ui.handOpen = false;
+  } else if (ui.handOpen && askedWhenOpen && asked !== askedWhenOpen && asked && !asked.priority) {
     // What was tapped asks its next question on the board, so the drawer gets out of the way
     ui.handOpen = false;
   } else if (!ui.handOpen && played !== null && asked?.priority) {
