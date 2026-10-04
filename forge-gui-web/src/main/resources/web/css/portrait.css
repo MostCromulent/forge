@@ -224,3 +224,35 @@ html[data-form="portrait"] .battlefield .card .combat-tag:not(:empty) { display:
 html[data-form="portrait"] #hand .card .cost-badge .pip { width: auto; height: auto; background: none; }
 /* Your attackers step up toward the strip, so the room for it is at the top of your half */
 html[data-form="portrait"] #match #me .battlefield { padding: 16px 5px 5px; }
+
+/* The menu: the log, the chat and the players, with the options and conceding at its foot */
+html[data-form="portrait"] #dialog-layer .menu-sheet { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: 8px; height: min(70dvh, calc(100dvh - var(--dock-h, 110px) - 40px)); padding: 22px 0 0; overflow: hidden; }
+html[data-form="portrait"] .menu-tabs { display: flex; gap: 4px; margin: 0 12px; padding: 4px; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 10px; }
+html[data-form="portrait"] .menu-tabs button { flex: 1; min-height: 44px; background: none; border: 0; color: var(--muted); font-weight: 700; }
+html[data-form="portrait"] .menu-tabs .on { background: var(--surface-2); color: var(--text); box-shadow: inset 0 -2px 0 var(--accent-2); }
+html[data-form="portrait"] .menu-body { min-height: 0; overflow-y: auto; padding: 0 12px; display: flex; flex-direction: column; gap: 6px; }
+html[data-form="portrait"] .menu-body > :is(#log, #match-chat) { flex: 1; min-height: 0; }
+html[data-form="portrait"] .menu-row { display: flex; align-items: center; gap: 10px; min-height: 48px; text-align: left; }
+html[data-form="portrait"] .menu-row b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+html[data-form="portrait"] .menu-row img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+html[data-form="portrait"] .menu-foot { display: flex; gap: 8px; padding: 8px 12px 12px; border-top: 1px solid var(--line); }
+html[data-form="portrait"] .menu-foot button { flex: 1; min-height: 48px; }
+html[data-form="portrait"] .menu-foot .concede { color: var(--danger); }
+html[data-form="portrait"] .menu-foot .concede.armed { background: var(--danger); color: var(--bg-deep); }
+
+/* Zones, dialogs and menus: all rise from the top of the dock, which stays in reach */
+html[data-form="portrait"] #match #zones { inset: 0 0 var(--dock-h, 110px) 0; place-items: end stretch; padding: 0; }
+html[data-form="portrait"] #match #zones.minimised { place-items: start end; padding: 8px 8px 0 0; }
+html[data-form="portrait"] #match #zones .zone-shelf { max-height: 86%; width: 100%; }
+html[data-form="portrait"] #match #zones .zone-panel { width: 100%; max-width: none; border-radius: 16px 16px 0 0; border-width: 1px 0 0; box-sizing: border-box; }
+html[data-form="portrait"] .zone-panel .cards { --fit: 1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+html[data-form="portrait"] .zone-panel :is(header, footer) { flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+html[data-form="portrait"] .zone-panel .zone-find { order: 9; flex: 1 0 100%; width: auto; min-width: 0; box-sizing: border-box; }
+html[data-form="portrait"] .zone-panel .zone-gap { display: none; }
+html[data-form="portrait"] .zone-panel .zone-sort { margin-left: auto; }
+html[data-form="portrait"] .zone-panel :is(button, input, select) { min-height: 44px; }
+html[data-form="portrait"] :is(#dialog-layer .backdrop:not(.anchored), .reveal-back) { inset: 0 0 var(--dock-h, 110px) 0; align-items: end; place-items: end stretch; padding: 0; }
+html[data-form="portrait"] #dialog-layer .dialog { width: 100%; max-width: none; margin: 0; max-height: 100%; border-radius: 16px 16px 0 0; border-width: 1px 0 0; padding: 16px 12px; box-sizing: border-box; }
+html[data-form="portrait"] #dialog-layer .dialog button { min-height: 44px; }
+html[data-form="portrait"] .reveal-panel { width: 100%; max-height: 86%; border-radius: 16px 16px 0 0; }
+html[data-form="portrait"] #dialog-layer .game-menu { max-height: calc(100dvh - var(--dock-h, 110px) - 40px); }

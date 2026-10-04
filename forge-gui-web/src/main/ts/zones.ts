@@ -5,6 +5,8 @@ import { byId, q } from './dom';
 import { changeUi, ui, type ZoneSort } from './ui';
 import { normalize, rankByName } from './search';
 import { manaValue } from './hand';
+import { isPortrait } from './form';
+import { sheet } from './sheet';
 import type { Actions } from './actions';
 import { keyName } from './keys';
 import { boundKeys } from './settings';
@@ -61,6 +63,8 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
     changeUi(u => { u.zonesMinimised = false; });
   }
   root.hidden = !open;
+  // Back closes what the player opened; what the game put up, the game puts away
+  sheet('zones', isPortrait() && open && ui.openZones.size > 0, () => changeUi(u => { u.openZones.clear(); }));
   root.classList.toggle('minimised', ui.zonesMinimised);
   if (!open) {
     root.replaceChildren();

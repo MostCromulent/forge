@@ -126,6 +126,11 @@ const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule, render);
 initForm(() => {
+  // What only one layout draws is put away when the layout changes
+  ui.menuSheet = null;
+  ui.handOpen = false;
+  ui.stopsOpen = false;
+  ui.zonesFor = null;
   window.dispatchEvent(new Event('resize'));
   schedule();
 });

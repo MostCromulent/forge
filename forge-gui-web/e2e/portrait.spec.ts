@@ -296,3 +296,35 @@ probe('a question about one hidden opponent\'s cards brings their tab forward', 
   await expect(tabs.nth(1)).toHaveClass(/\bon\b/);
   await expect(p.page.locator('#opponent .seat:not([hidden]) .card.selectable')).toBeVisible();
 }, PHONE);
+
+probe('the menu sheet holds the log, and conceding asks twice', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.locator('#menu-button').tap();
+  const sheet = p.page.locator('.menu-sheet');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('#log')).toBeVisible();
+  const at = await box(p.page, '.menu-sheet');
+  const dock = await box(p.page, '#prompt');
+  expect(at.width).toBe(390);
+  expect(Math.round(at.y + at.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
+  await sheet.locator('.concede').tap();
+  await expect(p.page.locator('#game-over')).toBeHidden();
+  await sheet.locator('.concede').tap();
+  await expect(p.page.locator('#game-over')).toBeVisible();
+}, PHONE);
+
+probe('a graveyard opens as a sheet above the dock, and Back closes it', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\nhumangraveyard=Grizzly Bears;Hill Giant\naibattlefield=Mountain');
+  await p.page.locator('#me .zones-pill').tap();
+  await p.page.locator('#me .zone-tile[data-zone="Graveyard"]').tap();
+  const panel = p.page.locator('#zones .zone-panel');
+  await expect(panel).toBeVisible();
+  const at = (await panel.boundingBox())!;
+  const dock = await box(p.page, '#prompt');
+  expect(at.width).toBe(390);
+  expect(at.y + at.height).toBeLessThanOrEqual(dock.y + 2);
+  await expect(p.page.locator('#prompt .ok')).toBeVisible();
+  await p.page.goBack();
+  await expect(panel).toBeHidden();
+  await expect(p.page.locator('#match')).toBeVisible();
+}, PHONE);
