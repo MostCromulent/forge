@@ -30,7 +30,7 @@ html[data-form="portrait"] #prompt.waiting { border-color: var(--accent-2); }
 html[data-form="portrait"] #prompt .glints { display: none; }
 html[data-form="portrait"] #prompt .step { grid-area: step; align-self: end; margin: 0; padding: 1px 10px 0; font-size: 9px; line-height: 10px; letter-spacing: .12em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* The tools ride on your own bar, at its right end */
-html[data-form="portrait"] #match > .tools { grid-area: me; align-self: end; justify-self: end; z-index: 2; height: 44px; margin: 0 2px 0 0; gap: 0; }
+html[data-form="portrait"] #match > .tools { grid-area: me; align-self: end; justify-self: end; z-index: 7; height: 44px; margin: 0 2px 0 0; gap: 0; }
 html[data-form="portrait"] #match > .tools[hidden] { display: none; }
 html[data-form="portrait"] #match > .tools button { width: 36px; height: 44px; }
 html[data-form="portrait"] #match > .tools svg { width: 19px; height: 19px; }
@@ -398,3 +398,5 @@ html[data-form="portrait"] .reveal-panel header { flex-wrap: nowrap; align-items
 html[data-form="portrait"] .reveal-panel header .zone-who { flex: 1; min-width: 0; }
 html[data-form="portrait"] .reveal-panel header .zone-count { display: none; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }
+/* Asked who goes first, the dock can answer too, so the question stops above it */
+html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }

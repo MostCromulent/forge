@@ -691,6 +691,7 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
       expect(at.x + at.width).toBeLessThanOrEqual(phone.viewport!.width);
       expect(at.height).toBeGreaterThanOrEqual(44);
     }
+    for (const tool of ['.auto-pass', '.more']) await p.page.locator(`#match > .tools ${tool}`).tap({ trial: true, timeout: 3000 });
     const counts = await box(p.page, '#me .zones-pill');
     expect(counts.x + counts.width).toBeLessThanOrEqual((await box(p.page, '#match > .tools')).x + 1);
     // What the rows gave up goes to the cards
@@ -699,3 +700,14 @@ for (const [name, phone] of [['390', PHONE], ['360', SMALL_PHONE]] as const) {
     expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(phone.viewport!.width);
   }, phone);
 }
+
+probe('the question of who goes first leaves the dock, which can also answer it, within reach', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.evaluate(() => {
+    const ask = Object.assign(document.createElement('div'), { id: 'first-reveal', className: 'choosing' });
+    document.getElementById('match')!.append(ask);
+  });
+  const ask = await box(p.page, '#first-reveal');
+  expect(ask.y + ask.height).toBeLessThanOrEqual((await box(p.page, '#prompt')).y + 1);
+  await p.page.locator('#prompt .ok').tap({ trial: true, timeout: 3000 });
+}, PHONE);
