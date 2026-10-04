@@ -99,6 +99,8 @@ final class WebService {
             closeForward();
         } else if (server != null) {
             openForward();
+        } else {
+            onForwarding.accept(forwarding);
         }
     }
 
@@ -165,8 +167,8 @@ final class WebService {
         return now == null ? 0 : now.playersHere();
     }
 
-    /** The port the browser connects on, or 0 while stopped. */
+    /** The port the browser connects on, or the one that will be asked for while stopped. */
     synchronized int port() {
-        return server == null ? 0 : server.port();
+        return server == null ? WebServer.configuredPort() : server.port();
     }
 }

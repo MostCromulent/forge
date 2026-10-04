@@ -109,7 +109,11 @@ public final class WebServer implements AutoCloseable {
     private final Channel channel;
 
     public WebServer(final Endpoint endpoint, final String hostToken, final String guestToken) throws InterruptedException {
-        this(endpoint, hostToken, guestToken, Integer.getInteger("forge.web.port", DEFAULT_PORT));
+        this(endpoint, hostToken, guestToken, configuredPort());
+    }
+
+    static int configuredPort() {
+        return Integer.getInteger("forge.web.port", DEFAULT_PORT);
     }
 
     /** A port of 0 takes whichever one is free, which is what a test wants. */

@@ -40,19 +40,21 @@ You need Java 17 or newer and Maven. From the top folder of the Forge repository
     mvn -Pweb -pl forge-gui-web -am install -DskipTests
     java -jar forge-gui-web/target/forge-gui-web.jar
 
-This opens the game in your browser, and the **server window**, which starts and stops the server and shows the
-links people join by. Closing it quits Forge, as does the last browser closing, unless you untick **Quit when the
-last player leaves**.
+This opens the game in your browser, and the **server window**, which sets out three steps: start the server,
+open the game, and invite players. Keep it open while you play. Closing it quits Forge, as does the last browser
+closing, unless you untick **Close Forge when everyone has left, including you**.
 
 <img src="docs/server.webp" width="49%" alt="The server window">
 
 ### Playing with friends
 
-Click **Invite** at the top of the table, or an address in the server window, to copy a link.
+Click **Invite** at the top of the table, or **Copy link** in the server window, to copy a link.
 
-- A local address (often `192.168.…`) works on your home network.
-- The internet address works for everyone else if your router lets them in. Tick **Open the port on the router**
-  in the server window; if that fails, turn on UPnP on your router or forward the port by hand.
+- The link for **players on your network** (an address that often starts `192.168.`) works on your home network.
+- The link for **players on the internet** works for everyone else once your router forwards the port to this
+  computer. **Forward the port automatically (UPnP)** asks the router to do that. If the router refuses, turn on
+  UPnP there or forward the port yourself, as the
+  [network setup guide](https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration) describes.
 
 Anyone with a guest link can join, and the links aren't encrypted, so only send them to people you're playing with.
 Never share the host's own link: it controls the table and the server. Links change each time Forge starts.
