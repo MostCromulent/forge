@@ -328,3 +328,31 @@ probe('a graveyard opens as a sheet above the dock, and Back closes it', async p
   await expect(panel).toBeHidden();
   await expect(p.page.locator('#match')).toBeVisible();
 }, PHONE);
+
+probe('Back with nothing open asks before leaving the match', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.goBack();
+  await expect(p.page.locator('#leave-ask')).toBeVisible();
+  await p.page.locator('#leave-ask .stay').tap();
+  await expect(p.page.locator('#leave-ask')).toBeHidden();
+  await expect(p.page.locator('#match')).toBeVisible();
+  await expect(p.page.locator('#prompt .ok')).toBeVisible();
+}, PHONE);
+
+probe('a phone on its side is asked to turn upright', async p => {
+  await board(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await expect(p.page.locator('#turn-upright')).toBeVisible();
+}, { viewport: { width: 664, height: 390 }, hasTouch: true, isMobile: true });
+
+probe('the page can be installed to the home screen', async p => {
+  await p.page.goto(p.server.url);
+  const href = await p.page.locator('link[rel=manifest]').getAttribute('href');
+  const answer = await p.page.request.get(new URL(href!, p.server.url).href);
+  expect(answer.headers()['content-type']).toContain('application/manifest+json');
+  const manifest = await answer.json();
+  expect(manifest.display).toBe('standalone');
+  expect(manifest.icons.map((i: { sizes: string }) => i.sizes)).toEqual(['192x192', '512x512']);
+  const icon = await p.page.request.get(new URL(manifest.icons[1].src, p.server.url).href);
+  expect(icon.status()).toBe(200);
+  expect(icon.headers()['content-type']).toBe('image/png');
+});

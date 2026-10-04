@@ -6,7 +6,7 @@ import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm } from './form';
 import { initPress } from './press';
-import { initSheets } from './sheet';
+import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
 import { renderScreens, screenOf } from './screens';
@@ -499,6 +499,30 @@ function dismissNotice(id: number): void {
   schedule();
 }
 
+// A phone that locks while the others take their turns drops its connection, so the screen is kept on during a match
+type WakeLock = { release(): Promise<void> };
+let lock: WakeLock | null = null;
+let locking = false;
+
+async function keepAwake(on: boolean): Promise<void> {
+  const wake = (navigator as Navigator & { wakeLock?: { request(type: 'screen'): Promise<WakeLock> } }).wakeLock;
+  if (!wake || locking || on === !!lock) return;
+  locking = true;
+  if (on && document.visibilityState === 'visible') {
+    // Refused, as a browser saving power may, it is not asked for again until the page is next shown
+    lock = await wake.request('screen').catch(() => ({ release: async () => {} }));
+  } else if (!on && lock) {
+    await lock.release().catch(() => {});
+    lock = null;
+  }
+  locking = false;
+}
+// The browser gives the lock up when the page is hidden, so it is asked for again on the way back
+document.addEventListener('visibilitychange', () => {
+  lock = null;
+  schedule();
+});
+
 function schedule(): void {
   if (scheduled) return;
   scheduled = true;
@@ -517,6 +541,8 @@ function render(): void {
   byId('drafting').hidden = page !== 'drafting';
   byId('conquest').hidden = page !== 'conquest';
   byId('match').hidden = page !== 'match';
+  matchHistory(page === 'match');
+  void keepAwake(page === 'match' && !model.gameOver);
   renderScreens(model, actions, dismissNotice);
   // The name page comes before the player's volumes are known
   playMusic(page === 'name' ? null : page !== 'match' ? 'menu' : model.gameOver ? null : 'match');

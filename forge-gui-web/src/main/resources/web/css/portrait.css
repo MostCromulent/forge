@@ -256,3 +256,15 @@ html[data-form="portrait"] #dialog-layer .dialog { width: 100%; max-width: none;
 html[data-form="portrait"] #dialog-layer .dialog button { min-height: 44px; }
 html[data-form="portrait"] .reveal-panel { width: 100%; max-height: 86%; border-radius: 16px 16px 0 0; }
 html[data-form="portrait"] #dialog-layer .game-menu { max-height: calc(100dvh - var(--dock-h, 110px) - 40px); }
+
+/* Asked before Back leaves a match */
+#leave-ask { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%); z-index: 95; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 16px; width: min(320px, 86vw); box-sizing: border-box;
+  background: var(--surface); border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 16px 40px #000c; }
+#leave-ask[hidden] { display: none; }
+#leave-ask p { grid-column: 1 / -1; margin: 0; font-weight: 700; }
+#leave-ask button { min-height: 48px; }
+/* A phone on its side has room for neither layout */
+#turn-upright { display: none; }
+@media (max-height: 499px) and (pointer: coarse) {
+  body:has(#match:not([hidden])):not(:has(:is(input, textarea):focus)) #turn-upright { display: grid; place-items: center; position: fixed; inset: 0; z-index: 99; padding: 24px; text-align: center; background: var(--bg-deep); font-size: 18px; }
+}

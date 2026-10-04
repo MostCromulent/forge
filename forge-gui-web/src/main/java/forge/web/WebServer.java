@@ -453,6 +453,12 @@ public final class WebServer implements AutoCloseable {
         if (resource.endsWith(".svg")) {
             return "image/svg+xml";
         }
+        if (resource.endsWith(".png")) {
+            return "image/png";
+        }
+        if (resource.endsWith(".webmanifest")) {
+            return "application/manifest+json";
+        }
         return "application/octet-stream";
     }
 

@@ -1,11 +1,36 @@
 // What every sheet on a phone shares: Back closes it, a swipe down closes it, and opening one closes the others.
 
+import { byId, q } from './dom';
+
 const open = new Map<string, () => void>();
+let inMatch = false;
+let leaving = false;
+
+/** A match holds one history entry of its own, so Back with nothing open asks before it leaves the page. */
+export function matchHistory(now: boolean): void {
+  if (now && !inMatch) history.pushState({ match: true }, '');
+  inMatch = now;
+}
 
 export function initSheets(): void {
+  const ask = byId('leave-ask');
+  q(ask, '.stay').onclick = () => { ask.hidden = true; };
+  // Leaving is what Back would have done: out past the entry the match holds
+  q(ask, '.leave').onclick = () => {
+    ask.hidden = true;
+    leaving = true;
+    history.go(-2);
+    setTimeout(() => { leaving = false; }, 500);
+  };
   addEventListener('popstate', () => {
     const last = [...open.keys()].pop();
-    if (last === undefined) return;
+    if (last === undefined) {
+      if (inMatch && !leaving) {
+        history.pushState({ match: true }, '');
+        ask.hidden = false;
+      }
+      return;
+    }
     const close = open.get(last);
     open.delete(last);
     close?.();
