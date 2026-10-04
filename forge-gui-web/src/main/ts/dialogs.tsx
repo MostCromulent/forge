@@ -14,7 +14,7 @@ import { boundKeys } from './settings';
 import { playerAvatarUrl } from './looks';
 import { cardMenu, isLocal, oldestRequest, stackPick, type Model } from './model';
 import type {
-  ChoicesRequest, DistributeRequest, ManipulateRequest, OptionRequest, OrderRequest, Request, RequestOption,
+  ChoicesRequest, DistributeRequest, ManipulateRequest, NumberRequest, OptionRequest, OrderRequest, Request, RequestOption,
   PlayerView, SideboardRequest, TextRequest, TrackedObject,
 } from './protocol';
 import { t } from './text';
@@ -78,6 +78,7 @@ function RequestDialog({ req, model, answer }: { req: Request; model: Model; ans
       case 'manipulate': return <Manipulate req={req} model={model} answer={answer} />;
       case 'option': return <Option req={req} model={model} answer={answer} />;
       case 'text': return <Text req={req} answer={answer} />;
+      case 'number': return <NumberPick req={req} answer={answer} />;
       case 'distribute': return <Distribute req={req} model={model} answer={answer} />;
       case 'sideboard': return <Sideboard req={req} model={model} answer={answer} />;
       default: {
@@ -408,6 +409,40 @@ function Text({ req, answer }: { req: TextRequest; answer: Answer }) {
     <>
       <input ref={input} type={req.numeric ? 'number' : 'text'} value={value} onInput={e => setValue(e.currentTarget.value)} />
       <ButtonRow><Button primary onClick={() => answer(value)}>{t('lblOK')}</Button></ButtonRow>
+    </>
+  );
+}
+
+/** How many of the first numbers are offered as buttons. */
+const QUICK_PICKS = 10;
+
+/** A whole number: stepped, picked from the first few, or typed. */
+function NumberPick({ req, answer }: { req: NumberRequest; answer: Answer }) {
+  const top = req.max ?? 999_999_999;
+  const [typed, setTyped] = useState(String(req.min));
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    input.current?.select();
+  }, []);
+  const parsed = parseInt(typed, 10);
+  const value = Number.isNaN(parsed) ? req.min : Math.max(req.min, Math.min(top, parsed));
+  const set = (n: number) => setTyped(String(Math.max(req.min, Math.min(top, n))));
+  const quick = Array.from({ length: Math.min(QUICK_PICKS, top - req.min + 1) }, (_, i) => req.min + i);
+  return (
+    <>
+      <div class="number-step">
+        <button type="button" aria-label={t('lblWebDialogOneLess')} disabled={value <= req.min} onClick={() => set(value - 1)}>&minus;</button>
+        <input ref={input} type="number" inputMode="numeric" min={req.min} max={req.max} value={typed} onInput={e => setTyped(e.currentTarget.value)}
+          onBlur={() => set(value)} onKeyDown={e => { if (e.key === 'Enter') answer(value); }} />
+        <button type="button" aria-label={t('lblWebDialogOneMore')} disabled={value >= top} onClick={() => set(value + 1)}>+</button>
+      </div>
+      <div class="number-quick">
+        {quick.map(n => <button key={n} type="button" class={n === value ? 'picked' : ''} onClick={() => set(n)}>{n}</button>)}
+      </div>
+      <ButtonRow>
+        {req.maySkip && <Button onClick={() => answer(null)}>{t('lblCancel')}</Button>}
+        <Button primary onClick={() => answer(value)}>{t('lblWebDialogConfirm')}</Button>
+      </ButtonRow>
     </>
   );
 }

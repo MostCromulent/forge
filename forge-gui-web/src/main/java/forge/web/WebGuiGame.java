@@ -80,6 +80,8 @@ public class WebGuiGame extends NetworkGuiGame {
     private final PromptState prompt = new PromptState(this::send);
     /** Something the player would want to see has happened since they last held priority or watched a pass. */
     private volatile boolean unseen;
+    /** A number the browser gave that the list it was picked from did not hold, kept for the typed prompt that follows. */
+    private Integer typedNumber;
     // Zones are shown and hidden from the dispatch thread and replayed to a reloading browser from the socket thread
     private final Object zonesLock = new Object();
     private final Map<String, ShownZone> shownZones = new LinkedHashMap<>();
@@ -712,10 +714,45 @@ public class WebGuiGame extends NetworkGuiGame {
             return new ArrayList<>();
         }
         final int need = Math.min(Math.max(min, 0), choices.size());
+        final List<T> number = max == 1 ? askNumber(message, need == 0, choices) : null;
+        if (number != null) {
+            return number;
+        }
         // Spells being chosen are already drawn on the stack, so they are picked there rather than from a list
         final ChoicesRequest request = choicesRequest(ChoiceKind.choices, message, need, max, choices, selected, display,
                 stackKeysFor(choices), null, Answers.range(0, need));
         return Answers.pick(choices, ask(request, Answers.indexList(choices.size(), need, max)));
+    }
+
+    /** Asks for a number when the choices count up by one, with or without a last entry for any number past them; null when they do not. */
+    private <T> List<T> askNumber(final String message, final boolean maySkip, final List<T> choices) {
+        final int last = choices.size() - 1;
+        final boolean open = last > 0 && choices.get(last) instanceof String;
+        final int count = open ? last : choices.size();
+        if (count < 2 || !(choices.get(0) instanceof Integer first)) {
+            return null;
+        }
+        for (int i = 1; i < count; i++) {
+            if (!Integer.valueOf(first + i).equals(choices.get(i))) {
+                return null;
+            }
+        }
+        final Integer top = open ? null : Integer.valueOf(first + count - 1);
+        final JsonElement reply = ask(new NumberRequest(message, first, top, maySkip, maySkip ? null : first), v -> {
+            if (v.isJsonNull()) {
+                return maySkip;
+            }
+            return v.isJsonPrimitive() && v.getAsString().matches("-?\\d{1,9}") && v.getAsInt() >= first && (open || v.getAsInt() <= top);
+        });
+        if (reply.isJsonNull()) {
+            return new ArrayList<>();
+        }
+        final int n = reply.getAsInt();
+        if (n - first < count) {
+            return Lists.newArrayList(choices.get(n - first));
+        }
+        typedNumber = n;
+        return Lists.newArrayList(choices.get(last));
     }
 
     /** The stack item each choice is, in the same order, or null unless every choice is a spell on the stack. */
@@ -824,6 +861,11 @@ public class WebGuiGame extends NetworkGuiGame {
 
     @Override
     public String showInputDialog(final String message, final String title, final FSkinProp icon, final String initialInput, final List<String> inputOptions, final boolean isNumeric) {
+        if (isNumeric && typedNumber != null) {
+            final String typed = typedNumber.toString();
+            typedNumber = null;
+            return typed;
+        }
         if (inputOptions != null && !inputOptions.isEmpty()) {
             return inputOptions.get(askOption(title, message, null, inputOptions, Math.max(0, inputOptions.indexOf(initialInput))));
         }

@@ -473,6 +473,12 @@ final class ToBrowser {
             @Name("default") @Nullable String defaultAnswer) {
     }
 
+    /** A whole number from min up, to max when there is one; null picks none when maySkip allows it. */
+    @Request("number")
+    record NumberRequest(@Nullable String message, int min, @Nullable Integer max, boolean maySkip,
+            @Name("default") @Nullable Integer defaultAnswer) {
+    }
+
     /** Divide an amount among the options; null skips when maySkip allows it. */
     @Request("distribute")
     record DistributeRequest(@Nullable String message, int amount, int perMin, List<RequestOption> options, @Nullable Ref card,

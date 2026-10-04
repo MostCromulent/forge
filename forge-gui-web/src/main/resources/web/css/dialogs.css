@@ -80,6 +80,15 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
+/* A number is set large between its two steps, with the first few a click away */
+.dialog .number-step { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.dialog .number-step button { width: 44px; height: 44px; padding: 0; border-radius: 50%; font-size: 22px; line-height: 1; }
+.dialog .number-step input { width: 3.2ch; box-sizing: content-box; padding: 0 6px; background: none; border: 0; border-bottom: 2px solid var(--line-bright); border-radius: 0;
+  font-size: 44px; font-weight: 600; line-height: 1.1; text-align: center; font-variant-numeric: tabular-nums; appearance: textfield; }
+.dialog .number-step input::-webkit-inner-spin-button, .dialog .number-step input::-webkit-outer-spin-button { appearance: none; }
+.dialog .number-quick { display: grid; grid-template-columns: repeat(10, minmax(34px, 1fr)); gap: 6px; }
+.dialog .number-quick button { padding: 6px 0; font-variant-numeric: tabular-nums; }
+.dialog .number-quick .picked { background: var(--brass); color: var(--on-brass); box-shadow: none; }
 .sb-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; min-width: min(80vw, 760px); }
 .sb-columns h4 { margin: 0 0 6px; }
 .sb-list { display: grid; gap: 4px; max-height: 60vh; overflow: auto; padding-right: 4px; }

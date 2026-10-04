@@ -254,6 +254,11 @@ html[data-form="portrait"] .zone-panel :is(button, input, select) { min-height: 
 html[data-form="portrait"] :is(#dialog-layer .backdrop:not(.anchored), .reveal-back) { inset: 0 0 var(--dock-h, 110px) 0; align-items: end; place-items: end stretch; padding: 0; }
 html[data-form="portrait"] #dialog-layer .dialog { width: 100%; max-width: none; margin: 0; max-height: 100%; border-radius: 16px 16px 0 0; border-width: 1px 0 0; padding: 16px 12px; box-sizing: border-box; }
 html[data-form="portrait"] #dialog-layer .dialog button { min-height: 44px; }
+html[data-form="portrait"] .dialog .number-step { gap: 22px; }
+html[data-form="portrait"] .dialog .number-step button { width: 56px; height: 56px; font-size: 26px; }
+html[data-form="portrait"] .dialog .number-quick { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+html[data-form="portrait"] #dialog-layer .dialog .number-quick button { min-height: 48px; font-size: 16px; }
+html[data-form="portrait"] .dialog .number-quick + .actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 html[data-form="portrait"] .reveal-panel { width: 100%; max-height: 86%; border-radius: 16px 16px 0 0; }
 html[data-form="portrait"] #dialog-layer .game-menu { max-height: calc(100dvh - var(--dock-h, 110px) - 40px); }
 
