@@ -5,6 +5,8 @@ import { byId, q } from './dom';
 const open = new Map<string, () => void>();
 let inMatch = false;
 let leaving = false;
+/** Steps back this module took itself, to give a closed sheet's entry back, which are not the player pressing Back. */
+let ownSteps = 0;
 
 /** A match holds one history entry of its own, so Back with nothing open asks before it leaves the page. */
 export function matchHistory(now: boolean): void {
@@ -23,6 +25,10 @@ export function initSheets(): void {
     setTimeout(() => { leaving = false; }, 500);
   };
   addEventListener('popstate', () => {
+    if (ownSteps > 0) {
+      ownSteps--;
+      return;
+    }
     const last = [...open.keys()].pop();
     if (last === undefined) {
       if (inMatch && !leaving) {
@@ -46,7 +52,10 @@ export function sheet(id: string, isOpen: boolean, close: () => void): void {
     open.set(id, close);
   } else if (open.has(id)) {
     open.delete(id);
-    if (history.state?.sheet === id) history.back();
+    if (history.state?.sheet === id) {
+      ownSteps++;
+      history.back();
+    }
   }
 }
 

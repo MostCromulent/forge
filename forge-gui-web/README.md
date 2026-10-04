@@ -4,7 +4,8 @@ Play Forge in a web browser. One computer runs Forge as a small server; everyone
 browser. Friends install nothing: you send them a link.
 
 The interface aims to be modern and easy to pick up, and leaves out much of desktop Forge's detailed customisation.
-It is built for a computer with a mouse and keyboard; phones and tablets aren't supported yet.
+It is built for a computer with a mouse and keyboard. Matches can also be played on a phone or tablet held upright;
+the deck editor, Draft, Sealed and Conquest have no phone layout yet.
 
 <p>
   <img src="docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">

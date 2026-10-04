@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { act, board, finderWithOwnDeck, lobby, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
+import { act, board, lobby, passUntil, probe, setState, PHONE, SMALL_PHONE, type Probe, type Table } from './probe';
 import { enterName, hold } from './steps';
 
 // A board set up through dev mode sometimes lands a moment late on a busy machine, and a tap or hold made meanwhile goes nowhere
@@ -379,4 +379,36 @@ probe('the start page and the deck editor do not scroll sideways on a phone', as
   await enterName(p.page, 'Alice');
   await expect(p.page.locator('[data-mode=play]')).toBeVisible();
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+}, PHONE);
+
+probe('a turn is played by touch: a land from the drawer, then an attack', async p => {
+  await settledBoard(p, 'humanhand=Forest;Giant Growth\nhumanbattlefield=Forest;Grizzly Bears\naibattlefield=Mountain');
+  for (const button of ['#prompt .ok', '#prompt .cancel']) {
+    const at = await box(p.page, button);
+    expect(at.y).toBeGreaterThanOrEqual(0);
+    expect(at.y + at.height).toBeLessThanOrEqual(664);
+  }
+  await p.page.locator('#hand').tap();
+  await p.page.locator('#hand.sheet .card', { hasText: 'Forest' }).tap();
+  await p.until('the land is on the battlefield', () => document.querySelectorAll('#hand .card').length === 1);
+  if (await p.page.locator('#hand.sheet').count()) await p.page.locator('#hand-head .close').tap();
+  await passUntil(p, 'attackers are asked for', () => {
+    const m = window.forge.model;
+    return (m.objects.get(m.root) as { Phase?: string } | undefined)?.Phase === 'COMBAT_DECLARE_ATTACKERS' && !!m.prompt?.ok?.enabled;
+  });
+  await p.page.locator('#me .battlefield .card', { hasText: 'Grizzly Bears' }).tap();
+  await expect(p.page.locator('#me .card.attacking')).toHaveCount(1);
+  await p.page.locator('#prompt .ok').tap();
+  await passUntil(p, 'the attack lands', () => [...window.forge.model.objects.values()].some(o => (o as { IsAI?: boolean }).IsAI && (o as { Life?: number }).Life === 18));
+  expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await expect(p.page.locator('#zoom.placed')).toHaveCount(0);
+}, PHONE);
+
+probe('closing a sheet by its own button does not ask to leave the match', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Grizzly Bears');
+  await p.page.locator('#opponent .card').first().tap();
+  await p.page.locator('#zoom.sheet .sheet-close').tap();
+  await expect(p.page.locator('#zoom.sheet')).toHaveCount(0);
+  await p.page.waitForTimeout(400);
+  await expect(p.page.locator('#leave-ask')).toBeHidden();
 }, PHONE);
