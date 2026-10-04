@@ -436,7 +436,10 @@ final class ServerConsole implements IProgressBar {
                 row(stack(new JLabel(TEXT.getMessage("lblWebImagesTitle")), muted(TEXT.getMessage("lblWebConsoleImagesAbout"))),
                         Box.createHorizontalGlue(), imagesButton),
                 quitWhenEmpty);
-        main.add(row(Box.createHorizontalGlue(), detailsToggle));
+        final JPanel foot = row(Box.createHorizontalGlue(), detailsToggle);
+        // A row left centred would push every left-aligned one in by half its width
+        foot.setAlignmentX(0f);
+        main.add(foot);
 
         // A styled pane so errors and warnings can stand out, and it wraps long lines because a stack trace is wider than the window
         text = new JTextPane();
