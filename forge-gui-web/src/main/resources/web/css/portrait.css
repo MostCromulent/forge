@@ -75,7 +75,7 @@ html[data-form="portrait"] .zones-pill.more::after { content: '+'; color: var(--
 html[data-form="portrait"] #match .seat .zones-pill.lit { box-shadow: inset 0 0 0 1px var(--select), 0 0 8px color-mix(in srgb, var(--select) 45%, transparent); }
 html[data-form="portrait"] #match .seat .zones-pill[aria-expanded="true"] { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--accent-2); }
 html[data-form="portrait"] #match .seat .zone-tiles { display: none; }
-html[data-form="portrait"] #match .seat.zones-open .zone-tiles { --tile-w: 62px; display: grid; position: absolute; left: 0; top: calc(100% + 4px); z-index: 28; gap: 6px; padding: 8px; max-width: calc(100vw - 12px); box-sizing: border-box; overflow-x: auto;
+html[data-form="portrait"] #match .seat.zones-open .zone-tiles { --tile-w: 56px; display: grid; position: absolute; left: 0; top: calc(100% + 4px); z-index: 28; gap: 5px; padding: 6px; max-width: calc(100vw - 12px); box-sizing: border-box; overflow-x: auto;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 12px; box-shadow: 0 12px 34px #000c; }
 html[data-form="portrait"] #match #me.zones-open .zone-tiles { top: auto; bottom: calc(100% + 4px); }
 html[data-form="portrait"] #match .seat.zones-open .zone-tile { height: calc(var(--tile-w) * 1.4); }
@@ -98,9 +98,9 @@ html[data-form="portrait"] #hand.strip .card .cost-badge .sym { width: 12px; hei
 html[data-form="portrait"] #hand::before { display: none; }
 html[data-form="portrait"] #hand.strip .card { pointer-events: none; }
 #hand-head { display: none; }
-/* Open, it is a drawer: three cards to a row, at a size that can be read, under a line saying what is on the stack */
-html[data-form="portrait"] #match #hand.sheet { --hand-w: min(105px, 28vw); --hand-h: calc(var(--hand-w) * 88 / 63 * 1); height: auto; max-height: calc((100dvh - var(--dock-h, 110px)) * .6); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  justify-items: center; align-items: start; gap: 26px 8px; padding: 64px 12px 12px; overflow-y: auto; }
+/* Open, it is a drawer: four cards to a row, so a full hand shows at once, under a line saying what is on the stack */
+html[data-form="portrait"] #match #hand.sheet { --hand-w: calc((100vw - 48px) / 4); --hand-h: calc(var(--hand-w) * 88 / 63); height: auto; max-height: calc((100dvh - var(--dock-h, 110px)) * .6); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  justify-items: center; align-items: start; gap: 24px 8px; padding: 64px 12px 12px; overflow-y: auto; }
 html[data-form="portrait"] #hand.sheet .card { margin: 0; transform: none; }
 html[data-form="portrait"] #hand.sheet .card::after { content: none; }
 html[data-form="portrait"] #hand-head:not([hidden]) { display: flex; align-items: center; gap: 8px; position: fixed; left: 0; right: 0; z-index: 51; height: 44px; padding: 0 8px 0 16px; box-sizing: border-box; }
@@ -381,3 +381,16 @@ html[data-form="portrait"] #prompt.blocked :is(.ok, .cancel, .prompt-body) { dis
 html[data-form="portrait"] #dialog-layer .dialog .ordered { gap: 30px 6px; justify-content: flex-start; }
 html[data-form="portrait"] #dialog-layer .dialog .ordered .card { --fit: 1; width: calc((100vw - 56px) / 4); height: calc((100vw - 56px) / 4 * 88 / 63); }
 html[data-form="portrait"] #dialog-layer .dialog .order-move :is(.earlier, .later) { width: 64px; height: 44px; }
+
+/* A card drawn without its picture is sized as the hand's cards are, so its words stay inside it */
+html[data-form="portrait"] #hand .card { --card-w: var(--hand-w); --fit: 1; }
+/* An attacker steps a short way forward, into the room its half keeps by the strip */
+html[data-form="portrait"] #match .slot.attacking { --advance: 5px; }
+html[data-form="portrait"] #match .slot.attacking:has(> .card.tapped:last-child) { --advance: calc(5px + (var(--card-h) - var(--card-w) * .9) / 2 * var(--fit, 1)); }
+/* A zone's sheet says in full what is asked, so the dock does not say its name again */
+html[data-form="portrait"] #match:has(#zones:not([hidden]):not(.minimised) .zone-hint:not(:empty)) #prompt.blocked .step { visibility: hidden; }
+/* Cards put up only to be seen: the title and Show board share the head, and a lone heading over them is left out */
+html[data-form="portrait"] .reveal-panel header { flex-wrap: nowrap; align-items: flex-start; }
+html[data-form="portrait"] .reveal-panel header .zone-who { flex: 1; min-width: 0; }
+html[data-form="portrait"] .reveal-panel header .zone-count { display: none; }
+html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }

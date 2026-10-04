@@ -123,7 +123,11 @@ function drawDrawer(root: HTMLElement, model: Model, held: CardView[], count: nu
   sheet('hand', open, closeDrawer);
   if (portrait) root.setAttribute('aria-label', t('lblWebPortraitHandTitle', count));
   else root.removeAttribute('aria-label');
-  if (!open) return false;
+  // The drawer scrolls, and the strip must not keep where it was scrolled to
+  if (!open) {
+    root.scrollTop = 0;
+    return false;
+  }
   q(head, 'b').textContent = `${t('lblWebPortraitHand')} ${count}`;
   // What is about to resolve is said here, since the drawer covers the stack
   const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];

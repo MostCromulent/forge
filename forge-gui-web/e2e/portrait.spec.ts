@@ -192,7 +192,7 @@ probe('the hand opens as a drawer, a card is played from it, and it closes for t
   const dock = await box(p.page, '#prompt');
   expect(Math.round(drawer.y + drawer.height)).toBeLessThanOrEqual(Math.round(dock.y) + 1);
   const bolt = p.page.locator('#hand .card', { hasText: 'Lightning Bolt' });
-  expect((await bolt.boundingBox())!.width).toBeGreaterThanOrEqual(90);
+  expect((await bolt.boundingBox())!.width).toBeGreaterThanOrEqual(75);
   await bolt.tap();
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
   await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
@@ -655,3 +655,18 @@ for (const [name, device] of [['a phone', PHONE], ['a desktop', undefined]] as c
     await expect(p.page.locator('#dialog-layer .dialog')).toHaveCount(0);
   }, device);
 }
+
+probe('a drawer scrolled to its end leaves the strip showing the tops of the cards', async p => {
+  await settledBoard(p, 'humanhand=Counterspell;Death Stroke;Giant Growth;Hill Giant;Shock;Island;Swamp;Forest;Mountain;Plains;Grizzly Bears;Lightning Bolt;Craw Wurm\nhumanbattlefield=Island\naibattlefield=Mountain');
+  await p.page.locator('#hand').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  // Every card of a large hand is on show at once or within a scroll
+  expect((await p.page.locator('#hand.sheet .card').first().boundingBox())!.width).toBeLessThan(95);
+  await p.page.evaluate(() => { document.getElementById('hand')!.scrollTop = 9999; });
+  await p.page.locator('#hand-head .close').tap();
+  await expect(p.page.locator('#hand.strip')).toBeVisible();
+  await p.page.waitForTimeout(300);
+  const hand = await box(p.page, '#hand');
+  const cost = (await p.page.locator('#hand .card .cost-badge:not(:empty)').first().boundingBox())!;
+  expect(cost.y).toBeGreaterThanOrEqual(hand.y);
+}, PHONE);

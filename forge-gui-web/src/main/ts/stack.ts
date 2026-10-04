@@ -90,7 +90,7 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     const paying = top ? '' : [...awaiting.values()][0]?.name ?? '';
     q(root, '.head b').textContent = top
       ? `${t('lblStack')} \u00b7 ${t('lblWebPortraitStackTop', source ? stateOf(model, source).Name ?? '' : '', deref(model, top.ActivatingPlayer)?.Name ?? '')}`
-      : paying ? `${t('lblStack')} \u00b7 ${paying}` : t('lblStack');
+      : paying ? `${t('lblStack')} \u00b7 ${t('lblWebPortraitStackTop', paying, me(model)?.Name ?? '')}` : t('lblStack');
     // The dock is drawn after this and can change height, which moves the strip the chip sits on
     requestAnimationFrame(() => place(root));
     // Over whichever half of the board holds fewer of the top item's targets, so they stay in view; with nothing to choose
