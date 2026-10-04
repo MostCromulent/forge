@@ -422,7 +422,7 @@ final class ServerConsole implements IProgressBar {
 
         final JPanel main = new JPanel();
         main.setLayout(new BoxLayout(main, BoxLayout.PAGE_AXIS));
-        main.setBorder(BorderFactory.createEmptyBorder(14, 18, 12, 18));
+        main.setBorder(BorderFactory.createEmptyBorder(16, 30, 14, 30));
         section(main, step(1), row(light, Box.createHorizontalStrut(9), stack(state, keepOpen), Box.createHorizontalGlue(), startStop), progress, startHelp);
         section(main, step(2), row(stack(heading(TEXT.getMessage("lblPlay")), wrapped(TEXT.getMessage("lblWebConsolePlayAbout"), UIManager.getColor("Label.disabledForeground"), TEXT_WIDTH - 150)),
                 Box.createHorizontalGlue(), browse));
