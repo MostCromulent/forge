@@ -12,7 +12,11 @@ let swallowClick = false;
 /** A pointer that can rest over something without pressing it. A phone has none, whatever events its browser makes up. */
 export const hovers = (e: PointerEvent): boolean => e.pointerType === 'mouse' && matchMedia('(any-hover: hover)').matches;
 
-export const isTouch = (e: Event | undefined): boolean => (e as PointerEvent | undefined)?.pointerType === 'touch';
+/** A click says what made it on most browsers; where it does not, the press before it does. */
+export const isTouch = (e: Event | undefined): boolean => {
+  const type = (e as PointerEvent | undefined)?.pointerType;
+  return type ? type === 'touch' : !!e && performance.now() - touchEnded < AFTER_TOUCH_MS;
+};
 
 export function initPress(): void {
   const lifted = (e: PointerEvent) => {

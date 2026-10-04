@@ -412,3 +412,45 @@ probe('closing a sheet by its own button does not ask to leave the match', async
   await p.page.waitForTimeout(400);
   await expect(p.page.locator('#leave-ask')).toBeHidden();
 }, PHONE);
+
+probe('a card in an open graveyard can be read, and the graveyard stays open under it', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\nhumangraveyard=Grizzly Bears;Hill Giant\naibattlefield=Mountain');
+  await p.page.locator('#me .zones-pill').tap();
+  await p.page.locator('#me .zone-tile[data-zone="Graveyard"]').tap();
+  const card = p.page.locator('#zones .zone-panel .card', { hasText: 'Hill Giant' });
+  await expect(card).toBeVisible();
+  await hold(p.page, card);
+  await expect(p.page.locator('#zoom.sheet .name')).toHaveText('Hill Giant');
+  await p.page.locator('#zoom.sheet .sheet-close').tap();
+  await expect(p.page.locator('#zones .zone-panel')).toBeVisible();
+}, PHONE);
+
+probe('a swipe down from a sheet\'s handle closes it', async p => {
+  await settledBoard(p, 'humanhand=Forest;Giant Growth\nhumanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.locator('#hand').tap();
+  await expect(p.page.locator('#hand.sheet')).toBeVisible();
+  const head = await box(p.page, '#hand-head');
+  const x = Math.round(head.x + 60);
+  const y = Math.round(head.y + 12);
+  const cdp = await p.page.context().newCDPSession(p.page);
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  for (const dy of [30, 70, 110]) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + dy }] });
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await expect(p.page.locator('#hand.sheet')).toHaveCount(0);
+}, PHONE);
+
+probe('after a reload in a match, Leave still leaves', async p => {
+  await settledBoard(p, 'humanbattlefield=Forest\naibattlefield=Mountain');
+  await p.page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(p.page.locator('#prompt .ok')).toBeVisible();
+  const depth = await p.page.evaluate(() => history.length);
+  await p.page.goBack();
+  await expect(p.page.locator('#leave-ask')).toBeVisible();
+  // Asking costs no history: staying and asking again does not pile entries up
+  await p.page.locator('#leave-ask .stay').tap();
+  await p.page.goBack();
+  await expect(p.page.locator('#leave-ask')).toBeVisible();
+  expect(await p.page.evaluate(() => history.length)).toBeLessThanOrEqual(depth);
+  await p.page.locator('#leave-ask .leave').tap();
+  await expect.poll(() => p.page.url()).not.toContain(new URL(p.server.url).host);
+}, PHONE);

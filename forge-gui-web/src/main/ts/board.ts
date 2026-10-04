@@ -64,14 +64,15 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   byId('match').classList.toggle('picking', !!p && !p.paying
     && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
-  const picking = byId('match').classList.contains('picking');
-  const mine = me(model)?.$key;
   const select: CardClick = (el, menu, e) => {
     const key = Number(el.dataset.key);
     if (isTouch(e) && !menu) {
       if (repeatTap(key, performance.now())) return;
+      // Read as the tap lands: a card keeps the handler it was made with, long after the question of that moment
       const card = model.objects.get(key) as CardView | undefined;
-      if (tapInspects({ playable: el.classList.contains('playable'), selectable: el.classList.contains('selectable'), mine: card?.Controller?.ref === mine }, picking)) {
+      const tapped = { playable: el.classList.contains('playable'), selectable: el.classList.contains('selectable'),
+        mine: card?.Controller?.ref === me(model)?.$key, attacking: !!card?.Attacking };
+      if (tapInspects(tapped, byId('match').classList.contains('picking'), game(model)?.Phase)) {
         inspectCard(el);
         return;
       }

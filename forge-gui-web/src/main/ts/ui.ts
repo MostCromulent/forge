@@ -76,7 +76,7 @@ export interface UiState {
   /** On a phone, the player whose zones are open from their bar, where only the counts are kept on show. */
   zonesFor: number | null;
   /** The phone's menu sheet, and which of its tabs shows. */
-  menuSheet: 'log' | 'chat' | 'zones' | 'players' | null;
+  menuSheet: 'log' | 'chat' | 'players' | null;
 }
 
 const SIDE_KEY = 'forge.sidePanels';

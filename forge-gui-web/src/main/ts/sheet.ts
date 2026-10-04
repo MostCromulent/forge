@@ -10,18 +10,35 @@ let ownSteps = 0;
 
 /** A match holds one history entry of its own, so Back with nothing open asks before it leaves the page. */
 export function matchHistory(now: boolean): void {
-  if (now && !inMatch) history.pushState({ match: true }, '');
+  // A reload keeps the entry the match already had
+  if (now && !inMatch && !history.state?.match) history.pushState({ match: true }, '');
+  if (!now && inMatch) {
+    // Given back with the match, so the page it returns to has no Back press that goes nowhere
+    open.clear();
+    if (history.state?.match) step();
+  }
   inMatch = now;
+}
+
+/** A step back this module takes itself, which the Back handler must not take for the player's. */
+function step(): void {
+  ownSteps++;
+  history.back();
 }
 
 export function initSheets(): void {
   const ask = byId('leave-ask');
-  q(ask, '.stay').onclick = () => { ask.hidden = true; };
+  // Staying puts back the entry that Back took, so the next Back asks again
+  q(ask, '.stay').onclick = () => {
+    ask.hidden = true;
+    if (inMatch && !history.state?.match) history.pushState({ match: true }, '');
+  };
   // Leaving is what Back would have done: out past the entry the match holds
   q(ask, '.leave').onclick = () => {
     ask.hidden = true;
     leaving = true;
-    history.go(-2);
+    // Back was already taken once to get here, so one more step is the page before this one
+    history.back();
     setTimeout(() => { leaving = false; }, 500);
   };
   addEventListener('popstate', () => {
@@ -30,11 +47,13 @@ export function initSheets(): void {
       return;
     }
     const last = [...open.keys()].pop();
+    // An entry left by a sheet that closed while another was above it holds nothing, so Back passes through it
+    if (history.state?.sheet && !open.has(history.state.sheet)) {
+      step();
+    }
     if (last === undefined) {
-      if (inMatch && !leaving) {
-        history.pushState({ match: true }, '');
-        ask.hidden = false;
-      }
+      // The match's own entry was just left; the question stands in front of the step that leaves the page
+      if (inMatch && !leaving && !history.state?.match) ask.hidden = false;
       return;
     }
     const close = open.get(last);
@@ -52,30 +71,21 @@ export function sheet(id: string, isOpen: boolean, close: () => void): void {
     open.set(id, close);
   } else if (open.has(id)) {
     open.delete(id);
-    if (history.state?.sheet === id) {
-      ownSteps++;
-      history.back();
-    }
+    if (history.state?.sheet === id) step();
   }
 }
-
-export function closeSheets(except?: string): void {
-  for (const [id, close] of [...open]) {
-    if (id !== except) close();
-  }
-}
-
-export const anySheet = (): boolean => open.size > 0;
 
 /** A swipe down from a sheet's handle closes it; lower down, the same swipe scrolls what the sheet holds. */
 export function swipeDown(el: HTMLElement, close: () => void): void {
-  el.addEventListener('pointerdown', e => {
-    if (e.pointerType !== 'touch' || e.clientY - el.getBoundingClientRect().top > 48) return;
-    const from = e.clientY;
-    const up = (ev: PointerEvent) => {
-      document.removeEventListener('pointerup', up);
-      if (ev.clientY - from > 60) close();
-    };
-    document.addEventListener('pointerup', up);
+  // Touch events, since a browser that takes a drag for a scroll cancels the pointer and never says where it lifted
+  let from: number | null = null;
+  el.addEventListener('touchstart', e => {
+    const y = e.touches[0].clientY;
+    from = y - el.getBoundingClientRect().top <= 48 ? y : null;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (from !== null && e.changedTouches[0].clientY - from > 60) close();
+    from = null;
   });
+  el.addEventListener('touchcancel', () => { from = null; });
 }

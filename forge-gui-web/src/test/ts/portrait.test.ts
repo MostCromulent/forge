@@ -16,6 +16,13 @@ describe('tapInspects', () => {
   it('sends the tap while a prompt is choosing cards', () => {
     expect(tapInspects(card, true)).toBe(false);
   });
+  it('sends the tap on an attacker, which is how one is picked to block', () => {
+    expect(tapInspects({ ...card, attacking: true }, false)).toBe(false);
+  });
+  it("sends the tap while attackers are declared, when an opponent's planeswalker can be picked to attack", () => {
+    expect(tapInspects(card, false, 'COMBAT_DECLARE_ATTACKERS')).toBe(false);
+    expect(tapInspects(card, false, 'MAIN1')).toBe(true);
+  });
 });
 
 describe('repeatTap', () => {

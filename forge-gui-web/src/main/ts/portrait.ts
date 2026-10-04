@@ -1,8 +1,11 @@
 // Decisions the phone layout makes, kept apart from the page so they can be tested without one.
 
-/** Whether a tap on a card opens its details and sends nothing: only when the tap could not have done anything. */
-export function tapInspects(card: { playable: boolean; selectable: boolean; mine: boolean }, picking: boolean): boolean {
-  return !card.playable && !card.selectable && !card.mine && !picking;
+/**
+ * Whether a tap on a card opens its details and sends nothing: only when the tap could not have done anything.
+ * In combat a tap picks the attacker to block, or the planeswalker to attack, and the host marks neither as selectable.
+ */
+export function tapInspects(card: { playable: boolean; selectable: boolean; mine: boolean; attacking?: boolean }, picking: boolean, phase?: string): boolean {
+  return !card.playable && !card.selectable && !card.mine && !card.attacking && !picking && phase !== 'COMBAT_DECLARE_ATTACKERS';
 }
 
 const REPEAT_MS = 350;

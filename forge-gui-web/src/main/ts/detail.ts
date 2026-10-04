@@ -10,7 +10,7 @@ import type { Actions } from './actions';
 import { deref, stateOf, type Model } from './model';
 import { isAiming } from './overlay';
 import { hovers } from './press';
-import { closeSheets, sheet, swipeDown } from './sheet';
+import { sheet, swipeDown } from './sheet';
 import type { CardFace, CardView, KeywordText, PlayerDetail, PlayerView } from './protocol';
 import { t, type TextKey } from './text';
 
@@ -90,14 +90,12 @@ function showCard(el: HTMLElement): void {
 export function inspectCard(el: HTMLElement): void {
   if (!el.dataset.zoom && !el.dataset.key) return;
   clearTimeout(opening);
-  closeSheets('detail');
   showCard(el);
   changeUi(u => { u.inspect = true; });
 }
 
 export function inspectPlayer(key: number): void {
   clearTimeout(opening);
-  closeSheets('detail');
   changeUi(u => { u.hover = { player: key }; u.faceIndex = 0; u.inspect = true; });
   actions?.inspectPlayer(key);
 }
