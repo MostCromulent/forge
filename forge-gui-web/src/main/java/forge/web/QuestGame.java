@@ -611,6 +611,21 @@ final class QuestGame implements Campaign {
         return using;
     }
 
+    /** A card's key in a trade: its printing, and whether it is foil, which the image key does not say and the price does. */
+    private static String key(final PaperCard card) {
+        return card.getImageKey(false) + (card.isFoil() ? "|foil" : "");
+    }
+
+    private static int copies(final ItemPool<? extends InventoryItem> pool) {
+        int n = 0;
+        for (final Map.Entry<? extends InventoryItem, Integer> e : pool) {
+            if (e.getKey() instanceof PaperCard) {
+                n += e.getValue();
+            }
+        }
+        return n;
+    }
+
     private static List<PaperCard> cardsIn(final ItemPool<? extends InventoryItem> pool) {
         final List<PaperCard> cards = new ArrayList<>();
         pool.forEach(e -> {
@@ -632,10 +647,10 @@ final class QuestGame implements Campaign {
         final Map<PaperCard, Integer> using = shop ? Map.of() : decksUsing();
         final CataloguePage page = CardCatalog.of(shop ? cardsIn(stock) : cardsIn(owned)).query(q.request(), new CardCatalog.Query(q.text(),
                 q.colours(), q.type(), q.filters(), q.sort(), q.offset(), true), c -> null, null, name -> 0, c -> shop
-                ? new CardCatalog.Extra(null, QuestSpellShop.getCardValue(c), stock.count(c), owned.count(c), null)
+                ? new CardCatalog.Extra(null, QuestSpellShop.getCardValue(c), stock.count(c), owned.count(c), null, key(c))
                 : new CardCatalog.Extra(quest().getCards().isNew(c) ? Boolean.TRUE : null, salePrice(c, multiplier), owned.count(c), null,
                         !using.containsKey(c) ? null : using.get(c) == 1 ? Localizer.getInstance().getMessage("lblWebQuestInOneDeck")
-                        : Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c))));
+                        : Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c)), key(c)));
         // The page says which list it is of, so the browser never shows one list's cards as another's
         return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(), q.source());
     }
@@ -662,8 +677,9 @@ final class QuestGame implements Campaign {
         ownedItems.addAllOfType(owned);
         final ItemPool<InventoryItem> extras = QuestSpellShop.extras(ownedItems);
         final List<CatalogueRow> extraRows = CardCatalog.rows(cardsIn(extras),
-                c -> new CardCatalog.Extra(null, salePrice(c, multiplier), extras.count(c), null, null));
-        return new Trading(List.of(new TradeList("shop", cardsIn(stock).size()), new TradeList("inventory", cardsIn(owned).size())), note, null,
+                c -> new CardCatalog.Extra(null, salePrice(c, multiplier), extras.count(c), null, null, key(c)));
+        // Copies, not cards, so that a trade of part of a stack changes them, which is what tells the page its lists changed
+        return new Trading(List.of(new TradeList("shop", copies(stock)), new TradeList("inventory", copies(owned))), note, null,
                 products, extraRows);
     }
 
@@ -703,14 +719,14 @@ final class QuestGame implements Campaign {
         return null;
     }
 
-    /** A card of a list by its image key, or a product by "p:" and its name. */
+    /** A card of a list by its key, or a product by "p:" and its name. */
     private static InventoryItem find(final ItemPool<? extends InventoryItem> pool, final String key) {
         if (key == null) {
             return null;
         }
         for (final Map.Entry<? extends InventoryItem, Integer> e : pool) {
             final InventoryItem item = e.getKey();
-            if (item instanceof PaperCard card ? card.getImageKey(false).equals(key) : ("p:" + item.getName()).equals(key)) {
+            if (item instanceof PaperCard card ? key(card).equals(key) : ("p:" + item.getName()).equals(key)) {
                 return item;
             }
         }

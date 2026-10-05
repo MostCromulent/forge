@@ -31,8 +31,8 @@ final class CardCatalog {
     record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
-    /** What a collection adds to a card's row: whether it is new, its price, how many its list holds, how many the player owns, and a line about it. */
-    record Extra(Boolean isNew, Integer value, Integer count, Integer owned, String note) {
+    /** What a collection adds to a card's row: whether it is new, its price, how many its list holds, how many the player owns, a line about it, and the key a trade names it by when its image key is not enough. */
+    record Extra(Boolean isNew, Integer value, Integer count, Integer owned, String note, String key) {
     }
 
     private record Row(PaperCard card, String normalised, String colours, String cost, int mv, String heading) {
@@ -204,7 +204,7 @@ final class CardCatalog {
         return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
                 row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem,
                 extra == null ? null : extra.isNew(), extra == null ? null : extra.value(), extra == null ? null : extra.count(),
-                extra == null ? null : extra.owned(), extra == null ? null : extra.note());
+                extra == null ? null : extra.owned(), extra == null ? null : extra.note(), extra == null ? null : extra.key());
     }
 
     static String pt(final CardRules rules) {

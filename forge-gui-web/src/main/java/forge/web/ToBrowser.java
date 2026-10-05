@@ -273,7 +273,7 @@ final class ToBrowser {
     /** In a collection, value is what exiling or retrieving the card is worth and problem is why it can't be exiled. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
             String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count,
-            @Nullable Integer owned, @Nullable String note) {
+            @Nullable Integer owned, @Nullable String note, @Nullable String key) {
     }
 
     @Message("cardSearch")

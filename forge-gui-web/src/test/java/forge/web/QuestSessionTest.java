@@ -562,6 +562,41 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(savedDeck(data, "Second deck").getMain().count(sold), 0);
     }
 
+    // Fails if selling one of two copies leaves the lists' sizes as they were, which is what tells the page to read its lists again
+    @Test(timeOut = 120_000)
+    public void aPartialSaleChangesTheListsSizes() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject card = row(listed(host, "inventory"), r -> !"Forest".equals(r.get("name").getAsString()));
+        FModel.getQuest().getCards().getCardpool().add(printing(card), 1);
+        send(host, JsonCodec.message("trading"));
+        final JsonObject before = host.awaitMatching("trading", t -> true, "the lists were not sent");
+        trade(host, "inventory", card.get("key").getAsString(), 1);
+        final JsonObject after = host.awaitMatching("trading", t -> true, "the lists were not sent again");
+        Assert.assertNotEquals(after.get("lists"), before.get("lists"));
+        Assert.assertEquals(FModel.getQuest().getCards().getCardpool().count(printing(card)), 1);
+    }
+
+    // Fails if a foil and a plain copy of one printing cannot be told apart, so selling one sells the other or pays the other's price
+    @Test(timeOut = 120_000)
+    public void aFoilTradesApartFromItsPlainCopy() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final PaperCard plain = printing(row(listed(host, "inventory"), r -> !"Forest".equals(r.get("name").getAsString())));
+        final PaperCard foil = plain.getFoiled();
+        FModel.getQuest().getCards().getCardpool().add(foil, 1);
+        final JsonObject page = listed(host, "inventory");
+        final JsonObject foilRow = row(page, r -> r.get("name").getAsString().equals(plain.getName()) && r.get("key").getAsString().endsWith("foil"));
+        Assert.assertNotEquals(foilRow.get("key"), row(page, r -> r.get("name").getAsString().equals(plain.getName())
+                && !r.get("key").getAsString().endsWith("foil")).get("key"));
+        final long credits = FModel.getQuest().getAssets().getCredits();
+        trade(host, "inventory", foilRow.get("key").getAsString(), 1);
+        host.awaitMatching("trading", t -> true, "the lists were not sent again");
+        Assert.assertEquals(FModel.getQuest().getCards().getCardpool().count(foil), 0);
+        Assert.assertEquals(FModel.getQuest().getCards().getCardpool().count(plain), 1);
+        Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), credits + foilRow.get("value").getAsInt());
+    }
+
     // Fails if a bought booster's cards are not in the pool and sent as a reward to reveal
     @Test(timeOut = 120_000)
     public void aBoughtBoosterIsRevealed() throws Exception {

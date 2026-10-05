@@ -30,7 +30,10 @@ export interface Pick { key: string; name: string; value: number; count: number;
 const amount = (n: number): string => n.toLocaleString('en-GB');
 
 /** A row as a pick of one, up to as many as its list holds. */
-export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: row.image, name: row.name, value: row.value ?? 0, count, most: row.count ?? 1 });
+export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: keyOf(row), name: row.name, value: row.value ?? 0, count, most: row.count ?? 1 });
+
+/** What names a row in a trade: the server's key where its image key is not enough, as for a foil, otherwise its image key. */
+const keyOf = (row: CatalogueRow): string => row.key ?? row.image;
 
 /** Owned copies as a playset of squares, filled for each copy held, and the number beside them. */
 function Owned({ n }: { n: number }) {
@@ -135,9 +138,9 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
       <div class="cq-coll-grid" onScroll={more}>
         {page && page.total === 0 && <p class="none-found">{t('lblWebCatalogueNoMatchHint')}</p>}
         {rows.map(row => {
-          const pick = picked.get(row.image);
+          const pick = picked.get(keyOf(row));
           const card = (
-              <button key={row.image} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
+              <button key={keyOf(row)} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
                 aria-pressed={!!pick} aria-disabled={!!row.problem}
                 onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
                 <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
@@ -150,7 +153,7 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
           // A list that counts copies takes a count for a pick, under the card; any other is the card alone
           if (row.count == null) return card;
           return (
-            <div key={row.image} class="cq-cc-slot">
+            <div key={keyOf(row)} class="cq-cc-slot">
               {card}
               {pick && pick.most > 1 && (
                 <span class="cq-step">
