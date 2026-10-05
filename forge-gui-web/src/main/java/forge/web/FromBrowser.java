@@ -441,6 +441,15 @@ final class FromBrowser {
     record DevConquestWheel(String outcome) {
     }
 
+    /** Chooses a quest's pet for a slot, the plant's being slot 0; null summons none. */
+    @Command("questPet")
+    record QuestPet(int slot, @Nullable String name) {
+    }
+
+    @Command("questMatchLength")
+    record QuestMatchLength(int games) {
+    }
+
     /** Every command record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> COMMANDS = Wire.marked(FromBrowser.class, Command.class);
 }

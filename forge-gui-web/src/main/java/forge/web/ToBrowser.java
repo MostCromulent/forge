@@ -702,6 +702,20 @@ final class ToBrowser {
     record QuestSaves(List<QuestSave> saves, @Nullable String current) {
     }
 
+    /** A duel on offer: its place in the list, which the browser sends back, and a card of the opponent's deck to show as its face. */
+    record QuestDuelRow(int index, String title, int difficulty, String description, String colors, @Nullable String face, boolean random) {
+    }
+
+    /** A pet slot's choice: the owned pets by name, and the one chosen, or null for none. */
+    record QuestPetChoice(int slot, List<String> pets, @Nullable String chosen) {
+    }
+
+    /** The Duels page: the duels, the player's record, the line about the next challenge, the pets and the match lengths the charms allow. */
+    @Message("questDuels")
+    record QuestDuels(List<QuestDuelRow> duels, int wins, int losses, int streak, int bestStreak, @Nullable String nextChallenge,
+            List<QuestPetChoice> pets, List<Integer> matchLengths, int matchLength, String deck, @Nullable String deckProblem) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(ToBrowser.class, Message.class);
 

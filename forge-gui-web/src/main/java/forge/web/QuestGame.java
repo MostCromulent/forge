@@ -1,14 +1,24 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
+import forge.card.CardType;
+import forge.deck.Deck;
 import forge.gamemodes.quest.QuestController;
+import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
+import forge.gamemodes.quest.QuestUtil;
+import forge.gamemodes.quest.bazaar.QuestItemType;
+import forge.gamemodes.quest.bazaar.QuestPetController;
+import forge.gamemodes.quest.data.QuestAchievements;
+import forge.gamemodes.quest.data.QuestAssets;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.game.GameView;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
 import forge.web.FromBrowser.CatalogueQuery;
@@ -28,6 +38,7 @@ import java.util.List;
 /** Holds only what one session knows that the save does not, as the quest itself is Forge's, one for the whole process. */
 final class QuestGame implements Campaign {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
+    private List<QuestEventDuel> duels;
 
     static QuestController quest() {
         return FModel.getQuest();
@@ -88,6 +99,7 @@ final class QuestGame implements Campaign {
             return null;
         }
         quest().load(data);
+        duels = null;
         // As desktop's quest chooser does, so desktop and mobile open the same quest next
         final QuestPreferences prefs = FModel.getQuestPreferences();
         prefs.setPref(QPref.CURRENT_QUEST, file.getName());
@@ -123,7 +135,86 @@ final class QuestGame implements Campaign {
 
     @Override
     public List<Record> page() {
-        return List.of(bar());
+        return List.of(bar(), duelsPage());
+    }
+
+    /** The duels on offer, kept so that an index the browser sends back names the duel it was shown. */
+    private List<QuestEventDuel> duels() {
+        if (duels == null) {
+            final List<QuestEventDuel> made = quest().getDuelsManager().generateDuels();
+            duels = made == null ? List.of() : made;
+        }
+        return duels;
+    }
+
+    private QuestDuels duelsPage() {
+        final QuestController quest = quest();
+        final Localizer text = Localizer.getInstance();
+        final List<QuestDuelRow> rows = new ArrayList<>();
+        final List<QuestEventDuel> offered = duels();
+        for (int i = 0; i < offered.size(); i++) {
+            final QuestEventDuel duel = offered.get(i);
+            // The random opponent is a surprise, so nothing of its deck shows
+            final boolean random = !duel.showDifficulty();
+            rows.add(new QuestDuelRow(i, duel.getTitle(), random ? 0 : duel.getDifficulty().ordinal() + 1, duel.getDescription(),
+                    random ? "" : DeckCatalog.colors(duel.getEventDeck()), random ? null : face(duel.getEventDeck()), random));
+        }
+        final QuestAchievements record = quest.getAchievements();
+        final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
+        final List<QuestPetChoice> pets = new ArrayList<>();
+        final List<Integer> lengths = new ArrayList<>();
+        String next = null;
+        // Pets, the plant, charms and challenges are Fantasy mode's only, as desktop's Duels screen shows them
+        if (fantasy) {
+            for (int slot = 0; slot < QuestController.MAX_PET_SLOTS; slot++) {
+                final List<String> owned = quest.getPetsStorage().getAvaliablePets(slot, quest.getAssets()).stream().map(QuestPetController::getName).toList();
+                if (!owned.isEmpty()) {
+                    pets.add(new QuestPetChoice(slot, owned, quest.getSelectedPet(slot)));
+                }
+            }
+            lengths.addAll(matchLengths());
+            final int wins = QuestUtil.nextChallengeInWins();
+            next = wins == 0 ? text.getMessage("lblnextChallengeInWins0") : wins == 1 ? text.getMessage("lblnextChallengeInWins1")
+                    : text.getMessage("lblnextChallengeInWins2").replace("%n", String.valueOf(wins));
+        }
+        final Deck deck = QuestUtil.getCurrentDeck();
+        String problem = deck == null ? text.getMessage("lblBuildAndSelectaDeck") : null;
+        if (deck != null && FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
+            problem = QuestUtil.getDeckConformanceProblemsBeforeGame(deck);
+        }
+        return new QuestDuels(rows, record.getWin(), record.getLost(), record.getWinStreakCurrent(), record.getWinStreakBest(), next,
+                pets, lengths, quest.getMatchLength(), deck == null ? "" : deck.getName(), problem);
+    }
+
+    /** The match lengths the charms allow: one with the Charm of Vim, five with the Charm of Vigor. */
+    private static List<Integer> matchLengths() {
+        final QuestAssets assets = quest().getAssets();
+        final List<Integer> lengths = new ArrayList<>();
+        if (assets.hasItem(QuestItemType.CHARM_VIM)) {
+            lengths.add(1);
+        }
+        lengths.add(3);
+        if (assets.hasItem(QuestItemType.CHARM)) {
+            lengths.add(5);
+        }
+        return lengths;
+    }
+
+    /** The opponent's creature of highest mana value, else its first spell, as the picture of a duel. */
+    private static String face(final Deck deck) {
+        PaperCard best = null;
+        PaperCard firstSpell = null;
+        for (final PaperCard card : deck.getMain().toFlatList()) {
+            final CardType type = card.getRules().getType();
+            if (firstSpell == null && !type.isLand()) {
+                firstSpell = card;
+            }
+            if (type.isCreature() && (best == null || card.getRules().getManaCost().getCMC() > best.getRules().getManaCost().getCMC())) {
+                best = card;
+            }
+        }
+        final PaperCard face = best != null ? best : firstSpell;
+        return face == null ? null : face.getImageKey(false);
     }
 
     CampaignBar bar() {
@@ -198,5 +289,32 @@ final class QuestGame implements Campaign {
 
     @Override
     public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
+        if (save == null || quest().getAssets() == null) {
+            return;
+        }
+        switch (msg.get("t").getAsString()) {
+            case "questPet" -> {
+                final FromBrowser.QuestPet pet = Wire.decode(msg, FromBrowser.QuestPet.class);
+                // The plant's slot takes only the plant, as desktop's switch sets it; a pet must be one the quest owns
+                final boolean owned = pet.name() == null || quest().getPetsStorage().getAvaliablePets(pet.slot(), quest().getAssets())
+                        .stream().anyMatch(p -> p.getName().equals(pet.name()));
+                if (pet.slot() >= 0 && pet.slot() < QuestController.MAX_PET_SLOTS && owned) {
+                    quest().selectPet(pet.slot(), pet.name());
+                    quest().save();
+                }
+            }
+            case "questMatchLength" -> {
+                final int games = Wire.decode(msg, FromBrowser.QuestMatchLength.class).games();
+                if (quest().getMode() == QuestMode.Fantasy && matchLengths().contains(games)) {
+                    quest().setMatchLength(String.valueOf(games));
+                    quest().save();
+                }
+            }
+            default -> {
+                return;
+            }
+        }
+        // Sent after a refusal too, so the page's control shows the choice that stands
+        channel.send(duelsPage());
     }
 }

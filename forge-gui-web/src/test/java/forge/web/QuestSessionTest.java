@@ -1,9 +1,14 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
+import forge.gamemodes.quest.QuestEventDuel;
+import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
+import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
 import forge.model.FModel;
 import org.testng.Assert;
@@ -12,6 +17,7 @@ import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
 public class QuestSessionTest extends SessionsTest {
@@ -122,6 +128,80 @@ public class QuestSessionTest extends SessionsTest {
         final JsonObject bar = host.awaitNewest("campaignBar", "the bar was not sent");
         Assert.assertEquals(balance(bar, "ICO_QUEST_COINSTACK"), 250);
         Assert.assertEquals(str(bar, "name"), data.getName());
+    }
+
+    /** The save as it is on disk, read as desktop would read it. */
+    private static QuestData saved(final QuestData data) throws IOException {
+        return QuestDataIO.loadData(QuestGame.find(data.getName()));
+    }
+
+    // Fails if the duels the page lists are not the duels manager's, in its order, with the random opponent's title hidden
+    @Test(timeOut = 120_000)
+    public void theDuelsAreTheManagers() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject page = host.awaitNewest("questDuels", "the duels were not sent");
+        final List<QuestEventDuel> expected = FModel.getQuest().getDuelsManager().generateDuels();
+        final JsonArray rows = page.getAsJsonArray("duels");
+        Assert.assertEquals(rows.size(), expected.size());
+        for (int i = 0; i < rows.size(); i++) {
+            final JsonObject row = rows.get(i).getAsJsonObject();
+            final QuestEventDuel duel = expected.get(i);
+            Assert.assertEquals(row.get("index").getAsInt(), i);
+            if (duel.showDifficulty()) {
+                Assert.assertFalse(row.get("random").getAsBoolean());
+                Assert.assertEquals(row.get("title").getAsString(), duel.getTitle());
+                Assert.assertEquals(row.get("difficulty").getAsInt(), duel.getDifficulty().ordinal() + 1);
+                Assert.assertNotNull(str(row, "face"), duel.getTitle() + " has no face");
+            } else {
+                Assert.assertTrue(row.get("random").getAsBoolean());
+                Assert.assertEquals(row.get("difficulty").getAsInt(), 0);
+                Assert.assertNull(str(row, "face"), "the random opponent's deck shows");
+                Assert.assertNotEquals(row.get("title").getAsString(), duel.getOpponentName());
+            }
+        }
+        Assert.assertEquals(page.get("deck").getAsString(), "Forest deck");
+        Assert.assertEquals(page.get("matchLength").getAsInt(), 3);
+    }
+
+    // Fails if the match length chosen is not kept in the save, or a length no charm allows is accepted
+    @Test(timeOut = 120_000)
+    public void theMatchLengthIsLimitedByCharmsAndSaved() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questDuels", "the duels were not sent");
+        send(host, message("questMatchLength", "games", 5));
+        JsonObject page = host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertEquals(page.get("matchLength").getAsInt(), 3);
+        Assert.assertEquals(saved(data).getMatchLength(), 3);
+        FModel.getQuest().getAssets().setItemLevel(QuestItemType.CHARM, 1);
+        send(host, message("questMatchLength", "games", 5));
+        page = host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertEquals(page.get("matchLength").getAsInt(), 5);
+        Assert.assertTrue(page.getAsJsonArray("matchLengths").contains(new JsonPrimitive(5)));
+        Assert.assertEquals(saved(data).getMatchLength(), 5);
+    }
+
+    // Fails if choosing no plant does not empty its slot in the save, or choosing the Wolf does not fill the pet slot
+    @Test(timeOut = 120_000)
+    public void petChoicesAreSaved() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questDuels", "the duels were not sent");
+        send(host, message("questPet", "slot", 0, "name", "Plant"));
+        host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertEquals(saved(data).getPetSlots().get(0), "Plant");
+        send(host, message("questPet", "slot", 0));
+        host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertNull(saved(data).getPetSlots().get(0));
+        send(host, message("questPet", "slot", 1, "name", "Wolf"));
+        final JsonObject page = host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertEquals(saved(data).getPetSlots().get(1), "Wolf");
+        Assert.assertEquals(page.getAsJsonArray("pets").get(1).getAsJsonObject().get("chosen").getAsString(), "Wolf");
+        // A pet the quest does not own is not summoned
+        send(host, message("questPet", "slot", 1, "name", "Bird"));
+        host.awaitNewest("questDuels", "the page was not sent again");
+        Assert.assertEquals(saved(data).getPetSlots().get(1), "Wolf");
     }
 
     // Fails if a browser without the host's seat can open a quest
