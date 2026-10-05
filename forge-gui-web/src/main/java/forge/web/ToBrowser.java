@@ -731,6 +731,16 @@ final class ToBrowser {
     record QuestDecks(List<QuestDeckRow> decks) {
     }
 
+    /** A difficulty and what a quest started at it is given: credits, and the starting pool's commons, uncommons and rares. */
+    record QuestDifficultyRow(String name, int credits, int commons, int uncommons, int rares) {
+    }
+
+    /** What the new-quest form offers, each list by name. */
+    @Message("questOptions")
+    record QuestOptions(List<String> worlds, List<String> sanctioned, List<String> casual, List<String> precons, List<String> sealedDecks,
+            List<String> draftDecks, List<String> cubes, List<QuestDifficultyRow> difficulties) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(ToBrowser.class, Message.class);
 

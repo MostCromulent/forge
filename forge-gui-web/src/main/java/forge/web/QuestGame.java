@@ -2,37 +2,43 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.card.CardType;
+import forge.card.MagicColor;
 import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.game.GameType;
-import forge.gamemodes.quest.data.DeckConstructionRules;
-import forge.util.storage.IStorage;
+import forge.game.GameView;
+import forge.gamemodes.match.PreparedMatch;
+import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestSpellShop;
 import forge.gamemodes.quest.QuestUtil;
 import forge.gamemodes.quest.QuestWinLoseController;
-import forge.gamemodes.match.PreparedMatch;
-import forge.player.GamePlayerUtil;
+import forge.gamemodes.quest.StartingPoolPreferences.PoolType;
+import forge.gamemodes.quest.StartingPoolPreferences;
+import forge.gamemodes.quest.StartingPoolType;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.bazaar.QuestPetController;
+import forge.gamemodes.quest.data.DeckConstructionRules;
 import forge.gamemodes.quest.data.QuestAchievements;
 import forge.gamemodes.quest.data.QuestAssets;
 import forge.gamemodes.quest.data.QuestData;
-import forge.gamemodes.quest.data.QuestPreferences;
+import forge.gamemodes.quest.data.QuestPreferences.DifficultyPrefs;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
+import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.io.QuestDataIO;
-import forge.game.GameView;
 import forge.item.InventoryItem;
 import forge.item.PaperCard;
 import forge.itemmanager.SItemManagerUtil;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.player.GamePlayerUtil;
 import forge.util.ItemPool;
 import forge.util.Localizer;
+import forge.util.storage.IStorage;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
 import forge.web.ToBrowser.*;
@@ -149,14 +155,134 @@ final class QuestGame implements Campaign {
         }
     }
 
-    /** Renaming waits for the shelf's menu, which comes with the new-quest form. */
+    /** Renames a save and its backup. The quest Forge has open is read again under its new name, or its next save would bring the old file back. */
     @Override
-    public String rename(final String name, final String to) {
+    public synchronized String rename(final String name, final String to) {
+        final File file = find(name);
+        final String clean = NewQuestRules.cleanName(to);
+        if (file == null) {
+            return null;
+        }
+        if (clean.isEmpty()) {
+            return Localizer.getInstance().getMessage("lblQuestNameEmpty");
+        }
+        if (new File(ForgeConstants.QUEST_SAVE_DIR, clean + ".dat").exists()) {
+            return Localizer.getInstance().getMessage("lblQuestExists");
+        }
+        final QuestData data = read(file);
+        if (data == null) {
+            return null;
+        }
+        final boolean open = name.equals(quest().getName());
+        data.rename(clean);
+        if (open) {
+            quest().load(data);
+        }
+        // Desktop and mobile leave the preference naming a file that is gone
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        if (file.getName().equals(prefs.getPref(QPref.CURRENT_QUEST))) {
+            prefs.setPref(QPref.CURRENT_QUEST, clean + ".dat");
+            prefs.save();
+        }
         return null;
     }
 
     @Override
-    public void delete(final String name) {
+    public synchronized void delete(final String name) {
+        final File file = find(name);
+        if (file == null) {
+            return;
+        }
+        if (name.equals(quest().getName())) {
+            quest().load(null);
+        }
+        file.delete();
+        new File(file.getPath() + ".bak").delete();
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        if (file.getName().equals(prefs.getPref(QPref.CURRENT_QUEST))) {
+            prefs.setPref(QPref.CURRENT_QUEST, QPref.CURRENT_QUEST.getDefault());
+            prefs.save();
+        }
+    }
+
+    /** What the new-quest form offers. */
+    private static QuestOptions options() {
+        final Localizer text = Localizer.getInstance();
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        final List<String> worlds = new ArrayList<>();
+        FModel.getWorlds().forEach(w -> worlds.add(w.getName()));
+        final List<String> sanctioned = new ArrayList<>();
+        FModel.getFormats().getSanctionedList().forEach(f -> sanctioned.add(f.getName()));
+        final List<String> casual = new ArrayList<>();
+        FModel.getFormats().getArchivedList().forEach(f -> casual.add(f.getName()));
+        final List<String> sealed = new ArrayList<>();
+        FModel.getDecks().getSealed().forEach(d -> sealed.add(d.getName()));
+        final List<String> draft = new ArrayList<>();
+        FModel.getDecks().getDraft().forEach(d -> draft.add(d.getName()));
+        final List<String> cubes = new ArrayList<>();
+        FModel.getDecks().getCubes().forEach(d -> cubes.add(d.getName()));
+        final List<QuestDifficultyRow> difficulties = new ArrayList<>();
+        for (int i = 0; i < DIFFICULTIES.length; i++) {
+            difficulties.add(new QuestDifficultyRow(text.getMessage(DIFFICULTIES[i]), prefs.getPrefInt(DifficultyPrefs.STARTING_CREDITS, i),
+                    prefs.getPrefInt(DifficultyPrefs.STARTING_COMMONS, i), prefs.getPrefInt(DifficultyPrefs.STARTING_UNCOMMONS, i),
+                    prefs.getPrefInt(DifficultyPrefs.STARTING_RARES, i)));
+        }
+        return new QuestOptions(worlds, sanctioned, casual, NewQuestRules.startingPrecons(), sealed, draft, cubes, difficulties);
+    }
+
+    /** The form's answers as the shared rules take them; null for a pool or prize type the form does not offer. */
+    private static NewQuestRules.Choices choices(final FromBrowser.QuestCreate c) {
+        final StartingPoolType pool = poolType(c.pool());
+        if (pool == null || pool == StartingPoolType.CustomFormat) {
+            return null;
+        }
+        final List<Byte> colours = new ArrayList<>();
+        final String letters = c.colors() == null ? "" : c.colors();
+        for (int i = 0; i < MagicColor.WUBRGC.length; i++) {
+            if (letters.indexOf("WUBRGC".charAt(i)) >= 0) {
+                colours.add(MagicColor.WUBRGC[i]);
+            }
+        }
+        PoolType distribution;
+        try {
+            distribution = PoolType.valueOf(c.poolType());
+        } catch (final IllegalArgumentException | NullPointerException e) {
+            distribution = PoolType.BALANCED;
+        }
+        return new NewQuestRules.Choices(c.name(), Math.max(0, Math.min(DIFFICULTIES.length - 1, c.difficulty())),
+                c.fantasy() ? QuestMode.Fantasy : QuestMode.Classic, c.commander(), c.world(), pool, c.format(), c.precon(), c.savedDeck(),
+                new StartingPoolPreferences(distribution, colours, c.artifacts(), c.completeSet(), c.duplicates(), Math.max(0, c.boosters())),
+                poolType(c.prizes()), c.prizeFormat(), c.allowUnlocks());
+    }
+
+    private static StartingPoolType poolType(final String name) {
+        try {
+            return name == null ? null : StartingPoolType.valueOf(name);
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    /** The shelf's own messages: the form's options, and a new quest from them. */
+    private void shelf(final BrowserChannel channel, final JsonObject msg, final Host host) {
+        switch (msg.get("t").getAsString()) {
+            case "questOptions" -> channel.send(options());
+            case "questCreate" -> {
+                final NewQuestRules.Choices choices = choices(Wire.decode(msg, FromBrowser.QuestCreate.class));
+                final String problem = choices == null ? Localizer.getInstance().getMessage("lbldckStartPool") : NewQuestRules.problem(choices);
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return;
+                }
+                synchronized (this) {
+                    NewQuestRules.start(choices);
+                }
+                duels = null;
+                reward = null;
+                host.opened(quest().getName());
+            }
+            default -> { }
+        }
     }
 
     @Override
@@ -612,7 +738,11 @@ final class QuestGame implements Campaign {
 
     @Override
     public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
-        if (save == null || quest().getAssets() == null || deckCommand(channel, msg, host)) {
+        if (save == null) {
+            shelf(channel, msg, host);
+            return;
+        }
+        if (quest().getAssets() == null || deckCommand(channel, msg, host)) {
             return;
         }
         switch (msg.get("t").getAsString()) {

@@ -466,6 +466,17 @@ final class FromBrowser {
     record QuestDeckRename(String deck, String to) {
     }
 
+    @Command("questOptions")
+    record QuestOptionsQuery() {
+    }
+
+    /** A new quest, as NewQuestRules.Choices with its enums by name and the distribution's colours as WUBRGC letters. */
+    @Command("questCreate")
+    record QuestCreate(String name, int difficulty, boolean fantasy, boolean commander, String world, String pool, @Nullable String format,
+            @Nullable String precon, @Nullable String savedDeck, String poolType, String colors, boolean artifacts, boolean completeSet,
+            boolean duplicates, int boosters, @Nullable String prizes, @Nullable String prizeFormat, boolean allowUnlocks) {
+    }
+
     /** Fights a duel of the Duels page, by its place in the list that page was sent. */
     @Command("questDuel")
     record QuestDuel(int index) {

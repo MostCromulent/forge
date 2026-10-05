@@ -17,6 +17,7 @@ import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
+import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
@@ -29,6 +30,7 @@ import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashSet;
@@ -584,6 +586,55 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(opened > 0);
         Assert.assertEquals(FModel.getQuest().getCards().getCardpool().countAll(), before + opened);
         Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), 100_000 - pack.get("price").getAsInt());
+    }
+
+    // Fails if a quest made from the form is not opened and made current, or the form's options are not sent
+    @Test(timeOut = 120_000)
+    public void aQuestMadeFromTheFormOpens() throws Exception {
+        final Recorder host = onTheShelf();
+        send(host, JsonCodec.message("questOptions"));
+        final JsonObject options = host.awaitMatching("questOptions", o -> true, "the form's options were not sent");
+        Assert.assertTrue(options.getAsJsonArray("worlds").contains(new JsonPrimitive("Main world")));
+        Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
+        final String name = QuestFixture.expected();
+        send(host, message("questCreate", "name", name, "difficulty", 1, "fantasy", true, "commander", false, "world", "Main world",
+                "pool", "Complete", "poolType", "BALANCED", "colors", "G", "artifacts", false, "completeSet", false, "duplicates", false,
+                "boosters", 0, "allowUnlocks", true));
+        host.awaitMatching("hello", h -> name.equals(str(h, "campaignSave")), "the new quest was not opened");
+        Assert.assertEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), name + ".dat");
+        Assert.assertEquals(FModel.getQuest().getName(), name);
+        Assert.assertEquals(FModel.getQuest().getAchievements().getDifficulty(), 1);
+    }
+
+    // Fails if renaming a quest leaves its old file or the current quest pointing at the old name
+    @Test(timeOut = 120_000)
+    public void renamingAQuestMovesItsFile() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = onTheShelf();
+        FModel.getQuestPreferences().setPref(QPref.CURRENT_QUEST, data.getName() + ".dat");
+        final String to = QuestFixture.expected();
+        send(host, message("campaignRename", "name", data.getName(), "to", to));
+        host.awaitMatching("questSaves", q -> q.toString().contains(to), "the shelf was not sent with the new name");
+        Assert.assertNull(QuestGame.find(data.getName()), "the old file is still there");
+        Assert.assertEquals(QuestDataIO.loadData(QuestGame.find(to)).getName(), to);
+        Assert.assertEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), to + ".dat");
+    }
+
+    // Fails if deleting a quest leaves its file or its backup, or the current quest naming it
+    @Test(timeOut = 120_000)
+    public void deletingAQuestRemovesBothFiles() throws Exception {
+        final QuestData data = QuestFixture.install();
+        // A second save copies the first to the backup
+        data.saveData();
+        final File backup = new File(ForgeConstants.QUEST_SAVE_DIR, data.getName() + ".dat.bak");
+        Assert.assertTrue(backup.isFile());
+        final Recorder host = onTheShelf();
+        FModel.getQuestPreferences().setPref(QPref.CURRENT_QUEST, data.getName() + ".dat");
+        send(host, message("campaignDelete", "name", data.getName()));
+        host.awaitMatching("questSaves", q -> !q.toString().contains(data.getName()), "the shelf was not sent without the quest");
+        Assert.assertNull(QuestGame.find(data.getName()));
+        Assert.assertFalse(backup.exists());
+        Assert.assertNotEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), data.getName() + ".dat");
     }
 
     // Fails if a browser without the host's seat can open a quest
