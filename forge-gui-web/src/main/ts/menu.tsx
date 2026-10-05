@@ -82,7 +82,7 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
           <Kind id="conquest" name={t('lblPlanarConquest')} blurb={t('lblWebConquestBlurb')} onClick={() => actions.campaignOpen('conquest', false)}
             resume={model.currentConquest ? () => actions.campaignOpen('conquest', true) : undefined}
             resumeLabel={model.currentConquest ? t('lblWebConquestResume', model.currentConquest) : undefined} />
-          <Kind id="quest" name={t('lblQuestMode')} blurb={t('lblWebQuestBlurb')} onClick={() => actions.campaignOpen('quest', false)}
+          <Kind id="quest" name={t('lblQuestMode')} note={t('lblWebMenuUnderConstruction')} blurb={t('lblWebQuestBlurb')} onClick={() => actions.campaignOpen('quest', false)}
             resume={model.currentQuest ? () => actions.campaignOpen('quest', true) : undefined}
             resumeLabel={model.currentQuest ? t('lblWebConquestResume', model.currentQuest) : undefined} />
         </div>
@@ -103,8 +103,8 @@ const KIND_ICONS: Record<string, ComponentChildren> = {
 };
 
 /** A kind of game, drawn as two buttons in one frame because a button cannot hold another, and greyed when it opens nothing. */
-function Kind({ id, name, blurb, resume, resumeLabel, onClick }: {
-  id: string; name: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
+function Kind({ id, name, note, blurb, resume, resumeLabel, onClick }: {
+  id: string; name: string; note?: string; blurb: string; resume?: () => void; resumeLabel?: string; onClick?: () => void;
 }) {
   return (
     <div class="mode kind-card">
@@ -112,6 +112,7 @@ function Kind({ id, name, blurb, resume, resumeLabel, onClick }: {
         <span class="mode-art" aria-hidden="true"><svg viewBox="0 0 48 48">{KIND_ICONS[id]}</svg></span>
         <span class="mode-text">
           <span class="mode-name">{name}</span>
+          {note && <span class="mode-note">{note}</span>}
           <span class="mode-blurb">{blurb}</span>
         </span>
       </button>
