@@ -581,7 +581,8 @@ final class ToBrowser {
             @Nullable String allScopes) {
     }
 
-    record PrefRow(String key, String label, String group, String value) {
+    /** A preference: column, when given, is which of several values of one row it is, as a difficulty's own value is. */
+    record PrefRow(String key, String label, String group, String value, @Nullable String column) {
     }
 
     /** A mode's preferences, each saved as it is changed. note says whose they are, and problem why the last change was refused. */

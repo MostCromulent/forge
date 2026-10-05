@@ -17,6 +17,7 @@ import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.data.QuestData;
+import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
@@ -1025,6 +1026,90 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(after.getAchievements().getDraftTokens(), 0);
         Assert.assertTrue(after.getAchievements().getDraftEvents().stream().anyMatch(d -> chosen.equals(d.getTitle())),
                 "no tournament of " + chosen);
+    }
+
+    private static int figure(final JsonObject stats, final String labelKey) {
+        final String label = Localizer.getInstance().getMessage(labelKey);
+        for (final JsonElement e : stats.getAsJsonArray("figures")) {
+            if (label.equals(e.getAsJsonObject().get("label").getAsString())) {
+                return e.getAsJsonObject().get("amount").getAsInt();
+            }
+        }
+        throw new AssertionError("no figure " + label + " in " + stats);
+    }
+
+    // Fails if the statistics' wins, losses and credits are not the save's
+    @Test(timeOut = 120_000)
+    public void theStatisticsAreTheSaves() throws Exception {
+        final QuestData data = QuestFixture.install();
+        for (int i = 0; i < 7; i++) {
+            data.getAchievements().addWin();
+        }
+        data.getAchievements().addLost();
+        data.getAchievements().addLost();
+        data.getAssets().setCredits(1234);
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        send(host, JsonCodec.message("campaignStats"));
+        final JsonObject stats = host.awaitMatching("campaignStats", s -> true, "the statistics were not sent");
+        Assert.assertEquals(figure(stats, "lblWins"), 7);
+        Assert.assertEquals(figure(stats, "lblLosses"), 2);
+        Assert.assertEquals(figure(stats, "lblCredits"), 1234);
+        Assert.assertEquals(stats.getAsJsonArray("tables").size(), 2, "the placings and bazaar tables were not sent: " + stats);
+    }
+
+    /** Sets a quest preference from the browser and answers the page that comes back. */
+    private JsonObject setQuestPref(final Recorder host, final String key, final String value) throws InterruptedException {
+        send(host, message("campaignPref", "key", key, "value", value));
+        return host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent again");
+    }
+
+    // Fails if one of the two decimal preferences is refused, or a value Quest's validation refuses is saved
+    @Test(timeOut = 120_000)
+    public void theDecimalPreferencesAreTakenAndARefusedValueIsNot() throws Exception {
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        final String distance = prefs.getPref(QPref.UNLOCK_DISTANCE_MULTIPLIER);
+        final String bias = prefs.getPref(QPref.STARTING_POOL_COLOR_BIAS);
+        try {
+            final Recorder host = hostInQuest(QuestFixture.install());
+            Assert.assertTrue(setQuestPref(host, "UNLOCK_DISTANCE_MULTIPLIER", "1.5").get("problem") == null);
+            Assert.assertEquals(prefs.getPref(QPref.UNLOCK_DISTANCE_MULTIPLIER), "1.5");
+            Assert.assertNotNull(setQuestPref(host, "STARTING_POOL_COLOR_BIAS", "0").get("problem"), "a bias of 0 was taken");
+            Assert.assertEquals(prefs.getPref(QPref.STARTING_POOL_COLOR_BIAS), bias);
+            Assert.assertNotNull(setQuestPref(host, "REWARDS_WINS_MULTIPLIER", "0.5").get("problem"), "a decimal was taken where Quest reads a whole number");
+        } finally {
+            prefs.setPref(QPref.UNLOCK_DISTANCE_MULTIPLIER, distance);
+            prefs.setPref(QPref.STARTING_POOL_COLOR_BIAS, bias);
+            prefs.save();
+        }
+    }
+
+    // Fails if a difficulty value is saved to a difficulty other than its column's
+    @Test(timeOut = 120_000)
+    public void aDifficultyValueIsSavedToItsColumn() throws Exception {
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        final String before = prefs.getPref(QPref.WINS_BOOSTER_HARD);
+        try {
+            final Recorder host = hostInQuest(QuestFixture.install());
+            send(host, JsonCodec.message("campaignPrefs"));
+            final JsonObject page = host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent");
+            final String label = Localizer.getInstance().getMessage("lblWinsforBooster");
+            final String hard = Localizer.getInstance().getMessage("questDifficultyHard");
+            String key = null;
+            for (final JsonElement e : page.getAsJsonArray("rows")) {
+                final JsonObject row = e.getAsJsonObject();
+                if (label.equals(row.get("label").getAsString()) && hard.equals(str(row, "column"))) {
+                    key = row.get("key").getAsString();
+                }
+            }
+            Assert.assertNotNull(key, "no Hard column for wins for a booster: " + page);
+            final int value = prefs.getPrefInt(QPref.WINS_BOOSTER_HARD) + 1;
+            Assert.assertNull(setQuestPref(host, key, String.valueOf(value)).get("problem"));
+            Assert.assertEquals(prefs.getPrefInt(QPref.WINS_BOOSTER_HARD), value);
+        } finally {
+            prefs.setPref(QPref.WINS_BOOSTER_HARD, before);
+            prefs.save();
+        }
     }
 
     // Fails if the bazaar is offered in Classic mode

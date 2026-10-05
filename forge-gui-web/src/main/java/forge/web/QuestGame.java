@@ -1,5 +1,7 @@
 package forge.web;
 
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 import com.google.gson.JsonObject;
 import forge.card.CardEdition;
 import forge.card.CardType;
@@ -1122,18 +1124,157 @@ final class QuestGame implements Campaign {
         return null;
     }
 
+    /** The quest's record, purse and collection, its tournament placings, and in Fantasy mode what it owns of the bazaar. */
     @Override
     public CampaignStats stats(final String scope) {
-        return new CampaignStats("", List.of(), List.of(), List.of(), null, null);
+        final QuestController quest = quest();
+        final QuestAchievements record = quest.getAchievements();
+        final QuestAssets assets = quest.getAssets();
+        final Localizer l = Localizer.getInstance();
+        final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
+        final List<Figure> figures = new ArrayList<>(List.of(
+                new Figure(l.getMessage("lblWins"), record.getWin(), null),
+                new Figure(l.getMessage("lblLosses"), record.getLost(), null),
+                new Figure(l.getMessage("lblWinStreak"), record.getWinStreakCurrent(), null),
+                new Figure(l.getMessage("lblWebQuestBestStreak"), record.getWinStreakBest(), null),
+                new Figure(l.getMessage("lblCredits"), (int) Math.min(Integer.MAX_VALUE, assets.getCredits()), null)));
+        if (fantasy) {
+            figures.add(new Figure(l.getMessage("lblLife"), assets.getLife(quest.getMode()), null));
+        }
+        figures.add(new Figure(l.getMessage("lblCards"), assets.getCardPool().countAll(), null));
+        final int rankUp = FModel.getQuestPreferences().getPrefInt(DifficultyPrefs.WINS_RANKUP, record.getDifficulty());
+        figures.add(new Figure(l.getMessage("lblWebQuestWinsToLevel"), rankUp - record.getWin() % rankUp, null));
+        final List<StatTable> tables = new ArrayList<>();
+        final List<List<String>> placings = new ArrayList<>();
+        for (int place = 1; place <= PLACES.length; place++) {
+            placings.add(List.of(l.getMessage(PLACES[place - 1]), String.valueOf(record.getWinsForPlace(place))));
+        }
+        tables.add(new StatTable(List.of(l.getMessage("lblPastResults"), l.getMessage("lblWebQuestTimesHead")), placings));
+        if (fantasy) {
+            tables.add(new StatTable(List.of(l.getMessage("lblBazaar"), l.getMessage("lblWebQuestLevelHead")), owned(quest)));
+        }
+        return new CampaignStats(l.getMessage("lblQuestStatistics"), figures, tables, List.of(), null, null);
+    }
+
+    private static final String[] PLACES = {"lblWebQuestFirstPlace", "lblWebQuestSecondPlace", "lblWebQuestThirdPlace", "lblWebQuestFourthPlace"};
+
+    /** The bazaar's items and pets the quest owns, each with its level of its most; an item missing from every stall has reached its most. */
+    private static List<List<String>> owned(final QuestController quest) {
+        final QuestAssets assets = quest.getAssets();
+        final Map<QuestItemType, Integer> most = new HashMap<>();
+        for (final String stall : quest.getBazaar().getStallNames()) {
+            for (final IQuestBazaarItem item : quest.getBazaar().getItems(quest, stall)) {
+                if (item instanceof QuestItemBasic basic) {
+                    most.put(basic.getItemType(), basic.getMaxLevel());
+                }
+            }
+        }
+        final Localizer l = Localizer.getInstance();
+        final List<List<String>> rows = new ArrayList<>();
+        for (final QuestItemType type : QuestItemType.values()) {
+            if (assets.hasItem(type)) {
+                final int level = assets.getItemLevel(type);
+                rows.add(List.of(type.getKey(), l.getMessage("lblWebQuestLevelOf", level, most.getOrDefault(type, level))));
+            }
+        }
+        for (int slot = 0; slot < QuestController.MAX_PET_SLOTS; slot++) {
+            for (final QuestPetController pet : quest.getPetsStorage().getAvaliablePets(slot, assets)) {
+                rows.add(List.of(pet.getName(), l.getMessage("lblWebQuestLevelOf", assets.getPetLevel(pet.getSaveFileKey()), pet.getMaxLevel())));
+            }
+        }
+        return rows;
+    }
+
+    /** A preference as desktop's page lists it, by its label's and group's keys; column is the difficulty a difficulty's own value is for. */
+    private record PrefField(QPref pref, String label, String group, String column) {
+    }
+
+    /** Desktop's preferences in its order (VSubmenuQuestPrefs), with the difficulty table's values one field each. */
+    private static final List<PrefField> PREFS = prefFields();
+
+    private static List<PrefField> prefFields() {
+        final List<PrefField> fields = new ArrayList<>();
+        fields.add(new PrefField(QPref.WORLD_RULES_CONFORMANCE, "lblWorldRulesConformance", "lblQuestGameSettings", null));
+        final Object[][] rewards = {{QPref.REWARDS_BASE, "lblBaseWinnings"}, {QPref.REWARDS_UNDEFEATED, "lblNoLosses"}, {QPref.REWARDS_POISON, "lblPoisonWin"},
+                {QPref.REWARDS_MILLED, "lblMillingWin"}, {QPref.REWARDS_MULLIGAN0, "lblMulligan0Win"}, {QPref.REWARDS_ALTERNATIVE, "lblAlternativeWin"},
+                {QPref.REWARDS_WINS_MULTIPLIER, "lblBonusMultiplierperWin"}, {QPref.REWARDS_WINS_MULTIPLIER_MAX, "lblMaxWinsforMultiplier"},
+                {QPref.REWARDS_TURN15, "lblWinbyTurn15"}, {QPref.REWARDS_TURN10, "lblWinbyTurn10"}, {QPref.REWARDS_TURN5, "lblWinbyTurn5"},
+                {QPref.REWARDS_TURN1, "lblFirstTurnWin"}, {QPref.REWARDS_HEALTH_DIFF_MAX, "lblMaxLifeDiffBonus"},
+                {QPref.EXCLUDE_PROMOS_FROM_POOL, "lblExcludePromosFromRewardPool"}};
+        add(fields, "lblRewards", rewards);
+        final String[][] perDifficulty = {{"WINS_BOOSTER", "lblWinsforBooster"}, {"WINS_RANKUP", "lblWinsforRankIncrease"},
+                {"WINS_MEDIUMAI", "lblWinsforMediumAI"}, {"WINS_HARDAI", "lblWinsforHardAI"}, {"WINS_EXPERTAI", "lblWinsforExpertAI"},
+                {"STARTING_COMMONS", "lblStartingCommons"}, {"STARTING_UNCOMMONS", "lblStartingUncommons"}, {"STARTING_RARES", "lblStartingRares"},
+                {"STARTING_CREDITS", "lblStartingCredits"}};
+        final String[] suffixes = {"EASY", "MEDIUM", "HARD", "EXPERT"};
+        for (final String[] row : perDifficulty) {
+            for (int d = 0; d < suffixes.length; d++) {
+                fields.add(new PrefField(QPref.valueOf(row[0] + "_" + suffixes[d]), row[1], "lblDifficultyAdjustments", DIFFICULTIES[d]));
+            }
+        }
+        add(fields, "lblDifficultyAdjustments", new Object[][] {{QPref.WINS_NEW_CHALLENGE, "lblWinsforNewChallenge"},
+                {QPref.STARTING_SNOW_LANDS, "lblStartingSnowLands"}, {QPref.STARTING_POOL_COLOR_BIAS, "lblColorBias"},
+                {QPref.PENALTY_LOSS, "lblPenaltyforLoss"}, {QPref.MORE_DUEL_CHOICES, "lblMoreDuelChoices"},
+                {QPref.WILD_OPPONENTS_MULTIPLIER, "lblWildOpponentMultiplier"}, {QPref.WILD_OPPONENTS_NUMBER, "lblWildOpponentNumber"}});
+        add(fields, "lblBoosterPackRatios", new Object[][] {{QPref.BOOSTER_COMMONS, "lblCommon"}, {QPref.BOOSTER_UNCOMMONS, "lblUncommon"},
+                {QPref.BOOSTER_RARES, "lblRare"}, {QPref.SPECIAL_BOOSTERS, "lblSpecialBoosters"}});
+        add(fields, "lblShopPreferences", new Object[][] {{QPref.SHOP_MAX_PACKS, "lblMaximumPacks"}, {QPref.SHOP_MIN_PACKS, "lblMinimumPacks"},
+                {QPref.SHOP_STARTING_PACKS, "lblStartingPacks"}, {QPref.SHOP_WINS_FOR_ADDITIONAL_PACK, "lblWinsforPack"},
+                {QPref.WINS_UNLOCK_SET, "lblWinsperSetUnlock"}, {QPref.UNLIMITED_UNLOCKING, "lblAllowFarUnlocks"},
+                {QPref.UNLOCK_DISTANCE_MULTIPLIER, "lblUnlockDistanceMultiplier"}, {QPref.SHOP_SINGLES_COMMON, "lblCommonSingles"},
+                {QPref.SHOP_SINGLES_UNCOMMON, "lblUncommonSingles"}, {QPref.SHOP_SINGLES_RARE, "lblRareSingles"},
+                {QPref.SHOP_SELLING_PERCENTAGE_BASE, "lblCardSalePercentageBase"}, {QPref.SHOP_SELLING_PERCENTAGE_MAX, "lblCardSalePercentageCap"},
+                {QPref.SHOP_MAX_SELLING_PRICE, "lblCardSalePriceCap"}, {QPref.SHOP_WINS_FOR_NO_SELL_LIMIT, "lblWinstoUncapSalePrice"},
+                {QPref.PLAYSET_SIZE, "lblPlaysetSize"}, {QPref.PLAYSET_BASIC_LAND_SIZE, "lblPlaysetSizeBasicLand"},
+                {QPref.PLAYSET_ANY_NUMBER_SIZE, "lblPlaysetSizeAnyNumber"}, {QPref.ITEM_LEVEL_RESTRICTION, "lblItemLevelRestriction"},
+                {QPref.FOIL_FILTER_DEFAULT, "lblFoilfilterAlwaysOn"}, {QPref.RATING_FILTER_DEFAULT, "lblRatingsfilterAlwaysOn"}});
+        add(fields, "lblDraftTournaments", new Object[][] {{QPref.SIMULATE_AI_VS_AI_RESULTS, "lblSimulateAIvsAIResults"},
+                {QPref.WINS_NEW_DRAFT, "lblWinsforNewDraft"}, {QPref.WINS_ROTATE_DRAFT, "lblWinsperDraftRotation"},
+                {QPref.DRAFT_ROTATION, "lblRotationType"}});
+        return List.copyOf(fields);
+    }
+
+    private static void add(final List<PrefField> fields, final String group, final Object[][] rows) {
+        for (final Object[] row : rows) {
+            fields.add(new PrefField((QPref) row[0], (String) row[1], group, null));
+        }
     }
 
     @Override
     public CampaignPrefs prefs(final String problem) {
-        return new CampaignPrefs("", List.of(), "", problem, false);
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        final Localizer l = Localizer.getInstance();
+        final List<PrefRow> rows = new ArrayList<>();
+        for (final PrefField f : PREFS) {
+            rows.add(new PrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPref(f.pref()),
+                    f.column() == null ? null : l.getMessage(f.column())));
+        }
+        // Neither desktop nor mobile resets Quest's preferences
+        return new CampaignPrefs(l.getMessage("lblQuestPreferences"), rows, l.getMessage("lblWebQuestPrefsShared"), problem, false);
     }
 
+    /** Checked as desktop checks it: two values are decimals and taken as they are, the rest whole numbers that Quest validates. */
     @Override
-    public String setPref(final String key, final String value) {
+    public synchronized String setPref(final String key, final String text) {
+        final QuestPreferences prefs = FModel.getQuestPreferences();
+        final Localizer l = Localizer.getInstance();
+        final String value = text.trim();
+        for (final PrefField f : PREFS) {
+            if (f.pref().name().equals(key)) {
+                final String problem;
+                if (f.pref() == QPref.UNLOCK_DISTANCE_MULTIPLIER || f.pref() == QPref.WILD_OPPONENTS_MULTIPLIER) {
+                    problem = Doubles.tryParse(value) == null ? l.getMessage("lblEnteraDecimal") : null;
+                } else {
+                    final Integer number = Ints.tryParse(value);
+                    problem = number == null ? l.getMessage("lblEnteraNumber") : prefs.validatePreference(f.pref(), number);
+                }
+                if (problem == null) {
+                    prefs.setPref(f.pref(), value);
+                    prefs.save();
+                }
+                return problem;
+            }
+        }
         return null;
     }
 

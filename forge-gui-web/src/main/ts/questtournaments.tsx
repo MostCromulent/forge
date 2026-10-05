@@ -43,7 +43,7 @@ function Offered({ page, credits, actions }: { page: QuestTournaments; credits: 
       </div>
       <div class="qu-status">
         <span class="cq-kicker">{t('lblPastResults')}</span>
-        {page.placings.map((n, i) => <span key={i} class="cq-chip">{t(PLACES[i])}<b>{n === 1 ? t('lblWebQuestOneTime') : t('lblWebQuestTimes', n)}</b></span>)}
+        {page.placings.map((n, i) => <span key={i} class="cq-chip">{t(PLACES[i])}:<b>{n === 1 ? t('lblWebQuestOneTime') : t('lblWebQuestTimes', n)}</b></span>)}
       </div>
       {page.offered.length === 0 ? <p class="muted">{t('lblNoTournaments')}</p> : (
         <div class="qu-tourney-grid">

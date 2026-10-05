@@ -6,7 +6,7 @@ import { imageUrl, skinIconUrl } from './images';
 import { artUrl } from './sleeves';
 import type { Actions } from './actions';
 import type { Model } from './model';
-import type { CampaignBar as Bar } from './protocol';
+import type { CampaignBar as Bar, PrefRow } from './protocol';
 import { t, type TextKey } from './text';
 
 /** A balance: its icon, its number, and its name for a reader that cannot see the icon. */
@@ -142,25 +142,52 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
     setLast(key);
     actions.campaignPref(key, text.trim());
   };
+  // A value written as a decimal may be stepped as one; whether it may be one is still the mode's to say
+  const field = (r: PrefRow, label?: string) => (
+    <input type="number" min={0} step={r.value.includes('.') ? 'any' : 1} value={typed[r.key] ?? r.value} aria-label={label}
+      onInput={e => setTyped({ ...typed, [r.key]: e.currentTarget.value })}
+      onBlur={e => save(r.key, e.currentTarget.value, r.value)}
+      onKeyDown={e => { if (e.key === 'Enter') save(r.key, e.currentTarget.value, r.value); }} />
+  );
+  const bad = (r: PrefRow) => !!p.problem && last === r.key;
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog cq-prefs">
         <header><h3>{p.title}</h3><button aria-label={t('lblClose')} onClick={close}>×</button></header>
         <div class="cq-prefs-body">
-          {groups.map(g => (
-            <section key={g}>
-              <h4>{g}</h4>
-              {p.rows.filter(r => r.group === g).map(r => (
-                <label key={r.key} class={p.problem && last === r.key ? 'cq-pref bad' : 'cq-pref'}>
-                  <span>{r.label}</span>
-                  <input type="number" min={0} step={1} value={typed[r.key] ?? r.value}
-                    onInput={e => setTyped({ ...typed, [r.key]: e.currentTarget.value })}
-                    onBlur={e => save(r.key, e.currentTarget.value, r.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') save(r.key, e.currentTarget.value, r.value); }} />
-                </label>
-              ))}
-            </section>
-          ))}
+          {groups.map(g => {
+            const rows = p.rows.filter(r => r.group === g);
+            // Rows that carry a column are one value of a row of several, drawn as a table with a column each
+            const columns = [...new Set(rows.flatMap(r => (r.column ? [r.column] : [])))];
+            const lines = [...new Set(rows.filter(r => r.column).map(r => r.label))];
+            return (
+              <section key={g} class={columns.length ? 'wide' : undefined}>
+                <h4>{g}</h4>
+                {columns.length > 0 && (
+                  <table class="cq-pref-table">
+                    <thead><tr><th />{columns.map(c => <th key={c}>{c}</th>)}</tr></thead>
+                    <tbody>
+                      {lines.map(label => (
+                        <tr key={label}>
+                          <th>{label}</th>
+                          {columns.map(c => {
+                            const r = rows.find(x => x.label === label && x.column === c);
+                            return <td key={c} class={r && bad(r) ? 'bad' : undefined}>{r && field(r, `${label}, ${c}`)}</td>;
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                {rows.filter(r => !r.column).map(r => (
+                  <label key={r.key} class={bad(r) ? 'cq-pref bad' : 'cq-pref'}>
+                    <span>{r.label}</span>
+                    {field(r)}
+                  </label>
+                ))}
+              </section>
+            );
+          })}
         </div>
         <footer>
           <span class={p.problem ? 'cq-warn' : 'muted'}>{p.problem ?? p.note}</span>

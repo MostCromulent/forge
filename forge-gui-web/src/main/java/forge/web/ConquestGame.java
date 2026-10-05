@@ -667,7 +667,7 @@ final class ConquestGame implements Campaign {
         final Localizer l = Localizer.getInstance();
         final List<PrefRow> rows = new ArrayList<>();
         for (final PrefField f : PREFS) {
-            rows.add(new PrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPref(f.pref())));
+            rows.add(new PrefRow(f.pref().name(), l.getMessage(f.label()), l.getMessage(f.group()), prefs.getPref(f.pref()), null));
         }
         return new CampaignPrefs(l.getMessage("lblConquestPreference"), rows, l.getMessage("lblWebConquestPrefsShared"), problem, true);
     }
