@@ -54,7 +54,6 @@ public class LoopbackGameTest {
 
     @Test(timeOut = 360000)
     public void passiveGameCompletesAndIncrementalMatchesFull() throws Exception {
-        WebTestSupport.skipUnlessStress();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
         TestMatch.play(islands, bears, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
