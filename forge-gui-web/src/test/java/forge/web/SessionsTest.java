@@ -122,7 +122,23 @@ abstract class SessionsTest {
 
     /** Wins the game for the web seat with dev mode's cheat, as a player checking a reward by hand would. */
     void computerLoses(final TestBrowser host) {
-        awaitPriority(host);
+        // The cheat sets life to 0 and passes priority, so a life gain resolving on that pass would save the computer
+        final Object[] passed = { null };
+        awaitTrue(() -> {
+            awaitPriority(host);
+            final Game game = sessions.hostLobby().getHostedMatch().getGame();
+            for (final Player p : game.getPlayers()) {
+                if (p.getController() instanceof PlayerControllerHuman human
+                        && human.getInputQueue().getInput() instanceof InputPassPriority input && input != passed[0]) {
+                    if (game.getStack().isEmpty()) {
+                        return true;
+                    }
+                    passed[0] = input;
+                    sessions.onMessage(host, JsonCodec.message("ok"));
+                }
+            }
+            return false;
+        }, "the web seat never had priority with an empty stack");
         sessions.onMessage(host, message("dev", "action", "winGame"));
     }
 
