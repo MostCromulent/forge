@@ -11,6 +11,7 @@ import { Duels } from './questduels';
 import { Decks } from './questdecks';
 import { Shop } from './questshop';
 import { Reveal, type Owed } from './conquestreward';
+import { NewQuest } from './questnew';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { QuestSave } from './protocol';
@@ -23,6 +24,9 @@ const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['decks', 'lblQuestD
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
   useEffect(() => { for (const icon of BALANCE_ICONS) new Image().src = skinIconUrl(icon); }, []);
+  // The form that starts a quest takes the shelf's place, and gives it back when left or when its quest opens
+  const [creating, setCreating] = useState(false);
+  useEffect(() => { if (open) setCreating(false); }, [open]);
   return (
     <div key={open ? 'open' : 'shelf'} class={open ? 'cq-shell' : 'limited-page'}>
       {/* A reward being revealed is gone through to its end: nothing behind it can be reached, by key or by pointer */}
@@ -30,34 +34,39 @@ export function Quest({ model, actions }: { model: Model; actions: Actions }) {
         <PageHeader class="limited-head">
           <div class="head-right">
             <HeadControls />
-            <button onClick={() => actions.campaignLeave()}>{t('lblBack')}</button>
+            <button onClick={() => (creating && !open ? setCreating(false) : actions.campaignLeave())}>{t('lblBack')}</button>
           </div>
         </PageHeader>
       </div>
-      {open ? <Campaign model={model} actions={actions} /> : <Shelf model={model} actions={actions} />}
+      {open ? <Campaign model={model} actions={actions} /> : <Shelf model={model} actions={actions} creating={creating} setCreating={setCreating} />}
     </div>
   );
 }
 
-/** The saved quests as cards, each with Play. Starting, renaming and deleting a quest come with the new-quest form. */
-function Shelf({ model, actions }: { model: Model; actions: Actions }) {
+/** The saved quests as cards, each with the one thing to do next, after a card that starts a new one. */
+function Shelf({ model, actions, creating, setCreating }: { model: Model; actions: Actions; creating: boolean; setCreating: (on: boolean) => void }) {
   const saves = model.questSaves;
   const trail = [
     { label: t('lblWebHeadStart'), go: () => { changeUi(u => { u.menuChoice = null; }); actions.campaignLeave(); } },
     { label: WAY_NAMES.play, go: () => { changeUi(u => { u.menuChoice = 'play'; }); actions.campaignLeave(); } },
-    { label: t('lblQuestMode') },
+    creating ? { label: t('lblQuestMode'), go: () => setCreating(false) } : { label: t('lblQuestMode') },
+    ...(creating ? [{ label: t('lblWebQuestNew') }] : []),
   ];
   return <>
-    <SetupHead trail={trail} title={t('lblWebQuestYours')} />
-    {model.error && <p class="limited-error">{model.error}</p>}
-    {!saves ? <p class="muted pools-wait">{t('lblWebQuestReading')}</p>
-      : <Saves saves={saves.saves} current={saves.current ?? null} actions={actions} />}
+    <SetupHead trail={trail} title={creating ? t('lblWebQuestNew') : t('lblWebQuestYours')} />
+    {model.error && !creating && <p class="limited-error">{model.error}</p>}
+    {creating ? <NewQuest model={model} actions={actions} />
+      : !saves ? <p class="muted pools-wait">{t('lblWebQuestReading')}</p>
+      : <Saves saves={saves.saves} current={saves.current ?? null} actions={actions} create={() => setCreating(true)} />}
   </>;
 }
 
-function Saves({ saves, current, actions }: { saves: QuestSave[]; current: string | null; actions: Actions }) {
+function Saves({ saves, current, actions, create }: { saves: QuestSave[]; current: string | null; actions: Actions; create: () => void }) {
   return (
     <Cards rows={saves} cls={s => (s.name === current ? 'ev qu-save current' : 'ev qu-save')}
+      create={{ title: t('lblWebQuestNew'), line: t('lblWebQuestNewLine'), go: create }}
+      rename={{ field: t('lblQuestName'), go: (s, to) => actions.campaignRename(s.name, to) }}
+      remove={{ item: t('lblDelete'), ask: s => t('lblAreYouSuerDeleteConquest', s.name), keep: t('lblCancel'), go: s => actions.campaignDelete(s.name) }}
       sub={s => <span class="sub">{s.difficulty ? `${s.mode} · ${s.difficulty}` : s.mode}</span>}
       mid={s => <>
         <span class="ev-line">{s.rank}</span>

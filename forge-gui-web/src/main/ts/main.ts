@@ -101,6 +101,10 @@ const actions: Actions = {
     model.error = null;
     wire.conquestCreate(c);
   },
+  questCreate: c => {
+    model.error = null;
+    wire.questCreate(c);
+  },
   campaignRename: (name, to) => {
     model.error = null;
     wire.campaignRename(name, to);
@@ -362,6 +366,7 @@ function apply(msg: ServerMessage): void {
     case 'questSaves': model.questSaves = msg; break;
     case 'questDuels': model.questDuels = msg; break;
     case 'questDecks': model.questDecks = msg; break;
+    case 'questOptions': model.questOptions = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'campaignResult': model.campaignResult = msg; break;

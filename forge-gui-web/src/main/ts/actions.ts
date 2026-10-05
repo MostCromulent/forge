@@ -1,7 +1,7 @@
 // Everything a player can do, which the controller alone turns into messages, so renderers and screens never see the protocol
 
 import type {
-  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, EventSetup, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
+  AutoDecisionAction, CatalogueQuery, DeckOp, DevAction, DeviceDeckText, EditorEdit, EventSetup, QuestCreate, ImportCommit, PhaseType, SealedCreate, DraftStart, Send, SetSeat,
   YieldAction,
 } from './protocol';
 
@@ -136,6 +136,9 @@ export interface Actions {
   questDeckView(deck: string): void;
   questDeckEdit(deck: string): void;
   questDeckDelete(deck: string): void;
+  /** Asks what the new-quest form offers. */
+  questOptions(): void;
+  questCreate(c: Omit<QuestCreate, 't'>): void;
 
   // Online draft and sealed, at a table
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
@@ -290,6 +293,8 @@ export function createActions(send: Send): Actions {
     questDeckView: deck => send({ t: 'questDeckView', deck }),
     questDeckEdit: deck => send({ t: 'questDeckEdit', deck }),
     questDeckDelete: deck => send({ t: 'questDeckDelete', deck }),
+    questOptions: () => send({ t: 'questOptions' }),
+    questCreate: c => send({ t: 'questCreate', ...c }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
     conquestAether: q => send({ t: 'conquestAether', ...q }),

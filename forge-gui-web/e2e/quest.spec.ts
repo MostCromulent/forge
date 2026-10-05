@@ -108,3 +108,26 @@ test('a booster is bought in the Spell Shop and its cards revealed', async ({ pa
   await expect(reveal).toHaveCount(0);
   await expect(credits).toHaveText((before - price).toLocaleString('en-GB'));
 });
+
+// Fails if a quest cannot be started from the form and lands on its Duels page with the difficulty's credits
+test('a quest is started from the new-quest form', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.getByRole('button', { name: /New quest/ }).click();
+
+  const tile = (text: string) => page.locator('.stp-open .tile-choice', { hasText: text }).first();
+  await tile('Trained').click();
+  await tile('Fantasy Mode').click();
+  await page.locator('.stp-open .tile-choice').filter({ hasText: /^Main world$/ }).click();
+  await tile('Unrestricted').click();
+  await page.locator('.stp-open').getByRole('button', { name: 'Continue' }).click();
+  await tile('Same as starting pool').click();
+  await page.getByRole('textbox', { name: 'Quest Name' }).fill('Form quest');
+  await page.getByRole('button', { name: 'Embark!' }).click();
+
+  await expect(page.locator('.qu-ev').first()).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.cq-id b')).toHaveText('Form quest');
+  await expect(page.locator('.cq-purse .cq-coin').first().locator('b')).toHaveText('200');
+});
