@@ -18,7 +18,9 @@ final class WebService {
     private final String guestToken;
     private WebServer server;
     private volatile WebSessions sessions;
-    private boolean quitWhenEmpty = true;
+    /** Set at launch for a server that should outlast its browsers, such as one with no window to untick the choice in. */
+    static final boolean KEEP_OPEN = Boolean.getBoolean("forge.web.keepOpen");
+    private boolean quitWhenEmpty = !KEEP_OPEN;
     private volatile PortForward forward;
     private volatile Forwarding forwarding = Forwarding.OFF;
     private volatile Consumer<Forwarding> onForwarding = f -> { };

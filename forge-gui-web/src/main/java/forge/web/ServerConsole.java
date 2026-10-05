@@ -111,7 +111,7 @@ final class ServerConsole implements IProgressBar {
     private final JButton copyHome = copyButton(TEXT.getMessage("lblWebConsoleCopyLink"), () -> service.inviteUrl(home.getValue()));
     private final JButton moreHome = new BasicArrowButton(SwingConstants.SOUTH);
     private final JButton copyNet = copyButton(TEXT.getMessage("lblWebConsoleCopyLink"), () -> service.inviteUrl(internet));
-    private final JCheckBox quitWhenEmpty = new JCheckBox(TEXT.getMessage("lblWebConsoleQuitWhenEmpty"), true);
+    private final JCheckBox quitWhenEmpty = new JCheckBox(TEXT.getMessage("lblWebConsoleQuitWhenEmpty"), !WebService.KEEP_OPEN);
     private final JCheckBox forwardPort = new JCheckBox(TEXT.getMessage("lblWebConsoleForwardPort"));
     private final Light forwardLight = new Light();
     private final JTextArea forwardState = wrapped("", UIManager.getColor("Label.foreground"), TEXT_WIDTH - 40);

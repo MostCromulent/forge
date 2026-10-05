@@ -98,6 +98,7 @@ find it, pass `-Dforge.assets.dir=<folder containing res>`.
 | `-Dforge.web.port=<n>` | Port to serve on. The default, 36743, is desktop Forge's network port too. |
 | `-Dforge.web.noBrowser=true` | Don't open the game in a browser. |
 | `-Dforge.web.noConsole=true` | Don't open the server window. The host's link is printed instead. |
+| `-Dforge.web.keepOpen=true` | Keep Forge running with no browser connected. |
 | `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web` | Serve the page from source, so a change needs only a reload. |
 
 With `pageDir` set, `npm run watch` in `forge-gui-web` rebuilds the TypeScript on save.
