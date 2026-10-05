@@ -144,6 +144,16 @@ export interface Actions {
   /** Opens a stall of the bazaar, or with null the first. */
   questStall(name: string | null): void;
   questBuy(stall: string, item: string): void;
+  /** Enters a tournament on offer, which pays its fee and opens its draft. */
+  questEnter(title: string): void;
+  /** Spends a draft token; the host asks for the format. */
+  questToken(): void;
+  questTournamentStart(): void;
+  questTournamentNext(): void;
+  /** Leaves the tournament, collecting its prizes once it has started. */
+  questTournamentLeave(): void;
+  /** Opens the tournament's deck in the editor. */
+  questTournamentDeck(): void;
   questCreate(c: Omit<QuestCreate, 't'>): void;
 
   // Online draft and sealed, at a table
@@ -304,6 +314,12 @@ export function createActions(send: Send): Actions {
     questZeppelin: () => send({ t: 'questZeppelin' }),
     questStall: name => send({ t: 'questStall', name: name ?? undefined }),
     questBuy: (stall, item) => send({ t: 'questBuy', stall, item }),
+    questEnter: title => send({ t: 'questEnter', title }),
+    questToken: () => send({ t: 'questToken' }),
+    questTournamentStart: () => send({ t: 'questTournamentStart' }),
+    questTournamentNext: () => send({ t: 'questTournamentNext' }),
+    questTournamentLeave: () => send({ t: 'questTournamentLeave' }),
+    questTournamentDeck: () => send({ t: 'questTournamentDeck' }),
     questCreate: c => send({ t: 'questCreate', ...c }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),

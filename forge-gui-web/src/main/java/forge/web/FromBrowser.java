@@ -516,6 +516,11 @@ final class FromBrowser {
     record QuestTournamentNext() {
     }
 
+    /** Opens the tournament's deck in the editor. */
+    @Command("questTournamentDeck")
+    record QuestTournamentDeck() {
+    }
+
     /** Leaves the tournament entered, collecting its prizes once it has started. */
     @Command("questTournamentLeave")
     record QuestTournamentLeave() {

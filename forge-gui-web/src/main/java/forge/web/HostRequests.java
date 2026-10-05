@@ -36,10 +36,11 @@ final class HostRequests {
         }
     }
 
-    /** Asks the browser to pick from a list and waits. Returns the indices chosen, or null when nobody answers. */
-    List<Integer> ask(final String kind, final String title, final String message, final List<String> options, final int min, final int max) {
+    /** Asks the browser to pick from a list and waits. images, when given, picture each option, as cards or as packs as pictured says. Returns the indices chosen, or null when nobody answers. */
+    List<Integer> ask(final String kind, final String title, final String message, final List<String> options, final int min, final int max,
+            final List<String> images, final String pictured) {
         final int id = nextId.incrementAndGet();
-        final HostChoice request = new HostChoice(id, kind, title, message, min, max, options);
+        final HostChoice request = new HostChoice(id, kind, title, message, min, max, options, images, pictured);
         final CompletableFuture<List<Integer>> answer = new CompletableFuture<>();
         open.put(id, answer);
         pending.put(id, request);

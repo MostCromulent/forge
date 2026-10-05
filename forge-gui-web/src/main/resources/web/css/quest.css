@@ -96,3 +96,34 @@
 .qu-item-t .qu-item-stats { color: var(--text); font-weight: 700; }
 .qu-item-foot { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .qu-item-foot .sp { flex: 1; }
+
+/* Tournaments on offer: each tile its packs, its sets and terms, and the priced Enter */
+.qu-tourneys > * { width: min(1100px, 100%); justify-self: center; }
+.qu-tourney-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.qu-tourney { display: grid; grid-template-rows: 104px auto auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.qu-tourney-packs { display: flex; justify-content: center; align-items: flex-end; padding-top: 10px; background: radial-gradient(80% 100% at 50% 100%, #2a2416 0%, #0d0f14 100%); border-bottom: 1px solid var(--line); }
+.qu-tourney-packs img { height: 92px; margin: 0 -6px; box-shadow: 0 4px 10px rgba(0, 0, 0, .5); }
+.qu-tourney-t { display: grid; gap: 4px; padding: 14px 18px; font-size: 12.5px; color: var(--muted); }
+.qu-tourney-t b { font-size: 16px; color: var(--text); }
+.qu-tourney-foot { padding: 12px 18px 14px; border-top: 1px dashed var(--line-bright); }
+
+/* The bracket: seats at fixed places, lines from each match's winner; a winner is bold with a bar, a loser struck through, the player outlined */
+.qu-bracket-wrap { min-width: 0; overflow: auto; padding: 22px 28px 90px; background: radial-gradient(100% 80% at 50% 40%, #131a26 0%, #080b11 100%); }
+.qu-bracket-heads { display: flex; gap: 56px; margin-bottom: 18px; }
+.qu-bracket-heads span { flex: none; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.qu-bracket { position: relative; }
+.qu-lines { position: absolute; inset: 0; overflow: visible; }
+.qu-lines path { fill: none; stroke: var(--line-bright); stroke-width: 1.5; }
+.qu-lines path.open { stroke-dasharray: 2 4; }
+.qu-lines path.won { stroke: var(--muted); }
+.qu-lines path.you { stroke: #fff; stroke-width: 2.5; }
+.qu-seat { position: absolute; height: 40px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 13px; }
+.qu-seat .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qu-av { width: 24px; height: 24px; flex: none; display: grid; place-items: center; border-radius: 50%; background: var(--surface-3); font-size: 11px; font-weight: 700; }
+.qu-seat.won { font-weight: 700; box-shadow: inset 3px 0 0 var(--accent-2); }
+.qu-seat.out { opacity: .5; }
+.qu-seat.out .n { text-decoration: line-through; }
+.qu-seat.empty { border-style: dashed; color: var(--muted); }
+.qu-seat.you { border: 2px solid #fff; }
+.qu-you { padding: 1px 7px; border-radius: 999px; background: #fff; color: #10131a; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+.qu-lines-text { white-space: pre-line; }

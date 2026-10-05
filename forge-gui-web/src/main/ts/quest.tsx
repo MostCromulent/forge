@@ -12,6 +12,7 @@ import { Decks } from './questdecks';
 import { Shop } from './questshop';
 import { Challenges } from './questchallenges';
 import { Bazaar } from './questbazaar';
+import { Tournaments } from './questtournaments';
 import { Reveal, type Owed } from './conquestreward';
 import { NewQuest } from './questnew';
 import type { Actions } from './actions';
@@ -21,8 +22,8 @@ import { t, type TextKey } from './text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the duels. */
 const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
-const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['decks', 'lblQuestDecks'], ['shop', 'lblSpellShop'],
-  ['bazaar', 'lblBazaar']];
+const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['tournaments', 'lblTournaments'], ['decks', 'lblQuestDecks'],
+  ['shop', 'lblSpellShop'], ['bazaar', 'lblBazaar']];
 /** The bazaar is Fantasy mode's only, which a Classic quest's bar shows by having no life. */
 const FANTASY_ONLY: QuestTab[] = ['bazaar'];
 
@@ -95,7 +96,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   const [owed, setOwed] = useState<Owed>({});
   const reward = model.reward;
   useEffect(() => { if (!reward) setOwed({}); }, [reward]);
-  if (!model.campaignBar || !model.questDuels || !model.questDecks || !model.questChallenges) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
+  if (!model.campaignBar || !model.questDuels || !model.questDecks || !model.questChallenges || !model.questTournaments) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
   const bar = model.campaignBar;
   const fantasy = bar.balances.some(b => b.icon === 'ICO_QUEST_LIFE');
   return <>
@@ -105,6 +106,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
     <div class="cq-main" inert={!!reward}>
       {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
         : ui.questTab === 'shop' ? <Shop model={model} actions={actions} />
+        : ui.questTab === 'tournaments' ? <Tournaments model={model} page={model.questTournaments} actions={actions} />
         : ui.questTab === 'challenges' ? <Challenges page={model.questChallenges} duels={model.questDuels} actions={actions} />
         : ui.questTab === 'bazaar' && fantasy ? <Bazaar model={model} actions={actions} />
         : <Duels page={model.questDuels} actions={actions} />}

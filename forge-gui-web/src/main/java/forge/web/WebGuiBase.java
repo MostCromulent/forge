@@ -5,6 +5,8 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gui.download.GuiDownloadService;
 import forge.gui.interfaces.IGuiBase;
 import forge.gui.interfaces.IGuiGame;
+import forge.ImageKeys;
+import forge.card.CardEdition;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
 import forge.localinstance.skin.ISkinImage;
@@ -165,7 +167,7 @@ public final class WebGuiBase implements IGuiBase {
             noticeSink.accept(Wire.encode(new Notice(title, message, icon == FSkinProp.ICO_ERROR || icon == FSkinProp.ICO_WARNING)));
             return defaultOption;
         }
-        final List<Integer> answer = hostRequests.ask("confirm", title, message, options, 1, 1);
+        final List<Integer> answer = hostRequests.ask("confirm", title, message, options, 1, 1, null, null);
         if (answer != null && !answer.isEmpty()) {
             final int picked = answer.get(0);
             if (picked >= 0 && picked < options.size()) {
@@ -190,7 +192,12 @@ public final class WebGuiBase implements IGuiBase {
         for (final T choice : all) {
             options.add(display == null ? String.valueOf(choice) : display.apply(choice));
         }
-        final List<Integer> answer = hostRequests.ask("choices", null, message, options, min, max);
+        // Sets are drawn as their packs and cards as themselves, as a bonus booster's set or a reward card is chosen
+        final boolean packs = !all.isEmpty() && all.stream().allMatch(CardEdition.class::isInstance);
+        final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
+        final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
+                : cards ? all.stream().map(c -> ((PaperCard) c).getImageKey(false)).toList() : null;
+        final List<Integer> answer = hostRequests.ask("choices", null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
         final List<T> result = new ArrayList<>();
         if (answer != null) {
             for (final int i : answer) {
@@ -219,7 +226,8 @@ public final class WebGuiBase implements IGuiBase {
             return null;
         }
         final List<Integer> answer = hostRequests.ask("choices", title, message,
-                list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1);
+                list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1,
+                list.stream().map(c -> c.getImageKey(false)).toList(), "card");
         if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {
             return list.get(answer.get(0));
         }
@@ -239,6 +247,11 @@ public final class WebGuiBase implements IGuiBase {
     /** Unreachable, because every web match is opened by LocalGame over netplay and each seat's WebGuiGame is built by its WebSession. */
     @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("A web seat's GUI is built by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
+
+    /** The picture of a set's booster, as BoosterPack names its first one. */
+    static String boosterImage(final CardEdition edition) {
+        return ImageKeys.BOOSTER_PREFIX + edition.getCode() + (edition.getCntBoosterPictures() > 1 ? "_1" : "");
+    }
 
     /** A picture the browser draws itself: a skin icon by its FSkinProp, or a file by its path, which only says which picture is meant. */
     record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {

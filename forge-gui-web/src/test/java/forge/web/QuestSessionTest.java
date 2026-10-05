@@ -821,7 +821,7 @@ public class QuestSessionTest extends SessionsTest {
         return host;
     }
 
-    // Fails if entering a tournament does not take its fee and open its draft
+    // Fails if entering a tournament does not take its fee and open its draft, or its tile has no picture of each pack
     @Test(timeOut = 180_000)
     public void enteringATournamentTakesItsFeeAndOpensItsDraft() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -834,6 +834,9 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(offered.size() > 0, "no tournament is offered: " + page);
         final JsonObject row = offered.get(0).getAsJsonObject();
         Assert.assertTrue(row.get("affordable").getAsBoolean());
+        final JsonArray pictures = row.getAsJsonArray("packImages");
+        Assert.assertEquals(pictures.size(), row.getAsJsonArray("packs").size());
+        Assert.assertTrue(pictures.get(0).getAsString().startsWith("b:"), "not a booster's picture: " + pictures);
         send(host, message("questEnter", "title", row.get("title").getAsString()));
         host.awaitMatching("hello", h -> h.get("drafting").getAsBoolean(), "the draft did not open");
         final JsonObject first = host.awaitMatching("draft", d -> !d.getAsJsonArray("cards").isEmpty(), "no pack was dealt");
@@ -892,7 +895,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(draftOf(data).getStandings()[9], "3");
     }
 
-    // Fails if a finished tournament's prizes are not in the save and sent to reveal, or the tournament stays open
+    // Fails if a finished tournament's prizes are not in the save and sent to reveal, the tournament stays open, or the rare is asked for without pictures
     @Test(timeOut = 240_000)
     public void aFinishedTournamentsPrizesAreSavedAndShown() throws Exception {
         final QuestData data = withTournament(d -> {
@@ -913,6 +916,10 @@ public class QuestSessionTest extends SessionsTest {
                 if ("reward".equals(m.get("t").getAsString())) {
                     reward = m;
                 } else if ("hostChoice".equals(m.get("t").getAsString()) && asked.add(m.get("id").getAsInt())) {
+                    if (!"confirm".equals(m.get("kind").getAsString())) {
+                        Assert.assertEquals(str(m, "pictured"), "card");
+                        Assert.assertEquals(m.getAsJsonArray("images").size(), m.getAsJsonArray("options").size());
+                    }
                     answer(host, m, "confirm".equals(m.get("kind").getAsString()) ? 1 : 0);
                 }
             }
@@ -926,6 +933,18 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(after.getAchievements().getDraftTokens(), 1, "first place's token was not given");
         Assert.assertEquals(after.getAchievements().getWinsForPlace(1), 1);
         Assert.assertNull(after.getAchievements().getCurrentDraft(), "the tournament is still open");
+    }
+
+    // Fails if the tournament's deck does not open in the editor from its page
+    @Test(timeOut = 120_000)
+    public void theTournamentsDeckOpensInTheEditor() throws Exception {
+        final QuestData data = withTournament(d -> { });
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questTournaments", "the tournaments were not sent");
+        editor = host;
+        send(host, JsonCodec.message("questTournamentDeck"));
+        final JsonObject state = host.awaitMatching("editor", e -> e.has("state"), "the editor did not open").getAsJsonObject("state");
+        Assert.assertEquals(str(state, "name"), "Tournament human");
     }
 
     // Fails if the computer's matches are decided for ever once the player is out

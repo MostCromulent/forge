@@ -838,3 +838,15 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .pool-chip[aria-pressed="true"] { border-color: var(--accent-2); color: var(--accent-2); background: var(--accent-soft); }
 .pool-more { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; border-top: 1px solid var(--line); padding-top: 10px; font-size: 12.5px; color: var(--muted); }
 .pool-more label { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* A host question over pictures: cards as cards, packs with their set's name under them; the one marked is outlined with a tick */
+.host-choice.pictured { width: min(900px, 94vw); }
+.host-pictures { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; max-height: 62vh; overflow: auto; padding: 4px; }
+.host-picture { position: relative; display: grid; justify-items: center; gap: 6px; padding: 8px; border-radius: 10px; background: var(--surface-2); font-size: 12.5px; font-weight: 600; }
+.host-picture img { width: 100%; border-radius: 6px; }
+.host-choice.card .host-picture span { display: none; }
+.host-choice.card .host-picture img[hidden] + span { display: block; min-height: 60px; }
+.host-choice.pack .host-picture img { width: 72px; }
+.host-picture[aria-pressed="true"] { border-color: var(--accent-2); box-shadow: 0 0 0 2px var(--accent-2); color: var(--accent-2); }
+.host-picture[aria-pressed="true"]::after { content: '\2713'; position: absolute; top: 4px; right: 6px; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-2); color: #1a1405; font-weight: 800; }
+.host-choice footer { gap: 8px; }

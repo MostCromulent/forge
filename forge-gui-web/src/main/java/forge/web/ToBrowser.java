@@ -295,7 +295,8 @@ final class ToBrowser {
 
     /** A question outside a match, answered with the indices chosen, where kind is "confirm" (a few buttons) or "choices" (a list). */
     @Message("hostChoice")
-    record HostChoice(int id, String kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options) {
+    record HostChoice(int id, String kind, @Nullable String title, @Nullable String message, int min, int max, List<String> options,
+            @Nullable List<String> images, @Nullable String pictured) {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
@@ -755,12 +756,12 @@ final class ToBrowser {
     record QuestBazaar(List<QuestStallRow> stalls, @Nullable String stall, List<QuestItemRow> items) {
     }
 
-    /** A tournament on offer: its title, which the browser sends back, the packs drafted by set name, and its fee. */
-    record QuestTournamentRow(String title, List<String> packs, int fee, boolean affordable) {
+    /** A tournament on offer: its title, which the browser sends back, the packs drafted by set name with each pack's picture, and its fee. */
+    record QuestTournamentRow(String title, List<String> packs, List<String> packImages, int fee, boolean affordable) {
     }
 
-    /** A place in the bracket: who holds it, whether it is the player, and whether it went on to the next round (won), lost there (out) or is still to be played (open). */
-    record QuestSeat(String name, boolean you, String state) {
+    /** A place in the bracket: who holds it (null while undecided, empty for the player), whether it is the player, and whether it went on to the next round (won), lost there (out) or is still to be played (open). */
+    record QuestSeat(@Nullable String name, boolean you, String state) {
     }
 
     /** The tournament entered: its rounds from the first eight seats to the winner, the player's next opponent while the player has a match left (empty when not yet known), and the player's placing. */

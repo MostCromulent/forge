@@ -131,12 +131,13 @@ export function Drafting({ model, actions }: { model: Model; actions: Actions })
           <Picks state={state} actions={actions} />
         </div>
       )}
-      {state?.done && <SaveDraft model={model} state={state} actions={actions} />}
+      {state?.done && (model.campaign === 'quest' ? <TournamentDrafted state={state} actions={actions} /> : <SaveDraft model={model} state={state} actions={actions} />)}
       {leaving && (
         <div class="backdrop" onClick={e => { if (e.target === e.currentTarget) setLeaving(false); }}>
           <div class="dialog" role="alertdialog" aria-label={t('lblLeaveDraft')}>
             <h3>{t('lblWebDraftLeaveTheDraftQ')}</h3>
-            <p class="hint">{t('lblWebDraftPicksNotSaved')}</p>
+            {/* A tournament's draft gives its fee back when left, which desktop says before it does */}
+            <p class="hint qu-lines-text">{t(model.campaign === 'quest' ? 'lblLeaveDraftConfirm' : 'lblWebDraftPicksNotSaved')}</p>
             <div class="actions">
               <button onClick={() => setLeaving(false)}>{t('lblWebDraftKeepDrafting')}</button>
               <button class="danger" onClick={() => actions.draftDiscard()}>{t('lblLeave')}</button>
@@ -483,6 +484,22 @@ function typeHeading(type: string): string {
     if (type.includes(name)) return t(heading);
   }
   return t('lblOther');
+}
+
+/** The end of a quest tournament's draft, whose picks are kept under the name Quest gives them and built into its deck next. */
+function TournamentDrafted({ state, actions }: { state: DraftState; actions: Actions }) {
+  return (
+    <div class="backdrop">
+      <div class="dialog draft-save">
+        <h3>{t('lblWebDraftComplete')}</h3>
+        <p class="hint">{t('lblWebDraftCardsDrafted', state.picks.length)}</p>
+        <p class="hint">{t('lblWebQuestDraftBuild')}</p>
+        <div class="actions">
+          <button class="primary" onClick={() => actions.draftSave('', false)}>{t('btnContinue')}</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /** The end of the draft, as desktop ends it: a name to save it under, or leaving without saving. */

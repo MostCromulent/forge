@@ -1,6 +1,7 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
+import forge.card.CardEdition;
 import forge.card.CardType;
 import forge.card.MagicColor;
 import forge.deck.CardPool;
@@ -567,8 +568,9 @@ final class QuestGame implements Campaign {
         if (entered == null) {
             for (final QuestEventDraft d : record.getDraftEvents()) {
                 // canEnter is true when the credits are short of the fee
-                offered.add(new QuestTournamentRow(d.getTitle(), Arrays.stream(d.getBoosterConfiguration())
-                        .map(code -> FModel.getMagicDb().getEditions().get(code).getName()).toList(), d.getEntryFee(), !d.canEnter()));
+                final List<CardEdition> sets = Arrays.stream(d.getBoosterConfiguration()).map(FModel.getMagicDb().getEditions()::get).toList();
+                offered.add(new QuestTournamentRow(d.getTitle(), sets.stream().map(CardEdition::getName).toList(),
+                        sets.stream().map(WebGuiBase::boosterImage).toList(), d.getEntryFee(), !d.canEnter()));
             }
         }
         final List<Integer> placings = IntStream.rangeClosed(1, 4).map(record::getWinsForPlace).boxed().toList();
@@ -599,10 +601,11 @@ final class QuestGame implements Campaign {
     private static QuestSeat seat(final QuestEventDraft draft, final String[] standings, final int place) {
         final String held = standings[place];
         if (QuestEventDraft.UNDETERMINED.equals(held)) {
-            return new QuestSeat("", false, "open");
+            return new QuestSeat(null, false, "open");
         }
         final boolean you = QuestEventDraft.HUMAN.equals(held);
-        final String name = you ? GamePlayerUtil.getGuiPlayer().getName() : draft.getAINames()[Integer.parseInt(held) - 1];
+        // The player is named by the browser, which knows the name its matches are played under
+        final String name = you ? "" : draft.getAINames()[Integer.parseInt(held) - 1];
         final String after = place == 14 ? held : standings[8 + place / 2];
         return new QuestSeat(name, you, QuestEventDraft.UNDETERMINED.equals(after) ? "open" : after.equals(held) ? "won" : "out");
     }
@@ -1178,6 +1181,13 @@ final class QuestGame implements Campaign {
                 channel.send(tournamentsPage());
                 if (reward != null && "questTournamentLeave".equals(msg.get("t").getAsString())) {
                     channel.send(reward);
+                }
+                return;
+            }
+            case "questTournamentDeck" -> {
+                final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
+                if (decks != null) {
+                    host.decks().openPool(decks.getHumanDeck(), quest().getDraftDecks(), GameType.QuestDraft, channel);
                 }
                 return;
             }

@@ -167,3 +167,37 @@ test('a bazaar item is bought from its stall', async ({ page }) => {
   await page.locator('.cq-tab', { hasText: 'Duels' }).click();
   await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
 });
+
+// Fails if a tournament cannot be entered, drafted, built and its first match reached
+test('a tournament is entered, drafted, built and its first match reached', async ({ page }) => {
+  test.setTimeout(480_000);
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
+
+  await page.locator('.cq-tab', { hasText: 'Tournaments' }).click();
+  await page.locator('.qu-tourney').first().getByRole('button', { name: /^Enter/ }).click();
+  await expect(page.locator('#drafting')).toBeVisible({ timeout: 60_000 });
+
+  // A set's packs need not hold fifteen cards, so picking goes on until the draft says it is complete
+  const done = page.locator('.draft-save');
+  const picked = page.locator('.draft-picks .draft-panel-head b .muted');
+  for (let i = 0; !(await done.isVisible()); i++) {
+    const first = page.locator('.draft-pack .draft-slot .tile').first();
+    await first.click();
+    await first.click();
+    await expect(picked).toHaveText(String(i + 1));
+  }
+  await done.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
+  await page.click('.editor-head button.primary');
+  await expect(page.locator('.qu-bracket')).toBeVisible();
+  await expect(page.locator('.qu-seat.you')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Start Tournament' }).click();
+  await page.getByRole('button', { name: 'Start Next Match' }).click();
+  await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
+  await gameStarted(page);
+});
