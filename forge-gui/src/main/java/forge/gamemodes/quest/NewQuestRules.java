@@ -51,6 +51,28 @@ public final class NewQuestRules {
         return names;
     }
 
+    /** The formats a casual pool or prize may name, as mobile's chooser lists them, less those its unselectable sets would leave empty. */
+    public static List<String> casualFormats() {
+        final List<String> names = new ArrayList<>();
+        for (final GameFormat format : FModel.getFormats().getOrderedList()) {
+            if (!setsOf(format.getName()).isEmpty()) {
+                names.add(format.getName());
+            }
+        }
+        return names;
+    }
+
+    /** The worlds whose own sets replace the starting pool. */
+    public static List<String> formatWorlds() {
+        final List<String> names = new ArrayList<>();
+        for (final QuestWorld world : FModel.getWorlds()) {
+            if (world.getFormat() != null) {
+                names.add(world.getName());
+            }
+        }
+        return names;
+    }
+
     /** Why a quest cannot start from these choices, or null when it can. */
     public static String problem(final Choices c) {
         final Localizer text = Localizer.getInstance();

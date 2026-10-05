@@ -120,7 +120,7 @@ test('a quest is started from the new-quest form', async ({ page }) => {
   const tile = (text: string) => page.locator('.stp-open .tile-choice', { hasText: text }).first();
   await tile('Trained').click();
   await tile('Fantasy Mode').click();
-  await page.locator('.stp-open .tile-choice').filter({ hasText: /^Main world$/ }).click();
+  await page.locator('.stp-open .pick-list button').filter({ hasText: /^Main world$/ }).click();
   await tile('Unrestricted').click();
   await page.locator('.stp-open').getByRole('button', { name: 'Continue' }).click();
   await tile('Same as starting pool').click();
@@ -130,4 +130,19 @@ test('a quest is started from the new-quest form', async ({ page }) => {
   await expect(page.locator('.qu-ev').first()).toBeVisible({ timeout: 60_000 });
   await expect(page.locator('.cq-id b')).toHaveText('Form quest');
   await expect(page.locator('.cq-purse .cq-coin').first().locator('b')).toHaveText('200');
+});
+
+// Fails if a world with sets of its own still asks for a starting pool its sets replace
+test('a world with its own sets goes straight to the distribution', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.getByRole('button', { name: /New quest/ }).click();
+  await page.locator('.stp-open .tile-choice', { hasText: 'Trained' }).click();
+  await page.locator('.stp-open .tile-choice', { hasText: 'Fantasy Mode' }).click();
+  await page.locator('.stp-open input[type=search]').fill('Ravnica');
+  await page.locator('.stp-open .pick-list button').filter({ hasText: /^Ravnica$/ }).click();
+  await expect(page.locator('.stp-open .q b')).toHaveText('Starting pool distribution');
+  await expect(page.locator('.ticket dd').nth(3)).toHaveText('Ravnica');
 });

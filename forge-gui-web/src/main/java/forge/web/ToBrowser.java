@@ -747,8 +747,8 @@ final class ToBrowser {
 
     /** What the new-quest form offers, each list by name. */
     @Message("questOptions")
-    record QuestOptions(List<String> worlds, List<String> sanctioned, List<String> casual, List<String> precons, List<String> sealedDecks,
-            List<String> draftDecks, List<String> cubes, List<QuestDifficultyRow> difficulties) {
+    record QuestOptions(List<String> worlds, List<String> formatWorlds, List<String> sanctioned, List<String> casual, List<String> precons,
+            List<String> sealedDecks, List<String> draftDecks, List<String> cubes, List<QuestDifficultyRow> difficulties) {
     }
 
     /** Every message record, which is what the TypeScript is generated from. */

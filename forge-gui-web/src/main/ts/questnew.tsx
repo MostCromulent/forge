@@ -1,7 +1,7 @@
 // Starting a quest: mobile's questions, asked one at a time, with the quest as it will be on the ticket beside them
 
 import { useEffect, useState } from 'preact/hooks';
-import { StepForm, type Step, type Ticket } from './setup';
+import { Pick, StepForm, type Step, type Ticket } from './setup';
 import { ColourToggles, toggled } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -52,9 +52,10 @@ function choicesFor(options: QuestOptions, pool?: string): string[] | null {
 /** A starting pool built from a deck is that deck, and has no distribution to choose. */
 const fromDeck = (pool?: string) => pool === 'Precon' || pool === 'SealedDeck' || pool === 'DraftDeck' || pool === 'Cube';
 
+/** A list of names, narrowed by what is typed, as long lists of formats and decks are; an empty list says there is nothing saved. */
 function Names({ names, pick }: { names: string[]; pick: (name: string) => void }) {
-  if (!names.length) return <p class="hint">{t('lblWebSetupNothingMatches')}</p>;
-  return <div class="tiles qu-names">{names.map(n => <button key={n} class="tile-choice" onClick={() => pick(n)}><b>{n}</b></button>)}</div>;
+  if (!names.length) return <p class="hint">{t('lblWebQuestNoneSaved')}</p>;
+  return <Pick items={names.map(n => [n, n])} placeholder={t('lblSearch')} pick={pick} />;
 }
 
 function DistributionStep({ set }: { set: (d: Distribution) => void }) {
@@ -103,6 +104,9 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
   const options = model.questOptions;
   if (!options) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
   const difficulty = value.difficulty === undefined ? null : options.difficulties[value.difficulty];
+  const worldOf = (v: NewValue) => (v.commander ? COMMANDER_WORLD : v.world);
+  // A world with sets of its own makes its pool from them, as mobile's screen greys the pool's choices out
+  const ownSets = (v: NewValue) => options.formatWorlds.includes(worldOf(v) ?? '');
   const prizesFrom = (v: NewValue) => (v.prizes === 'Sanctioned' ? options.sanctioned : v.prizes === 'Casual' ? options.casual : null);
   const complete = value.prizes !== undefined && (prizesFrom(value) === null || value.prizeFormat !== undefined);
   const ready = complete && name.trim().length > 0;
@@ -111,10 +115,10 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
     setBusy(true);
     setSent(true);
     const d = value.distribution;
-    const pool = value.pool!;
+    const pool = ownSets(value) ? 'Complete' : value.pool!;
     actions.questCreate({
       name: name.trim(), difficulty: value.difficulty!, fantasy: !!value.fantasy, commander: !!value.commander,
-      world: value.commander ? COMMANDER_WORLD : value.world!, pool,
+      world: worldOf(value)!, pool,
       format: pool === 'Sanctioned' || pool === 'Casual' ? value.choice : undefined, precon: pool === 'Precon' ? value.choice : undefined,
       savedDeck: fromDeck(pool) && pool !== 'Precon' ? value.choice : undefined,
       poolType: d?.poolType ?? 'BALANCED', colors: d?.colors ?? '', artifacts: d?.artifacts ?? true, completeSet: d?.completeSet ?? false,
@@ -156,19 +160,19 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
       render: (_, set) => <Names names={options.worlds} pick={world => set({ world })} />,
     },
     {
-      id: 'pool', label: t('lblStartingPool'), hint: '', fields: ['pool'],
+      id: 'pool', label: t('lblStartingPool'), hint: '', fields: ['pool'], applies: v => !ownSets(v),
       answer: v => nameOf(POOLS, v.pool),
       render: (_, set) => (
         <div class="tiles">{POOLS.map(([id, name]) => <button key={id} class="tile-choice" onClick={() => set({ pool: id })}><b>{t(name)}</b></button>)}</div>
       ),
     },
     {
-      id: 'choice', label: t('lblWebQuestPoolChoice'), hint: '', fields: ['choice'], applies: v => choicesFor(options, v.pool) !== null,
+      id: 'choice', label: t('lblWebQuestPoolChoice'), hint: '', fields: ['choice'], applies: v => !ownSets(v) && choicesFor(options, v.pool) !== null,
       answer: v => v.choice ?? null,
       render: (v, set) => <Names names={choicesFor(options, v.pool) ?? []} pick={choice => set({ choice })} />,
     },
     {
-      id: 'distribution', label: t('lblStartingPoolDistribution'), hint: '', fields: ['distribution'], applies: v => !fromDeck(v.pool),
+      id: 'distribution', label: t('lblStartingPoolDistribution'), hint: '', fields: ['distribution'], applies: v => ownSets(v) || !fromDeck(v.pool),
       answer: v => (v.distribution ? nameOf(DISTRIBUTIONS, v.distribution.poolType) + (v.distribution.colors ? ` · ${v.distribution.colors.split('').join(' ')}` : '') : null),
       render: (_, set) => <DistributionStep set={distribution => set({ distribution })} />,
     },
@@ -205,8 +209,8 @@ export function NewQuest({ model, actions }: { model: Model; actions: Actions })
     rows: v => [
       [t('lblDifficulty'), difficulty?.name ?? null],
       [t('lblWebQuestMode'), v.fantasy === undefined ? null : v.fantasy ? t('rbFantasyMode') : t('lblClassicMode')],
-      [t('lblStartingWorld'), v.commander ? COMMANDER_WORLD : v.world ?? null],
-      [t('lblStartingPool'), v.choice ?? nameOf(POOLS, v.pool)],
+      [t('lblStartingWorld'), worldOf(v) ?? null],
+      [t('lblStartingPool'), ownSets(v) ? worldOf(v) ?? null : v.choice ?? nameOf(POOLS, v.pool)],
       [t('lblPrizedCards'), v.prizeFormat ?? nameOf(PRIZES, v.prizes)],
       [t('lblStartingCredits'), difficulty ? difficulty.credits.toLocaleString('en-GB') : null],
     ],

@@ -215,8 +215,6 @@ final class QuestGame implements Campaign {
         FModel.getWorlds().forEach(w -> worlds.add(w.getName()));
         final List<String> sanctioned = new ArrayList<>();
         FModel.getFormats().getSanctionedList().forEach(f -> sanctioned.add(f.getName()));
-        final List<String> casual = new ArrayList<>();
-        FModel.getFormats().getArchivedList().forEach(f -> casual.add(f.getName()));
         final List<String> sealed = new ArrayList<>();
         FModel.getDecks().getSealed().forEach(d -> sealed.add(d.getName()));
         final List<String> draft = new ArrayList<>();
@@ -229,7 +227,8 @@ final class QuestGame implements Campaign {
                     prefs.getPrefInt(DifficultyPrefs.STARTING_COMMONS, i), prefs.getPrefInt(DifficultyPrefs.STARTING_UNCOMMONS, i),
                     prefs.getPrefInt(DifficultyPrefs.STARTING_RARES, i)));
         }
-        return new QuestOptions(worlds, sanctioned, casual, NewQuestRules.startingPrecons(), sealed, draft, cubes, difficulties);
+        return new QuestOptions(worlds, NewQuestRules.formatWorlds(), sanctioned, NewQuestRules.casualFormats(), NewQuestRules.startingPrecons(),
+                sealed, draft, cubes, difficulties);
     }
 
     /** The form's answers as the shared rules take them; null for a pool or prize type the form does not offer. */

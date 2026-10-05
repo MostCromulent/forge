@@ -625,7 +625,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), 100_000 - pack.get("price").getAsInt());
     }
 
-    // Fails if a quest made from the form is not opened and made current, or the form's options are not sent
+    // Fails if a quest made from the form is not opened and made current, or the form's options are not sent or leave out a world's format or a casual format
     @Test(timeOut = 120_000)
     public void aQuestMadeFromTheFormOpens() throws Exception {
         final Recorder host = onTheShelf();
@@ -633,6 +633,11 @@ public class QuestSessionTest extends SessionsTest {
         final JsonObject options = host.awaitMatching("questOptions", o -> true, "the form's options were not sent");
         Assert.assertTrue(options.getAsJsonArray("worlds").contains(new JsonPrimitive("Main world")));
         Assert.assertEquals(options.getAsJsonArray("difficulties").size(), 4);
+        // A world with sets of its own replaces the starting pool, and the casual formats are mobile's whole list, less those of only unselectable sets
+        Assert.assertTrue(options.getAsJsonArray("formatWorlds").contains(new JsonPrimitive("Ravnica")));
+        Assert.assertFalse(options.getAsJsonArray("formatWorlds").contains(new JsonPrimitive("Main world")));
+        Assert.assertTrue(options.getAsJsonArray("casual").contains(new JsonPrimitive("Premodern")));
+        Assert.assertFalse(options.getAsJsonArray("casual").contains(new JsonPrimitive("Pre-format (LEB)")));
         final String name = QuestFixture.expected();
         send(host, message("questCreate", "name", name, "difficulty", 1, "fantasy", true, "commander", false, "world", "Main world",
                 "pool", "Complete", "poolType", "BALANCED", "colors", "G", "artifacts", false, "completeSet", false, "duplicates", false,

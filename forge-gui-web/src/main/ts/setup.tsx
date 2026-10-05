@@ -552,7 +552,7 @@ function PackSets({ sets, packs, done }: { sets: string[]; packs: number; done: 
   );
 }
 
-function Pick({ items, placeholder, pick }: { items: [string, string][]; placeholder: string; pick: (id: string) => void }) {
+export function Pick({ items, placeholder, pick }: { items: [string, string][]; placeholder: string; pick: (id: string) => void }) {
   const [filter, setFilter] = useState('');
   const shown = items.filter(([, label]) => label.toLowerCase().includes(filter.trim().toLowerCase()));
   return (
