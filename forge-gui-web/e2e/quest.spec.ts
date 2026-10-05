@@ -40,9 +40,9 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   // The match's results, then the booster, are revealed over the Duels page
   const reveal = page.locator('.cq-reveal');
   await expect(reveal.locator('.cq-gift h3')).toHaveText('Gameplay Results');
-  await reveal.getByRole('button', { name: 'OK' }).click();
+  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
   await expect(reveal.locator('.cq-cards-card').first()).toBeVisible();
-  await reveal.getByRole('button', { name: 'OK' }).click();
+  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
   await expect(reveal).toHaveCount(0);
   await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('1 Losses');
 });
