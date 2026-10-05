@@ -334,8 +334,10 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
 
         try {
             if (bossGroup != null) {
-                bossGroup.shutdownGracefully().sync();
-                workerGroup.shutdownGracefully().sync();
+                // Nothing outside this process can still be talking to a loopback server, so it need not wait out Netty's quiet period
+                final long quiet = loopbackOnly ? 0 : 2;
+                bossGroup.shutdownGracefully(quiet, 15, TimeUnit.SECONDS).sync();
+                workerGroup.shutdownGracefully(quiet, 15, TimeUnit.SECONDS).sync();
             }
         } catch (final InterruptedException e) {
             Thread.currentThread().interrupt();
