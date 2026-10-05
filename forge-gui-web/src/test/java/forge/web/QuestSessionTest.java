@@ -883,6 +883,30 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(second.get(1).getAsJsonObject().get("you").getAsBoolean(), "the bracket does not show the player in the second round: " + page);
     }
 
+    // Fails if a player named as one of the tournament's computers wins a match and that computer is advanced in the player's place
+    @Test(timeOut = 300_000)
+    public void aPlayerNamedAsAComputerIsAdvancedOnAWin() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withTournament(d -> d.setStarted(true));
+        final Recorder host = hostInQuest(data);
+        // The computer in seat 0, who already won the first match, has this name
+        sessions.onMessage(host, message("setName", "name", QuestFixture.AI_NAMES[0]));
+        host.awaitMatching("hello", h -> QuestFixture.AI_NAMES[0].equals(str(h, "playerName")), "the name did not change");
+        host.awaitNewest("questTournaments", "the tournaments were not sent");
+        send(host, JsonCodec.message("questTournamentNext"));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the tournament match did not start");
+        awaitPriority(host);
+        computerLoses(host);
+        host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        send(host, message("nextGame", "decision", "CONTINUE"));
+        awaitPriority(host);
+        computerLoses(host);
+        host.awaitMatching("campaignResult", r -> r.get("matchOver").getAsBoolean(), "the match did not end");
+        send(host, JsonCodec.message("leave"));
+        host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
+        Assert.assertEquals(draftOf(data).getStandings()[9], QuestEventDraft.HUMAN);
+    }
+
     // Fails if leaving a tournament match early does not lose it
     @Test(timeOut = 240_000)
     public void leavingATournamentMatchEarlyLosesIt() throws Exception {

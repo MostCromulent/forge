@@ -720,8 +720,10 @@ final class QuestGame implements Campaign {
     private CampaignResult tournamentGameOver(final GameView hostGame, final String opponent) {
         final boolean over = hostGame.isMatchOver();
         final String winner = hostGame.getWinningPlayerName();
+        final boolean won = winner != null && !opponent.equals(winner);
         if (over && winner != null) {
-            quest().getAchievements().getCurrentDraft().setWinner(winner);
+            // setWinner takes any name not a computer's as the player's, and the player may share a name with a computer
+            quest().getAchievements().getCurrentDraft().setWinner(won ? QuestEventDraft.HUMAN : opponent);
             quest().save();
             tournamentDecided = true;
         }
@@ -730,7 +732,7 @@ final class QuestGame implements Campaign {
                 ? List.of(new ResultButton(text.getMessage("lblWebQuestContinueTournament"), "leave", true))
                 : List.of(new ResultButton(text.getMessage("btnContinue"), "nextGame", true),
                         new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "quit", false));
-        result = new CampaignResult(winner != null && !opponent.equals(winner), over, null, buttons);
+        result = new CampaignResult(won, over, null, buttons);
         return result;
     }
 
