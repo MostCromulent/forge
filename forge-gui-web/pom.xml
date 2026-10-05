@@ -149,6 +149,10 @@
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
                         </manifest>
+                        <!-- Quest's saves are read by XStream, which needs these, as desktop's jar declares them -->
+                        <manifestEntries>
+                            <Add-Opens>java.base/java.util java.base/java.lang java.base/java.lang.reflect java.base/java.text java.base/java.math java.base/java.util.concurrent java.base/java.net java.base/java.nio</Add-Opens>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>

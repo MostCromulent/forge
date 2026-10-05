@@ -121,6 +121,13 @@ export interface Actions {
   /** Starts a finished match again from its first game. */
   restartGame(): void;
 
+  // A campaign mode: Quest
+  /** Fights a duel of the Duels page, by its place in the list. */
+  questDuel(index: number): void;
+  /** Chooses the pet for a slot, the plant's being 0; null summons none. */
+  questPet(slot: number, name: string | null): void;
+  questMatchLength(games: number): void;
+
   // Online draft and sealed, at a table
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
   openLimitedTable(kind: 'sealed' | 'draft'): void;
@@ -265,6 +272,9 @@ export function createActions(send: Send): Actions {
     conquestBattle: () => send({ t: 'conquestBattle' }),
     rewardClaim: () => send({ t: 'rewardClaim' }),
     devConquestWheel: outcome => send({ t: 'devConquestWheel', outcome }),
+    questDuel: index => send({ t: 'questDuel', index }),
+    questPet: (slot, name) => send({ t: 'questPet', slot, name: name ?? undefined }),
+    questMatchLength: games => send({ t: 'questMatchLength', games }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
     conquestAether: q => send({ t: 'conquestAether', ...q }),

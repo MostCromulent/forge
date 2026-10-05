@@ -27,7 +27,9 @@ final class SkinSprites {
     /** The sheets campaign icons are cut from, by file name. */
     private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
     private static final Set<FSkinProp> CAMPAIGN_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
-            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE, FSkinProp.ICO_QUEST_COINSTACK, FSkinProp.ICO_QUEST_LIFE);
+            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE, FSkinProp.ICO_QUEST_COINSTACK, FSkinProp.ICO_QUEST_LIFE,
+            // The icons Quest's reward messages name
+            FSkinProp.ICO_QUEST_GOLD, FSkinProp.ICO_QUEST_COIN, FSkinProp.ICO_QUEST_HEART, FSkinProp.ICO_QUEST_NOTES, FSkinProp.ICO_QUEST_BOX);
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
     private SkinSprites() {

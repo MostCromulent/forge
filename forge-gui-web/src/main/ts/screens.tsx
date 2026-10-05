@@ -7,6 +7,7 @@ import { Editor } from './editor';
 import { Limited } from './limited';
 import { Drafting } from './drafting';
 import { Conquest } from './conquest';
+import { Quest } from './quest';
 import { Importer } from './importer';
 import { DeckFinder } from './deckfinder';
 import { Requests } from './dialogs';
@@ -34,6 +35,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
   render(page === 'limited' ? <Limited model={model} actions={actions} /> : null, byId('limited'));
   render(page === 'drafting' ? <Drafting model={model} actions={actions} /> : null, byId('drafting'));
   render(page === 'conquest' ? <Conquest model={model} actions={actions} /> : null, byId('conquest'));
+  render(page === 'quest' ? <Quest model={model} actions={actions} /> : null, byId('quest'));
   // The dock has two homes: the bottom edge before a match, the side column under the log during one
   render(page === 'match' && model.networked ? <Dock model={model} actions={actions} /> : null, byId('match-chat'));
   render(page !== 'match' ? <Dock model={model} actions={actions}
@@ -66,7 +68,7 @@ export function renderScreens(model: Model, actions: Actions, dismissNotice: (id
 }
 
 /** Which page is showing. A browser without a name is asked for one before it goes anywhere. */
-export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'conquest' | 'match' {
+export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | 'drafting' | 'limited' | 'conquest' | 'quest' | 'match' {
   if (model.inMatch) return 'match';
   if (!model.playerName) return 'name';
   // The editor sits over the menu or the table without leaving either, so closing it returns to where it was opened
@@ -75,5 +77,6 @@ export function screenOf(model: Model): 'name' | 'menu' | 'lobby' | 'editor' | '
   if (model.drafting && !(model.inLobby && ui.draftHidden)) return 'drafting';
   if (model.inEvent) return 'limited';
   if (model.campaign === 'conquest') return 'conquest';
+  if (model.campaign === 'quest') return 'quest';
   return model.inLobby ? 'lobby' : 'menu';
 }

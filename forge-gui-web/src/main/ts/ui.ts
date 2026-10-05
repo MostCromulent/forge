@@ -15,6 +15,7 @@ export interface Picker {
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
 export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
+export type QuestTab = 'duels';
 
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */
@@ -60,6 +61,8 @@ export interface UiState {
   sidePanels: { log: boolean; chat: boolean };
   /** Which page of the open conquest is showing. It outlives the deck editor, which takes the page's place for a while. */
   conquestTab: ConquestTab;
+  /** Which page of the open quest is showing. */
+  questTab: QuestTab;
   /** The map's regions the player has opened or closed by hand, as `plane:region`. */
   conquestOpened: Record<string, boolean>;
   /** An online draft was left for the table on this browser; the draft goes on, and Return to draft comes back to it. */
@@ -105,6 +108,7 @@ export const ui: UiState = {
   cardText: false,
   sidePanels: { log: true, chat: true, ...storedSidePanels() },
   conquestTab: 'map',
+  questTab: 'duels',
   conquestOpened: {},
   draftHidden: false,
   inspect: false,

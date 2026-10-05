@@ -2,7 +2,8 @@
 
 import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { skinIconUrl } from './images';
+import { imageUrl, skinIconUrl } from './images';
+import { artUrl } from './sleeves';
 import type { Actions } from './actions';
 import type { Model } from './model';
 import type { CampaignBar as Bar } from './protocol';
@@ -21,7 +22,7 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
   bar: Bar; tabs: [Tab, TextKey][]; tab: Tab; setTab: (tab: Tab) => void;
   /** What a reward being revealed has yet to show, by balance icon: the server's balances already hold it all, so the bar shows less. */
   held: Record<string, number>;
-  extra?: ComponentChildren; prefs: () => void; under: boolean;
+  extra?: ComponentChildren; prefs?: () => void; under: boolean;
 }) {
   return (
     <div class="cq-bar" inert={under}>
@@ -36,8 +37,46 @@ export function CampaignBar<Tab extends string>({ bar, tabs, tab, setTab, held, 
       <div class="cq-purse">
         {extra}
         {bar.balances.map(b => <Purse key={b.icon} icon={b.icon} n={b.amount - (held[b.icon] ?? 0)} label={b.label} />)}
-        <button onClick={prefs}>{t('lblWebCampaignPreferences')}</button>
+        {prefs && <button onClick={prefs}>{t('lblWebCampaignPreferences')}</button>}
       </div>
+    </div>
+  );
+}
+
+/** The panel beside a page's list: what is chosen, its picture, what it says, and under it what the player brings. A picture pressed is shown large. */
+export function SidePanel({ kicker, where, title, art, label, zoom, setZoom, children, foot }: {
+  kicker: string; where?: ComponentChildren; title?: string; art?: string | null; label?: string;
+  zoom: string | null; setZoom: (image: string | null) => void; children: ComponentChildren; foot: ComponentChildren;
+}) {
+  return (
+    <aside class="cq-side">
+      <div class="cq-panel">
+        <div class="cq-where"><span class="cq-kicker">{kicker}</span>{where}</div>
+        <h3>{title}</h3>
+        <button class="cq-art" disabled={!art} style={{ backgroundImage: art ? `url("${artUrl(art)}")` : undefined }}
+          onClick={() => setZoom(art ?? null)}>
+          <b>{label}</b>
+        </button>
+        {children}
+      </div>
+      <div class="cq-foot">{foot}</div>
+      {zoom && <div class="backdrop" onClick={() => setZoom(null)}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
+    </aside>
+  );
+}
+
+/** The deck a match is fought with, and the way to another. */
+export function DeckRow({ image, name, line, problem, zoom, change }: {
+  image?: string | null; name: string; line: string; problem: boolean; zoom: (image: string) => void; change?: () => void;
+}) {
+  return (
+    <div class="cq-mine">
+      {image && <button class="cq-face2" aria-label={name} style={{ backgroundImage: `url("${artUrl(image)}")` }} onClick={() => zoom(image)} />}
+      <div class="t">
+        <b>{name}</b>
+        {problem ? <span class="cq-warn">{t('lblInvalidDeck')}</span> : <span>{line}</span>}
+      </div>
+      {change && <button onClick={change}>{t('lblWebMenuChange')}</button>}
     </div>
   );
 }

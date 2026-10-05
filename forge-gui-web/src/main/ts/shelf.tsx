@@ -7,7 +7,7 @@ import { t } from './text';
 
 export function Shelf<Row extends { name: string }>({ rows, create, cls, art, sub, mid, foot, rename, remove }: {
   rows: Row[];
-  create: { title: string; line?: string; go: () => void };
+  create?: { title: string; line?: string; go: () => void };
   cls: (row: Row) => string;
   art?: (row: Row) => ComponentChildren;
   /** What a card says under its name and in its middle, and its buttons while it is asked nothing. */
@@ -15,7 +15,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
   /** field names the name's input for a reader who cannot see it. */
   rename?: { field: string; go: (row: Row, to: string) => void };
   /** item is the menu's word for it, ask the question put before it is done, and keep the answer that leaves it. */
-  remove: { item: string; ask: (row: Row) => string; keep: string; go: (row: Row) => void };
+  remove?: { item: string; ask: (row: Row) => string; keep: string; go: (row: Row) => void };
 }) {
   const [menu, setMenu] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
@@ -23,11 +23,13 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
   usePressOutside(menu !== null, '.ev-more', () => setMenu(null));
   return (
     <div class="event-shelf">
-      <button class="ev new" onClick={create.go}>
-        <span class="plus" aria-hidden="true">+</span>
-        <b>{create.title}</b>
-        {create.line && <span>{create.line}</span>}
-      </button>
+      {create && (
+        <button class="ev new" onClick={create.go}>
+          <span class="plus" aria-hidden="true">+</span>
+          <b>{create.title}</b>
+          {create.line && <span>{create.line}</span>}
+        </button>
+      )}
       {rows.map(r => (
         <article key={r.name} class={cls(r)}>
           {art?.(r)}
@@ -51,7 +53,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
           </div>
           <div class="ev-mid">{mid(r)}</div>
           <div class="ev-foot">
-            {deleting === r.name
+            {remove && deleting === r.name
               ? <>
                   <span class="ev-ask">{remove.ask(r)}</span>
                   <span class="sp" />
@@ -61,7 +63,8 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
               : <>
                   {foot(r)}
                   <span class="sp" />
-                  <span class="ev-more">
+                  {/* Without a way to remove a save there is nothing for its menu to hold */}
+                  {remove && <span class="ev-more">
                     <button class="more" title={t('lblWebLimitedMore')} aria-label={t('lblWebLimitedMoreFor', r.name)} aria-expanded={menu === r.name}
                       onClick={() => setMenu(menu === r.name ? null : r.name)}>⋯</button>
                     {menu === r.name && (
@@ -70,7 +73,7 @@ export function Shelf<Row extends { name: string }>({ rows, create, cls, art, su
                         <button role="menuitem" onClick={() => { setMenu(null); setDeleting(r.name); }}>{remove.item}</button>
                       </div>
                     )}
-                  </span>
+                  </span>}
                 </>}
           </div>
         </article>

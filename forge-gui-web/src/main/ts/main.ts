@@ -291,7 +291,11 @@ function apply(msg: ServerMessage): void {
         model.conquestPlanes = null;
         ui.conquestTab = 'map';
       }
-      if (msg.campaign !== 'quest') model.questSaves = null;
+      if (msg.campaign !== 'quest') {
+        model.questSaves = null;
+        model.questDuels = null;
+        ui.questTab = 'duels';
+      }
       model.drafting = msg.drafting;
       if (!msg.drafting) {
         model.draft = null;
@@ -355,6 +359,7 @@ function apply(msg: ServerMessage): void {
     case 'limitedResult': model.limitedResult = msg; break;
     case 'conquestSaves': model.conquestSaves = msg; break;
     case 'questSaves': model.questSaves = msg; break;
+    case 'questDuels': model.questDuels = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'campaignResult': model.campaignResult = msg; break;
@@ -545,6 +550,7 @@ function render(): void {
   byId('limited').hidden = page !== 'limited';
   byId('drafting').hidden = page !== 'drafting';
   byId('conquest').hidden = page !== 'conquest';
+  byId('quest').hidden = page !== 'quest';
   byId('match').hidden = page !== 'match';
   matchHistory(page === 'match');
   void keepAwake(page === 'match' && !model.gameOver);

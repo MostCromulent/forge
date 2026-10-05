@@ -321,7 +321,7 @@ html[data-form="portrait"] #dock .dock.folded { min-height: 44px; width: auto; }
 html[data-form="portrait"] #dock .dock.open { left: 12px; width: auto; max-height: 60dvh; }
 html[data-form="portrait"] .page-head button { min-width: 44px; min-height: 44px; }
 /* Screens with no phone layout yet scroll inside themselves, never the page */
-html[data-form="portrait"] :is(#editor, #limited, #drafting, #conquest) { max-width: 100vw; overflow-x: auto; }
+html[data-form="portrait"] :is(#editor, #limited, #drafting, #conquest, #quest) { max-width: 100vw; overflow-x: auto; }
 /* Pinned over the seats, a Play that cannot be pressed yet is dimmed without being seen through */
 html[data-form="portrait"] #lobby .play:disabled { opacity: 1; filter: saturate(.35) brightness(.55); }
 

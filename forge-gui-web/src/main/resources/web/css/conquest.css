@@ -1,4 +1,4 @@
-/* Planar Conquest. The saved conquests reuse the Limited shelf (limited.css); everything else is here. */
+/* Planar Conquest, and the pieces every campaign shares (the bar, the side panel, the reveal). The shelves reuse the Limited shelf (limited.css). */
 
 .chooser-more { margin: 14px 0 0; font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .kind-main:disabled { opacity: .45; cursor: default; }
@@ -143,6 +143,16 @@ html[data-motion="reduced"] .cq-you::before { animation: none; opacity: 0; }
 .cq-gift-what { display: flex; align-items: center; gap: 12px; }
 .cq-gift-what img { width: 64px; height: 64px; }
 .cq-gift-what b { font: 700 34px/1 Georgia, "Times New Roman", serif; font-variant-numeric: tabular-nums; }
+/* A message's breakdown, each line with its amount at its end */
+.cq-gift-lines { list-style: none; margin: 0; padding: 0; width: 100%; display: grid; gap: 4px; text-align: left; font-size: 13px; }
+.cq-gift-lines li { display: flex; justify-content: space-between; gap: 18px; padding: 5px 10px; border-radius: 6px; background: var(--surface-2); }
+.cq-gift-lines li b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cq-gift-lines li:last-child { background: var(--accent-soft); font-weight: 700; }
+/* Cards a reward gave, face up; cards lost to ante are dimmed and grey */
+.cq-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 12px; max-width: min(1000px, 92vw); }
+.cq-cards-card { width: 148px; aspect-ratio: 63 / 88; padding: 0; border: 0; border-radius: 8px; overflow: hidden; background: var(--surface-2); box-shadow: 0 8px 20px #000b; }
+.cq-cards-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cq-cards.lost .cq-cards-card { filter: grayscale(.85) brightness(.6); }
 
 /* The Chaos Wheel as a dial: engraved brass round dark glass, and nothing that blinks */
 .cq-wheel-stop { display: grid; justify-items: center; gap: 18px; }

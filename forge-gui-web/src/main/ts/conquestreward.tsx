@@ -65,19 +65,50 @@ export function Reveal({ reward, onOwed, done }: { reward: Reward; onOwed: (owed
       {step.kind === 'EMBLEMS' && <Gift icon="IMG_PW_BADGE_COMMON" amount={step.amount} title={t('lblReceivedBonusPlaneswalkEmblems')} button={t('lblGreat')} next={next} />}
       {step.kind === 'ALL_PLANES_UNLOCKED' && <Gift icon="IMG_PW_BADGE_COMMON" title={t('lblAllPlanesUnlocked')} text={t('lblAllPlanesUnlockedNotify')} button={t('lblOK')} next={next} />}
       {step.kind === 'CHAOS_BATTLE' && <Gift icon="IMG_MULTIVERSE" title={t('lblChaosApproaching')} text={t('lblWebConquestNoRefusal')} button={t('lblOK')} next={next} />}
+      {step.kind === 'MESSAGE' && <Gift icon={step.icon} title={step.title ?? ''} text={step.text} lines={step.lines} button={t('lblOK')} next={next} />}
+      {step.kind === 'CARDS' && <CardsStop key={at} step={step} zoom={setZoom} next={next} />}
       {zoom && <div class="backdrop cq-zoom-layer" onClick={e => { e.stopPropagation(); setZoom(null); }}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
     </div>
   );
 }
 
-/** One of the wheel's plain outcomes, or a notice, as a small dialog of one shape. */
-function Gift({ icon, amount, title, text, button, next }: { icon: string; amount?: number; title: string; text?: string; button: string; next: () => void }) {
+/** A line of a message that ends in an amount of credits, as Quest's results write them: the words, and the amount set apart. */
+const CREDIT_LINE = /^(.*?):?\s+(-?\d+) credits?\.?$/;
+
+/** One of the wheel's plain outcomes, or a notice, as a small dialog of one shape. lines are a breakdown, each with its amount at its end. */
+function Gift({ icon, amount, title, text, lines, button, next }: {
+  icon?: string; amount?: number; title: string; text?: string; lines?: string[]; button: string; next: () => void;
+}) {
   return (
     <div class="dialog cq-gift">
       <h3>{title}</h3>
-      <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{amount.toLocaleString('en-GB')}</b>}</div>
+      {icon && <div class="cq-gift-what"><img alt="" src={skinIconUrl(icon)} />{amount !== undefined && <b>{amount.toLocaleString('en-GB')}</b>}</div>}
       {text && <p>{text}</p>}
+      {lines && (
+        <ul class="cq-gift-lines">
+          {lines.map((line, i) => {
+            const credit = CREDIT_LINE.exec(line);
+            return <li key={i}>{credit ? <><span>{credit[1]}</span><b>{credit[2]}</b></> : <span>{line}</span>}</li>;
+          })}
+        </ul>
+      )}
       <button class="primary" onClick={next}>{button}</button>
+    </div>
+  );
+}
+
+/** Cards a reward gave, face up as a pack ends, or cards lost to ante, drawn dimmed and grey. */
+function CardsStop({ step, zoom, next }: { step: RewardStep; zoom: (image: string) => void; next: () => void }) {
+  const lost = step.outcome === 'lost';
+  return (
+    <div class="cq-pack-stop">
+      <h3>{step.title}</h3>
+      <div class={lost ? 'cq-cards lost' : 'cq-cards'}>
+        {(step.cards ?? []).map((c, i) => (
+          <button key={i} class="cq-cards-card" aria-label={c.name} onClick={() => zoom(c.image)}><img alt={c.name} src={imageUrl(c.image)} /></button>
+        ))}
+      </div>
+      <div class="cq-reveal-foot"><button class="primary cq-big" onClick={next}>{t('lblOK')}</button></div>
     </div>
   );
 }

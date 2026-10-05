@@ -24,8 +24,8 @@ export interface Seed {
   prefs?: Record<string, string>;
   /** Constructed decks saved as the player's own, by name, in .dck text. */
   decks?: Record<string, string>;
-  /** Any other files, by their path under Forge's user folder, with their text. */
-  files?: Record<string, string>;
+  /** Any other files, by their path under Forge's user folder, with their text, or their bytes for a file that is not text. */
+  files?: Record<string, string | Buffer>;
 }
 
 /** The player's own deck every probe server starts with: sixty basics, legal in Constructed. */

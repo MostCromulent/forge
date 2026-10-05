@@ -82,7 +82,9 @@ function Chooser({ who, model, actions, back }: { who: 'play' | 'friends'; model
           <Kind id="conquest" name={t('lblPlanarConquest')} blurb={t('lblWebConquestBlurb')} onClick={() => actions.campaignOpen('conquest', false)}
             resume={model.currentConquest ? () => actions.campaignOpen('conquest', true) : undefined}
             resumeLabel={model.currentConquest ? t('lblWebConquestResume', model.currentConquest) : undefined} />
-          <Kind id="quest" name={t('lblQuestMode')} blurb={t('lblWebConquestQuestSoon')} />
+          <Kind id="quest" name={t('lblQuestMode')} blurb={t('lblWebQuestBlurb')} onClick={() => actions.campaignOpen('quest', false)}
+            resume={model.currentQuest ? () => actions.campaignOpen('quest', true) : undefined}
+            resumeLabel={model.currentQuest ? t('lblWebConquestResume', model.currentQuest) : undefined} />
         </div>
       </>}
     </div>

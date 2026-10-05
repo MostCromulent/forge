@@ -2,10 +2,11 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { artUrl } from './sleeves';
-import { skinIconUrl, imageUrl } from './images';
+import { skinIconUrl } from './images';
 import { Pips } from './symbols';
 import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
 import { reducedMotion } from './conquestmotion';
+import { DeckRow, SidePanel } from './campaign';
 import { changeUi, ui } from './ui';
 import type { Actions } from './actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from './protocol';
@@ -210,28 +211,11 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
   const region = state.regions[cell.region];
   const lead = state.commander;
   return (
-    <aside class="cq-side">
-      <div class="cq-panel">
-        <div class="cq-where"><span class="cq-kicker">{state.plane} - {region.name}</span><span class="pips"><Pips colors={region.colors} /></span></div>
-        <h3>{cell.name}</h3>
-        <button class="cq-art" disabled={!cell.avatar} style={{ backgroundImage: cell.avatar ? `url("${artUrl(cell.avatar)}")` : undefined }}
-          onClick={() => setZoom(cell.avatar ?? null)}>
-          <b>{cell.opponent}</b>
-        </button>
-        <Chips cell={cell} />
-        {(cell.variants ?? []).filter(v => VARIANT_DESC[v]).map(v => <p key={v} class="cq-desc">{t(VARIANT_DESC[v])}</p>)}
-        <Reward cell={cell} />
-        {state.steps > 0 && <p class="cq-steps">{state.steps === 1 ? t('lblWebConquestOneStep') : t('lblWebConquestSteps', state.steps)}</p>}
-      </div>
-      <div class="cq-foot">
-        <div class="cq-mine">
-          <button class="cq-face2" aria-label={lead.name} style={{ backgroundImage: `url("${artUrl(lead.image)}")` }} onClick={() => setZoom(lead.image)} />
-          <div class="t">
-            <b>{lead.name}</b>
-            {lead.problem ? <span class="cq-warn">{t('lblInvalidDeck')}</span> : <span>{t('lblWebConquestDeckCards', lead.deckSize)}</span>}
-          </div>
-          <button onClick={() => changeUi(u => { u.conquestTab = 'party'; })}>{t('lblWebMenuChange')}</button>
-        </div>
+    <SidePanel kicker={`${state.plane} - ${region.name}`} where={<span class="pips"><Pips colors={region.colors} /></span>}
+      title={cell.name} art={cell.avatar} label={cell.opponent} zoom={zoom} setZoom={setZoom}
+      foot={<>
+        <DeckRow image={lead.image} name={lead.name} line={t('lblWebConquestDeckCards', lead.deckSize)} problem={!!lead.problem}
+          zoom={setZoom} change={() => changeUi(u => { u.conquestTab = 'party'; })} />
         {(cell.variants ?? []).includes('Planeswalker') && (
           <div class="cq-mine">
             <button class="cq-face2 round" aria-label={state.walker} style={{ backgroundImage: `url("${artUrl(state.walkerImage)}")` }} onClick={() => setZoom(state.walkerImage)} />
@@ -240,8 +224,11 @@ function EventPanel({ state, cell, busy, battle }: { state: ConquestState; cell:
         )}
         {lead.problem && <p class="cq-warn">{lead.problem}</p>}
         <button class="primary cq-big" disabled={!!lead.problem || busy} onClick={battle}>{t('lblBattle')}</button>
-      </div>
-      {zoom && <div class="backdrop" onClick={() => setZoom(null)}><img class="cq-zoom" alt="" src={imageUrl(zoom)} /></div>}
-    </aside>
+      </>}>
+      <Chips cell={cell} />
+      {(cell.variants ?? []).filter(v => VARIANT_DESC[v]).map(v => <p key={v} class="cq-desc">{t(VARIANT_DESC[v])}</p>)}
+      <Reward cell={cell} />
+      {state.steps > 0 && <p class="cq-steps">{state.steps === 1 ? t('lblWebConquestOneStep') : t('lblWebConquestSteps', state.steps)}</p>}
+    </SidePanel>
   );
 }
