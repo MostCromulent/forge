@@ -1,27 +1,41 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.deck.Deck;
+import forge.game.GameFormat;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.PreparedMatch;
+import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDuel;
+import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestSpellShop;
 import forge.gamemodes.quest.QuestUtil;
+import forge.gamemodes.quest.StartingPoolPreferences;
+import forge.gamemodes.quest.StartingPoolType;
+import forge.gamemodes.quest.data.QuestData;
+import forge.gamemodes.quest.data.QuestPreferences.DifficultyPrefs;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
+import forge.item.IPaperCard;
 import forge.item.InventoryItem;
 import forge.item.PaperCard;
-import forge.item.IPaperCard;
+import forge.item.PreconDeck;
+import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
 import forge.util.ItemPool;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
@@ -123,5 +137,64 @@ public class QuestRulesTest {
         final ItemPool<InventoryItem> extras = QuestSpellShop.extras(owned);
         assertEquals(extras.count(shock), 7 - FModel.getQuestPreferences().getPrefInt(QPref.PLAYSET_SIZE));
         assertEquals(extras.count(forest), Math.max(0, 60 - FModel.getQuestPreferences().getPrefInt(QPref.PLAYSET_ANY_NUMBER_SIZE)));
+    }
+
+    private static NewQuestRules.Choices choices(final String name, final StartingPoolType pool, final String format, final String precon) {
+        return new NewQuestRules.Choices(name, 0, QuestMode.Fantasy, false, "Main world", pool, format, precon, null,
+                new StartingPoolPreferences(StartingPoolPreferences.PoolType.BALANCED, new ArrayList<>(), false, false, false, 0), null, null, true);
+    }
+
+    // Fails if a Sanctioned-format quest does not start with a pool from that format's sets and the difficulty's credits
+    @Test
+    public void aSanctionedQuestStartsFromItsFormat() {
+        final String name = QuestFixture.expected();
+        final GameFormat format = FModel.getFormats().getSanctionedList().iterator().next();
+        NewQuestRules.start(choices(name, StartingPoolType.Sanctioned, format.getName(), null));
+        final QuestController quest = FModel.getQuest();
+        assertEquals(quest.getName(), name);
+        assertEquals(quest.getAssets().getCredits(), FModel.getQuestPreferences().getPrefInt(DifficultyPrefs.STARTING_CREDITS, 0));
+        assertTrue(quest.getCards().getCardpool().countAll() > 0);
+        for (final PaperCard card : quest.getCards().getCardpool().toFlatList()) {
+            if (!card.getRules().getType().isBasicLand()) {
+                assertTrue(format.isSetLegal(card.getEdition()), card + " is not from " + format.getName());
+            }
+        }
+        assertTrue(new File(ForgeConstants.QUEST_SAVE_DIR, name + ".dat").isFile());
+        assertEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), name + ".dat");
+    }
+
+    // Fails if a precon quest does not start with that deck and nothing else
+    @Test
+    public void aPreconQuestStartsWithItsDeck() {
+        final String name = QuestFixture.expected();
+        String precon = null;
+        for (final PreconDeck deck : QuestController.getPrecons()) {
+            if (precon == null && QuestController.getPreconDeals(deck).getMinWins() <= 0) {
+                precon = deck.getName();
+            }
+        }
+        assertNotNull(precon, "no precon is offered at the start");
+        NewQuestRules.start(choices(name, StartingPoolType.Precon, null, precon));
+        final Deck deck = QuestController.getPrecons().get(precon).getDeck();
+        final QuestController quest = FModel.getQuest();
+        assertEquals(quest.getMyDecks().size(), 1);
+        for (final PaperCard card : quest.getCards().getCardpool().toFlatList()) {
+            if (!card.getRules().getType().isBasicLand()) {
+                assertTrue(deck.getMain().contains(card), card + " is not in " + precon);
+            }
+        }
+        deck.getMain().forEach(e -> assertTrue(quest.getCards().getCardpool().count(e.getKey()) >= e.getValue(), e.getKey() + " is missing"));
+    }
+
+    // Fails if a name another quest has is accepted, or a name with a path in it is not cleaned of it
+    @Test
+    public void aQuestsNameIsCleanAndFree() throws IOException {
+        final QuestData data = QuestFixture.install();
+        assertNotNull(NewQuestRules.problem(choices(data.getName(), StartingPoolType.Complete, null, null)));
+        assertNotNull(NewQuestRules.problem(choices("../", StartingPoolType.Complete, null, null)));
+        final String name = QuestFixture.expected();
+        assertNull(NewQuestRules.problem(choices("../" + name + "/", StartingPoolType.Complete, null, null)));
+        assertEquals(NewQuestRules.cleanName("../" + name + "/"), name);
+        assertFalse(new File(ForgeConstants.QUEST_SAVE_DIR, name + ".dat").exists());
     }
 }

@@ -54,6 +54,16 @@ final class QuestFixture {
         return QuestDataIO.loadData(file.toFile());
     }
 
+    /** A name a test is about to have a quest made or renamed to, whose files are removed afterwards. */
+    static String expected() {
+        if (currentBefore == null) {
+            currentBefore = FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST);
+        }
+        final String name = "Quest test " + UUID.randomUUID().toString().substring(0, 8);
+        made.add(name);
+        return name;
+    }
+
     static void cleanUp() throws IOException {
         FModel.getQuest().setCurrentEvent(null);
         FModel.getQuest().load(null);
