@@ -211,3 +211,22 @@ test('a tournament is entered, drafted, built and its first match reached', asyn
   await result.getByRole('button', { name: 'Forfeit Tournament' }).click();
   await expect(page.locator('.qu-seat.you.out')).toHaveCount(1, { timeout: 30_000 });
 });
+
+// Fails if the Statistics tab does not show the quest's record, or the preferences do not open from the bar with the difficulty table
+test('the statistics show the record and the preferences open from the bar', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
+
+  await page.locator('.cq-tab', { hasText: 'Statistics' }).click();
+  const figure = (label: string) => page.locator('.cq-figure', { has: page.locator('.cq-kicker', { hasText: new RegExp(`^${label}$`) }) }).locator('p b');
+  await expect(figure('Wins')).toHaveText('0');
+  await expect(figure('Credits')).toHaveText('5,000');
+
+  await page.getByRole('button', { name: 'Preferences' }).click();
+  await expect(page.locator('.cq-pref-table thead th')).toHaveCount(5);
+  await page.getByRole('button', { name: 'OK', exact: true }).click();
+  await expect(page.locator('.cq-prefs')).toHaveCount(0);
+});

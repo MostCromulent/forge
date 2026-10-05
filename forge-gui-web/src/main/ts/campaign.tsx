@@ -134,7 +134,10 @@ export function Prefs({ model, actions, close }: { model: Model; actions: Action
     if (p && !p.problem && last) setTyped(({ [last]: _, ...rest }) => rest);
   }, [p]);
   if (!p) return null;
-  const groups = [...new Set(p.rows.map(r => r.group))];
+  // A group drawn as a table spans the dialog, so it comes after the groups that share its two columns
+  const tabled = (g: string) => p.rows.some(r => r.group === g && r.column);
+  const named = [...new Set(p.rows.map(r => r.group))];
+  const groups = [...named.filter(g => !tabled(g)), ...named.filter(tabled)];
   // The field's own text, since a blur can come before the typing has been drawn
   const save = (key: string, text: string, was: string) => {
     // What a value may be is the mode's to say, and its refusal comes back as the problem line

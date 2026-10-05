@@ -2,7 +2,7 @@
 
 import { useState } from 'preact/hooks';
 import { SidePanel } from './campaign';
-import { Brings, Difficulty } from './questduels';
+import { Brings, Difficulty, WorldButtons } from './questduels';
 import { artUrl } from './sleeves';
 import { skinIconUrl } from './images';
 import type { Actions } from './actions';
@@ -54,6 +54,7 @@ export function Challenges({ page, duels, actions }: { page: QuestChallenges; du
           <h2>{t('lblChallenges')}</h2><p>{t('lblWebQuestChallengeAsk')}</p>
           <span class="sp" />
           {page.zeppelin && <button disabled={page.zeppelinUsed} onClick={() => actions.questZeppelin()}>{t('lblWebQuestZeppelin')}</button>}
+          <WorldButtons page={duels} actions={actions} />
         </div>
         <div class="qu-status">
           <span class="cq-chip">{t('lblWebQuestOpenOf', page.open, page.max)}</span>

@@ -83,6 +83,14 @@ export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
   </>;
 }
 
+/** Travel, and Unlock Sets where the quest's format offers an unlock, as desktop has them beside the duels and challenges. */
+export function WorldButtons({ page, actions }: { page: QuestDuels; actions: Actions }) {
+  return <>
+    <button onClick={() => actions.questTravel()}>{t('btnTravel')}</button>
+    {page.canUnlock && <button onClick={() => actions.questUnlock()}>{t('btnUnlockSets')}</button>}
+  </>;
+}
+
 export function Duels({ page, actions }: { page: QuestDuels; actions: Actions }) {
   const [chosen, setChosen] = useState(0);
   const [zoom, setZoom] = useState<string | null>(null);
@@ -91,7 +99,7 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
   return (
     <div class="cq-map">
       <div class="qu-list">
-        <div class="qu-list-head"><h2>{t('lblDuels')}</h2><p>{t('lblWebQuestSelectDuel')}</p></div>
+        <div class="qu-list-head"><h2>{t('lblDuels')}</h2><p>{t('lblWebQuestSelectDuel')}</p><span class="sp" /><WorldButtons page={page} actions={actions} /></div>
         <div class="qu-status">
           <span class="cq-chip"><b>{page.wins}</b> {t('lblWins')}</span>
           <span class="cq-chip"><b>{page.losses}</b> {t('lblLosses')}</span>

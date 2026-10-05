@@ -154,6 +154,10 @@ export interface Actions {
   questTournamentLeave(): void;
   /** Opens the tournament's deck in the editor. */
   questTournamentDeck(): void;
+  /** Travels to another world; the host asks which. */
+  questTravel(): void;
+  /** Unlocks a set; the host asks which. */
+  questUnlock(): void;
   questCreate(c: Omit<QuestCreate, 't'>): void;
 
   // Online draft and sealed, at a table
@@ -320,6 +324,8 @@ export function createActions(send: Send): Actions {
     questTournamentNext: () => send({ t: 'questTournamentNext' }),
     questTournamentLeave: () => send({ t: 'questTournamentLeave' }),
     questTournamentDeck: () => send({ t: 'questTournamentDeck' }),
+    questTravel: () => send({ t: 'questTravel' }),
+    questUnlock: () => send({ t: 'questUnlock' }),
     questCreate: c => send({ t: 'questCreate', ...c }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
