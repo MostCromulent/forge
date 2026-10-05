@@ -358,7 +358,7 @@ final class DeckSession {
         return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), q.showAll()), problems, only, inDeck::countByName,
                 collection == null ? null : c -> new CardCatalog.Extra(collection.isNew().test(c) ? Boolean.TRUE : null, null,
-                        owned == null ? null : owned.countByName(c.getName())));
+                        owned == null ? null : owned.countByName(c.getName()), null, null));
     }
 
     private ImportResult fetched(final ImportFetch fetch) {

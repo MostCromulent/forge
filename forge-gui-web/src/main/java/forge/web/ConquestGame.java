@@ -437,7 +437,8 @@ final class ConquestGame implements Campaign {
         final String note = Localizer.getInstance().getMessage("lblExileRetrieveProportion",
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_EXILE_VALUE) / base),
                 Math.round(100 * prefs.getPrefInt(CQPref.AETHER_BASE_RETRIEVE_COST) / base)).replace('\n', ' ');
-        return new Trading(List.of(new TradeList("collection", cardsOf(false).size()), new TradeList("exile", cardsOf(true).size())), note, planes);
+        return new Trading(List.of(new TradeList("collection", cardsOf(false).size()), new TradeList("exile", cardsOf(true).size())), note, planes,
+                null, null);
     }
 
     /** A page of the collection or of the exile, each card with what exiling or retrieving it is worth. */
@@ -457,7 +458,7 @@ final class ConquestGame implements Campaign {
         final Function<PaperCard, String> problem = exile ? c -> null : c -> data.getExileProblem(List.of(c));
         final CataloguePage page = CardCatalog.of(cards).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), true), problem, null, name -> 0, c -> new CardCatalog.Extra(data.isNewCard(c) ? Boolean.TRUE : null,
-                exile ? data.getRetrieveCost(List.of(c)) : data.getExileValue(List.of(c)), null));
+                exile ? data.getRetrieveCost(List.of(c)) : data.getExileValue(List.of(c)), null, null, null));
         // The page says which list it is of, so the browser never shows one list's cards as another's
         return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(),
                 exile ? "exile" : "collection");

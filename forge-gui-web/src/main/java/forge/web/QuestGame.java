@@ -11,6 +11,7 @@ import forge.util.storage.IStorage;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
+import forge.gamemodes.quest.QuestSpellShop;
 import forge.gamemodes.quest.QuestUtil;
 import forge.gamemodes.quest.QuestWinLoseController;
 import forge.gamemodes.match.PreparedMatch;
@@ -24,10 +25,13 @@ import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.game.GameView;
+import forge.item.InventoryItem;
 import forge.item.PaperCard;
+import forge.itemmanager.SItemManagerUtil;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.ItemPool;
 import forge.util.Localizer;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
@@ -36,12 +40,17 @@ import org.tinylog.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /** Holds only what one session knows that the save does not, as the quest itself is Forge's, one for the whole process. */
 final class QuestGame implements Campaign {
@@ -450,19 +459,134 @@ final class QuestGame implements Campaign {
         duels = null;
     }
 
-    // The pages that ask for these come in later parts, so they answer with nothing
+    /** Cards Forge showed the host, such as a booster just bought: added to what the reveal has yet to show. */
+    void shown(final String title, final List<PaperCard> cards) {
+        final List<RewardStep> steps = new ArrayList<>(reward == null ? List.of() : reward.steps());
+        steps.add(WebQuestView.cardsStep(title, cards, false));
+        reward = new Reward(steps);
+    }
+
+    /** What a card sells for, as the shop's own sale works it out. */
+    private static int salePrice(final PaperCard card, final double multiplier) {
+        return Math.max(Math.min((int) (multiplier * QuestSpellShop.getCardValue(card)), quest().getCards().getSellPriceLimit()), 1);
+    }
+
+    /** How many of the quest's decks hold a card, in either section. */
+    private static Map<PaperCard, Integer> decksUsing() {
+        final Map<PaperCard, Integer> using = new HashMap<>();
+        for (final Deck deck : quest().getMyDecks()) {
+            final Set<PaperCard> cards = new HashSet<>();
+            deck.getMain().forEach(e -> cards.add(e.getKey()));
+            if (deck.has(DeckSection.Sideboard)) {
+                deck.get(DeckSection.Sideboard).forEach(e -> cards.add(e.getKey()));
+            }
+            cards.forEach(c -> using.merge(c, 1, Integer::sum));
+        }
+        return using;
+    }
+
+    private static List<PaperCard> cardsIn(final ItemPool<? extends InventoryItem> pool) {
+        final List<PaperCard> cards = new ArrayList<>();
+        pool.forEach(e -> {
+            if (e.getKey() instanceof PaperCard card) {
+                cards.add(card);
+            }
+        });
+        return cards;
+    }
+
+    /** A page of the shop's cards for sale, each with its price, stock and copies owned, or of the player's cards, each with its sale price, copies and decks. */
     @Override
     public CataloguePage cards(final CatalogueQuery q) {
-        return new CataloguePage(q.request(), List.of(), 0, 0, 0, false, q.source());
+        final boolean shop = "shop".equals(q.source());
+        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
+        final ItemPool<PaperCard> owned = quest().getCards().getCardpool();
+        // Without these the shop's statics are unset, and every card would sell for 1 credit
+        final double multiplier = QuestSpellShop.updateMultiplier();
+        final Map<PaperCard, Integer> using = shop ? Map.of() : decksUsing();
+        final CataloguePage page = CardCatalog.of(shop ? cardsIn(stock) : cardsIn(owned)).query(q.request(), new CardCatalog.Query(q.text(),
+                q.colours(), q.type(), q.filters(), q.sort(), q.offset(), true), c -> null, null, name -> 0, c -> shop
+                ? new CardCatalog.Extra(null, QuestSpellShop.getCardValue(c), stock.count(c), owned.count(c), null)
+                : new CardCatalog.Extra(quest().getCards().isNew(c) ? Boolean.TRUE : null, salePrice(c, multiplier), owned.count(c), null,
+                        using.containsKey(c) ? Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c)) : null));
+        // The page says which list it is of, so the browser never shows one list's cards as another's
+        return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(), q.source());
     }
 
+    /** The shop's two lists, what selling pays, the products for sale, and the copies Sell All Extras would sell. */
     @Override
     public Trading trading() {
-        return new Trading(List.of(), "", null);
+        final Localizer text = Localizer.getInstance();
+        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
+        final ItemPool<PaperCard> owned = quest().getCards().getCardpool();
+        final double multiplier = QuestSpellShop.updateMultiplier();
+        final int limit = quest().getCards().getSellPriceLimit();
+        // Mobile's line, on one line
+        final String note = (text.getMessage("lblSellCardsAt") + " " + new DecimalFormat("#.##").format(multiplier * 100) + text.getMessage("lblTheirValue")
+                + (limit < Integer.MAX_VALUE ? String.format(text.getMessage("lblMaximumSellingCredits"), limit) : "")).replace('\n', ' ').trim();
+        final List<Product> products = new ArrayList<>();
+        stock.forEach(e -> {
+            if (!(e.getKey() instanceof PaperCard)) {
+                products.add(new Product("p:" + e.getKey().getName(), e.getKey().getItemType(), e.getKey().getName(), e.getKey().getImageKey(false),
+                        QuestSpellShop.getCardValue(e.getKey())));
+            }
+        });
+        final ItemPool<InventoryItem> ownedItems = new ItemPool<>(InventoryItem.class);
+        ownedItems.addAllOfType(owned);
+        final ItemPool<InventoryItem> extras = QuestSpellShop.extras(ownedItems);
+        final List<CatalogueRow> extraRows = CardCatalog.rows(cardsIn(extras),
+                c -> new CardCatalog.Extra(null, salePrice(c, multiplier), extras.count(c), null, null));
+        return new Trading(List.of(new TradeList("shop", cardsIn(stock).size()), new TradeList("inventory", cardsIn(owned).size())), note, null,
+                products, extraRows);
     }
 
+    /** Buys picks from the shop, or sells picks of the player's cards, each up to what its list holds. Answers why a purchase cannot be made, or null. */
     @Override
     public String trade(final String source, final List<TradePick> picks) {
+        final boolean buying = "shop".equals(source);
+        final ItemPool<InventoryItem> stock = quest().getCards().getShopList();
+        final ItemPool<InventoryItem> chosen = new ItemPool<>(InventoryItem.class);
+        for (final TradePick pick : picks == null ? List.<TradePick>of() : picks) {
+            final InventoryItem item = buying ? find(stock, pick.key()) : find(quest().getCards().getCardpool(), pick.key());
+            final int held = item == null ? 0 : buying ? stock.count(item) : quest().getCards().getCardpool().count((PaperCard) item);
+            if (held > 0 && pick.count() > 0) {
+                chosen.add(item, Math.min(pick.count(), held));
+            }
+        }
+        if (chosen.isEmpty()) {
+            return null;
+        }
+        if (buying) {
+            final long short_ = QuestSpellShop.getTotalBuyCost(chosen) - quest().getAssets().getCredits();
+            if (short_ > 0) {
+                // Quest's own sentence
+                return "You need " + short_ + " more credits to purchase the following "
+                        + SItemManagerUtil.getItemDisplayString(chosen.toFlatList(), 1, true).toLowerCase() + ".\n" + SItemManagerUtil.buildDisplayList(chosen);
+            }
+            QuestSpellShop.buyItems(chosen);
+            // The shop's list widget takes what was bought out of the stock on desktop and mobile
+            stock.removeAll(chosen);
+        } else {
+            QuestSpellShop.updateMultiplier();
+            QuestSpellShop.sellItems(chosen);
+            // As the shop's list widget puts what was sold back on sale
+            stock.addAll(chosen);
+        }
+        quest().save();
+        return null;
+    }
+
+    /** A card of a list by its image key, or a product by "p:" and its name. */
+    private static InventoryItem find(final ItemPool<? extends InventoryItem> pool, final String key) {
+        if (key == null) {
+            return null;
+        }
+        for (final Map.Entry<? extends InventoryItem, Integer> e : pool) {
+            final InventoryItem item = e.getKey();
+            if (item instanceof PaperCard card ? card.getImageKey(false).equals(key) : ("p:" + item.getName()).equals(key)) {
+                return item;
+            }
+        }
         return null;
     }
 

@@ -129,6 +129,8 @@ public final class WebSession {
     void becomeHost() {
         isHost = true;
         settings = PlayerSettings.saved();
+        // Cards Forge shows the host outside a match are what a quest's purchase or prize opened
+        ui.setCardsSink(quest::shown);
         ui.setNoticeSink(notice -> {
             final BrowserChannel b = browser;
             if (b != null) {
@@ -589,6 +591,10 @@ public final class WebSession {
                         }
                         // What was traded away may have been on any of the campaign's pages
                         campaign.page().forEach(m -> channel.send(m));
+                        final ToBrowser.Reward opened = campaign.reward();
+                        if (opened != null) {
+                            channel.send(opened);
+                        }
                     }
                     channel.send(campaign.trading());
                 }

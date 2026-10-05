@@ -272,7 +272,8 @@ final class ToBrowser {
 
     /** In a collection, value is what exiling or retrieving the card is worth and problem is why it can't be exiled. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count) {
+            String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count,
+            @Nullable Integer owned, @Nullable String note) {
     }
 
     @Message("cardSearch")
@@ -593,7 +594,12 @@ final class ToBrowser {
 
     /** The lists a campaign trades between, a line on what a trade pays, and what the lists can also be narrowed by, if anything. */
     @Message("trading")
-    record Trading(List<TradeList> lists, String note, @Nullable List<String> groups) {
+    record Trading(List<TradeList> lists, String note, @Nullable List<String> groups, @Nullable List<Product> products,
+            @Nullable List<CatalogueRow> extras) {
+    }
+
+    /** Something for sale that is not a card: a booster, a box, a deck. Its key is "p:" and its name, which a trade's pick names it by. */
+    record Product(String key, String kind, String name, String image, int price) {
     }
 
     // ---- Planar Conquest ---------------------------------------------------------------------------------------

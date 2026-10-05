@@ -31,8 +31,8 @@ final class CardCatalog {
     record Query(String text, String colours, String type, String filters, String sort, int offset, boolean showAll) {
     }
 
-    /** What a collection adds to a card's row: whether it is new, its price, and how many its list holds. */
-    record Extra(Boolean isNew, Integer value, Integer count) {
+    /** What a collection adds to a card's row: whether it is new, its price, how many its list holds, how many the player owns, and a line about it. */
+    record Extra(Boolean isNew, Integer value, Integer count, Integer owned, String note) {
     }
 
     private record Row(PaperCard card, String normalised, String colours, String cost, int mv, String heading) {
@@ -80,6 +80,13 @@ final class CardCatalog {
         final CardRules rules = card.getRules();
         return new Row(card, normalize(card.getName()), letters(rules.getColor()), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), heading(card));
+    }
+
+    /** These cards as rows, in the order given, each with what extras adds. */
+    static List<CatalogueRow> rows(final Iterable<PaperCard> cards, final Function<PaperCard, Extra> extras) {
+        final List<CatalogueRow> out = new ArrayList<>();
+        cards.forEach(card -> out.add(toBrowser(row(card), null, 0, extras.apply(card))));
+        return out;
     }
 
     /** A card problemOf names a problem for is left out unless the query asks for everything, and commanderOnly and extras may be null. */
@@ -196,7 +203,8 @@ final class CardCatalog {
         final CardRules rules = row.card().getRules();
         return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
                 row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem,
-                extra == null ? null : extra.isNew(), extra == null ? null : extra.value(), extra == null ? null : extra.count());
+                extra == null ? null : extra.isNew(), extra == null ? null : extra.value(), extra == null ? null : extra.count(),
+                extra == null ? null : extra.owned(), extra == null ? null : extra.note());
     }
 
     static String pt(final CardRules rules) {

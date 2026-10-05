@@ -21,6 +21,7 @@ import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 import forge.player.PlayerControllerHuman;
+import forge.util.ImageUtil;
 import forge.util.Localizer;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
@@ -33,6 +34,7 @@ import java.io.UncheckedIOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
 public class QuestSessionTest extends SessionsTest {
@@ -461,6 +463,127 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(back.getMain().countAll(), 40);
         Assert.assertEquals(back.get(DeckSection.Sideboard).count(owned), 1);
         Assert.assertEquals(back.getMain().countByName("Black Lotus"), 0);
+    }
+
+    /** A page of one of the quest's lists, as the trade page asks for it. */
+    private JsonObject listed(final Recorder host, final String source) throws InterruptedException {
+        send(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "", "sort", "name",
+                "offset", 0, "showAll", true, "source", source));
+        return host.awaitMatching("catalogue", c -> source.equals(str(c, "source")), "the " + source + " list was not sent");
+    }
+
+    private static JsonObject row(final JsonObject page, final Predicate<JsonObject> wanted) {
+        for (final JsonElement e : page.getAsJsonArray("rows")) {
+            if (wanted.test(e.getAsJsonObject())) {
+                return e.getAsJsonObject();
+            }
+        }
+        throw new AssertionError("no such row in " + page);
+    }
+
+    private void trade(final Recorder host, final String source, final String key, final int count) {
+        final JsonObject pick = new JsonObject();
+        pick.addProperty("key", key);
+        pick.addProperty("count", count);
+        final JsonArray picks = new JsonArray();
+        picks.add(pick);
+        final JsonObject msg = message("trade", "source", source);
+        msg.add("picks", picks);
+        send(host, msg);
+    }
+
+    private static PaperCard printing(final JsonObject row) {
+        return ImageUtil.getPaperCardFromImageKey(row.get("image").getAsString());
+    }
+
+    // Fails if a card sells for other than the price the list shows
+    @Test(timeOut = 120_000)
+    public void aCardSellsForTheListedPrice() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject card = row(listed(host, "inventory"), r -> !"Forest".equals(r.get("name").getAsString()));
+        final long credits = FModel.getQuest().getAssets().getCredits();
+        trade(host, "inventory", card.get("image").getAsString(), 1);
+        host.awaitMatching("trading", t -> true, "the lists were not sent again");
+        Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), credits + card.get("value").getAsInt());
+        Assert.assertEquals(saved(data).getAssets().getCardPool().count(printing(card)), 0);
+    }
+
+    // Fails if a purchase the credits cannot cover changes anything
+    @Test(timeOut = 120_000)
+    public void aPurchaseTooDearChangesNothing() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject card = row(listed(host, "shop"), r -> r.get("value").getAsInt() > 0);
+        FModel.getQuest().getAssets().setCredits(0);
+        final PaperCard bought = printing(card);
+        final int stock = FModel.getQuest().getCards().getShopList().count(bought);
+        trade(host, "shop", card.get("image").getAsString(), 1);
+        host.awaitMatching("notice", n -> true, "the purchase was not refused");
+        Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), 0);
+        Assert.assertEquals(FModel.getQuest().getCards().getShopList().count(bought), stock);
+        Assert.assertEquals(FModel.getQuest().getCards().getCardpool().count(bought), data.getAssets().getCardPool().count(bought));
+    }
+
+    // Fails if a bought card is not taken from the stock once and added to the pool once
+    @Test(timeOut = 120_000)
+    public void aBoughtCardMovesOnceFromStockToPool() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        FModel.getQuest().getAssets().setCredits(100_000);
+        final JsonObject card = row(listed(host, "shop"), r -> true);
+        final PaperCard bought = printing(card);
+        final int stock = FModel.getQuest().getCards().getShopList().count(bought);
+        final int owned = FModel.getQuest().getCards().getCardpool().count(bought);
+        Assert.assertEquals(card.get("count").getAsInt(), stock);
+        trade(host, "shop", card.get("image").getAsString(), 1);
+        host.awaitMatching("trading", t -> true, "the lists were not sent again");
+        Assert.assertEquals(FModel.getQuest().getCards().getShopList().count(bought), stock - 1);
+        Assert.assertEquals(saved(data).getAssets().getCardPool().count(bought), owned + 1);
+        Assert.assertEquals(saved(data).getAssets().getCredits(), 100_000 - card.get("value").getAsInt());
+    }
+
+    // Fails if a card two decks use is sold without leaving both decks
+    @Test(timeOut = 120_000)
+    public void aCardSoldLeavesEveryDeck() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject card = row(listed(host, "inventory"), r -> !"Forest".equals(r.get("name").getAsString()));
+        final PaperCard sold = printing(card);
+        FModel.getQuest().getMyDecks().get("Forest deck").getMain().add(sold, 1);
+        final Deck second = new Deck("Second deck");
+        second.getMain().add(sold, 1);
+        FModel.getQuest().getMyDecks().add(second);
+        trade(host, "inventory", card.get("image").getAsString(), 1);
+        host.awaitMatching("trading", t -> true, "the lists were not sent again");
+        Assert.assertEquals(savedDeck(data, "Forest deck").getMain().count(sold), 0);
+        Assert.assertEquals(savedDeck(data, "Second deck").getMain().count(sold), 0);
+    }
+
+    // Fails if a bought booster's cards are not in the pool and sent as a reward to reveal
+    @Test(timeOut = 120_000)
+    public void aBoughtBoosterIsRevealed() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        FModel.getQuest().getAssets().setCredits(100_000);
+        send(host, JsonCodec.message("trading"));
+        final JsonObject trading = host.awaitMatching("trading", t -> t.has("products"), "the products were not sent");
+        JsonObject pack = null;
+        for (final JsonElement e : trading.getAsJsonArray("products")) {
+            if (e.getAsJsonObject().get("kind").getAsString().equals("Booster Pack")) {
+                pack = e.getAsJsonObject();
+            }
+        }
+        Assert.assertNotNull(pack, "no booster for sale: " + trading.get("products"));
+        final int before = FModel.getQuest().getCards().getCardpool().countAll();
+        trade(host, "shop", pack.get("key").getAsString(), 1);
+        final JsonObject reward = host.awaitMatching("reward", m -> true, "the booster was not revealed");
+        final JsonObject cards = reward.getAsJsonArray("steps").get(0).getAsJsonObject();
+        Assert.assertEquals(cards.get("kind").getAsString(), "CARDS");
+        final int opened = cards.getAsJsonArray("cards").size();
+        Assert.assertTrue(opened > 0);
+        Assert.assertEquals(FModel.getQuest().getCards().getCardpool().countAll(), before + opened);
+        Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), 100_000 - pack.get("price").getAsInt());
     }
 
     // Fails if a browser without the host's seat can open a quest

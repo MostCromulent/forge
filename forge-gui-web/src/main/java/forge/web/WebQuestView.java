@@ -86,10 +86,14 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
 
     @Override
     public void showCards(final String title, final List<PaperCard> cards) {
-        final List<PackCard> shown = cards.stream().map(c -> new PackCard(c.getName(), c.getImageKey(false), c.getRarity().name(), 0)).toList();
         // Cards lost to ante are shown with the rest, marked so the browser can set them apart
-        final boolean lost = title.equals(Localizer.getInstance().getMessage("lblLootedLostAnteCard"));
-        steps.add(new RewardStep("CARDS", 0, lost ? "lost" : null, shown, 0, 0, false, null, null, null, title, null, null));
+        steps.add(cardsStep(title, cards, title.equals(Localizer.getInstance().getMessage("lblLootedLostAnteCard"))));
+    }
+
+    /** Cards shown face up under a title, as a reveal draws them. */
+    static RewardStep cardsStep(final String title, final List<PaperCard> cards, final boolean lost) {
+        final List<PackCard> shown = cards.stream().map(c -> new PackCard(c.getName(), c.getImageKey(false), c.getRarity().name(), 0)).toList();
+        return new RewardStep("CARDS", 0, lost ? "lost" : null, shown, 0, 0, false, null, null, null, title, null, null);
     }
 
     @Override

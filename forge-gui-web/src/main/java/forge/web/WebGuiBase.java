@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** What Forge asks of the program it runs in, answered for the web, with one "WebUI" thread in place of Swing's event thread. */
@@ -45,7 +46,13 @@ public final class WebGuiBase implements IGuiBase {
     private final String assetsDir = resolveAssetsDir();
     private final ImageFetcher imageFetcher = new WebImageFetcher();
     private volatile Consumer<JsonObject> noticeSink = notice -> { };
+    /** Where cards shown to the host go: the open campaign's reward, which reveals them. */
+    private volatile BiConsumer<String, List<PaperCard>> cardsSink = (title, cards) -> { };
     private final HostRequests hostRequests = new HostRequests();
+
+    public void setCardsSink(final BiConsumer<String, List<PaperCard>> sink) {
+        cardsSink = sink;
+    }
 
     public void setNoticeSink(final Consumer<JsonObject> sink) {
         noticeSink = sink;
@@ -239,8 +246,12 @@ public final class WebGuiBase implements IGuiBase {
         WebDownloads.run(service, callback, noticeSink);
     }
     @Override public void copyToClipboard(final String text) { }
-    @Override public void showCardList(final String title, final String message, final List<PaperCard> list) { }
-    @Override public boolean showBoxedProduct(final String title, final String message, final List<PaperCard> list) { return false; }
+    @Override public void showCardList(final String title, final String message, final List<PaperCard> list) { cardsSink.accept(title, list); }
+    // A box's first pack is shown, and true asks for the rest together, so a box is two steps of a reveal and not thirty-six
+    @Override public boolean showBoxedProduct(final String title, final String message, final List<PaperCard> list) {
+        cardsSink.accept(title, list);
+        return true;
+    }
     @Override public void showBugReportDialog(final String title, final String text, final boolean showExitAppBtn) { Logger.error("{}: {}", title, text); }
     @Override public void showImageDialog(final ISkinImage image, final String message, final String title) { }
     @Override public String showFileDialog(final String title, final String defaultDir) { return null; }
