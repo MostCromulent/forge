@@ -1,11 +1,11 @@
 # Forge Web GUI
 
-Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by
-web link with no further install required. You can also play alone against the AI.
+Play Forge in a web browser. One person runs Forge on their computer and sends the others a link. They don't
+need to install anything. You can also play alone against the computer.
 
-The interface aims to be easy to pick up, and leaves out much of desktop Forge's detailed customisation. It is
-built first for a mouse and keyboard. A mobile layout covers setting up and playing a match but is less tested;
-the deck editor, Draft, Sealed and Conquest have none yet.
+It has fewer options than desktop Forge and is meant to be quick to learn. It is made for a mouse and keyboard
+first. Phones are only partly supported. You can set up and play a match on a phone, but the deck editor, Draft,
+Sealed, Planar Conquest and Quest are laid out for a computer screen.
 
 <p>
   <img src="docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">
@@ -24,12 +24,13 @@ the deck editor, Draft, Sealed and Conquest have none yet.
 
 ### What you can play
 
-- **Constructed**, Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto, for up to four players.
-- The variants **Vanguard**, **Planechase**, **Archenemy** and **Archenemy Rumble**.
-- **Draft** and **Sealed** for up to eight. The computer fills empty seats.
-- **Planar Conquest**, on the same saves as the mobile app.
+- Constructed, Commander, Brawl, Oathbreaker, Tiny Leaders, Momir Basic and MoJhoSto, for up to four players.
+- Vanguard, Planechase, Archenemy and Archenemy Rumble.
+- Draft and Sealed for up to eight. The computer fills any empty seats.
+- Planar Conquest.
+- Quest, which is still being built.
 
-Not yet: Quest, Adventure, puzzles, constructed gauntlets and Winston draft.
+Not yet: Adventure, puzzles, constructed gauntlets and Winston draft.
 
 ### Starting it
 
@@ -38,36 +39,35 @@ Not yet: Quest, Adventure, puzzles, constructed gauntlets and Winston draft.
    and unzip it anywhere.
 3. Open `forge-gui-web.jar`. If nothing happens, run `java -jar forge-gui-web.jar` in that folder.
 
-The game opens in your browser, along with the **server window**. Keep that window open: closing it quits Forge.
-Forge also quits when the last browser leaves, unless you untick **Close Forge when everyone has left, including
-you**. To update, replace the folder with the new zip.
+The game opens in your browser and a server window opens beside it. Closing that window quits Forge. Forge also
+quits when the last browser leaves, unless you untick **Close Forge when everyone has left, including you**. To
+update, replace the folder with the new zip.
 
 <img src="docs/server.webp" width="49%" alt="The server window">
 
 ### Playing with friends
 
-Click **Invite** at the top of the table, or **Copy link** in the server window.
+Click **Invite** at the top of the table, or **Copy link** in the server window. There are two links. One is for
+people on your home network. The other is for people on the internet, and works only once your router forwards
+Forge's port to your computer. **Forward the port automatically (UPnP)** asks the router to do that. If your
+router won't, the [network setup guide](https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration)
+explains how to do it by hand.
 
-- The link for **players on your network** works on your home network.
-- The link for **players on the internet** works once your router forwards the port to this computer. **Forward
-  the port automatically (UPnP)** asks the router to do that. If it refuses, see the
-  [network setup guide](https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration).
+Anyone with a link can join and the connection isn't encrypted, so only send links to the people you're playing
+with. Don't share the host's own link. It controls the table and the server. The links change each time Forge
+starts. A player who reloads the page or loses their connection gets their seat back.
 
-Links aren't encrypted and anyone with one can join, so only send them to people you're playing with. Never share
-the host's own link: it controls the table and the server. Links change each time Forge starts. A player who
-reloads or drops out goes straight back to their seat.
+### Decks, saves and settings
 
-### Decks and settings
+Build decks in the deck editor or import them from a pasted list, a deck file, or a Moxfield, Archidekt,
+TappedOut or MTGGoldfish link.
 
-Build decks in the deck editor, or import them from a pasted list, a deck file, or a link from Moxfield,
-Archidekt, TappedOut or MTGGoldfish.
+The host's decks, settings and Conquest and Quest saves are kept in the Forge user folder. Desktop Forge uses
+the same folder, so a change in one shows in the other. If you already play desktop Forge, back that folder up
+first. It is `%APPDATA%\Forge` on Windows, `~/Library/Application Support/Forge` on macOS and `~/.forge` on Linux.
 
-- **The host's decks and game settings** are kept in the Forge user folder, which desktop Forge also uses, so a
-  change in one shows in the other. If you already play desktop Forge, back that folder up first:
-  `%APPDATA%\Forge` on Windows, `~/Library/Application Support/Forge` on macOS, `~/.forge` on Linux.
-- **A guest's decks** are kept in their browser, for the exact link they joined by. A private window keeps
-  nothing.
-- **Display settings, keys and custom CSS** are kept in each browser, the host's included.
+A guest's decks are kept in their own browser, for the link they joined with. A private window keeps none.
+Display settings, keyboard shortcuts and custom CSS are kept in each browser, including the host's.
 
 ---
 
@@ -81,22 +81,23 @@ TypeScript and Preact, bundled by the build into `src/main/resources/web/js/`, w
     mvn -Pweb -pl forge-gui-web -am install -DskipTests
     java -jar forge-gui-web/target/forge-gui-web.jar
 
-`-Pweb` is needed because Forge's default build leaves this module out. Maven fetches its own Node. The jar needs
-`target/lib/` beside it and finds Forge's `res` folder by searching up from where it runs; otherwise pass
-`-Dforge.assets.dir=<folder containing res>`.
+Forge's default build leaves this module out, so `-Pweb` is needed. Maven downloads its own copy of Node. The jar
+needs `target/lib/` beside it. It looks for Forge's `res` folder in the folders above where it runs. If it can't
+find it, pass `-Dforge.assets.dir=<folder containing res>`.
 
 | Option | Effect |
 |---|---|
 | `-Dforge.web.port=<n>` | Port to serve on. The default, 36743, is desktop Forge's network port too. |
 | `-Dforge.web.noBrowser=true` | Don't open the game in a browser. |
-| `-Dforge.web.noConsole=true` | Don't open the server window; the host's link is printed instead. |
+| `-Dforge.web.noConsole=true` | Don't open the server window. The host's link is printed instead. |
 | `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web` | Serve the page from source, so a change needs only a reload. |
 
 With `pageDir` set, `npm run watch` in this folder rebuilds the TypeScript on save.
 
 ### How it fits together
 
-One Java process runs Forge and serves the page on one port. Each browser is a player, over one WebSocket.
+One Java process runs Forge and serves the page on a single port. Each browser is one player, connected over a
+WebSocket.
 
 ```
 browser (src/main/ts)                server (src/main/java/forge/web)              Forge
@@ -110,56 +111,58 @@ main.ts ◀── WebSocket /ws ──▶ WebServer ─▶ WebSessions ─▶ We
                                                                   FServerManager ◀── the game ──┘
 ```
 
-- **Every seat is a netplay client.** The host's `LocalGame` starts Forge's netplay server (`FServerManager`) on
-  loopback and joins it, and each guest's session joins the same server. The lobby, drafts, delta packets and
-  `IGuiGame` calls are desktop netplay's own. Only the web port is reachable from outside.
-- **`WebServer`** (Netty) serves the page, card images, sounds and the socket, and turns away any request without
-  one of the two link tokens. Only the host's token can take the host's seat.
-- **`WebSession`**, one per browser, knows which screen it is on and routes its messages to `Lobby`,
-  `DeckSession`, the draft classes, or `WebGuiGame` in a match.
-- **`WebGuiGame`** is the web's `IGuiGame`. It sends the browser what changed as JSON. A call that needs an answer
-  becomes a request, and `PendingRequests` holds the game's thread until the reply. A browser that reloads is sent
-  the whole table and every open question again.
+Every seat is a netplay client, including the host's. The host's `LocalGame` starts Forge's netplay server
+(`FServerManager`) on loopback and joins it. Each guest's session joins the same server. The lobby, drafts, delta
+packets and `IGuiGame` calls are the same ones desktop netplay uses. Only the web port is reachable from outside.
 
-In the page, `main.ts` is the only module that talks to the server. Messages update `model.ts`, and the page is
-drawn from the model once a frame. The board is drawn by hand (`board.ts`); everything else is Preact. Nothing
-that draws sends anything: it calls `actions.ts`.
+`WebServer` (Netty) serves the page, card images, sounds and the socket. It refuses any request without one of
+the two link tokens. Only the host's token can take the host's seat. There is one `WebSession` per browser. It
+knows which screen the browser is on and passes its messages to `Lobby`, `DeckSession`, the draft classes,
+`ConquestGame` and `QuestGame`, or `WebGuiGame` during a match.
+
+`WebGuiGame` is the web's `IGuiGame`. It sends the browser what changed as JSON. When the game needs an answer,
+the call becomes a request and `PendingRequests` holds the game's thread until the reply comes. A browser that
+reloads is sent the whole table again and every question that is still open.
+
+In the page, `main.ts` is the only module that talks to the server. Incoming messages update `model.ts` and the
+page is redrawn from the model once a frame. The board is drawn by hand in `board.ts`. The rest uses Preact.
+Components never send messages themselves. They call `actions.ts`.
 
 ### The protocol
 
-Messages are Java records in `ToBrowser` and `FromBrowser`. Each build writes `src/main/ts/protocol.gen.ts` from
-them and type-checks the TypeScript against it, so a changed record fails the build where the browser uses it. A
-field may be null only if marked `@Nullable`.
+Messages are Java records in `ToBrowser` and `FromBrowser`. Each build generates `src/main/ts/protocol.gen.ts`
+from them and type-checks the TypeScript against it. Changing a record breaks the build wherever the browser
+uses it. A field may be null only if it is marked `@Nullable`.
 
-- **A new question from the game:** implement the `IGuiGame` method in `WebGuiGame` with `ask(request, check)`,
-  add a `@Request` record to `ToBrowser.REQUESTS`, and draw it in `dialogs.tsx`. `WebGuiGameTest` fails while any
-  such method is left to Forge's default.
-- **A new message:** a `@Message` record in `ToBrowser.MESSAGES`, handled in `main.ts`; or a `@Command` record in
-  `FromBrowser.COMMANDS`, handled where `WebSession` routes it.
-- **A new game property** needs nothing: it travels with the rest of `TrackableProperty`.
+- To add a question the game asks, implement the `IGuiGame` method in `WebGuiGame` with `ask(request, check)`,
+  add a `@Request` record to `ToBrowser` and draw it in `dialogs.tsx`. `WebGuiGameTest` fails while any such
+  method is still left to Forge's default.
+- To add a message, write a `@Message` record in `ToBrowser` and handle it in `main.ts`, or a `@Command` record
+  in `FromBrowser` and handle it where `WebSession` routes it.
+- A new game property needs no work. It travels with the rest of `TrackableProperty`.
 
 ### Text and languages
 
-Everything a player reads comes from Forge's language files (`forge-gui/res/languages`). The page's keys are
-grouped at the end of `en-US.properties`, under `#forge-gui-web`.
+All the text a player sees comes from Forge's language files (`forge-gui/res/languages`). The page's own keys
+are grouped at the end of `en-US.properties` under `#forge-gui-web`. In TypeScript, `t('lblWebSomething', arg…)`
+returns the text. `tNodes` does the same when a sentence has elements inside it. The build fails if
+`en-US.properties` lacks a `lblWeb…` key the page uses. On the Java side, text sent for display goes through
+`Localizer`.
 
-- In TypeScript, `t('lblWebSomething', arg…)` gives the text, and `tNodes` the same with elements inside a
-  sentence. The build fails on a `lblWeb…` key that `en-US.properties` lacks.
-- Patterns follow `java.text.MessageFormat`: `{0}` is an argument and an apostrophe is written twice (`can''t`).
-  Write whole sentences with arguments rather than joining pieces.
-- In Java, text the server sends for display uses `Localizer`.
+The texts follow `java.text.MessageFormat`. `{0}` is an argument and an apostrophe is written twice (`can''t`).
+Write whole sentences with arguments in them rather than joining pieces together.
 
 ### Tests
 
-The tests guard what a change elsewhere in Forge could break without the module noticing: the wire format,
-unanswered `IGuiGame` calls, a web seat answering the engine's prompts, netplay between host and guest, and the
-server's tokens and paths.
+The tests catch changes elsewhere in Forge that would break this module without anyone noticing. They cover the
+wire format, `IGuiGame` calls left unanswered, a web seat answering the engine's prompts, netplay between host
+and guest, and the server's tokens and paths.
 
-- `mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and Vitest; `npm test` runs only Vitest.
-- `-Drun.stress.tests=true` adds whole games and events played over netplay. The snapshot build runs these.
-- `e2e/` drives the page in a real browser against a built jar. It runs only locally:
+`mvn -Pweb -pl forge-gui-web -am test` runs the Java tests and Vitest. `npm test` runs Vitest alone. Adding
+`-Drun.stress.tests=true` also plays whole games and events over netplay, as the snapshot build does. The tests in
+`e2e/` drive the page in a real browser against a built jar. They only run locally:
 
-      cd forge-gui-web/e2e
-      npm ci
-      npx playwright install chromium   # first time only
-      npx playwright test
+    cd forge-gui-web/e2e
+    npm ci
+    npx playwright install chromium   # first time only
+    npx playwright test
