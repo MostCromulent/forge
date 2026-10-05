@@ -1,9 +1,15 @@
 package forge.web;
 
+import forge.StaticData;
+import forge.deck.Deck;
+import forge.deck.DeckGroup;
+import forge.gamemodes.quest.QuestController;
+import forge.gamemodes.quest.QuestEventDraft;
 import forge.gamemodes.quest.data.QuestData;
-import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
+import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.io.QuestDataIO;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgeConstants;
 import forge.model.FModel;
 
@@ -63,6 +69,32 @@ final class QuestFixture {
         Files.write(file, packed(name, classic));
         made.add(name);
         return QuestDataIO.loadData(file.toFile());
+    }
+
+    static final String[] AI_NAMES = {"Ann", "Bob", "Cid", "Dee", "Eve", "Fay", "Gus"};
+
+    /** A tournament in progress in the quest open, with fixed seats: the player in seat 2, the first round's first match won by the computer in seat 0, so the player's match is next. Its decks are 40 Forests for the player and 40 Islands for each computer. */
+    static QuestEventDraft tournament(final QuestController quest) {
+        final QuestEventDraft draft = new QuestEventDraft("Test tournament");
+        draft.setAINames(AI_NAMES.clone());
+        draft.setAIIcons(new int[] {0, 1, 2, 3, 4, 5, 6});
+        final String u = QuestEventDraft.UNDETERMINED;
+        draft.setStandings(new String[] {"1", "2", QuestEventDraft.HUMAN, "3", "4", "5", "6", "7", "1", u, u, u, u, u, u});
+        quest.getAchievements().getDraftEvents().add(draft);
+        quest.getAchievements().setCurrentDraft(draft);
+        final PaperCard forest = StaticData.instance().getCommonCards().getCard("Forest");
+        final PaperCard island = StaticData.instance().getCommonCards().getCard("Island");
+        final DeckGroup decks = new DeckGroup(QuestEventDraft.DECK_NAME);
+        final Deck human = new Deck("Tournament human");
+        human.getMain().add(forest, 40);
+        decks.setHumanDeck(human);
+        for (int i = 0; i < AI_NAMES.length; i++) {
+            final Deck ai = new Deck("AI Deck " + i);
+            ai.getMain().add(island, 40);
+            decks.addAiDeck(ai);
+        }
+        quest.getDraftDecks().add(decks);
+        return draft;
     }
 
     /** A name a test is about to have a quest made or renamed to, whose files are removed afterwards. */

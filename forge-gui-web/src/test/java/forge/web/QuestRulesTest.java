@@ -3,10 +3,12 @@ package forge.web;
 import forge.StaticData;
 import forge.deck.Deck;
 import forge.game.GameFormat;
+import forge.game.GameType;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
+import forge.gamemodes.quest.QuestDraftUtils;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestSpellShop;
@@ -196,5 +198,22 @@ public class QuestRulesTest {
         assertNull(NewQuestRules.problem(choices("../" + name + "/", StartingPoolType.Complete, null, null)));
         assertEquals(NewQuestRules.cleanName("../" + name + "/"), name);
         assertFalse(new File(ForgeConstants.QUEST_SAVE_DIR, name + ".dat").exists());
+    }
+
+    // Fails if the prepared match is not the player against the bracket's next opponent with the draft's deck
+    @Test
+    public void aTournamentsNextMatchIsThePlayers() throws IOException {
+        final QuestController quest = FModel.getQuest();
+        quest.load(QuestFixture.install());
+        QuestFixture.tournament(quest);
+        final PreparedMatch match = QuestDraftUtils.prepareNextMatch();
+        assertNotNull(match, "the player's match was not prepared");
+        assertEquals(match.rules().getGameType(), GameType.QuestDraft);
+        assertEquals(match.players().size(), 2);
+        assertEquals(match.human().getDeck().getName(), "Tournament human");
+        // Seat 3 holds the computer numbered 3, whose name is the third
+        final RegisteredPlayer opponent = match.players().get(0) == match.human() ? match.players().get(1) : match.players().get(0);
+        assertEquals(opponent.getPlayer().getName(), QuestFixture.AI_NAMES[2]);
+        assertEquals(opponent.getDeck().getName(), "AI Deck 2");
     }
 }
