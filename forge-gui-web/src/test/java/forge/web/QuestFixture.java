@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.zip.GZIPOutputStream;
 
-/** Quests copied in for a test, in the profile of whoever runs it, and removed afterwards. */
+/** Quests copied in for a test in the test profile, and removed afterwards. */
 final class QuestFixture {
     private static final List<String> made = new ArrayList<>();
     private static String currentBefore;

@@ -839,42 +839,30 @@ public class ConquestSessionTest extends SessionsTest {
         final forge.gamemodes.planarconquest.ConquestPreferences prefs = FModel.getConquestPreferences();
         final int commons = prefs.getPrefInt(CQPref.BOOSTER_COMMONS);
         final int pull = prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST);
-        // The preferences are the real profile's, and the reset below would lose whatever its owner had set
-        final java.util.Map<CQPref, String> before = new java.util.EnumMap<>(CQPref.class);
-        for (final CQPref pref : CQPref.values()) {
-            before.put(pref, prefs.getPref(pref));
-        }
         final TestBrowser host = hostInConquest(ConquestFixture.create("Zendikar"));
         final String current = prefs.getPref(CQPref.CURRENT_CONQUEST);
-        try {
-            send(host, pref("BOOSTER_COMMONS", 16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
-            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
-            Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
-            send(host, pref("AETHER_BASE_PULL_COST", -1));
-            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a negative value was not refused");
-            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
-            send(host, message("campaignPref", "key", "AETHER_BASE_PULL_COST", "value", "1.5"));
-            host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a value that is not a whole number was not refused");
-            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
-            send(host, pref("CURRENT_CONQUEST", 1));
-            host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent");
-            Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "a preference that is not the page's was written");
+        send(host, pref("BOOSTER_COMMONS", 16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
+        host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a pack of more than 15 cards was not refused");
+        Assert.assertEquals(prefs.getPrefInt(CQPref.BOOSTER_COMMONS), commons);
+        send(host, pref("AETHER_BASE_PULL_COST", -1));
+        host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a negative value was not refused");
+        Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
+        send(host, message("campaignPref", "key", "AETHER_BASE_PULL_COST", "value", "1.5"));
+        host.awaitMatching("campaignPrefs", p -> p.has("problem"), "a value that is not a whole number was not refused");
+        Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull);
+        send(host, pref("CURRENT_CONQUEST", 1));
+        host.awaitMatching("campaignPrefs", p -> true, "the preferences were not sent");
+        Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "a preference that is not the page's was written");
 
-            send(host, pref("AETHER_BASE_PULL_COST", pull + 50));
-            final JsonObject saved = host.awaitMatching("campaignPrefs", p -> !p.has("problem"), "a good value was refused");
-            Assert.assertEquals(saved.getAsJsonArray("rows").size(), 20);
-            Assert.assertEquals(new forge.gamemodes.planarconquest.ConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull + 50);
+        send(host, pref("AETHER_BASE_PULL_COST", pull + 50));
+        final JsonObject saved = host.awaitMatching("campaignPrefs", p -> !p.has("problem"), "a good value was refused");
+        Assert.assertEquals(saved.getAsJsonArray("rows").size(), 20);
+        Assert.assertEquals(new forge.gamemodes.planarconquest.ConquestPreferences().getPrefInt(CQPref.AETHER_BASE_PULL_COST), pull + 50);
 
-            send(host, JsonCodec.message("campaignPrefsReset"));
-            host.awaitMatching("campaignPrefs", p -> true, "the reset did not answer");
-            Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), Integer.parseInt(CQPref.AETHER_BASE_PULL_COST.getDefault()));
-            Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");
-        } finally {
-            // Which conquest is current is the fixture's to put back
-            before.remove(CQPref.CURRENT_CONQUEST);
-            before.forEach(prefs::setPref);
-            prefs.save();
-        }
+        send(host, JsonCodec.message("campaignPrefsReset"));
+        host.awaitMatching("campaignPrefs", p -> true, "the reset did not answer");
+        Assert.assertEquals(prefs.getPrefInt(CQPref.AETHER_BASE_PULL_COST), Integer.parseInt(CQPref.AETHER_BASE_PULL_COST.getDefault()));
+        Assert.assertEquals(prefs.getPref(CQPref.CURRENT_CONQUEST), current, "the reset forgot which conquest is current");
     }
 
     // Fails if a name with a path in it reaches a folder that is not one of the saves, which a delete would remove

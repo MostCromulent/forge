@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-/** Conquests made for a test, in the profile of whoever runs it, and removed afterwards. */
+/** Conquests made for a test in the test profile, and removed afterwards. */
 final class ConquestFixture {
     private static final List<ConquestData> made = new ArrayList<>();
     private static final List<Path> junk = new ArrayList<>();
