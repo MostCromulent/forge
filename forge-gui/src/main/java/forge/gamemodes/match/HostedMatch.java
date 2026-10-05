@@ -19,7 +19,7 @@ import forge.game.player.Player;
 import forge.game.player.PlayerView;
 import forge.game.player.RegisteredPlayer;
 import forge.gamemodes.net.NetworkGameEventListener;
-import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.quest.QuestController;
 import forge.gui.FThreads;
 import forge.gui.GuiBase;
@@ -162,9 +162,6 @@ public class HostedMatch {
         game = match.createGame();
         game.EXPERIMENTAL_RESTORE_SNAPSHOT = FModel.getPreferences().getPrefBoolean(FPref.MATCH_EXPERIMENTAL_RESTORE);
         game.AI_TIMEOUT = FModel.getPreferences().getPrefInt(FPref.MATCH_AI_TIMEOUT);
-        // Android API 31 and above can use completeOnTimeout -> CompletableFuture:
-        //https://developer.android.com/reference/java/util/concurrent/CompletableFuture#completeOnTimeout(T,%20long,%20java.util.concurrent.TimeUnit)
-        game.AI_CAN_USE_TIMEOUT = !GuiBase.isAndroid() || GuiBase.getAndroidAPILevel() > 30;
 
         StaticData.instance().setSourceImageForClone(FModel.getPreferences().getPrefBoolean(FPref.UI_CLONE_MODE_SOURCE));
 
@@ -183,7 +180,7 @@ public class HostedMatch {
         // (It still subscribes to the Match bus for UiEvent sounds like blocker assignment.)
 
         // This logs game actions to NetworkLogConfig for debugging network games
-        if (FServerManager.getInstance().isHosting()) {
+        if (HostingServer.isHosting()) {
             game.subscribeToEvents(new NetworkGameEventListener());
         }
 
@@ -224,7 +221,7 @@ public class HostedMatch {
                 gui.setGameView(gameView);
                 gui.setOriginalGameController(p.getView(), humanController);
 
-                if (gui instanceof forge.gamemodes.net.server.RemoteClientGuiGame ngg) {
+                if (gui instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
                     forge.gui.control.GameEventForwarder forwarder = new forge.gui.control.GameEventForwarder(gui);
                     ngg.setForwarder(forwarder);
                     game.subscribeToEvents(forwarder);
@@ -247,7 +244,7 @@ public class HostedMatch {
         // players' InputQueues. This ensures events are flushed on the game thread
         // before it blocks for input (e.g. host plays a land and retains priority).
         for (PlayerControllerHuman hc : humanControllers) {
-            if (hc.getGui() instanceof forge.gamemodes.net.server.RemoteClientGuiGame ngg) {
+            if (hc.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
                 forge.gui.control.GameEventForwarder fwd = ngg.getForwarder();
                 if (fwd != null) {
                     for (PlayerControllerHuman allHc : humanControllers) {
@@ -281,14 +278,20 @@ public class HostedMatch {
         // It's important to run match in a different thread to allow GUI inputs to be invoked from inside game. 
         // Game is set on pause while gui player takes decisions
         game.getAction().invoke(() -> {
+            // Capture the current game in a local so this lambda keeps operating on the
+            // game it started even if another thread (e.g. the EDT handling a player's
+            // "quit"/"continue" decision via addNextGameDecision -> endCurrentGame())
+            // concurrently clears the `game` field while match.startGame() is wrapping up.
+            final Game currentGame = game;
+
             if (humanCount == 0) {
                 // Create FControlGamePlayback in game thread to allow pausing
                 playbackControl = new FControlGamePlayback(humanControllers.get(0));
-                playbackControl.setGame(game);
-                game.subscribeToEvents(playbackControl);
+                playbackControl.setGame(currentGame);
+                currentGame.subscribeToEvents(playbackControl);
             }
             // Actually start the game!
-            match.startGame(game, startGameHook);
+            match.startGame(currentGame, startGameHook);
             // this function waits?
             if (endGameHook != null){
                 endGameHook.run();
@@ -297,7 +300,7 @@ public class HostedMatch {
             // Flush any buffered game events to remote clients so they receive
             // GameEventGameOutcome and GameEventGameFinished before we proceed.
             for (PlayerControllerHuman hc : humanControllers) {
-                if (hc.getGui() instanceof forge.gamemodes.net.server.RemoteClientGuiGame ngg) {
+                if (hc.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
                     forge.gui.control.GameEventForwarder fwd = ngg.getForwarder();
                     if (fwd != null) {
                         fwd.flush();
@@ -309,7 +312,7 @@ public class HostedMatch {
             isMatchOver = match.isMatchOver();
             if (humanCount == 0) {
                 // ... if no human players, let AI decide next game
-                if (game.getRules().getGameType() == GameType.Constructed) {
+                if (currentGame.getRules().getGameType() == GameType.Constructed) {
                     // Dramatic interlude to signal end of game.
                     FThreads.delayInEDT(3000, () -> {
                         if (isMatchOver) {
@@ -367,7 +370,7 @@ public class HostedMatch {
         game = null;
 
         for (final PlayerControllerHuman humanController : humanControllers) {
-            if (humanController.getGui() instanceof forge.gamemodes.net.server.RemoteClientGuiGame ngg) {
+            if (humanController.getGui() instanceof forge.gamemodes.net.ProtocolGuiGame ngg) {
                 forge.gui.control.GameEventForwarder fwd = ngg.getForwarder();
                 if (fwd != null) {
                     for (PlayerControllerHuman allHc : humanControllers) {
@@ -386,6 +389,18 @@ public class HostedMatch {
             humanController.getGui().updateDayTime(null);
         }
         humanControllers.clear();
+
+        // Force GC here rather than in Match.startGame so it runs ONLY for
+        // GUI-hosted matches — headless AI sims (DeckBattler, SimulateMatch,
+        // quest-draft bracket) build Match directly and bypass HostedMatch.
+        // Runs after game=null + afterGameEnd above, so the finished game's
+        // whole object graph is collectible (more than a gc while it's still
+        // referenced). iOS only: it keeps the iPad under its jetsam ceiling
+        // across the games of a multi-game Commander match; other platforms
+        // don't need it and shouldn't pay the GC stall.
+        if (GuiBase.isIOS()) {
+            System.gc();
+        }
     }
 
     public void pause() {
@@ -414,7 +429,7 @@ public class HostedMatch {
         @Override
         public Void visit(final UiEventBlockerAssigned event) {
             for (final PlayerControllerHuman humanController : humanControllers) {
-                humanController.getGui().updateSingleCard(event.blocker());
+                humanController.getGui().updateCard(event.blocker());
             }
             return null;
         }
@@ -422,7 +437,7 @@ public class HostedMatch {
         @Override
         public Void visit(final UiEventAttackerDeclared event) {
             for (final PlayerControllerHuman humanController : humanControllers) {
-                humanController.getGui().updateSingleCard(event.attacker());
+                humanController.getGui().updateCard(event.attacker());
             }
             return null;
         }

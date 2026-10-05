@@ -252,7 +252,7 @@ public class GameAction {
 
             // need to copy counters when card enters another zone than hand or library
             if (StaticAbilityCountersRemain.countersRemain(lastKnownInfo, zoneTo)) {
-                copied.setCounters(Maps.newHashMap(lastKnownInfo.getCounters()));
+                copied.setCounters(HashMultiset.create(lastKnownInfo.getCounters()));
             }
 
             // perpetual stuff
@@ -264,6 +264,10 @@ public class GameAction {
             }
             if (c.hasPerpetual()) {
                 copied.setPerpetual(c);
+            }
+            // CR 123.5
+            if (c.isStickered() && !zoneTo.getZoneType().isHidden()) {
+                copied.setStickers(c);
             }
         }
 
@@ -394,29 +398,35 @@ public class GameAction {
         // Handle merged permanent here so all replacement effects are already applied.
         CardCollection mergedCards = null;
         if (fromBattlefield && !toBattlefield && c.hasMergedCard()) {
-            CardCollection cards = new CardCollection(c.getMergedCards());
-            // replace top card with copied card for correct name for human to choose.
-            cards.set(cards.indexOf(c), copied);
-            // 725.3b
+            mergedCards = new CardCollection(c.getMergedCards());
+            // replace top card with copied card for correct name for human to choose
+            mergedCards.set(mergedCards.indexOf(c), copied);
+            // CR 725.3b
             if (cause != null && zoneTo.getZoneType() == ZoneType.Exile) {
-                cards = (CardCollection) cause.getHostCard().getController().getController().orderMoveToZoneList(cards, zoneTo.getZoneType(), cause);
+                mergedCards = (CardCollection) cause.getHostCard().getController().getController().orderMoveToZoneList(mergedCards, zoneTo.getZoneType(), cause);
             } else {
-                cards = (CardCollection) c.getOwner().getController().orderMoveToZoneList(cards, zoneTo.getZoneType(), cause);
+                mergedCards = (CardCollection) c.getOwner().getController().orderMoveToZoneList(mergedCards, zoneTo.getZoneType(), cause);
             }
-            cards.set(cards.indexOf(copied), c);
-            mergedCards = cards;
+            // CR 123.5c
+            if (copied.isStickered()) {
+                Card keeper = c.getOwner().getController().chooseCardToKeepStickers(mergedCards);
+                if (keeper != copied) {
+                    keeper.takeStickersFrom(copied);
+                }
+            }
+            mergedCards.set(mergedCards.indexOf(copied), c);
             if (cause != null) {
                 // Replace sa targeting cards
                 final SpellAbility saTargeting = cause.getSATargetingCard();
                 if (saTargeting != null) {
-                    saTargeting.getTargets().replaceTargetCard(c, cards);
+                    saTargeting.getTargets().replaceTargetCard(c, mergedCards);
                 }
                 // Replace host remembered cards
                 // But not replace RememberLKI, since it wants to refer to the last known info.
                 Card hostCard = cause.getHostCard();
                 if (!cause.hasParam("RememberLKI") && hostCard.isRemembered(c)) {
                     hostCard.removeRemembered(c);
-                    hostCard.addRemembered(cards);
+                    hostCard.addRemembered(mergedCards);
                 }
             }
         }
@@ -578,6 +588,10 @@ public class GameAction {
             c.cleanupExiledWith();
         }
 
+        if (c.isStickered() || copied.isStickered()) {
+            Card.refreshSheetViews(copied.getOwner());
+        }
+
         // play the change zone sound
         game.fireEvent(new GameEventCardChangeZone(c, zoneFrom, zoneTo));
 
@@ -637,7 +651,13 @@ public class GameAction {
                     // Ask controller if it wants to be on top or bottom of other meld.
                     unmeldPosition++;
                 }
+                // CR 123.5c
+                boolean unmeldKeepsStickers = copied.isStickered() && c.getOwner().getController()
+                        .chooseCardToKeepStickers(new CardCollection(List.of(copied, unmeld))) == unmeld;
                 unmeld = changeZone(null, zoneTo, unmeld, position, cause, params);
+                if (unmeldKeepsStickers && unmeld != null) {
+                    unmeld.takeStickersFrom(copied);
+                }
                 storeChangesZoneAll(unmeld, zoneFrom, zoneTo, params);
             }
         } else if (toBattlefield) {
@@ -699,11 +719,11 @@ public class GameAction {
             stAb.setActiveZone(EnumSet.of(ZoneType.Command));
             // needed for ETB lookahead like Bronzehide Lion
             stAb.putParam("AffectedZone", "All");
-            SpellAbilityEffect.addForgetOnMovedTrigger(eff, "Battlefield");
             eff.getOwner().getZone(ZoneType.Command).add(eff);
         }
 
         eff.addRemembered(copied);
+        copied.addLeavesPlayCommand(() -> cleanStaticEffect(eff, copied));
         // refresh needed for canEnchant checks
         checkStaticAbilities(false, Sets.newHashSet(copied), new CardCollection(copied));
         return eff;
@@ -1095,26 +1115,23 @@ public class GameAction {
             dependencies = HashBasedTable.create();
         }
 
-        game.forEachCardInGame(new Visitor<>() {
-            @Override
-            public boolean visit(final Card c) {
-                // need to get Card from preList if able
-                final Card co = preList.get(c);
-                for (StaticAbility stAb : co.getStaticAbilities()) {
-                    if (stAb.checkMode(StaticAbilityMode.Continuous) && stAb.zonesCheck()) {
-                        staticAbilities.add(stAb);
-                    }
+        game.forEachCardInGame(c -> {
+            // need to get Card from preList if able
+            final Card co = preList.get(c);
+            for (StaticAbility stAb : co.getStaticAbilities()) {
+                if (stAb.checkMode(StaticAbilityMode.Continuous) && stAb.zonesCheck()) {
+                    staticAbilities.add(stAb);
                 }
-                if (!co.getStaticCommandList().isEmpty()) {
-                    staticList.add(co);
-                }
-                for (StaticAbility stAb : co.getHiddenStaticAbilities()) {
-                    if (stAb.checkMode(StaticAbilityMode.Continuous) && stAb.zonesCheck()) {
-                        staticAbilities.add(stAb);
-                    }
-                }
-                return true;
             }
+            if (!co.getStaticCommandList().isEmpty()) {
+                staticList.add(co);
+            }
+            for (StaticAbility stAb : co.getHiddenStaticAbilities()) {
+                if (stAb.checkMode(StaticAbilityMode.Continuous) && stAb.zonesCheck()) {
+                    staticAbilities.add(stAb);
+                }
+            }
+            return true;
         }, true);
 
         staticAbilities.sort(effectOrder);
@@ -1431,7 +1448,7 @@ public class GameAction {
                 p.checkKeywordCard();
 
                 for (final ZoneType zt : ZoneType.values()) {
-                    if (zt == ZoneType.Battlefield) {
+                    if (zt == ZoneType.Battlefield || zt == ZoneType.Flashback) {
                         continue;
                     }
                     for (final Card c : p.getCardsIn(zt).threadSafeIterable()) {
@@ -1997,7 +2014,7 @@ public class GameAction {
         boolean recheck = false;
 
         for (Card c : list) {
-            if (c.getCounters(CounterEnumType.LOYALTY) <= 0) {
+            if (c.getCounters(CounterEnumType.LOYALTY) <= 0 && !c.ignorePlaneswalkerZeroLoyaltyRule()) {
                 noRegCreats.add(c);
                 recheck = true;
             }
@@ -2282,7 +2299,7 @@ public class GameAction {
 
         //shuffle
         List<Card> shuffledCards = Lists.newArrayList(p1.getZone(ZoneType.Library).getCards().threadSafeIterable());
-        Collections.shuffle(shuffledCards);
+        Collections.shuffle(shuffledCards, MyRandom.getRandom());
 
         //check a second hand
         List<Card> hand2 = shuffledCards.subList(0,p1.getMaxHandSize());
@@ -2657,6 +2674,7 @@ public class GameAction {
                 runParams.put(AbilityKey.ScryBottom, toBottom == null ? 0 : toBottom.size());
                 game.getTriggerHandler().runTrigger(TriggerType.Scry, runParams, false);
             }
+            p.incScryThisTurn();
         }
     }
 
@@ -2695,7 +2713,7 @@ public class GameAction {
         return milled;
     }
 
-    public void dealDamage(final boolean isCombat, final CardDamageMap damageMap, final CardDamageMap preventMap,
+    public void dealDamage(final boolean isCombat, final CardDamageTable damageMap, final CardDamageTable preventMap,
                            final GameEntityCounterTable counterTable, final SpellAbility cause) {
         // Clear assigned damage if is combat
         if (isCombat) {

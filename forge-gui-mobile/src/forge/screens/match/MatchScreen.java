@@ -400,8 +400,9 @@ public class MatchScreen extends FScreen {
         }
 
         drawArcs(g);
+        CardFlightOverlay.draw(g, bottomPlayerPanel.getPlayer(), getHeight());
         if (FModel.getPreferences().getPrefBoolean(ForgePreferences.FPref.UI_ENABLE_MAGNIFIER) && Forge.magnify && Forge.magnifyToggle) {
-            if (Forge.isLandscapeMode() && (!GuiBase.isAndroid() || Forge.hasGamepad()) && !CardZoom.isOpen() && potentialListener != null) {
+            if (Forge.isLandscapeMode() && (!GuiBase.isMobile() || Forge.hasGamepad()) && !CardZoom.isOpen() && potentialListener != null) {
                 for (FDisplayObject object : potentialListener) {
                     if (object != null) {
                         if (object instanceof FCardPanel cardPanel) {
@@ -687,7 +688,6 @@ public class MatchScreen extends FScreen {
             case Keys.Y: //auto-yield, always yes, Ctrl+Y on Android, Y when running on desktop
                 if (KeyInputAdapter.isCtrlKeyDown() || GuiBase.getInterface().isRunningOnDesktop()) {
                     final IGameController controller = MatchController.instance.getGameController();
-                    final GameView gameView = MatchController.instance.getGameView();
                     final FCollectionView<StackItemView> stack = MatchController.instance.getGameView().getStack();
                     if (stack.isEmpty()) {
                         return false;
@@ -704,16 +704,11 @@ public class MatchScreen extends FScreen {
                     }
 
                     controller.setShouldAutoYield(key, true, abilityScope);
-                    if (stackInstance.equals(gameView.peekStack())) {
-                        //auto-pass priority if ability is on top of stack
-                        controller.passPriority();
-                    }
                 }
                 break;
             case Keys.N: //auto-yield, always no, Ctrl+N on Android, N when running on desktop
                 if (KeyInputAdapter.isCtrlKeyDown() || GuiBase.getInterface().isRunningOnDesktop()) {
                     final IGameController controller = MatchController.instance.getGameController();
-                    final GameView gameView = MatchController.instance.getGameView();
                     final FCollectionView<StackItemView> stack = MatchController.instance.getGameView().getStack();
                     if (stack.isEmpty()) {
                         return false;
@@ -730,10 +725,6 @@ public class MatchScreen extends FScreen {
                     }
 
                     controller.setShouldAutoYield(key, true, abilityScope);
-                    if (stackInstance.equals(gameView.peekStack())) {
-                        //auto-pass priority if ability is on top of stack
-                        controller.passPriority();
-                    }
                 }
                 break;
         }
@@ -805,15 +796,6 @@ public class MatchScreen extends FScreen {
         }
     }
 
-    public Iterable<PlayerZoneUpdate> tempShowZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        // pfps needs to actually do something
-        return zonesToUpdate; // pfps should return only those zones newly shown
-    }
-
-    public void hideZones(final PlayerView controller, final Iterable<PlayerZoneUpdate> zonesToUpdate) {
-        // pfps needs to actually do something
-    }
-
     public void updateSingleCard(final CardView card) {
         if (card == null)
             return;
@@ -827,6 +809,7 @@ public class MatchScreen extends FScreen {
             pnl.setAttachedToPanel(null);
             pnl.setPrevPanelInStack(null);
             pnl.setNextPanelInStack(null);
+            CardAreaPanel.forgetAnimated(card);
         }
     }
 

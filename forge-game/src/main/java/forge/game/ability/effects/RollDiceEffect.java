@@ -314,7 +314,7 @@ public class RollDiceEffect extends SpellAbilityEffect {
                 sa.setSVar("MaxRolls", Integer.toString(countMaxRolls));
             }
         }
-
+        SpellAbility sourceSA = sa != null ? sa.getRootAbility() : null;
         int rollNum = 1;
         for (DieRollResult roll : resultsList) {
             final Map<AbilityKey, Object> runParams = AbilityKey.mapFromPlayer(player);
@@ -323,6 +323,7 @@ public class RollDiceEffect extends SpellAbilityEffect {
             runParams.put(AbilityKey.NaturalResult, roll.getNaturalValue());
             runParams.put(AbilityKey.RolledToVisitAttractions, toVisitAttractions);
             runParams.put(AbilityKey.Number, player.getNumRollsThisTurn() - amount + rollNum);
+            runParams.put(AbilityKey.SourceSA, sourceSA);
             player.getGame().getTriggerHandler().runTrigger(TriggerType.RolledDie, runParams, false);
             rollNum++;
         }
@@ -330,6 +331,7 @@ public class RollDiceEffect extends SpellAbilityEffect {
         runParams.put(AbilityKey.Sides, sides);
         runParams.put(AbilityKey.Result, getFinalResults(resultsList));
         runParams.put(AbilityKey.RolledToVisitAttractions, toVisitAttractions);
+        runParams.put(AbilityKey.SourceSA, sourceSA);
         player.getGame().getTriggerHandler().runTrigger(TriggerType.RolledDieOnce, runParams, false);
 
         return getFinalResults(resultsList).stream().reduce(0, Integer::sum);
@@ -369,8 +371,8 @@ public class RollDiceEffect extends SpellAbilityEffect {
         List<Card> canIncrementDice = new ArrayList<>();
         for (Card c : xenosquirrels) {
             // Xenosquirrels must have a P1P1 counter on it to remove in order to modify
-            Integer P1P1Counters = c.getCounters().get(CounterEnumType.P1P1);
-            if (P1P1Counters != null && P1P1Counters > 0 && c.canRemoveCounters(CounterEnumType.P1P1)) {
+            int P1P1Counters = c.getCounters(CounterEnumType.P1P1);
+            if (P1P1Counters > 0 && c.canRemoveCounters(CounterEnumType.P1P1)) {
                 canIncrementDice.add(c);
             }
         }
