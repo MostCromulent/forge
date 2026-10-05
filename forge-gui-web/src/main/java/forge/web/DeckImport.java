@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,11 +49,11 @@ final class DeckImport {
         return read(text, check, null);
     }
 
-    /** With a collection, only the main deck is taken, each card as the printing owned, and a card not owned is a problem. */
+    /** With a collection, a card not owned is a problem, and a collection that fixes all but the main deck takes the main deck alone. */
     static Read read(final String text, final Check check, final DeckEditor.Collection collection) {
-        final Map<String, PaperCard> owned = new HashMap<>();
+        final Set<String> owned = new HashSet<>();
         if (collection != null) {
-            collection.cards().get().forEach(e -> owned.putIfAbsent(e.getKey().getName(), e.getKey()));
+            collection.cards().get().forEach(e -> owned.add(e.getKey().getName()));
         }
         final String[] raw = text.split("\r?\n", -1);
         // Lines the recognizer misses only because of a set code and collector number are read by name
@@ -100,17 +101,18 @@ final class DeckImport {
                         kinds[i] = IGNORED;
                         continue;
                     }
-                    if (collection != null && token.getTokenSection() != DeckSection.Main) {
+                    if (collection != null && collection.mainOnly() && token.getTokenSection() != DeckSection.Main) {
                         kinds[i] = IGNORED;
                         continue;
                     }
                     final PaperCard listed = token.getCard();
-                    final PaperCard card = collection == null || listed.getRules().getType().isBasicLand() ? listed : owned.get(listed.getName());
+                    // The listed printing stands for the name: the editor takes the printings owned when the deck is made
+                    final PaperCard card = collection == null || listed.getRules().getType().isBasicLand() || owned.contains(listed.getName()) ? listed : null;
                     if (card == null) {
                         kinds[i] = PROBLEM;
                         notImported++;
                         problems.add(new ImportProblem(i, Localizer.getInstance().getMessage("lblWebImportLineCard", i + 1, listed.getName()),
-                                Localizer.getInstance().getMessage("lblWebConquestNotOwned"),
+                                Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED),
                                 List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
                         continue;
                     }

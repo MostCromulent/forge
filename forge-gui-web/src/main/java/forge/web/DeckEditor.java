@@ -45,9 +45,9 @@ final class DeckEditor {
     /** The key of the answer to renaming, duplicating or deleting a pool's deck. */
     private static final String GROUP_OWNS_IT = "lblWebEditorPoolOwnsDeck";
     /** The keys of the answers to changing what a deck built from a collection keeps as it is. */
-    private static final String DECK_FIXED = "lblWebConquestDeckFixed";
-    private static final String MAIN_ONLY = "lblWebConquestMainOnly";
-    private static final String NOT_OWNED = "lblWebConquestNotOwned";
+    private static final String DECK_FIXED = "lblWebCollectionDeckFixed";
+    private static final String MAIN_ONLY = "lblWebCollectionMainOnly";
+    static final String NOT_OWNED = "lblWebCollectionNotOwned";
     /** The basics the land row offers, with the colour each needs; Wastes needs none. */
     private static final Map<String, String> BASICS = new LinkedHashMap<>();
 
@@ -75,9 +75,9 @@ final class DeckEditor {
     record Group(IStorage<DeckGroup> storage) implements Target {
     }
 
-    /** A game mode's own cards, which a deck of that mode is built from, with cards read at each use and saved run after each save. */
+    /** A game mode's own cards, which a deck of that mode is built from, with cards read at each use and saved run after each save. mainOnly fixes every section but the main deck. */
     record Collection(String owner, Supplier<CardPool> cards, Predicate<PaperCard> isNew,
-            Function<Deck, List<CardEdition>> landSets, Runnable saved) {
+            Function<Deck, List<CardEdition>> landSets, Runnable saved, boolean mainOnly) {
     }
 
     /** Tells a guest's browser its deck changed: the deck as .dck text, or null when it was deleted. */
@@ -195,7 +195,7 @@ final class DeckEditor {
         if (limit != null) {
             return limit;
         }
-        return change(name, () -> deck.getOrCreate(to).add(card, count));
+        return change(name, () -> addOwned(deck.getOrCreate(to), card, count));
     }
 
     String remove(final String name, final DeckSection from, final int count) {
@@ -233,7 +233,7 @@ final class DeckEditor {
 
     /** Makes a card the commander, from a section of the deck or (from null) the catalogue. A commander it replaces goes to the main deck. */
     String makeCommander(final String name, final DeckSection from) {
-        if (collection != null) {
+        if (fixedSection(DeckSection.Commander)) {
             return Localizer.getInstance().getMessage(MAIN_ONLY);
         }
         final DeckFormat df = check.deckFormat();
@@ -241,7 +241,11 @@ final class DeckEditor {
             return Localizer.getInstance().getMessage("lblWebEditorNoCommanderFormat");
         }
         final CardPool source = from == null ? null : deck.get(from);
-        final PaperCard card = source == null ? printingFor(name) : source.find(c -> c.getName().equals(name));
+        final PaperCard card = source != null ? source.find(c -> c.getName().equals(name))
+                : collection == null ? printingFor(name) : ownedByName().get(name);
+        if (card == null && collection != null) {
+            return Localizer.getInstance().getMessage(NOT_OWNED, String.valueOf(name));
+        }
         if (card == null) {
             return Localizer.getInstance().getMessage("lblWebEditorNoSuchCard", String.valueOf(name));
         }
@@ -272,10 +276,6 @@ final class DeckEditor {
 
     /** Sets how many copies of each printing a section holds of one card. The total can't change. */
     String setPrintings(final String name, final DeckSection in, final Map<String, Integer> countsByImageKey) {
-        // The printing is the one owned
-        if (collection != null) {
-            return Localizer.getInstance().getMessage(DECK_FIXED);
-        }
         final CardPool pool = deck.get(in);
         final int have = pool == null ? 0 : pool.countByName(name);
         final int total = countsByImageKey.values().stream().mapToInt(Integer::intValue).sum();
@@ -289,6 +289,15 @@ final class DeckEditor {
                 return Localizer.getInstance().getMessage("lblWebEditorNotAPrinting", String.valueOf(name));
             }
             wanted.merge(printing, e.getValue(), Integer::sum);
+        }
+        // With a collection, each printing only as many times as it is owned and not used elsewhere in the deck
+        if (collection != null && !BASICS.containsKey(name)) {
+            for (final Map.Entry<PaperCard, Integer> e : wanted.entrySet()) {
+                final int here = pool == null ? 0 : pool.count(e.getKey());
+                if (e.getValue() > spare(e.getKey()) + here) {
+                    return Localizer.getInstance().getMessage(NOT_OWNED, String.valueOf(name));
+                }
+            }
         }
         return change(name, () -> {
             take(pool, name, have);
@@ -448,16 +457,15 @@ final class DeckEditor {
     }
 
     private void addCards(final Deck other) {
-        for (final DeckSection section : collection != null ? List.of(DeckSection.Main) : List.of(DeckSection.Main, DeckSection.Sideboard)) {
+        for (final DeckSection section : List.of(DeckSection.Main, DeckSection.Sideboard)) {
             final CardPool from = other.get(section);
-            if (from == null) {
+            if (from == null || fixedSection(section)) {
                 continue;
             }
             for (final Map.Entry<PaperCard, Integer> e : from) {
-                final PaperCard card = owned(e.getKey());
-                final int room = card == null ? 0 : room(card);
+                final int room = room(e.getKey());
                 if (room > 0) {
-                    deck.getOrCreate(section).add(card, Math.min(room, e.getValue()));
+                    addOwned(deck.getOrCreate(section), e.getKey(), Math.min(room, e.getValue()));
                 }
             }
         }
@@ -466,9 +474,12 @@ final class DeckEditor {
     /** Swaps the deck's cards for another deck's, keeping its name and where it is saved. */
     String replaceAll(final Deck other) {
         if (collection != null) {
-            // The main deck alone is replaced, and by what the collection can supply
+            // The sections the collection lets change are replaced, and by what it can supply
             return change(null, () -> {
                 deck.getMain().clear();
+                if (!collection.mainOnly()) {
+                    deck.getOrCreate(DeckSection.Sideboard).clear();
+                }
                 addCards(other);
             });
         }
@@ -755,9 +766,38 @@ final class DeckEditor {
         return Math.min(byLimit, spare);
     }
 
+    /** How many more copies of this very printing the collection can supply, the whole deck counted. */
+    private int spare(final PaperCard printing) {
+        return collection.cards().get().count(printing) - deck.getAllCardsInASinglePool(true, false).count(printing);
+    }
+
+    /** Adds copies of a card: as it is without a collection or for a basic land, otherwise as the printings owned, the one asked for first. */
+    private void addOwned(final CardPool to, final PaperCard card, final int count) {
+        if (collection == null || BASICS.containsKey(card.getName())) {
+            to.add(card, count);
+            return;
+        }
+        final List<PaperCard> printings = new ArrayList<>();
+        collection.cards().get().forEach(e -> {
+            if (e.getKey().getName().equals(card.getName())) {
+                printings.add(e.getKey());
+            }
+        });
+        // An imported list names a printing, which is taken first when it is owned
+        printings.sort((a, b) -> Boolean.compare(!a.equals(card), !b.equals(card)));
+        int left = count;
+        for (final PaperCard printing : printings) {
+            final int take = Math.min(left, spare(printing));
+            if (take > 0) {
+                to.add(printing, take);
+                left -= take;
+            }
+        }
+    }
+
     /** A section a collection's deck keeps as it is, or does not have. */
     private boolean fixedSection(final DeckSection section) {
-        return collection != null && section != DeckSection.Main;
+        return collection != null && collection.mainOnly() && section != DeckSection.Main;
     }
 
     /** The collection's cards by name, one printing each. */
@@ -765,11 +805,6 @@ final class DeckEditor {
         final Map<String, PaperCard> byName = new LinkedHashMap<>();
         collection.cards().get().forEach(e -> byName.putIfAbsent(e.getKey().getName(), e.getKey()));
         return byName;
-    }
-
-    /** The printing of a card that goes in the deck: the card itself, or with a collection the one owned, a basic land being free. */
-    private PaperCard owned(final PaperCard card) {
-        return collection == null || BASICS.containsKey(card.getName()) ? card : ownedByName().get(card.getName());
     }
 
     /** The first edition a collection's basic lands may come from, or null when it names none. */

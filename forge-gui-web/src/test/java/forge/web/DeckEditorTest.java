@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.StaticData;
+import forge.deck.CardPool;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
 import forge.deck.io.DeckStorage;
@@ -102,5 +103,42 @@ public class DeckEditorTest {
         Assert.assertEquals(sent.size(), 1);
         Assert.assertTrue(sent.get(0).contains("Llanowar Elves"));
         Assert.assertFalse(storages.of(GameType.Constructed).contains("Host deck (copy)"));
+    }
+
+    /** An editor over a collection of exactly these cards, by name and set. */
+    private DeckEditor collectionEditor(final GameType format, final boolean mainOnly, final Object... nameSetCount) {
+        final CardPool owned = new CardPool();
+        for (int i = 0; i < nameSetCount.length; i += 3) {
+            owned.add(StaticData.instance().getCommonCards().getCard((String) nameSetCount[i], (String) nameSetCount[i + 1]), (Integer) nameSetCount[i + 2]);
+        }
+        return new DeckEditor(new Deck("Owned deck"), false, false, new DeckEditor.Stored(storages.of(format)), Check.of(format, null), storages,
+                false, (id, text, f) -> { }, new DeckEditor.Collection("Test", () -> owned, c -> false, d -> List.of(), () -> { }, mainOnly));
+    }
+
+    // Fails if a deck built from a collection can hold more copies of a printing than are owned
+    @Test
+    public void aCollectionsPrintingsAreTakenInTurn() {
+        final DeckEditor e = collectionEditor(GameType.Constructed, false, "Shock", "10E", 1, "Shock", "M19", 3);
+        Assert.assertNull(e.add("Shock", DeckSection.Main, 4));
+        final Map<String, Integer> bySet = new HashMap<>();
+        e.deck().getMain().forEach(c -> bySet.merge(c.getKey().getEdition(), c.getValue(), Integer::sum));
+        Assert.assertEquals(bySet, Map.of("10E", 1, "M19", 3));
+        Assert.assertNotNull(e.add("Shock", DeckSection.Sideboard, 1), "a fifth Shock was taken from a collection of four");
+    }
+
+    // Fails if a collection that does not fix the sideboard refuses a sideboard edit, or one that does accepts it
+    @Test
+    public void onlyAMainOnlyCollectionFixesTheSideboard() {
+        Assert.assertNull(collectionEditor(GameType.Constructed, false, "Shock", "M19", 2).add("Shock", DeckSection.Sideboard, 1));
+        Assert.assertNotNull(collectionEditor(GameType.Constructed, true, "Shock", "M19", 2).add("Shock", DeckSection.Sideboard, 1));
+    }
+
+    // Fails if a Commander deck built from a collection can take a commander that is not owned
+    @Test
+    public void aCommanderMustBeOwned() {
+        final DeckEditor e = collectionEditor(GameType.Commander, false, "Isamaru, Hound of Konda", "CHK", 1);
+        Assert.assertNotNull(e.makeCommander("Krenko, Mob Boss", null));
+        Assert.assertNull(e.makeCommander("Isamaru, Hound of Konda", null));
+        Assert.assertEquals(e.deck().getCommanders().get(0).getEdition(), "CHK");
     }
 }

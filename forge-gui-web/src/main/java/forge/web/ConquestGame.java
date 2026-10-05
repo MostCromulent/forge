@@ -141,7 +141,7 @@ final class ConquestGame implements Campaign {
         final ConquestData data = model();
         // The commander caches its deck, and the editor saves a copy
         return new DeckEditor.Collection(data.getName(), ConquestUtil::getAvailablePool, data::isNewCard,
-                ConquestUtil::getBasicLandSets, commander::reloadDeck);
+                ConquestUtil::getBasicLandSets, commander::reloadDeck, true);
     }
 
     /** A plane has no picture of its own, so it wears its first region's. */
@@ -896,7 +896,7 @@ final class ConquestGame implements Campaign {
                     channel.send(new DeckDetailsMessage(deckDetails(commander)));
                 } else {
                     host.decks().openCollectionDeck(commander.getDeck(), FModel.getConquest().getDecks(), GameType.PlanarConquest,
-                            collection(commander), channel);
+                            collection(commander), true, channel);
                 }
             }
             default -> { }

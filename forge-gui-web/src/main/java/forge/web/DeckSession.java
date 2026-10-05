@@ -237,8 +237,8 @@ final class DeckSession {
 
     /** Opens a game mode's own deck, built from that mode's collection and saved among its decks. */
     synchronized void openCollectionDeck(final Deck deck, final IStorage<Deck> storage, final GameType type,
-            final DeckEditor.Collection collection, final BrowserChannel channel) {
-        editor = new DeckEditor(deck, false, true, new DeckEditor.Stored(storage), Check.of(type, null), storages, false,
+            final DeckEditor.Collection collection, final boolean exists, final BrowserChannel channel) {
+        editor = new DeckEditor(deck, false, exists, new DeckEditor.Stored(storage), Check.of(type, null), storages, false,
                 this::sendDeviceDeck, collection);
         eventPool = false;
         editorSeat = null;
