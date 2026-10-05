@@ -433,10 +433,12 @@ public final class WebSession {
                     "editorDeck", "deckDelete", "catalogue", "importRead", "importFetch", "importCommit", "deviceDecks" -> {
                 if ("catalogue".equals(msg.get("t").getAsString()) && msg.has("source") && !msg.get("source").isJsonNull()) {
                     // A campaign's own cards, which need no deck open
-                    if (stage instanceof InCampaign c && c.save() != null) {
-                        final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);
-                        onCampaign(() -> channel.send(campaign(c.mode()).cards(q)));
-                    }
+                    final FromBrowser.CatalogueQuery q = Wire.decode(msg, FromBrowser.CatalogueQuery.class);
+                    onCampaign(() -> {
+                        if (stage instanceof InCampaign c && c.save() != null) {
+                            channel.send(campaign(c.mode()).cards(q));
+                        }
+                    });
                 } else if (!(stage instanceof Playing)) {
                     // The pools go first, since closing the editor lists every deck again before the page changes
                     if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof Event) {
@@ -444,8 +446,12 @@ public final class WebSession {
                     }
                     decks.onMessage(channel, msg);
                     // A deck may have changed size or become playable, which the campaign's pages show
-                    if ("editorClose".equals(msg.get("t").getAsString()) && stage instanceof InCampaign c && c.save() != null) {
-                        onCampaign(() -> campaign(c.mode()).page().forEach(m -> channel.send(m)));
+                    if ("editorClose".equals(msg.get("t").getAsString())) {
+                        onCampaign(() -> {
+                            if (stage instanceof InCampaign c && c.save() != null) {
+                                campaign(c.mode()).page().forEach(m -> channel.send(m));
+                            }
+                        });
                     }
                 }
             }
@@ -1387,33 +1393,30 @@ public final class WebSession {
         if (b != null) {
             playing.gui().attach(b);
         }
-        playing.gui().onGameOver(() -> onCampaign(this::campaignGameOver));
+        // A game's result belongs to the campaign that started it, wherever the browser has gone by the time it is recorded
+        final Campaign campaign = campaign(back.mode());
+        playing.gui().onGameOver(() -> onCampaign(() -> {
+            final HostedMatch match = local.hostedMatch();
+            final Record result = campaign.gameOver(match == null ? null : match.getGameView());
+            if (result != null) {
+                tell(result);
+            }
+        }));
         try {
             final PreparedMatch prepared = prepare.get();
             if (prepared == null) {
-                throw new IllegalStateException("A battle is already being fought");
+                throw new IllegalStateException("A match is already being played");
             }
             // The game names its winner by this name, and the board knows the seat by the session's
             prepared.human().getPlayer().setName(playerName());
             local.startPrepared(playerName(), prepared, playing.gui());
         } catch (final RuntimeException ex) {
-            Logger.error(ex, "Could not start the battle");
+            Logger.error(ex, "Could not start the match");
             failed.run();
             local.endMatch();
             move(playing, back);
             tell(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(ex.getMessage()))));
             sendCampaign();
-        }
-    }
-
-    /** A game of the campaign's match ended: recorded and rewarded where the game ran, so the browser decides nothing. */
-    private void campaignGameOver() {
-        if (stage instanceof Playing p && p.back() instanceof InCampaign c) {
-            final HostedMatch match = local.hostedMatch();
-            final Record result = campaign(c.mode()).gameOver(match == null ? null : match.getGameView());
-            if (result != null) {
-                tell(result);
-            }
         }
     }
 
@@ -1559,16 +1562,20 @@ public final class WebSession {
         final BrowserChannel b = browser;
         if (playing.back() != null) {
             stopGauntlet();
-            if (playing.back() instanceof InCampaign c) {
-                campaign(c.mode()).left();
-            }
             local.endMatch();
-            if (move(from, playing.back()) && b != null) {
-                if (playing.back() instanceof InCampaign) {
-                    onCampaign(this::sendCampaign);
-                } else {
-                    sendLimited(b);
-                }
+            if (playing.back() instanceof InCampaign c) {
+                // Queued behind the last game's result, so the campaign records the game before it is told the match is left
+                final Campaign campaign = campaign(c.mode());
+                onCampaign(() -> {
+                    if (stage == from) {
+                        campaign.left();
+                        if (move(from, c) && b != null) {
+                            sendCampaign();
+                        }
+                    }
+                });
+            } else if (move(from, playing.back()) && b != null) {
+                sendLimited(b);
             }
             return;
         }
