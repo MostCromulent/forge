@@ -9,6 +9,7 @@ import forge.deck.DeckGroup;
 import forge.game.GameType;
 import forge.game.GameView;
 import forge.gamemodes.limited.BoosterDraft;
+import forge.gamemodes.quest.QuestEventDraft;
 import forge.gamemodes.limited.GauntletMini;
 import forge.gamemodes.match.GameLobby;
 import forge.gamemodes.match.GameLobby.GameLobbyData;
@@ -175,6 +176,20 @@ public final class WebSession {
             // A match is started on the host UI thread, as a table's is, and the campaign's work waits for it
             ui.invokeInEdtAndWait(() -> startCampaignMatch(prepare, failed));
         }
+
+        @Override
+        public void startDraft(final BoosterDraft draft) {
+            synchronized (WebSession.this) {
+                if (offlineDraft != null) {
+                    return;
+                }
+                offlineDraft = new OfflineDraft(() -> draft, true, playerName(), WebSession.this::tell, problem -> {
+                    endDraft();
+                    tell(error(problem));
+                });
+            }
+            tell(hello());
+        }
     };
 
     private void onCampaign(final Runnable work) {
@@ -328,6 +343,10 @@ public final class WebSession {
                 channel.send(draft.latest());
             }
         } else if (now instanceof InCampaign) {
+            final OfflineDraft draft = offlineDraft;
+            if (draft != null && draft.latest() != null) {
+                channel.send(draft.latest());
+            }
             onCampaign(this::sendCampaign);
         } else if (now instanceof Menu) {
             // A guest that arrives while a game is already open takes a seat without being asked, once it has a name
@@ -511,7 +530,7 @@ public final class WebSession {
                 }
             }
             case "draftSave" -> saveDraft(channel, Wire.decode(msg, DraftSave.class));
-            case "draftDiscard" -> endDraft();
+            case "draftDiscard" -> discardDraft();
             // The gauntlet starts its rounds itself, which, like any match, happens on the host UI thread
             case "gauntletNext" -> ui.invokeInEdtLater(() -> {
                 final LimitedResult result = lastResult;
@@ -1202,7 +1221,7 @@ public final class WebSession {
             channel.send(error(ex.getMessage()));
             return;
         }
-        offlineDraft = new OfflineDraft(make, playerName(), this::tell, problem -> {
+        offlineDraft = new OfflineDraft(make, false, playerName(), this::tell, problem -> {
             endDraft();
             tell(error(problem));
         });
@@ -1223,6 +1242,25 @@ public final class WebSession {
         final Stage now = stage;
         if (now instanceof Event e) {
             move(now, new Event(e.kind(), e.pool()));
+        } else {
+            tell(hello());
+        }
+    }
+
+    /** Whether the draft running is a quest tournament's, which the quest's page holds instead of the Limited page. */
+    private boolean tournamentDrafting() {
+        return offlineDraft != null && stage instanceof InCampaign c && "quest".equals(c.mode());
+    }
+
+    /** Stops the draft unsaved; a tournament's is left as desktop leaves it, with its fee given back. */
+    private void discardDraft() {
+        final boolean tournament = tournamentDrafting();
+        endDraft();
+        if (tournament) {
+            onCampaign(() -> {
+                quest.cancelDraft();
+                sendCampaign();
+            });
         }
     }
 
@@ -1230,6 +1268,22 @@ public final class WebSession {
     private void saveDraft(final BrowserChannel channel, final DraftSave save) {
         final OfflineDraft draft = offlineDraft;
         if (!isHost || draft == null || draft.latest() == null || !draft.latest().done()) {
+            return;
+        }
+        if (tournamentDrafting()) {
+            // A tournament's draft is kept under the one name Quest gives it, so the browser's name is not used
+            draft.save(QuestEventDraft.DECK_NAME).whenCompleteAsync((group, ex) -> {
+                if (ex != null) {
+                    tell(error(Localizer.getInstance().getMessage("lblWebSessionDraftSaveFailed", String.valueOf(ex.getMessage()))));
+                    return;
+                }
+                endDraft();
+                onCampaign(() -> {
+                    final IStorage<DeckGroup> pools = quest.drafted(group);
+                    sendCampaign();
+                    decks.openPool(group.getHumanDeck(), pools, GameType.QuestDraft, browser);
+                });
+            });
             return;
         }
         final String name = save.name() == null ? "" : save.name().trim();

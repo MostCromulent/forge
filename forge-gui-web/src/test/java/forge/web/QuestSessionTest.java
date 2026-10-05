@@ -9,7 +9,9 @@ import forge.game.GameType;
 import forge.game.player.Player;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
+import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventChallenge;
+import forge.gamemodes.quest.QuestEventDraft;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
@@ -35,9 +37,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
@@ -108,6 +112,10 @@ public class QuestSessionTest extends SessionsTest {
             if (host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean()) == null) {
                 return;
             }
+        }
+        if (host.hello.get("drafting").getAsBoolean()) {
+            send(host, JsonCodec.message("draftDiscard"));
+            host.awaitMatching("hello", h -> !h.get("drafting").getAsBoolean());
         }
         if (str(host.hello, "campaignSave") != null) {
             send(host, JsonCodec.message("campaignLeave"));
@@ -778,6 +786,202 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(page.getAsJsonArray("challenges").size() > 0, "no challenge is offered after 40 wins: " + page);
         Assert.assertFalse(page.get("zeppelin").getAsBoolean());
         Assert.assertFalse(page.has("nextIn") && !page.get("nextIn").isJsonNull(), "the next-challenge line is shown: " + page);
+    }
+
+    /** The fixture with QuestFixture's tournament in it, changed as a test needs, and saved. */
+    private static QuestData withTournament(final Consumer<QuestEventDraft> change) throws IOException {
+        final QuestData data = QuestFixture.install();
+        final QuestController quest = FModel.getQuest();
+        quest.load(data);
+        change.accept(QuestFixture.tournament(quest));
+        quest.save();
+        return data;
+    }
+
+    private static String[] standings(final String... seats) {
+        final String[] all = new String[15];
+        Arrays.fill(all, QuestEventDraft.UNDETERMINED);
+        for (int i = 0; i < seats.length; i++) {
+            all[i] = "u".equals(seats[i]) ? QuestEventDraft.UNDETERMINED : "h".equals(seats[i]) ? QuestEventDraft.HUMAN : seats[i];
+        }
+        return all;
+    }
+
+    private static QuestEventDraft draftOf(final QuestData data) throws IOException {
+        return saved(data).getAchievements().getDraftEvents().stream().filter(d -> "Test tournament".equals(d.getTitle())).findFirst().orElse(null);
+    }
+
+    /** The player's tournament match, from the tournaments page. */
+    private Recorder inTournamentMatch(final QuestData data) throws InterruptedException {
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questTournaments", "the tournaments were not sent");
+        send(host, JsonCodec.message("questTournamentNext"));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the tournament match did not start");
+        awaitPriority(host);
+        return host;
+    }
+
+    // Fails if entering a tournament does not take its fee and open its draft
+    @Test(timeOut = 180_000)
+    public void enteringATournamentTakesItsFeeAndOpensItsDraft() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        data.getAssets().setCredits(100_000);
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        final JsonObject page = host.awaitNewest("questTournaments", "the tournaments were not sent");
+        final JsonArray offered = page.getAsJsonArray("offered");
+        Assert.assertTrue(offered.size() > 0, "no tournament is offered: " + page);
+        final JsonObject row = offered.get(0).getAsJsonObject();
+        Assert.assertTrue(row.get("affordable").getAsBoolean());
+        send(host, message("questEnter", "title", row.get("title").getAsString()));
+        host.awaitMatching("hello", h -> h.get("drafting").getAsBoolean(), "the draft did not open");
+        final JsonObject first = host.awaitMatching("draft", d -> !d.getAsJsonArray("cards").isEmpty(), "no pack was dealt");
+        Assert.assertEquals(first.get("pack").getAsInt(), 1);
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAssets().getCredits(), 100_000 - row.get("fee").getAsInt());
+        Assert.assertEquals(after.getAchievements().getCurrentDraft().getTitle(), row.get("title").getAsString());
+    }
+
+    // Fails if the computer's matches are not decided before the player's, so the bracket's next match is the player's
+    @Test(timeOut = 240_000)
+    public void theComputersMatchesComeBeforeThePlayers() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withTournament(d -> d.setStandings(standings("1", "2", "3", "4", "h", "5", "6", "7")));
+        final Recorder host = hostInQuest(data);
+        final JsonObject before = host.awaitNewest("questTournaments", "the tournaments were not sent");
+        Assert.assertFalse(before.getAsJsonObject("bracket").get("started").getAsBoolean());
+        send(host, JsonCodec.message("questTournamentStart"));
+        host.awaitMatching("questTournaments", p -> p.getAsJsonObject("bracket").get("started").getAsBoolean(), "the tournament did not start");
+        send(host, JsonCodec.message("questTournamentNext"));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the player's match did not start");
+        final String[] standings = draftOf(data).getStandings();
+        Assert.assertNotEquals(standings[8], QuestEventDraft.UNDETERMINED, "the first computer match was not decided");
+        Assert.assertNotEquals(standings[9], QuestEventDraft.UNDETERMINED, "the second computer match was not decided");
+        Assert.assertEquals(standings[10], QuestEventDraft.UNDETERMINED, "the player's match was decided without a game");
+    }
+
+    // Fails if a won tournament match does not advance the player in the bracket
+    @Test(timeOut = 300_000)
+    public void aWonTournamentMatchAdvancesThePlayer() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withTournament(d -> d.setStarted(true));
+        final Recorder host = inTournamentMatch(data);
+        computerLoses(host);
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        send(host, message("nextGame", "decision", "CONTINUE"));
+        awaitPriority(host);
+        computerLoses(host);
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no second result was sent")), List.of("leave"));
+        send(host, JsonCodec.message("leave"));
+        final JsonObject page = host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
+        Assert.assertEquals(draftOf(data).getStandings()[9], QuestEventDraft.HUMAN);
+        final JsonArray second = page.getAsJsonObject("bracket").getAsJsonArray("rounds").get(1).getAsJsonArray();
+        Assert.assertTrue(second.get(1).getAsJsonObject().get("you").getAsBoolean(), "the bracket does not show the player in the second round: " + page);
+    }
+
+    // Fails if leaving a tournament match early does not lose it
+    @Test(timeOut = 240_000)
+    public void leavingATournamentMatchEarlyLosesIt() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withTournament(d -> d.setStarted(true));
+        final Recorder host = inTournamentMatch(data);
+        send(host, JsonCodec.message("leave"));
+        host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
+        // Seat 3 holds the computer numbered 3, who goes on in the player's place
+        Assert.assertEquals(draftOf(data).getStandings()[9], "3");
+    }
+
+    // Fails if a finished tournament's prizes are not in the save and sent to reveal, or the tournament stays open
+    @Test(timeOut = 240_000)
+    public void aFinishedTournamentsPrizesAreSavedAndShown() throws Exception {
+        final QuestData data = withTournament(d -> {
+            d.setStandings(standings("1", "2", "h", "3", "4", "5", "6", "7", "1", "h", "4", "6", "h", "4", "h"));
+            d.setStarted(true);
+        });
+        final long credits = data.getAssets().getCredits();
+        final int cards = data.getAssets().getCardPool().countAll();
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questTournaments", "the tournaments were not sent");
+        send(host, JsonCodec.message("questTournamentLeave"));
+        // The rare is the first offered, and the draft is not copied to the regular drafts
+        JsonObject reward = null;
+        final Set<Integer> asked = new HashSet<>();
+        final long end = System.currentTimeMillis() + 60_000;
+        while (reward == null && System.currentTimeMillis() < end) {
+            for (final JsonObject m : host.got) {
+                if ("reward".equals(m.get("t").getAsString())) {
+                    reward = m;
+                } else if ("hostChoice".equals(m.get("t").getAsString()) && asked.add(m.get("id").getAsInt())) {
+                    answer(host, m, "confirm".equals(m.get("kind").getAsString()) ? 1 : 0);
+                }
+            }
+            Thread.sleep(50);
+        }
+        Assert.assertNotNull(reward, "the prizes were not sent");
+        step(reward, "CARDS", Localizer.getInstance().getMessage("lblTournamentReward"));
+        final QuestData after = saved(data);
+        Assert.assertTrue(after.getAssets().getCredits() > credits, "no credits were won: " + credits + " then " + after.getAssets().getCredits());
+        Assert.assertTrue(after.getAssets().getCardPool().countAll() > cards, "no cards were won");
+        Assert.assertEquals(after.getAchievements().getDraftTokens(), 1, "first place's token was not given");
+        Assert.assertEquals(after.getAchievements().getWinsForPlace(1), 1);
+        Assert.assertNull(after.getAchievements().getCurrentDraft(), "the tournament is still open");
+    }
+
+    // Fails if the computer's matches are decided for ever once the player is out
+    @Test(timeOut = 120_000)
+    public void nothingIsDecidedOnceThePlayerIsOut() throws Exception {
+        final QuestData data = withTournament(d -> {
+            d.setStandings(standings("1", "2", "h", "3", "4", "5", "6", "7", "1", "3"));
+            d.setStarted(true);
+        });
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questTournaments", "the tournaments were not sent");
+        send(host, JsonCodec.message("questTournamentNext"));
+        final JsonObject page = host.awaitMatching("questTournaments", p -> true, "the page was not sent again");
+        Assert.assertFalse(host.hello.get("inMatch").getAsBoolean());
+        final JsonObject bracket = page.getAsJsonObject("bracket");
+        Assert.assertTrue(!bracket.has("next") || bracket.get("next").isJsonNull(), "a next match is offered: " + page);
+    }
+
+    // Fails if a tournament match adds a quest win or loss
+    @Test(timeOut = 240_000)
+    public void aTournamentMatchIsNoQuestWinOrLoss() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withTournament(d -> d.setStarted(true));
+        final int won = data.getAchievements().getWin();
+        final int lost = data.getAchievements().getLost();
+        final Recorder host = inTournamentMatch(data);
+        sessions.onMessage(host, JsonCodec.message("concede"));
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        sessions.onMessage(host, message("nextGame", "decision", "QUIT"));
+        send(host, JsonCodec.message("leave"));
+        host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAchievements().getWin(), won);
+        Assert.assertEquals(after.getAchievements().getLost(), lost);
+    }
+
+    // Fails if a token does not make a tournament of the format the browser chose
+    @Test(timeOut = 120_000)
+    public void aTokenMakesATournamentOfTheChosenFormat() throws Exception {
+        final QuestData data = QuestFixture.install();
+        data.getAchievements().addDraftToken();
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        Assert.assertEquals(host.awaitNewest("questTournaments", "the tournaments were not sent").get("tokens").getAsInt(), 1);
+        final int offered = FModel.getQuest().getAchievements().getDraftEvents().size();
+        send(host, JsonCodec.message("questToken"));
+        final JsonObject format = host.awaitMatching("hostChoice", q -> "choices".equals(q.get("kind").getAsString()), "no format was asked for");
+        final String chosen = QuestEventDraft.getAvailableFormats(FModel.getQuest()).get(0).getName();
+        answer(host, format, 0);
+        answer(host, host.awaitMatching("hostChoice", q -> "confirm".equals(q.get("kind").getAsString()), "the fee was not confirmed"), 0);
+        final JsonObject page = host.awaitMatching("questTournaments", p -> p.get("tokens").getAsInt() == 0, "the token was not spent");
+        Assert.assertEquals(page.getAsJsonArray("offered").size(), offered + 1);
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAchievements().getDraftTokens(), 0);
+        Assert.assertTrue(after.getAchievements().getDraftEvents().stream().anyMatch(d -> chosen.equals(d.getTitle())),
+                "no tournament of " + chosen);
     }
 
     // Fails if the bazaar is offered in Classic mode

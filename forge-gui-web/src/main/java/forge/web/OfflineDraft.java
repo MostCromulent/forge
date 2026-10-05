@@ -44,8 +44,8 @@ final class OfflineDraft {
     private int roundPicks;
     private final DraftView view = new DraftView();
 
-    /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; fail hears why it could not. */
-    OfflineDraft(final Supplier<BoosterDraft> make, final String playerName, final Consumer<DraftState> publish,
+    /** make builds the draft, on the draft's thread, since importing a cube waits on a web site; dealt says it has its packs already, as a quest tournament's has; fail hears why it could not. */
+    OfflineDraft(final Supplier<BoosterDraft> make, final boolean dealt, final String playerName, final Consumer<DraftState> publish,
             final Consumer<String> fail) {
         this.playerName = playerName;
         this.publish = publish;
@@ -54,7 +54,9 @@ final class OfflineDraft {
             try {
                 draft = make.get();
                 product = draft.getProductName() == null ? Localizer.getInstance().getMessage("lblWebSetupProductFull") : draft.getProductName();
-                draft.initializeBoosters();
+                if (!dealt) {
+                    draft.initializeBoosters();
+                }
                 advance(false);
             } catch (final RuntimeException e) {
                 fail.accept(e.getMessage() == null ? Localizer.getInstance().getMessage("lblWebLobbyDraftSetUpFailed") : e.getMessage());

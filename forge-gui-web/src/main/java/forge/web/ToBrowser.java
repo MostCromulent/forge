@@ -755,6 +755,23 @@ final class ToBrowser {
     record QuestBazaar(List<QuestStallRow> stalls, @Nullable String stall, List<QuestItemRow> items) {
     }
 
+    /** A tournament on offer: its title, which the browser sends back, the packs drafted by set name, and its fee. */
+    record QuestTournamentRow(String title, List<String> packs, int fee, boolean affordable) {
+    }
+
+    /** A place in the bracket: who holds it, whether it is the player, and whether it went on to the next round (won), lost there (out) or is still to be played (open). */
+    record QuestSeat(String name, boolean you, String state) {
+    }
+
+    /** The tournament entered: its rounds from the first eight seats to the winner, the player's next opponent while the player has a match left (empty when not yet known), and the player's placing. */
+    record QuestBracket(String title, List<List<QuestSeat>> rounds, @Nullable String next, String placing, boolean started) {
+    }
+
+    /** The Tournaments page: those on offer while none is entered, the tokens to make one, the past placings from first to fourth, and the one entered. */
+    @Message("questTournaments")
+    record QuestTournaments(List<QuestTournamentRow> offered, int tokens, List<Integer> placings, @Nullable QuestBracket bracket) {
+    }
+
     /** A difficulty and what a quest started at it is given: credits, and the starting pool's commons, uncommons and rares. */
     record QuestDifficultyRow(String name, int credits, int commons, int uncommons, int rares) {
     }

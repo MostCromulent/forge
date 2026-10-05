@@ -5,14 +5,20 @@ import forge.card.CardType;
 import forge.card.MagicColor;
 import forge.deck.CardPool;
 import forge.deck.Deck;
+import forge.deck.DeckGroup;
 import forge.deck.DeckSection;
 import forge.game.GameType;
 import forge.game.GameView;
+import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
+import forge.gamemodes.quest.QuestDraftUtils;
 import forge.gamemodes.quest.QuestEvent;
 import forge.gamemodes.quest.QuestEventChallenge;
+import forge.gamemodes.quest.QuestEventDraft;
+import forge.gamemodes.quest.QuestEventDraft.QuestDraftFormat;
+import forge.gamemodes.quest.QuestEventDraft.QuestDraftPrizes;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestSpellShop;
@@ -35,11 +41,16 @@ import forge.gamemodes.quest.data.QuestPreferences.DifficultyPrefs;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.io.QuestDataIO;
+import forge.gui.GuiBase;
+import forge.gui.util.SGuiChoose;
+import forge.gui.util.SOptionPane;
+import forge.item.BoosterPack;
 import forge.item.InventoryItem;
 import forge.item.PaperCard;
 import forge.itemmanager.SItemManagerUtil;
 import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
+import forge.localinstance.skin.FSkinProp;
 import forge.model.FModel;
 import forge.player.GamePlayerUtil;
 import forge.util.ItemPool;
@@ -57,12 +68,14 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 /** Holds only what one session knows that the save does not, as the quest itself is Forge's, one for the whole process. */
 final class QuestGame implements Campaign {
@@ -75,6 +88,10 @@ final class QuestGame implements Campaign {
     private volatile CampaignResult result;
     /** What the last match gave, until the browser says it has shown it. */
     private volatile Reward reward;
+    /** The computer the player's tournament match is against, while one is played. */
+    private volatile String tournamentOpponent;
+    /** Whether that match has been decided, so leaving it is no forfeit. */
+    private volatile boolean tournamentDecided;
 
     static QuestController quest() {
         return FModel.getQuest();
@@ -292,7 +309,7 @@ final class QuestGame implements Campaign {
 
     @Override
     public List<Record> page() {
-        return List.of(bar(), duelsPage(), decksPage(), challengesPage());
+        return List.of(bar(), duelsPage(), decksPage(), challengesPage(), tournamentsPage());
     }
 
     /** The quest's decks, by name. */
@@ -539,6 +556,249 @@ final class QuestGame implements Campaign {
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 
+    /** The tournaments on offer, drawn again where old ones have aged out as desktop's screen does, or the one entered with its bracket. */
+    private static QuestTournaments tournamentsPage() {
+        final QuestAchievements record = quest().getAchievements();
+        if (record.getCurrentDraft() == null) {
+            record.generateDrafts();
+        }
+        final QuestEventDraft entered = record.getCurrentDraft();
+        final List<QuestTournamentRow> offered = new ArrayList<>();
+        if (entered == null) {
+            for (final QuestEventDraft d : record.getDraftEvents()) {
+                // canEnter is true when the credits are short of the fee
+                offered.add(new QuestTournamentRow(d.getTitle(), Arrays.stream(d.getBoosterConfiguration())
+                        .map(code -> FModel.getMagicDb().getEditions().get(code).getName()).toList(), d.getEntryFee(), !d.canEnter()));
+            }
+        }
+        final List<Integer> placings = IntStream.rangeClosed(1, 4).map(record::getWinsForPlace).boxed().toList();
+        return new QuestTournaments(offered, record.getDraftTokens(), placings, entered == null ? null : bracket(entered));
+    }
+
+    /** The standings as rounds: places 0-7 are the first round's seats, 8-11 the second's, 12-13 the final's and 14 the winner's, and place p's winner goes to place 8 + p / 2. */
+    private static QuestBracket bracket(final QuestEventDraft draft) {
+        final String[] standings = draft.getStandings();
+        final List<List<QuestSeat>> rounds = new ArrayList<>();
+        for (final int[] round : new int[][] {{0, 8}, {8, 12}, {12, 14}, {14, 15}}) {
+            final List<QuestSeat> seats = new ArrayList<>();
+            for (int p = round[0]; p < round[1]; p++) {
+                seats.add(seat(draft, standings, p));
+            }
+            rounds.add(seats);
+        }
+        String next = null;
+        final int you = Arrays.asList(standings).lastIndexOf(QuestEventDraft.HUMAN);
+        if (draft.isStarted() && draft.playerHasMatchesLeft() && you >= 0) {
+            // The seat paired with the player's, whose holder may still be decided by a computer match
+            final String opponent = standings[you ^ 1];
+            next = QuestEventDraft.UNDETERMINED.equals(opponent) ? "" : seat(draft, standings, you ^ 1).name();
+        }
+        return new QuestBracket(draft.getTitle(), rounds, next, draft.getPlacementString(), draft.isStarted());
+    }
+
+    private static QuestSeat seat(final QuestEventDraft draft, final String[] standings, final int place) {
+        final String held = standings[place];
+        if (QuestEventDraft.UNDETERMINED.equals(held)) {
+            return new QuestSeat("", false, "open");
+        }
+        final boolean you = QuestEventDraft.HUMAN.equals(held);
+        final String name = you ? GamePlayerUtil.getGuiPlayer().getName() : draft.getAINames()[Integer.parseInt(held) - 1];
+        final String after = place == 14 ? held : standings[8 + place / 2];
+        return new QuestSeat(name, you, QuestEventDraft.UNDETERMINED.equals(after) ? "open" : after.equals(held) ? "won" : "out");
+    }
+
+    /** Enters a tournament on offer, as desktop's Enter does: its fee is paid, its packs dealt, and its draft opened. Answers why it cannot, or null. */
+    private static String enter(final String title, final Host host) {
+        final QuestAchievements record = quest().getAchievements();
+        if (title == null || record.getCurrentDraft() != null || record.getDraftEvents() == null) {
+            return null;
+        }
+        for (final QuestEventDraft offered : record.getDraftEvents()) {
+            if (title.equals(offered.getTitle())) {
+                if (offered.canEnter()) {
+                    return Localizer.getInstance().getMessage("lblWebQuestCreditsShort", offered.getEntryFee() - quest().getAssets().getCredits());
+                }
+                final BoosterDraft draft = offered.enter();
+                quest().save();
+                host.startDraft(draft);
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /** Leaves a tournament whose draft was not finished: its fee comes back and it is no longer offered, as desktop's leaving the draft does. */
+    void cancelDraft() {
+        final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
+        if (draft == null) {
+            return;
+        }
+        quest().getAssets().addCredits(draft.getEntryFee());
+        quest().getAchievements().deleteDraft(draft);
+        quest().save();
+    }
+
+    /** Keeps a tournament's finished draft as Quest keeps it, and answers the storage its deck is built in. */
+    IStorage<DeckGroup> drafted(final DeckGroup group) {
+        QuestDraftUtils.completeDraft(group);
+        return quest().getDraftDecks();
+    }
+
+    /** Spends a token on a tournament of a format the player chooses, as desktop's Spend Token asks it. */
+    private static void spendToken() {
+        final QuestAchievements record = quest().getAchievements();
+        if (record.getDraftTokens() <= 0) {
+            return;
+        }
+        final Localizer text = Localizer.getInstance();
+        final List<QuestDraftFormat> formats = QuestEventDraft.getAvailableFormats(quest());
+        if (formats.isEmpty()) {
+            SOptionPane.showErrorDialog(text.getMessage("lblNoAvailableDraftsMessage"), text.getMessage("lblNoAvailableDrafts"));
+            return;
+        }
+        final QuestDraftFormat format = SGuiChoose.oneOrNone(text.getMessage("lblChooseDraftFormat"), formats);
+        if (format == null) {
+            return;
+        }
+        // Made only to show its fee, as desktop does; the token makes the tournament itself
+        final QuestEventDraft shown = QuestEventDraft.getDraftOrNull(quest(), format);
+        if (shown != null && SOptionPane.showConfirmDialog(text.getMessage("lblEntryFeeOfDraftTournament") + shown.getEntryFee()
+                + text.getMessage("lblWouldLikeCreateTournament"), text.getMessage("lblCreatingDraftTournament"))) {
+            record.spendDraftToken(format);
+        }
+    }
+
+    /** Starts the tournament entered once its deck is legal, as desktop's Start Tournament does. Answers why it cannot, or null. */
+    private static String startTournament() {
+        final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
+        final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
+        if (draft == null || draft.isStarted() || decks == null) {
+            return null;
+        }
+        final String problem = GameType.QuestDraft.getDeckFormat().getDeckConformanceProblem(decks.getHumanDeck());
+        if (problem != null && FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
+            return Localizer.getInstance().getMessage("lblDeck") + " " + problem;
+        }
+        draft.start();
+        return null;
+    }
+
+    /** Decides the computer's matches up to the player's without a game, as mobile does, and starts the player's. Answers why it cannot, or null. */
+    private String nextMatch(final Host host) {
+        final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
+        if (draft == null || !draft.isStarted() || reward != null) {
+            return null;
+        }
+        // injectRandomMatchOutcome answers true for ever once the player is out, so the player's matches left end the loop
+        while (draft.playerHasMatchesLeft() && QuestDraftUtils.injectRandomMatchOutcome(false)) {
+        }
+        quest().save();
+        if (!draft.playerHasMatchesLeft()) {
+            return null;
+        }
+        final String illegal = QuestDraftUtils.getDeckLegality();
+        if (illegal != null) {
+            return illegal;
+        }
+        view = null;
+        controller = null;
+        tournamentDecided = false;
+        host.startMatch(() -> {
+            final PreparedMatch match = QuestDraftUtils.prepareNextMatch();
+            if (match != null) {
+                tournamentOpponent = match.players().stream().filter(p -> p != match.human()).findFirst().orElseThrow().getPlayer().getName();
+            }
+            return match;
+        }, () -> tournamentOpponent = null);
+        return null;
+    }
+
+    /** A tournament game, as desktop's QuestDraftWinLose has it: the bracket learns the winner once the match is over, and nothing goes on the quest's record. */
+    private CampaignResult tournamentGameOver(final GameView hostGame, final String opponent) {
+        final boolean over = hostGame.isMatchOver();
+        final String winner = hostGame.getWinningPlayerName();
+        if (over && winner != null) {
+            quest().getAchievements().getCurrentDraft().setWinner(winner);
+            quest().save();
+            tournamentDecided = true;
+        }
+        final Localizer text = Localizer.getInstance();
+        final List<ResultButton> buttons = over
+                ? List.of(new ResultButton(text.getMessage("lblWebQuestContinueTournament"), "leave", true))
+                : List.of(new ResultButton(text.getMessage("btnContinue"), "nextGame", true),
+                        new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "quit", false));
+        result = new CampaignResult(winner != null && !opponent.equals(winner), over, null, buttons);
+        return result;
+    }
+
+    /** Leaves the tournament entered, as desktop's Leave Tournament or Collect Prizes does: prizes once it has started, the offer to keep the draft, and the pool added to the quest. */
+    private void endTournament() {
+        final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
+        if (draft == null) {
+            return;
+        }
+        if (quest().getDraftDecks().get(QuestEventDraft.DECK_NAME) == null) {
+            // Its draft was never finished, so there is no pool to keep
+            cancelDraft();
+            return;
+        }
+        final WebQuestView shown = new WebQuestView();
+        if (draft.isStarted()) {
+            prizes(draft, shown);
+        }
+        final Localizer text = Localizer.getInstance();
+        if (SOptionPane.showOptionDialog(text.getMessage("lblWouldLikeSaveDraft"), text.getMessage("lblSaveDraft") + "?", SOptionPane.QUESTION_ICON,
+                List.of(text.getMessage("lblYes"), text.getMessage("lblNo")), 0) == 0) {
+            draft.saveToRegularDraft();
+        }
+        draft.addToQuestDecks();
+        if (!shown.steps.isEmpty()) {
+            final List<RewardStep> steps = new ArrayList<>(reward == null ? List.of() : reward.steps());
+            steps.addAll(shown.steps);
+            reward = new Reward(steps);
+        }
+    }
+
+    /** The prizes for the player's placing, as desktop's endTournamentAndAwardPrizes gives them, shown as reward steps. */
+    private static void prizes(final QuestEventDraft draft, final WebQuestView shown) {
+        final Localizer text = Localizer.getInstance();
+        final String placing = text.getMessage("lblForPlacing") + draft.getPlacementString();
+        final QuestDraftPrizes prizes = draft.collectPrizes();
+        // Only the first four places win anything
+        if (prizes == null) {
+            return;
+        }
+        if (prizes.hasCredits()) {
+            shown.showMessage(placing + text.getMessage("lblHaveBeAward") + QuestUtil.formatCredits(prizes.credits) + " " + text.getMessage("lblCredits") + "!",
+                    text.getMessage("lblCreditsAwarded"), FSkinProp.ICO_QUEST_GOLD);
+        }
+        if (prizes.hasIndividualCards()) {
+            shown.showCards(text.getMessage("lblTournamentReward"), prizes.individualCards);
+        }
+        if (prizes.hasBoosterPacks()) {
+            final String plural = prizes.boosterPacks.size() == 1 ? "" : "s";
+            shown.showMessage(placing + text.getMessage("lblHaveBeAward") + prizes.boosterPacks.size() + " " + text.getMessage("lblBoosterPack") + plural + "!",
+                    text.getMessage("lblBoosterPack") + plural + " " + text.getMessage("lblAwarded"), FSkinProp.ICO_QUEST_BOX);
+            final List<PaperCard> cards = new ArrayList<>();
+            for (final BoosterPack pack : prizes.boosterPacks) {
+                cards.addAll(pack.getCards());
+            }
+            shown.showCards(text.getMessage("lblTournamentReward"), cards);
+        }
+        if (prizes.selectRareFromSets()) {
+            final PaperCard card = GuiBase.getInterface().chooseCard(text.getMessage("lblSelectACard"), text.getMessage("lblSelectKeepCard"), prizes.selectRareCards);
+            if (card != null) {
+                prizes.addSelectedCard(card);
+                shown.showMessage("'" + card.getDisplayName() + "' " + text.getMessage("lblAddToCollection"), text.getMessage("lblCardAdded"), FSkinProp.ICO_QUEST_STAKES);
+            }
+        }
+        if (draft.getPlayerPlacement() == 1) {
+            shown.showMessage(placing + text.getMessage("lblHaveBeAwardToken"), text.getMessage("lblBonusToken"), FSkinProp.ICO_QUEST_NOTES);
+            quest().getAchievements().addDraftToken();
+        }
+        quest().save();
+    }
+
     /** The bazaar with one stall open: Fantasy mode's only, as desktop and mobile offer it. */
     private static QuestBazaar bazaar(final String wanted) {
         final QuestController quest = quest();
@@ -639,6 +899,10 @@ final class QuestGame implements Campaign {
     /** Quest's own result controller is made for each game, as desktop makes one per game, and the latest one records the match when it is left. */
     @Override
     public CampaignResult gameOver(final GameView hostGame) {
+        final String opponent = tournamentOpponent;
+        if (opponent != null && hostGame != null) {
+            return tournamentGameOver(hostGame, opponent);
+        }
         final WebQuestView shown = view;
         if (shown == null || hostGame == null || quest().getCurrentEvent() == null) {
             return null;
@@ -676,6 +940,18 @@ final class QuestGame implements Campaign {
     /** Leaving records the match, as desktop's Quit does, and the match's steps become the reward shown over the Duels page. */
     @Override
     public void left() {
+        final String opponent = tournamentOpponent;
+        if (opponent != null) {
+            tournamentOpponent = null;
+            result = null;
+            // A match left before it is decided is forfeit, as desktop's Forfeit Tournament has it
+            if (!tournamentDecided) {
+                quest().getAchievements().getCurrentDraft().setWinner(opponent);
+                QuestDraftUtils.cancelFurtherMatches();
+                quest().save();
+            }
+            return;
+        }
         final QuestWinLoseController last = controller;
         final WebQuestView shown = view;
         controller = null;
@@ -878,6 +1154,30 @@ final class QuestGame implements Campaign {
                 final String id = Wire.decode(msg, FromBrowser.QuestChallenge.class).id();
                 if (id != null && quest().getAchievements().getCurrentChallenges().contains(id)) {
                     fight(quest().getChallenges().get(id), host);
+                }
+                return;
+            }
+            case "questEnter", "questToken", "questTournamentStart", "questTournamentNext", "questTournamentLeave" -> {
+                final String problem = switch (msg.get("t").getAsString()) {
+                    case "questEnter" -> enter(Wire.decode(msg, FromBrowser.QuestEnter.class).title(), host);
+                    case "questTournamentStart" -> startTournament();
+                    case "questTournamentNext" -> nextMatch(host);
+                    default -> {
+                        if ("questToken".equals(msg.get("t").getAsString())) {
+                            spendToken();
+                        } else {
+                            endTournament();
+                        }
+                        yield null;
+                    }
+                };
+                if (problem != null) {
+                    channel.send(new Notice(problem, null, true));
+                }
+                channel.send(bar());
+                channel.send(tournamentsPage());
+                if (reward != null && "questTournamentLeave".equals(msg.get("t").getAsString())) {
+                    channel.send(reward);
                 }
                 return;
             }

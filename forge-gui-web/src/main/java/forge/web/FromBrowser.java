@@ -496,6 +496,31 @@ final class FromBrowser {
     record QuestZeppelin() {
     }
 
+    /** Enters a tournament on offer, by its title, which pays its fee and opens its draft. */
+    @Command("questEnter")
+    record QuestEnter(String title) {
+    }
+
+    /** Spends a draft token on a tournament of a format the host asks for. */
+    @Command("questToken")
+    record QuestToken() {
+    }
+
+    /** Starts the tournament entered, once its deck is built. */
+    @Command("questTournamentStart")
+    record QuestTournamentStart() {
+    }
+
+    /** Plays the player's next tournament match, deciding the computer's matches before it. */
+    @Command("questTournamentNext")
+    record QuestTournamentNext() {
+    }
+
+    /** Leaves the tournament entered, collecting its prizes once it has started. */
+    @Command("questTournamentLeave")
+    record QuestTournamentLeave() {
+    }
+
     /** Fights a duel of the Duels page, by its place in the list that page was sent. */
     @Command("questDuel")
     record QuestDuel(int index) {

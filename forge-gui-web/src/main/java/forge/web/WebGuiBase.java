@@ -215,8 +215,16 @@ public final class WebGuiBase implements IGuiBase {
 
     @Override
     public PaperCard chooseCard(final String title, final String message, final List<PaperCard> list) {
-        Logger.warn("Host card dialog answered with its default: {}", title);
-        return list == null || list.isEmpty() ? null : list.get(0);
+        if (list == null || list.isEmpty()) {
+            return null;
+        }
+        final List<Integer> answer = hostRequests.ask("choices", title, message,
+                list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1);
+        if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {
+            return list.get(answer.get(0));
+        }
+        Logger.warn("Host card choice unanswered, taking the first: {}", title);
+        return list.get(0);
     }
 
     @Override

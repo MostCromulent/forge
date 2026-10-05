@@ -2,6 +2,7 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.game.GameView;
+import forge.gamemodes.limited.BoosterDraft;
 import forge.gamemodes.match.PreparedMatch;
 import forge.web.FromBrowser.CatalogueQuery;
 import forge.web.FromBrowser.TradePick;
@@ -28,6 +29,9 @@ interface Campaign {
 
         /** Starts a match the campaign built. failed undoes what preparing it did. */
         void startMatch(Supplier<PreparedMatch> prepare, Runnable failed);
+
+        /** Opens a draft whose packs are already dealt, as a quest tournament's are. */
+        void startDraft(BoosterDraft draft);
     }
 
     /** The saved games, as the mode's own message. Reading them is slow. */

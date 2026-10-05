@@ -73,9 +73,10 @@ final class QuestFixture {
 
     static final String[] AI_NAMES = {"Ann", "Bob", "Cid", "Dee", "Eve", "Fay", "Gus"};
 
-    /** A tournament in progress in the quest open, with fixed seats: the player in seat 2, the first round's first match won by the computer in seat 0, so the player's match is next. Its decks are 40 Forests for the player and 40 Islands for each computer. */
+    /** A tournament in progress in the quest open, of three Magic 2010 packs, with fixed seats: the player in seat 2, the first round's first match won by the computer in seat 0, so the player's match is next. Its decks are 40 Forests for the player and 40 Islands for each computer. */
     static QuestEventDraft tournament(final QuestController quest) {
-        final QuestEventDraft draft = new QuestEventDraft("Test tournament");
+        final QuestEventDraft draft = QuestEventDraft.getDraftOrNull(quest, new QuestEventDraft.QuestDraftFormat(FModel.getMagicDb().getEditions().get("M10")));
+        draft.setTitle("Test tournament");
         draft.setAINames(AI_NAMES.clone());
         draft.setAIIcons(new int[] {0, 1, 2, 3, 4, 5, 6});
         final String u = QuestEventDraft.UNDETERMINED;
