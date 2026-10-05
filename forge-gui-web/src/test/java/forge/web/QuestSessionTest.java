@@ -1151,24 +1151,47 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(after.getAssets().getShopList().isEmpty(), "the shop was not cleared");
     }
 
-    // Fails if an unaffordable set picked changes the credits or the format
-    @Test(timeOut = 120_000)
-    public void anUnaffordableSetLeavesTheQuestAsItWas() throws Exception {
+    /** The fixture with a format that allows Magic 2010 and unlocks the rest, 40 wins for its unlock tokens, and credits as given. */
+    private static QuestData withUnlocks(final long credits) throws Exception {
         final QuestData data = QuestFixture.install();
-        // The fixture has no format, which offers no unlocks; this one allows one set and unlocks the rest
+        // The fixture has no format, which offers no unlocks, and QuestData has no setter for one
         final Field format = QuestData.class.getDeclaredField("format");
         format.setAccessible(true);
         format.set(data, new GameFormatQuest("Test format", List.of("M10"), List.of(), true));
         for (int i = 0; i < 40; i++) {
             data.getAchievements().addWin();
         }
-        data.getAssets().setCredits(0);
+        data.getAssets().setCredits(credits);
         data.saveData();
+        return data;
+    }
+
+    // Fails if an unlocked set is not added to the format, or its bonus cards are not sent to reveal
+    @Test(timeOut = 120_000)
+    public void anUnlockedSetsCardsAreRevealed() throws Exception {
+        final QuestData data = withUnlocks(1_000_000);
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questDuels", "the duels were not sent");
+        send(host, JsonCodec.message("questUnlock"));
+        answer(host, host.awaitMatching("hostChoice", q -> "choices".equals(q.get("kind").getAsString()), "no set was offered"), 0);
+        answer(host, host.awaitMatching("hostChoice", q -> "confirm".equals(q.get("kind").getAsString()), "the price was not confirmed"), 0);
+        final JsonObject reward = host.awaitMatching("reward", r -> true, "the bonus cards were not sent to reveal");
+        Assert.assertTrue(reward.getAsJsonArray("steps").asList().stream().anyMatch(s -> "CARDS".equals(s.getAsJsonObject().get("kind").getAsString())),
+                "no cards in " + reward);
+        Assert.assertEquals(saved(data).getFormat().getAllowedSetCodes().size(), 2);
+    }
+
+    // Fails if an unaffordable set picked changes the credits or the format
+    @Test(timeOut = 120_000)
+    public void anUnaffordableSetLeavesTheQuestAsItWas() throws Exception {
+        final QuestData data = withUnlocks(0);
         final Recorder host = hostInQuest(data);
         Assert.assertTrue(host.awaitNewest("questDuels", "the duels were not sent").get("canUnlock").getAsBoolean(), "unlocking is not offered");
         send(host, JsonCodec.message("questUnlock"));
         answer(host, host.awaitMatching("hostChoice", q -> true, "no set was offered"), 0);
         host.awaitMatching("notice", n -> true, "the refusal was not said");
+        // The page sent after is written to the save as it is drawn, which must finish before the save is read
+        host.awaitMatching("questTournaments", p -> true, "the page was not sent again");
         final QuestData after = saved(data);
         Assert.assertEquals(after.getAssets().getCredits(), 0);
         Assert.assertEquals(after.getFormat().getAllowedSetCodes(), List.of("M10"));

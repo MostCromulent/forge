@@ -1345,6 +1345,10 @@ final class QuestGame implements Campaign {
                 // A new world has new opponents, and either may change the shop, the bar and every list
                 duels = null;
                 page().forEach(channel::send);
+                // An unlocked set's bonus boosters are shown as Forge shows them, which adds them to the reveal
+                if (reward != null) {
+                    channel.send(reward);
+                }
                 return;
             }
             case "questTournamentDeck" -> {
