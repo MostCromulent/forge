@@ -146,3 +146,24 @@ test('a world with its own sets goes straight to the distribution', async ({ pag
   await expect(page.locator('.stp-open .q b')).toHaveText('Starting pool distribution');
   await expect(page.locator('.ticket dd').nth(3)).toHaveText('Ravnica');
 });
+
+// Fails if a bazaar item cannot be bought from its stall and the credits do not fall by its price
+test('a bazaar item is bought from its stall', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
+
+  const credits = page.locator('.cq-purse .cq-coin').first().locator('b');
+  await expect(credits).toHaveText('5,000');
+  await page.locator('.cq-tab', { hasText: 'Bazaar' }).click();
+  await page.locator('.qu-stall', { hasText: 'Pet Shop' }).click();
+  const bird = page.locator('.qu-item', { hasText: 'Bird' });
+  const price = Number((await bird.locator('button.primary').innerText()).replace(/\D/g, ''));
+  await bird.locator('button.primary').click();
+  await expect(credits).toHaveText((5000 - price).toLocaleString('en-GB'));
+  // A pet bought is offered for duels; a level-0 quest may raise no pet past level 1, so it leaves the stall
+  await page.locator('.cq-tab', { hasText: 'Duels' }).click();
+  await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
+});

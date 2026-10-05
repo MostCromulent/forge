@@ -35,6 +35,17 @@ export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: keyOf(row)
 /** What names a row in a trade: the server's key where its image key is not enough, as for a foil, otherwise its image key. */
 const keyOf = (row: CatalogueRow): string => row.key ?? row.image;
 
+/** One button that spends a balance: its verb, the currency's icon and the cost, refused while the balance is short. */
+export function PricedButton({ label, icon, iconLabel, size, cost, have, disabled, cls, onClick }: {
+  label: string; icon: string; iconLabel: string; size: number; cost: number; have: number; disabled?: boolean; cls?: string; onClick: () => void;
+}) {
+  return (
+    <button class={cls ? `primary ${cls}` : 'primary'} disabled={disabled || cost > have} onClick={onClick}>
+      {label}<span class="cq-sep">·</span><img class="cq-shard" alt={iconLabel} style={{ width: `${size}px`, height: `${size}px` }} src={skinIconUrl(icon)} />{cost.toLocaleString('en-GB')}
+    </button>
+  );
+}
+
 /** Owned copies as a playset of squares, filled for each copy held, and the number beside them. */
 function Owned({ n }: { n: number }) {
   return (

@@ -299,6 +299,8 @@ function apply(msg: ServerMessage): void {
         model.questSaves = null;
         model.questDuels = null;
         model.questDecks = null;
+        model.questChallenges = null;
+        model.questBazaar = null;
         ui.questTab = 'duels';
       }
       model.drafting = msg.drafting;
@@ -367,6 +369,8 @@ function apply(msg: ServerMessage): void {
     case 'questDuels': model.questDuels = msg; break;
     case 'questDecks': model.questDecks = msg; break;
     case 'questOptions': model.questOptions = msg; break;
+    case 'questChallenges': model.questChallenges = msg; break;
+    case 'questBazaar': model.questBazaar = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'campaignResult': model.campaignResult = msg; break;

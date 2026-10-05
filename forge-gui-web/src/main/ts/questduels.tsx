@@ -12,7 +12,7 @@ import { t, type TextKey } from './text';
 const DIFFICULTY: TextKey[] = ['lblEasy', 'lblMedium', 'lblHard', 'lblExpert', 'lblWebQuestWild'];
 
 /** How hard a duel is, as bars that fill and the word beside them, so it reads without colour. */
-function Difficulty({ n }: { n: number }) {
+export function Difficulty({ n }: { n: number }) {
   const word = t(DIFFICULTY[n - 1]);
   return (
     <span class="qu-diff" title={word}>
@@ -38,14 +38,56 @@ function Tile({ duel, chosen, choose }: { duel: QuestDuelRow; chosen: boolean; c
   );
 }
 
+/** What the player brings to a duel or a challenge, under the panel: the deck, the pet and the plant, the match length, and the button that starts it. fixedDeck names the challenge's own deck. */
+export function Brings({ page, actions, zoom, start, label, fixedDeck }: {
+  page: QuestDuels; actions: Actions; zoom: (image: string | null) => void; start: () => void; label: string; fixedDeck?: boolean;
+}) {
+  const plant = page.pets.find(p => p.slot === 0);
+  const pet = page.pets.find(p => p.slot === 1);
+  const summon = (name: string) => t('lblSummon').replace('%n', name);
+  const problem = fixedDeck ? null : page.deckProblem;
+  return <>
+    {fixedDeck
+      ? <DeckRow name={t('lblWebQuestChallengeDeck')} line={t('lblWebQuestChallengeDeckLine')} problem={false} zoom={zoom} />
+      : <DeckRow name={page.deck || t('lblNone')} line={t('lblCurrentDeck2')} problem={!!page.deckProblem} zoom={zoom} />}
+    {pet && (
+      <div class="qu-row">
+        <span>{t('lblWebQuestPet')}</span>
+        <select aria-label={t('lblWebQuestPet')} value={pet.chosen ?? ''} onChange={e => actions.questPet(1, e.currentTarget.value || null)}>
+          <option value="">{t('lblDontSummonAPet')}</option>
+          {pet.pets.map(p => <option key={p} value={p}>{summon(`"${p}"`)}</option>)}
+        </select>
+      </div>
+    )}
+    {plant && (
+      <div class="qu-row">
+        <span>{t('lblPlant')}</span>
+        <label class="qu-check">
+          <input type="checkbox" checked={plant.chosen != null} onChange={e => actions.questPet(0, e.currentTarget.checked ? plant.pets[0] : null)} />
+          {summon(t('lblPlant'))}
+        </label>
+      </div>
+    )}
+    {page.matchLengths.length > 1 && (
+      <div class="qu-row">
+        <span>{t('lblMatch')}</span>
+        <span class="seg" role="group">
+          {page.matchLengths.map(n => (
+            <button key={n} aria-pressed={n === page.matchLength} onClick={() => actions.questMatchLength(n)}>{t('lblWebQuestBestOf', n)}</button>
+          ))}
+        </span>
+      </div>
+    )}
+    {problem && <p class="cq-warn">{problem}</p>}
+    <button class="primary cq-big" disabled={!!problem} onClick={start}>{label}</button>
+  </>;
+}
+
 export function Duels({ page, actions }: { page: QuestDuels; actions: Actions }) {
   const [chosen, setChosen] = useState(0);
   const [zoom, setZoom] = useState<string | null>(null);
   // The list is new after every match, so a choice past its end falls back to the last duel
   const duel = page.duels[Math.min(chosen, page.duels.length - 1)];
-  const plant = page.pets.find(p => p.slot === 0);
-  const pet = page.pets.find(p => p.slot === 1);
-  const summon = (name: string) => t('lblSummon').replace('%n', name);
   return (
     <div class="cq-map">
       <div class="qu-list">
@@ -62,39 +104,7 @@ export function Duels({ page, actions }: { page: QuestDuels; actions: Actions })
       </div>
       {duel && (
         <SidePanel kicker={t('lblWebQuestDuel')} title={duel.title} art={duel.face} label={duel.title} zoom={zoom} setZoom={setZoom}
-          foot={<>
-            <DeckRow name={page.deck || t('lblNone')} line={t('lblCurrentDeck2')} problem={!!page.deckProblem} zoom={setZoom} />
-            {pet && (
-              <div class="qu-row">
-                <span>{t('lblWebQuestPet')}</span>
-                <select aria-label={t('lblWebQuestPet')} value={pet.chosen ?? ''} onChange={e => actions.questPet(1, e.currentTarget.value || null)}>
-                  <option value="">{t('lblDontSummonAPet')}</option>
-                  {pet.pets.map(p => <option key={p} value={p}>{summon(`"${p}"`)}</option>)}
-                </select>
-              </div>
-            )}
-            {plant && (
-              <div class="qu-row">
-                <span>{t('lblPlant')}</span>
-                <label class="qu-check">
-                  <input type="checkbox" checked={plant.chosen != null} onChange={e => actions.questPet(0, e.currentTarget.checked ? plant.pets[0] : null)} />
-                  {summon(t('lblPlant'))}
-                </label>
-              </div>
-            )}
-            {page.matchLengths.length > 1 && (
-              <div class="qu-row">
-                <span>{t('lblMatch')}</span>
-                <span class="seg" role="group">
-                  {page.matchLengths.map(n => (
-                    <button key={n} aria-pressed={n === page.matchLength} onClick={() => actions.questMatchLength(n)}>{t('lblWebQuestBestOf', n)}</button>
-                  ))}
-                </span>
-              </div>
-            )}
-            {page.deckProblem && <p class="cq-warn">{page.deckProblem}</p>}
-            <button class="primary cq-big" disabled={!!page.deckProblem} onClick={() => actions.questDuel(duel.index)}>{t('lblWebQuestStartDuel')}</button>
-          </>}>
+          foot={<Brings page={page} actions={actions} zoom={setZoom} start={() => actions.questDuel(duel.index)} label={t('lblWebQuestStartDuel')} />}>
           {duel.difficulty > 0 && <div class="cq-chips"><Difficulty n={duel.difficulty} /></div>}
           <p class="cq-desc">{duel.description}</p>
         </SidePanel>

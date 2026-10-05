@@ -10,6 +10,8 @@ import { shortDay } from './limited';
 import { Duels } from './questduels';
 import { Decks } from './questdecks';
 import { Shop } from './questshop';
+import { Challenges } from './questchallenges';
+import { Bazaar } from './questbazaar';
 import { Reveal, type Owed } from './conquestreward';
 import { NewQuest } from './questnew';
 import type { Actions } from './actions';
@@ -19,7 +21,10 @@ import { t, type TextKey } from './text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the duels. */
 const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
-const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['decks', 'lblQuestDecks'], ['shop', 'lblSpellShop']];
+const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['decks', 'lblQuestDecks'], ['shop', 'lblSpellShop'],
+  ['bazaar', 'lblBazaar']];
+/** Challenges and the bazaar are Fantasy mode's only, which a Classic quest's bar shows by having no life. */
+const FANTASY_ONLY: QuestTab[] = ['challenges', 'bazaar'];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
@@ -90,15 +95,18 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   const [owed, setOwed] = useState<Owed>({});
   const reward = model.reward;
   useEffect(() => { if (!reward) setOwed({}); }, [reward]);
-  if (!model.campaignBar || !model.questDuels || !model.questDecks) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
+  if (!model.campaignBar || !model.questDuels || !model.questDecks || !model.questChallenges) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
   const bar = model.campaignBar;
+  const fantasy = bar.balances.some(b => b.icon === 'ICO_QUEST_LIFE');
   return <>
-    <CampaignBar bar={bar} tabs={TABS} tab={ui.questTab} setTab={tab => changeUi(u => { u.questTab = tab; })}
+    <CampaignBar bar={bar} tabs={fantasy ? TABS : TABS.filter(([id]) => !FANTASY_ONLY.includes(id))} tab={ui.questTab} setTab={tab => changeUi(u => { u.questTab = tab; })}
       held={reward ? owed : {}} under={!!reward} />
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}>
       {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
         : ui.questTab === 'shop' ? <Shop model={model} actions={actions} />
+        : ui.questTab === 'challenges' && fantasy ? <Challenges page={model.questChallenges} duels={model.questDuels} actions={actions} />
+        : ui.questTab === 'bazaar' && fantasy ? <Bazaar model={model} actions={actions} />
         : <Duels page={model.questDuels} actions={actions} />}
     </div>
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}

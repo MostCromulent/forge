@@ -138,6 +138,12 @@ export interface Actions {
   questDeckDelete(deck: string): void;
   /** Asks what the new-quest form offers. */
   questOptions(): void;
+  questChallenge(id: string): void;
+  /** Flies the zeppelin, which draws the challenges again once between two matches. */
+  questZeppelin(): void;
+  /** Opens a stall of the bazaar, or with null the first. */
+  questStall(name: string | null): void;
+  questBuy(stall: string, item: string): void;
   questCreate(c: Omit<QuestCreate, 't'>): void;
 
   // Online draft and sealed, at a table
@@ -294,6 +300,10 @@ export function createActions(send: Send): Actions {
     questDeckEdit: deck => send({ t: 'questDeckEdit', deck }),
     questDeckDelete: deck => send({ t: 'questDeckDelete', deck }),
     questOptions: () => send({ t: 'questOptions' }),
+    questChallenge: id => send({ t: 'questChallenge', id }),
+    questZeppelin: () => send({ t: 'questZeppelin' }),
+    questStall: name => send({ t: 'questStall', name: name ?? undefined }),
+    questBuy: (stall, item) => send({ t: 'questBuy', stall, item }),
     questCreate: c => send({ t: 'questCreate', ...c }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),

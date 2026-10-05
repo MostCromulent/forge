@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { skinIconUrl, imageUrl } from './images';
 import { balance } from './campaign';
+import { PricedButton } from './trade';
 import { ColourToggles, Pip, Pips } from './symbols';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -27,11 +28,8 @@ export function Aether({ model, actions }: { model: Model; actions: Actions }) {
   const toggle = (letter: string) => ask({ colors: [...'WUBRG'].filter(c => (c === letter) !== a.colors.includes(c)).join('') });
   // The price is on the button, so a pull that cannot be paid for is not offered
   const short = a.cost > balance(model.campaignBar, 'IMG_AETHER_SHARD');
-  const pull = (
-    <button class="primary cq-ae-pull" disabled={!a.cost || !a.strict || short} onClick={() => ask({}, true)}>
-      {t('lblWebConquestPull')}<span class="cq-sep">·</span>{shard(18)}{a.cost.toLocaleString('en-GB')}
-    </button>
-  );
+  const pull = <PricedButton label={t('lblWebConquestPull')} icon="IMG_AETHER_SHARD" iconLabel={t('lblAetherShards')} size={18} cost={a.cost}
+    have={balance(model.campaignBar, 'IMG_AETHER_SHARD')} disabled={!a.cost || !a.strict} cls="cq-ae-pull" onClick={() => ask({}, true)} />;
   return (
     <div class="cq-aether">
       <aside class="cq-ae-filters">

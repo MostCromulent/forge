@@ -1,6 +1,6 @@
 // The browser's copy of the game, which server messages change here and everything on the page is drawn from
 
-import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestDecks, QuestDuels, QuestOptions, QuestSaves, DeckMatches, DevState, MatchScore } from './protocol';
+import type { CardPoolDetails, CardPoolGroup, ConquestAetherState, CampaignBar, ConquestPlanes, CampaignPrefs, CampaignStats, Trading, ConquestOptions, ConquestParty, CampaignResult, Reward, ConquestSaves, ConquestState, QuestBazaar, QuestChallenges, QuestDecks, QuestDuels, QuestOptions, QuestSaves, DeckMatches, DevState, MatchScore } from './protocol';
 import type { Address, CataloguePage, EditorState, ImportResult, CardStateView, AutoDecisions, ChoicesRequest, CardView, Controls, DeckDetails, DrawOffer, DeckSummary, Detail, GameEvent, GameView, HostChoice, LobbyTable, Notice, Person, PlayerDetail, Playable, PlayerView, PlayerZone, Printing, Prompt, Ref, Refs, Request, SavedSleeveArt, ShownZone, StackMenu, StateMessage, TrackedObject, ZoneType, ExtraChoices, LimitedOptions, LimitedPools, DraftState, LimitedResult } from './protocol';
 
 /** How many avatars and sleeves the skin's sprite sheets hold. */
@@ -115,6 +115,9 @@ export interface Model {
   questSaves: QuestSaves | null;
   questDuels: QuestDuels | null;
   questDecks: QuestDecks | null;
+  questChallenges: QuestChallenges | null;
+  /** The bazaar with one stall open, once its tab has asked. */
+  questBazaar: QuestBazaar | null;
   /** What the new-quest form offers, once it has asked. */
   questOptions: QuestOptions | null;
   campaignBar: CampaignBar | null;
@@ -147,7 +150,7 @@ export function createModel(): Model {
     drawOffer: null, autoDecisions: null, devState: null, editor: null, catalogue: null, importResult: null, nameTaken: null,
     inEvent: false, eventPool: null, sealedPools: 0, draftPools: 0, eventKind: null, drafting: false, draft: null, limitedResult: null,
     limitedOptions: null, cardPools: [], cardPoolDetails: null, limitedPools: null,
-    campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questSaves: null, questDuels: null, questDecks: null, questOptions: null, campaignBar: null, conquestState: null,
+    campaign: null, campaignSave: null, currentConquest: null, currentQuest: null, conquestSaves: null, questSaves: null, questDuels: null, questDecks: null, questChallenges: null, questBazaar: null, questOptions: null, campaignBar: null, conquestState: null,
     campaignResult: null, reward: null, conquestParty: null, trading: null, conquestOptions: null,
     conquestAether: null, conquestPlanes: null, campaignStats: null, campaignPrefs: null,
   };

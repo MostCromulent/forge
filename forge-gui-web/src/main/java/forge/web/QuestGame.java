@@ -578,7 +578,8 @@ final class QuestGame implements Campaign {
         // The description is written for desktop's label, with line breaks as markup
         final String description = item.getPurchaseDescription(assets).replaceAll("(?i)<br\\s*/?>", "\n").replaceAll("<[^>]+>", "").trim();
         if (item instanceof QuestPetController pet) {
-            return new QuestItemRow(item.getPurchaseName(), description, icon, card, item.getBuyingPrice(assets), assets.getPetLevel(pet.getSaveFileKey()),
+            // A pet's purchase description repeats its stats, which the row carries as now and next
+            return new QuestItemRow(item.getPurchaseName(), pet.getDescription(), icon, card, item.getBuyingPrice(assets), assets.getPetLevel(pet.getSaveFileKey()),
                     pet.getMaxLevel(), pet.getStats(assets), pet.getUpgradedStats(assets));
         }
         final QuestItemBasic basic = (QuestItemBasic) item;
