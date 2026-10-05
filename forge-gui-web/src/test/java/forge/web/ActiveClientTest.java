@@ -116,9 +116,12 @@ public class ActiveClientTest {
     private static int keepAndHoldPriority(final WebGuiGame gui, final TestBrowser browser) throws InterruptedException {
         for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
             if (turn(browser) == 0 && okEnabled(browser)) {
-                // A press that lands before the host has registered the input is dropped, so wait and press again
+                // A press that lands before the host has registered the input is dropped, so press again if no new prompt follows
+                final int prompts = browser.all("prompt").size();
                 gui.onBrowserMessage(TestBrowser.action("ok"));
-                Thread.sleep(3000);
+                for (int j = 0; j < 30 && browser.all("prompt").size() == prompts; j++) {
+                    Thread.sleep(100);
+                }
             } else {
                 Thread.sleep(100);
             }
