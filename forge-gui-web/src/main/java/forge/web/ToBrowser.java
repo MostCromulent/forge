@@ -722,7 +722,7 @@ final class ToBrowser {
     /** The Duels page: the duels, the player's record, the line about the next challenge, the pets and the match lengths the charms allow. */
     @Message("questDuels")
     record QuestDuels(List<QuestDuelRow> duels, int wins, int losses, int streak, int bestStreak, @Nullable String nextChallenge,
-            List<QuestPetChoice> pets, List<Integer> matchLengths, int matchLength, String deck, @Nullable String deckProblem) {
+            List<QuestPetChoice> pets, List<Integer> matchLengths, int matchLength, String deck, @Nullable String deckProblem, boolean canUnlock) {
     }
 
     /** A quest deck: its picture, colours and size, why it cannot be played if it cannot, and whether it is the one duels use. */

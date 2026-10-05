@@ -468,7 +468,12 @@ final class QuestGame implements Campaign {
             problem = QuestUtil.getDeckConformanceProblemsBeforeGame(deck);
         }
         return new QuestDuels(rows, record.getWin(), record.getLost(), record.getWinStreakCurrent(), record.getWinStreakBest(), next,
-                pets, lengths, quest.getMatchLength(), deck == null ? "" : deck.getName(), problem);
+                pets, lengths, quest.getMatchLength(), deck == null ? "" : deck.getName(), problem, canUnlock());
+    }
+
+    /** Whether Unlock Sets is offered, as desktop shows its button. */
+    private static boolean canUnlock() {
+        return quest().getUnlocksTokens() > 0 && quest().getWorldFormat() == null;
     }
 
     /** The match lengths the charms allow: one with the Charm of Vim, five with the Charm of Vigor. */
@@ -1329,6 +1334,17 @@ final class QuestGame implements Campaign {
                 if (reward != null && "questTournamentLeave".equals(msg.get("t").getAsString())) {
                     channel.send(reward);
                 }
+                return;
+            }
+            case "questTravel", "questUnlock" -> {
+                if ("questTravel".equals(msg.get("t").getAsString())) {
+                    QuestUtil.travelWorld();
+                } else if (canUnlock()) {
+                    QuestUtil.chooseAndUnlockEdition();
+                }
+                // A new world has new opponents, and either may change the shop, the bar and every list
+                duels = null;
+                page().forEach(channel::send);
                 return;
             }
             case "questTournamentDeck" -> {

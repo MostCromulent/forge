@@ -526,6 +526,16 @@ final class FromBrowser {
     record QuestTournamentLeave() {
     }
 
+    /** Travels to another world, which the host asks for. */
+    @Command("questTravel")
+    record QuestTravel() {
+    }
+
+    /** Unlocks a set for the quest's format, which the host asks for. */
+    @Command("questUnlock")
+    record QuestUnlock() {
+    }
+
     /** Fights a duel of the Duels page, by its place in the list that page was sent. */
     @Command("questDuel")
     record QuestDuel(int index) {

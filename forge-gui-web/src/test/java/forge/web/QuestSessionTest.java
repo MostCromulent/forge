@@ -16,6 +16,7 @@ import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
 import forge.gamemodes.quest.bazaar.QuestItemType;
+import forge.gamemodes.quest.data.GameFormatQuest;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
@@ -37,6 +38,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -1129,6 +1131,47 @@ public class QuestSessionTest extends SessionsTest {
             prefs.setPref(QPref.WINS_BOOSTER_HARD, before);
             prefs.save();
         }
+    }
+
+    // Fails if travelling to the world the browser answers does not change the quest's world and clear the shop
+    @Test(timeOut = 120_000)
+    public void travellingChangesTheWorldAndClearsTheShop() throws Exception {
+        final QuestData data = QuestFixture.install();
+        data.getAssets().getShopList().add(FModel.getMagicDb().getCommonCards().getCard("Forest"));
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questDuels", "the duels were not sent");
+        send(host, JsonCodec.message("questTravel"));
+        final JsonObject worlds = host.awaitMatching("hostChoice", q -> true, "no world was asked for");
+        final String chosen = worlds.getAsJsonArray("options").get(0).getAsString();
+        answer(host, worlds, 0);
+        host.awaitMatching("campaignBar", b -> b.get("line").getAsString().contains(chosen), "the bar does not show the new world");
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getWorldId(), chosen);
+        Assert.assertTrue(after.getAssets().getShopList().isEmpty(), "the shop was not cleared");
+    }
+
+    // Fails if an unaffordable set picked changes the credits or the format
+    @Test(timeOut = 120_000)
+    public void anUnaffordableSetLeavesTheQuestAsItWas() throws Exception {
+        final QuestData data = QuestFixture.install();
+        // The fixture has no format, which offers no unlocks; this one allows one set and unlocks the rest
+        final Field format = QuestData.class.getDeclaredField("format");
+        format.setAccessible(true);
+        format.set(data, new GameFormatQuest("Test format", List.of("M10"), List.of(), true));
+        for (int i = 0; i < 40; i++) {
+            data.getAchievements().addWin();
+        }
+        data.getAssets().setCredits(0);
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        Assert.assertTrue(host.awaitNewest("questDuels", "the duels were not sent").get("canUnlock").getAsBoolean(), "unlocking is not offered");
+        send(host, JsonCodec.message("questUnlock"));
+        answer(host, host.awaitMatching("hostChoice", q -> true, "no set was offered"), 0);
+        host.awaitMatching("notice", n -> true, "the refusal was not said");
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAssets().getCredits(), 0);
+        Assert.assertEquals(after.getFormat().getAllowedSetCodes(), List.of("M10"));
     }
 
     // Fails if the bazaar is offered in Classic mode
