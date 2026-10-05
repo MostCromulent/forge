@@ -27,9 +27,7 @@ final class SkinSprites {
     /** The sheets campaign icons are cut from, by file name. */
     private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
     private static final Set<FSkinProp> CAMPAIGN_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
-            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE, FSkinProp.ICO_QUEST_COINSTACK, FSkinProp.ICO_QUEST_LIFE,
-            // The icons Quest's reward messages name
-            FSkinProp.ICO_QUEST_GOLD, FSkinProp.ICO_QUEST_COIN, FSkinProp.ICO_QUEST_HEART, FSkinProp.ICO_QUEST_NOTES, FSkinProp.ICO_QUEST_BOX);
+            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE);
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
     private SkinSprites() {
@@ -76,7 +74,8 @@ final class SkinSprites {
     /** PNG bytes of one of the skin icons a campaign shows, named by its FSkinProp, or null for any other name. */
     static byte[] iconPng(final String name) {
         final FSkinProp prop = prop(name);
-        if (prop == null || !CAMPAIGN_ICONS.contains(prop)) {
+        // Quest's icons are its bazaar's stalls and items, its balances and its reward messages
+        if (prop == null || !(CAMPAIGN_ICONS.contains(prop) || prop.name().startsWith("ICO_QUEST_"))) {
             return null;
         }
         return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));

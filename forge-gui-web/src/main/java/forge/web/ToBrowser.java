@@ -741,6 +741,20 @@ final class ToBrowser {
     record QuestChallenges(List<QuestChallengeRow> challenges, int open, int max, @Nullable String nextIn, boolean zeppelin, boolean zeppelinUsed) {
     }
 
+    /** A stall of the bazaar: its name, which the browser sends back, the merchant's name, a line about it, and its skin icon. */
+    record QuestStallRow(String name, String displayName, String fluff, String icon) {
+    }
+
+    /** Something for sale at a stall: a skin icon or a card to picture it, its price, its level of its most, and for a pet what it is now and what the next level gives. */
+    record QuestItemRow(String name, String description, @Nullable String icon, @Nullable String card, int price, int level, int maxLevel,
+            @Nullable String now, @Nullable String next) {
+    }
+
+    /** The bazaar: its stalls, the one open, and what that stall sells. */
+    @Message("questBazaar")
+    record QuestBazaar(List<QuestStallRow> stalls, @Nullable String stall, List<QuestItemRow> items) {
+    }
+
     /** A difficulty and what a quest started at it is given: credits, and the starting pool's commons, uncommons and rares. */
     record QuestDifficultyRow(String name, int credits, int commons, int uncommons, int rares) {
     }

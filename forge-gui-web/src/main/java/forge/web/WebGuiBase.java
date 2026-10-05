@@ -232,8 +232,12 @@ public final class WebGuiBase implements IGuiBase {
     @Override public IGuiGame getNewGuiGame() { throw new UnsupportedOperationException("A web seat's GUI is built by WebSession"); }
     @Override public boolean hasNetGame() { return false; }
 
-    @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return null; }
-    @Override public ISkinImage getUnskinnedIcon(final String path) { return null; }
+    /** A picture the browser draws itself: a skin icon by its FSkinProp, or a file by its path, which only says which picture is meant. */
+    record WebSkinImage(FSkinProp prop, String path) implements ISkinImage {
+    }
+
+    @Override public ISkinImage getSkinIcon(final FSkinProp skinProp) { return new WebSkinImage(skinProp, null); }
+    @Override public ISkinImage getUnskinnedIcon(final String path) { return new WebSkinImage(null, path); }
     @Override public ISkinImage getCardArt(final PaperCard card, final boolean backFace) { return null; }
     @Override public ISkinImage createLayeredImage(final PaperCard card, final FSkinProp background, final String overlayFilename, final float opacity) { return null; }
     @Override public void clearImageCache() { }

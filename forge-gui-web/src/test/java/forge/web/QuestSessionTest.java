@@ -753,6 +753,65 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(FModel.getQuest().getAssets().getItemLevel(QuestItemType.ZEPPELIN), 2);
     }
 
+    private JsonObject stall(final Recorder host, final String name) throws InterruptedException {
+        send(host, message("questStall", "name", name));
+        return host.awaitMatching("questBazaar", b -> true, "the bazaar was not sent");
+    }
+
+    private static JsonObject item(final JsonObject bazaar, final String name) {
+        for (final JsonElement e : bazaar.getAsJsonArray("items")) {
+            if (name.equals(e.getAsJsonObject().get("name").getAsString())) {
+                return e.getAsJsonObject();
+            }
+        }
+        return null;
+    }
+
+    // Fails if the bazaar is offered in Classic mode
+    @Test(timeOut = 120_000)
+    public void aClassicQuestHasNoBazaar() throws Exception {
+        final Recorder host = hostInQuest(QuestFixture.installClassic());
+        Assert.assertEquals(stall(host, null).getAsJsonArray("stalls").size(), 0);
+    }
+
+    // Fails if an item costs other than its price, or one bought to its last level stays on its stall
+    @Test(timeOut = 120_000)
+    public void anItemCostsItsPriceAndLeavesAtItsLastLevel() throws Exception {
+        final QuestData data = QuestFixture.install();
+        data.getAssets().setCredits(100_000);
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        final JsonObject bazaar = stall(host, "Bookstore");
+        Assert.assertTrue(bazaar.getAsJsonArray("stalls").size() > 0);
+        final JsonObject book = item(bazaar, "Sleight of Hand Vol. I");
+        Assert.assertNotNull(book, "the book is not for sale: " + bazaar);
+        Assert.assertEquals(book.get("maxLevel").getAsInt(), 1);
+        send(host, message("questBuy", "stall", "Bookstore", "item", "Sleight of Hand Vol. I"));
+        final JsonObject after = host.awaitMatching("questBazaar", b -> true, "the bazaar was not sent again");
+        Assert.assertEquals(FModel.getQuest().getAssets().getCredits(), 100_000 - book.get("price").getAsInt());
+        Assert.assertTrue(FModel.getQuest().getAssets().hasItem(QuestItemType.SLEIGHT));
+        Assert.assertNull(item(after, "Sleight of Hand Vol. I"), "a book bought to its last level is still for sale");
+        Assert.assertTrue(saved(data).getAssets().hasItem(QuestItemType.SLEIGHT));
+    }
+
+    // Fails if a pet bought is not owned at its first level and offered in the Duels page's pet slot, or one the credits cannot pay for is bought
+    @Test(timeOut = 120_000)
+    public void aPetBoughtIsOfferedForDuels() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject bird = item(stall(host, "Pet Shop"), "Bird");
+        Assert.assertNotNull(bird, "the bird is not for sale");
+        FModel.getQuest().getAssets().setCredits(bird.get("price").getAsInt() - 1);
+        send(host, message("questBuy", "stall", "Pet Shop", "item", "Bird"));
+        host.awaitMatching("notice", n -> true, "a pet too dear was not refused");
+        Assert.assertEquals(FModel.getQuest().getAssets().getPetLevel("Bird"), 0);
+        FModel.getQuest().getAssets().setCredits(10_000);
+        send(host, message("questBuy", "stall", "Pet Shop", "item", "Bird"));
+        final JsonObject duels = host.awaitMatching("questDuels", d -> d.toString().contains("Bird"), "the Duels page does not offer the bird");
+        Assert.assertEquals(FModel.getQuest().getAssets().getPetLevel("Bird"), 1);
+        Assert.assertTrue(duels.getAsJsonArray("pets").toString().contains("Bird"));
+    }
+
     // Fails if a browser without the host's seat can open a quest
     @Test(timeOut = 120_000)
     public void aGuestCannotOpenQuest() throws Exception {

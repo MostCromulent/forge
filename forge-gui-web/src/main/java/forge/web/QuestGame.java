@@ -21,8 +21,12 @@ import forge.gamemodes.quest.QuestWinLoseController;
 import forge.gamemodes.quest.StartingPoolPreferences.PoolType;
 import forge.gamemodes.quest.StartingPoolPreferences;
 import forge.gamemodes.quest.StartingPoolType;
+import forge.gamemodes.quest.bazaar.IQuestBazaarItem;
+import forge.gamemodes.quest.bazaar.QuestBazaarManager;
+import forge.gamemodes.quest.bazaar.QuestItemBasic;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.bazaar.QuestPetController;
+import forge.gamemodes.quest.bazaar.QuestStallDefinition;
 import forge.gamemodes.quest.data.DeckConstructionRules;
 import forge.gamemodes.quest.data.QuestAchievements;
 import forge.gamemodes.quest.data.QuestAssets;
@@ -536,6 +540,75 @@ final class QuestGame implements Campaign {
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 
+    /** The bazaar with one stall open: Fantasy mode's only, as desktop and mobile offer it. */
+    private static QuestBazaar bazaar(final String wanted) {
+        final QuestController quest = quest();
+        if (quest.getMode() != QuestMode.Fantasy) {
+            return new QuestBazaar(List.of(), null, List.of());
+        }
+        final QuestBazaarManager bazaar = quest.getBazaar();
+        final List<QuestStallRow> stalls = new ArrayList<>();
+        for (final String name : bazaar.getStallNames()) {
+            final QuestStallDefinition stall = bazaar.getStall(name);
+            stalls.add(new QuestStallRow(stall.getName(), stall.getDisplayName(), stall.getFluff(), stall.getIcon().name()));
+        }
+        final String open = stalls.stream().anyMatch(s -> s.name().equals(wanted)) ? wanted : stalls.isEmpty() ? null : stalls.get(0).name();
+        final List<QuestItemRow> items = new ArrayList<>();
+        if (open != null) {
+            final QuestAssets assets = quest.getAssets();
+            for (final IQuestBazaarItem item : bazaar.getItems(quest, open)) {
+                items.add(itemRow(item, assets));
+            }
+        }
+        return new QuestBazaar(stalls, open, items);
+    }
+
+    private static QuestItemRow itemRow(final IQuestBazaarItem item, final QuestAssets assets) {
+        String icon = null;
+        String card = null;
+        if (item.getIcon(assets) instanceof WebGuiBase.WebSkinImage image) {
+            if (image.prop() != null) {
+                icon = image.prop().name();
+            } else if (image.path() != null) {
+                // A pet's picture is its token's, which the image route serves by the token's key
+                final String file = new File(image.path()).getName();
+                card = "t:" + (file.contains(".") ? file.substring(0, file.lastIndexOf('.')) : file);
+            }
+        }
+        // The description is written for desktop's label, with line breaks as markup
+        final String description = item.getPurchaseDescription(assets).replaceAll("(?i)<br\\s*/?>", "\n").replaceAll("<[^>]+>", "").trim();
+        if (item instanceof QuestPetController pet) {
+            return new QuestItemRow(item.getPurchaseName(), description, icon, card, item.getBuyingPrice(assets), assets.getPetLevel(pet.getSaveFileKey()),
+                    pet.getMaxLevel(), pet.getStats(assets), pet.getUpgradedStats(assets));
+        }
+        final QuestItemBasic basic = (QuestItemBasic) item;
+        return new QuestItemRow(item.getPurchaseName(), description, icon, card, item.getBuyingPrice(assets), assets.getItemLevel(basic.getItemType()),
+                basic.getMaxLevel(), null, null);
+    }
+
+    /** Buys an item of a stall, refusing first when the credits are short, since Quest's own purchase then does nothing. */
+    private static String buy(final String stall, final String name) {
+        final QuestController quest = quest();
+        if (quest.getMode() != QuestMode.Fantasy || stall == null || !quest.getBazaar().getStallNames().contains(stall)) {
+            return null;
+        }
+        for (final IQuestBazaarItem item : quest.getBazaar().getItems(quest, stall)) {
+            if (item.getPurchaseName().equals(name)) {
+                final int price = item.getBuyingPrice(quest.getAssets());
+                if (price < 0) {
+                    return null;
+                }
+                final long short_ = price - quest.getAssets().getCredits();
+                if (short_ > 0) {
+                    return Localizer.getInstance().getMessage("lblWebQuestCreditsShort", short_);
+                }
+                QuestUtil.buyQuestItem(item);
+                return null;
+            }
+        }
+        return null;
+    }
+
     /** Starts a duel or a challenge, as desktop's Start does. */
     private void fight(final QuestEvent duel, final Host host) {
         // A reward still to be shown belongs to the last match, and the next match's would replace it
@@ -806,6 +879,23 @@ final class QuestGame implements Campaign {
                 if (id != null && quest().getAchievements().getCurrentChallenges().contains(id)) {
                     fight(quest().getChallenges().get(id), host);
                 }
+                return;
+            }
+            case "questStall" -> {
+                channel.send(bazaar(Wire.decode(msg, FromBrowser.QuestStall.class).name()));
+                return;
+            }
+            case "questBuy" -> {
+                final FromBrowser.QuestBuy buy = Wire.decode(msg, FromBrowser.QuestBuy.class);
+                final String problem = buy(buy.stall(), buy.item());
+                if (problem != null) {
+                    channel.send(new Notice(problem, null, false));
+                }
+                // A pet, a charm or the zeppelin changes what the other pages offer
+                channel.send(bar());
+                channel.send(duelsPage());
+                channel.send(challengesPage());
+                channel.send(bazaar(buy.stall()));
                 return;
             }
             case "questZeppelin" -> {

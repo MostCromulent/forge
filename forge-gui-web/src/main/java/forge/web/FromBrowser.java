@@ -477,6 +477,15 @@ final class FromBrowser {
             boolean duplicates, int boosters, @Nullable String prizes, @Nullable String prizeFormat, boolean allowUnlocks) {
     }
 
+    /** Opens a stall of the bazaar, or with no name the first. */
+    @Command("questStall")
+    record QuestStall(@Nullable String name) {
+    }
+
+    @Command("questBuy")
+    record QuestBuy(String stall, String item) {
+    }
+
     /** Fights a challenge, by its id. */
     @Command("questChallenge")
     record QuestChallenge(String id) {
