@@ -42,7 +42,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
           <h3>{state.name} <span class="pips"><Pips colors={state.identity} /></span></h3>
           <p class="sizes">{state.limited
             ? t('lblWebEditorSizesLimited', state.stats.total, state.stats.lands, state.stats.sideboard)
-            : state.collection ? t('lblWebFinderSizesNoSideboard', state.stats.main, state.stats.lands)
+            : state.mainOnly ? t('lblWebFinderSizesNoSideboard', state.stats.main, state.stats.lands)
             : t('lblWebEditorSizes', state.stats.total, state.stats.sideboard, state.stats.lands)}</p>
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
@@ -77,7 +77,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
               <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
               {g.cards.map(c => cards
                 ? <Stack key={c.name} card={c} zone="Main" landed={state.landed === c.name} handlers={handlers} />
-                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={!!state.collection} />)}
+                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
             </div>
           ))}
         </div>
@@ -103,7 +103,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
             onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>{t('lblWebEditorSuggestLands')}</button>
         </>}
       </div>
-      {!state.limited && !state.collection && <div class="zone side-zone" data-zone="Sideboard">
+      {!state.limited && !state.mainOnly && <div class="zone side-zone" data-zone="Sideboard">
         <h4><span class="zn">{t('lblSideboard')}</span><span class="count">{state.stats.sideboard}</span></h4>
         {cards
           ? (
@@ -126,8 +126,8 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
 }
 
 function CommanderZone({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
-  // A collection's deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
-  const kept = !!state.collection;
+  // Conquest's deck keeps the commander it was made for: nothing is dropped here, and nothing is taken away
+  const kept = state.mainOnly;
   return (
     <div class="zone commander-zone" data-zone={kept ? undefined : 'Commander'}>
       <h4><span class="zn">{t('lblCommander')}</span><span class="count">{state.commanders.length}</span></h4>

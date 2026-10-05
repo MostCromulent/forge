@@ -500,7 +500,7 @@ final class DeckEditor {
                 DeckCatalog.stats(deck), legality.verdict(), !undo.isEmpty(), landed,
                 limited(), landSet, limited() ? LandSets.ALL : collection == null ? List.of()
                         : collection.landSets().apply(deck).stream().map(e -> new LandSet(e.getCode(), e.getName())).toList(),
-                collection == null ? null : collection.owner());
+                collection == null ? null : collection.owner(), collection != null && collection.mainOnly());
     }
 
     private String change(final String cardName, final Runnable op) {

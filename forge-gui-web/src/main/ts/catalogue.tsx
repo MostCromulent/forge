@@ -46,16 +46,18 @@ export function countsInDeck(state: EditorState): Map<string, number> {
   return counts;
 }
 
-/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. A collection holds one of each. */
-export function copyLimit(state: EditorState, name: string): number {
+/** The copy limit the editor shows; the server enforces the exact one, which a few cards raise. Conquest's collection holds one of each, and a collection that counts copies no more than owned. */
+export function copyLimit(state: EditorState, name: string, owned?: number | null): number {
   if (BASICS.has(name)) return Infinity;
-  return state.collection || (!state.unrestricted && COMMANDER_FORMATS.has(state.format)) ? 1 : 4;
+  if (state.mainOnly) return 1;
+  const rule = !state.unrestricted && COMMANDER_FORMATS.has(state.format) ? 1 : 4;
+  return owned == null ? rule : Math.min(rule, owned);
 }
 
 /** How many more of a card the deck can take: what the pool has left in limited mode, otherwise the copy limit's room. */
 export function roomFor(state: EditorState, row: CatalogueRow, inDeck: number): number {
   if (state.limited) return state.sideboard.find(c => c.name === row.name)?.count ?? 0;
-  return copyLimit(state, row.name) - inDeck;
+  return copyLimit(state, row.name, row.count) - inDeck;
 }
 
 export function Catalogue({ model, actions, state, handlers }: {
@@ -66,9 +68,10 @@ export function Catalogue({ model, actions, state, handlers }: {
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [sort, setSort] = useState('name');
-  // A deck built from a collection may hold any card owned; the list opens on those its commander's colours allow
+  // A deck built from a collection may hold any card owned; the list opens on those its commander's colours allow, when it has one
   const owned = !!state.collection;
-  const opening: CatalogueFilter = owned ? { ...NO_FILTER, identity: state.identity || 'C' } : NO_FILTER;
+  const leader = state.mainOnly ? state.identity || 'C' : state.identity || undefined;
+  const opening: CatalogueFilter = owned && leader ? { ...NO_FILTER, identity: leader } : NO_FILTER;
   const [filter, setFilter] = useState<CatalogueFilter>(opening);
   const [view, setView] = useState<'cards' | 'table'>(() => storedView());
   const asked = useRef(0);
@@ -148,8 +151,8 @@ export function Catalogue({ model, actions, state, handlers }: {
           showThem={() => setFilter(f => ({ ...f, showAll: true }))} />}
         {view === 'cards'
           ? rows.map(row => <Tile key={row.name} row={row} count={counts.get(row.name) ?? 0} top={row === top}
-              limit={copyLimit(state, row.name)} room={roomFor(state, row, counts.get(row.name) ?? 0)} limited={state.limited}
-              commanderWanted={state.commanderWanted} owned={owned} add={add} remove={remove}
+              limit={copyLimit(state, row.name, row.count)} room={roomFor(state, row, counts.get(row.name) ?? 0)} limited={state.limited}
+              commanderWanted={state.commanderWanted} mainOnly={state.mainOnly} add={add} remove={remove}
               makeCommander={makeCommander} handlers={handlers} />)
           : <Table rows={rows} counts={counts} state={state} add={add} remove={remove} handlers={handlers} />}
       </div>
@@ -271,8 +274,8 @@ function liftCard(name: string, to: string): void {
   else if (at?.dataset.image) liftFromLine(imageUrl(at.dataset.image), at.getBoundingClientRect(), `${to}:${name}`);
 }
 
-function Tile({ row, count, top, limit, room, limited, commanderWanted, owned, add, remove, makeCommander, handlers }: {
-  row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean; owned: boolean;
+function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly, add, remove, makeCommander, handlers }: {
+  row: CatalogueRow; count: number; top: boolean; limit: number; room: number; limited: boolean; commanderWanted: boolean; mainOnly: boolean;
   add: (name: string, to?: 'Main' | 'Sideboard') => void; remove: (name: string) => void; makeCommander: (name: string) => void;
   handlers: CardHandlers;
 }) {
@@ -298,8 +301,8 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, owned, a
             {limited
               ? <span class="why">{room ? t('lblWebCatalogueLeft', room) : t('lblWebCatalogueNoneLeft')}</span>
               : full && limit < Infinity
-                ? <span class="why">{limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebLegalityCopies', count, limit)}</span>
-                : owned ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
+                ? <span class="why">{limit === row.count ? t('lblWebCatalogueNoneLeft') : limit === 1 ? t('lblWebCatalogueSingleton') : t('lblWebLegalityCopies', count, limit)}</span>
+                : mainOnly ? null : <button class="side" disabled={!!row.problem} onClick={() => add(row.name, 'Sideboard')}>{t('lblSide')}</button>}
           </div>
         )}
     </div>

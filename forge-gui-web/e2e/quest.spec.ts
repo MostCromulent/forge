@@ -10,8 +10,9 @@ const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resou
 
 let server: Server;
 test.beforeEach(async () => {
-  // Quest reads its saves gzipped; one game a match, so a conceded game ends it
-  const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>');
+  // Quest reads its saves gzipped; one game a match, so a conceded game ends it; three copies of one card, to see a deck take each one owned
+  const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
+    .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>');
   server = await startServer(undefined, { ...PROBE_SEED, files: { 'quest/saves/Fixture quest.dat': gzipSync(xml) } });
 });
 test.afterEach(async () => { await server.stop(); });
@@ -47,7 +48,7 @@ test('a quest duel is conceded and the loss is shown on the Duels page', async (
   await expect(page.locator('.qu-status .cq-chip').nth(1)).toHaveText('1 Losses');
 });
 
-// Fails if a deck cannot be made, edited to forty cards and chosen as current from the Decks tab
+// Fails if a deck cannot be made, edited to forty cards and chosen as current from the Decks tab, or the editor does not take each copy owned and no more
 test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await page.goto(server.url);
   await enterName(page, 'Alice');
@@ -61,7 +62,15 @@ test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await page.getByRole('button', { name: 'Create' }).click();
 
   await expect(page.locator('#editor')).toBeVisible();
-  await page.evaluate(() => (window as any).forge.actions.edit({ op: 'lands', lands: [{ name: 'Island', count: 40 }] }));
+  await expect(page.locator('#editor .side-zone')).toBeVisible();
+  const owned = page.locator('.slot[data-card="Naya Hushblade"]');
+  const plus = owned.locator('.step').last();
+  for (let i = 1; i <= 3; i++) {
+    await plus.click();
+    await expect(owned.locator('.badge')).toHaveText(String(i));
+  }
+  await expect(plus).toBeDisabled();
+  await page.evaluate(() => (window as any).forge.actions.edit({ op: 'lands', lands: [{ name: 'Island', count: 37 }] }));
   await expect(page.locator('.main-zone > h4 .count')).toHaveText('40');
   await page.getByRole('button', { name: 'Done' }).click();
 

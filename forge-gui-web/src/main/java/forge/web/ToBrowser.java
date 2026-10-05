@@ -216,7 +216,7 @@ final class ToBrowser {
             String target, @Nullable String copyOf, List<EditorCard> commanders, boolean commanderWanted, String identity,
             List<EditorGroup> main, List<EditorCard> sideboard, List<EditorLand> lands, DeckStats stats,
             @Nullable String verdict, boolean canUndo, @Nullable String landed,
-            boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection) {
+            boolean limited, @Nullable String landSet, List<LandSet> landSets, @Nullable String collection, boolean mainOnly) {
     }
 
     /** An edition basic lands can come from, for a limited deck's land row. */
@@ -272,7 +272,7 @@ final class ToBrowser {
 
     /** In a collection, value is what exiling or retrieving the card is worth and problem is why it can't be exiled. */
     record CatalogueRow(String name, String image, String cost, int mv, String colors, String type, @Nullable String pt,
-            String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value) {
+            String heading, int inDeck, @Nullable String problem, @Nullable Boolean isNew, @Nullable Integer value, @Nullable Integer count) {
     }
 
     @Message("cardSearch")

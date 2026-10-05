@@ -353,9 +353,12 @@ final class DeckSession {
         final CardPool inDeck = deck.getAllCardsInASinglePool(true, false);
         final Function<PaperCard, String> problems = Legality.cardProblems(check, commanders);
         final DeckEditor.Collection collection = e == null ? null : e.collection();
+        // A collection that counts copies says how many of each it holds, which is as many as a deck can take
+        final CardPool owned = collection == null || collection.mainOnly() ? null : collection.cards().get();
         return (e == null ? CardCatalog.get() : e.catalogue()).query(q.request(), new CardCatalog.Query(q.text(), q.colours(), q.type(), q.filters(), q.sort(),
                 q.offset(), q.showAll()), problems, only, inDeck::countByName,
-                collection == null ? null : c -> new CardCatalog.Extra(collection.isNew().test(c) ? Boolean.TRUE : null, null));
+                collection == null ? null : c -> new CardCatalog.Extra(collection.isNew().test(c) ? Boolean.TRUE : null, null,
+                        owned == null ? null : owned.countByName(c.getName())));
     }
 
     private ImportResult fetched(final ImportFetch fetch) {

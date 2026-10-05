@@ -50,8 +50,8 @@ export function CardMenu({ at, state, actions, close, printings }: {
   const zone = at.from === 'catalogue' ? null : at.from;
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   const anywhere = (['Main', 'Sideboard', 'Commander'] as DeckSection[]).find(z => cardIn(state, z, at.name));
-  // A collection's deck is its main deck alone, each card in the printing owned
-  if (state.collection) {
+  // Conquest's deck is its main deck alone, each card in the printing owned
+  if (state.mainOnly) {
     return (
       <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
         <span class="menu-cap">{at.name}</span>
