@@ -508,7 +508,8 @@ final class QuestGame implements Campaign {
                 q.colours(), q.type(), q.filters(), q.sort(), q.offset(), true), c -> null, null, name -> 0, c -> shop
                 ? new CardCatalog.Extra(null, QuestSpellShop.getCardValue(c), stock.count(c), owned.count(c), null)
                 : new CardCatalog.Extra(quest().getCards().isNew(c) ? Boolean.TRUE : null, salePrice(c, multiplier), owned.count(c), null,
-                        using.containsKey(c) ? Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c)) : null));
+                        !using.containsKey(c) ? null : using.get(c) == 1 ? Localizer.getInstance().getMessage("lblWebQuestInOneDeck")
+                        : Localizer.getInstance().getMessage("lblWebQuestInDecks", using.get(c))));
         // The page says which list it is of, so the browser never shows one list's cards as another's
         return new CataloguePage(page.request(), page.rows(), page.total(), page.offset(), page.hiddenBySwitch(), page.ranked(), q.source());
     }

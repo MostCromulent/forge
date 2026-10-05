@@ -10,9 +10,10 @@ const fixture = join(dirname(fileURLToPath(import.meta.url)), '../src/test/resou
 
 let server: Server;
 test.beforeEach(async () => {
-  // Quest reads its saves gzipped; one game a match, so a conceded game ends it; three copies of one card, to see a deck take each one owned
+  // Quest reads its saves gzipped; one game a match, so a conceded game ends it; three copies of one card, to see a deck take each one owned; credits for a booster
   const xml = readFileSync(fixture, 'utf8').replace('<matchLength>3</matchLength>', '<matchLength>1</matchLength>')
-    .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>');
+    .replace('<card c="Naya Hushblade" s="ARB" i="1" n="1"/>', '<card c="Naya Hushblade" s="ARB" i="1" n="3"/>')
+    .replace('<credits>250</credits>', '<credits>5000</credits>');
   server = await startServer(undefined, { ...PROBE_SEED, files: { 'quest/saves/Fixture quest.dat': gzipSync(xml) } });
 });
 test.afterEach(async () => { await server.stop(); });
@@ -81,4 +82,29 @@ test('a quest deck is made, filled and chosen as current', async ({ page }) => {
   await expect(plate.locator('.tag')).toHaveText('Current Deck');
   await page.locator('.cq-tab', { hasText: 'Duels' }).click();
   await expect(page.locator('.cq-mine b')).toHaveText('Ice deck');
+});
+
+// Fails if a booster cannot be bought and its cards revealed, or the credits do not fall by its price
+test('a booster is bought in the Spell Shop and its cards revealed', async ({ page }) => {
+  await page.goto(server.url);
+  await enterName(page, 'Alice');
+  await page.click('[data-mode=play]');
+  await page.click('.chooser [data-kind=quest]');
+  await page.locator('.qu-save', { hasText: 'Fixture quest' }).getByRole('button', { name: 'Play' }).click();
+
+  const credits = page.locator('.cq-purse .cq-coin').first().locator('b');
+  const before = Number((await credits.innerText()).replace(/\D/g, ''));
+  await page.locator('.cq-tab', { hasText: 'Spell Shop' }).click();
+  const booster = page.locator('.qu-product', { hasText: 'Booster Pack' }).first();
+  const price = Number((await booster.locator('.qu-price').innerText()).replace(/\D/g, ''));
+  expect(price).toBeLessThanOrEqual(before);
+  await booster.click();
+  await page.locator('.cq-sel-bar .primary').click();
+  await page.locator('.cq-exile').getByRole('button', { name: 'OK', exact: true }).click();
+
+  const reveal = page.locator('.cq-reveal');
+  await expect(reveal.locator('.cq-cards-card').first()).toBeVisible();
+  await reveal.getByRole('button', { name: 'OK', exact: true }).click();
+  await expect(reveal).toHaveCount(0);
+  await expect(credits).toHaveText((before - price).toLocaleString('en-GB'));
 });

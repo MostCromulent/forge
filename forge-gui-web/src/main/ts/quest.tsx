@@ -9,6 +9,7 @@ import { CampaignBar, Purse } from './campaign';
 import { shortDay } from './limited';
 import { Duels } from './questduels';
 import { Decks } from './questdecks';
+import { Shop } from './questshop';
 import { Reveal, type Owed } from './conquestreward';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -17,7 +18,7 @@ import { t, type TextKey } from './text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the duels. */
 const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
-const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['decks', 'lblQuestDecks']];
+const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['decks', 'lblQuestDecks'], ['shop', 'lblSpellShop']];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
@@ -88,6 +89,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
     {model.error && <p class="limited-error">{model.error}</p>}
     <div class="cq-main" inert={!!reward}>
       {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
+        : ui.questTab === 'shop' ? <Shop model={model} actions={actions} />
         : <Duels page={model.questDuels} actions={actions} />}
     </div>
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}

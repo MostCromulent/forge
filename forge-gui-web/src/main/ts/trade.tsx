@@ -1,5 +1,6 @@
 // A campaign's lists of cards and the trade between them, where every price shown is the server's
 
+import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { imageUrl, skinIconUrl } from './images';
 import { ColourToggles, toggled } from './symbols';
@@ -19,12 +20,30 @@ export interface TradeWords {
   row: (price: string) => string;
   /** The question's sentence for n cards at this total, with the token where the symbol goes. */
   confirm: (n: number, total: string) => string;
+  /** The badge on a card for how many its list holds, for a list that counts copies. */
+  count?: (n: number) => string;
 }
+
+/** Something picked: a card's printing or a product, by the key a trade names it by, and how many of it. */
+export interface Pick { key: string; name: string; value: number; count: number; most: number }
 
 const amount = (n: number): string => n.toLocaleString('en-GB');
 
+/** A row as a pick of one, up to as many as its list holds. */
+export const pickOf = (row: CatalogueRow, count = 1): Pick => ({ key: row.image, name: row.name, value: row.value ?? 0, count, most: row.count ?? 1 });
+
+/** Owned copies as a playset of squares, filled for each copy held, and the number beside them. */
+function Owned({ n }: { n: number }) {
+  return (
+    <span class="cq-owned" title={t('lblWebTradeOwned', n)}>
+      {[1, 2, 3, 4].map(i => <i key={i} class={i <= n ? 'on' : undefined} />)}
+      <span>{t('lblWebTradeOwned', n)}</span>
+    </span>
+  );
+}
+
 /** The lists are the keys of words, in that order, and each is the source its cards are asked for by. */
-export function TradePage({ model, actions, icon, iconLabel, token, words, types, groupLabel, blocked }: {
+export function TradePage({ model, actions, icon, iconLabel, token, words, types, groupLabel, blocked, top }: {
   model: Model; actions: Actions;
   /** The currency's skin icon, its name for a reader who cannot see it, and where a sentence names it. */
   icon: string; iconLabel: string; token: string;
@@ -33,6 +52,8 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   groupLabel?: string;
   /** The mark on a card that cannot be picked. */
   blocked: string;
+  /** What a list shows above its cards: given the picks, a way to pick or unpick one, and a way to ask about a whole set of picks at once. */
+  top?: (source: string, picked: Map<string, Pick>, toggle: (pick: Pick) => void, askAbout: (picks: Pick[]) => void) => ComponentChildren;
 }) {
   const info = model.trading;
   const [source, setSource] = useState(Object.keys(words)[0]);
@@ -41,8 +62,8 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
   const [colours, setColours] = useState<Set<string>>(() => new Set());
   const [type, setType] = useState('any');
   const [group, setGroup] = useState('');
-  /** The cards picked, by image key, which is what names a printing. */
-  const [picked, setPicked] = useState<Map<string, CatalogueRow>>(() => new Map());
+  /** What is picked, by key, which for a card is its image key, the key of its printing. */
+  const [picked, setPicked] = useState<Map<string, Pick>>(() => new Map());
   const [asking, setAsking] = useState(false);
   const asked = useRef(0);
   const query = { text, colours: [...colours].join(''), type, filters: '', sort: 'name', showAll: true, source, group: group || undefined };
@@ -70,15 +91,24 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
       actions.queryCatalogue(0, { ...query, offset: rows.length });
     }
   };
-  const toggle = (row: CatalogueRow) => {
+  const toggle = (pick: Pick) => {
     const next = new Map(picked);
-    if (!next.delete(row.image)) next.set(row.image, row);
+    if (!next.delete(pick.key)) next.set(pick.key, pick);
     setPicked(next);
   };
+  const recount = (pick: Pick, by: number) => {
+    const count = Math.min(Math.max(1, pick.count + by), pick.most);
+    setPicked(new Map(picked).set(pick.key, { ...pick, count }));
+  };
+  const askAbout = (picks: Pick[]) => {
+    setPicked(new Map(picks.map(p => [p.key, p])));
+    if (picks.length) setAsking(true);
+  };
   const chosen = [...picked.values()];
-  const total = chosen.reduce((sum, c) => sum + (c.value ?? 0), 0);
+  const n = chosen.reduce((sum, c) => sum + c.count, 0);
+  const total = chosen.reduce((sum, c) => sum + c.value * c.count, 0);
   const said = words[source];
-  const title = said.verb(chosen.length);
+  const title = said.verb(n);
   return (
     <div class="cq-coll">
       <div class="cq-coll-bar">
@@ -101,18 +131,37 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         )}
         {info && <span class="cq-coll-note">{info.note}</span>}
       </div>
+      {top?.(source, picked, toggle, askAbout)}
       <div class="cq-coll-grid" onScroll={more}>
         {page && page.total === 0 && <p class="none-found">{t('lblWebCatalogueNoMatchHint')}</p>}
-        {rows.map(row => (
-          <button key={row.image} class={`cq-cc${picked.has(row.image) ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
-            aria-pressed={picked.has(row.image)} aria-disabled={!!row.problem}
-            onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(row))}>
-            <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
-            {row.isNew && <span class="new-card">{t('lblNew')}</span>}
-            {row.problem && <span class="inuse">{blocked}</span>}
-            <span class="val">{priced(said.row(amount(row.value ?? 0)))}</span>
-          </button>
-        ))}
+        {rows.map(row => {
+          const pick = picked.get(row.image);
+          const card = (
+              <button key={row.image} class={`cq-cc${pick ? ' sel' : ''}${row.problem ? ' used' : ''}`} title={row.problem ?? row.name}
+                aria-pressed={!!pick} aria-disabled={!!row.problem}
+                onClick={() => (row.problem ? showNotice({ t: 'notice', title: row.problem, error: false }) : toggle(pickOf(row)))}>
+                <span class="cq-pic"><span class="nm">{row.name}</span><img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} /></span>
+                {row.isNew && <span class="new-card">{t('lblNew')}</span>}
+                {row.problem && <span class="inuse">{blocked}</span>}
+                {said.count && row.count != null && <span class="cq-stock">{said.count(row.count)}</span>}
+                <span class="val">{priced(said.row(amount(row.value ?? 0)))}{row.owned != null && <Owned n={row.owned} />}{row.note && <span class="cq-cc-note">{row.note}</span>}</span>
+              </button>
+          );
+          // A list that counts copies takes a count for a pick, under the card; any other is the card alone
+          if (row.count == null) return card;
+          return (
+            <div key={row.image} class="cq-cc-slot">
+              {card}
+              {pick && pick.most > 1 && (
+                <span class="cq-step">
+                  <button aria-label={t('lblWebTradeOneFewer', row.name)} disabled={pick.count <= 1} onClick={() => recount(pick, -1)}>&minus;</button>
+                  <b>{t('lblWebTradeNOf', pick.count, pick.most)}</b>
+                  <button aria-label={t('lblWebTradeOneMore', row.name)} disabled={pick.count >= pick.most} onClick={() => recount(pick, 1)}>+</button>
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
       {chosen.length > 0 && (
         <div class="cq-sel-bar">
@@ -126,13 +175,13 @@ export function TradePage({ model, actions, icon, iconLabel, token, words, types
         <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setAsking(false); }}>
           <div class="dialog cq-exile">
             <h3>{title}</h3>
-            <p class="cq-exile-total">{priced(said.confirm(chosen.length, amount(total)))}</p>
+            <p class="cq-exile-total">{priced(said.confirm(n, amount(total)))}</p>
             <ul class="cq-cards-list">
-              {chosen.map(c => <li key={c.image}>{c.name}<span>{priced(`${token} ${amount(c.value ?? 0)}`)}</span></li>)}
+              {chosen.map(c => <li key={c.key}>{c.count > 1 ? `${c.name} ×${c.count}` : c.name}<span>{priced(`${token} ${amount(c.value * c.count)}`)}</span></li>)}
             </ul>
             <div class="actions">
               <button onClick={() => setAsking(false)}>{t('lblCancel')}</button>
-              <button class="primary" onClick={() => { setAsking(false); actions.trade(source, chosen.map(c => ({ key: c.image, count: 1 }))); }}>{t('lblOK')}</button>
+              <button class="primary" onClick={() => { setAsking(false); actions.trade(source, chosen.map(c => ({ key: c.key, count: c.count }))); }}>{t('lblOK')}</button>
             </div>
           </div>
         </div>
