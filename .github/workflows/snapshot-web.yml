@@ -69,7 +69,7 @@ jobs:
       - name: Write release notes
         run: |
           cat > notes.md <<'EOF'
-          Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by web link with no further install required. See the [README](https://github.com/@REPO@/blob/@SHA@/forge-gui-web/README.md) for what you can play and how to set up a game.
+          Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by web link with no further install required. See the [README](https://github.com/@REPO@/blob/@SHA@/README.md) for what you can play and how to set up a game.
 
           This is an unofficial test build from the `forge-gui-web` branch of this fork, not a Card-Forge release. It is rebuilt at most once a day.
 

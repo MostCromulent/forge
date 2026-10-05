@@ -1,7 +1,7 @@
 {
   "name": "forge-gui-web",
   "private": true,
-  "description": "The browser half of Forge's web GUI. Maven runs the build; see README.md.",
+  "description": "The browser half of Forge's web GUI. Maven runs the build; see the root README.md.",
   "type": "module",
   "scripts": {
     "build": "esbuild src/main/ts/app.ts --bundle --splitting --minify --format=esm --target=es2022 --sourcemap --log-level=warning --outdir=src/main/resources/web/js --chunk-names=chunks/[name]-[hash]",
