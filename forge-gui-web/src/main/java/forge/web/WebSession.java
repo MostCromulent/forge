@@ -1406,6 +1406,7 @@ public final class WebSession {
             final Record result = campaign.gameOver(match == null ? null : match.getGameView());
             if (result != null) {
                 tell(result);
+                campaign.resultSent();
             }
         }));
         try {

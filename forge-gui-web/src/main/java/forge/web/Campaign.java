@@ -56,6 +56,10 @@ interface Campaign {
     /** A game of the campaign's match ended: recorded and rewarded here. hostGame is the host's own view, which alone knows the match. */
     CampaignResult gameOver(GameView hostGame);
 
+    /** The game's result has been sent, so what the mode does next, such as asking about a reward, comes after the result screen. */
+    default void resultSent() {
+    }
+
     /** The result of the game just ended, while its match is still open, or null. */
     CampaignResult result();
 

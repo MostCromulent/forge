@@ -353,7 +353,7 @@ final class ConquestGame implements Campaign {
             default -> null;
         };
         return new RewardStep(s.kind().name(), s.amount(), s.outcome() == null ? null : s.outcome().name(), cards,
-                s.number(), s.total(), s.chaos(), pack, art, icon);
+                s.number(), s.total(), s.chaos(), pack, art, icon, null, null, null);
     }
 
     @Override

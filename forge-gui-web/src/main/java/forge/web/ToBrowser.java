@@ -680,9 +680,10 @@ final class ToBrowser {
     record PackCard(String name, String image, String rarity, int shards) {
     }
 
-    /** One thing a reward shows. kind is the mode's name for it, and icon names the balance its amount, or its cards' shards, were paid into. */
+    /** One thing a reward shows: kind is the mode's name for it, icon the balance it pays into; MESSAGE and CARDS bring their own words, and outcome "lost" marks cards lost to ante. */
     record RewardStep(String kind, int amount, @Nullable String outcome, @Nullable List<PackCard> cards,
-            int number, int total, boolean chaos, @Nullable String pack, @Nullable String art, @Nullable String icon) {
+            int number, int total, boolean chaos, @Nullable String pack, @Nullable String art, @Nullable String icon,
+            @Nullable String title, @Nullable String text, @Nullable List<String> lines) {
     }
 
     /** What a match gave, already in the save, for the browser to reveal step by step. */

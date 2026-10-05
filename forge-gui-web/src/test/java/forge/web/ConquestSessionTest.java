@@ -11,8 +11,6 @@ import forge.game.player.Player;
 import forge.game.zone.ZoneType;
 import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.PreparedMatch;
-import forge.gamemodes.match.input.InputPassPriority;
-import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestBattle;
 import forge.gamemodes.planarconquest.ConquestCommander;
 import forge.gamemodes.planarconquest.ConquestData;
@@ -26,7 +24,6 @@ import forge.localinstance.properties.ForgeConstants;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
 import forge.util.Localizer;
-import forge.player.PlayerControllerHuman;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -35,14 +32,10 @@ import org.testng.annotations.Test;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Set;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 /** A conquest as a browser drives it, and its battles as netplay plays them. */
 public class ConquestSessionTest extends SessionsTest {
@@ -54,27 +47,6 @@ public class ConquestSessionTest extends SessionsTest {
     @Override
     void afterDisconnecting() {
         ConquestFixture.cleanUp();
-    }
-
-    private static void onUi(final Runnable r) {
-        GuiBase.getInterface().invokeInEdtAndWait(r);
-    }
-
-    /** The game's thread deals the zones after the match has started, so what it sets up is waited for. */
-    private static void awaitTrue(final BooleanSupplier wanted, final String why) {
-        awaitTrue(wanted, () -> why);
-    }
-
-    private static void awaitTrue(final BooleanSupplier wanted, final Supplier<String> why) {
-        for (int i = 0; i < 2000 && !wanted.getAsBoolean(); i++) {
-            try {
-                Thread.sleep(10);
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                break;
-            }
-        }
-        Assert.assertTrue(wanted.getAsBoolean(), why.get());
     }
 
     /** Starts the battle at a place over the loopback, with no session, and hands the running match to body. */
@@ -145,10 +117,6 @@ public class ConquestSessionTest extends SessionsTest {
             }
         }
         throw new AssertionError("The bar has no balance of " + icon);
-    }
-
-    private static String str(final JsonObject o, final String field) {
-        return o.has(field) && !o.get(field).isJsonNull() ? o.get(field).getAsString() : null;
     }
 
     private static JsonObject cell(final JsonObject state, final int region, final int row, final int col) {
@@ -249,51 +217,6 @@ public class ConquestSessionTest extends SessionsTest {
         FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, devModeBefore);
     }
 
-    /** Wins the game for the web seat with dev mode's cheat, as a player checking a reward by hand would. */
-    private void computerLoses(final Recorder host) {
-        awaitPriority(host);
-        sessions.onMessage(host, message("dev", "action", "winGame"));
-    }
-
-    /** By message and not by id: a restarted match numbers its questions from the start again. */
-    private final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
-
-    /** Gives every question on the way its default answer, since only at first priority is the game past dealing its zones and safe to end. */
-    private void awaitPriority(final Recorder host) {
-        final String[] seen = { "no game" };
-        // A press that lands before the input is ready is lost, so it is made again
-        final long[] lastPress = { 0 };
-        awaitTrue(() -> {
-            final ServerGameLobby lobby = sessions.hostLobby();
-            final Game game = lobby == null || lobby.getHostedMatch() == null ? null : lobby.getHostedMatch().getGame();
-            if (game == null) {
-                return false;
-            }
-            for (final JsonObject m : host.got) {
-                if ("request".equals(m.get("t").getAsString()) && answered.add(m)) {
-                    sessions.onMessage(host, FakeBrowser.reply(m.get("id").getAsInt(), m.get("default")));
-                }
-            }
-            for (final Player p : game.getPlayers()) {
-                if (p.getController() instanceof PlayerControllerHuman human) {
-                    final Object input = human.getInputQueue().getInput();
-                    seen[0] = (input == null ? "no input" : input.getClass().getSimpleName()) + ", messages "
-                            + host.got.stream().map(m -> m.get("t").getAsString() + (m.has("kind") ? ":" + m.get("kind").getAsString() : "")).distinct().toList()
-                            + ", turn " + game.getPhaseHandler().getTurn() + " " + game.getPhaseHandler().getPhase() + ", over " + game.isGameOver();
-                    if (input instanceof InputPassPriority) {
-                        return true;
-                    }
-                    // Keeping the opening hand is an input of its own, answered with OK
-                    if (input != null && System.currentTimeMillis() - lastPress[0] > 500) {
-                        lastPress[0] = System.currentTimeMillis();
-                        sessions.onMessage(host, JsonCodec.message("ok"));
-                    }
-                }
-            }
-            return false;
-        }, () -> "the web seat never got priority: " + seen[0]);
-    }
-
     private Recorder inBattle(final ConquestData data) throws InterruptedException {
         final Recorder host = hostInConquest(data);
         send(host, JsonCodec.message("conquestBattle"));
@@ -348,12 +271,6 @@ public class ConquestSessionTest extends SessionsTest {
         third.awaitMatching("conquestState", s -> true, "the map was not sent");
         Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())),
                 "an acknowledged reward was sent again");
-    }
-
-    private static List<String> buttons(final JsonObject result) {
-        final List<String> actions = new ArrayList<>();
-        result.getAsJsonArray("buttons").forEach(b -> actions.add(b.getAsJsonObject().get("action").getAsString()));
-        return actions;
     }
 
     // Fails if a lost event does not offer to fight it again before leaving, or a won one offers anything but to leave

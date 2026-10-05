@@ -4,20 +4,30 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
+import forge.game.Game;
+import forge.game.GameType;
+import forge.game.player.Player;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
 import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
+import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.player.PlayerControllerHuman;
+import forge.util.Localizer;
 import org.testng.Assert;
+import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
+import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** A quest as a browser drives it, and its duels as netplay plays them. */
 public class QuestSessionTest extends SessionsTest {
@@ -33,10 +43,6 @@ public class QuestSessionTest extends SessionsTest {
         } catch (final IOException e) {
             throw new UncheckedIOException(e);
         }
-    }
-
-    private static String str(final JsonObject o, final String field) {
-        return o.has(field) && !o.get(field).isJsonNull() ? o.get(field).getAsString() : null;
     }
 
     /** How much of a balance the bar shows, by its icon. */
@@ -202,6 +208,177 @@ public class QuestSessionTest extends SessionsTest {
         send(host, message("questPet", "slot", 1, "name", "Bird"));
         host.awaitNewest("questDuels", "the page was not sent again");
         Assert.assertEquals(saved(data).getPetSlots().get(1), "Wolf");
+    }
+
+    private boolean devModeBefore;
+
+    @BeforeClass
+    public void allowTheGameToBeWon() {
+        WebTestSupport.initModel();
+        devModeBefore = FModel.getPreferences().getPrefBoolean(FPref.DEV_MODE_ENABLED);
+        FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, true);
+    }
+
+    @AfterClass(alwaysRun = true)
+    public void restoreDevMode() {
+        FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, devModeBefore);
+    }
+
+    /** The host in the first duel of the quest, at its first priority. */
+    private Recorder inDuel(final QuestData data) throws InterruptedException {
+        final Recorder host = hostInQuest(data);
+        host.awaitNewest("questDuels", "the duels were not sent");
+        send(host, message("questDuel", "index", 0));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the duel did not start");
+        awaitPriority(host);
+        return host;
+    }
+
+    private void answer(final Recorder host, final JsonObject question, final int option) {
+        final JsonObject reply = message("hostChoice", "id", question.get("id").getAsInt());
+        final JsonArray value = new JsonArray();
+        value.add(option);
+        reply.add("value", value);
+        sessions.onMessage(host, reply);
+    }
+
+    /** Answers each question the reward script asks with its first option until the reward arrives. */
+    private JsonObject untilRewarded(final Recorder host) throws InterruptedException {
+        final Set<Integer> asked = new HashSet<>();
+        final long end = System.currentTimeMillis() + 60_000;
+        while (System.currentTimeMillis() < end) {
+            for (final JsonObject m : host.got) {
+                final String type = m.get("t").getAsString();
+                if ("reward".equals(type)) {
+                    return m;
+                }
+                if ("hostChoice".equals(type) && asked.add(m.get("id").getAsInt())) {
+                    answer(host, m, 0);
+                }
+            }
+            Thread.sleep(50);
+        }
+        throw new AssertionError("the reward was not sent: " + host.got.stream().map(m -> m.get("t").getAsString()).distinct().toList());
+    }
+
+    private static JsonObject step(final JsonObject reward, final String kind, final String title) {
+        for (final JsonElement e : reward.getAsJsonArray("steps")) {
+            final JsonObject s = e.getAsJsonObject();
+            if (kind.equals(s.get("kind").getAsString()) && str(s, "title") != null && str(s, "title").contains(title)) {
+                return s;
+            }
+        }
+        throw new AssertionError("no " + kind + " step titled " + title + " in " + reward);
+    }
+
+    // Fails if a duel does not start with the quest's deck against the chosen opponent
+    @Test(timeOut = 180_000)
+    public void aDuelStartsAgainstTheChosenOpponent() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final JsonObject row = host.awaitNewest("questDuels", "the duels were not sent").getAsJsonArray("duels").get(0).getAsJsonObject();
+        send(host, message("questDuel", "index", 0));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the duel did not start");
+        awaitPriority(host);
+        final Game game = sessions.hostLobby().getHostedMatch().getGame();
+        Assert.assertEquals(game.getRules().getGameType(), GameType.Quest);
+        final List<String> names = game.getPlayers().stream().map(Player::getName).toList();
+        Assert.assertTrue(names.contains(row.get("title").getAsString()), "the opponents are " + names);
+        for (final Player p : game.getPlayers()) {
+            if (p.getController() instanceof PlayerControllerHuman) {
+                Assert.assertEquals(p.getRegisteredPlayer().getDeck().getName(), "Forest deck");
+            }
+        }
+    }
+
+    // Fails if a won duel is not recorded once, or its credits are not in the save when the reward is shown
+    @Test(timeOut = 240_000)
+    public void aWonDuelIsRecordedOnce() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        data.setMatchLength(1);
+        data.saveData();
+        final Recorder host = inDuel(data);
+        computerLoses(host);
+        final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        Assert.assertTrue(result.get("won").getAsBoolean());
+        Assert.assertEquals(buttons(result), List.of("leave"));
+
+        // A reload on the result screen shows the same result and records nothing
+        final Recorder reloaded = connect("host");
+        Assert.assertEquals(reloaded.awaitMatching("campaignResult", r -> true, "a reload lost the result"), result);
+        sessions.onMessage(reloaded, JsonCodec.message("leave"));
+        final JsonObject reward = untilRewarded(reloaded);
+        step(reward, "MESSAGE", Localizer.getInstance().getMessage("lblGameplayResults"));
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAchievements().getWin(), 1);
+        Assert.assertEquals(after.getAchievements().getLost(), 0);
+        Assert.assertTrue(after.getAssets().getCredits() > 250, "no credits were won: " + after.getAssets().getCredits());
+
+        final Recorder again = connect("host");
+        Assert.assertEquals(again.awaitMatching("reward", r -> true, "a reload lost the reward"), reward);
+        Assert.assertEquals(saved(data).getAchievements().getWin(), 1);
+
+        send(again, JsonCodec.message("rewardClaim"));
+        final Recorder third = connect("host");
+        third.awaitMatching("questDuels", s -> true, "the page was not sent");
+        Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())), "a claimed reward was sent again");
+    }
+
+    // Fails if a duel quit before its match is over is not recorded as a loss with the penalty
+    @Test(timeOut = 240_000)
+    public void quittingADuelEarlyIsALossWithThePenalty() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        final Recorder host = inDuel(data);
+        sessions.onMessage(host, JsonCodec.message("concede"));
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        sessions.onMessage(host, message("nextGame", "decision", "QUIT"));
+        send(host, JsonCodec.message("leave"));
+        host.awaitMatching("questDuels", s -> true, "leaving did not return to the duels");
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAchievements().getLost(), 1);
+        Assert.assertEquals(after.getAchievements().getWin(), 0);
+        Assert.assertEquals(after.getAssets().getCredits(), 250 - FModel.getQuestPreferences().getPrefInt(QPref.PENALTY_LOSS));
+    }
+
+    // Fails if a won best-of-three is not recorded as a win
+    @Test(timeOut = 300_000)
+    public void aWonBestOfThreeIsAWin() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        final Recorder host = inDuel(data);
+        computerLoses(host);
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        send(host, message("nextGame", "decision", "CONTINUE"));
+        awaitPriority(host);
+        computerLoses(host);
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no second result was sent")), List.of("leave"));
+        // Not forgetting what came before: the booster's question may already be here
+        sessions.onMessage(host, JsonCodec.message("leave"));
+        untilRewarded(host);
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAchievements().getWin(), 1);
+        Assert.assertEquals(after.getAchievements().getLost(), 0);
+        Assert.assertTrue(after.getAssets().getCredits() > 250, "the win paid a penalty or nothing: " + after.getAssets().getCredits());
+    }
+
+    // Fails if the booster reward's question is not answered by the browser's answer
+    @Test(timeOut = 240_000)
+    public void theBoosterIsTheFormatTheBrowserChose() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = QuestFixture.install();
+        data.setMatchLength(1);
+        data.saveData();
+        final Recorder host = inDuel(data);
+        computerLoses(host);
+        host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        final JsonObject question = host.awaitMatching("hostChoice", q -> true, "the booster's format was not asked");
+        final String chosen = question.getAsJsonArray("options").get(1).getAsString();
+        answer(host, question, 1);
+        send(host, JsonCodec.message("leave"));
+        step(untilRewarded(host), "CARDS", chosen);
     }
 
     // Fails if a browser without the host's seat can open a quest

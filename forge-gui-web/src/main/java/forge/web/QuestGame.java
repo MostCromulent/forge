@@ -7,6 +7,9 @@ import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestUtil;
+import forge.gamemodes.quest.QuestWinLoseController;
+import forge.gamemodes.match.PreparedMatch;
+import forge.player.GamePlayerUtil;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.bazaar.QuestPetController;
 import forge.gamemodes.quest.data.QuestAchievements;
@@ -39,6 +42,13 @@ import java.util.List;
 final class QuestGame implements Campaign {
     private static final String[] DIFFICULTIES = {"questDifficultyEasy", "questDifficultyMedium", "questDifficultyHard", "questDifficultyExpert"};
     private List<QuestEventDuel> duels;
+    /** The match being played: its view keeps every game's steps, and the latest game's controller records the match. */
+    private volatile WebQuestView view;
+    private volatile QuestWinLoseController controller;
+    /** The result of the game just ended, while its match is still open. */
+    private volatile CampaignResult result;
+    /** What the last match gave, until the browser says it has shown it. */
+    private volatile Reward reward;
 
     static QuestController quest() {
         return FModel.getQuest();
@@ -100,6 +110,8 @@ final class QuestGame implements Campaign {
         }
         quest().load(data);
         duels = null;
+        // A reward not yet shown is already in its save, and belongs to the quest that was open
+        reward = null;
         // As desktop's quest chooser does, so desktop and mobile open the same quest next
         final QuestPreferences prefs = FModel.getQuestPreferences();
         prefs.setPref(QPref.CURRENT_QUEST, file.getName());
@@ -231,25 +243,98 @@ final class QuestGame implements Campaign {
 
     @Override
     public Reward reward() {
-        return null;
+        return reward;
     }
 
     @Override
     public void claim(final Host host) {
+        reward = null;
     }
 
+    /** Starts the duel at an index of the list the page was sent, as desktop's Start does. */
+    private void duel(final int index, final Host host) {
+        final List<QuestEventDuel> offered = duels();
+        // A reward still to be shown belongs to the last match, and the next match's would replace it
+        if (reward != null || index < 0 || index >= offered.size()) {
+            return;
+        }
+        final QuestEventDuel duel = offered.get(index);
+        QuestUtil.setEvent(duel);
+        if (!QuestUtil.canStartGame()) {
+            return;
+        }
+        // What desktop's start does in the background before the match
+        quest().getDuelsManager().randomizeOpponents();
+        quest().setCurrentEvent(duel);
+        quest().save();
+        view = new WebQuestView();
+        controller = null;
+        final String face = face(duel.getEventDeck());
+        host.startMatch(() -> {
+            final PreparedMatch match = QuestUtil.prepareGame();
+            match.players().get(1).getPlayer().setAvatarCardImageKey(face);
+            return match;
+        }, () -> {
+            quest().setCurrentEvent(null);
+            view = null;
+        });
+    }
+
+    /** Quest's own result controller is made for each game, as desktop makes one per game, and the latest one records the match when it is left. */
     @Override
     public CampaignResult gameOver(final GameView hostGame) {
-        return null;
+        final WebQuestView shown = view;
+        if (shown == null || hostGame == null || quest().getCurrentEvent() == null) {
+            return null;
+        }
+        shown.newGame();
+        controller = new QuestWinLoseController(hostGame, shown);
+        controller.showRewards();
+        final boolean over = hostGame.isMatchOver();
+        final List<ResultButton> buttons = new ArrayList<>();
+        if (shown.getBtnContinue().isVisible()) {
+            buttons.add(new ResultButton(shown.getBtnContinue().getText(), "nextGame", true));
+        }
+        if (shown.getBtnQuit().isVisible()) {
+            buttons.add(new ResultButton(shown.getBtnQuit().getText(), over ? "leave" : "quit", buttons.isEmpty()));
+        }
+        result = new CampaignResult(GamePlayerUtil.getQuestPlayer().getName().equals(hostGame.getWinningPlayerName()), over, null, buttons);
+        return result;
+    }
+
+    /** The rewards the controller works out may ask the player questions, which belong after the result screen. */
+    @Override
+    public void resultSent() {
+        final WebQuestView shown = view;
+        final Runnable rest = shown == null ? null : shown.takeScript();
+        if (rest != null) {
+            rest.run();
+        }
     }
 
     @Override
     public CampaignResult result() {
-        return null;
+        return result;
     }
 
+    /** Leaving records the match, as desktop's Quit does, and the match's steps become the reward shown over the Duels page. */
     @Override
     public void left() {
+        final QuestWinLoseController last = controller;
+        final WebQuestView shown = view;
+        controller = null;
+        view = null;
+        result = null;
+        if (last != null) {
+            last.actionOnQuit();
+        } else if (shown != null) {
+            quest().setCurrentEvent(null);
+        }
+        if (shown != null && !shown.steps.isEmpty()) {
+            reward = new Reward(List.copyOf(shown.steps));
+        }
+        // The opponents were shuffled when the duel started, so the next page offers new ones
+        duels = null;
     }
 
     // The pages that ask for these come in later parts, so they answer with nothing
@@ -293,6 +378,10 @@ final class QuestGame implements Campaign {
             return;
         }
         switch (msg.get("t").getAsString()) {
+            case "questDuel" -> {
+                duel(Wire.decode(msg, FromBrowser.QuestDuel.class).index(), host);
+                return;
+            }
             case "questPet" -> {
                 final FromBrowser.QuestPet pet = Wire.decode(msg, FromBrowser.QuestPet.class);
                 // The plant's slot takes only the plant, as desktop's switch sets it; a pet must be one the quest owns
