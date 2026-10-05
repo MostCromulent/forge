@@ -8,7 +8,7 @@ import { t } from './text';
 export function Wordmark() {
   return (
     <div class="wordmark-block">
-      <span class="wordmark">Forge</span>
+      <span class="wordmark">Forge<span class="beta">{t('lblWebBeta')}</span></span>
       <span class="stripes" aria-hidden="true"><i /><i /><i /><i /><i /></span>
     </div>
   );
