@@ -302,7 +302,8 @@ function apply(msg: ServerMessage): void {
         model.questChallenges = null;
         model.questBazaar = null;
         model.questTournaments = null;
-        ui.questTab = 'duels';
+        // A match is played from the quest's page, so the tab it was started from is the one returned to
+        if (!msg.inMatch) ui.questTab = 'duels';
       }
       model.drafting = msg.drafting;
       if (!msg.drafting) {

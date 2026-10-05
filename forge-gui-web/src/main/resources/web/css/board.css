@@ -727,6 +727,8 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
 #game-over .tally-player.champion .tally-won { color: #f5d27a; }
 #game-over .actions { display: flex; gap: 10px; margin-top: 8px; }
 #game-over .actions button { padding: 9px 22px; }
+#game-over .actions:has(.ask) { flex-wrap: wrap; justify-content: center; }
+#game-over .actions .ask { flex-basis: 100%; margin: 0; text-align: center; }
 #game-over.viewing { place-items: end center; padding-bottom: 28px; }
 #game-over.viewing .panel, #game-over:not(.viewing) .to-result { display: none; }
 #game-over .to-result { pointer-events: auto; padding: 9px 22px; box-shadow: 0 10px 30px #000c; }

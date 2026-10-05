@@ -168,7 +168,7 @@ test('a bazaar item is bought from its stall', async ({ page }) => {
   await expect(page.locator('.qu-row select option', { hasText: 'Bird' })).toHaveCount(1);
 });
 
-// Fails if a tournament cannot be entered, drafted, built and its first match reached
+// Fails if a tournament cannot be entered, drafted, built and its first match reached, or a game lost there forfeits it without asking
 test('a tournament is entered, drafted, built and its first match reached', async ({ page }) => {
   test.setTimeout(480_000);
   await page.goto(server.url);
@@ -200,4 +200,14 @@ test('a tournament is entered, drafted, built and its first match reached', asyn
   await page.getByRole('button', { name: 'Start Next Match' }).click();
   await expect(page.locator('#match')).toBeVisible({ timeout: 60_000 });
   await gameStarted(page);
+
+  await concede(page);
+  const result = page.locator('#game-over .actions');
+  await result.getByRole('button', { name: 'Forfeit Tournament' }).click();
+  await expect(result.locator('.ask')).toHaveText(/forfeit the tournament/);
+  await result.getByRole('button', { name: 'Cancel' }).click();
+  await expect(result.locator('.ask')).toHaveCount(0);
+  await result.getByRole('button', { name: 'Forfeit Tournament' }).click();
+  await result.getByRole('button', { name: 'Forfeit Tournament' }).click();
+  await expect(page.locator('.qu-seat.you.out')).toHaveCount(1, { timeout: 30_000 });
 });

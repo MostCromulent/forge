@@ -558,7 +558,7 @@ final class ToBrowser {
     record CampaignBar(String name, String line, List<Balance> balances) {
     }
 
-    /** A button of the result screen: action is nextGame, leave, restart, or quit, which leaves a match that is not over. */
+    /** A button of the result screen: action is nextGame, leave, restart, quit, which leaves a match that is not over, or forfeit, a quit the player is asked about first. */
     record ResultButton(String label, String action, boolean primary) {
     }
 
@@ -765,8 +765,8 @@ final class ToBrowser {
     record QuestSeat(@Nullable String name, boolean you, String state) {
     }
 
-    /** The tournament entered: its rounds from the first eight seats to the winner, the player's next opponent while the player has a match left (empty when not yet known), and the player's placing. */
-    record QuestBracket(String title, List<List<QuestSeat>> rounds, @Nullable String next, String placing, boolean started) {
+    /** The tournament entered: its rounds from the first eight seats to the winner, the player's next opponent while the player has a match left (empty when not yet known), the player's placing, and whether its draft was finished into a pool. */
+    record QuestBracket(String title, List<List<QuestSeat>> rounds, @Nullable String next, String placing, boolean started, boolean drafted) {
     }
 
     /** The Tournaments page: those on offer while none is entered, the tokens to make one, the past placings from first to fourth, and the one entered. */

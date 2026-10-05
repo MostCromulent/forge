@@ -1002,14 +1002,28 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   };
   // A campaign's match ends as its mode says, and the battlefield can be looked at whatever the mode offers
   if (campaign) {
-    const does: Record<string, () => void> = {
-      nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(),
-      quit: () => { actions.quitMatch(); actions.leave(); },
+    const quit = () => { actions.quitMatch(); actions.leave(); };
+    const draw = () => {
+      buttons.replaceChildren();
+      const does: Record<string, () => void> = {
+        nextGame: () => actions.nextGame(), leave: () => actions.leave(), restart: () => actions.restartGame(), quit,
+        // A forfeit loses what was paid to enter, so it is asked first, as desktop asks
+        forfeit: () => {
+          buttons.replaceChildren();
+          const ask = document.createElement('p');
+          ask.className = 'ask';
+          ask.textContent = t('lblWebQuestForfeitAsk');
+          buttons.append(ask);
+          add(t('lblCancel'), true, draw);
+          add(t('lblWebQuestForfeitTournament'), false, quit);
+        },
+      };
+      campaign.buttons.forEach((b, i) => {
+        add(b.label, b.primary, does[b.action]);
+        if (i === 0) add(t('lblWebBoardViewBattlefield'), false, () => view(true));
+      });
     };
-    campaign.buttons.forEach((b, i) => {
-      add(b.label, b.primary, does[b.action]);
-      if (i === 0) add(t('lblWebBoardViewBattlefield'), false, () => view(true));
-    });
+    draw();
     return;
   }
   if (limited?.nextRound) add(t('lblWebBoardNextRound', limited.round + 1, limited.rounds), true, () => actions.gauntletNext());

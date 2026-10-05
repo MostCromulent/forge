@@ -114,6 +114,19 @@ function Panel({ bracket, actions }: { bracket: QuestBracket; actions: Actions }
   const [leaving, setLeaving] = useState(false);
   const playing = bracket.started && bracket.next !== null && bracket.next !== undefined;
   const over = bracket.started && !playing;
+  // A tournament whose draft never finished has no deck, and leaving it gives the fee back
+  if (!bracket.drafted) return (
+    <aside class="cq-side">
+      <div class="cq-panel">
+        <div class="cq-where"><span class="cq-kicker">{bracket.title}</span></div>
+        <h3>{t('lblWebQuestDraftLostTitle')}</h3>
+        <p class="cq-desc">{t('lblWebQuestDraftLost')}</p>
+      </div>
+      <div class="cq-foot">
+        <button class="primary cq-big" onClick={() => actions.questTournamentLeave()}>{t('btnLeaveTournament')}</button>
+      </div>
+    </aside>
+  );
   return (
     <aside class="cq-side">
       <div class="cq-panel">

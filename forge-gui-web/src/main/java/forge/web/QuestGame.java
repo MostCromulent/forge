@@ -597,7 +597,8 @@ final class QuestGame implements Campaign {
             final String opponent = standings[you ^ 1];
             next = QuestEventDraft.UNDETERMINED.equals(opponent) ? "" : seat(draft, standings, you ^ 1).name();
         }
-        return new QuestBracket(draft.getTitle(), rounds, next, draft.getPlacementString(), draft.isStarted());
+        return new QuestBracket(draft.getTitle(), rounds, next, draft.getPlacementString(), draft.isStarted(),
+                quest().getDraftDecks().get(QuestEventDraft.DECK_NAME) != null);
     }
 
     private static QuestSeat seat(final QuestEventDraft draft, final String[] standings, final int place) {
@@ -677,8 +678,11 @@ final class QuestGame implements Campaign {
     private static String startTournament() {
         final QuestEventDraft draft = quest().getAchievements().getCurrentDraft();
         final DeckGroup decks = quest().getDraftDecks().get(QuestEventDraft.DECK_NAME);
-        if (draft == null || draft.isStarted() || decks == null) {
+        if (draft == null || draft.isStarted()) {
             return null;
+        }
+        if (decks == null) {
+            return Localizer.getInstance().getMessage("lblWebQuestDraftLost");
         }
         final String problem = GameType.QuestDraft.getDeckFormat().getDeckConformanceProblem(decks.getHumanDeck());
         if (problem != null && FModel.getPreferences().getPrefBoolean(FPref.ENFORCE_DECK_LEGALITY)) {
@@ -733,7 +737,7 @@ final class QuestGame implements Campaign {
         final List<ResultButton> buttons = over
                 ? List.of(new ResultButton(text.getMessage("lblWebQuestContinueTournament"), "leave", true))
                 : List.of(new ResultButton(text.getMessage("btnContinue"), "nextGame", true),
-                        new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "quit", false));
+                        new ResultButton(text.getMessage("lblWebQuestForfeitTournament"), "forfeit", false));
         result = new CampaignResult(won, over, null, buttons);
         return result;
     }

@@ -872,7 +872,7 @@ public class QuestSessionTest extends SessionsTest {
         final QuestData data = withTournament(d -> d.setStarted(true));
         final Recorder host = inTournamentMatch(data);
         computerLoses(host);
-        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "forfeit"));
         send(host, message("nextGame", "decision", "CONTINUE"));
         awaitPriority(host);
         computerLoses(host);
@@ -972,6 +972,25 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertEquals(str(state, "name"), "Tournament human");
     }
 
+    // Fails if a tournament entered with no pool is not shown as interrupted, can be started, or leaving it keeps the fee
+    @Test(timeOut = 120_000)
+    public void aTournamentWithNoPoolIsLeftForItsFee() throws Exception {
+        final QuestData data = withTournament(d -> FModel.getQuest().getDraftDecks().delete(QuestEventDraft.DECK_NAME));
+        final long credits = data.getAssets().getCredits();
+        final int fee = draftOf(data).getEntryFee();
+        final Recorder host = hostInQuest(data);
+        final JsonObject page = host.awaitNewest("questTournaments", "the tournaments were not sent");
+        Assert.assertFalse(page.getAsJsonObject("bracket").get("drafted").getAsBoolean(), "the tournament is not shown as interrupted: " + page);
+        send(host, JsonCodec.message("questTournamentStart"));
+        host.awaitMatching("notice", n -> n.get("error").getAsBoolean(), "starting it was not refused with a reason");
+        Assert.assertFalse(draftOf(data).isStarted());
+        send(host, JsonCodec.message("questTournamentLeave"));
+        host.awaitMatching("questTournaments", p -> !p.has("bracket") || p.get("bracket").isJsonNull(), "the tournament was not left");
+        final QuestData after = saved(data);
+        Assert.assertEquals(after.getAssets().getCredits(), credits + fee);
+        Assert.assertNull(after.getAchievements().getCurrentDraft());
+    }
+
     // Fails if the computer's matches are decided for ever once the player is out
     @Test(timeOut = 120_000)
     public void nothingIsDecidedOnceThePlayerIsOut() throws Exception {
@@ -988,7 +1007,7 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertTrue(!bracket.has("next") || bracket.get("next").isJsonNull(), "a next match is offered: " + page);
     }
 
-    // Fails if a tournament match adds a quest win or loss
+    // Fails if a tournament match adds a quest win or loss, or its early quit is not the forfeit the browser asks about first
     @Test(timeOut = 240_000)
     public void aTournamentMatchIsNoQuestWinOrLoss() throws Exception {
         WebTestSupport.skipUnlessStress();
@@ -997,7 +1016,7 @@ public class QuestSessionTest extends SessionsTest {
         final int lost = data.getAchievements().getLost();
         final Recorder host = inTournamentMatch(data);
         sessions.onMessage(host, JsonCodec.message("concede"));
-        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "quit"));
+        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("nextGame", "forfeit"));
         sessions.onMessage(host, message("nextGame", "decision", "QUIT"));
         send(host, JsonCodec.message("leave"));
         host.awaitMatching("questTournaments", p -> true, "leaving did not return to the tournaments");
