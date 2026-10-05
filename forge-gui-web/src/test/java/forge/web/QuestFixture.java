@@ -54,7 +54,7 @@ final class QuestFixture {
         return install(false);
     }
 
-    /** The same quest in Classic mode, which has no pets, no bazaar and no challenges. */
+    /** The same quest in Classic mode, which has no pets and no bazaar. */
     static QuestData installClassic() throws IOException {
         return install(true);
     }

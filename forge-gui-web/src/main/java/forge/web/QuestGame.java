@@ -517,26 +517,25 @@ final class QuestGame implements Campaign {
         final QuestController quest = quest();
         final QuestAchievements record = quest.getAchievements();
         final List<QuestChallengeRow> rows = new ArrayList<>();
-        // Fantasy mode's only, as desktop shows challenges
-        if (quest.getMode() == QuestMode.Fantasy) {
-            quest.regenerateChallenges();
-            for (final String id : record.getCurrentChallenges()) {
-                final QuestEventChallenge c = quest.getChallenges().get(id);
-                if (c == null) {
-                    continue;
-                }
-                rows.add(new QuestChallengeRow(c.getId(), c.getTitle(), c.getDifficulty() == null ? 0 : c.getDifficulty().ordinal() + 1,
-                        c.getDescription(), face(c.getEventDeck()), c.getAILife(), c.getHumanLife(), c.getCreditsReward(),
-                        c.getCardRewardList() == null ? List.of() : c.getCardRewardList().stream().map(InventoryItem::getName).toList(),
-                        c.isRepeatable(), c.getHumanExtraCards(), c.getAiExtraCards(), c.getHumanDeck() != null));
+        quest.regenerateChallenges();
+        for (final String id : record.getCurrentChallenges()) {
+            final QuestEventChallenge c = quest.getChallenges().get(id);
+            if (c == null) {
+                continue;
             }
+            rows.add(new QuestChallengeRow(c.getId(), c.getTitle(), c.getDifficulty() == null ? 0 : c.getDifficulty().ordinal() + 1,
+                    c.getDescription(), face(c.getEventDeck()), c.getAILife(), c.getHumanLife(), c.getCreditsReward(),
+                    c.getCardRewardList() == null ? List.of() : c.getCardRewardList().stream().map(InventoryItem::getName).toList(),
+                    c.isRepeatable(), c.getHumanExtraCards(), c.getAiExtraCards(), c.getHumanDeck() != null));
         }
+        // Desktop hides the zeppelin and the next-challenge line in Classic mode, though it offers the challenges
+        final boolean fantasy = quest.getMode() == QuestMode.Fantasy;
         final int max = Math.max(0, Math.min(5, record.getWin() / quest.getTurnsToUnlockChallenge() - record.getChallengesPlayed()));
         final int wins = QuestUtil.nextChallengeInWins();
         final Localizer text = Localizer.getInstance();
-        final String next = rows.isEmpty() ? wins == 1 ? text.getMessage("lblnextChallengeInWins1")
+        final String next = fantasy && rows.isEmpty() ? wins == 1 ? text.getMessage("lblnextChallengeInWins1")
                 : text.getMessage("lblnextChallengeInWins2").replace("%n", String.valueOf(wins)) : null;
-        return new QuestChallenges(rows, rows.size(), max, next, quest.getAssets().hasItem(QuestItemType.ZEPPELIN),
+        return new QuestChallenges(rows, rows.size(), max, next, fantasy && quest.getAssets().hasItem(QuestItemType.ZEPPELIN),
                 quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
     }
 

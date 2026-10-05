@@ -681,7 +681,10 @@ public class QuestSessionTest extends SessionsTest {
 
     /** The fixture with enough wins for challenges to be offered, and one game a match. */
     private static QuestData withChallenges() throws IOException {
-        final QuestData data = QuestFixture.install();
+        return withChallenges(QuestFixture.install());
+    }
+
+    private static QuestData withChallenges(final QuestData data) throws IOException {
         for (int i = 0; i < 40; i++) {
             data.getAchievements().addWin();
         }
@@ -765,6 +768,16 @@ public class QuestSessionTest extends SessionsTest {
             }
         }
         return null;
+    }
+
+    // Fails if a Classic quest offers no challenges, or offers the zeppelin or the next-challenge line, which desktop hides there
+    @Test(timeOut = 120_000)
+    public void aClassicQuestOffersChallenges() throws Exception {
+        final Recorder host = hostInQuest(withChallenges(QuestFixture.installClassic()));
+        final JsonObject page = host.awaitNewest("questChallenges", "the challenges were not sent");
+        Assert.assertTrue(page.getAsJsonArray("challenges").size() > 0, "no challenge is offered after 40 wins: " + page);
+        Assert.assertFalse(page.get("zeppelin").getAsBoolean());
+        Assert.assertFalse(page.has("nextIn") && !page.get("nextIn").isJsonNull(), "the next-challenge line is shown: " + page);
     }
 
     // Fails if the bazaar is offered in Classic mode

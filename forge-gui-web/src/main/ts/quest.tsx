@@ -23,8 +23,8 @@ import { t, type TextKey } from './text';
 const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
 const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['challenges', 'lblChallenges'], ['decks', 'lblQuestDecks'], ['shop', 'lblSpellShop'],
   ['bazaar', 'lblBazaar']];
-/** Challenges and the bazaar are Fantasy mode's only, which a Classic quest's bar shows by having no life. */
-const FANTASY_ONLY: QuestTab[] = ['challenges', 'bazaar'];
+/** The bazaar is Fantasy mode's only, which a Classic quest's bar shows by having no life. */
+const FANTASY_ONLY: QuestTab[] = ['bazaar'];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
@@ -105,7 +105,7 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
     <div class="cq-main" inert={!!reward}>
       {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
         : ui.questTab === 'shop' ? <Shop model={model} actions={actions} />
-        : ui.questTab === 'challenges' && fantasy ? <Challenges page={model.questChallenges} duels={model.questDuels} actions={actions} />
+        : ui.questTab === 'challenges' ? <Challenges page={model.questChallenges} duels={model.questDuels} actions={actions} />
         : ui.questTab === 'bazaar' && fantasy ? <Bazaar model={model} actions={actions} />
         : <Duels page={model.questDuels} actions={actions} />}
     </div>
