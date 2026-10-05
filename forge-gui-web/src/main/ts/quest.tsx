@@ -8,6 +8,7 @@ import { skinIconUrl } from './images';
 import { CampaignBar, Purse } from './campaign';
 import { shortDay } from './limited';
 import { Duels } from './questduels';
+import { Decks } from './questdecks';
 import { Reveal, type Owed } from './conquestreward';
 import type { Actions } from './actions';
 import type { Model } from './model';
@@ -16,7 +17,7 @@ import { t, type TextKey } from './text';
 
 /** The two balances' icons, asked for as the mode opens: on a first visit they would wait behind every picture of the duels. */
 const BALANCE_ICONS = ['ICO_QUEST_COINSTACK', 'ICO_QUEST_LIFE'];
-const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels']];
+const TABS: [QuestTab, TextKey][] = [['duels', 'lblDuels'], ['decks', 'lblQuestDecks']];
 
 export function Quest({ model, actions }: { model: Model; actions: Actions }) {
   const open = model.campaignSave !== null;
@@ -79,13 +80,16 @@ function Campaign({ model, actions }: { model: Model; actions: Actions }) {
   const [owed, setOwed] = useState<Owed>({});
   const reward = model.reward;
   useEffect(() => { if (!reward) setOwed({}); }, [reward]);
-  if (!model.campaignBar || !model.questDuels) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
+  if (!model.campaignBar || !model.questDuels || !model.questDecks) return <p class="muted pools-wait">{t('lblWebQuestReading')}</p>;
   const bar = model.campaignBar;
   return <>
     <CampaignBar bar={bar} tabs={TABS} tab={ui.questTab} setTab={tab => changeUi(u => { u.questTab = tab; })}
       held={reward ? owed : {}} under={!!reward} />
     {model.error && <p class="limited-error">{model.error}</p>}
-    <div class="cq-main" inert={!!reward}><Duels page={model.questDuels} actions={actions} /></div>
+    <div class="cq-main" inert={!!reward}>
+      {ui.questTab === 'decks' ? <Decks page={model.questDecks} model={model} actions={actions} />
+        : <Duels page={model.questDuels} actions={actions} />}
+    </div>
     {reward && <Reveal key={reward.steps.length + ':' + bar.name} reward={reward} onOwed={setOwed} done={() => actions.rewardClaim()} />}
   </>;
 }

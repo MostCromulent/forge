@@ -39,3 +39,10 @@
 .qu-row .seg button { padding: 4px 10px; font-size: 12px; }
 .qu-row select { flex: none; max-width: 170px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; font-size: 12.5px; }
 .qu-check { display: inline-flex; align-items: center; gap: 7px; }
+
+/* The Decks page: the plate that makes a new deck, and the questions asked in the panel's foot */
+.qu-new { display: grid; place-items: center; align-content: center; gap: 8px; min-height: 104px; border: 1px dashed color-mix(in srgb, var(--accent-2) 55%, var(--line)); border-radius: 11px; background: var(--surface); }
+.qu-new .plus { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-2); color: #1a1405; font-size: 20px; font-weight: 800; }
+.qu-name { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px; }
+.qu-name input { flex: 1; min-width: 140px; padding: 6px 9px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+.qu-ask { display: grid; gap: 10px; font-size: 13px; color: var(--muted); }

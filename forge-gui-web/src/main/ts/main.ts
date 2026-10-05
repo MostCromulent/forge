@@ -294,6 +294,7 @@ function apply(msg: ServerMessage): void {
       if (msg.campaign !== 'quest') {
         model.questSaves = null;
         model.questDuels = null;
+        model.questDecks = null;
         ui.questTab = 'duels';
       }
       model.drafting = msg.drafting;
@@ -360,6 +361,7 @@ function apply(msg: ServerMessage): void {
     case 'conquestSaves': model.conquestSaves = msg; break;
     case 'questSaves': model.questSaves = msg; break;
     case 'questDuels': model.questDuels = msg; break;
+    case 'questDecks': model.questDecks = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'campaignResult': model.campaignResult = msg; break;

@@ -15,7 +15,7 @@ export interface Picker {
 export type ZoneSort = 'order' | 'name' | 'type' | 'mana';
 
 export type ConquestTab = 'map' | 'aether' | 'party' | 'collection' | 'planes' | 'stats';
-export type QuestTab = 'duels';
+export type QuestTab = 'duels' | 'decks';
 
 export interface UiState {
   /** Battlefield piles the player has laid out card by card, by the pile's signature. */

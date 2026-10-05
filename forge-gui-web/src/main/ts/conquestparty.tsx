@@ -1,11 +1,10 @@
 // A conquest's commanders and planeswalkers on one page, with the one being looked at and its deck beside them
 
-import type { ComponentChildren } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import { artUrl } from './sleeves';
 import { imageUrl } from './images';
-import { FIVE_COLOURS, Pip, Pips } from './symbols';
+import { FIVE_COLOURS } from './symbols';
 import { Curve } from './deckhalf';
+import { DeckPanel, Plate } from './deckplate';
 import { CardGroup } from './importer';
 import { peekAt } from './deckfinder';
 import { AnyOf, FilterBar, type FilterKind, OneOf } from './filters';
@@ -87,20 +86,16 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
       </div>
       {walker ? <WalkerPanel walker={walker} actions={actions} />
         : commander && (
-          <aside class="cq-side">
-            <div class="cq-cmd-detail">
-              <img class="cq-card" alt={commander.name} src={imageUrl(commander.image)} />
-              <h3>{commander.name}</h3>
-              <div class="cq-chips">
-                {commander.origin && <span class="cq-chip">{commander.origin}</span>}
-                <span class="cq-chip">{commander.wins}W / {commander.losses}L</span>
-                <span class="cq-chip"><DeckLine commander={commander} /></span>
-              </div>
-              {commander.problem && commander.deckSize > 0 && <p class="cq-warn">{commander.problem}</p>}
+          <DeckPanel image={commander.image} title={commander.name} problem={commander.deckSize > 0 ? commander.problem : null}
+            chips={<>
+              {commander.origin && <span class="cq-chip">{commander.origin}</span>}
+              <span class="cq-chip">{commander.wins}W / {commander.losses}L</span>
+              <span class="cq-chip"><DeckLine commander={commander} /></span>
+            </>}
+            details={<>
               {details && commander.deckSize > 0 && <Curve curve={details.stats.curve} creatures={details.stats.creatures} px={44} />}
               {reading && details && <div class="dk-cards">{details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} />)}</div>}
-            </div>
-            <div class="cq-foot">
+            </>}>
               <div class="cq-two">
                 <button aria-pressed={reading} disabled={!commander.deckSize} onClick={() => setReading(!reading)}>{t('lblViewDeck')}</button>
                 <button onClick={() => actions.conquestEditDeck(commander.name)}>{t('btnEditDeck')}</button>
@@ -108,8 +103,7 @@ export function Party({ model, actions }: { model: Model; actions: Actions }) {
               <button class="primary cq-big" disabled={commander.selected} onClick={() => actions.conquestLead(commander.name)}>
                 {commander.selected ? t('lblSelected') : t('lblSelectCommander')}
               </button>
-            </div>
-          </aside>
+          </DeckPanel>
         )}
       {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
     </div>
@@ -122,22 +116,6 @@ function DeckLine({ commander }: { commander: ConquestCommanderRow }) {
   return commander.problem
     ? <span class="cq-warn" title={commander.problem}>{t('lblInvalidDeck')} · {commander.deckSize}</span>
     : <>{t('lblWebNCards', commander.deckSize)}</>;
-}
-
-function Plate({ name, image, colors, selected, pressed, pick, lines }: {
-  name: string; image: string; colors: string; selected: boolean; pressed: boolean; pick: () => void; lines: ComponentChildren[];
-}) {
-  return (
-    <button class="cq-cmd" aria-pressed={pressed} onClick={pick}>
-      <div class="a" style={{ backgroundImage: `url("${artUrl(image)}")` }} />
-      {selected && <span class="cq-chip brass tag">{t('lblSelected')}</span>}
-      <div class="t">
-        <b>{name}</b>
-        <span class="l"><span class="pips">{colors ? <Pips colors={colors} /> : <Pip letter="C" />}</span>{lines[0]}</span>
-        {lines[1] && <span class="l">{lines[1]}</span>}
-      </div>
-    </button>
-  );
 }
 
 function WalkerPanel({ walker, actions }: { walker: ConquestWalkerRow; actions: Actions }) {

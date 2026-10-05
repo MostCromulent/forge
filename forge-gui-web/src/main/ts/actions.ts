@@ -127,6 +127,15 @@ export interface Actions {
   /** Chooses the pet for a slot, the plant's being 0; null summons none. */
   questPet(slot: number, name: string | null): void;
   questMatchLength(games: number): void;
+  /** Makes an empty deck of a name and opens it in the editor. */
+  questDeckNew(name: string): void;
+  questDeckRename(deck: string, to: string): void;
+  /** Makes a deck the one duels are fought with. */
+  questDeckCurrent(deck: string): void;
+  /** Asks for a deck's list, which arrives as a deck's details do. */
+  questDeckView(deck: string): void;
+  questDeckEdit(deck: string): void;
+  questDeckDelete(deck: string): void;
 
   // Online draft and sealed, at a table
   /** Opens a table others can join by link and makes it a draft or sealed table once it is open. */
@@ -275,6 +284,12 @@ export function createActions(send: Send): Actions {
     questDuel: index => send({ t: 'questDuel', index }),
     questPet: (slot, name) => send({ t: 'questPet', slot, name: name ?? undefined }),
     questMatchLength: games => send({ t: 'questMatchLength', games }),
+    questDeckNew: name => send({ t: 'questDeckNew', name }),
+    questDeckRename: (deck, to) => send({ t: 'questDeckRename', deck, to }),
+    questDeckCurrent: deck => send({ t: 'questDeckCurrent', deck }),
+    questDeckView: deck => send({ t: 'questDeckView', deck }),
+    questDeckEdit: deck => send({ t: 'questDeckEdit', deck }),
+    questDeckDelete: deck => send({ t: 'questDeckDelete', deck }),
     conquestOptions: (plane, commander) => send({ t: 'conquestOptions', plane, commander }),
     conquestCreate: c => send({ t: 'conquestCreate', ...c }),
     conquestAether: q => send({ t: 'conquestAether', ...q }),
