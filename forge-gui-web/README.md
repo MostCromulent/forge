@@ -1,7 +1,7 @@
 # Forge Web GUI
 
-Play Forge in a web browser. One person runs Forge on their computer and sends the others a link. They don't
-need to install anything. You can also play alone against the computer.
+Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by
+web link with no further install required. You can also play alone against the computer.
 
 It has fewer options than desktop Forge and is meant to be quick to learn. It is made for a mouse and keyboard
 first. Phones are only partly supported. You can set up and play a match on a phone, but the deck editor, Draft,
