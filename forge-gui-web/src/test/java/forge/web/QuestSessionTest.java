@@ -15,6 +15,7 @@ import forge.gamemodes.quest.io.QuestDataIO;
 import forge.gui.GuiBase;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.player.GamePlayerUtil;
 import forge.player.PlayerControllerHuman;
 import forge.util.Localizer;
 import org.testng.Assert;
@@ -271,12 +272,16 @@ public class QuestSessionTest extends SessionsTest {
         throw new AssertionError("no " + kind + " step titled " + title + " in " + reward);
     }
 
-    // Fails if a duel does not start with the quest's deck against the chosen opponent
+    // Fails if a duel does not start with the quest's deck against the chosen opponent, or the player's seat lacks the face and sleeve chosen
     @Test(timeOut = 180_000)
     public void aDuelStartsAgainstTheChosenOpponent() throws Exception {
         WebTestSupport.skipUnlessStress();
         final QuestData data = QuestFixture.install();
         final Recorder host = hostInQuest(data);
+        // Quest plays the shared human player, which a lobby match before this one may have given looks
+        GamePlayerUtil.getQuestPlayer().setAvatarIndex(-1);
+        GamePlayerUtil.getQuestPlayer().setSleeveIndex(-1);
+        sessions.onMessage(host, message("setName", "name", "Host", "avatar", 5));
         final JsonObject row = host.awaitNewest("questDuels", "the duels were not sent").getAsJsonArray("duels").get(0).getAsJsonObject();
         send(host, message("questDuel", "index", 0));
         host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the duel did not start");
@@ -288,6 +293,8 @@ public class QuestSessionTest extends SessionsTest {
         for (final Player p : game.getPlayers()) {
             if (p.getController() instanceof PlayerControllerHuman) {
                 Assert.assertEquals(p.getRegisteredPlayer().getDeck().getName(), "Forest deck");
+                Assert.assertEquals(p.getLobbyPlayer().getAvatarIndex(), 5);
+                Assert.assertEquals(p.getLobbyPlayer().getSleeveIndex(), LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
             }
         }
     }

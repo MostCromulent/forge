@@ -1416,6 +1416,9 @@ public final class WebSession {
             }
             // The game names its winner by this name, and the board knows the seat by the session's
             prepared.human().getPlayer().setName(playerName());
+            // Quest plays Forge's one shared human player, whose looks are whatever the last match gave it
+            prepared.human().getPlayer().setAvatarIndex(avatarIndex());
+            prepared.human().getPlayer().setSleeveIndex(LocalGame.storedIndex(FPref.UI_SLEEVES, 0));
             local.startPrepared(playerName(), prepared, playing.gui());
         } catch (final RuntimeException ex) {
             Logger.error(ex, "Could not start the match");
