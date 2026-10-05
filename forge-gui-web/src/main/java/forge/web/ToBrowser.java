@@ -717,6 +717,14 @@ final class ToBrowser {
             List<QuestPetChoice> pets, List<Integer> matchLengths, int matchLength, String deck, @Nullable String deckProblem) {
     }
 
+    /** A quest deck: its picture, colours and size, why it cannot be played if it cannot, and whether it is the one duels use. */
+    record QuestDeckRow(String name, @Nullable String image, String colors, int size, int sideboard, @Nullable String problem, boolean current) {
+    }
+
+    @Message("questDecks")
+    record QuestDecks(List<QuestDeckRow> decks) {
+    }
+
     /** Every message record, which is what the TypeScript is generated from. */
     static final List<Class<? extends Record>> MESSAGES = Wire.marked(ToBrowser.class, Message.class);
 

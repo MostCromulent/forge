@@ -450,6 +450,22 @@ final class FromBrowser {
     record QuestMatchLength(int games) {
     }
 
+    enum QuestDeckAction { questDeckCurrent, questDeckView, questDeckEdit, questDeckDelete }
+
+    /** Something done with a quest deck, by name: made the one duels use, its list asked for, opened in the editor, or deleted. */
+    @Command
+    record QuestDeckCommand(QuestDeckAction t, String deck) {
+    }
+
+    /** Makes an empty quest deck of a name and opens it in the editor. */
+    @Command("questDeckNew")
+    record QuestDeckNew(String name) {
+    }
+
+    @Command("questDeckRename")
+    record QuestDeckRename(String deck, String to) {
+    }
+
     /** Fights a duel of the Duels page, by its place in the list that page was sent. */
     @Command("questDuel")
     record QuestDuel(int index) {

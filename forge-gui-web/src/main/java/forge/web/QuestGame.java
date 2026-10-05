@@ -2,7 +2,12 @@ package forge.web;
 
 import com.google.gson.JsonObject;
 import forge.card.CardType;
+import forge.deck.CardPool;
 import forge.deck.Deck;
+import forge.deck.DeckSection;
+import forge.game.GameType;
+import forge.gamemodes.quest.data.DeckConstructionRules;
+import forge.util.storage.IStorage;
 import forge.gamemodes.quest.QuestController;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
@@ -147,7 +152,115 @@ final class QuestGame implements Campaign {
 
     @Override
     public List<Record> page() {
-        return List.of(bar(), duelsPage());
+        return List.of(bar(), duelsPage(), decksPage());
+    }
+
+    /** The quest's decks, by name. */
+    private QuestDecks decksPage() {
+        final String current = quest().getCurrentDeck();
+        final List<QuestDeckRow> rows = new ArrayList<>();
+        for (final Deck deck : quest().getMyDecks()) {
+            final CardPool side = deck.get(DeckSection.Sideboard);
+            rows.add(new QuestDeckRow(deck.getName(), face(deck), DeckCatalog.colors(deck), deck.getMain().countAll(), side == null ? 0 : side.countAll(),
+                    QuestUtil.getDeckConformanceProblemsBeforeGame(deck), deck.getName().equals(current)));
+        }
+        rows.sort(Comparator.comparing(QuestDeckRow::name, String.CASE_INSENSITIVE_ORDER));
+        return new QuestDecks(rows);
+    }
+
+    /** What the deck editor builds a quest deck from: the quest's cards, every printing counted, with a sideboard of its own. */
+    private static DeckEditor.Collection collection() {
+        return new DeckEditor.Collection(quest().getName(), () -> {
+            final CardPool owned = new CardPool();
+            owned.addAll(quest().getCards().getCardpool());
+            return owned;
+        }, card -> quest().getCards().isNew(card), deck -> quest().getAvailableLandSets(), () -> quest().save(), false);
+    }
+
+    /** A Commander quest's decks are checked as Commander decks, every other quest's as Quest's. */
+    private static GameType deckType() {
+        return quest().getDeckConstructionRules() == DeckConstructionRules.Commander ? GameType.Commander : GameType.Quest;
+    }
+
+    /** Why a quest deck cannot take a name, or null when it can. */
+    private static String deckNameProblem(final String name) {
+        final String problem = DeckStore.nameProblem(name);
+        if (problem != null) {
+            return problem;
+        }
+        return quest().getMyDecks().contains(name.trim()) ? Localizer.getInstance().getMessage("lblWebEditorNameTaken", name.trim()) : null;
+    }
+
+    /** A deck's own commands, from the Decks page. Answers false for a message that is not one. */
+    private boolean deckCommand(final BrowserChannel channel, final JsonObject msg, final Host host) {
+        final IStorage<Deck> decks = quest().getMyDecks();
+        switch (msg.get("t").getAsString()) {
+            case "questDeckNew" -> {
+                final String name = Wire.decode(msg, FromBrowser.QuestDeckNew.class).name();
+                final String problem = name == null ? DeckStore.nameProblem("") : deckNameProblem(name);
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return true;
+                }
+                // Stored at once, so the deck is on the Decks page whether or not a card is added
+                final Deck deck = new Deck(name.trim());
+                decks.add(deck);
+                quest().save();
+                host.decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
+            }
+            case "questDeckRename" -> {
+                final FromBrowser.QuestDeckRename rename = Wire.decode(msg, FromBrowser.QuestDeckRename.class);
+                final Deck deck = rename.deck() == null ? null : decks.get(rename.deck());
+                final String problem = deck == null || rename.to() == null ? DeckStore.nameProblem("") : deckNameProblem(rename.to());
+                if (problem != null) {
+                    channel.send(host.error(problem));
+                    return true;
+                }
+                final boolean wasCurrent = deck.getName().equals(quest().getCurrentDeck());
+                decks.delete(deck.getName());
+                deck.setName(rename.to().trim());
+                decks.add(deck);
+                if (wasCurrent) {
+                    quest().setCurrentDeck(deck.getName());
+                }
+                quest().save();
+            }
+            case "questDeckCurrent", "questDeckView", "questDeckEdit", "questDeckDelete" -> {
+                final FromBrowser.QuestDeckCommand command = Wire.decode(msg, FromBrowser.QuestDeckCommand.class);
+                final Deck deck = command.deck() == null ? null : decks.get(command.deck());
+                if (deck == null) {
+                    return true;
+                }
+                switch (command.t()) {
+                    case questDeckCurrent -> quest().setCurrentDeck(deck.getName());
+                    case questDeckView -> {
+                        channel.send(new DeckDetailsMessage(new DeckDetails("quest:" + deck.getName(), deck.getName(),
+                                QuestUtil.getDeckConformanceProblemsBeforeGame(deck), DeckCatalog.colors(deck), DeckCatalog.stats(deck),
+                                DeckEditor.groups(deck.getMain(), DeckCatalog.NO_FLAGS), DeckEditor.cards(deck.get(DeckSection.Sideboard), DeckCatalog.NO_FLAGS),
+                                null, 0, null)));
+                        return true;
+                    }
+                    case questDeckEdit -> {
+                        host.decks().openCollectionDeck(deck, decks, deckType(), collection(), true, channel);
+                        return true;
+                    }
+                    case questDeckDelete -> {
+                        decks.delete(deck.getName());
+                        if (deck.getName().equals(quest().getCurrentDeck())) {
+                            quest().setCurrentDeck(QPref.CURRENT_DECK.getDefault());
+                        }
+                    }
+                }
+                quest().save();
+            }
+            default -> {
+                return false;
+            }
+        }
+        // The Duels page names the deck duels use
+        channel.send(duelsPage());
+        channel.send(decksPage());
+        return true;
     }
 
     /** The duels on offer, kept so that an index the browser sends back names the duel it was shown. */
@@ -374,7 +487,7 @@ final class QuestGame implements Campaign {
 
     @Override
     public void handle(final BrowserChannel channel, final JsonObject msg, final String save, final Host host) {
-        if (save == null || quest().getAssets() == null) {
+        if (save == null || quest().getAssets() == null || deckCommand(channel, msg, host)) {
             return;
         }
         switch (msg.get("t").getAsString()) {

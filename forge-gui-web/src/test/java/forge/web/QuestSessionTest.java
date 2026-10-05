@@ -7,7 +7,11 @@ import com.google.gson.JsonPrimitive;
 import forge.game.Game;
 import forge.game.GameType;
 import forge.game.player.Player;
+import forge.deck.Deck;
+import forge.deck.DeckSection;
 import forge.gamemodes.quest.QuestEventDuel;
+import forge.gamemodes.quest.QuestUtil;
+import forge.item.PaperCard;
 import forge.gamemodes.quest.bazaar.QuestItemType;
 import forge.gamemodes.quest.data.QuestData;
 import forge.gamemodes.quest.data.QuestPreferences.QPref;
@@ -75,9 +79,15 @@ public class QuestSessionTest extends SessionsTest {
         return host;
     }
 
-    // The session outlives a test, so a quest the cleanup removes would be shown to the next one's browser
+    private Recorder editor;
+
+    // The session outlives a test, so an open editor or a quest the cleanup removes would be shown to the next one's browser
     @AfterMethod(alwaysRun = true)
     public void leaveTheQuest() throws InterruptedException {
+        if (editor != null) {
+            sessions.onMessage(editor, JsonCodec.message("editorClose"));
+            editor = null;
+        }
         Recorder host = null;
         for (final Recorder browser : browsers) {
             if (browser.hello != null && browser.hello.get("host").getAsBoolean()) {
@@ -386,6 +396,71 @@ public class QuestSessionTest extends SessionsTest {
         answer(host, question, 1);
         send(host, JsonCodec.message("leave"));
         step(untilRewarded(host), "CARDS", chosen);
+    }
+
+    /** The deck of a name in the quest as its file holds it, or null. */
+    private static Deck savedDeck(final QuestData data, final String name) throws IOException {
+        return saved(data).getAssets().getDeckStorage().get(name);
+    }
+
+    // Fails if a new deck is not stored in the quest, or a name another deck has is accepted
+    @Test(timeOut = 120_000)
+    public void aNewDeckIsStoredUnderAFreeName() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        editor = host;
+        send(host, message("questDeckNew", "name", "Ice deck"));
+        host.awaitMatching("editor", e -> e.has("state"), "the editor did not open on the new deck");
+        Assert.assertNotNull(savedDeck(data, "Ice deck"), "the new deck is not in the save");
+        sessions.onMessage(host, JsonCodec.message("editorClose"));
+        editor = null;
+        send(host, message("questDeckNew", "name", "Forest deck"));
+        host.awaitMatching("error", e -> true, "a name in use was not refused");
+        Assert.assertEquals(savedDeck(data, "Forest deck").getMain().countAll(), 40, "the deck of that name was replaced");
+    }
+
+    // Fails if renaming the current deck leaves the quest pointing at the old name
+    @Test(timeOut = 120_000)
+    public void renamingTheCurrentDeckKeepsItCurrent() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        send(host, message("questDeckRename", "deck", "Forest deck", "to", "Green deck"));
+        host.awaitNewest("questDecks", d -> d.toString().contains("Green deck"), "the decks were not sent again");
+        Assert.assertNull(savedDeck(data, "Forest deck"));
+        Assert.assertEquals(savedDeck(data, "Green deck").getMain().countAll(), 40);
+        Assert.assertEquals(saved(data).getAssets().getDeckStorage().get("Green deck").getName(), "Green deck");
+        Assert.assertEquals(FModel.getQuest().getCurrentDeck(), "Green deck");
+        Assert.assertEquals(QuestUtil.getCurrentDeck().getName(), "Green deck");
+    }
+
+    // Fails if a deleted deck stays in the save, or the quest still names it as current
+    @Test(timeOut = 120_000)
+    public void aDeletedDeckLeavesTheSave() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        send(host, message("questDeckDelete", "deck", "Forest deck"));
+        host.awaitNewest("questDecks", d -> d.getAsJsonArray("decks").isEmpty(), "the decks were not sent again");
+        Assert.assertNull(savedDeck(data, "Forest deck"));
+        Assert.assertNull(QuestUtil.getCurrentDeck());
+    }
+
+    // Fails if a deck edited on the web cannot be read back by Quest's own reader with the same cards, or takes a card the quest does not own
+    @Test(timeOut = 120_000)
+    public void anEditedDeckReadsBackInQuest() throws Exception {
+        final QuestData data = QuestFixture.install();
+        final Recorder host = hostInQuest(data);
+        final PaperCard owned = data.getAssets().getCardPool().toFlatList().stream().filter(c -> !c.getRules().getType().isLand()).findFirst().orElseThrow();
+        editor = host;
+        send(host, message("questDeckEdit", "deck", "Forest deck"));
+        host.awaitMatching("editor", e -> e.has("state"), "the editor did not open");
+        send(host, message("editorEdit", "op", "add", "name", owned.getName(), "to", "Sideboard", "count", 1));
+        host.awaitMatching("editor", e -> e.has("state"), "the editor did not answer");
+        send(host, message("editorEdit", "op", "add", "name", "Black Lotus", "to", "Main", "count", 1));
+        host.awaitMatching("notice", e -> true, "a card not owned was not refused");
+        final Deck back = savedDeck(data, "Forest deck");
+        Assert.assertEquals(back.getMain().countAll(), 40);
+        Assert.assertEquals(back.get(DeckSection.Sideboard).count(owned), 1);
+        Assert.assertEquals(back.getMain().countByName("Black Lotus"), 0);
     }
 
     // Fails if a browser without the host's seat can open a quest
