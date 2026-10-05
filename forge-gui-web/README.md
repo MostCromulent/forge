@@ -74,7 +74,9 @@ Display settings, keyboard shortcuts and custom CSS are kept in each browser, in
 ## For developers
 
 The Java side (`src/main/java`) runs the engine and serves the page. The browser side (`src/main/ts`) is
-TypeScript and Preact, bundled by the build into `src/main/resources/web/js/`, which git ignores.
+TypeScript and Preact, bundled by the build into `src/main/resources/web/js/`, which git ignores. Each folder holds
+one part of the page (`match`, `lobby`, `deck`, `limited`, `campaign`, `conquest`, `quest`), and the modules they share
+sit at the top.
 
 ### Building
 
@@ -125,7 +127,7 @@ the call becomes a request and `PendingRequests` holds the game's thread until t
 reloads is sent the whole table again and every question that is still open.
 
 In the page, `main.ts` is the only module that talks to the server. Incoming messages update `model.ts` and the
-page is redrawn from the model once a frame. The board is drawn by hand in `board.ts`. The rest uses Preact.
+page is redrawn from the model once a frame. The board is drawn by hand in `match/board.ts`. The rest uses Preact.
 Components never send messages themselves. They call `actions.ts`.
 
 ### The protocol
@@ -135,7 +137,7 @@ from them and type-checks the TypeScript against it. Changing a record breaks th
 uses it. A field may be null only if it is marked `@Nullable`.
 
 - To add a question the game asks, implement the `IGuiGame` method in `WebGuiGame` with `ask(request, check)`,
-  add a `@Request` record to `ToBrowser` and draw it in `dialogs.tsx`. `WebGuiGameTest` fails while any such
+  add a `@Request` record to `ToBrowser` and draw it in `match/dialogs.tsx`. `WebGuiGameTest` fails while any such
   method is still left to Forge's default.
 - To add a message, write a `@Message` record in `ToBrowser` and handle it in `main.ts`, or a `@Command` record
   in `FromBrowser` and handle it where `WebSession` routes it.

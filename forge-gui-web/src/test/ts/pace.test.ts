@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { worthSeeing } from '../../main/ts/pace';
+import { worthSeeing } from '../../main/ts/match/pace';
 import type { GameEvent } from '../../main/ts/protocol';
 
 const ME = 1;

@@ -1,0 +1,332 @@
+// The bar above the seats: what is played and by how many, as labelled fields that each open their own control
+
+import type { ComponentChildren } from 'preact';
+import { useEffect, useRef, useState } from 'preact/hooks';
+import { HeadControls, PageHeader } from '../header';
+import { t, type TextKey } from '../text';
+import type { Actions } from '../actions';
+import type { Model } from '../model';
+import type { Address, Format, LobbyTable } from '../protocol';
+
+/** A field's popup: opened by its button, closed by Escape or a press anywhere outside it. */
+function Popup({ label, disabled, children, wide, onOpen }: {
+  label: ComponentChildren; disabled?: boolean; children: (close: () => void) => ComponentChildren; wide?: boolean; onOpen?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, [open]);
+  return (
+    <span ref={root} class="popup-anchor">
+      <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => {
+        if (!open) onOpen?.();
+        setOpen(!open);
+      }}>{label}</button>
+      {open && <div class={wide ? 'popup wide' : 'popup'} role="dialog">{children(() => setOpen(false))}</div>}
+    </span>
+  );
+}
+
+function Field({ name, grow, children }: { name: string; grow?: boolean; children: ComponentChildren }) {
+  return (
+    <div class={grow ? 'field grow' : 'field'}>
+      <span class="field-name">{name}</span>
+      {children}
+    </div>
+  );
+}
+
+/** Draft and Sealed, in the shape the server gives a format, so the menu's card reads the same for them. */
+function limitedFormats(): (Format & { kind: 'draft' | 'sealed' })[] {
+  return [
+    { id: 'Draft', kind: 'draft', name: t('lblDraft'), group: 'Limited', desc: t('lblWebMatchBarDescDraft'),
+      facts: [t('lblWebMatchBarFactPicks'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlayDraft') },
+    { id: 'Sealed', kind: 'sealed', name: t('lblSealed'), group: 'Limited', desc: t('lblWebMatchBarDescSealed'),
+      facts: [t('lblWebMatchBarFactPool'), t('lblWebFactLife', 20)], play: t('lblWebMatchBarPlaySealed') },
+  ];
+}
+
+/** A game's deck size in a few words, read from its first fact: "60+ cards", "100 cards", or "no deck" when it is dealt. */
+export function deckMark(format: Format): string {
+  const size = /^(\d+\+?)/.exec(format.facts[0] ?? '')?.[1];
+  return size ? t('lblWebNCards', size) : t('lblWebMatchBarNoDeck');
+}
+
+/** A mark for each family of games: a deck for Constructed, a crown for the commander games, a die for the Momir games and a pack for Limited. */
+const GROUP_ICONS: Record<string, ComponentChildren> = {
+  Constructed: <svg viewBox="0 0 16 16"><rect x="3" y="2" width="9" height="12" rx="1.5" /><path d="M5 4.5v10.5h8V5" opacity=".6" /></svg>,
+  Commander: <svg viewBox="0 0 16 16"><path d="M2 12 L3 5 L6 8 L8 3 L10 8 L13 5 L14 12 Z" /></svg>,
+  Other: <svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5" /><circle cx="5.7" cy="5.7" r="1.3" fill="currentColor" stroke="none" />
+    <circle cx="8" cy="8" r="1.3" fill="currentColor" stroke="none" /><circle cx="10.3" cy="10.3" r="1.3" fill="currentColor" stroke="none" /></svg>,
+  Limited: <svg viewBox="0 0 16 16"><path d="M4 2h8l1 3v9H3V5z" /><path d="M3 5h10" /></svg>,
+};
+
+/** What each family of games is called; the server names a format's family by these words. */
+const GROUP_NAMES: Record<string, TextKey> = {
+  Constructed: 'lblConstructed', Commander: 'lblCommander', Other: 'lblOther', Limited: 'lblLimited',
+};
+
+/** A list of every game beside a card that explains the chosen one, or the one last pointed at. */
+export function GameMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  const lim = lobby.limited;
+  const LIMITED = limitedFormats();
+  const chosen: Format | undefined = lim ? LIMITED.find(l => l.kind === lim.kind) : lobby.formats.find(f => f.id === lobby.format);
+  const [pointed, setPointed] = useState<Format | null>(null);
+  // A new kind of event waits until the one begun is over; a format waits out a draft
+  const drafting = lim?.phase === 'DRAFTING' && !lim.activeEventId;
+  const limitedOffered = lobby.shareable || !!lim;
+  const shown = pointed ?? chosen ?? null;
+  const pick = (f: Format, close: () => void) => {
+    const kind = LIMITED.find(l => l.id === f.id)?.kind;
+    if (kind) {
+      actions.setLimited(kind);
+    } else {
+      if (lim) actions.setLimited(null);
+      actions.setFormat(f.id);
+    }
+    setPointed(null);
+    close();
+  };
+  const blocked = (f: Format) => (LIMITED.some(l => l.id === f.id) ? !!lim?.started : drafting);
+  const groups: [string, Format[]][] = [...groupsOf(lobby.formats), ...(limitedOffered ? [['Limited', LIMITED] as [string, Format[]]] : [])];
+  return (
+    <Popup label={chosen?.name ?? lobby.format} disabled={!lobby.host} wide>
+      {close => (
+        <div class="game-menu-list">
+          <div class="game-choices">
+            {groups.map(([group, formats]) => (
+              <div key={group} class="game-group">
+                <span class="game-group-name">{GROUP_NAMES[group] ? t(GROUP_NAMES[group]) : group}</span>
+                {formats.map(f => (
+                  <button key={f.id} class="game-choice" aria-pressed={f === chosen} disabled={blocked(f)}
+                    onPointerEnter={e => { if (e.pointerType === 'mouse') setPointed(f); }} onFocus={() => setPointed(f)}
+                    onClick={() => pick(f, close)}>
+                    <i class="game-icon" aria-hidden="true">{GROUP_ICONS[f.group]}</i>
+                    <span class="game-name">{f.name}</span><span class="game-size">{deckMark(f)}</span>
+                  </button>
+                ))}
+              </div>
+            ))}
+          </div>
+          {shown && (
+            <div class="game-card">
+              <h5>{shown.name}</h5>
+              <p class="desc">{shown.desc}</p>
+              <div class="facts">{shown.facts.map(x => <span key={x} class="fact">{x}</span>)}</div>
+              <p class="format-play"><b>{t('lblWebMatchBarInMatch')}</b> {shown.play}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </Popup>
+  );
+}
+
+/** Formats under their group, in the order the server lists them. */
+function groupsOf(formats: Format[]): [string, Format[]][] {
+  const groups = new Map<string, Format[]>();
+  for (const f of formats) groups.set(f.group, [...(groups.get(f.group) ?? []), f]);
+  return [...groups];
+}
+
+/** Why a casual variant cannot be switched on, or null. Momir Basic and MoJhoSto bring their own avatars. */
+export function variantBlocked(lobby: LobbyTable, id: string): string | null {
+  const group = lobby.formats.find(f => f.id === lobby.format)?.group;
+  return id === 'Vanguard' && group === 'Other' ? t('lblWebMatchBarVanguardOff') : null;
+}
+
+function VariantsMenu({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  const on = lobby.casualVariants.filter(v => lobby.variantsOn.includes(v.id));
+  return (
+    <Popup label={on.length ? on.map(v => v.name).join(', ') : <span class="muted">{t('lblNone')}</span>} disabled={!lobby.host}>
+      {() => (
+        <div class="variant-list">
+          {lobby.casualVariants.map(v => {
+            const blocked = variantBlocked(lobby, v.id);
+            return (
+              <label key={v.id} class={blocked ? 'variant blocked' : 'variant'}>
+                <input type="checkbox" checked={lobby.variantsOn.includes(v.id)} disabled={!!blocked}
+                  onChange={e => actions.setVariant(v.id, e.currentTarget.checked)} />
+                <span><b>{v.name}</b><span class="muted">{blocked ?? v.desc}</span></span>
+              </label>
+            );
+          })}
+        </div>
+      )}
+    </Popup>
+  );
+}
+
+/** Seats a lower count takes away, as the server takes them: open seats, then computers, from the end; never a person's. */
+export function seatsLeaving(lobby: LobbyTable, count: number): Set<number> {
+  const out = new Set<number>();
+  let extra = lobby.seats.length - count;
+  for (const type of ['OPEN', 'AI']) {
+    for (let i = lobby.seats.length - 1; i >= 0 && extra > 0; i--) {
+      if (!lobby.seats[i].mine && lobby.seats[i].type === type && !out.has(i)) {
+        out.add(i);
+        extra--;
+      }
+    }
+  }
+  return out;
+}
+
+/** The fewest seats a table can have: two, or everyone who is seated. */
+export function fewestSeats(lobby: LobbyTable): number {
+  return Math.max(2, lobby.seats.filter(s => s.mine || s.type === 'LOCAL' || s.type === 'REMOTE').length);
+}
+
+export function PlayerCount({ lobby, actions, preview }: { lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void }) {
+  const fewest = fewestSeats(lobby);
+  const counts = Array.from({ length: lobby.maxSeats - 1 }, (_, i) => i + 2);
+  const drafting = lobby.limited?.phase === 'DRAFTING' && !lobby.limited.activeEventId;
+  return (
+    <span class="count" role="group" aria-label={t('lblPlayers')} onPointerLeave={() => preview(null)}>
+      {counts.map(n => (
+        <button key={n} aria-pressed={n === lobby.seats.length} disabled={!lobby.host || drafting || n < fewest}
+          title={n < fewest ? t('lblWebMatchBarFewerSeats') : ''}
+          onPointerEnter={() => preview(n < lobby.seats.length ? n : null)}
+          onClick={() => { preview(null); actions.setPlayerCount(n); }}>{n}</button>
+      ))}
+    </span>
+  );
+}
+
+/** The highest Commander bracket the table plays at, as the host's own Forge keeps it; 5 is any. Only the host may change it. */
+function MaxBracket({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  return (
+    <span class="count" role="group" aria-label={t('lblBracket')}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button key={n} aria-pressed={n === lobby.maxBracket} disabled={!lobby.host} title={n < 5 ? t('lblWebMatchBarBracketTip', n) : ''}
+          onClick={() => actions.setMaxBracket(n)}>{n < 5 ? n : t('lblAny')}</button>
+      ))}
+    </span>
+  );
+}
+
+const MATCH_LENGTHS = [[1, 'lblWebMatchBarBestOfOne'], [3, 'lblWebMatchBarBestOfThree'], [5, 'lblWebMatchBarBestOfFive']] as const;
+
+/** Best-of-one, three or five, as the host's own Forge keeps it; only the host may change it. */
+function MatchLength({ lobby, actions }: { lobby: LobbyTable; actions: Actions }) {
+  return (
+    <span class="count" role="group" aria-label={t('lblMatch')}>
+      {MATCH_LENGTHS.map(([n, name]) => (
+        <button key={n} aria-pressed={n === lobby.gamesPerMatch} disabled={!lobby.host} title={t(name)}
+          onClick={() => actions.setMatchLength(n)}>{t('lblWebMatchBarBestOfShort', n)}</button>
+      ))}
+    </span>
+  );
+}
+
+/** Which cards a Constructed game allows, with where each format's cards come from asked for when it first opens. */
+function CardPoolPicker({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
+  const details = model.cardPoolDetails;
+  const lines = new Map((details?.lines ?? []).map(l => [l.name, l.line]));
+  const group = (name: string) => model.cardPools.find(g => g.name === name)?.formats ?? [];
+  return (
+    <Popup label={lobby.cardPool ?? t('lblWebMatchBarAnyCards')} disabled={!lobby.host} wide
+      onOpen={() => { if (!details) actions.askCardPoolDetails(); }}>
+      {close => {
+        const choose = (name: string | null) => { actions.setCardPool(name); close(); };
+        return (
+          <div class="pool-picker">
+            <span class="field-name">{t('lblWebMatchBarAnyOrFormat')}</span>
+            <div class="pool-tiles">
+              <button class="pool-tile" aria-pressed={!lobby.cardPool} onClick={() => choose(null)}><b>{t('lblWebMatchBarAnyCards')}</b><span>{t('lblWebMatchBarNoLimit')}</span></button>
+              {group('Sanctioned').map(name => (
+                <button key={name} class="pool-tile" aria-pressed={lobby.cardPool === name} onClick={() => choose(name)}>
+                  <b>{name}</b><span>{lines.get(name) ?? ''}</span>
+                </button>
+              ))}
+            </div>
+            {group('Casual').length > 0 && <>
+              <span class="field-name">{t('lblWebMatchBarCasual')}</span>
+              <div class="pool-chips">
+                {group('Casual').map(name => (
+                  <button key={name} class="pool-chip" aria-pressed={lobby.cardPool === name} title={lines.get(name)} onClick={() => choose(name)}>{name}</button>
+                ))}
+              </div>
+            </>}
+            {group('Block').length > 0 && (
+            <div class="pool-more">
+                <label>{t('lblWebMatchBarBlock')}
+                  <span class="pill-select"><select value={group('Block').includes(lobby.cardPool ?? '') ? lobby.cardPool : ''}
+                    onChange={e => choose(e.currentTarget.value)}>
+                    <option value="" disabled>{t('lblWebMatchBarChooseBlock')}</option>
+                    {group('Block').map(name => <option key={name} value={name}>{name}</option>)}
+                  </select></span>
+                </label>
+            </div>
+            )}
+          </div>
+        );
+      }}
+    </Popup>
+  );
+}
+
+/** The field names are the tournament rules' own: a format says which cards are allowed, and a match is the games played between decks. */
+export function MatchBar({ model, lobby, actions, preview }: {
+  model: Model; lobby: LobbyTable; actions: Actions; preview: (count: number | null) => void;
+}) {
+  return (
+    <div class="match-bar">
+      <div class="fields">
+        <Field name={t('lblWebMatchBarMode')}><GameMenu lobby={lobby} actions={actions} /></Field>
+        {lobby.format === 'Constructed' && <Field name={t('lblFormat')}><CardPoolPicker model={model} lobby={lobby} actions={actions} /></Field>}
+        <Field name={t('lblPlayers')}><PlayerCount lobby={lobby} actions={actions} preview={preview} /></Field>
+        {lobby.format === 'Commander' && <Field name={t('lblBracket')}><MaxBracket lobby={lobby} actions={actions} /></Field>}
+        <Field name={t('lblMatch')}><MatchLength lobby={lobby} actions={actions} /></Field>
+        <Field name={t('lblVariants')} grow><VariantsMenu lobby={lobby} actions={actions} /></Field>
+      </div>
+    </div>
+  );
+}
+
+/** How others join, the sound and the options, and the way out. Who is here is the dock's to say. */
+export function TableHeader({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
+  return (
+    <PageHeader>
+      <div class="head-right">
+        {lobby.shareable && (
+          <Popup label={t('lblWebMatchBarInvite')}>
+            {() => (
+              <div class="invite">
+                <b>{t('lblWebMatchBarOthersJoinAt')}</b>
+                <Addresses list={model.addresses ?? []} />
+              </div>
+            )}
+          </Popup>
+        )}
+        {/* The way out is the trail over the table (lobby.tsx), which also says where it leads */}
+        <HeadControls />
+      </div>
+    </PageHeader>
+  );
+}
+
+function Addresses({ list }: { list: Address[] }) {
+  const [copied, setCopied] = useState<string | null>(null);
+  if (!list.length) {
+    return <p class="muted">{t('lblWebMatchBarWorkingOutAddress')}</p>;
+  }
+  return <>{list.map(a => (
+    <button key={a.url} class="share-row" onClick={async () => {
+      await navigator.clipboard.writeText(a.url);
+      setCopied(a.url);
+    }}>
+      <span class="share-label">{a.label}</span><code class="share-url">{a.url}</code>
+      <span class="share-copy">{t(copied === a.url ? 'lblWebMatchBarCopied' : 'lblCopy')}</span>
+    </button>
+  ))}</>;
+}

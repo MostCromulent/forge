@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newCards, repeatTap, seatToOpen, tagsFor, tapInspects } from '../../main/ts/portrait';
+import { newCards, repeatTap, seatToOpen, tagsFor, tapInspects } from '../../main/ts/match/portrait';
 
 describe('tapInspects', () => {
   const card = { playable: false, selectable: false, mine: false };

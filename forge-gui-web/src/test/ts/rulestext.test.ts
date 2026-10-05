@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesOf, plain, sortRulesText, type Line } from '../../main/ts/rulestext';
+import { changesOf, plain, sortRulesText, type Line } from '../../main/ts/match/rulestext';
 
 const lines = (text: string): Line[] => text.split('\n').map(t => [{ text: t, muted: false }]);
 const sort = (text: string) => sortRulesText(lines(text));

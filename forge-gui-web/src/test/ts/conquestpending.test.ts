@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { pendingAmounts } from '../../main/ts/conquestpending';
+import { pendingAmounts } from '../../main/ts/conquest/conquestpending';
 import type { RewardStep } from '../../main/ts/protocol';
 
 const SHARD = 'IMG_AETHER_SHARD', EMBLEM = 'IMG_PW_BADGE_COMMON';

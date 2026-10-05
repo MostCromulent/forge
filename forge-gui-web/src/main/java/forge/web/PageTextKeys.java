@@ -30,7 +30,7 @@ final class PageTextKeys {
         final TreeSet<String> used = new TreeSet<>();
         final List<String> problems = new ArrayList<>();
         final List<Path> sources = new ArrayList<>();
-        try (Stream<Path> files = Files.list(tsDir)) {
+        try (Stream<Path> files = Files.walk(tsDir)) {
             files.filter(f -> f.toString().matches(".*\\.tsx?") && !f.toString().endsWith(".gen.ts")).sorted().forEach(sources::add);
         }
         // The page's frame names some of its text too, by data-text

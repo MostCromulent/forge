@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { isFolded, layout } from '../../main/ts/conquestlayout';
+import { isFolded, layout } from '../../main/ts/conquest/conquestlayout';
 import type { ConquestCell } from '../../main/ts/protocol';
 
 const region = (conquered = 0) => ({ name: '', art: '', colors: '', conquered, total: 9 });
