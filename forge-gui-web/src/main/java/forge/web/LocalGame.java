@@ -17,6 +17,7 @@ import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.NetEvent;
 import forge.gamemodes.net.event.UpdateLobbyPlayerEvent;
 import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.HostingServer;
 import forge.gamemodes.net.server.RemoteClient;
 import forge.gamemodes.net.server.RemoteClientGuiGame;
 import forge.gamemodes.net.server.ServerGameLobby;
@@ -95,7 +96,7 @@ public final class LocalGame {
         endMatch();
         awaitOldSeatsFreed();
         // The server costs nothing to leave running, so it outlives every game it serves
-        if (!server.isHosting()) {
+        if (!HostingServer.isHosting()) {
             server.startLoopbackServer();
             startedServer = true;
         }
@@ -133,7 +134,7 @@ public final class LocalGame {
 
     /** Waits for the last table's connections to go, since the server frees a late-closing seat in whichever lobby is current by then. */
     private void awaitOldSeatsFreed() {
-        if (!server.isHosting()) {
+        if (!HostingServer.isHosting()) {
             return;
         }
         final long giveUp = System.currentTimeMillis() + FREE_SEATS_TIMEOUT_MILLIS;

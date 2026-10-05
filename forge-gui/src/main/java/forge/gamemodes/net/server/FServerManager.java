@@ -145,7 +145,6 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     /** Where a client in this process connects to a server started by {@link #startLoopbackServer()}. */
     public static final LocalAddress LOOPBACK = new LocalAddress("forge");
 
-    private volatile boolean isHosting = false;
     private volatile boolean loopbackOnly;
     // Created by startServer: an offline game reaches getInstance() but never needs the selectors
     private EventLoopGroup bossGroup;
@@ -154,11 +153,10 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     private ServerGameLobby localLobby;
     private ILobbyListener lobbyListener;
     private IDraftEventHandler draftHandler;
-    private boolean UPnPMapped = false;
     private int port;
     private static final Localizer localizer = Localizer.getInstance();
     private final Thread shutdownHook = new Thread(() -> {
-        if (isHosting()) {
+        if (HostingServer.isHosting()) {
             stopServer(false);
         }
     });
@@ -289,7 +287,6 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                 mapNatPort();
             }
             Runtime.getRuntime().addShutdownHook(shutdownHook);
-            isHosting = true;
             HostingServer.set(this);
         } catch (final InterruptedException e) {
             netLog.error(e, "Server start interrupted");
@@ -322,10 +319,9 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     public void stopServer() {
         stopServer(true);
     }
-
     private synchronized void stopServer(final boolean removeShutdownHook) {
         // The shutdown hook and the channel-close thread both stop the server; only the first does the work
-        if (!isHosting) {
+        if (!HostingServer.isHosting()) {
             return;
         }
         forgetDisconnectedClients();
@@ -349,19 +345,9 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         if (removeShutdownHook) {
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
         }
-        isHosting = false;
         loopbackOnly = false;
         HostingServer.set(null);
-        UPnPMapped = false;
         NetworkLogConfig.deactivateNetworkLogging();
-    }
-
-    public boolean isHosting() {
-        return isHosting;
-    }
-
-    public boolean isUPnPMapped() {
-        return UPnPMapped;
     }
 
     public int getTotalSendErrors() {
@@ -425,7 +411,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
      */
     @Override
     public AfkTimeout armAfkTimeout(final PlayerControllerHuman controller, final InputSynchronized input) {
-        if (!isHosting() || localLobby == null || loopbackOnly) {
+        if (!HostingServer.isHosting() || localLobby == null || loopbackOnly) {
             return AfkTimeout.NOOP;
         }
         final HostedMatch hostedMatch = localLobby.getHostedMatch();
@@ -776,10 +762,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
 
     private void mapNatPort() {
         portForward = new PortForward(port);
-        portForward.open(accepted -> {
-            UPnPMapped = accepted;
-            onUPnPResult(accepted);
-        });
+        portForward.open(this::onUPnPResult);
     }
 
     private void onUPnPResult(boolean success) {
