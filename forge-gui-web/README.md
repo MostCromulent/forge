@@ -9,14 +9,14 @@ the deck editor, Draft, Sealed and Conquest have none yet.
 
 <p>
   <img src="docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">
-  <img src="docs/target.webp" width="49%" alt="A spell's targets while it is paid for">
+  <img src="docs/cast.webp" width="49%" alt="A spell cast from the hand at two creatures">
 </p>
 <p>
-  <img src="docs/four.webp" width="49%" alt="A four-player game, attacking two opponents">
-  <img src="docs/victory.webp" width="49%" alt="The end of a game">
+  <img src="docs/attack.webp" width="49%" alt="Three creatures attacking">
+  <img src="docs/victory.webp" width="49%" alt="A winning spell and the end of a game">
 </p>
 <p>
-  <img src="docs/hand.webp" width="49%" alt="A card raised from the hand, on a playmat">
+  <img src="docs/hover.webp" width="49%" alt="Cards raised from the hand as the pointer passes over them">
   <img src="docs/conquest.webp" width="49%" alt="The map of a Planar Conquest">
 </p>
 
