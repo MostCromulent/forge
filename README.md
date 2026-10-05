@@ -1,8 +1,8 @@
 # Forge Web GUI
 
-> **This is a development branch.** The web GUI is being built here, on the `forge-gui-web` branch of the
+> **This is a development branch.** The web GUI is being built here on the `forge-gui-web` branch of the
 > [MostCromulent/forge](https://github.com/MostCromulent/forge) fork. It is not part of a Card-Forge release and it
-> changes often. For Forge itself, see [Card-Forge/forge](https://github.com/Card-Forge/forge).
+> changes often.
 
 Forge in a web browser with a modern interface. The host runs a small server on their computer. Players join by
 web link with no further install required. You can also play alone against the computer.
