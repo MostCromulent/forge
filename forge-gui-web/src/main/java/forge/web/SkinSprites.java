@@ -12,6 +12,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -23,9 +24,10 @@ final class SkinSprites {
     private static BufferedImage manaIcons;
     private static BufferedImage abilityIcons;
     private static List<BufferedImage> sleeves;
-    private static BufferedImage conquestIcons;
-    private static final Set<FSkinProp> CONQUEST_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
-            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE);
+    /** The sheets campaign icons are cut from, by file name. */
+    private static final Map<String, BufferedImage> iconSheets = new HashMap<>();
+    private static final Set<FSkinProp> CAMPAIGN_ICONS = Set.of(FSkinProp.IMG_AETHER_SHARD, FSkinProp.IMG_PW_BADGE_COMMON,
+            FSkinProp.IMG_SPELLBOOK, FSkinProp.IMG_MULTIVERSE, FSkinProp.ICO_QUEST_COINSTACK, FSkinProp.ICO_QUEST_LIFE);
     private static final Map<String, byte[]> encoded = new ConcurrentHashMap<>();
 
     private SkinSprites() {
@@ -72,10 +74,10 @@ final class SkinSprites {
     /** PNG bytes of one of the skin icons a campaign shows, named by its FSkinProp, or null for any other name. */
     static byte[] iconPng(final String name) {
         final FSkinProp prop = prop(name);
-        if (prop == null || !CONQUEST_ICONS.contains(prop)) {
+        if (prop == null || !CAMPAIGN_ICONS.contains(prop)) {
             return null;
         }
-        return encoded.computeIfAbsent("c" + name, k -> cell(conquestSheet(), prop, k));
+        return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));
     }
 
     private static FSkinProp prop(final String name) {
@@ -86,11 +88,8 @@ final class SkinSprites {
         }
     }
 
-    private static synchronized BufferedImage conquestSheet() {
-        if (conquestIcons == null) {
-            conquestIcons = read(skinFile(ForgeConstants.SPRITE_PLANAR_CONQUEST_FILE));
-        }
-        return conquestIcons;
+    private static synchronized BufferedImage iconSheet(final String file) {
+        return iconSheets.computeIfAbsent(file, f -> read(skinFile(f)));
     }
 
     private static synchronized BufferedImage manaSheet() {

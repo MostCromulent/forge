@@ -275,19 +275,23 @@ function apply(msg: ServerMessage): void {
       model.campaign = msg.campaign ?? null;
       model.campaignSave = msg.campaignSave ?? null;
       model.currentConquest = msg.currentConquest ?? null;
-      // A battle's result belongs to its match, and a conquest's pages to the conquest
+      model.currentQuest = msg.currentQuest ?? null;
+      // A match's result belongs to its match, and a campaign's pages to the campaign
       if (!msg.inMatch) model.campaignResult = null;
-      if (msg.campaign !== 'conquest') {
-        model.conquestState = null;
+      if (!msg.campaign) {
         model.campaignBar = null;
         model.reward = null;
-        model.conquestParty = null;
         model.trading = null;
+        model.campaignStats = null;
+      }
+      if (msg.campaign !== 'conquest') {
+        model.conquestState = null;
+        model.conquestParty = null;
         model.conquestAether = null;
         model.conquestPlanes = null;
-        model.campaignStats = null;
         ui.conquestTab = 'map';
       }
+      if (msg.campaign !== 'quest') model.questSaves = null;
       model.drafting = msg.drafting;
       if (!msg.drafting) {
         model.draft = null;
@@ -350,6 +354,7 @@ function apply(msg: ServerMessage): void {
     case 'limitedPools': model.limitedPools = msg; break;
     case 'limitedResult': model.limitedResult = msg; break;
     case 'conquestSaves': model.conquestSaves = msg; break;
+    case 'questSaves': model.questSaves = msg; break;
     case 'campaignBar': model.campaignBar = msg; break;
     case 'conquestState': model.conquestState = msg; break;
     case 'campaignResult': model.campaignResult = msg; break;

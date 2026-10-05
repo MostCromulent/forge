@@ -107,6 +107,7 @@ public final class WebSession {
     private volatile LimitedResult lastResult;
     /** What this session alone knows of the open conquest: its selection and the last move. */
     private final ConquestGame conquest = new ConquestGame();
+    private final QuestGame quest = new QuestGame();
     /** One thread for everything a campaign does, as its model is Forge's own and nothing guards it; it ends when idle, so a finished session holds none. */
     private final ExecutorService campaignWork = new ThreadPoolExecutor(0, 1, 5, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), r -> {
         final Thread t = new Thread(r, "WebCampaign");
@@ -141,7 +142,11 @@ public final class WebSession {
     }
 
     private Campaign campaign(final String mode) {
-        return "conquest".equals(mode) ? conquest : null;
+        return switch (mode == null ? "" : mode) {
+            case "conquest" -> conquest;
+            case "quest" -> quest;
+            default -> null;
+        };
     }
 
     private final Campaign.Host campaignHost = new Campaign.Host() {
@@ -1079,6 +1084,7 @@ public final class WebSession {
                 // The open save is named in its matches too, so the result screen knows whose ending it shows
                 now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
                 isHost ? conquest.current() : null,
+                isHost ? quest.current() : null,
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }

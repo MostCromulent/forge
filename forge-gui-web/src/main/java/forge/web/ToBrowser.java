@@ -43,7 +43,7 @@ final class ToBrowser {
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
             @Nullable String eventKind, boolean drafting, int draftPools, @Nullable String campaign, @Nullable String campaignSave,
-            @Nullable String currentConquest, ServerSettings settings) {
+            @Nullable String currentConquest, @Nullable String currentQuest, ServerSettings settings) {
     }
 
     record SavedSleeveArt(String key, int offset) {
@@ -688,6 +688,18 @@ final class ToBrowser {
     /** What a match gave, already in the save, for the browser to reveal step by step. */
     @Message("reward")
     record Reward(List<RewardStep> steps) {
+    }
+
+    // ---- Quest -------------------------------------------------------------------------------------------------
+
+    /** A quest on the shelf: its mode, difficulty and rank, its record, cards and credits, the world it is in, and when it was saved. */
+    record QuestSave(String name, String mode, String difficulty, String rank, int wins, int losses, int cards, long credits,
+            String world, @Nullable String saved) {
+    }
+
+    /** The saved quests, and the one played last. */
+    @Message("questSaves")
+    record QuestSaves(List<QuestSave> saves, @Nullable String current) {
     }
 
     /** Every message record, which is what the TypeScript is generated from. */
