@@ -85,7 +85,7 @@ jobs:
 
           ## Good to know
 
-          The web build uses the same user folder as desktop Forge, so your decks and settings are shared between the two. If you already play desktop Forge, back that folder up first: `%APPDATA%\Forge` on Windows, `~/Library/Application Support/Forge` on macOS, `~/.forge` on Linux.
+          The web build uses the same user folder as desktop Forge, so your decks and settings are shared between the two. If you already play desktop Forge, you may want to back that up first: `%APPDATA%\Forge` on Windows, `~/Library/Application Support/Forge` on macOS, `~/.forge` on Linux.
 
           Invite links aren't encrypted, and anyone who has one can join. Only send them to people you're playing with, and keep the host's link to yourself.
           EOF
