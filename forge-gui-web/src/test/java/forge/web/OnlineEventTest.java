@@ -15,8 +15,8 @@ public class OnlineEventTest extends SessionsTest {
     }
 
     /** The host at a fresh table of its own, invited or not, with the Limited switch set to kind. */
-    private Recorder hostAt(final String open, final String kind) throws InterruptedException {
-        final Recorder host = hostAt(open);
+    private TestBrowser hostAt(final String open, final String kind) throws InterruptedException {
+        final TestBrowser host = hostAt(open);
         sessions.onMessage(host, setLimited(kind));
         host.awaitLobby(l -> l.has("limited") && kind.equals(l.getAsJsonObject("limited").get("kind").getAsString()),
                 "the table never became a " + kind + " table");
@@ -47,15 +47,15 @@ public class OnlineEventTest extends SessionsTest {
     }
 
     /** A browser must see the table's event before it readies, because learning of the event deals the seat afresh and unreadies it. */
-    private static void seeEvent(final Recorder browser) throws InterruptedException {
+    private static void seeEvent(final TestBrowser browser) throws InterruptedException {
         browser.awaitLobby(l -> l.has("limited") && l.getAsJsonObject("limited").has("product"),
                 "the event never reached this browser's table");
     }
 
     /** A host and a guest at a Limited table of kind, both ready, with the event setup describes set up and started. */
-    private Recorder[] startedEvent(final String kind, final JsonObject setup) throws InterruptedException {
-        final Recorder host = hostAt("invite", kind);
-        final Recorder guest = connect("guest");
+    private TestBrowser[] startedEvent(final String kind, final JsonObject setup) throws InterruptedException {
+        final TestBrowser host = hostAt("invite", kind);
+        final TestBrowser guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
         host.awaitLobby(l -> seatNames(l).contains("Guest"), "the guest never sat down");
         sessions.onMessage(host, setup);
@@ -69,7 +69,7 @@ public class OnlineEventTest extends SessionsTest {
         Assert.assertNotNull(host.awaitLobby(l -> l.getAsJsonObject("limited").has("phase")
                 && !"LOBBY_GATHER".equals(l.getAsJsonObject("limited").get("phase").getAsString())), "the event never started: "
                 + host.got.stream().filter(m -> "error".equals(m.get("t").getAsString())).toList() + " " + host.latestTable());
-        return new Recorder[] {host, guest};
+        return new TestBrowser[] {host, guest};
     }
 
     private static int picks(final JsonObject state) {
@@ -79,8 +79,8 @@ public class OnlineEventTest extends SessionsTest {
     // Fails if an event starts while a seat is not ready, or does not start once every seat is
     @Test(timeOut = 180_000)
     public void startWaitsForReady() throws Exception {
-        final Recorder host = hostAt("invite", "sealed");
-        final Recorder guest = connect("guest");
+        final TestBrowser host = hostAt("invite", "sealed");
+        final TestBrowser guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
         host.awaitLobby(l -> seatNames(l).contains("Guest"), "the guest never sat down");
         sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), null, 6));
@@ -107,9 +107,9 @@ public class OnlineEventTest extends SessionsTest {
     @Test(timeOut = 300_000)
     public void aGuestPicksOnlyItsOwnPacks() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final Recorder[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
-        final Recorder host = both[0];
-        final Recorder guest = both[1];
+        final TestBrowser[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
+        final TestBrowser host = both[0];
+        final TestBrowser guest = both[1];
         final JsonObject first = guest.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0, "the guest was never shown a pack");
         final JsonObject hostFirst = host.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0, "the host was never shown a pack");
         final int step = first.get("step").getAsInt();
@@ -129,11 +129,11 @@ public class OnlineEventTest extends SessionsTest {
     @Test(timeOut = 300_000)
     public void aReloadReturnsToTheOnlineDraft() throws Exception {
         WebTestSupport.skipUnlessStress();
-        final Recorder[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
-        final Recorder guest = both[1];
+        final TestBrowser[] both = startedEvent("draft", eventSetup(LimitedPoolType.Full.name(), 2));
+        final TestBrowser guest = both[1];
         final JsonObject shown = guest.awaitMatching("draft", d -> d.getAsJsonArray("cards").size() > 0, "the guest was never shown a pack");
         sessions.disconnected(guest);
-        final Recorder again = connect("guest");
+        final TestBrowser again = connect("guest");
         again.awaitMatching("hello", h -> h.get("drafting").getAsBoolean(), "the reload was not told it is drafting");
         again.awaitMatching("draft", d -> d.get("step").equals(shown.get("step"))
                 && d.getAsJsonArray("cards").equals(shown.getAsJsonArray("cards")), "the reload was not shown its pack again");
@@ -142,7 +142,7 @@ public class OnlineEventTest extends SessionsTest {
     // Fails if closing a table leaves its draft host running, whose packs would then reach the next table's seats
     @Test(timeOut = 180_000)
     public void endMatchStopsTheDraftHost() throws Exception {
-        final Recorder host = hostAt("lobby", "draft");
+        final TestBrowser host = hostAt("lobby", "draft");
         sessions.onMessage(host, eventSetup(LimitedPoolType.Full.name(), 2));
         host.awaitLobby(l -> l.getAsJsonObject("limited").has("product"), "the draft was never set up");
         sessions.onMessage(host, ready(true));

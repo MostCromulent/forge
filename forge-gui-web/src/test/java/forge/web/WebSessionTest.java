@@ -18,7 +18,7 @@ public class WebSessionTest {
     }
 
     /** Connects a browser and has it take the host's seat, which nobody gets by arriving. */
-    private static void connectAsHost(final WebSessions sessions, final Recorder r, final String id) {
+    private static void connectAsHost(final WebSessions sessions, final TestBrowser r, final String id) {
         sessions.connected(r, id, true);
         sessions.onMessage(r, JsonCodec.message("claimHost"));
     }
@@ -27,8 +27,8 @@ public class WebSessionTest {
     @Test
     public void theFirstBrowserToAskGetsTheHostSeat() throws Exception {
         final WebSessions sessions = opened();
-        final Recorder first = new Recorder();
-        final Recorder second = new Recorder();
+        final TestBrowser first = new TestBrowser();
+        final TestBrowser second = new TestBrowser();
         sessions.connected(first, "first", true);
         sessions.connected(second, "second", true);
         Assert.assertFalse(first.awaitNewest("hello").get("host").getAsBoolean(), "a browser hosted by arriving");
@@ -46,7 +46,7 @@ public class WebSessionTest {
     @Test
     public void aGuestLinkCannotTakeTheHostSeat() throws Exception {
         final WebSessions sessions = opened();
-        final Recorder guest = new Recorder();
+        final TestBrowser guest = new TestBrowser();
         sessions.connected(guest, "guest", false);
         Assert.assertFalse(guest.awaitNewest("hello").get("canClaimHost").getAsBoolean(), "a guest was offered the host's seat");
         sessions.onMessage(guest, JsonCodec.message("claimHost"));
@@ -54,7 +54,7 @@ public class WebSessionTest {
         Assert.assertFalse(guest.awaitNewest("hello").get("host").getAsBoolean(), "a guest took the host's seat");
 
         // The same browser id on the host's link is a different browser, and may still take the seat
-        final Recorder host = new Recorder();
+        final TestBrowser host = new TestBrowser();
         connectAsHost(sessions, host, "guest");
         Assert.assertTrue(host.awaitNewest("hello").get("host").getAsBoolean());
     }
@@ -63,20 +63,20 @@ public class WebSessionTest {
     @Test
     public void browsersBeyondTheLimitAreTurnedAwayUntilOthersLeave() {
         final WebSessions sessions = opened();
-        final List<Recorder> attached = new java.util.ArrayList<>();
+        final List<TestBrowser> attached = new java.util.ArrayList<>();
         for (int i = 0; i < WebSessions.MOST_SESSIONS; i++) {
-            final Recorder r = new Recorder();
+            final TestBrowser r = new TestBrowser();
             sessions.connected(r, "b" + i, false);
             attached.add(r);
         }
-        final Recorder oneTooMany = new Recorder();
+        final TestBrowser oneTooMany = new TestBrowser();
         sessions.connected(oneTooMany, "extra", false);
         Assert.assertTrue(oneTooMany.closed, "a browser past the limit was let in");
         Assert.assertFalse(attached.get(0).closed);
 
         // One that has gone and holds nothing makes room
         sessions.disconnected(attached.get(0));
-        final Recorder next = new Recorder();
+        final TestBrowser next = new TestBrowser();
         sessions.connected(next, "extra", false);
         Assert.assertFalse(next.closed, "a browser was turned away although another had left");
         sessions.shutdown();

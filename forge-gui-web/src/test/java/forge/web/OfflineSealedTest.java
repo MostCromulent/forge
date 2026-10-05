@@ -34,8 +34,8 @@ public class OfflineSealedTest extends SessionsTest {
         made.clear();
     }
 
-    private Recorder host() throws InterruptedException {
-        final Recorder host = connect("host");
+    private TestBrowser host() throws InterruptedException {
+        final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         Assert.assertNotNull(host.awaitMatching("hello", h -> h.get("host").getAsBoolean()));
         sessions.onMessage(host, message("setName", "name", "Host"));
@@ -45,7 +45,7 @@ public class OfflineSealedTest extends SessionsTest {
     }
 
     /** The editor opened on this pool; a session that kept an earlier test's editor resends that one on connecting. */
-    private static JsonObject editorOn(final Recorder host, final String name) throws InterruptedException {
+    private static JsonObject editorOn(final TestBrowser host, final String name) throws InterruptedException {
         return host.awaitMatching("editor", m -> m.has("state") && name.equals(m.getAsJsonObject("state").get("name").getAsString()));
     }
 
@@ -62,7 +62,7 @@ public class OfflineSealedTest extends SessionsTest {
     // Fails if a pool is overwritten without the player confirming, as desktop asks before replacing
     @Test(timeOut = 120_000)
     public void aTakenNameNeedsConfirming() throws Exception {
-        final Recorder host = host();
+        final TestBrowser host = host();
         final String name = name();
         sessions.onMessage(host, full(name, false));
         Assert.assertNotNull(editorOn(host, name));

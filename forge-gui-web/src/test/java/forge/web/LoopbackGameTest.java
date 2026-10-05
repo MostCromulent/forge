@@ -26,7 +26,7 @@ public class LoopbackGameTest {
         GuiBase.getInterface().invokeInEdtAndWait(r);
     }
 
-    private static void awaitGameStarted(final LocalGame local, final FakeBrowser browser) throws InterruptedException {
+    private static void awaitGameStarted(final LocalGame local, final TestBrowser browser) throws InterruptedException {
         for (int i = 0; i < 300; i++) {
             final HostedMatch match = local.hostedMatch();
             if (match != null && match.getGame() != null && browser.all("state").size() > 1) {
@@ -57,7 +57,7 @@ public class LoopbackGameTest {
         WebTestSupport.skipUnlessStress();
         final Deck bears = TestDecks.of("Bears", "Grizzly Bears", 20, "Forest", 20);
         final Deck islands = TestDecks.of("Islands", "Island", 40);
-        TestMatch.play(islands, bears, gui -> new FakeBrowser(gui, true), (local, gui, browser) -> {
+        TestMatch.play(islands, bears, gui -> new TestBrowser(gui, true), (local, gui, browser) -> {
             awaitGameStarted(local, browser);
 
             // The host UI thread blocks on a client reply; the client must answer without that thread
@@ -86,7 +86,7 @@ public class LoopbackGameTest {
 
             // A second match reuses the running loopback host
             final WebGuiGame second = new WebGuiGame();
-            final FakeBrowser secondBrowser = new FakeBrowser(second, true);
+            final TestBrowser secondBrowser = new TestBrowser(second, true);
             second.attach(secondBrowser);
             onUi(() -> local.startMatch("Web Player", islands, "AI", bears, second));
             awaitGameStarted(local, secondBrowser);

@@ -16,7 +16,7 @@ public class GuestSeatTest extends SessionsTest {
     /** Fails if a guest cannot reach the host's game, in one game because restarting the loopback server mid-test races its shutdown. */
     @Test(timeOut = 120_000)
     public void aGuestSitsDownWithTheHostAndLeavesWithTheGame() throws Exception {
-        final Recorder hostBrowser = connect("host");
+        final TestBrowser hostBrowser = connect("host");
         sessions.onMessage(hostBrowser, JsonCodec.message("claimHost"));
         hostBrowser.awaitMatching("hello", h -> h.get("host").getAsBoolean(),
                 "asking for the host's seat did not take it");
@@ -28,7 +28,7 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertTrue(hosted.get("shareable").getAsBoolean(), "an invited game offered no link");
 
         // Every browser shares the server's preferences, so a guest has no name until it chooses one
-        final Recorder guestBrowser = connect("guest");
+        final TestBrowser guestBrowser = connect("guest");
         final JsonObject greeted = guestBrowser.awaitNewest("hello", "the guest was never greeted");
         Assert.assertFalse(greeted.has("playerName"), "the guest was given a name it never chose");
         sessions.onMessage(guestBrowser, message("setName", "name", "host"));
@@ -52,7 +52,7 @@ public class GuestSeatTest extends SessionsTest {
 
         // A reload lands back at the same table, which the browser cannot draw until it is sent again
         sessions.disconnected(guestBrowser);
-        final Recorder reloaded = connect("guest");
+        final TestBrowser reloaded = connect("guest");
         final JsonObject again = reloaded.awaitLobbyWithSeat();
         Assert.assertNotNull(again, "a guest that reloaded in match setup was never shown the table again");
         Assert.assertEquals(again.get("mySeat").getAsInt(), guestSeat, "a guest that reloaded lost its seat");
@@ -83,20 +83,20 @@ public class GuestSeatTest extends SessionsTest {
     /** Fails if the guest's browser stays in match setup when the host starts the match, or is never shown the table. */
     @Test(timeOut = 120_000)
     public void aGuestFollowsTheHostIntoTheMatch() throws Exception {
-        final Recorder host = connect("host");
+        final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         send(host, JsonCodec.message("invite"));
         final JsonObject hosted = host.awaitLobbyWithSeat();
         Assert.assertNotNull(hosted, "the host never got a seat in its own game");
 
-        final Recorder guest = connect("player");
+        final TestBrowser guest = connect("player");
         sessions.onMessage(guest, message("setName", "name", "Player"));
         final JsonObject seated = guest.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat" + diagnosis(host, guest));
 
         sessions.onMessage(host, JsonCodec.message("decks"));
         final String deck = legalDeck(host.awaitNewest("decks"));
-        for (final Recorder browser : List.of(host, guest)) {
+        for (final TestBrowser browser : List.of(host, guest)) {
             final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
             sessions.onMessage(browser, choose);
@@ -137,9 +137,9 @@ public class GuestSeatTest extends SessionsTest {
     }
 
     /** What each browser was told last and what every thread is doing, for a wait that ran out. */
-    private static String diagnosis(final Recorder... browsers) {
+    private static String diagnosis(final TestBrowser... browsers) {
         final StringBuilder out = new StringBuilder();
-        for (final Recorder b : browsers) {
+        for (final TestBrowser b : browsers) {
             out.append("\n--- last messages:\n");
             final List<JsonObject> got = b.got;
             for (final JsonObject m : got.subList(Math.max(0, got.size() - 4), got.size())) {
@@ -163,10 +163,10 @@ public class GuestSeatTest extends SessionsTest {
     // Fails if lowering the count removes a seat a person holds, or keeps an open seat over a computer's
     @Test(timeOut = 120_000)
     public void aPersonKeepsTheirSeat() throws Exception {
-        final Recorder host = hostAt("invite");
+        final TestBrowser host = hostAt("invite");
         sessions.onMessage(host, message("setPlayerCount", "count", 4));
         host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 4, "the table never grew to four");
-        final Recorder guest = connect("guest");
+        final TestBrowser guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
         host.awaitLobby(l -> seatNames(l).contains("Guest"), "the guest never sat down");
 

@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
 
 public class WebGuiGameTest {
     private WebGuiGame gui;
-    private FakeBrowser browser;
+    private TestBrowser browser;
 
     @BeforeClass
     public void setUpModel() {
@@ -27,7 +27,7 @@ public class WebGuiGameTest {
     @BeforeMethod
     public void setUp() {
         gui = new WebGuiGame();
-        browser = new FakeBrowser(gui, false);
+        browser = new TestBrowser();
         gui.attach(browser);
     }
 
@@ -35,12 +35,12 @@ public class WebGuiGameTest {
     public void getChoicesMapsReplyIndicesBackToObjects() throws Exception {
         final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b", "c"), null, null));
-        final JsonObject request = browser.awaitLast("request", 2000);
+        final JsonObject request = browser.awaitNewest("request", "no request reached the browser");
         Assert.assertEquals(request.get("kind").getAsString(), "choices");
         Assert.assertEquals(request.getAsJsonArray("options").get(2).getAsJsonObject().get("label").getAsString(), "c");
         final JsonArray choice = new JsonArray();
         choice.add(2);
-        gui.onBrowserMessage(FakeBrowser.reply(request.get("id").getAsInt(), choice));
+        gui.onBrowserMessage(TestBrowser.reply(request.get("id").getAsInt(), choice));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("c"));
     }
 
@@ -48,8 +48,8 @@ public class WebGuiGameTest {
     public void concedeAnswersOpenRequestsWithDefaults() throws Exception {
         final CompletableFuture<List<String>> picked = CompletableFuture.supplyAsync(
                 () -> gui.getChoices("Pick one", 1, 1, List.of("a", "b"), null, null));
-        browser.awaitLast("request", 2000);
-        gui.onBrowserMessage(FakeBrowser.action("concede"));
+        browser.awaitNewest("request", "no request reached the browser");
+        gui.onBrowserMessage(TestBrowser.action("concede"));
         Assert.assertEquals(picked.get(2, TimeUnit.SECONDS), List.of("a"));
     }
 
@@ -57,11 +57,11 @@ public class WebGuiGameTest {
     public void reloadReplaysTheOpenRequest() throws Exception {
         final CompletableFuture<Boolean> answer = CompletableFuture.supplyAsync(
                 () -> gui.showConfirmDialog("Keep?", "Mulligan", "Keep", "Mulligan", true));
-        final JsonObject request = browser.awaitLast("request", 2000);
-        final FakeBrowser reloaded = new FakeBrowser(gui, false);
+        final JsonObject request = browser.awaitNewest("request", "no request reached the browser");
+        final TestBrowser reloaded = new TestBrowser();
         gui.attach(reloaded);
         Assert.assertEquals(reloaded.last("request").get("id"), request.get("id"));
-        gui.onBrowserMessage(FakeBrowser.reply(request.get("id").getAsInt(), new JsonPrimitive(1)));
+        gui.onBrowserMessage(TestBrowser.reply(request.get("id").getAsInt(), new JsonPrimitive(1)));
         Assert.assertFalse(answer.get(2, TimeUnit.SECONDS));
     }
 

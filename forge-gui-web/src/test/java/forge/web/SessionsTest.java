@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 /** One server serves the whole class, because stopping and restarting it between tests races with its own shutdown. */
 abstract class SessionsTest {
     WebSessions sessions;
-    final List<Recorder> browsers = new CopyOnWriteArrayList<>();
+    final List<TestBrowser> browsers = new CopyOnWriteArrayList<>();
 
     @BeforeClass
     public void startSessions() {
@@ -47,7 +47,7 @@ abstract class SessionsTest {
 
     @AfterMethod(alwaysRun = true)
     public void disconnectBrowsers() {
-        for (final Recorder browser : browsers) {
+        for (final TestBrowser browser : browsers) {
             sessions.disconnected(browser);
         }
         browsers.clear();
@@ -67,22 +67,22 @@ abstract class SessionsTest {
     }
 
     /** A browser on the host's link as "host", and on a guest's link otherwise. */
-    Recorder connect(final String id) {
-        final Recorder browser = new Recorder();
+    TestBrowser connect(final String id) {
+        final TestBrowser browser = new TestBrowser();
         browsers.add(browser);
         sessions.connected(browser, id, "host".equals(id));
         return browser;
     }
 
     /** Sends a browser's message with what it was told before forgotten, so a wait that follows is answered by what this brings. */
-    void send(final Recorder browser, final JsonObject message) {
+    void send(final TestBrowser browser, final JsonObject message) {
         browser.forget();
         sessions.onMessage(browser, message);
     }
 
     /** The host, named Host, at a fresh table of its own that open ("lobby" or "invite") starts. */
-    Recorder hostAt(final String open) throws InterruptedException {
-        final Recorder host = connect("host");
+    TestBrowser hostAt(final String open) throws InterruptedException {
+        final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         sessions.onMessage(host, message("setName", "name", "Host"));
         send(host, JsonCodec.message(open));
@@ -121,7 +121,7 @@ abstract class SessionsTest {
     }
 
     /** Wins the game for the web seat with dev mode's cheat, as a player checking a reward by hand would. */
-    void computerLoses(final Recorder host) {
+    void computerLoses(final TestBrowser host) {
         awaitPriority(host);
         sessions.onMessage(host, message("dev", "action", "winGame"));
     }
@@ -130,7 +130,7 @@ abstract class SessionsTest {
     final Set<JsonObject> answered = Collections.newSetFromMap(new IdentityHashMap<>());
 
     /** Gives every question on the way its default answer, since only at first priority is the game past dealing its zones and safe to end. */
-    void awaitPriority(final Recorder host) {
+    void awaitPriority(final TestBrowser host) {
         final String[] seen = { "no game" };
         // A press that lands before the input is ready is lost, so it is made again
         final long[] lastPress = { 0 };
@@ -142,7 +142,7 @@ abstract class SessionsTest {
             }
             for (final JsonObject m : host.got) {
                 if ("request".equals(m.get("t").getAsString()) && answered.add(m)) {
-                    sessions.onMessage(host, FakeBrowser.reply(m.get("id").getAsInt(), m.get("default")));
+                    sessions.onMessage(host, TestBrowser.reply(m.get("id").getAsInt(), m.get("default")));
                 }
             }
             for (final Player p : game.getPlayers()) {

@@ -62,7 +62,7 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void actingSeatReachesScryAndLibrarySearch() throws Exception {
         WebTestSupport.skipUnlessStress();
-        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 300), (local, gui, browser) -> {
+        TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 300), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
 
             // Temple's enter trigger scrys; Evolving Wilds searches the library
@@ -72,43 +72,52 @@ public class ActiveClientTest {
             WebTestSupport.remoteGui(local.hostedMatch()).updateGameView();
             // One card at a time, so the Wilds activation cannot interleave with the Temple's trigger
             browser.release("Hand:Temple of Enlightenment");
-            for (int i = 0; i < 300 && !browser.requestKinds.containsKey("manipulate"); i++) {
+            for (int i = 0; i < 300 && !asked(browser, "manipulate"); i++) {
                 Thread.sleep(100);
             }
-            Assert.assertTrue(browser.requestKinds.containsKey("manipulate"), "no scry reached the browser: " + browser.requestKinds);
+            Assert.assertTrue(asked(browser, "manipulate"), "no scry reached the browser");
 
             browser.release("Battlefield:Evolving Wilds");
-            for (int i = 0; i < 300 && !browser.zonesShown.contains("Library"); i++) {
+            for (int i = 0; i < 300 && !shown(browser, "Library"); i++) {
                 Thread.sleep(100);
             }
-            Assert.assertTrue(browser.zonesShown.contains("Library"), "no library search reached the browser: " + browser.zonesShown);
-            Assert.assertTrue(browser.reloaded, "no reload happened mid-request; requests seen: " + browser.requestKinds);
+            Assert.assertTrue(shown(browser, "Library"), "no library search reached the browser");
+            Assert.assertTrue(browser.reloaded, "no reload happened mid-request");
             Assert.assertEquals(gui.skippedProperties(), 0);
-            gui.onBrowserMessage(FakeBrowser.action("concede"));
+            gui.onBrowserMessage(TestBrowser.action("concede"));
         });
     }
 
-    private static int turn(final FakeBrowser browser) {
+    private static boolean asked(final TestBrowser browser, final String kind) {
+        return browser.all("request").stream().anyMatch(m -> kind.equals(m.get("kind").getAsString()));
+    }
+
+    private static boolean shown(final TestBrowser browser, final String zone) {
+        return browser.all("zones").stream().flatMap(m -> m.getAsJsonArray("show").asList().stream())
+                .anyMatch(z -> zone.equals(z.getAsJsonObject().get("zone").getAsString()));
+    }
+
+    private static int turn(final TestBrowser browser) {
         final JsonObject state = browser.last("state");
         final JsonObject game = state == null ? null : browser.model.objectsCopy().get(state.get("root").getAsInt());
         return game == null || !game.has("Turn") ? 0 : game.get("Turn").getAsInt();
     }
 
-    private static boolean atPriority(final FakeBrowser browser) {
+    private static boolean atPriority(final TestBrowser browser) {
         final JsonObject prompt = browser.last("prompt");
         return prompt.has("priority") && prompt.get("priority").getAsBoolean();
     }
 
-    private static boolean okEnabled(final FakeBrowser browser) {
+    private static boolean okEnabled(final TestBrowser browser) {
         return browser.last("prompt").getAsJsonObject("ok").get("enabled").getAsBoolean();
     }
 
     // Answers the pre-game prompts with OK, then waits at the first priority prompt and returns the turn it holds on
-    private static int keepAndHoldPriority(final WebGuiGame gui, final FakeBrowser browser) throws InterruptedException {
+    private static int keepAndHoldPriority(final WebGuiGame gui, final TestBrowser browser) throws InterruptedException {
         for (int i = 0; i < 600 && !(turn(browser) > 0 && okEnabled(browser) && atPriority(browser)); i++) {
             if (turn(browser) == 0 && okEnabled(browser)) {
                 // A press that lands before the host has registered the input is dropped, so wait and press again
-                gui.onBrowserMessage(FakeBrowser.action("ok"));
+                gui.onBrowserMessage(TestBrowser.action("ok"));
                 Thread.sleep(3000);
             } else {
                 Thread.sleep(100);
@@ -133,8 +142,8 @@ public class ActiveClientTest {
         throw new AssertionError("no " + name + " in " + zone);
     }
 
-    private static JsonArray faces(final WebGuiGame gui, final FakeBrowser browser, final int key) throws InterruptedException {
-        final JsonObject request = FakeBrowser.action("detail");
+    private static JsonArray faces(final WebGuiGame gui, final TestBrowser browser, final int key) throws InterruptedException {
+        final JsonObject request = TestBrowser.action("detail");
         request.addProperty("key", key);
         gui.onBrowserMessage(request);
         for (int i = 0; i < 100; i++) {
@@ -151,7 +160,7 @@ public class ActiveClientTest {
     @Test(timeOut = 180000)
     public void cardDetailShowsOtherFacesOnlyToThoseWhoMaySeeThem() throws Exception {
         WebTestSupport.skipUnlessStress();
-        TestMatch.play(plains(), forests(), gui -> new FakeBrowser(gui, false, true), (local, gui, browser) -> {
+        TestMatch.play(plains(), forests(), gui -> new TestBrowser(gui, false), (local, gui, browser) -> {
             keepAndHoldPriority(gui, browser);
             final Game game = local.hostedMatch().getGame();
             giveWebSeat(game, "Fire // Ice", "Delver of Secrets;Grizzly Bears|FaceDown", "Plains;Plains;Plains", "Grizzly Bears|FaceDown");
@@ -171,7 +180,7 @@ public class ActiveClientTest {
             final JsonArray hidden = faces(gui, browser, theirFaceDown);
             Assert.assertEquals(hidden.size(), 1, "an opponent's face-down card offers another face");
             Assert.assertFalse(hidden.toString().contains("Grizzly"), "an opponent's face-down card revealed its name: " + hidden);
-            gui.onBrowserMessage(FakeBrowser.action("concede"));
+            gui.onBrowserMessage(TestBrowser.action("concede"));
         });
     }
 
@@ -180,7 +189,7 @@ public class ActiveClientTest {
     public void playerChoicePromptIsAnsweredFromTheWebSeat() throws Exception {
         WebTestSupport.skipUnlessStress();
         // Passes priority, takes the first option of optional choices and presses OK to pay costs
-        TestMatch.play(plains(), forests(), gui -> new ScriptedBrowser(gui, 50), (local, gui, browser) -> {
+        TestMatch.play(plains(), forests(), gui -> TestBrowser.held(gui, 50), (local, gui, browser) -> {
             Assert.assertTrue(browser.atOwnMain.await(120, TimeUnit.SECONDS), "the web seat never reached its main phase");
             final Game game = local.hostedMatch().getGame();
             final boolean webFirst = game.getPlayers().get(0).getController() instanceof PlayerControllerHuman;
@@ -218,7 +227,7 @@ public class ActiveClientTest {
             }
             Assert.assertTrue(gruntSurvived, "the cumulative upkeep went unpaid and the Grunt was sacrificed");
             Assert.assertEquals(seat.getCardsIn(ZoneType.Graveyard).size(), 1, "two cards should have left the graveyard");
-            gui.onBrowserMessage(FakeBrowser.action("concede"));
+            gui.onBrowserMessage(TestBrowser.action("concede"));
         });
     }
 }

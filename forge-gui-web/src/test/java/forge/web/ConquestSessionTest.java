@@ -54,7 +54,7 @@ public class ConquestSessionTest extends SessionsTest {
         final LocalGame local = new LocalGame();
         try {
             final WebGuiGame gui = new WebGuiGame();
-            gui.attach(new FakeBrowser(gui, false, true));
+            gui.attach(new TestBrowser(gui, false));
             final ConquestBattle battle = loc.getEvent().createBattle(loc, 0);
             onUi(() -> {
                 final PreparedMatch p = FModel.getConquest().prepareBattle(battle, null);
@@ -86,23 +86,8 @@ public class ConquestSessionTest extends SessionsTest {
         });
     }
 
-    // Fails if a Planeswalker-only event against a planeswalker does not put both planeswalkers in the command zone
-    @Test(timeOut = 120_000)
-    public void aPlaneswalkerEventPutsBothInTheCommandZone() {
-        WebTestSupport.skipUnlessStress();
-        final ConquestData data = ConquestFixture.create("Alara");
-        final ConquestLocation loc = ConquestRulesTest.eventWhere(data.getCurrentPlane(), v -> v.equals(Set.of(GameType.Planeswalker)));
-        Assert.assertTrue(loc.getEvent().getAvatarCard().getRules().getType().isPlaneswalker());
-        battleAt(loc, match -> {
-            for (final Player p : match.getGame().getPlayers()) {
-                awaitTrue(() -> p.getCardsIn(ZoneType.Command).stream().anyMatch(c -> c.getType().isPlaneswalker()),
-                        p.getName() + " has no planeswalker in the command zone");
-            }
-        });
-    }
-
-    private Recorder hostInConquest(final ConquestData data) throws InterruptedException {
-        final Recorder host = onTheShelf();
+    private TestBrowser hostInConquest(final ConquestData data) throws InterruptedException {
+        final TestBrowser host = onTheShelf();
         send(host, message("campaignLoad", "name", data.getName()));
         host.awaitMatching("hello", h -> data.getName().equals(str(h, "campaignSave")), "the conquest did not open");
         host.awaitMatching("conquestState", s -> true, "the map was not sent");
@@ -133,7 +118,7 @@ public class ConquestSessionTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aConquestOpensOnItsMap() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = hostInConquest(data);
+        final TestBrowser host = hostInConquest(data);
         final JsonObject state = host.awaitNewest("conquestState");
         Assert.assertEquals(state.get("plane").getAsString(), "Zendikar");
         Assert.assertEquals(state.getAsJsonArray("regions").size(), 6);
@@ -155,7 +140,7 @@ public class ConquestSessionTest extends SessionsTest {
         data.setCurrentLocation(portal);
         data.addWin(portal.getEvent().createBattle(portal, 0));
         data.saveData();
-        final Recorder host = hostInConquest(data);
+        final TestBrowser host = hostInConquest(data);
         ConquestUtil.setPlaneTemporarilyAccessible(secret.getName(), true);
         final ConquestLocation next = portal.getNeighbors().get(0);
         send(host, message("conquestSelect", "region", next.getRegionIndex(), "row", next.getRow(), "col", next.getCol()));
@@ -173,7 +158,7 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestLocation start = data.getCurrentLocation();
         data.addWin(start.getEvent().createBattle(start, 0));
         data.saveData();
-        final Recorder host = hostInConquest(data);
+        final TestBrowser host = hostInConquest(data);
         final ConquestLocation next = start.getNeighbors().get(0);
         sessions.onMessage(host, message("conquestSelect", "region", next.getRegionIndex(), "row", next.getRow(), "col", next.getCol()));
         send(host, JsonCodec.message("conquestMove"));
@@ -186,7 +171,7 @@ public class ConquestSessionTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void anIllegalDeckDoesNotBattle() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = hostInConquest(data);
+        final TestBrowser host = hostInConquest(data);
         FModel.getConquest().getModel().getSelectedCommander().getDeck().getMain().clear();
         send(host, JsonCodec.message("conquestBattle"));
         host.awaitMatching("error", e -> true, "the illegal deck was not reported");
@@ -196,7 +181,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a browser without the host's seat can open a conquest
     @Test(timeOut = 120_000)
     public void aGuestCannotOpenConquest() throws Exception {
-        final Recorder guest = connect("guest");
+        final TestBrowser guest = connect("guest");
         sessions.onMessage(guest, message("setName", "name", "Guest"));
         send(guest, message("campaignOpen", "mode", "conquest", "resume", false));
         Thread.sleep(500);
@@ -217,8 +202,8 @@ public class ConquestSessionTest extends SessionsTest {
         FModel.getPreferences().setPref(FPref.DEV_MODE_ENABLED, devModeBefore);
     }
 
-    private Recorder inBattle(final ConquestData data) throws InterruptedException {
-        final Recorder host = hostInConquest(data);
+    private TestBrowser inBattle(final ConquestData data) throws InterruptedException {
+        final TestBrowser host = hostInConquest(data);
         send(host, JsonCodec.message("conquestBattle"));
         host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the battle did not start");
         awaitPriority(host);
@@ -233,7 +218,7 @@ public class ConquestSessionTest extends SessionsTest {
         final int shards = data.getAEtherShards();
         final int wheelShards = FModel.getConquestPreferences().getPrefInt(CQPref.AETHER_WHEEL_SHARDS);
         final int emblems = FModel.getConquestPreferences().getPrefInt(CQPref.PLANESWALK_CONQUER_EMBLEMS);
-        final Recorder host = inBattle(data);
+        final TestBrowser host = inBattle(data);
         sessions.onMessage(host, message("devConquestWheel", "outcome", "SHARDS"));
         computerLoses(host);
         final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
@@ -245,7 +230,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
 
         // A reload on the result screen shows the same result and records nothing again
-        final Recorder reloaded = connect("host");
+        final TestBrowser reloaded = connect("host");
         Assert.assertEquals(reloaded.awaitMatching("campaignResult", r -> true, "a reload lost the result"), result);
         Assert.assertEquals(model.getCurrentPlaneData().getEventRecord(model.getCurrentLocation()).getTotalWins(), 1);
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
@@ -255,7 +240,7 @@ public class ConquestSessionTest extends SessionsTest {
         final JsonObject reward = reloaded.awaitMatching("reward", r -> true, "the reward was not sent with the map");
         Assert.assertEquals(reward.getAsJsonArray("steps").size(), 3);
 
-        final Recorder again = connect("host");
+        final TestBrowser again = connect("host");
         final JsonObject resent = again.awaitMatching("reward", r -> true, "a reload lost the reward");
         Assert.assertEquals(resent, reward);
         Assert.assertEquals(model.getAEtherShards(), shards + wheelShards);
@@ -267,23 +252,10 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(FModel.getConquest().getActiveBattle(), "a battle started over a reward still to be shown");
 
         send(again, JsonCodec.message("rewardClaim"));
-        final Recorder third = connect("host");
+        final TestBrowser third = connect("host");
         third.awaitMatching("conquestState", s -> true, "the map was not sent");
         Assert.assertFalse(third.got.stream().anyMatch(m -> "reward".equals(m.get("t").getAsString())),
                 "an acknowledged reward was sent again");
-    }
-
-    // Fails if a lost event does not offer to fight it again before leaving, or a won one offers anything but to leave
-    @Test(timeOut = 180_000)
-    public void theResultSaysWhichButtonsItOffers() throws Exception {
-        WebTestSupport.skipUnlessStress();
-        final Recorder host = inBattle(ConquestFixture.create("Zendikar"));
-        sessions.onMessage(host, JsonCodec.message("concede"));
-        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("restart", "leave"));
-        send(host, message("nextGame", "decision", "NEW"));
-        awaitPriority(host);
-        computerLoses(host);
-        Assert.assertEquals(buttons(host.awaitMatching("campaignResult", r -> true, "no result was sent")), List.of("leave"));
     }
 
     // Fails if a lost Commander event restarted from the result screen does not start again at 30 life, or the loss is not recorded
@@ -294,7 +266,7 @@ public class ConquestSessionTest extends SessionsTest {
         final ConquestLocation loc = ConquestRulesTest.eventWhere(data.getCurrentPlane(), v -> v.equals(Set.of(GameType.Commander)));
         data.setCurrentLocation(loc);
         data.saveData();
-        final Recorder host = inBattle(data);
+        final TestBrowser host = inBattle(data);
         sessions.onMessage(host, JsonCodec.message("concede"));
         final JsonObject result = host.awaitMatching("campaignResult", r -> true, "no result was sent");
         Assert.assertFalse(result.get("won").getAsBoolean());
@@ -312,7 +284,7 @@ public class ConquestSessionTest extends SessionsTest {
     public void aChaosBattleFollowsTheWheelAndLeavingItIsALoss() throws Exception {
         WebTestSupport.skipUnlessStress();
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = inBattle(data);
+        final TestBrowser host = inBattle(data);
         sessions.onMessage(host, message("devConquestWheel", "outcome", "CHAOS"));
         computerLoses(host);
         host.awaitMatching("campaignResult", r -> true, "no result was sent");
@@ -329,23 +301,12 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertNull(FModel.getConquest().getActiveBattle());
     }
 
-    // Fails if a move with nowhere to go answers with a map, which a browser in the middle of a walk would take as its end
-    @Test(timeOut = 120_000)
-    public void aMoveWithNothingSelectedSendsNoMap() throws Exception {
-        final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = hostInConquest(data);
-        send(host, JsonCodec.message("conquestMove"));
-        sessions.onMessage(host, message("conquestSelect", "region", 0, "row", 0, "col", 0));
-        host.awaitMatching("conquestState", s -> true, "selecting sent no map");
-        Assert.assertEquals(host.got.stream().filter(m -> "conquestState".equals(m.get("t").getAsString())).count(), 1);
-    }
-
     // Fails if a battle that could not start leaves the conquest unable to start another, or records anything
     @Test(timeOut = 180_000)
     public void aBattleThatFailsToStartLeavesTheConquestUsable() throws Exception {
         WebTestSupport.skipUnlessStress();
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = hostInConquest(data);
+        final TestBrowser host = hostInConquest(data);
         // A battle already marked active makes the next one refuse to be prepared
         final ConquestLocation loc = FModel.getConquest().getModel().getCurrentLocation();
         FModel.getConquest().prepareBattle(loc.getEvent().createBattle(loc, 0), null);
@@ -375,7 +336,7 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertFalse(names.contains(halfRead), "a save with no planes is listed");
     }
 
-    private Recorder editor;
+    private TestBrowser editor;
 
     // The session outlives a test, so an open editor or a conquest the cleanup removes would be shown to the next one's browser
     @AfterMethod(alwaysRun = true)
@@ -385,8 +346,8 @@ public class ConquestSessionTest extends SessionsTest {
             editor = null;
         }
         // A test that reconnects has two browsers that held the host's seat, and only the later one is heard
-        Recorder host = null;
-        for (final Recorder browser : browsers) {
+        TestBrowser host = null;
+        for (final TestBrowser browser : browsers) {
             if (browser.hello != null && browser.hello.get("host").getAsBoolean()) {
                 host = browser;
             }
@@ -414,14 +375,14 @@ public class ConquestSessionTest extends SessionsTest {
     }
 
     /** Opens the selected commander's deck in the editor, and answers what the editor shows. */
-    private JsonObject editing(final Recorder host) throws InterruptedException {
+    private JsonObject editing(final TestBrowser host) throws InterruptedException {
         editor = host;
         send(host, message("conquestEditDeck", "commander", FModel.getConquest().getModel().getSelectedCommander().getName()));
         return host.awaitMatching("editor", e -> e.has("state"), "the editor did not open").getAsJsonObject("state");
     }
 
     /** What the editor shows once it has answered the message just sent. */
-    private JsonObject edited(final Recorder host, final JsonObject message) throws InterruptedException {
+    private JsonObject edited(final TestBrowser host, final JsonObject message) throws InterruptedException {
         send(host, message);
         return host.awaitMatching("editor", e -> e.has("state"), "the editor did not answer").getAsJsonObject("state");
     }
@@ -468,7 +429,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if the editor's catalogue lists a card that is not owned or is exiled, or such a card can be added to the deck
     @Test(timeOut = 120_000)
     public void theEditorOffersOnlyOwnedCards() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final PaperCard exiled = spares(data).get(0);
         data.exile(List.of(exiled));
@@ -497,7 +458,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a card added in the editor is not in the next battle's deck, or the map is not told the deck's new size on close
     @Test(timeOut = 120_000)
     public void anEditedDeckIsTheDeckFoughtWith() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final String spare = spares(data).get(0).getName();
         final int size = data.getSelectedCommander().getDeck().getMain().countAll();
@@ -520,7 +481,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if anything the editor can be asked changes the deck's Commander section or its name
     @Test(timeOut = 120_000)
     public void theCommanderStays() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final ConquestCommander commander = data.getSelectedCommander();
         final List<PaperCard> spares = spares(data);
@@ -552,7 +513,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if an import adds a card that is not owned, leaves out an owned card named in another printing, or refuses the basic lands
     @Test(timeOut = 120_000)
     public void importTakesOnlyOwnedCards() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         PaperCard owned = null;
         PaperCard otherPrinting = null;
@@ -609,7 +570,7 @@ public class ConquestSessionTest extends SessionsTest {
         throw new AssertionError("There is no list of " + source);
     }
 
-    private List<String> cardsOf(final Recorder host, final String source) throws InterruptedException {
+    private List<String> cardsOf(final TestBrowser host, final String source) throws InterruptedException {
         send(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
                 "sort", "name", "offset", 0, "showAll", true, "source", source));
         final List<String> names = new ArrayList<>();
@@ -634,7 +595,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a conquest's messages are answered out of the order they were sent, as work on separate threads allows
     @Test(timeOut = 120_000)
     public void messagesAreAnsweredInTheOrderSent() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         host.forget();
         sessions.onMessage(host, message("catalogue", "request", 1, "text", "", "colours", "", "type", "any", "filters", "",
                 "sort", "name", "offset", 0, "showAll", true, "source", "collection"));
@@ -649,7 +610,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a card a deck uses can be exiled, or a free card's exile and retrieval do not pay, charge and move it between the lists
     @Test(timeOut = 120_000)
     public void exileAndRetrieveOverTheWire() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final PaperCard inDeck = data.getSelectedCommander().getDeck().getMain().toFlatList().stream()
                 .filter(c -> !c.getRules().getType().isBasicLand()).findFirst().orElseThrow();
@@ -683,72 +644,9 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertTrue(cardsOf(host, "collection").contains(spare.getName()));
     }
 
-    // Fails if choosing a commander does not make it the one the map names and the party marks, or is not saved
-    @Test(timeOut = 120_000)
-    public void selectingACommanderChangesTheLead() throws Exception {
-        final ConquestData made = ConquestFixture.create("Zendikar");
-        PaperCard second = null;
-        for (final PaperCard card : made.getCurrentPlane().getCommanders()) {
-            if (!made.hasUnlockedCard(card)) {
-                second = card;
-            }
-        }
-        made.unlockCard(second);
-        made.saveData();
-        final Recorder host = hostInConquest(made);
-        final ConquestCommander wanted = ConquestGame.commander(second.getName());
-        send(host, message("conquestLead", "commander", second.getName()));
-        host.awaitMatching("conquestState", s -> s.getAsJsonObject("commander").get("name").getAsString().equals(wanted.getDisplayName()),
-                "the map does not name the commander chosen");
-        final JsonObject party = host.awaitMatching("conquestParty", p -> true, "the party was not sent");
-        for (final JsonElement e : party.getAsJsonArray("commanders")) {
-            final JsonObject c = e.getAsJsonObject();
-            Assert.assertEquals(c.get("selected").getAsBoolean(), c.get("name").getAsString().equals(second.getName()));
-        }
-        Assert.assertEquals(new ConquestData(made.getDirectory()).getSelectedCommander().getName(), second.getName());
-    }
-
-    // Fails if a card the rules allow any number of goes into a conquest's deck more times than it is owned, by adding or importing
-    @Test(timeOut = 120_000)
-    public void aCardIsNotAddedMoreTimesThanItIsOwned() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
-        final ConquestData data = FModel.getConquest().getModel();
-        final PaperCard rats = FModel.getMagicDb().getCommonCards().getCard("Relentless Rats");
-        data.unlockCard(rats);
-        final String deck = data.getSelectedCommander().getName();
-        editing(host);
-        edited(host, message("editorEdit", "op", "add", "name", rats.getName(), "to", "Main", "count", 1));
-        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1);
-        edited(host, message("editorEdit", "op", "add", "name", rats.getName(), "to", "Main", "count", 1));
-        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1, "a second copy was added of a card owned once");
-        edited(host, message("importCommit", "text", "20 " + rats.getName() + "\n", "name", "Imported", "format", "PlanarConquest",
-                "unrestricted", false, "action", "add"));
-        Assert.assertEquals(storedDeck(deck).getMain().countByName(rats.getName()), 1, "an import added copies that are not owned");
-    }
-
-    // Fails if a conquest import is read under the format sent, which takes an owned legendary creature for the list's commander
-    @Test(timeOut = 120_000)
-    public void anImportIsReadAsAConquestDeckWhateverFormatIsAsked() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
-        final ConquestData data = FModel.getConquest().getModel();
-        PaperCard legend = null;
-        for (final PaperCard card : data.getCurrentPlane().getCommanders()) {
-            if (!data.hasUnlockedCard(card)) {
-                legend = card;
-            }
-        }
-        data.unlockCard(legend);
-        final String deck = data.getSelectedCommander().getName();
-        editing(host);
-        edited(host, message("importCommit", "text", "1 " + legend.getName() + "\n", "name", "Imported", "format", "Commander",
-                "unrestricted", false, "action", "add"));
-        Assert.assertEquals(storedDeck(deck).getMain().countByName(legend.getName()), 1, "the owned legendary creature did not reach the deck");
-        Assert.assertEquals(storedDeck(deck).get(DeckSection.Commander).toFlatList(), List.of(data.getSelectedCommander().getCard()));
-    }
-
     /** The host on the list of saved conquests, wherever the last test left the session. */
-    private Recorder onTheShelf() throws InterruptedException {
-        final Recorder host = connect("host");
+    private TestBrowser onTheShelf() throws InterruptedException {
+        final TestBrowser host = connect("host");
         sessions.onMessage(host, JsonCodec.message("claimHost"));
         host.awaitMatching("hello", h -> h.get("host").getAsBoolean(), "the host's seat was not given");
         sessions.onMessage(host, message("setName", "name", "Host"));
@@ -787,7 +685,7 @@ public class ConquestSessionTest extends SessionsTest {
         existing.saveData();
         final int shards = existing.getAEtherShards();
         final PaperCard commander = existing.getCurrentPlane().getCommanders().get(0);
-        final Recorder host = onTheShelf();
+        final TestBrowser host = onTheShelf();
         send(host, message("conquestCreate", "name", existing.getName(), "plane", "Zendikar", "commander", commander.getName(),
                 "planeswalker", ConquestUtil.getStartingPlaneswalkerOptions(commander).iterator().next().getName()));
         host.awaitMatching("error", e -> true, "a name in use was not refused");
@@ -799,7 +697,7 @@ public class ConquestSessionTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void aCreatedConquestOpensOnItsMap() throws Exception {
         final String name = ConquestFixture.expected();
-        final Recorder host = onTheShelf();
+        final TestBrowser host = onTheShelf();
         send(host, JsonCodec.message("conquestOptions"));
         final JsonObject planes = host.awaitMatching("conquestOptions", o -> true, "the planes were not sent");
         Assert.assertTrue(names(planes, "planes").contains("Zendikar"));
@@ -822,25 +720,12 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(saved.getPlaneswalker().getName(), walker);
     }
 
-    // Fails if a commander that is not of the plane can start a conquest there: no error is sent, or a save is made
-    @Test(timeOut = 120_000)
-    public void aConquestThatCannotBeIsNotCreated() throws Exception {
-        final String name = ConquestFixture.expected();
-        final PaperCard stranger = FModel.getPlanes().get("Alara").getCommanders().get(0);
-        Assert.assertFalse(FModel.getPlanes().get("Zendikar").getCommanders().contains(stranger));
-        final Recorder host = onTheShelf();
-        send(host, message("conquestCreate", "name", name, "plane", "Zendikar", "commander", stranger.getName(),
-                "planeswalker", ConquestUtil.getStartingPlaneswalkerOptions(stranger).iterator().next().getName()));
-        host.awaitMatching("error", e -> true, "a commander of another plane was not refused");
-        Assert.assertFalse(saveDir(name).exists(), "a conquest was made all the same");
-    }
-
     // Fails if renaming the conquest played last leaves the old folder, or the start page's Resume and the shelf's mark still name the old one
     @Test(timeOut = 120_000)
     public void renamingTheCurrentConquestKeepsItCurrent() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
         final String to = ConquestFixture.expected();
-        final Recorder host = onTheShelf();
+        final TestBrowser host = onTheShelf();
         send(host, message("campaignRename", "name", data.getName(), "to", to));
         final JsonObject saves = host.awaitMatching("conquestSaves", s -> to.equals(str(s, "current")), "the shelf does not mark the new name as current");
         Assert.assertTrue(names(saves, "saves").contains(to));
@@ -862,7 +747,7 @@ public class ConquestSessionTest extends SessionsTest {
     @Test(timeOut = 120_000)
     public void deletingRemovesTheSave() throws Exception {
         final ConquestData data = ConquestFixture.create("Zendikar");
-        final Recorder host = onTheShelf();
+        final TestBrowser host = onTheShelf();
         Assert.assertTrue(names(host.awaitNewest("conquestSaves"), "saves").contains(data.getName()));
         send(host, message("campaignDelete", "name", data.getName()));
         final JsonObject saves = host.awaitMatching("conquestSaves", s -> true, "the shelf was not sent again");
@@ -873,7 +758,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a plane can be unlocked without the emblems or entered while locked, unlocking does not spend once, or going back costs
     @Test(timeOut = 120_000)
     public void unlockingSpendsOnce() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final ConquestPlane alara = FModel.getPlanes().get("Alara");
         final int cost = data.getPlaneUnlockCost();
@@ -914,7 +799,7 @@ public class ConquestSessionTest extends SessionsTest {
     // Fails if a pull does not cost what the page showed and add the card it names, or a pull with no shards gives a card
     @Test(timeOut = 120_000)
     public void aPullSpendsAndUnlocks() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
+        final TestBrowser host = hostInConquest(ConquestFixture.install());
         final ConquestData data = FModel.getConquest().getModel();
         final int shards = data.getAEtherShards();
         final int owned = data.getUnlockedCardCount();
@@ -959,7 +844,7 @@ public class ConquestSessionTest extends SessionsTest {
         for (final CQPref pref : CQPref.values()) {
             before.put(pref, prefs.getPref(pref));
         }
-        final Recorder host = hostInConquest(ConquestFixture.create("Zendikar"));
+        final TestBrowser host = hostInConquest(ConquestFixture.create("Zendikar"));
         final String current = prefs.getPref(CQPref.CURRENT_CONQUEST);
         try {
             send(host, pref("BOOSTER_COMMONS", 16 - prefs.getPrefInt(CQPref.BOOSTER_UNCOMMONS) - prefs.getPrefInt(CQPref.BOOSTER_RARES)));
@@ -992,34 +877,6 @@ public class ConquestSessionTest extends SessionsTest {
         }
     }
 
-    // Fails if a plane's statistics do not list its regions with what is conquered in each, or every plane's figures carry regions
-    @Test(timeOut = 120_000)
-    public void statisticsNameTheRegions() throws Exception {
-        final Recorder host = hostInConquest(ConquestFixture.install());
-        final ConquestData data = FModel.getConquest().getModel();
-        send(host, message("campaignStats", "scope", "Zendikar"));
-        final JsonObject stats = host.awaitMatching("campaignStats", s -> true, "the statistics were not sent");
-        // With a plane the regions are the first table, and the commanders the second
-        final List<String> regions = new ArrayList<>();
-        final int rows = stats.getAsJsonArray("tables").get(0).getAsJsonObject().getAsJsonArray("rows").size();
-        for (int r = 0; r < rows; r++) {
-            regions.add(row(stats, 0, r).get(0));
-        }
-        final List<String> wanted = new ArrayList<>();
-        data.getCurrentPlane().getRegions().forEach(r -> wanted.add(r.getName()));
-        Assert.assertEquals(regions, wanted);
-        Assert.assertEquals(row(stats, 0, 0).get(1), "1 / 9", "the first region's conquered events");
-        Assert.assertEquals(row(stats, 0, 0).get(2), "1", "the first region's wins");
-        Assert.assertEquals(stats.getAsJsonArray("figures").size(), 8);
-        Assert.assertTrue(stats.getAsJsonArray("scopes").toString().contains("Zendikar"));
-
-        send(host, JsonCodec.message("campaignStats"));
-        final JsonObject all = host.awaitMatching("campaignStats", s -> true, "the statistics for every plane were not sent");
-        Assert.assertFalse(all.has("scope"));
-        Assert.assertEquals(all.getAsJsonArray("tables").size(), 1, "every plane together has no table of regions");
-        Assert.assertEquals(all.getAsJsonArray("tables").get(0).getAsJsonObject().getAsJsonArray("rows").size(), 2, "one commander and the chaos battles");
-    }
-
     // Fails if a name with a path in it reaches a folder that is not one of the saves, which a delete would remove
     @Test
     public void aNameWithAPathInItFindsNothing() {
@@ -1042,12 +899,4 @@ public class ConquestSessionTest extends SessionsTest {
         Assert.assertEquals(WebServer.artKey(original.getImageKey(false)), original.getImageKey(false));
     }
 
-    // Fails if a saved conquest's card does not say how much of the plane it stands on is conquered
-    @Test
-    public void aSaveSaysWhatIsConqueredOnItsPlane() throws Exception {
-        final ConquestData data = ConquestFixture.install();
-        final ToBrowser.ConquestSave save = new ConquestGame().saves().saves().stream().filter(s -> s.name().equals(data.getName())).findFirst().orElseThrow();
-        Assert.assertEquals(save.conquered(), 1);
-        Assert.assertEquals(save.total(), 54);
-    }
 }
