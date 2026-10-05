@@ -731,6 +731,16 @@ final class ToBrowser {
     record QuestDecks(List<QuestDeckRow> decks) {
     }
 
+    /** A challenge on offer: its terms as its file sets them, the cards each side starts with in play, and whether the player's deck is its own. */
+    record QuestChallengeRow(String id, String title, int difficulty, String description, @Nullable String face, int aiLife, @Nullable Integer humanLife,
+            int credits, List<String> cardReward, boolean repeatable, List<String> humanCards, List<String> aiCards, boolean fixedDeck) {
+    }
+
+    /** The Challenges page: the challenges, how many are open of how many the wins allow, the line about the next, and the zeppelin. */
+    @Message("questChallenges")
+    record QuestChallenges(List<QuestChallengeRow> challenges, int open, int max, @Nullable String nextIn, boolean zeppelin, boolean zeppelinUsed) {
+    }
+
     /** A difficulty and what a quest started at it is given: credits, and the starting pool's commons, uncommons and rares. */
     record QuestDifficultyRow(String name, int credits, int commons, int uncommons, int rares) {
     }

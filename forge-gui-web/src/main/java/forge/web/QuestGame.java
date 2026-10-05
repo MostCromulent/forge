@@ -11,6 +11,8 @@ import forge.game.GameView;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.quest.NewQuestRules;
 import forge.gamemodes.quest.QuestController;
+import forge.gamemodes.quest.QuestEvent;
+import forge.gamemodes.quest.QuestEventChallenge;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestMode;
 import forge.gamemodes.quest.QuestSpellShop;
@@ -287,7 +289,7 @@ final class QuestGame implements Campaign {
 
     @Override
     public List<Record> page() {
-        return List.of(bar(), duelsPage(), decksPage());
+        return List.of(bar(), duelsPage(), decksPage(), challengesPage());
     }
 
     /** The quest's decks, by name. */
@@ -502,11 +504,45 @@ final class QuestGame implements Campaign {
     /** Starts the duel at an index of the list the page was sent, as desktop's Start does. */
     private void duel(final int index, final Host host) {
         final List<QuestEventDuel> offered = duels();
+        if (index >= 0 && index < offered.size()) {
+            fight(offered.get(index), host);
+        }
+    }
+
+    /** The challenges on offer, drawn again as desktop's page does each time it is shown, which draws only where there is room. */
+    private QuestChallenges challengesPage() {
+        final QuestController quest = quest();
+        final QuestAchievements record = quest.getAchievements();
+        final List<QuestChallengeRow> rows = new ArrayList<>();
+        // Fantasy mode's only, as desktop shows challenges
+        if (quest.getMode() == QuestMode.Fantasy) {
+            quest.regenerateChallenges();
+            for (final String id : record.getCurrentChallenges()) {
+                final QuestEventChallenge c = quest.getChallenges().get(id);
+                if (c == null) {
+                    continue;
+                }
+                rows.add(new QuestChallengeRow(c.getId(), c.getTitle(), c.getDifficulty() == null ? 0 : c.getDifficulty().ordinal() + 1,
+                        c.getDescription(), face(c.getEventDeck()), c.getAILife(), c.getHumanLife(), c.getCreditsReward(),
+                        c.getCardRewardList() == null ? List.of() : c.getCardRewardList().stream().map(InventoryItem::getName).toList(),
+                        c.isRepeatable(), c.getHumanExtraCards(), c.getAiExtraCards(), c.getHumanDeck() != null));
+            }
+        }
+        final int max = Math.max(0, Math.min(5, record.getWin() / quest.getTurnsToUnlockChallenge() - record.getChallengesPlayed()));
+        final int wins = QuestUtil.nextChallengeInWins();
+        final Localizer text = Localizer.getInstance();
+        final String next = rows.isEmpty() ? wins == 1 ? text.getMessage("lblnextChallengeInWins1")
+                : text.getMessage("lblnextChallengeInWins2").replace("%n", String.valueOf(wins)) : null;
+        return new QuestChallenges(rows, rows.size(), max, next, quest.getAssets().hasItem(QuestItemType.ZEPPELIN),
+                quest.getAssets().getItemLevel(QuestItemType.ZEPPELIN) == 2);
+    }
+
+    /** Starts a duel or a challenge, as desktop's Start does. */
+    private void fight(final QuestEvent duel, final Host host) {
         // A reward still to be shown belongs to the last match, and the next match's would replace it
-        if (reward != null || index < 0 || index >= offered.size()) {
+        if (reward != null) {
             return;
         }
-        final QuestEventDuel duel = offered.get(index);
         QuestUtil.setEvent(duel);
         if (!QuestUtil.canStartGame()) {
             return;
@@ -764,6 +800,22 @@ final class QuestGame implements Campaign {
         switch (msg.get("t").getAsString()) {
             case "questDuel" -> {
                 duel(Wire.decode(msg, FromBrowser.QuestDuel.class).index(), host);
+                return;
+            }
+            case "questChallenge" -> {
+                final String id = Wire.decode(msg, FromBrowser.QuestChallenge.class).id();
+                if (id != null && quest().getAchievements().getCurrentChallenges().contains(id)) {
+                    fight(quest().getChallenges().get(id), host);
+                }
+                return;
+            }
+            case "questZeppelin" -> {
+                // Level 2 is the zeppelin flown since the last match, which the end of a match sets back to 1
+                if (quest().getAssets().hasItem(QuestItemType.ZEPPELIN) && quest().getAssets().getItemLevel(QuestItemType.ZEPPELIN) != 2) {
+                    quest().getAchievements().setCurrentChallenges(null);
+                    quest().getAssets().setItemLevel(QuestItemType.ZEPPELIN, 2);
+                }
+                channel.send(challengesPage());
                 return;
             }
             case "questPet" -> {

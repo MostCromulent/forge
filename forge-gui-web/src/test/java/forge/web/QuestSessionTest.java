@@ -9,6 +9,7 @@ import forge.game.GameType;
 import forge.game.player.Player;
 import forge.deck.Deck;
 import forge.deck.DeckSection;
+import forge.gamemodes.quest.QuestEventChallenge;
 import forge.gamemodes.quest.QuestEventDuel;
 import forge.gamemodes.quest.QuestUtil;
 import forge.item.PaperCard;
@@ -33,6 +34,7 @@ import org.testng.annotations.Test;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -670,6 +672,80 @@ public class QuestSessionTest extends SessionsTest {
         Assert.assertNull(QuestGame.find(data.getName()));
         Assert.assertFalse(backup.exists());
         Assert.assertNotEquals(FModel.getQuestPreferences().getPref(QPref.CURRENT_QUEST), data.getName() + ".dat");
+    }
+
+    /** The fixture with enough wins for challenges to be offered, and one game a match. */
+    private static QuestData withChallenges() throws IOException {
+        final QuestData data = QuestFixture.install();
+        for (int i = 0; i < 40; i++) {
+            data.getAchievements().addWin();
+        }
+        data.setMatchLength(1);
+        data.saveData();
+        return data;
+    }
+
+    // Fails if a challenge's terms are not the challenge file's (life, bounty, starting cards)
+    @Test(timeOut = 120_000)
+    public void aChallengesTermsAreItsFiles() throws Exception {
+        final Recorder host = hostInQuest(withChallenges());
+        final JsonObject page = host.awaitNewest("questChallenges", "the challenges were not sent");
+        final JsonArray rows = page.getAsJsonArray("challenges");
+        Assert.assertTrue(rows.size() > 0, "no challenge is offered after 40 wins");
+        Assert.assertEquals(page.get("open").getAsInt(), rows.size());
+        for (final JsonElement e : rows) {
+            final JsonObject row = e.getAsJsonObject();
+            final QuestEventChallenge challenge = FModel.getQuest().getChallenges().get(row.get("id").getAsString());
+            Assert.assertEquals(row.get("title").getAsString(), challenge.getTitle());
+            Assert.assertEquals(row.get("aiLife").getAsInt(), challenge.getAILife());
+            Assert.assertEquals(row.get("credits").getAsInt(), challenge.getCreditsReward());
+            final List<String> human = new ArrayList<>();
+            row.getAsJsonArray("humanCards").forEach(c -> human.add(c.getAsString()));
+            Assert.assertEquals(human, challenge.getHumanExtraCards());
+            Assert.assertEquals(row.get("fixedDeck").getAsBoolean(), challenge.getHumanDeck() != null);
+        }
+    }
+
+    // Fails if a won challenge is not taken off the list and its bounty paid
+    @Test(timeOut = 240_000)
+    public void aWonChallengeIsPaidAndGone() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final QuestData data = withChallenges();
+        final Recorder host = hostInQuest(data);
+        final JsonObject row = host.awaitNewest("questChallenges", "the challenges were not sent").getAsJsonArray("challenges").get(0).getAsJsonObject();
+        final String id = row.get("id").getAsString();
+        final long credits = FModel.getQuest().getAssets().getCredits();
+        send(host, message("questChallenge", "id", id));
+        host.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the challenge did not start");
+        awaitPriority(host);
+        computerLoses(host);
+        host.awaitMatching("campaignResult", r -> true, "no result was sent");
+        sessions.onMessage(host, JsonCodec.message("leave"));
+        untilRewarded(host);
+        final QuestData after = saved(data);
+        Assert.assertFalse(after.getAchievements().getCurrentChallenges().contains(id), "the won challenge is still offered");
+        Assert.assertTrue(after.getAssets().getCredits() >= credits + row.get("credits").getAsInt(),
+                "the bounty was not paid: " + credits + " then " + after.getAssets().getCredits());
+    }
+
+    // Fails if the zeppelin re-rolls the challenges more than once between two matches
+    @Test(timeOut = 120_000)
+    public void theZeppelinFliesOnceBetweenMatches() throws Exception {
+        final QuestData data = withChallenges();
+        data.getAssets().setItemLevel(QuestItemType.ZEPPELIN, 1);
+        data.saveData();
+        final Recorder host = hostInQuest(data);
+        final JsonObject before = host.awaitNewest("questChallenges", "the challenges were not sent");
+        Assert.assertTrue(before.get("zeppelin").getAsBoolean());
+        Assert.assertFalse(before.get("zeppelinUsed").getAsBoolean());
+        send(host, JsonCodec.message("questZeppelin"));
+        final JsonObject flown = host.awaitMatching("questChallenges", c -> true, "the zeppelin sent no challenges");
+        Assert.assertTrue(flown.get("zeppelinUsed").getAsBoolean());
+        final List<String> ids = new ArrayList<>(FModel.getQuest().getAchievements().getCurrentChallenges());
+        send(host, JsonCodec.message("questZeppelin"));
+        host.awaitMatching("questChallenges", c -> true, "a second flight sent no challenges");
+        Assert.assertEquals(FModel.getQuest().getAchievements().getCurrentChallenges(), ids, "the zeppelin flew twice");
+        Assert.assertEquals(FModel.getQuest().getAssets().getItemLevel(QuestItemType.ZEPPELIN), 2);
     }
 
     // Fails if a browser without the host's seat can open a quest
