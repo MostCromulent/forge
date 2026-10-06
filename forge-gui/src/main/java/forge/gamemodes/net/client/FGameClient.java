@@ -7,6 +7,7 @@ import forge.gamemodes.net.CompatibleObjectEncoder;
 import forge.gamemodes.net.NetworkLogConfig;
 import forge.util.IHasForgeLog;
 import forge.gamemodes.net.ReplyPool;
+import forge.gamemodes.net.WebSocketBytes;
 import forge.gamemodes.net.event.*;
 import forge.gui.interfaces.IDraftEventHandler;
 import forge.gui.interfaces.IGuiGame;
@@ -18,21 +19,32 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.http.DefaultHttpHeaders;
+import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.codec.http.HttpObjectAggregator;
+import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
+import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler;
+import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.handler.timeout.IdleStateHandler;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import javax.net.ssl.SSLParameters;
 
 public class FGameClient implements IToServer, IHasForgeLog {
 
@@ -61,6 +73,13 @@ public class FGameClient implements IToServer, IHasForgeLog {
     private static final int RESUME_WATCH_SECONDS = 5;
     private final IGuiGame clientGui;
     private final SocketAddress address;
+    /** Where a web host takes netplay clients, as a WebSocket carrying the same byte stream. */
+    public static final String TUNNEL_PATH = "/netplay";
+    /** One frame holds one message, so this stands a little above the largest message the decoder takes. */
+    public static final int TUNNEL_FRAME_BYTES = 10 << 20;
+    private static final int TUNNEL_OPEN_SECONDS = 15;
+    private final URI tunnel;
+    private final SslContext tunnelTrust;
     private final String username;
     private final List<ILobbyListener> lobbyListeners = Lists.newArrayList();
     private IDraftEventHandler draftHandler;
@@ -89,6 +108,42 @@ public class FGameClient implements IToServer, IHasForgeLog {
         this.username = username;
         this.clientGui = clientGui;
         this.address = address;
+        this.tunnel = null;
+        this.tunnelTrust = null;
+    }
+
+    /**
+     * Reaches a web host at the address {@link #tunnelOf} made of its invite link. A wss address is encrypted and
+     * checked against the certificates this machine trusts, or against trust when one is given.
+     */
+    public FGameClient(String username, IGuiGame clientGui, URI tunnel, SslContext trust) {
+        this.username = username;
+        this.clientGui = clientGui;
+        this.address = InetSocketAddress.createUnresolved(tunnel.getHost(), tunnel.getPort());
+        this.tunnel = tunnel;
+        this.tunnelTrust = trust;
+    }
+
+    /**
+     * The WebSocket address a web host's invite link stands for, or null when the text is not one. An invite link
+     * is an http or https link that carries a token, which goes with it since that is what lets a guest in. An
+     * address without one, scheme or not, is a host of the older kind.
+     */
+    public static URI tunnelOf(final String address) {
+        final URI link;
+        try {
+            link = URI.create(address.trim());
+        } catch (final IllegalArgumentException e) {
+            return null;
+        }
+        final boolean secure = "https".equalsIgnoreCase(link.getScheme());
+        if ((!secure && !"http".equalsIgnoreCase(link.getScheme())) || link.getHost() == null
+                || link.getRawQuery() == null || !link.getRawQuery().matches("(.*&)?token=.+")) {
+            return null;
+        }
+        final int port = link.getPort() < 0 ? (secure ? 443 : 80) : link.getPort();
+        return URI.create((secure ? "wss" : "ws") + "://" + link.getHost() + ":" + port + TUNNEL_PATH
+                + (link.getRawQuery() == null ? "" : "?" + link.getRawQuery()));
     }
 
     public String getUsername() {
@@ -123,6 +178,23 @@ public class FGameClient implements IToServer, IHasForgeLog {
                 @Override
                 public void initChannel(final Channel ch) throws Exception {
                     final ChannelPipeline pipeline = ch.pipeline();
+                    if (tunnel != null) {
+                        if ("wss".equals(tunnel.getScheme())) {
+                            final SslContext ssl = tunnelTrust != null ? tunnelTrust : SslContextBuilder.forClient().build();
+                            final SslHandler tls = ssl.newHandler(ch.alloc(), tunnel.getHost(), tunnel.getPort());
+                            // Without this the certificate is checked for trust but not for whose it is
+                            final SSLParameters named = tls.engine().getSSLParameters();
+                            named.setEndpointIdentificationAlgorithm("HTTPS");
+                            tls.engine().setSSLParameters(named);
+                            pipeline.addLast(tls);
+                        }
+                        pipeline.addLast(
+                                new HttpClientCodec(),
+                                new HttpObjectAggregator(8192),
+                                new WebSocketClientProtocolHandler(WebSocketClientHandshakerFactory.newHandshaker(tunnel,
+                                        WebSocketVersion.V13, null, false, new DefaultHttpHeaders(), TUNNEL_FRAME_BYTES)),
+                                new WebSocketBytes());
+                    }
                     pipeline.addLast(
                             new LoggingHandler(LogLevel.INFO),
                             new CompatibleObjectEncoder(null), // Client doesn't need byte tracking
@@ -136,6 +208,14 @@ public class FGameClient implements IToServer, IHasForgeLog {
 
             // Start the connection attempt.
             final Channel newChannel = b.connect(address).sync().channel();
+            if (tunnel != null) {
+                // The web port answers anyone; whether this client is let in is only known once the WebSocket opens
+                final ChannelFuture opened = newChannel.pipeline().get(WebSocketBytes.class).opened();
+                if (!opened.await(TUNNEL_OPEN_SECONDS, TimeUnit.SECONDS) || !opened.isSuccess()) {
+                    newChannel.close();
+                    throw new IllegalStateException("The host did not let this client in", opened.cause());
+                }
+            }
             synchronized (reconnectLock) {
                 if (shuttingDown) {
                     newChannel.close();

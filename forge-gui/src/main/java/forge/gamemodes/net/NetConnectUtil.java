@@ -25,6 +25,7 @@ import forge.util.Localizer;
 import forge.util.URLValidator;
 import org.apache.commons.lang3.StringUtils;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -170,17 +171,26 @@ public class NetConnectUtil {
         final IGuiGame gui = GuiBase.getInterface().getNewGuiGame();
         String hostname;
         int port;
+        final FGameClient client;
 
-        URLValidator.HostPort hostPort = URLValidator.parseURL(url);
-        if (hostPort == null) {
-            return new ChatMessage(null, ForgeConstants.INVALID_HOST_COMMAND);
+        // A web host is joined by its invite link, through its web port
+        final URI tunnel = FGameClient.tunnelOf(url);
+        if (tunnel != null) {
+            hostname = tunnel.getHost();
+            port = tunnel.getPort();
+            client = new FGameClient(FModel.getPreferences().getPref(FPref.PLAYER_NAME), gui, tunnel, null);
+        } else {
+            URLValidator.HostPort hostPort = URLValidator.parseURL(url);
+            if (hostPort == null) {
+                return new ChatMessage(null, ForgeConstants.INVALID_HOST_COMMAND);
+            }
+
+            hostname = hostPort.host();
+            port = hostPort.port();
+            if (port == -1) port = Integer.valueOf(ForgeNetPreferences.FNetPref.NET_PORT.getDefault());
+
+            client = new FGameClient(FModel.getPreferences().getPref(FPref.PLAYER_NAME), gui, hostname, port);
         }
-
-        hostname = hostPort.host();
-        port = hostPort.port();
-        if (port == -1) port = Integer.valueOf(ForgeNetPreferences.FNetPref.NET_PORT.getDefault());
-
-        final FGameClient client = new FGameClient(FModel.getPreferences().getPref(FPref.PLAYER_NAME), gui, hostname, port);
         onlineLobby.setClient(client);
         chatInterface.setGameClient(client);
         final ClientGameLobby lobby = new ClientGameLobby();

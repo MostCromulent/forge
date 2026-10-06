@@ -1232,6 +1232,21 @@ final class Lobby {
         bySeat.putAll(moved);
     }
 
+    /** The seats at this table that people hold, a browser's or an app's. */
+    List<LobbySlot> remoteSeats() {
+        final List<LobbySlot> out = new ArrayList<>();
+        final GameLobby lobby = view();
+        if (lobby != null) {
+            for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+                final LobbySlot slot = lobby.getSlot(i);
+                if (slot.getType() == LobbySlotType.REMOTE && slot.getName() != null) {
+                    out.add(slot);
+                }
+            }
+        }
+        return out;
+    }
+
     /** The names the computer plays under at this table, which a person may not also take. */
     List<String> computerNames() {
         final List<String> out = new ArrayList<>();
