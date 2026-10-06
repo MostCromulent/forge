@@ -47,9 +47,9 @@ The game opens in your browser and a server window opens beside it. Closing that
 quits when the last browser leaves, unless you untick **Close Forge when everyone has left, including you** or
 start it with `-Dforge.web.keepOpen=true`. To update, replace the folder with the new zip.
 
-The first time, the server window offers to download Scryfall's card data file (75 MB). With it Forge fetches card
-pictures straight from Scryfall's image servers. Without it they come from Scryfall's image API, which limits how
-fast they download.
+Forge downloads each card image from Scryfall the first time it is shown. By default this uses Scryfall's
+rate-limited API. The first time it runs, the server window offers to download the image index (around 75 MB),
+which tells Forge where each image is on Scryfall's servers so they can be downloaded directly with no limit.
 
 <img src="forge-gui-web/docs/server.webp" width="49%" alt="The server window">
 

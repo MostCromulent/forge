@@ -802,6 +802,8 @@ final class ServerConsole implements IProgressBar {
     /** A wrapped text's height follows from its width, so both are fixed again whenever its words change. */
     private static void reword(final JTextArea area, final String words, final int width) {
         area.setText(words);
+        // Room to the right: on a scaled display a line that just fits when measured is drawn a little wider, and would lose its last letters
+        area.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, width / 20));
         area.setPreferredSize(null);
         area.setSize(width, Short.MAX_VALUE);
         final Dimension size = new Dimension(width, area.getPreferredSize().height);
