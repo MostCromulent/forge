@@ -50,8 +50,8 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .options .section { grid-column: 1 / -1; width: 100%; margin-top: 4px; padding-bottom: 4px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
 .dialog .options .section:first-child { margin-top: 0; }
 /* The cards being put in order run along a row, first to last, and onto a second row when one is not enough */
-.dialog .ordered { gap: 30px 12px; padding: 10px 2px 38px; }
-.dialog .ordered-item { position: relative; transition: transform .12s ease; }
+.dialog .ordered { gap: 30px 12px; padding: 12px 2px 30px; }
+.dialog .ordered-item { position: relative; transition: transform .12s ease; user-select: none; -webkit-user-select: none; }
 .dialog .ordered-item.selected { transform: translateY(-8px); outline: 2px solid var(--select); outline-offset: 2px; }
 .dialog .row { display: flex; align-items: center; gap: 8px; }
 .dialog .picked { box-shadow: 0 0 0 3px var(--pick); }
@@ -103,13 +103,17 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 
 /* Where a card lands, numbered so the order reads without counting rows */
 .dialog .ordered-item { cursor: grab; border-radius: 6px; }
-.dialog .ordered-item.drop-here { outline: 2px dashed var(--accent-2); outline-offset: 2px; }
+/* The place a carried card will land stays open in the row, and a copy of the card follows the pointer above the dialog */
+.dialog .ordered-item.carried { outline: 2px dashed color-mix(in srgb, var(--accent-2) 45%, transparent); outline-offset: -1px; background: #ffffff0a; }
+.dialog .ordered-item.carried > :not(.order-number, .order-end) { visibility: hidden; }
+.dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
+.dialog .order-ghost .ordered-item { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
+.dialog .order-ghost :is(.order-number, .order-end) { display: none; }
 .dialog .order-number {
   position: absolute;
-  left: 50%;
-  bottom: -11px;
+  left: -9px;
+  top: -9px;
   z-index: 4;
-  transform: translateX(-50%);
   min-width: 22px;
   height: 22px;
   display: grid;
@@ -123,7 +127,7 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 }
 .dialog .ordered-item:first-child .order-number { background: var(--brass); border-color: var(--accent); color: var(--on-brass); }
 /* What the first place means, in the game's own words */
-.dialog .order-end { position: absolute; left: 50%; top: calc(100% + 13px); transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+.dialog .order-end { position: absolute; left: 50%; top: calc(100% + 7px); transform: translateX(-50%); font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; white-space: nowrap; color: var(--accent-2); pointer-events: none; }
 /* The two that carry the held card along the row share the foot of the dialog with its answer */
 .dialog .order-move { display: flex; align-items: center; gap: 8px; margin-right: auto; }

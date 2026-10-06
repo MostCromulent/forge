@@ -5,6 +5,7 @@ import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl } from '../images';
 import { hoverCard } from './detail';
+import { reducedMotion } from '../conquest/conquestmotion';
 import { rankByName } from '../search';
 import { SymbolText } from '../symbols';
 import { useDebounced } from '../hooks';
@@ -278,18 +279,114 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   );
 }
 
+/** How long a card takes to slide to a new place in the order, and to settle when it is put down. */
+const CARRY_MS = 170;
+const CARRY_EASE = 'cubic-bezier(.2,.8,.2,1)';
+
 function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer: Answer }) {
   const [chosen, setChosen] = useState<number[]>(() => [...req.selected]);
   const [remember, setRemember] = useState(false);
-  const [dropAt, setDropAt] = useState<number | null>(null);
   /** The card tapped to be moved, by its place among the options. */
   const [held, setHeld] = useState<number | null>(null);
-  const dragFrom = useRef<number | null>(null);
-  const move = (from: number, to: number) => setChosen(list => {
-    const next = [...list];
-    next.splice(to, 0, next.splice(from, 1)[0]);
-    return next;
-  });
+  /** The card the pointer is carrying, by its place among the options. */
+  const [carried, setCarried] = useState<number | null>(null);
+  const row = useRef<HTMLDivElement>(null);
+  const order = useRef(chosen);
+  order.current = chosen;
+  /** Where each card stood before the order changed, so it slides from there to its new place. */
+  const stood = useRef<Map<Element, DOMRect> | null>(null);
+  const ghost = useRef<HTMLElement | null>(null);
+  const dragged = useRef(false);
+  const move = (from: number, to: number) => {
+    if (row.current) stood.current = new Map([...row.current.children].map(el => [el, el.getBoundingClientRect()]));
+    setChosen(list => {
+      const next = [...list];
+      next.splice(to, 0, next.splice(from, 1)[0]);
+      return next;
+    });
+  };
+  useLayoutEffect(() => {
+    const was = stood.current;
+    stood.current = null;
+    if (!was || reducedMotion()) return;
+    for (const [el, from] of was) {
+      el.getAnimations().forEach(a => a.cancel());
+      const to = el.getBoundingClientRect();
+      if (el.classList.contains('carried') || (from.left === to.left && from.top === to.top)) continue;
+      el.animate([{ translate: `${from.left - to.left}px ${from.top - to.top}px` }, { translate: '0 0' }], { duration: CARRY_MS, easing: CARRY_EASE });
+    }
+  }, [chosen]);
+  useEffect(() => () => ghost.current?.remove(), []);
+  // A finger scrolls the dialog, so only a mouse or pen carries a card; a tap holds it for the arrows
+  const carry = (e: PointerEvent, i: number) => {
+    if (e.pointerType === 'touch' || e.button !== 0 || ghost.current) return;
+    const el = e.currentTarget as HTMLElement;
+    const start = { x: e.clientX, y: e.clientY };
+    let from: DOMRect | null = null;
+    let slots: DOMRect[] = [];
+    let last = e.clientX;
+    let lean = 0;
+    const onMove = (m: PointerEvent) => {
+      const dx = m.clientX - start.x;
+      const dy = m.clientY - start.y;
+      if (!from) {
+        if (Math.hypot(dx, dy) < 5 || !row.current) return;
+        from = el.getBoundingClientRect();
+        slots = [...row.current.children].map(c => c.getBoundingClientRect());
+        // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
+        const lifted = document.createElement('div');
+        lifted.className = 'options ordered order-ghost';
+        lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;`;
+        lifted.append(el.cloneNode(true));
+        row.current.after(lifted);
+        ghost.current = lifted;
+        dragged.current = true;
+        setHeld(null);
+        setCarried(i);
+      }
+      const lifted = ghost.current;
+      if (!lifted) return;
+      // The card leans the way it is moving, and settles upright when it stops
+      lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
+      last = m.clientX;
+      lifted.style.translate = `${dx}px ${dy}px`;
+      lifted.style.rotate = `${lean.toFixed(2)}deg`;
+      const x = from.left + from.width / 2 + dx;
+      const y = from.top + from.height / 2 + dy;
+      const far = (r: DOMRect) => Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
+      let best = 0;
+      slots.forEach((s, n) => {
+        if (far(s) < far(slots[best])) best = n;
+      });
+      const at = order.current.indexOf(i);
+      if (at >= 0 && best !== at) move(at, best);
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onUp);
+      const lifted = ghost.current;
+      if (!lifted || !from) return;
+      // The click that ends a carry is not a tap on the card
+      setTimeout(() => { dragged.current = false; }, 0);
+      const done = () => {
+        lifted.remove();
+        ghost.current = null;
+        setCarried(null);
+      };
+      if (reducedMotion()) {
+        done();
+        return;
+      }
+      const to = el.getBoundingClientRect();
+      lifted.animate([{ translate: lifted.style.translate || '0 0', rotate: lifted.style.rotate || '0deg', scale: getComputedStyle(lifted).scale },
+        { translate: `${to.left - from.left}px ${to.top - from.top}px`, rotate: '0deg', scale: '1' }],
+      { duration: CARRY_MS, easing: CARRY_EASE, fill: 'forwards' }).finished.then(done, done);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onUp);
+  };
   const at = held === null ? -1 : chosen.indexOf(held);
   const step = (by: number) => {
     if (at >= 0 && at + by >= 0 && at + by < chosen.length) move(at, at + by);
@@ -318,25 +415,12 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
             : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
         </div>
       </>}
-      <div class="options ordered">
+      <div class="options ordered" ref={row}>
         {chosen.map((i, pos) => (
-          <div key={i} class={`ordered-item${dropAt === pos ? ' drop-here' : ''}${held === i ? ' selected' : ''}`} draggable
-            onDragStart={e => {
-              dragFrom.current = pos;
-              if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
-            }}
-            onDragOver={e => {
-              e.preventDefault();
-              setDropAt(pos);
-            }}
-            onDragLeave={() => setDropAt(null)}
-            onDrop={e => {
-              e.preventDefault();
-              setDropAt(null);
-              if (dragFrom.current !== null && dragFrom.current !== pos) move(dragFrom.current, pos);
-              dragFrom.current = null;
-            }}>
-            <OptionView model={model} opt={req.options[i]} onClick={() => setHeld(h => (h === i ? null : i))} />
+          <div key={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>
+            <OptionView model={model} opt={req.options[i]} onClick={() => {
+              if (!dragged.current) setHeld(h => (h === i ? null : i));
+            }} />
             {/* The number is the order they go in, which is the question the dialog is asking */}
             <span class="order-number">{pos + 1}</span>
             {pos === 0 && req.top && <span class="order-end">{req.top}</span>}
