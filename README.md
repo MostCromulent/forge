@@ -49,7 +49,8 @@ start it with `-Dforge.web.keepOpen=true`. To update, replace the folder with th
 
 Forge downloads each card image from Scryfall the first time it is shown. By default this uses Scryfall's
 rate-limited API. The first time it runs, the server window offers to download the image index (around 75 MB),
-which tells Forge where each image is on Scryfall's servers so they can be downloaded directly with no limit.
+which tells Forge where each image is on Scryfall's servers so they can be downloaded directly with no rate
+limit.
 
 <img src="forge-gui-web/docs/server.webp" width="49%" alt="The server window">
 
