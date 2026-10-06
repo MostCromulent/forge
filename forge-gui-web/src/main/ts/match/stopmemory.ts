@@ -3,44 +3,18 @@
 import type { Controls, PhaseType } from '../protocol';
 import { storeJson, storedJson } from '../storage';
 
-export interface RememberedStops {
-  mine: PhaseType[];
-  others: PhaseType[];
+const KEY = 'forge.guestStops';
+
+/** Gives the server the stops this browser remembers, if it remembers any. */
+export function restoreStops(setStops: (mine: boolean, phases: PhaseType[]) => void): void {
+  const saved = storedJson<{ mine: PhaseType[]; others: PhaseType[] } | null>(KEY, null);
+  if (saved) {
+    setStops(true, saved.mine);
+    setStops(false, saved.others);
+  }
 }
 
-export interface StopStore {
-  load(): RememberedStops | null;
-  save(stops: RememberedStops): void;
-}
-
-export interface StopMemory {
-  /** Gives the server the stops this browser remembers, if it remembers any. */
-  restore(setStops: (mine: boolean, phases: PhaseType[]) => void): void;
-  /** Remembers a guest's stops as the server has them. The host's are Forge's preferences, which outlive the server. */
-  onControls(controls: Controls, guest: boolean): void;
-}
-
-export function createStopMemory(store: StopStore): StopMemory {
-  return {
-    restore(setStops) {
-      const saved = store.load();
-      if (saved) {
-        setStops(true, saved.mine);
-        setStops(false, saved.others);
-      }
-    },
-    onControls(controls, guest) {
-      if (guest) {
-        store.save({ mine: controls.myStops, others: controls.otherStops });
-      }
-    },
-  };
-}
-
-/** The browser's storage, which can be unavailable; the stops then last as long as the session. */
-export function localStopStore(key: string): StopStore {
-  return {
-    load: () => storedJson(key, null),
-    save: stops => storeJson(key, stops),
-  };
+/** Remembers a guest's stops as the server has them. The host's are Forge's preferences, which outlive the server. */
+export function rememberStops(controls: Controls): void {
+  storeJson(KEY, { mine: controls.myStops, others: controls.otherStops });
 }

@@ -1,6 +1,7 @@
 // How the player has arranged the table, none of which goes to the server, kept in one place so a new match clears it at once
 
 import { storeJson, storedJson } from './storage';
+import { reducedMotion } from './dom';
 
 /** The card or player the pointer is over, where src is empty when the viewer may not see the card and at is the element hovered in. */
 export type Hover = { card: number | null; src: string; from?: string; at?: HTMLElement } | { player: number };
@@ -151,7 +152,7 @@ export function easedLocal(change: () => void, mark: () => Record<string, string
 }
 
 function transition(update: () => void | Promise<void>, still: () => void, mark: () => Record<string, string>): void {
-  if (!document.startViewTransition || document.documentElement.dataset.motion === 'reduced') {
+  if (!document.startViewTransition || reducedMotion()) {
     still();
     return;
   }

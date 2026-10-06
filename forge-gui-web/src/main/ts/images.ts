@@ -2,6 +2,7 @@
 
 import { stateOf, type Model } from './model';
 import type { CardView } from './protocol';
+import { make } from './dom';
 
 export const imageUrl = (key: string): string => `img?key=${encodeURIComponent(key)}`;
 
@@ -36,8 +37,7 @@ export function setSymbolText(el: HTMLElement, text: string | null | undefined):
 export function appendSymbolText(el: HTMLElement, text: string): void {
   for (const part of symbolParts(text)) {
     if (part.symbol) {
-      const img = document.createElement('img');
-      img.className = 'sym';
+      const img = make('img', 'sym');
       img.alt = part.text;
       img.src = symbolUrl(part.symbol);
       el.append(img);

@@ -5,7 +5,7 @@ import { createCard, updateCard, setPileCount, type CardClick } from './cards';
 import { combatShown, stateOf, type Model } from '../model';
 import { mergeInto, spreadFrom } from './motion';
 import { chargingAtPlayer } from './overlay';
-import { q } from '../dom';
+import { q, make } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { CardView } from '../protocol';
 import { t } from '../text';
@@ -118,7 +118,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
   const zoneWidth = (z: Zone, s: Omit<Sized, 'raw'>, gap: number) =>
     live(z).reduce((n, g) => n + groupUnit(g, s.lines) * s.fit, 0) + gap * Math.max(0, live(z).length - 1);
   // What is behind a card fans out to its left only, so it costs a row width and never height
-  const zoneHeight = (z: Zone, s: Sized) => s.lines * h * s.fit + (s.lines - 1) * lineGap(s.fit);
+  const zoneHeight = (s: Sized) => s.lines * h * s.fit + (s.lines - 1) * lineGap(s.fit);
 
   // offsetWidth, so a scrollbar appearing does not shrink the room it measures and feed back into the size
   const width = field.offsetWidth - px(fieldStyle, 'padding-left') - px(fieldStyle, 'padding-right') - 2;
@@ -180,7 +180,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const row = rows[r];
     // An empty row still keeps 60% of a card's height (.row's min-height)
     if (!row.some(z => live(z).length)) return 0.6 * h * cap;
-    return Math.max(...row.map((z, i) => (live(z).length ? zoneHeight(z, sizes[i]) : 0)));
+    return Math.max(...row.map((z, i) => (live(z).length ? zoneHeight(sizes[i]) : 0)));
   };
 
   // A phone has less to spare, and says how much
@@ -332,8 +332,7 @@ function isSick(model: Model, card: CardView): boolean {
 }
 
 function createSlot(): HTMLElement {
-  const el = document.createElement('div');
-  el.className = 'slot';
+  const el = make('div', 'slot');
   return el;
 }
 

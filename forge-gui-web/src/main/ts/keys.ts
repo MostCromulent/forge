@@ -20,8 +20,6 @@ export interface KeyBindings {
   cardText: string;
 }
 
-export const DEFAULT_KEYS: KeyBindings = { ok: ' ', endTurn: 'e', autoPass: 'p', undo: 'z', nextFace: 'f', cardText: 't' };
-
 // Escape closes and cancels everywhere, Enter confirms and starts a match, and the numbers pick from a card's menu
 const KEPT = new Set(['Escape', 'Enter', 'Tab', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
@@ -49,7 +47,7 @@ export interface KeyPress {
   modified: boolean;
 }
 
-export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys = DEFAULT_KEYS): KeyCommand | null {
+export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: KeyBindings): KeyCommand | null {
   if (press.modified) {
     // The one held key the page takes: undo in the deck editor, which the browser would otherwise spend on nothing
     const editing = !!model.editor && !model.inMatch && !ui.importer;

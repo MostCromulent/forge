@@ -4,7 +4,7 @@ import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from '../press';
 import { stepName } from './phasebar';
-import { byId, q, replay } from '../dom';
+import { byId, q, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { keyName } from '../keys';
@@ -80,7 +80,7 @@ export function renderPrompt(model: Model, actions: Actions): void {
   root.classList.toggle('blocked', isPortrait() && asking && !model.prompt?.selectablePlayers?.length
     && q<HTMLButtonElement>(root, '.ok').disabled && q<HTMLButtonElement>(root, '.cancel').disabled);
   const after = root.offsetHeight;
-  if (!before || Math.abs(after - before) < 3 || document.documentElement.dataset.motion === 'reduced') return;
+  if (!before || Math.abs(after - before) < 3 || reducedMotion()) return;
   for (const a of root.getAnimations()) if (a.id === 'prompt-resize') a.cancel();
   root.style.overflow = 'clip';
   root.style.alignContent = 'end';

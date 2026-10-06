@@ -1,5 +1,7 @@
 // A finger rested on something opens what a right-click or a hover opens for a mouse.
 
+import { make } from './dom';
+
 export const LONG_PRESS_MS = 500;
 const MOVE_LIMIT_PX = 8;
 /** How long after a finger lifts the browser's own context menu for that touch may still arrive. */
@@ -55,8 +57,7 @@ export function longPress(e: PointerEvent, open: (x: number, y: number) => void)
   }
   const x = e.clientX;
   const y = e.clientY;
-  const ring = document.createElement('div');
-  ring.className = 'press-ring';
+  const ring = make('div', 'press-ring');
   ring.style.left = `${x - 20}px`;
   ring.style.top = `${y - 20}px`;
   document.body.append(ring);

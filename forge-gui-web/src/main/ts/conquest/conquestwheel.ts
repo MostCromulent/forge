@@ -1,7 +1,7 @@
 // The Chaos Wheel as a dial, drawn and turned by hand, and the server decides where it stops
 
 import { skinIconUrl } from '../images';
-import { reducedMotion } from './conquestmotion';
+import { reducedMotion } from '../dom';
 
 /** The wheel's eight spots, clockwise from the needle, as ConquestEvent.ChaosWheelOutcome orders them. */
 export const WHEEL_SPOTS = ['CHAOS', 'BOOSTER', 'SHARDS', 'DOUBLE_BOOSTER', 'PLANESWALK', 'BOOSTER', 'DOUBLE_SHARDS', 'BOOSTER'] as const;

@@ -41,7 +41,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
   const kind = t(lim ? (lim.kind === 'draft' ? 'lblDraft' : 'lblSealed') : 'lblConstructed');
   return (
     <>
-      <TableHeader model={model} lobby={lobby} actions={actions} />
+      <TableHeader model={model} lobby={lobby} />
       <div class="lobby-main" onPointerOver={e => setPeek(peekAt(e, '.lobby-main'))} onPointerLeave={() => setPeek(null)}>
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
         <SetupHead trail={[{ label: t('lblWebHeadStart'), go: back(null) }, { label: WAY_NAMES[way], go: back(way) }, { label: kind }]}

@@ -7,7 +7,7 @@ import { hoverCard, hoverable, inspectCard } from './detail';
 import { journeys } from './motion';
 import { stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
-import { byId, q } from '../dom';
+import { byId, q, make, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import { ICONS } from './gamemenu';
@@ -141,7 +141,7 @@ let closing: Animation | null = null;
 
 /** Fades the panel in or out by opacity only, because a scale or slide would move the slot a flying spell is aimed at. */
 function showPanel(root: HTMLElement, shown: boolean): void {
-  const reduced = document.documentElement.dataset.motion === 'reduced';
+  const reduced = reducedMotion();
   if (shown) {
     if (closing) {
       closing.cancel();
@@ -240,8 +240,7 @@ function noteAwaiting(model: Model, items: StackItemView[], events: readonly Gam
 
 function createAwaiting(key: string): HTMLElement {
   const spell = awaiting.get(key);
-  const el = document.createElement('div');
-  el.className = 'stack-item awaiting';
+  const el = make('div', 'stack-item awaiting');
   el.innerHTML = '<img alt="" draggable="false"><div class="await"></div>';
   q(el, '.await').textContent = t('lblWebStackAwaitingPayment');
   const img = q<HTMLImageElement>(el, 'img');
@@ -254,8 +253,7 @@ function createAwaiting(key: string): HTMLElement {
 }
 
 function createItem(model: Model): HTMLElement {
-  const el = document.createElement('div');
-  el.className = 'stack-item';
+  const el = make('div', 'stack-item');
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"></div><div class="caption"><div class="who"></div><div class="desc"></div><div class="targets"></div></div>';
   const img = q<HTMLImageElement>(el, 'img');
   noImageOnError(el, img);
@@ -365,8 +363,7 @@ function renderMenu(model: Model): void {
   const source = deref(model, items.find(i => i.$key === at.key)?.SourceCard);
   const name = source && stateOf(model, source).Name;
   if (name) {
-    const title = document.createElement('p');
-    title.className = 'card-menu-title';
+    const title = make('p', 'card-menu-title');
     title.textContent = name;
     menu.append(title);
   }
@@ -391,8 +388,7 @@ function renderMenu(model: Model): void {
     item(t('lblWebStackAlwaysDecline'), 'alwaysNo', answer.trigger === 'DECLINE');
   }
   if (answer.autoYield !== undefined || answer.trigger !== undefined) {
-    const sep = document.createElement('div');
-    sep.className = 'card-menu-sep';
+    const sep = make('div', 'card-menu-sep');
     sep.setAttribute('role', 'separator');
     menu.append(sep);
   }

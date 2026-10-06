@@ -22,7 +22,7 @@ import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdr
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
 import { asksPlayer, worthSeeing } from './match/pace';
 import { applyAudioSettings, playMusic, playSound } from './audio';
-import { createStopMemory, localStopStore } from './match/stopmemory';
+import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, saveText } from './dom';
 import { initNotices } from './notices';
 import { deleteDeviceDeck, listDeviceDecks, putDeviceDeck } from './deck/devicedecks';
@@ -124,7 +124,6 @@ const actions: Actions = {
 // The page's own actions and model, for the browser console and for e2e probes
 Object.assign(window, { forge: { actions, model } });
 
-const stopMemory = createStopMemory(localStopStore('forge.guestStops'));
 
 initUi(schedule, render);
 initForm(() => {
@@ -262,7 +261,7 @@ function apply(msg: ServerMessage): void {
       if (!model.host && !restored) {
         restored = true;
         restoreGuestSettings();
-        stopMemory.restore(actions.setStops);
+        restoreStops(actions.setStops);
       }
       model.canClaimHost = msg.canClaimHost;
       onServerSettings(msg.settings);
@@ -473,7 +472,7 @@ function apply(msg: ServerMessage): void {
       model.controls = msg;
       onServerSettings(msg.settings);
       applyAudioSettings();
-      stopMemory.onControls(msg, !model.host);
+      if (!model.host) rememberStops(msg);
       break;
     case 'log':
       appendLog(msg, logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) }))));

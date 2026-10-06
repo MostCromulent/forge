@@ -7,6 +7,7 @@ import { cssUrl, playerSleeveUrl } from '../looks';
 import { echoSound } from '../audio';
 import { TAPPED_SCALE, unmake } from './leaving';
 import type { Model } from '../model';
+import { make } from '../dom';
 
 /** Where a card stood, and a copy of how it looked there, for a trip after its own element has gone. */
 interface Snapshot {
@@ -474,8 +475,7 @@ export function pileTopFor(key: string): HTMLElement | null {
 function cardBack(model: Model, key: string): HTMLElement {
   const card = model.objects.get(Number(key)) as CardView | undefined;
   const owner = card?.Owner ? model.objects.get(card.Owner.ref) as PlayerView | undefined : undefined;
-  const back = document.createElement('div');
-  back.className = 'card back';
+  const back = make('div', 'card back');
   back.style.setProperty('--sleeve', cssUrl(playerSleeveUrl(owner)));
   return back;
 }

@@ -5,7 +5,7 @@ import { cardImageSrc, setImage } from '../images';
 import { deref, game, me, players, stateOf, zone, type Model } from '../model';
 import { hoverable } from './detail';
 import { cssUrl } from '../looks';
-import { byId, q } from '../dom';
+import { byId, q, make } from '../dom';
 import { commandKind } from './command';
 import type { Actions } from '../actions';
 import type { CardView, GameView, PlayerView } from '../protocol';
@@ -41,8 +41,7 @@ export function renderPlanes(model: Model, actions: Actions): void {
 
   reconcile(q(dock, '.planes'), planes, c => c.$key,
     () => {
-      const el = document.createElement('div');
-      el.className = 'plane';
+      const el = make('div', 'plane');
       el.innerHTML = '<img alt="" draggable="false"><span class="plane-name"></span>';
       hoverable(el);
       return el;

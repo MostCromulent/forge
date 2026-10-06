@@ -4,6 +4,7 @@ import { copyLimit, countsInDeck } from './catalogue';
 import { imageUrl } from '../images';
 import type { EditorState } from '../protocol';
 import { t, type TextKey } from '../text';
+import { make } from '../dom';
 
 export type Zone = 'Main' | 'Sideboard' | 'Commander' | 'catalogue';
 
@@ -120,16 +121,14 @@ export type CardHandlers = (name: string, from: Zone, image: string, count: numb
 };
 
 function makeChip(carried: Carried, image: string): HTMLElement {
-  const chip = document.createElement('div');
-  chip.className = 'drag-chip';
+  const chip = make('div', 'drag-chip');
   const art = document.createElement('img');
   art.src = imageUrl(image);
   art.alt = '';
   const words = document.createElement('span');
   const name = document.createElement('b');
   name.textContent = carried.count > 1 ? `${carried.count} × ${carried.name}` : carried.name;
-  const verb = document.createElement('span');
-  verb.className = 'verb';
+  const verb = make('span', 'verb');
   words.append(name, verb);
   chip.append(art, words);
   document.body.append(chip);

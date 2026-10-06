@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
-import { byId, q } from '../dom';
+import { byId, q, make } from '../dom';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
 import { manaValue } from './hand';
@@ -87,14 +87,12 @@ function shelf(root: HTMLElement): HTMLElement {
   if (known) {
     return known;
   }
-  const el = document.createElement('div');
-  el.className = 'zone-shelf';
+  const el = make('div', 'zone-shelf');
   return el;
 }
 
 function createPanel(): HTMLElement {
-  const el = document.createElement('section');
-  el.className = 'zone-panel';
+  const el = make('section', 'zone-panel');
   el.innerHTML = '<header><b class="zone-who"></b><span class="zone-count"></span><span class="zone-gap"></span>'
     + '<input class="zone-find" type="search">'
     + '<label class="zone-sort"><select></select></label>'

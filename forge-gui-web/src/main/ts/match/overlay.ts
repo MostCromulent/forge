@@ -1,6 +1,6 @@
 import { combatShown, game, derefAll, players, type Model } from '../model';
 import { setting } from '../settings';
-import { byId } from '../dom';
+import { byId, reducedMotion } from '../dom';
 import { cardElement, pileTopFor } from './motion';
 import { ui } from '../ui';
 import { isPortrait } from '../form';
@@ -156,13 +156,13 @@ function paintArrows(model: Model): void {
     const blocked = present(band.blockers).length > 0 || present(band.plannedBlockers).length > 0;
     attackers.forEach(attacker => {
       if (!phone && !atFace.has(attacker.ref) && !blocked) {
-        ribbon(ctx, elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack);
+        ribbon(elementFor(attacker.ref), elementFor(band.defender?.ref), KINDS.attack);
       }
       for (const blocker of present(band.blockers)) {
-        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block);
+        ribbon(elementFor(blocker.ref), elementFor(attacker.ref), KINDS.block);
       }
       for (const blocker of present(band.plannedBlockers)) {
-        ribbon(ctx, elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock);
+        ribbon(elementFor(blocker.ref), elementFor(attacker.ref), KINDS.plannedBlock);
       }
     });
   }
@@ -170,14 +170,14 @@ function paintArrows(model: Model): void {
   if (g.Phase === 'COMBAT_DECLARE_BLOCKERS') {
     for (const obj of model.objects.values()) {
       const forced = present((obj as CardView).MustBlockCards);
-      forced.forEach(attacker => ribbon(ctx, elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
+      forced.forEach(attacker => ribbon(elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
   const item = !phone && ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
   if (item) {
     const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
     const targets = stackTargets(model, item);
-    targets.forEach(target => ribbon(ctx, from, elementFor(target.$key), KINDS.target));
+    targets.forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
   }
   drawQueued(ctx);
 }
@@ -231,7 +231,7 @@ function drawDrag(ctx: CanvasRenderingContext2D): void {
   if (!drag) return;
   const kind = KINDS[drag.kind];
   if (drag.to instanceof HTMLElement) {
-    ribbon(ctx, drag.from, drag.to, kind, false);
+    ribbon(drag.from, drag.to, kind, false);
     glow(drag.to, kind);
   } else {
     arrow(ctx, edge(drag.from, drag.to, 2), drag.to, kind);
@@ -281,7 +281,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
     const waiting = p?.paying && lastAim ? onStack(lastAim.key) : null;
     if (waiting && lastAim) {
       const targets = lastAim.targets;
-      targets.forEach(k => ribbon(ctx, waiting, elementFor(k) ?? onStack(String(k)), KINDS.target));
+      targets.forEach(k => ribbon(waiting, elementFor(k) ?? onStack(String(k)), KINDS.target));
     } else {
       lastAim = null;
     }
@@ -290,7 +290,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
     aimedAt = null;
     return;
   }
-  p.highlighted.forEach(k => ribbon(ctx, from, elementFor(k) ?? onStack(String(k)), KINDS.target));
+  p.highlighted.forEach(k => ribbon(from, elementFor(k) ?? onStack(String(k)), KINDS.target));
   if (!pointer) return;
   const r = from.getBoundingClientRect();
   if (within(r, pointer, 0)) return;
@@ -300,7 +300,7 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
   aimedAt = over;
   if (over) {
     // Full grown at once: the arrow was already out to the pointer, so only its head moves onto the target
-    ribbon(ctx, from, over, KINDS.target, false);
+    ribbon(from, over, KINDS.target, false);
     glow(over, KINDS.target);
   } else {
     arrow(ctx, edge(from, pointer, 2), pointer, KINDS.target);
@@ -372,7 +372,7 @@ const RETREAT_MS = 300;
 
 /** A chevron whose card has left the battlefield has nothing to draw back to, so it goes at once. */
 function retreat(mark: HTMLElement, cardStays: boolean, afterHit: boolean): void {
-  if (!cardStays || document.documentElement.dataset.motion === 'reduced') {
+  if (!cardStays || reducedMotion()) {
     mark.remove();
     return;
   }
@@ -448,7 +448,7 @@ const rgba = (hex: string, a: number) => {
 /** The arrows of this paint, drawn together at its end so the ones sharing a target can share where they land. */
 let queued: { from: HTMLElement; to: HTMLElement; kind: ArrowKind; grows: boolean }[] = [];
 
-function ribbon(ctx: CanvasRenderingContext2D, fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
+function ribbon(fromEl: HTMLElement | null, toEl: HTMLElement | null, kind: ArrowKind, grows = true): void {
   if (!fromEl || !toEl || fromEl === toEl) return;
   // A block the engine lists as both declared and planned is drawn once, as declared, which is queued first
   if (queued.some(q => q.from === fromEl && q.to === toEl)) return;
@@ -516,7 +516,7 @@ const idOf = (el: Element) => ids.get(el) ?? (ids.set(el, ++nextId), nextId);
 
 /** How far along an arrow is, from 0 as it first appears to 1 once it has reached its target. */
 function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind): number {
-  if (document.documentElement.dataset.motion === 'reduced') return 1;
+  if (reducedMotion()) return 1;
   const key = `${idOf(from)}>${idOf(to)}>${kind.core}`;
   const first = born.get(key) ?? performance.now();
   drawnNow.set(key, first);

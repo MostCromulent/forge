@@ -2,7 +2,7 @@ import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSym
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { frameColour } from './cards';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './rulestext';
-import { byId, q, replay } from '../dom';
+import { byId, q, replay, make } from '../dom';
 import { changeUi, ui } from '../ui';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
@@ -388,35 +388,27 @@ function setRulesText(box: HTMLElement, foot: HTMLElement, html: string, keyword
   box.replaceChildren(...sorted.blocks.map(b => drawBlock(b, changes)));
   // What the card has lost goes with its rules, struck through: the keywords with its keywords, the rest after
   if (changes?.lostKeywords.length) {
-    const kws = box.querySelector('.kws') ?? box.insertBefore(element('div', 'kws'), box.firstChild);
+    const kws = box.querySelector('.kws') ?? box.insertBefore(make('div', 'kws'), box.firstChild);
     const firstReminder = kws.querySelector('.kwrem');
-    for (const lost of changes.lostKeywords) kws.insertBefore(changed(richLine(element('span', 'kw lost'), [{ text: lost, muted: false }]), 'lost'), firstReminder);
+    for (const lost of changes.lostKeywords) kws.insertBefore(changed(richLine(make('span', 'kw lost'), [{ text: lost, muted: false }]), 'lost'), firstReminder);
   }
-  for (const lost of changes?.lostText ?? []) box.append(changed(richLine(element('div', 'lost'), [{ text: lost, muted: false }]), 'lost'));
+  for (const lost of changes?.lostText ?? []) box.append(changed(richLine(make('div', 'lost'), [{ text: lost, muted: false }]), 'lost'));
   if (sorted.notes.length) {
-    const notes = document.createElement('div');
-    notes.className = 'notes';
+    const notes = make('div', 'notes');
     for (const note of sorted.notes) notes.append(richLine(document.createElement('div'), note));
     box.append(notes);
   }
   foot.replaceChildren(...sorted.chips.map(chip => {
-    const el = document.createElement('span');
-    el.className = `chip ${chip.kind}`;
+    const el = make('span', `chip ${chip.kind}`);
     el.textContent = chip.text;
     return el;
   }));
   return sorted;
 }
 
-function element(tag: string, className: string): HTMLElement {
-  const el = document.createElement(tag);
-  el.className = className;
-  return el;
-}
-
 /** Labels a keyword or a line as gained or lost. */
 function changed(el: HTMLElement, how: 'gained' | 'lost'): HTMLElement {
-  const tag = element('i', 'change');
+  const tag = make('i', 'change');
   tag.textContent = how === 'gained' ? t('lblWebDetailGained') : t('lblWebDetailLost');
   el.append(tag);
   return el;
@@ -428,28 +420,28 @@ const LONG_COST = 22;
 function drawBlock(block: Block, changes?: Changes): HTMLElement {
   switch (block.kind) {
     case 'keywords': {
-      const el = element('div', 'kws');
+      const el = make('div', 'kws');
       for (const item of block.items) {
-        const kw = richLine(element('span', 'kw'), item);
+        const kw = richLine(make('span', 'kw'), item);
         el.append(changes?.gained.has(plain(item).toLowerCase()) ? changed(kw, 'gained') : kw);
       }
-      for (const reminder of block.reminders) el.append(richLine(element('span', 'kwrem'), reminder));
+      for (const reminder of block.reminders) el.append(richLine(make('span', 'kwrem'), reminder));
       return el;
     }
     case 'ability': {
       // A cost too long to sit beside its effect, such as one that returns a land, goes above it and wraps
-      const el = element('div', plain(block.cost).length > LONG_COST ? 'ab long' : 'ab');
-      el.append(richLine(element('span', block.loyalty ? `ac ${block.loyalty}` : 'ac'), block.cost));
-      const effect = element('span', 'ef');
-      if (block.label) effect.append(richLine(element('b', ''), block.label), ' ');
+      const el = make('div', plain(block.cost).length > LONG_COST ? 'ab long' : 'ab');
+      el.append(richLine(make('span', block.loyalty ? `ac ${block.loyalty}` : 'ac'), block.cost));
+      const effect = make('span', 'ef');
+      if (block.label) effect.append(richLine(make('b', ''), block.label), ' ');
       el.append(richLine(effect, block.effect));
       return el;
     }
     case 'mode':
-      return richLine(element('div', 'mode-option'), block.text);
+      return richLine(make('div', 'mode-option'), block.text);
     case 'text': {
-      const el = element('div', '');
-      if (block.label) el.append(richLine(element('b', ''), block.label), ' — ');
+      const el = make('div', '');
+      if (block.label) el.append(richLine(make('b', ''), block.label), ' — ');
       return richLine(el, block.text);
     }
   }
@@ -460,8 +452,7 @@ function richLine<E extends HTMLElement>(el: E, line: Line): E {
   for (const run of line) {
     run.text.split(/(\((?:[^()]|\([^()]*\))*\))/).forEach((part, i) => {
       if (!part) return;
-      const span = document.createElement('span');
-      span.className = [run.muted ? 'muted' : '', run.struck ? 'struck' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' ');
+      const span = make('span', [run.muted ? 'muted' : '', run.struck ? 'struck' : '', i % 2 ? 'rem' : ''].filter(Boolean).join(' '));
       appendSymbolText(span, part);
       el.append(span);
     });
@@ -525,8 +516,7 @@ function drawCommanderDamage(root: HTMLElement, model: Model, key: number): void
   root.append(title);
   for (const { card, value } of hits) {
     const commander = deref(model, card) as CardView | undefined;
-    const row = document.createElement('div');
-    row.className = value >= COMMANDER_WARNING ? 'cmdr-row near' : 'cmdr-row';
+    const row = make('div', value >= COMMANDER_WARNING ? 'cmdr-row near' : 'cmdr-row');
     row.innerHTML = '<span class="art"></span><span class="who"><span class="nm"></span><span class="bar"><i></i></span></span><span class="v"><b></b><small></small></span>';
     const src = cardImageSrc(model, commander);
     if (src) q(row, '.art').style.backgroundImage = `url("${src}")`;

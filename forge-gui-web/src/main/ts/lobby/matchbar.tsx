@@ -1,11 +1,12 @@
 // The bar above the seats: what is played and by how many, as labelled fields that each open their own control
 
 import type { ComponentChildren } from 'preact';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { HeadControls, PageHeader } from '../header';
 import { t, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
+import { useDismiss } from '../hooks';
 import type { Address, Format, LobbyTable } from '../protocol';
 
 /** A field's popup: opened by its button, closed by Escape or a press anywhere outside it. */
@@ -14,17 +15,7 @@ function Popup({ label, disabled, children, wide, onOpen }: {
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
-    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', outside);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [open]);
+  useDismiss(open, root, () => setOpen(false));
   return (
     <span ref={root} class="popup-anchor">
       <button class="field-value menu-button" aria-expanded={open} disabled={disabled} onClick={() => {
@@ -294,7 +285,7 @@ export function MatchBar({ model, lobby, actions, preview }: {
 }
 
 /** How others join, the sound and the options, and the way out. Who is here is the dock's to say. */
-export function TableHeader({ model, lobby, actions }: { model: Model; lobby: LobbyTable; actions: Actions }) {
+export function TableHeader({ model, lobby }: { model: Model; lobby: LobbyTable }) {
   return (
     <PageHeader>
       <div class="head-right">

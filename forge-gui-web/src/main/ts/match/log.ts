@@ -2,7 +2,7 @@
 
 import { imageUrl, setSymbolText } from '../images';
 import { hoverable } from './detail';
-import { byId } from '../dom';
+import { byId, make } from '../dom';
 import type { LogMessage } from '../protocol';
 
 const MAX_ENTRIES = 400;
@@ -44,8 +44,7 @@ function tintNames(el: HTMLElement, names: readonly { name: string; colour: stri
     let at = 0;
     for (const match of value.matchAll(pattern)) {
       parts.push(document.createTextNode(value.slice(at, match.index)));
-      const who = document.createElement('b');
-      who.className = 'log-player';
+      const who = make('b', 'log-player');
       who.style.color = byName.get(match[0]) ?? '';
       who.textContent = match[0];
       parts.push(who);
@@ -70,12 +69,10 @@ export function appendLog(msg: LogMessage, tints: readonly { name: string; colou
     stick = true;
   }
   for (const entry of msg.entries) {
-    const el = document.createElement('div');
-    el.className = `log-entry ${entry.type.toLowerCase()}`;
+    const el = make('div', `log-entry ${entry.type.toLowerCase()}`);
     // Entries about a card show it, as the desktop log does
     if (entry.imageKey) {
-      const thumb = document.createElement('img');
-      thumb.className = 'thumb';
+      const thumb = make('img', 'thumb');
       thumb.alt = '';
       thumb.src = imageUrl(entry.imageKey);
       thumb.dataset.key = String(entry.card);

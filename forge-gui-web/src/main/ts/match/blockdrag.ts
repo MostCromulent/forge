@@ -1,6 +1,6 @@
 // A dragged block or attack sends the clicks the engine already takes, each waiting for the one before to show on the board
 
-import { byId, q } from '../dom';
+import { byId, q, make } from '../dom';
 import { game, me, opponents, stateOf, type Model } from '../model';
 import { setDragArrow } from './overlay';
 import type { Actions } from '../actions';
@@ -243,8 +243,7 @@ const TIP_MS = 3500;
 /** A small note where the drag was let go, so the reason is read where the eye already is. */
 function showTip(at: Point, title: string, reason: string): void {
   document.querySelector('.block-tip')?.remove();
-  const tip = document.createElement('div');
-  tip.className = 'block-tip';
+  const tip = make('div', 'block-tip');
   tip.append(Object.assign(document.createElement('b'), { textContent: title }));
   if (reason) tip.append(Object.assign(document.createElement('span'), { textContent: reason }));
   document.body.append(tip);

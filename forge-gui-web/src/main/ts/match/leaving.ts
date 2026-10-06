@@ -1,5 +1,7 @@
 // A permanent leaving for a graveyard or exile is unmade where it stood, drawn on a canvas over the card from its own picture
 
+import { reducedMotion } from '../dom';
+
 export type Destination = 'Graveyard' | 'Exile';
 
 /** A tapped card is drawn turned and at this size (board.css). */
@@ -50,7 +52,7 @@ function noiseField(pw: number, ph: number, scale: number): Float32Array {
 export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: number } | undefined, tapped: boolean,
   to: Destination): number {
   const img = card.querySelector('img');
-  if (document.documentElement.dataset.motion === 'reduced' || card.classList.contains('noimg')
+  if (reducedMotion() || card.classList.contains('noimg')
     || !img?.complete || !img.naturalWidth) {
     return 0;
   }

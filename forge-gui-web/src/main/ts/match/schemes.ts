@@ -4,7 +4,7 @@ import { reconcile } from './render';
 import { cardImageSrc, setImage } from '../images';
 import { players, stateOf, zone, type Model } from '../model';
 import { hoverable } from './detail';
-import { byId, q } from '../dom';
+import { byId, q, make, reducedMotion } from '../dom';
 import { commandKind } from './command';
 import type { CardView, PlayerView } from '../protocol';
 import { t } from '../text';
@@ -28,8 +28,7 @@ export function isArchenemy(model: Model, player: PlayerView): boolean {
 export function renderOngoing(root: HTMLElement, model: Model, player: PlayerView): void {
   reconcile(root, schemesOf(model, player), c => c.$key,
     () => {
-      const el = document.createElement('div');
-      el.className = 'scheme';
+      const el = make('div', 'scheme');
       el.innerHTML = '<img alt="" draggable="false"><span class="scheme-name"></span>';
       hoverable(el);
       return el;
@@ -56,10 +55,9 @@ export function revealSchemes(model: Model): void {
   const all = players(model).flatMap(p => schemesOf(model, p).map(c => ({ card: c, owner: p })));
   const fresh = newSchemes(seen, all.map(s => s.card.$key));
   seen = new Set(all.map(s => s.card.$key));
-  if (!fresh.length || document.documentElement.dataset.motion === 'reduced') return;
+  if (!fresh.length || reducedMotion()) return;
   const { card, owner } = all.find(s => s.card.$key === fresh[fresh.length - 1])!;
-  const reveal = document.createElement('div');
-  reveal.className = 'scheme-reveal';
+  const reveal = make('div', 'scheme-reveal');
   reveal.innerHTML = '<div class="scheme big"><img alt=""><span class="scheme-name"></span></div><p></p>';
   setImage(q<HTMLImageElement>(reveal, 'img'), cardImageSrc(model, card));
   q(reveal, '.scheme-name').textContent = stateOf(model, card).Name ?? '';

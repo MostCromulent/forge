@@ -4,6 +4,7 @@
 // the page.
 
 import { playEffect } from '../audio';
+import { make, reducedMotion } from '../dom';
 
 type Three = typeof import('three');
 
@@ -42,7 +43,7 @@ function loadThree() {
 
 /** Whether a portrait may break here at all; without it, the seat just empties and the title shows at once. */
 export function canShatter(): boolean {
-  if (document.documentElement.dataset.motion === 'reduced') return false;
+  if (reducedMotion()) return false;
   try {
     return !!document.createElement('canvas').getContext('webgl2');
   } catch {
@@ -160,13 +161,11 @@ export async function shatter(o: ShatterOptions): Promise<void> {
   const R = o.final ? Math.min(140, Math.max(95, Math.min(W, H) * 0.145)) : seatR;
   const k = R / 130;
 
-  const layer = document.createElement('div');
-  layer.className = 'shatter-layer';
+  const layer = make('div', 'shatter-layer');
   const canvas = document.createElement('canvas');
   layer.append(canvas);
   const glow = (name: string) => {
-    const el = document.createElement('div');
-    el.className = 'shatter-glow ' + name;
+    const el = make('div', 'shatter-glow ' + name);
     layer.append(el);
     return el;
   };

@@ -6,7 +6,7 @@ import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
 import { playerSleeveUrl, cssUrl } from '../looks';
 import { reconcile } from './render';
-import { q, replay } from '../dom';
+import { q, replay, make } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 
@@ -17,8 +17,7 @@ export type CardClick = (el: HTMLElement, menu: boolean, e?: MouseEvent) => void
 const EYE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>';
 
 export function createCard(onClick: CardClick): HTMLDivElement {
-  const el = document.createElement('div');
-  el.className = 'card';
+  const el = make('div', 'card');
   el.innerHTML = '<img alt="" draggable="false"><div class="frame"><b class="name"></b><span class="cost"></span><span class="type"></span></div><span class="pt"><i class="pt-p"></i><i class="pt-t"></i></span><span class="badges"></span><span class="sick">Zz</span><span class="count"></span><span class="cost-badge"></span><span class="seen">' + EYE + '</span><span class="owned-by"></span><span class="kind-tag"></span><span class="corner"><span class="mech"></span><span class="kws"></span></span><span class="blocks"></span><span class="block-tab"></span><span class="combat-tag"></span><i class="halo" aria-hidden="true"></i><i class="rim" aria-hidden="true"></i><span class="haze" aria-hidden="true"></span><i class="pile-edge" aria-hidden="true"></i>';
   q(el, '.sick').title = t('lblWebCardSummoningSick');
   q(el, '.seen').title = t('lblWebCardRevealed');
@@ -172,8 +171,7 @@ function showKeywords(root: HTMLElement, keywords: KeywordText[] | undefined, sh
 }
 
 function shieldBadge(): HTMLElement {
-  const el = document.createElement('span');
-  el.className = 'shield';
+  const el = make('span', 'shield');
   el.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.6 13.4 3.4v4.4c0 3.1-2.2 5.6-5.4 6.6-3.2-1-5.4-3.5-5.4-6.6V3.4Z"/></svg><i class="n"></i>';
   return el;
 }
@@ -193,8 +191,7 @@ function setCost(el: HTMLElement, text: string, pips = false): void {
     // An image cannot carry the light drawn round a changed cost, so each symbol gets a box of its own to hold it
     if (pips) {
       for (const sym of [...el.children]) {
-        const pip = document.createElement('span');
-        pip.className = 'pip';
+        const pip = make('span', 'pip');
         sym.replaceWith(pip);
         pip.append(sym);
       }
@@ -205,11 +202,9 @@ function setCost(el: HTMLElement, text: string, pips = false): void {
 /** Where a permanent has got to in its set's track, and a card has at most one such track, so one chip serves them all. */
 function mechanic(card: CardView, type: string): Node[] {
   const track = (now: number, of: number, text: string) => {
-    const pips = document.createElement('span');
-    pips.className = 'pips';
+    const pips = make('span', 'pips');
     for (let i = 0; i < of; i++) {
-      const pip = document.createElement('i');
-      pip.className = i < now ? 'on' : '';
+      const pip = make('i', i < now ? 'on' : '');
       pips.append(pip);
     }
     return [pips, label(text)];
@@ -220,11 +215,9 @@ function mechanic(card: CardView, type: string): Node[] {
   if (card.Sprocket) return track(card.Sprocket, 3, t('lblWebCardSprocket', card.Sprocket));
   if (card.AttractionLights?.length) {
     const lit = new Set(card.AttractionLights);
-    const pips = document.createElement('span');
-    pips.className = 'pips';
+    const pips = make('span', 'pips');
     for (let i = 1; i <= 6; i++) {
-      const pip = document.createElement('i');
-      pip.className = lit.has(i) ? 'lit' : '';
+      const pip = make('i', lit.has(i) ? 'lit' : '');
       pips.append(pip);
     }
     return [pips, label(card.AttractionLights.join(' '))];
@@ -235,8 +228,7 @@ function mechanic(card: CardView, type: string): Node[] {
 }
 
 function label(text: string): HTMLElement {
-  const el = document.createElement('i');
-  el.className = 'mech-text';
+  const el = make('i', 'mech-text');
   el.textContent = text;
   return el;
 }
@@ -260,8 +252,7 @@ function showDamage(el: HTMLElement, damage: number): void {
     return;
   }
   replay(el, 'struck');
-  const hit = document.createElement('span');
-  hit.className = 'hit-number';
+  const hit = make('span', 'hit-number');
   hit.textContent = `-${damage - before}`;
   el.append(hit);
   hit.addEventListener('animationend', () => hit.remove());

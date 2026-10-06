@@ -1,21 +1,22 @@
 // A card is lifted as it looked when chosen, and flies once the place it lands on has been drawn
 
+import { reducedMotion } from './dom';
+
 const FLY_MS = 380;
 
 /** The card lifted, where it stood, and what it is flying for, until its place is drawn. */
 let inFlight: { face: HTMLElement; from: DOMRect; key: string } | null = null;
 
-const reduced = () => document.documentElement.dataset.motion === 'reduced';
 
 /** Lifts a card's image where it stands. A card showing only its text, or with no image yet, stays put. */
 export function lift(img: HTMLImageElement | null | undefined, key: string): void {
-  inFlight = !reduced() && img?.complete && img.naturalWidth
+  inFlight = !reducedMotion() && img?.complete && img.naturalWidth
     ? { face: img.cloneNode() as HTMLElement, from: img.getBoundingClientRect(), key } : null;
 }
 
 /** Lifts a card from a line with no picture of it, such as a table row: its image, card-shaped, at the line's start. */
 export function liftFromLine(src: string, line: DOMRect, key: string): void {
-  if (reduced()) {
+  if (reducedMotion()) {
     inFlight = null;
     return;
   }

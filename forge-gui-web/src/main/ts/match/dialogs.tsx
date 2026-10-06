@@ -5,7 +5,6 @@ import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
 import { imageUrl } from '../images';
 import { hoverCard } from './detail';
-import { reducedMotion } from '../conquest/conquestmotion';
 import { rankByName } from '../search';
 import { SymbolText } from '../symbols';
 import { useDebounced } from '../hooks';
@@ -19,6 +18,7 @@ import type {
   PlayerView, SideboardRequest, TextRequest, TrackedObject,
 } from '../protocol';
 import { t } from '../text';
+import { make, reducedMotion } from '../dom';
 
 type Answer = (value: unknown) => void;
 
@@ -334,8 +334,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
         from = el.getBoundingClientRect();
         slots = [...row.current.children].map(c => c.getBoundingClientRect());
         // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
-        const lifted = document.createElement('div');
-        lifted.className = 'options ordered order-ghost';
+        const lifted = make('div', 'options ordered order-ghost');
         lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;`;
         lifted.append(el.cloneNode(true));
         row.current.after(lifted);

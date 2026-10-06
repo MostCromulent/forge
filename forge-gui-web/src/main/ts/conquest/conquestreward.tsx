@@ -5,9 +5,9 @@ import { skinIconUrl, imageUrl } from '../images';
 import { mountPack, type Pack } from './conquestpack';
 import { mountWheel, spotFor, type Wheel, type WheelOutcome } from './conquestwheel';
 import { pendingAmounts } from './conquestpending';
-import { reducedMotion } from './conquestmotion';
 import type { Reward, RewardStep } from '../protocol';
 import { t } from '../text';
+import { make, reducedMotion } from '../dom';
 
 /** What the reveal has yet to show, by the icon of the balance it was paid into. */
 export type Owed = Record<string, number>;
@@ -143,8 +143,7 @@ function flyShards(from: DOMRect, arrived: () => void): void {
     arrived();
     return;
   }
-  const mote = document.createElement('img');
-  mote.className = 'cq-mote';
+  const mote = make('img', 'cq-mote');
   mote.alt = '';
   mote.src = skinIconUrl('IMG_AETHER_SHARD');
   document.body.append(mote);

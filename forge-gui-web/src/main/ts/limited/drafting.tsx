@@ -15,7 +15,9 @@ import { t, tNodes, type TextKey } from '../text';
 import type { ComponentChildren } from 'preact';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
+import { useDismiss } from '../hooks';
 import type { DraftCard, DraftSeat, DraftState } from '../protocol';
+import { make, reducedMotion } from '../dom';
 
 type GroupBy = 'colour' | 'type' | 'mv' | 'pick';
 type Drag = { from: 'pack' | 'pick'; index: number };
@@ -52,14 +54,12 @@ function passPack(picked: number, side: -1 | 1): void {
   const grid = document.querySelector<HTMLElement>('.draft-pack .cat-grid');
   const slots = [...grid?.querySelectorAll<HTMLElement>('.draft-slot') ?? []].filter((_, i) => i !== picked);
   if (!grid || !slots.length) return;
-  const reduced = document.documentElement.dataset.motion === 'reduced';
+  const reduced = reducedMotion();
   const box = grid.getBoundingClientRect();
   // Clipped to the pack, and inside the same classes, so the copies are drawn as the cards are
-  const layer = document.createElement('div');
-  layer.className = 'draft-pack pack-leaving';
+  const layer = make('div', 'draft-pack pack-leaving');
   Object.assign(layer.style, { left: `${box.left}px`, top: `${box.top}px`, width: `${box.width}px`, height: `${box.height}px` });
-  const inner = document.createElement('div');
-  inner.className = 'cat-grid';
+  const inner = make('div', 'cat-grid');
   layer.append(inner);
   const columns = columnsFrom(slots, side);
   packStillAt = Math.max(packStillAt, performance.now() + (reduced ? 160 : PASS_MS + Math.max(...columns) * COLUMN_STAGGER_MS));
@@ -83,7 +83,7 @@ function passPack(picked: number, side: -1 | 1): void {
 /** Slides a new pack in from the side it comes from, the column with furthest to go first. */
 function arrive(grid: HTMLElement, from: -1 | 1): void {
   const slots = [...grid.querySelectorAll<HTMLElement>('.draft-slot')];
-  const reduced = document.documentElement.dataset.motion === 'reduced';
+  const reduced = reducedMotion();
   const columns = columnsFrom(slots, -from as -1 | 1);
   // A pack the next player had waiting comes in behind the one leaving, once that one is mostly gone
   const behind = Math.max(0, passedAt + PASS_MS * 0.6 - performance.now());
@@ -188,14 +188,7 @@ function TableMenu({ state, faces }: { state: DraftState; faces: string[] }) {
 function Dropdown({ label, children, class: cls }: { label: ComponentChildren; children: (close: () => void) => ComponentChildren; class?: string }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const away = (e: Event) => { if (!root.current?.contains(e.target as Node)) setOpen(false); };
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    addEventListener('pointerdown', away);
-    addEventListener('keydown', key);
-    return () => { removeEventListener('pointerdown', away); removeEventListener('keydown', key); };
-  }, [open]);
+  useDismiss(open, root, () => setOpen(false));
   return (
     <span class="table-menu" ref={root}>
       <button class={[cls ?? '', 'drop-btn', open ? 'open' : ''].join(' ')} aria-expanded={open} onClick={() => setOpen(!open)}>

@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { deref, game, isLocal, me, opponents, players, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
-import { byId, q, replay } from '../dom';
+import { byId, q, replay, make, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
@@ -200,7 +200,6 @@ function drawTrack(pill: HTMLElement, model: Model, step: number, phase: number,
 /** The pill's motions last as long as its CSS transitions (--pill-ms in board.css), and ease out as they do. */
 const PILL_MS = 240;
 const easeOut = (t: number): number => 1 - (1 - t) ** 3;
-const reduced = (): boolean => document.documentElement.dataset.motion === 'reduced';
 
 /** The brass behind the current phase is one piece that glides between segments, since a gradient cannot fade from one to the next. */
 let slideKey = '';
@@ -228,7 +227,7 @@ function slideTo(track: HTMLElement, phase: number, step: number): void {
     const elapsed = performance.now() - start;
     const to = target();
     // With nothing to glide from, the brass only follows the segment as it grows to fit its name
-    const k = first || reduced() ? 1 : easeOut(Math.min(1, elapsed / PILL_MS));
+    const k = first || reducedMotion() ? 1 : easeOut(Math.min(1, elapsed / PILL_MS));
     place({ left: from.left + (to.left - from.left) * k, width: from.width + (to.width - from.width) * k });
     // A little past the glide, so the brass settles on the segment's final width
     if (elapsed < PILL_MS + 60) sliding = requestAnimationFrame(frame);
@@ -243,7 +242,7 @@ function swapOwner(owner: HTMLElement, name: string): void {
   const before = owner.offsetWidth;
   const had = !!b.textContent;
   b.textContent = name;
-  if (!had || reduced()) return;
+  if (!had || reducedMotion()) return;
   const after = owner.offsetWidth;
   const timing = { duration: PILL_MS, easing: 'cubic-bezier(.2,.7,.2,1)' };
   owner.animate([{ width: `${before}px` }, { width: `${after}px` }], timing);
@@ -254,8 +253,7 @@ function swapOwner(owner: HTMLElement, name: string): void {
 function drawPips(root: HTMLElement, phase: Phase, step: number, marker: TurnMarker | undefined, myTurn: boolean): void {
   reconcile(root, phase.steps, i => i,
     () => {
-      const el = document.createElement('span');
-      el.className = 'pip';
+      const el = make('span', 'pip');
       return el;
     },
     (el, i) => {

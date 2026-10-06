@@ -1,8 +1,8 @@
 // What closes plays its way out first (dialogs.css), as the chat dock does, and is gone once that animation ends
 
 import { useState } from 'preact/hooks';
+import { reducedMotion } from './dom';
 
-const still = () => document.documentElement.dataset.motion === 'reduced';
 /** Longer than any way out (dialogs.css). */
 const GIVE_UP_MS = 400;
 
@@ -12,7 +12,7 @@ export function useClosing(close: () => void): { closing: boolean; shut: () => v
   return {
     closing,
     shut: () => {
-      if (still()) {
+      if (reducedMotion()) {
         close();
         return;
       }
@@ -27,7 +27,7 @@ export function useClosing(close: () => void): { closing: boolean; shut: () => v
 /** The same for an element drawn by hand: it takes `closing`, and is removed once its animation ends. */
 export function leave(el: Element | null): void {
   if (!el) return;
-  if (still() || el.classList.contains('closing')) {
+  if (reducedMotion() || el.classList.contains('closing')) {
     el.remove();
     return;
   }

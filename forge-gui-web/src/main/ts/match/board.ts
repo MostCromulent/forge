@@ -16,7 +16,7 @@ import { artUrl } from '../sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion } from './motion';
 import { canShatter, shatter } from './shatter';
-import { byId, q, replay } from '../dom';
+import { byId, q, replay, make } from '../dom';
 import { setting } from '../settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
@@ -140,8 +140,7 @@ function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], a
   const tints = logTints(players(model).map(p => ({ name: p.Name ?? '', local: isLocal(model, p) })));
   reconcile(root, across, p => p.$key,
     () => {
-      const el = document.createElement('section');
-      el.className = 'seat compact';
+      const el = make('section', 'seat compact');
       return el;
     },
     (el, p) => {
@@ -187,8 +186,7 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
   const blocking = byId('match').classList.contains('declaring-blocks');
   reconcile<PlayerView, HTMLButtonElement>(tabs, across, o => o.$key,
     () => {
-      const el = document.createElement('button');
-      el.className = 'seat-tab';
+      const el = make('button', 'seat-tab');
       el.setAttribute('role', 'tab');
       el.innerHTML = '<img alt="" draggable="false"><b class="life"></b><span class="who"></span><span class="new"></span><span class="aim"></span><i class="dot" aria-hidden="true"></i>';
       // A tab only shows a seat; the player is chosen on the portrait inside it
@@ -360,8 +358,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   const badges: Badge[] = Object.entries(player.Counters ?? {}).map(([name, n]) => ({ key: name, text: `${name.toLowerCase()} ${n}`, title: '' }));
   reconcile(q(root, '.player-counters'), badges, b => b.key,
     () => {
-      const el = document.createElement('span');
-      el.className = 'player-counter';
+      const el = make('span', 'player-counter');
       return el;
     },
     (el, b) => {
@@ -400,8 +397,7 @@ function renderManaPool(root: HTMLElement, player: PlayerView, own: boolean, act
   root.hidden = pool.length === 0;
   reconcile<[number, string], HTMLButtonElement>(q(root, '.mana-chips'), pool, ([bit]) => bit,
     ([bit, sym]) => {
-      const el = document.createElement('button');
-      el.className = 'mana-chip';
+      const el = make('button', 'mana-chip');
       el.innerHTML = '<img class="sym" alt="" draggable="false"><span class="amount"></span>';
       const img = q<HTMLImageElement>(el, 'img');
       img.src = symbolUrl(sym);
@@ -506,8 +502,7 @@ function renderZoneTiles(root: HTMLElement, model: Model, player: PlayerView, se
     ...EXTRA_ZONES.map(([z]) => z).filter(z => zone(model, player, z).length > 0)];
   reconcile<ZoneType, HTMLButtonElement>(root, zones, z => z,
     zoneName => {
-      const el = document.createElement('button');
-      el.className = 'zone-tile';
+      const el = make('button', 'zone-tile');
       el.dataset.zone = zoneName;
       el.innerHTML = '<img alt="" draggable="false">' + (zoneName === 'Library' ? '' : AMBIENT)
         + '<span class="zone-name"></span><span class="zone-count"></span>';
@@ -629,8 +624,7 @@ function revealFirst(model: Model, first: number | null, said?: string, pick?: (
   reveal.id = 'first-reveal';
   reveal.setAttribute('role', pick ? 'dialog' : 'status');
   reveal.classList.toggle('choosing', !!pick);
-  const faces = document.createElement('div');
-  faces.className = 'reveal-faces';
+  const faces = make('div', 'reveal-faces');
   for (const p of everyone) {
     const face = document.createElement(pick ? 'button' : 'div');
     face.className = p.$key === first ? 'reveal-face first' : 'reveal-face';
@@ -643,8 +637,7 @@ function revealFirst(model: Model, first: number | null, said?: string, pick?: (
     } else {
       picture.textContent = (p.Name ?? '?').slice(0, 1).toUpperCase();
     }
-    const name = document.createElement('span');
-    name.className = 'reveal-name';
+    const name = make('span', 'reveal-name');
     name.textContent = p.Name ?? '';
     face.append(picture, name);
     faces.append(face);
@@ -691,8 +684,7 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   if (!mine && players(model).length > 2) {
     return false;
   }
-  const banner = document.createElement('div');
-  banner.className = `turn-banner${mine ? ' mine' : ''}`;
+  const banner = make('div', `turn-banner${mine ? ' mine' : ''}`);
   banner.textContent = mine ? t('lblWebPhaseYourTurn') : t('lblWebBoardPlayersTurn', active.Name ?? '');
   // The banner takes the pill's place instead of covering it, because the pill animates its own width
   const strip = byId('phase-strip');
@@ -721,8 +713,7 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   }
   const hurt = change < 0;
   replay(el, hurt ? 'hurt' : 'healed', 'hurt', 'healed');
-  const float = document.createElement('span');
-  float.className = `life-change ${hurt ? 'hurt' : 'healed'}`;
+  const float = make('span', `life-change ${hurt ? 'hurt' : 'healed'}`);
   float.textContent = `${hurt ? '' : '+'}${change}`;
   avatar.append(float);
   float.addEventListener('animationend', () => float.remove());
@@ -738,8 +729,7 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
   avatar.addEventListener('animationend', e => {
     if (e.target === avatar) avatar.classList.remove('hit', 'hit-hard');
   });
-  const glow = document.createElement('span');
-  glow.className = 'avatar-hit';
+  const glow = make('span', 'avatar-hit');
   avatar.append(glow);
   glow.addEventListener('animationend', () => glow.remove());
 }
@@ -749,8 +739,7 @@ function takeHit(amount: number): void {
   const match = byId('match');
   replay(match, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
   match.addEventListener('animationend', () => match.classList.remove('hit', 'hit-hard'), { once: true });
-  const flash = document.createElement('div');
-  flash.className = 'hit-flash';
+  const flash = make('div', 'hit-flash');
   document.body.append(flash);
   flash.addEventListener('animationend', () => flash.remove());
 }
@@ -807,8 +796,7 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
     ({ card }) => {
       // A card the player reads or activates is drawn as a card; a reminder like the monarch stays a round token
       const tile = commandKind(card, stateOf(model, card)) !== 'effect';
-      const el = document.createElement('div');
-      el.className = tile ? 'cmd-tile' : 'emblem';
+      const el = make('div', tile ? 'cmd-tile' : 'emblem');
       el.innerHTML = tile ? '<img alt="" draggable="false"><span class="band"></span>'
         : '<img alt="" draggable="false"><span class="initials"></span><span class="band"><i></i><b></b></span><span class="tax"></span><span class="n"></span>';
       const img = q<HTMLImageElement>(el, 'img');
@@ -942,8 +930,7 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
   const counted = everyone.filter(p => wins(p) !== undefined);
   root.hidden = counted.length === 0;
   for (const p of counted) {
-    const row = document.createElement('div');
-    row.className = p === champion ? 'tally-player champion' : 'tally-player';
+    const row = make('div', p === champion ? 'tally-player champion' : 'tally-player');
     row.innerHTML = '<span class="tally-face"></span><span class="tally-name"></span><b class="tally-won"></b>';
     q(row, '.tally-face').style.backgroundImage = cssUrl(playerAvatarUrl(p));
     q(row, '.tally-name').textContent = p.Name ?? '';
@@ -1045,8 +1032,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
         // A forfeit loses what was paid to enter, so it is asked first, as desktop asks
         forfeit: () => {
           buttons.replaceChildren();
-          const ask = document.createElement('p');
-          ask.className = 'ask';
+          const ask = make('p', 'ask');
           ask.textContent = t('lblWebQuestForfeitAsk');
           buttons.append(ask);
           add(t('lblCancel'), true, draw);

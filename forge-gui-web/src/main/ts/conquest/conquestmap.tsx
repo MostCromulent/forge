@@ -5,12 +5,12 @@ import { artUrl } from '../sleeves';
 import { skinIconUrl } from '../images';
 import { Pips } from '../symbols';
 import { BH, G, SPINE, TH, TW, Y0, isFolded, layout } from './conquestlayout';
-import { reducedMotion } from './conquestmotion';
 import { DeckRow, SidePanel } from '../campaign/campaign';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
 import type { ConquestCell, ConquestPlace, ConquestState } from '../protocol';
 import { t, type TextKey } from '../text';
+import { reducedMotion } from '../dom';
 
 /** How long the marker takes over one step, as mobile's token does. */
 const STEP_MS = 500;

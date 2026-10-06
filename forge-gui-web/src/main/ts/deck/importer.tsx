@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { CheckSelect } from './editor';
 import { leaveOut, makeCommander, useName } from './importfix';
-import { loadDraft, saveDraft } from './drafts';
+import { store, stored } from '../storage';
 import { Pips } from '../symbols';
 import { ui } from '../ui';
 import type { Actions } from '../actions';
@@ -15,6 +15,8 @@ const READ_DELAY_MS = 300;
 const LINE_PX = 22;
 const MARKS: Record<string, string> = { read: '✓', problem: '!', ignored: '–', heading: '' };
 const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
+/** Where the text is kept while it is not yet imported, so closing the dialog by mistake loses nothing. */
+const DRAFT_KEY = 'forge.importDraft';
 
 export interface ImporterProps {
   model: Model;
@@ -30,7 +32,7 @@ export interface ImporterProps {
 }
 
 export function Importer({ model, actions, from, seat, initialText, initialUrl, sync, close }: ImporterProps) {
-  const [text, setText] = useState(() => initialText ?? loadDraft());
+  const [text, setText] = useState(() => initialText ?? stored(DRAFT_KEY) ?? '');
   const [typedName, setTypedName] = useState<string | null>(null);
   const [check, setCheck] = useState(() => startingCheck(model, from, ui.browse?.format));
   const [url, setUrl] = useState(initialUrl ?? '');
@@ -67,7 +69,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   // After Import the dialog waits for the server: a taken name asks what to do, anything else means it is done
   useEffect(() => {
     if (sent && !model.nameTaken && (model.decks !== sent.decks || model.editor !== sent.editor)) {
-      saveDraft('');
+      store(DRAFT_KEY, null);
       close();
     }
   }, [model.decks, model.editor, model.nameTaken]);
@@ -84,7 +86,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
   const typed = (next: string) => {
     setText(next);
     setLit(new Set());
-    saveDraft(next);
+    store(DRAFT_KEY, next || null);
   };
   const summary = result?.summary;
   const name = typedName ?? result?.name ?? (summary?.commander ? t('lblWebImportCommanderDeck', summary.commander) : t('lblWebImportDefaultName'));
