@@ -364,6 +364,8 @@ html[data-motion="reduced"] .zone-tile[data-zone="Exile"] { animation: none; }
 .emblem .tax { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 0 2px; text-align: center; font-size: 8.5px; font-weight: 800; color: var(--accent-2); background: linear-gradient(180deg, transparent, #000000e0 38%); }
 .emblem .tax:empty { display: none; }
 .emblem:has(.tax:not(:empty)) .band { display: none; }
+.emblem .n { position: absolute; right: 2px; top: 2px; min-width: 20px; height: 17px; padding: 0 4px; box-sizing: border-box; display: grid; place-items: center; background: #050608; color: #fff; border: 1px solid #ffffff38; border-radius: 9px; font-size: 11px; font-weight: 800; }
+.emblem .n:empty { display: none; }
 /* A commander, signature spell or avatar is a card the player reads or activates, so it is drawn as a small card */
 .cmd-tile { width: 52px; height: 72px; border-radius: 5px; overflow: hidden; position: relative; cursor: pointer; background: var(--surface-2); box-shadow: 0 3px 8px #0009, inset 0 0 0 1px #ffffff2a; }
 .cmd-tile img { width: 100%; height: 100%; object-fit: cover; }

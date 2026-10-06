@@ -267,12 +267,12 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
     under.set(host, list);
   }
   // A card a permanent holds in exile, such as an Oblivion Ring's, sits under it as an attachment would, as a ghost
-  for (const obj of model.objects.values()) {
-    const held = obj as CardView;
-    const holder = held.Zone === 'Exile' && held.ExiledWith ? byKey.get(held.ExiledWith.ref) : undefined;
-    if (!holder) continue;
+  for (const holder of onField) {
+    const held = (holder.UntilLeavesBattlefield ?? []).map(r => r && model.objects.get(r.ref) as CardView | undefined)
+      .filter((c): c is CardView => c?.Zone === 'Exile');
+    if (!held.length) continue;
     const host = rootOf(holder).$key;
-    under.set(host, [...(under.get(host) ?? []), held]);
+    under.set(host, [...(under.get(host) ?? []), ...held]);
   }
   const hosts = cards.filter(c => !hostOf(c));
   const marks = [

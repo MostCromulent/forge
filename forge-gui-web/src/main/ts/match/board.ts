@@ -766,19 +766,51 @@ function effectKind(state: Partial<CardStateView>): { label: string; lasting: bo
   return named ? { label: named[1], lasting: true } : { label: t('lblEffect'), lasting: false };
 }
 
+/** More kinds of effect than this beside one portrait fold into a single plaque. */
+const MAX_EFFECT_PLAQUES = 4;
+
+/** One plaque beside the portrait: a card of its own, or the effects it stands for when there are several. */
+interface Plaque {
+  card: CardView;
+  members: CardView[];
+}
+
+/** An effect is named after its source and that card's number, which tells two copies of the source apart. */
+const sourceName = (name: string | undefined) => (name ?? '').replace(/ \(\d+\)/, '');
+
+/** Effects alike in name and number share a plaque, and too many kinds share one between them. */
+function plaques(model: Model, cards: CardView[]): Plaque[] {
+  const avatars: Plaque[] = [];
+  const effects = new Map<string, Plaque>();
+  for (const card of cards) {
+    const state = stateOf(model, card);
+    const kind = commandKind(card, state);
+    if (kind === 'avatar') {
+      avatars.push({ card, members: [card] });
+    } else if (kind === 'effect') {
+      const like = `${sourceName(state.Name)}|${card.OverlayText ?? ''}`;
+      const pile = effects.get(like);
+      if (pile) pile.members.push(card);
+      else effects.set(like, { card, members: [card] });
+    }
+  }
+  const piles = [...effects.values()];
+  return piles.length > MAX_EFFECT_PLAQUES ? [...avatars, { card: piles[0].card, members: piles.flatMap(p => p.members) }]
+    : [...avatars, ...piles];
+}
+
 // The command zone apart from commanders and signature spells, which have the Command tile among the zones
 function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | undefined, cards: CardView[],
     select: CardClick): void {
   // Planes, schemes and the planar die have places of their own; the rest stay beside the portrait
-  const shown = cards.filter(c => ['avatar', 'effect'].includes(commandKind(c, stateOf(model, c))));
-  reconcile(root, shown, c => c.$key,
-    card => {
+  reconcile(root, plaques(model, cards), p => p.card.$key,
+    ({ card }) => {
       // A card the player reads or activates is drawn as a card; a reminder like the monarch stays a round token
       const tile = commandKind(card, stateOf(model, card)) !== 'effect';
       const el = document.createElement('div');
       el.className = tile ? 'cmd-tile' : 'emblem';
       el.innerHTML = tile ? '<img alt="" draggable="false"><span class="band"></span>'
-        : '<img alt="" draggable="false"><span class="initials"></span><span class="band"><i></i><b></b></span><span class="tax"></span>';
+        : '<img alt="" draggable="false"><span class="initials"></span><span class="band"><i></i><b></b></span><span class="tax"></span><span class="n"></span>';
       const img = q<HTMLImageElement>(el, 'img');
       if (tile) {
         noImageOnError(el, img);
@@ -793,11 +825,12 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
           }
         });
       }
-      el.onclick = () => select(el, false);
       hoverable(el);
       return el;
     },
-    (el, card) => {
+    (el, { card, members }) => {
+      // Several effects open the command zone, where each can be read and chosen
+      el.onclick = () => (members.length > 1 && player ? togglePile(player.$key, 'Command') : select(el, false));
       const state = stateOf(model, card);
       const src = cardImageSrc(model, card);
       el.dataset.zoom = src;
@@ -811,8 +844,9 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
         el.classList.toggle('noimg', !src);
       }
       const tax = commanderTax(player, card);
-      el.title = tax > 0 ? t('lblWebBoardEffectCostsMoreHere', state.Name ?? '', tax) : state.Name ?? '';
-      el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => r.ref === card.$key));
+      el.title = tax > 0 ? t('lblWebBoardEffectCostsMoreHere', state.Name ?? '', tax)
+        : members.length > 1 ? [...new Set(members.map(m => sourceName(stateOf(model, m).Name)))].join('\n') : state.Name ?? '';
+      el.classList.toggle('selectable', (model.prompt?.selectable ?? []).some(r => members.some(m => m.$key === r.ref)));
       if (el.classList.contains('cmd-tile')) {
         q(el, '.band').textContent = tileBand(commandKind(card, state), state, tax);
         return;
@@ -824,6 +858,7 @@ function renderEmblems(root: HTMLElement, model: Model, player: PlayerView | und
       q(el, '.band b').textContent = kind.label;
       // An effect that keeps a number, such as a player's speed, carries it as the text desktop lays over the card
       q(el, '.tax').textContent = tax > 0 ? t('lblWebBoardTax', tax) : card.OverlayText ?? '';
+      q(el, '.n').textContent = members.length > 1 ? `×${members.length}` : '';
     });
 }
 
