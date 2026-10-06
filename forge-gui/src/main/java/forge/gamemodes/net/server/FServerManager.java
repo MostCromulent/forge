@@ -38,11 +38,14 @@ import forge.localinstance.properties.ForgeNetPreferences;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.*;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.serialization.ClassResolvers;
+import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleState;
@@ -146,6 +149,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
     public static final LocalAddress LOOPBACK = new LocalAddress("forge");
 
     private volatile boolean loopbackOnly;
+    private final ChannelGroup adopted = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
     // Created by startServer: an offline game reaches getInstance() but never needs the selectors
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
@@ -240,6 +244,29 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         bind(LOOPBACK, false);
     }
 
+    /**
+     * Serves a client on a connection something else accepted, such as one a web server carries on its own port.
+     * The channel's pipeline must already turn what arrives into the netplay byte stream.
+     */
+    public void adopt(final Channel ch) {
+        adopted.add(ch);
+        addHandlers(ch);
+    }
+
+    private void addHandlers(final Channel ch) {
+        ch.config().setWriteBufferWaterMark(
+                new WriteBufferWaterMark(OUTBOUND_BUFFER_LOW_WATER, OUTBOUND_BUFFER_HIGH_WATER));
+        ch.pipeline().addLast(
+                new CompatibleObjectEncoder(byteTracker),
+                new CompatibleObjectDecoder(9766 * 1024, ClassResolvers.cacheDisabled(null)),
+                new IdleStateHandler(HEARTBEAT_TIMEOUT_SECONDS, 0, 0, TimeUnit.SECONDS),
+                new MessageHandler(),
+                new SaturationLoggingHandler(),
+                new RegisterClientHandler(),
+                new DeregisterClientHandler(),
+                new GameServerHandler());
+    }
+
     private void bind(final SocketAddress address, final boolean startUPnP) {
         netLog.info("Starting Multiplayer Server");
         final boolean inProcess = address instanceof LocalAddress;
@@ -253,18 +280,7 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         public void initChannel(final Channel ch) throws Exception {
-                            ch.config().setWriteBufferWaterMark(
-                                    new WriteBufferWaterMark(OUTBOUND_BUFFER_LOW_WATER, OUTBOUND_BUFFER_HIGH_WATER));
-                            final ChannelPipeline p = ch.pipeline();
-                            p.addLast(
-                                    new CompatibleObjectEncoder(byteTracker),
-                                    new CompatibleObjectDecoder(9766 * 1024, ClassResolvers.cacheDisabled(null)),
-                                    new IdleStateHandler(HEARTBEAT_TIMEOUT_SECONDS, 0, 0, TimeUnit.SECONDS),
-                                    new MessageHandler(),
-                                    new SaturationLoggingHandler(),
-                                    new RegisterClientHandler(),
-                                    new DeregisterClientHandler(),
-                                    new GameServerHandler());
+                            addHandlers(ch);
                         }
                     });
 
@@ -327,6 +343,8 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         forgetDisconnectedClients();
         clients.clear();
         afkSlots.clear();
+        // These belong to whoever accepted them, so stopping this server's own threads would leave them open
+        adopted.close();
 
         try {
             if (bossGroup != null) {

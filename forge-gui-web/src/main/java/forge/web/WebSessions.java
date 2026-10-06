@@ -1,5 +1,6 @@
 package forge.web;
 
+import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.server.ServerGameLobby;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonObject;
@@ -45,6 +46,8 @@ final class WebSessions implements WebServer.Endpoint {
     private static final long HOST_GRACE_MILLIS = 20_000;
     /** How long a drafting seat's browser may be gone before the draft host is told its player left. */
     private static final long DRAFT_HOLD_MILLIS = 15_000;
+    /** The app players in the list of who is here as it was last sent, to tell when one has come or gone. */
+    private volatile List<String> appSeatNames = List.of();
     /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
     private ScheduledFuture<?> idle;
 
@@ -241,7 +244,26 @@ final class WebSessions implements WebServer.Endpoint {
             }
         }
         final WebSession h = host;
-        return h != null && h.computerNames().stream().anyMatch(name::equalsIgnoreCase);
+        return h != null && (h.computerNames().stream().anyMatch(name::equalsIgnoreCase)
+                || appSeats().stream().anyMatch(s -> name.equalsIgnoreCase(s.getName())));
+    }
+
+    /** The seats at the host's table held from desktop or mobile Forge, which have no session here. */
+    private List<LobbySlot> appSeats() {
+        final WebSession h = host;
+        if (h == null) {
+            return List.of();
+        }
+        final List<LobbySlot> seats = new ArrayList<>(h.remoteSeats());
+        seats.removeIf(seat -> byId.values().stream().anyMatch(s -> s.hasGame() && seat.getName().equalsIgnoreCase(s.playerName())));
+        return seats;
+    }
+
+    /** The host's table changed, which is the only word of a desktop or mobile player arriving or going. */
+    void seatsMayHaveChanged() {
+        if (!appSeats().stream().map(LobbySlot::getName).toList().equals(appSeatNames)) {
+            announcePresence();
+        }
     }
 
     /** Enough of the conversation for a browser that arrives late to see what was being said. */
@@ -282,6 +304,12 @@ final class WebSessions implements WebServer.Endpoint {
                 people.add(new Person(who, session.avatarIndex(), session.doing(), session.hosting()));
             }
         }
+        final WebSession h = host;
+        final List<LobbySlot> apps = appSeats();
+        for (final LobbySlot seat : apps) {
+            people.add(new Person(seat.getName(), seat.getAvatarIndex(), h.doing(), false));
+        }
+        appSeatNames = apps.stream().map(LobbySlot::getName).toList();
         return new Presence(people);
     }
 

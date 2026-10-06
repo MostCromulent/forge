@@ -17,6 +17,7 @@ import forge.gamemodes.match.HostedMatch;
 import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.net.EventFormat;
 import forge.gamemodes.net.NetworkEventView;
+import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.net.server.ServerGameLobby;
 import forge.gamemodes.planarconquest.ConquestEvent.ChaosWheelOutcome;
 import forge.util.storage.IStorage;
@@ -247,6 +248,11 @@ public final class WebSession {
     /** The names the computer plays under at this session's table. */
     List<String> computerNames() {
         return lobby.computerNames();
+    }
+
+    /** The seats at this session's table that people hold, a browser's or an app's. */
+    List<LobbySlot> remoteSeats() {
+        return lobby.remoteSeats();
     }
 
     /** Whether a browser is attached to this session right now. */
@@ -1014,6 +1020,9 @@ public final class WebSession {
 
     /** The table changed. The browser sees it only once it is set up; until then it is still being built. */
     void lobbyChanged() {
+        if (isHost) {
+            sessions.seatsMayHaveChanged();
+        }
         final BrowserChannel b = browser;
         if (b != null && stage instanceof Setup) {
             // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too

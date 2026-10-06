@@ -6,6 +6,10 @@ import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import forge.ImageKeys;
 import forge.StaticData;
+import forge.gamemodes.net.WebSocketBytes;
+import forge.gamemodes.net.client.FGameClient;
+import forge.gamemodes.net.server.FServerManager;
+import forge.gamemodes.net.server.HostingServer;
 import forge.gui.GuiBase;
 import forge.util.SleeveArt;
 import forge.localinstance.properties.ForgeConstants;
@@ -105,6 +109,7 @@ public final class WebServer implements AutoCloseable {
     private static final int PING_SECONDS = 30;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final ServerTraffic traffic = new ServerTraffic();
+    private final Endpoint endpoint;
     private final String hostToken;
     private final String guestToken;
     // The shared fetcher tries a path once per run and never calls back again, so a key that failed is not retried
@@ -122,6 +127,7 @@ public final class WebServer implements AutoCloseable {
     /** A port of 0 takes whichever one is free, which is what a test wants. */
     WebServer(final Endpoint endpoint, final String hostToken, final String guestToken, final int port)
             throws InterruptedException {
+        this.endpoint = endpoint;
         this.hostToken = hostToken;
         this.guestToken = guestToken;
         final ServerBootstrap b = new ServerBootstrap()
@@ -130,18 +136,8 @@ public final class WebServer implements AutoCloseable {
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(final SocketChannel ch) {
-                        ch.pipeline().addLast(
-                                traffic,
-                                new HttpServerCodec(),
-                                new HttpObjectAggregator(1 << 20),
-                                new AccessGate(),
-                                // State and deck lists are JSON that repeats its field names, so compression matters to a guest over the internet
-                                new WebSocketServerCompressionHandler(),
-                                new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
-                                        .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
-                                        .allowExtensions(true).build()),
-                                new StaticFiles(),
-                                new BrowserSocket(endpoint));
+                        // What follows the gate depends on who is calling, so the gate adds it at the first request
+                        ch.pipeline().addLast(traffic, new HttpServerCodec(), new HttpObjectAggregator(1 << 20), new AccessGate());
                     }
                 });
         channel = b.bind(port).sync().channel();
@@ -576,22 +572,52 @@ public final class WebServer implements AutoCloseable {
     }
 
     private final class AccessGate extends ChannelInboundHandlerAdapter {
+        private boolean routed;
+
         @Override
         public void channelRead(final ChannelHandlerContext ctx, final Object msg) {
             if (msg instanceof FullHttpRequest req) {
                 final QueryStringDecoder q = new QueryStringDecoder(req.uri());
                 final boolean socket = "/ws".equals(q.path());
-                final Access access = access(req, q);
+                final boolean netplay = FGameClient.TUNNEL_PATH.equals(q.path());
+                // A netplay client is no page: it sends no origin to check, so a cookie must not let it in and only its link's token does
+                final Access access = netplay ? accessOf(param(q, "token")) : access(req, q);
                 // The token keeps other pages out; the origin check keeps them from opening a socket with a stolen cookie
-                if (access == Access.NONE || (socket && !sameOrigin(req))) {
+                if (access == Access.NONE || (socket && !sameOrigin(req)) || (netplay && !HostingServer.isHosting())) {
                     req.release();
                     respond(ctx, HttpResponseStatus.FORBIDDEN, new byte[0], "text/plain");
                     return;
                 }
                 ctx.channel().attr(ACCESS).set(access);
                 ctx.channel().attr(KEEP_ALIVE).set(HttpUtil.isKeepAlive(req));
+                if (!routed) {
+                    routed = true;
+                    route(ctx, netplay);
+                }
             }
             ctx.fireChannelRead(msg);
+        }
+
+        private void route(final ChannelHandlerContext ctx, final boolean netplay) {
+            if (netplay) {
+                // Desktop or mobile Forge: from here the connection is the host's netplay server's, as one made in this process is
+                ServerTraffic.carrying(ctx.channel(), ServerTraffic.Kind.GAME);
+                ctx.pipeline().addLast(
+                        new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                                .websocketPath(FGameClient.TUNNEL_PATH).checkStartsWith(true)
+                                .maxFramePayloadLength(FGameClient.TUNNEL_FRAME_BYTES).build()),
+                        new WebSocketBytes());
+                FServerManager.getInstance().adopt(ctx.channel());
+                return;
+            }
+            ctx.pipeline().addLast(
+                    // State and deck lists are JSON that repeats its field names, so compression matters to a guest over the internet
+                    new WebSocketServerCompressionHandler(),
+                    new WebSocketServerProtocolHandler(WebSocketServerProtocolConfig.newBuilder()
+                            .websocketPath("/ws").checkStartsWith(true).maxFramePayloadLength(1 << 22)
+                            .allowExtensions(true).build()),
+                    new StaticFiles(),
+                    new BrowserSocket(endpoint));
         }
     }
 
