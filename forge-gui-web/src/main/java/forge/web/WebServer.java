@@ -269,6 +269,8 @@ public final class WebServer implements AutoCloseable {
         }
         final AtomicBoolean answered = new AtomicBoolean();
         GuiBase.getInterface().invokeInEdtLater(() -> GuiBase.getInterface().getImageFetcher().fetchImage(key, () -> {
+            // Forge remembers a picture it could not find, and would go on saying so now that the picture is here
+            ImageKeys.clearMissingCards();
             final File fetched = cardImage(key);
             if (answered.compareAndSet(false, true)) {
                 try {
