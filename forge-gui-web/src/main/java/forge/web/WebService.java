@@ -5,6 +5,7 @@ import forge.localinstance.properties.ForgeNetPreferences.FNetPref;
 import forge.model.FModel;
 import org.tinylog.Logger;
 
+import java.io.File;
 import java.util.function.Consumer;
 
 /** The web server as something the console can stop and start again, with tokens that outlive a restart so old links still work. */
@@ -24,6 +25,9 @@ final class WebService {
     private volatile PortForward forward;
     private volatile Forwarding forwarding = Forwarding.OFF;
     private volatile Consumer<Forwarding> onForwarding = f -> { };
+    private volatile CloudflareTunnel tunnel;
+    private volatile CloudflareTunnel.State tunnelling = CloudflareTunnel.State.OFF;
+    private volatile Consumer<CloudflareTunnel.State> onTunnel = t -> { };
 
     /** Where asking the router to forward the port stands. */
     enum Forwarding { OFF, ASKING, FORWARDED, REFUSED }
@@ -64,7 +68,9 @@ final class WebService {
         sessions = fresh;
         server = bound;
         Logger.info("Forge web UI: {}", bound.url());
-        if (forwardPort()) {
+        if (throughCloudflare()) {
+            openTunnel();
+        } else if (forwardPort()) {
             openForward();
         }
     }
@@ -75,6 +81,7 @@ final class WebService {
             return;
         }
         closeForward();
+        closeTunnel();
         sessions.shutdown();
         server.close();
         sessions = null;
@@ -112,6 +119,10 @@ final class WebService {
         listener.accept(forwarding);
     }
 
+    Forwarding forwarding() {
+        return forwarding;
+    }
+
     private void openForward() {
         if (forward != null) {
             forward.close();
@@ -138,6 +149,85 @@ final class WebService {
             forward = null;
         }
         setForwarding(Forwarding.OFF);
+    }
+
+    /** Whether players on the internet come in through Cloudflare, with the router left alone. Kept between runs. */
+    boolean throughCloudflare() {
+        return Boolean.parseBoolean(FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARE));
+    }
+
+    /** Only one way in is open at a time, so choosing one closes the other; the port forwarding choice is kept for the way back. */
+    synchronized void throughCloudflare(final boolean value) {
+        FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARE, String.valueOf(value));
+        FModel.getNetPreferences().save();
+        if (value) {
+            closeForward();
+            if (server != null) {
+                openTunnel();
+            }
+        } else {
+            closeTunnel();
+            if (server != null && forwardPort()) {
+                openForward();
+            }
+        }
+    }
+
+    /** Told of every change in where the connection through Cloudflare stands, on the thread that runs it. */
+    synchronized void onTunnel(final Consumer<CloudflareTunnel.State> listener) {
+        onTunnel = listener;
+        listener.accept(tunnelling);
+    }
+
+    /** The host has said where Cloudflare's program is, which a wait for it to be installed then finds. Kept between runs. */
+    void cloudflaredAt(final File program) {
+        FModel.getNetPreferences().setPref(FNetPref.WEB_CLOUDFLARED_PATH, program.getAbsolutePath());
+        FModel.getNetPreferences().save();
+        final CloudflareTunnel waiting = tunnel;
+        if (waiting != null) {
+            waiting.lookIn(program);
+        }
+    }
+
+    /** A link for another player through Cloudflare, or null until it is connected. */
+    synchronized String tunnelUrl() {
+        final CloudflareTunnel open = tunnel;
+        final String address = open == null ? null : open.address();
+        return server == null || address == null ? null : server.inviteUrlThrough(address);
+    }
+
+    private void openTunnel() {
+        if (tunnel != null) {
+            tunnel.close();
+        }
+        final String path = FModel.getNetPreferences().getPref(FNetPref.WEB_CLOUDFLARED_PATH);
+        final CloudflareTunnel[] opening = new CloudflareTunnel[1];
+        // The answer takes no lock, for the reason the router's does not
+        opening[0] = new CloudflareTunnel(server.port(), path.isEmpty() ? null : new File(path), state -> {
+            if (tunnel == opening[0]) {
+                setTunnelling(state);
+            }
+        });
+        tunnel = opening[0];
+        opening[0].open();
+    }
+
+    private void closeTunnel() {
+        if (tunnel != null) {
+            tunnel.close();
+            tunnel = null;
+        }
+        setTunnelling(CloudflareTunnel.State.OFF);
+    }
+
+    private void setTunnelling(final CloudflareTunnel.State value) {
+        tunnelling = value;
+        final WebSessions now = sessions;
+        final CloudflareTunnel open = tunnel;
+        if (now != null) {
+            now.throughCloudflare(value == CloudflareTunnel.State.CONNECTED && open != null ? open.address() : null);
+        }
+        onTunnel.accept(value);
     }
 
     private void setForwarding(final Forwarding value) {

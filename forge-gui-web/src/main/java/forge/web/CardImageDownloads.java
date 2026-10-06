@@ -4,10 +4,8 @@ import com.google.common.collect.Iterables;
 import forge.deck.Deck;
 import forge.gui.FThreads;
 import forge.gui.UiCommand;
-import forge.gui.download.CdnUuidCache;
 import forge.gui.download.GuiDownloadFilteredCardImages;
 import forge.gui.download.GuiDownloadService;
-import forge.gui.download.ScryfallBulkDataSync;
 import forge.gui.interfaces.IButton;
 import forge.gui.interfaces.IProgressBar;
 import forge.gui.interfaces.ITextField;
@@ -33,11 +31,8 @@ import javax.swing.SwingUtilities;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.io.File;
-import java.text.DateFormat;
 import java.text.NumberFormat;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,20 +40,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-/** The console's Card images window, whose image index lets Forge fetch from Scryfall's image servers, which have no rate limit. */
+/** The console's window for saving card pictures to this computer ahead of time. */
 final class CardImageDownloads {
     private static final Localizer TEXT = Localizer.getInstance();
     /** A rough size for one saved image, for the estimate beside the count. */
     private static final double MB_PER_IMAGE = 0.08;
     private static final int TEXT_WIDTH = 400;
-    private static final Color WARN = new Color(0x9a, 0x62, 0x00);
     private static final Color GOOD = new Color(0x2f, 0x8f, 0x46);
     private static final Color MUTED = new Color(0x5d, 0x66, 0x73);
 
-    private final JLabel indexState = new JLabel();
-    private final JButton indexButton = new JButton();
-    private final JButton indexCancel = new JButton(TEXT.getMessage("lblCancel"));
-    private final JProgressBar indexBar = bar();
     private final JComboBox<Choice> choices = new JComboBox<>();
     private final JLabel cardCount = count();
     private final JLabel savedCount = count();
@@ -70,8 +60,6 @@ final class CardImageDownloads {
     private final Consumer<String> showProgress;
     private JDialog window;
     private boolean ready;
-    private volatile boolean stopSync;
-    private int indexPercent = -1;
     private int downloadPercent = -1;
     private GuiDownloadService running;
     private long downloadStarted;
@@ -104,7 +92,6 @@ final class CardImageDownloads {
         if (window == null) {
             window = build(owner);
         }
-        showIndexState();
         recount();
         window.setVisible(true);
         window.toFront();
@@ -115,14 +102,6 @@ final class CardImageDownloads {
         final JPanel body = new JPanel();
         body.setLayout(new BoxLayout(body, BoxLayout.PAGE_AXIS));
         body.setBorder(BorderFactory.createEmptyBorder(14, 16, 14, 16));
-
-        indexButton.addActionListener(e -> syncIndex());
-        indexCancel.addActionListener(e -> stopSync = true);
-        indexCancel.setVisible(false);
-        body.add(section(TEXT.getMessage("lblWebImagesRecommended"), TEXT.getMessage("lblWebImagesIndex"),
-                TEXT.getMessage("lblWebImagesIndexAbout"), TEXT.getMessage("lblWebImagesIndexSize"),
-                indexBar, line(indexState, indexCancel, indexButton)));
-        body.add(Box.createVerticalStrut(12));
 
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesMyDecks"), null));
         choices.addItem(new Choice(TEXT.getMessage("lblWebImagesAllCards"), c -> true));
@@ -252,63 +231,6 @@ final class CardImageDownloads {
         return label;
     }
 
-    // ---- The image index ----------------------------------------------------------------------------------------
-
-    /** When the index was last updated, from its newest set file, or that it has never been downloaded. */
-    private void showIndexState() {
-        // The set files only: the folder also holds a marker saying the desktop's offer to download it was answered
-        final File[] files = new File(CdnUuidCache.cacheDir()).listFiles((dir, name) -> name.endsWith(".json.gz"));
-        long newest = 0;
-        for (final File f : files == null ? new File[0] : files) {
-            newest = Math.max(newest, f.lastModified());
-        }
-        if (newest == 0) {
-            indexState.setText(TEXT.getMessage("lblWebImagesIndexNone"));
-            indexState.setForeground(WARN);
-            indexButton.setText(TEXT.getMessage("lblWebImagesIndexDownload"));
-        } else {
-            indexState.setText(TEXT.getMessage("lblWebImagesIndexUpdated", DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(newest))));
-            indexState.setForeground(GOOD);
-            indexButton.setText(TEXT.getMessage("lblWebImagesIndexUpdate"));
-        }
-    }
-
-    private void syncIndex() {
-        stopSync = false;
-        indexButton.setEnabled(false);
-        indexCancel.setVisible(true);
-        indexBar.setVisible(true);
-        indexBar.setIndeterminate(true);
-        indexBar.setString(TEXT.getMessage("lblWebImagesIndexStarting"));
-        window.pack();
-        FThreads.invokeInBackgroundThread(() -> {
-            final int sets = ScryfallBulkDataSync.sync(ScryfallBulkDataSync.BULK_TYPE_DEFAULT_CARDS, null,
-                    (message, fraction) -> SwingUtilities.invokeLater(() -> {
-                        indexBar.setIndeterminate(fraction < 0);
-                        if (fraction >= 0) {
-                            indexBar.setMaximum(1000);
-                            indexBar.setValue((int) (fraction * 1000));
-                            indexPercent = (int) (fraction * 100);
-                            showButtonProgress();
-                        }
-                        indexBar.setString(message);
-                    }), () -> stopSync);
-            SwingUtilities.invokeLater(() -> {
-                indexPercent = -1;
-                showButtonProgress();
-                indexBar.setVisible(false);
-                indexCancel.setVisible(false);
-                indexButton.setEnabled(true);
-                showIndexState();
-                if (sets < 0 && !stopSync) {
-                    indexState.setText(TEXT.getMessage("lblWebImagesIndexFailed"));
-                    indexState.setForeground(WARN);
-                }
-                window.pack();
-            });
-        });
-    }
-
     // ---- The download ---------------------------------------------------------------------------------------------
 
     private Predicate<PaperCard> chosenCards() {
@@ -421,8 +343,7 @@ final class CardImageDownloads {
 
     /** The console's button names whichever run is going, so a closed window's work can be found again. */
     private void showButtonProgress() {
-        final int percent = Math.max(indexPercent, downloadPercent);
-        showProgress.accept(percent < 0 ? TEXT.getMessage("lblWebImagesButton") : TEXT.getMessage("lblWebImagesButtonProgress", percent));
+        showProgress.accept(downloadPercent < 0 ? TEXT.getMessage("lblWebImagesButton") : TEXT.getMessage("lblWebImagesButtonProgress", downloadPercent));
     }
 
     /** Every printing in the decks this player has saved, in every kind of deck they build. */

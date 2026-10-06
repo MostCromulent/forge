@@ -29,6 +29,10 @@ public class ForgeNetPreferences extends AbstractPreferences<ForgeNetPreferences
         UPnP("ASK"),
         /** Whether the web server asks the router to forward its port. */
         WEB_PORT_FORWARD("true"),
+        /** Whether players on the internet reach the web server through Cloudflare, in place of a port forwarded by the router. */
+        WEB_CLOUDFLARE("false"),
+        /** Where the host said Cloudflare's connector program is, when it is not where its installer puts it. */
+        WEB_CLOUDFLARED_PATH(""),
         NET_BANDWIDTH_LOGGING("false"),
         NET_LOG_CLEANUP_ENABLED("true"),
         NET_AFK_TIMEOUT("5"),

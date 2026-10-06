@@ -1,6 +1,7 @@
 package forge.web;
 
 import forge.gamemodes.net.server.FServerManager;
+import forge.gui.download.CdnUuidCache;
 import forge.gui.interfaces.IProgressBar;
 import forge.util.Localizer;
 import org.tinylog.Logger;
@@ -9,8 +10,10 @@ import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.ButtonGroup;
 import javax.swing.JCheckBox;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -21,6 +24,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JTextArea;
 import javax.swing.JTextPane;
+import javax.swing.JToggleButton;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
@@ -59,6 +63,8 @@ import java.io.PrintStream;
 import java.net.BindException;
 import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -89,6 +95,9 @@ final class ServerConsole implements IProgressBar {
     private static final Color WARN = new Color(0x9a, 0x5b, 0x00);
     private static final Color WARN_FILL = new Color(0xfd, 0xf1, 0xd8);
     private static final Color WARN_TEXT = new Color(0x1a, 0x20, 0x2b);
+    private static final Color NOTE = new Color(0x1f, 0x5f, 0xc4);
+    private static final Color NOTE_FILL = new Color(0xe9, 0xf0, 0xfc);
+    private static final Color FIELD_EDGE = new Color(0xc9, 0xcd, 0xd4);
 
     private final WebGuiBase ui;
     private final Runnable onQuit;
@@ -110,11 +119,22 @@ final class ServerConsole implements IProgressBar {
     private final JLabel netAddress = muted("—");
     private final JButton copyHome = copyButton(TEXT.getMessage("lblWebConsoleCopyLink"), () -> service.inviteUrl(home.getValue()));
     private final JButton moreHome = new BasicArrowButton(SwingConstants.SOUTH);
-    private final JButton copyNet = copyButton(TEXT.getMessage("lblWebConsoleCopyLink"), () -> service.inviteUrl(internet));
+    private final JButton copyNet = copyButton(TEXT.getMessage("lblWebConsoleCopyLink"),
+            () -> service.throughCloudflare() ? service.tunnelUrl() : service.inviteUrl(internet));
+    private final JToggleButton byRouter = new JToggleButton(TEXT.getMessage("lblWebConsoleByRouter"));
+    private final JToggleButton byCloudflare = new JToggleButton(TEXT.getMessage("lblWebConsoleByCloudflare"));
+    private final Light tunnelLight = new Light();
+    private final JTextArea tunnelState = wrapped("", UIManager.getColor("Label.foreground"), TEXT_WIDTH - 20);
+    private final Light picturesLight = new Light(WARN);
+    private final JLabel picturesState = new JLabel();
+    private final JLabel picturesUpdated = muted(" ");
+    private final JProgressBar picturesBar = new JProgressBar(0, 100);
+    private final JButton picturesButton = new JButton();
+    private final ImageIndex index = new ImageIndex(now -> SwingUtilities.invokeLater(() -> showPictures(now)));
     private final JCheckBox quitWhenEmpty = new JCheckBox(TEXT.getMessage("lblWebConsoleQuitWhenEmpty"), !WebService.KEEP_OPEN);
     private final JCheckBox forwardPort = new JCheckBox(TEXT.getMessage("lblWebConsoleForwardPort"));
     private final Light forwardLight = new Light();
-    private final JTextArea forwardState = wrapped("", UIManager.getColor("Label.foreground"), TEXT_WIDTH - 40);
+    private final JTextArea forwardState = wrapped("", UIManager.getColor("Label.foreground"), TEXT_WIDTH - 250);
     private final JLabel refused = new JLabel();
     private final JLabel players = muted(" ");
     private final JPanel details = new JPanel(new BorderLayout(0, 8));
@@ -140,6 +160,13 @@ final class ServerConsole implements IProgressBar {
     private JPanel startHelp;
     private JPanel forwardStateRow;
     private JPanel forwardHelp;
+    private JPanel netField;
+    private JPanel tunnelStateRow;
+    private JPanel tunnelMissing;
+    private JPanel tunnelFailed;
+    private JPanel picturesAsk;
+    private CloudflareTunnel.State tunnelling = CloudflareTunnel.State.OFF;
+    private boolean downloadingIndex;
     private volatile boolean quitting;
 
     private ServerConsole(final WebGuiBase ui, final Runnable onQuit) {
@@ -181,8 +208,15 @@ final class ServerConsole implements IProgressBar {
             quitWhenEmpty.setEnabled(true);
             forwardPort.setEnabled(true);
             imagesButton.setEnabled(true);
+            byRouter.setEnabled(true);
+            byCloudflare.setEnabled(true);
+            picturesButton.setEnabled(true);
+            // Asked once, as desktop and mobile ask, and only of a host who has never had the data
+            picturesAsk.setVisible(CdnUuidCache.shouldPromptForBulkSync());
+            showPictures(new ImageIndex.State(false, -1, false));
         });
         driven.onForwarding(this::forwarding);
+        driven.onTunnel(this::tunnelling);
         if (driven.running()) {
             running();
         } else {
@@ -217,7 +251,10 @@ final class ServerConsole implements IProgressBar {
             progress.setVisible(false);
             browse.setEnabled(true);
             frame.getRootPane().setDefaultButton(null);
-            showInternet(null, TEXT.getMessage("lblWebMatchBarWorkingOutAddress"), false);
+            showInternet(null, TEXT.getMessage(service.throughCloudflare() ? "lblWebConsoleCloudflareConnecting" : "lblWebMatchBarWorkingOutAddress"), false);
+            if (tunnelling == CloudflareTunnel.State.CONNECTED) {
+                tunnelling(tunnelling);
+            }
             refit();
         });
         inBackground("ForgeAddresses", () -> {
@@ -228,7 +265,9 @@ final class ServerConsole implements IProgressBar {
                     showHome(local);
                 }
             });
-            findInternet();
+            if (!service.throughCloudflare()) {
+                findInternet();
+            }
         });
     }
 
@@ -243,21 +282,122 @@ final class ServerConsole implements IProgressBar {
     private void forwarding(final WebService.Forwarding now) {
         SwingUtilities.invokeLater(() -> {
             final boolean wanted = service.forwardPort();
+            final boolean viaRouter = !service.throughCloudflare();
             forwardPort.setSelected(wanted);
             forwardLight.lit(now == WebService.Forwarding.FORWARDED);
             // A refusal only says UPnP did not do it; the port may still be forwarded by hand, so the link stays usable
             refused.setText(TEXT.getMessage("lblWebConsoleRefused", service.port()));
-            forwardHelp.setVisible(now == WebService.Forwarding.REFUSED);
+            forwardHelp.setVisible(viaRouter && now == WebService.Forwarding.REFUSED);
             final String words = switch (now) {
                 case OFF -> wanted ? "" : TEXT.getMessage("lblWebConsoleUpnpOff", service.port());
                 case ASKING -> TEXT.getMessage("lblWebConsoleAskingRouter");
                 case FORWARDED -> TEXT.getMessage("lblWebConsoleForwarded", service.port());
                 case REFUSED -> "";
             };
-            reword(forwardState, words, TEXT_WIDTH - 40);
-            forwardStateRow.setVisible(!words.isEmpty());
+            reword(forwardState, words, TEXT_WIDTH - 250);
+            forwardLight.setVisible(!words.isEmpty());
+            forwardStateRow.setVisible(viaRouter);
             refit();
         });
+    }
+
+    /** Shows where the connection through Cloudflare stands, and puts its address where the router's would be. */
+    private void tunnelling(final CloudflareTunnel.State now) {
+        SwingUtilities.invokeLater(() -> {
+            tunnelling = now;
+            final boolean cloudflare = service.throughCloudflare();
+            byRouter.setSelected(!cloudflare);
+            byCloudflare.setSelected(cloudflare);
+            tunnelMissing.setVisible(now == CloudflareTunnel.State.MISSING);
+            tunnelFailed.setVisible(now == CloudflareTunnel.State.FAILED);
+            netField.setVisible(now != CloudflareTunnel.State.MISSING && now != CloudflareTunnel.State.FAILED);
+            tunnelLight.lit(now == CloudflareTunnel.State.CONNECTED);
+            tunnelLight.setVisible(now == CloudflareTunnel.State.CONNECTED);
+            final String words = switch (now) {
+                case CONNECTING -> TEXT.getMessage("lblWebConsoleCloudflareWait");
+                case CONNECTED -> TEXT.getMessage("lblWebConsoleCloudflareConnected");
+                default -> "";
+            };
+            reword(tunnelState, words, TEXT_WIDTH - 20);
+            tunnelStateRow.setVisible(!words.isEmpty());
+            if (cloudflare && up) {
+                final String url = now == CloudflareTunnel.State.CONNECTED ? service.tunnelUrl() : null;
+                // The address without its token, as the other links are shown
+                showInternet(url == null ? null : url.substring(0, url.indexOf("/?")), TEXT.getMessage("lblWebConsoleCloudflareConnecting"), false);
+            } else if (up) {
+                showInternet(null, TEXT.getMessage("lblWebMatchBarWorkingOutAddress"), false);
+                inBackground("ForgeAddresses", this::findInternet);
+            }
+            refit();
+        });
+    }
+
+    /** Chooses how players on the internet get in, off the event thread because closing either way waits on it. */
+    private void choose(final boolean cloudflare) {
+        byRouter.setSelected(!cloudflare);
+        byCloudflare.setSelected(cloudflare);
+        if (cloudflare == service.throughCloudflare() && !(cloudflare && tunnelling == CloudflareTunnel.State.FAILED)) {
+            return;
+        }
+        if (service.playersHere() > 1 && !confirmed("lblWebConsoleSwitchAsk", "lblWebConsoleSwitch")) {
+            byRouter.setSelected(!service.throughCloudflare());
+            byCloudflare.setSelected(service.throughCloudflare());
+            return;
+        }
+        router.execute(() -> {
+            service.throughCloudflare(cloudflare);
+            forwarding(service.forwarding());
+        });
+    }
+
+    /** Asks where Cloudflare's program is, for a host who did not put it where its installer does. */
+    private void locateCloudflared() {
+        final JFileChooser chooser = new JFileChooser();
+        chooser.setDialogTitle(TEXT.getMessage("lblWebConsoleCloudflareLocate"));
+        if (chooser.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            service.cloudflaredAt(chooser.getSelectedFile());
+        }
+    }
+
+    /** Says where card pictures come from, which is Scryfall's image servers once its card data has been downloaded. */
+    private void showPictures(final ImageIndex.State now) {
+        final long updated = ImageIndex.updated();
+        picturesBar.setVisible(now.downloading());
+        picturesBar.setIndeterminate(now.percent() < 0);
+        picturesBar.setValue(Math.max(0, now.percent()));
+        picturesLight.lit(updated > 0);
+        final String words;
+        final String action;
+        if (now.downloading()) {
+            words = now.percent() < 0 ? TEXT.getMessage("lblWebConsolePicturesStarting") : TEXT.getMessage("lblWebConsolePicturesDownloading", now.percent());
+            action = TEXT.getMessage("lblCancel");
+            picturesAsk.setVisible(false);
+        } else if (now.failed()) {
+            words = TEXT.getMessage("lblWebConsolePicturesFailed");
+            action = TEXT.getMessage("lblTryAgain");
+        } else if (updated > 0) {
+            words = TEXT.getMessage("lblWebConsolePicturesFast");
+            action = TEXT.getMessage("lblWebImagesIndexUpdate");
+        } else {
+            words = TEXT.getMessage("lblWebConsolePicturesSlow");
+            action = TEXT.getMessage("lblWebConsolePicturesSpeedUp");
+        }
+        picturesState.setText("<html><div style='width:" + (TEXT_WIDTH - 170) + "px'>" + words + "</div></html>");
+        picturesButton.setText(action);
+        downloadingIndex = now.downloading();
+        picturesUpdated.setText(updated > 0 && !now.downloading()
+                ? TEXT.getMessage("lblWebConsolePicturesUpdated", DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(updated))) + "  " : "");
+        refit();
+    }
+
+    /** The host's answer to the one-time offer, which is not made again whichever it is. */
+    private void answerPictures(final boolean download) {
+        CdnUuidCache.markBulkSyncPromptAnswered();
+        picturesAsk.setVisible(false);
+        if (download) {
+            index.download();
+        }
+        refit();
     }
 
     /** The port is closed: there is nothing to link to until it is started again. failure is why a start did not work, or null. */
@@ -274,6 +414,7 @@ final class ServerConsole implements IProgressBar {
             browse.setEnabled(false);
             showHome(Map.of());
             showInternet(null, "—", false);
+            netField.setVisible(true);
             startHelp.setVisible(failure != null);
             if (failure != null) {
                 // All a failed bind says is that the port is taken; another Forge is the likely holder, since desktop Forge hosts on the same port
@@ -352,7 +493,7 @@ final class ServerConsole implements IProgressBar {
     private void findInternet() {
         final String found = FServerManager.getExternalAddress();
         SwingUtilities.invokeLater(() -> {
-            if (up) {
+            if (up && !service.throughCloudflare()) {
                 showInternet(found, TEXT.getMessage("lblWebConsoleNoAddress"), found == null);
             }
         });
@@ -403,40 +544,81 @@ final class ServerConsole implements IProgressBar {
             }
             router.execute(() -> service.forwardPort(on));
         });
-        forwardStateRow = row(Box.createHorizontalStrut(22), forwardLight, Box.createHorizontalStrut(6), forwardState);
-        forwardStateRow.setVisible(false);
+        forwardStateRow = row(forwardLight, Box.createHorizontalStrut(6), forwardState, Box.createHorizontalGlue(), forwardPort);
+        forwardLight.setVisible(false);
         refused.setForeground(WARN);
         refused.setFont(refused.getFont().deriveFont(Font.BOLD));
         forwardHelp = warning(refused, wrapped(TEXT.getMessage("lblWebConsoleRefusedAbout"), WARN_TEXT, HELP_WIDTH),
-                row(button(TEXT.getMessage("lblWebConsoleSetupGuide"), this::openGuide), Box.createHorizontalStrut(8),
+                row(button(TEXT.getMessage("lblWebConsoleUseCloudflare"), () -> choose(true)), Box.createHorizontalStrut(8),
                         button(TEXT.getMessage("lblTryAgain"), () -> router.execute(() -> service.forwardPort(true))), Box.createHorizontalStrut(8),
-                        button(TEXT.getMessage("lblWebConsoleForwardedMyself"), () -> router.execute(() -> service.forwardPort(false)))));
+                        button(TEXT.getMessage("lblWebConsoleForwardedMyself"), () -> router.execute(() -> service.forwardPort(false))),
+                        Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleSetupGuide"), this::openGuide)));
         forwardHelp.setVisible(false);
+
+        final ButtonGroup ways = new ButtonGroup();
+        ways.add(byRouter);
+        ways.add(byCloudflare);
+        byRouter.setSelected(true);
+        byRouter.setEnabled(false);
+        byCloudflare.setEnabled(false);
+        byRouter.addActionListener(e -> choose(false));
+        byCloudflare.addActionListener(e -> choose(true));
+        tunnelStateRow = row(tunnelLight, Box.createHorizontalStrut(6), tunnelState);
+        tunnelStateRow.setVisible(false);
+        tunnelMissing = note(heading(TEXT.getMessage("lblWebConsoleCloudflareMissing"), NOTE),
+                wrapped(TEXT.getMessage("lblWebConsoleCloudflareMissingAbout"), WARN_TEXT, HELP_WIDTH),
+                row(button(TEXT.getMessage("lblWebConsoleCloudflareGet"), () -> open(CloudflareTunnel.DOWNLOADS)), Box.createHorizontalStrut(10),
+                        muted(TEXT.getMessage("lblWebConsoleCloudflareWaiting")), Box.createHorizontalGlue(),
+                        link(TEXT.getMessage("lblWebConsoleCloudflareElsewhere"), this::locateCloudflared)));
+        tunnelMissing.setVisible(false);
+        tunnelFailed = warning(heading(TEXT.getMessage("lblWebConsoleCloudflareFailed"), WARN),
+                wrapped(TEXT.getMessage("lblWebConsoleCloudflareFailedAbout"), WARN_TEXT, HELP_WIDTH),
+                row(button(TEXT.getMessage("lblTryAgain"), () -> choose(true)), Box.createHorizontalStrut(8),
+                        button(TEXT.getMessage("lblWebConsoleUseRouter"), () -> choose(false))));
+        tunnelFailed.setVisible(false);
+
+        picturesBar.setVisible(false);
+        picturesBar.setMaximumSize(new Dimension(Integer.MAX_VALUE, 8));
+        picturesButton.setEnabled(false);
+        picturesButton.addActionListener(e -> {
+            if (downloadingIndex) {
+                index.cancel();
+            } else {
+                answerPictures(true);
+            }
+        });
+        picturesAsk = note(heading(TEXT.getMessage("lblWebConsolePicturesAsk"), NOTE),
+                wrapped(TEXT.getMessage("lblWebConsolePicturesAskAbout"), WARN_TEXT, HELP_WIDTH),
+                row(button(TEXT.getMessage("lblWebConsolePicturesDownloadNow"), () -> answerPictures(true)), Box.createHorizontalStrut(8),
+                        button(TEXT.getMessage("lblWebConsolePicturesNotNow"), () -> answerPictures(false))));
+        picturesAsk.setVisible(false);
 
         quitWhenEmpty.setEnabled(false);
         quitWhenEmpty.addActionListener(e -> service.quitWhenEmpty(quitWhenEmpty.isSelected()));
         imagesButton.addActionListener(e -> images.show(frame));
         imagesButton.setEnabled(false);
+        asLink(imagesButton);
         detailsToggle = link("", () -> showDetails(!details.isVisible()));
         labelDetails();
 
         final JPanel main = new JPanel();
         main.setLayout(new BoxLayout(main, BoxLayout.PAGE_AXIS));
-        main.setBorder(BorderFactory.createEmptyBorder(16, 30, 14, 30));
-        section(main, step(1), row(light, Box.createHorizontalStrut(9), stack(state, keepOpen), Box.createHorizontalGlue(), startStop), progress, startHelp);
-        section(main, step(2), row(stack(heading(TEXT.getMessage("lblPlay")), wrapped(TEXT.getMessage("lblWebConsolePlayAbout"), UIManager.getColor("Label.disabledForeground"), TEXT_WIDTH - 150)),
-                Box.createHorizontalGlue(), browse));
-        section(main, step(3), stack(heading(TEXT.getMessage("lblWebConsoleInvitePlayers")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), UIManager.getColor("Label.disabledForeground"), TEXT_WIDTH)),
-                row(stack(new JLabel(TEXT.getMessage("lblWebConsoleOnNetwork")), homeAddress), Box.createHorizontalGlue(), copyHome, moreHome),
-                row(stack(new JLabel(TEXT.getMessage("lblWebConsoleOnInternet")), netAddress), Box.createHorizontalGlue(), retryNet,
-                        Box.createHorizontalStrut(8), copyNet),
-                forwardPort, forwardStateRow, forwardHelp,
-                row(players, Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleGuide"), this::openGuide)));
-        section(main, muted(TEXT.getMessage("lblWebHeadOptions")),
-                row(stack(new JLabel(TEXT.getMessage("lblWebImagesTitle")), muted(TEXT.getMessage("lblWebConsoleImagesAbout"))),
-                        Box.createHorizontalGlue(), imagesButton),
-                quitWhenEmpty);
-        final JPanel foot = row(Box.createHorizontalGlue(), detailsToggle);
+        main.setBorder(BorderFactory.createEmptyBorder(14, 26, 12, 26));
+        final Color quiet = UIManager.getColor("Label.disabledForeground");
+        section(main, picturesAsk,
+                row(light, Box.createHorizontalStrut(10), stack(row(state, Box.createHorizontalStrut(10), players), keepOpen),
+                        Box.createHorizontalGlue(), browse, Box.createHorizontalStrut(8), startStop),
+                progress, startHelp);
+        netField = field(netAddress, Box.createHorizontalGlue(), retryNet, Box.createHorizontalStrut(8), copyNet);
+        section(main, stack(heading(TEXT.getMessage("lblWebConsoleInvitePlayers")), wrapped(TEXT.getMessage("lblWebConsoleInviteAbout"), quiet, TEXT_WIDTH)),
+                heading(TEXT.getMessage("lblWebConsoleOnNetwork")),
+                field(homeAddress, Box.createHorizontalGlue(), copyHome, moreHome),
+                row(heading(TEXT.getMessage("lblWebConsoleOnInternet")), Box.createHorizontalStrut(12), byRouter, byCloudflare),
+                netField, forwardStateRow, forwardHelp, tunnelStateRow, tunnelMissing, tunnelFailed);
+        section(main, field(picturesLight, Box.createHorizontalStrut(10),
+                stack(picturesState, stack(picturesBar, row(picturesUpdated, imagesButton))),
+                Box.createHorizontalGlue(), picturesButton));
+        final JPanel foot = row(quitWhenEmpty, Box.createHorizontalGlue(), detailsToggle);
         // A row left centred would push every left-aligned one in by half its width
         foot.setAlignmentX(0f);
         main.add(foot);
@@ -502,6 +684,12 @@ final class ServerConsole implements IProgressBar {
 
     /** The window is as tall as what it shows, which changes as help and the details come and go. */
     private void refit() {
+        fit();
+        // The space under a part is shown by an event that follows the part's own, so the fit is made again once that has run
+        SwingUtilities.invokeLater(this::fit);
+    }
+
+    private void fit() {
         frame.pack();
         frame.setSize(frame.getWidth(), Math.min(frame.getHeight(), GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().height));
     }
@@ -524,10 +712,14 @@ final class ServerConsole implements IProgressBar {
     }
 
     private void openGuide() {
+        open(GUIDE);
+    }
+
+    private void open(final String address) {
         try {
-            ui.browseToUrl(GUIDE);
+            ui.browseToUrl(address);
         } catch (final IOException | URISyntaxException e) {
-            Logger.warn(e, "Open {} in a browser", GUIDE);
+            Logger.warn(e, "Open {} in a browser", address);
         }
     }
 
@@ -539,7 +731,10 @@ final class ServerConsole implements IProgressBar {
 
     /** A button drawn as coloured text, for what leads somewhere rather than does something. */
     private static JButton link(final String label, final Runnable action) {
-        final JButton b = button(label, action);
+        return asLink(button(label, action));
+    }
+
+    private static JButton asLink(final JButton b) {
         b.setBorderPainted(false);
         b.setContentAreaFilled(false);
         b.setMargin(new Insets(0, 0, 0, 0));
@@ -567,11 +762,20 @@ final class ServerConsole implements IProgressBar {
         return label;
     }
 
-    private static JLabel step(final int number) {
-        final JLabel label = heading(TEXT.getMessage("lblWebConsoleStep", number));
-        label.setFont(label.getFont().deriveFont(label.getFont().getSize2D() + 3f));
-        label.setForeground(LINK);
+    private static JLabel heading(final String words, final Color colour) {
+        final JLabel label = heading(words);
+        label.setForeground(colour);
         return label;
+    }
+
+    /** A white box around an address or a state and the button that acts on it, so the two read as one thing. */
+    private static JPanel field(final Component... parts) {
+        final JPanel field = row(parts);
+        field.setOpaque(true);
+        field.setBackground(Color.WHITE);
+        field.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(FIELD_EDGE),
+                BorderFactory.createEmptyBorder(5, 10, 5, 6)));
+        return field;
     }
 
     private static JLabel muted(final String words) {
@@ -627,11 +831,8 @@ final class ServerConsole implements IProgressBar {
         return stack;
     }
 
-    /** Adds one captioned group of rows to the window, with a line under it. */
-    private static void section(final JPanel main, final JLabel caption, final JComponent... parts) {
-        caption.setAlignmentX(0f);
-        main.add(caption);
-        main.add(Box.createVerticalStrut(7));
+    /** Adds one group of rows to the window, with a line under it. */
+    private static void section(final JPanel main, final JComponent... parts) {
         for (final JComponent part : parts) {
             part.setAlignmentX(0f);
             main.add(part);
@@ -654,17 +855,26 @@ final class ServerConsole implements IProgressBar {
         final JSeparator line = new JSeparator();
         line.setAlignmentX(0f);
         line.setMaximumSize(new Dimension(Integer.MAX_VALUE, 1));
-        main.add(Box.createVerticalStrut(4));
+        main.add(Box.createVerticalStrut(2));
         main.add(line);
-        main.add(Box.createVerticalStrut(13));
+        main.add(Box.createVerticalStrut(11));
     }
 
     /** An amber box for what went wrong and what to do about it. */
     private static JPanel warning(final JComponent... parts) {
+        return box(WARN, WARN_FILL, parts);
+    }
+
+    /** A blue box for something the host is asked or has to do, which is not a fault. */
+    private static JPanel note(final JComponent... parts) {
+        return box(NOTE, NOTE_FILL, parts);
+    }
+
+    private static JPanel box(final Color edge, final Color fill, final JComponent... parts) {
         final JPanel box = new JPanel();
         box.setLayout(new BoxLayout(box, BoxLayout.PAGE_AXIS));
-        box.setBackground(WARN_FILL);
-        box.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, WARN),
+        box.setBackground(fill);
+        box.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createMatteBorder(0, 3, 0, 0, edge),
                 BorderFactory.createEmptyBorder(8, 10, 8, 10)));
         for (final JComponent part : parts) {
             part.setAlignmentX(0f);
@@ -677,9 +887,16 @@ final class ServerConsole implements IProgressBar {
     /** A lamp, filled while the server is up and an empty ring while it is not. */
     private static final class Light extends JComponent {
         private static final int SIZE = 11;
+        private final Color off;
         private boolean on;
 
         Light() {
+            this(DARK);
+        }
+
+        /** off is the colour of the empty ring, for a lamp whose unlit state is not a fault. */
+        Light(final Color off) {
+            this.off = off;
             final Dimension size = new Dimension(SIZE, SIZE);
             setPreferredSize(size);
             setMinimumSize(size);
@@ -695,7 +912,7 @@ final class ServerConsole implements IProgressBar {
         protected void paintComponent(final Graphics g) {
             final Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(on ? LIT : DARK);
+            g2.setColor(on ? LIT : off);
             if (on) {
                 g2.fillOval(0, 0, SIZE - 1, SIZE - 1);
             } else {

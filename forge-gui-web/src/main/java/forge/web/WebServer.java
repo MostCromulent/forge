@@ -42,6 +42,7 @@ import io.netty.handler.codec.http.cookie.CookieHeaderNames;
 import io.netty.handler.codec.http.cookie.DefaultCookie;
 import io.netty.handler.codec.http.cookie.ServerCookieDecoder;
 import io.netty.handler.codec.http.cookie.ServerCookieEncoder;
+import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolConfig;
@@ -67,6 +68,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.regex.Matcher;
@@ -100,6 +102,7 @@ public final class WebServer implements AutoCloseable {
     private static final int DEFAULT_PORT = 36743;
     /** How long a download is waited on before the browser is told there is no image. */
     private static final int FETCH_TIMEOUT_SECONDS = 15;
+    private static final int PING_SECONDS = 30;
     private final EventLoopGroup group = new NioEventLoopGroup(2, new DefaultThreadFactory("WebServer", true));
     private final ServerTraffic traffic = new ServerTraffic();
     private final String hostToken;
@@ -161,6 +164,11 @@ public final class WebServer implements AutoCloseable {
     /** A guest's link, at whichever address they can reach this machine by. */
     public String inviteUrl(final String address) {
         return "http://" + address + ":" + port() + "/?token=" + guestToken;
+    }
+
+    /** A link for another player by way of an address that leads here, such as the one Cloudflare gives. */
+    String inviteUrlThrough(final String origin) {
+        return origin + "/?token=" + guestToken;
     }
 
     @Override
@@ -677,6 +685,7 @@ public final class WebServer implements AutoCloseable {
     private static final class BrowserSocket extends SimpleChannelInboundHandler<WebSocketFrame> {
         private final Endpoint endpoint;
         private BrowserChannel browser;
+        private ScheduledFuture<?> pings;
 
         BrowserSocket(final Endpoint endpoint) {
             this.endpoint = endpoint;
@@ -700,6 +709,9 @@ public final class WebServer implements AutoCloseable {
                 };
                 final List<String> id = new QueryStringDecoder(done.requestUri()).parameters().get("client");
                 endpoint.connected(browser, id == null ? "" : id.get(0), ch.attr(ACCESS).get() == Access.HOST);
+                // A proxy between here and the browser drops a socket that says nothing for long, as a player thinking does
+                pings = ctx.executor().scheduleAtFixedRate(() -> ch.writeAndFlush(new PingWebSocketFrame()),
+                        PING_SECONDS, PING_SECONDS, TimeUnit.SECONDS);
             } else {
                 ctx.fireUserEventTriggered(evt);
             }
@@ -718,6 +730,9 @@ public final class WebServer implements AutoCloseable {
 
         @Override
         public void channelInactive(final ChannelHandlerContext ctx) {
+            if (pings != null) {
+                pings.cancel(false);
+            }
             if (browser != null) {
                 endpoint.disconnected(browser);
             }

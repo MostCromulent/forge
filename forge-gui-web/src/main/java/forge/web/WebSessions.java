@@ -58,6 +58,12 @@ final class WebSessions implements WebServer.Endpoint {
 
     /** Whether the router has agreed to forward the port, which decides how the internet link is described. */
     private volatile boolean portForwarded;
+    private volatile String cloudflare;
+
+    /** The address Cloudflare gives for this server while players come in that way, which then stands in for the router's. */
+    void throughCloudflare(final String address) {
+        cloudflare = address;
+    }
 
     void portForwarded(final boolean value) {
         portForwarded = value;
@@ -330,6 +336,11 @@ final class WebSessions implements WebServer.Endpoint {
         }
         for (final Map.Entry<String, String> e : FServerManager.getAllLocalAddresses().entrySet()) {
             list.add(new Address(e.getKey(), s.inviteUrl(e.getValue())));
+        }
+        final String through = cloudflare;
+        if (through != null) {
+            list.add(new Address(Localizer.getInstance().getMessage("lblWebSessionsThroughCloudflare"), s.inviteUrlThrough(through)));
+            return list;
         }
         // Last, because without a forwarded port this link reaches the router and stops there
         final String external = FServerManager.getExternalAddress();

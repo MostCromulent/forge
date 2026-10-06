@@ -44,21 +44,32 @@ Not yet: Adventure, puzzles, constructed gauntlets and Winston draft.
 3. Open `forge-gui-web.jar`. If nothing happens, run `java -jar forge-gui-web.jar` in that folder.
 
 The game opens in your browser and a server window opens beside it. Closing that window quits Forge. Forge also
-quits when the last browser leaves, unless you untick **Close Forge when everyone has left, including you**. To
-update, replace the folder with the new zip.
+quits when the last browser leaves, unless you untick **Close Forge when everyone has left, including you** or
+start it with `-Dforge.web.keepOpen=true`. To update, replace the folder with the new zip.
+
+The first time, the server window offers to download Scryfall's card data file (75 MB). With it Forge fetches card
+pictures straight from Scryfall's image servers. Without it they come from Scryfall's image API, which limits how
+fast they download.
 
 <img src="forge-gui-web/docs/server.webp" width="49%" alt="The server window">
 
 ### Playing with friends
 
 Click **Invite** at the top of the table, or **Copy link** in the server window. There are two links. One is for
-people on your home network. The other is for people on the internet, and works only once your router forwards
-Forge's port to your computer. **Forward the port automatically (UPnP)** asks the router to do that. If your
-router won't, the [network setup guide](https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration)
-explains how to do it by hand.
+people on your home network. The other is for people on the internet, and the server window offers two ways to
+make it work:
 
-Anyone with a link can join and the connection isn't encrypted, so only send links to the people you're playing
-with. Don't share the host's own link. It controls the table and the server. The links change each time Forge
+- **Through your router.** The router has to forward Forge's port to your computer. **Forward the port
+  automatically** asks it to (UPnP). If your router won't, the
+  [network setup guide](https://github.com/Card-Forge/forge/wiki/Network-Play#network-configuration) explains how
+  to do it by hand.
+- **Through Cloudflare.** Nothing to set up on the router, and your internet address stays hidden. It needs
+  Cloudflare's free [`cloudflared`](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)
+  program, installed once. The link is new each time Forge starts.
+
+Anyone with a link can join, so only send links to the people you're playing with. A link through your router
+isn't encrypted. A link through Cloudflare is encrypted as far as Cloudflare, which passes it on to you. Don't
+share the host's own link. It controls the table and the server. The links change each time Forge
 starts. A player who reloads the page or loses their connection gets their seat back.
 
 ### Decks, saves and settings
@@ -98,7 +109,7 @@ find it, pass `-Dforge.assets.dir=<folder containing res>`.
 | `-Dforge.web.port=<n>` | Port to serve on. The default, 36743, is desktop Forge's network port too. |
 | `-Dforge.web.noBrowser=true` | Don't open the game in a browser. |
 | `-Dforge.web.noConsole=true` | Don't open the server window. The host's link is printed instead. |
-| `-Dforge.web.keepOpen=true` | Keep Forge running with no browser connected. |
+| `-Dforge.web.keepOpen=true` | Keep Forge running with no browser connected, for a server left on between games. |
 | `-Dforge.web.pageDir=forge-gui-web/src/main/resources/web` | Serve the page from source, so a change needs only a reload. |
 
 With `pageDir` set, `npm run watch` in `forge-gui-web` rebuilds the TypeScript on save.
