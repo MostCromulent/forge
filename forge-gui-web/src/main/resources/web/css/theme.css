@@ -33,6 +33,7 @@
   --back-edge: #574319;
   /* Selection and attack cues differ in luminance and shape, never only in red versus green */
   --select: #b4f05a;
+  --selectable: #ffffff;
   --pick: var(--accent-2);
   --attack: #ffffff;
   --danger: #f59e0b;

@@ -254,7 +254,7 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .avatar.lost :is(.life, .cmdr-arc, .cmdr-chip) { display: none; }
 .avatar .skull-mark { display: none; position: absolute; inset: 0; z-index: 2; place-items: center; color: #d8dde5; pointer-events: none; }
 .avatar .skull-mark svg { width: 46%; height: 46%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 1px 3px #000); }
-.avatar.selectable { box-shadow: 0 0 0 3px var(--select); }
+.avatar.selectable { box-shadow: 0 0 0 3px var(--selectable); }
 .avatar.highlighted { box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
 .avatar .initial { font-size: 28px; font-weight: 700; }
 .avatar .life { position: absolute; bottom: -8px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 0 8px; font-weight: 700; }
@@ -833,7 +833,8 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .sym { height: 1em; width: 1em; vertical-align: -0.12em; margin: 0 1px; }
 #zoom .sym { height: 1.05em; width: 1.05em; }
 /* A land that can pay the cost being paid. Paying is not a pick among options, so the board does not dim for it */
-.card.selectable { outline: 2px solid var(--select); outline-offset: 0; }
+/* The ring stands off the card, so it still shows round a white-bordered one */
+.card.selectable { outline: 2px solid var(--selectable); outline-offset: 2px; }
 /* A card you could act on now, and what Auto would tap, are marked paler and thinner than a card a prompt is asking for */
 .card.playable:not(.selectable) { outline: 2px solid var(--playable, #66ccff); outline-offset: 0; }
 .card.auto-tap:not(.selectable) { outline: 3px solid var(--playable, #66ccff); box-shadow: 0 0 6px color-mix(in srgb, var(--playable, #66ccff) 40%, transparent), var(--lift, 0 0 #0000); }
