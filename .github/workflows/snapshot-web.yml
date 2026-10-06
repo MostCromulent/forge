@@ -90,7 +90,7 @@ jobs:
           Invite links aren't encrypted, and anyone who has one can join. Only send them to people you're playing with, and keep the host's link to yourself.
           EOF
           sed -i -e "s|@REPO@|$GITHUB_REPOSITORY|" -e "s|@SHA@|$GITHUB_SHA|" \
-            -e "s|@SHORT@|${GITHUB_SHA:0:11}|" -e "s|@DATE@|$(date -u +%F)|" notes.md
+            -e "s|@SHORT@|${GITHUB_SHA:0:11}|" -e "s|@DATE@|$(date -u '+%F %H:%M')|" notes.md
 
       - name: Replace the snapshot release
         run: |
