@@ -33,11 +33,13 @@ import javax.swing.UIManager;
 import javax.swing.UnsupportedLookAndFeelException;
 import javax.swing.WindowConstants;
 import javax.swing.plaf.basic.BasicArrowButton;
+import javax.swing.plaf.basic.BasicHTML;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Element;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
+import javax.swing.text.View;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -167,6 +169,8 @@ final class ServerConsole implements IProgressBar {
     private JPanel picturesAsk;
     private CloudflareTunnel.State tunnelling = CloudflareTunnel.State.OFF;
     private boolean downloadingIndex;
+    private int widest;
+    private JPanel main;
     private volatile boolean quitting;
 
     private ServerConsole(final WebGuiBase ui, final Runnable onQuit) {
@@ -382,8 +386,16 @@ final class ServerConsole implements IProgressBar {
             words = TEXT.getMessage("lblWebConsolePicturesSlow");
             action = TEXT.getMessage("lblWebConsolePicturesSpeedUp");
         }
-        picturesState.setText("<html><div style='width:" + (TEXT_WIDTH - 170) + "px'>" + words + "</div></html>");
         picturesButton.setText(action);
+        // The words take what the button leaves, so the row is as wide as the rest whatever the button says
+        picturesState.setText("<html>" + words + "</html>");
+        // A label wraps HTML only when told how wide it is, and a width given in the HTML itself is not in screen pixels
+        final View laidOut = (View) picturesState.getClientProperty(BasicHTML.propertyKey);
+        final int room = TEXT_WIDTH - 60 - picturesButton.getPreferredSize().width;
+        laidOut.setSize(room, 0);
+        final Dimension size = new Dimension(room, (int) Math.ceil(laidOut.getPreferredSpan(View.Y_AXIS)));
+        picturesState.setPreferredSize(size);
+        picturesState.setMaximumSize(size);
         downloadingIndex = now.downloading();
         picturesUpdated.setText(updated > 0 && !now.downloading()
                 ? TEXT.getMessage("lblWebConsolePicturesUpdated", DateFormat.getDateInstance(DateFormat.MEDIUM).format(new Date(updated))) + "  " : "");
@@ -552,7 +564,7 @@ final class ServerConsole implements IProgressBar {
                 row(button(TEXT.getMessage("lblWebConsoleUseCloudflare"), () -> choose(true)), Box.createHorizontalStrut(8),
                         button(TEXT.getMessage("lblTryAgain"), () -> router.execute(() -> service.forwardPort(true))), Box.createHorizontalStrut(8),
                         button(TEXT.getMessage("lblWebConsoleForwardedMyself"), () -> router.execute(() -> service.forwardPort(false))),
-                        Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleSetupGuide"), this::openGuide)));
+                        Box.createHorizontalStrut(12), Box.createHorizontalGlue(), link(TEXT.getMessage("lblWebConsoleSetupGuide"), this::openGuide)));
         forwardHelp.setVisible(false);
 
         final ButtonGroup ways = new ButtonGroup();
@@ -601,7 +613,14 @@ final class ServerConsole implements IProgressBar {
         detailsToggle = link("", () -> showDetails(!details.isVisible()));
         labelDetails();
 
-        final JPanel main = new JPanel();
+        main = new JPanel() {
+            @Override
+            public Dimension getPreferredSize() {
+                final Dimension size = super.getPreferredSize();
+                size.width = Math.max(size.width, widest);
+                return size;
+            }
+        };
         main.setLayout(new BoxLayout(main, BoxLayout.PAGE_AXIS));
         main.setBorder(BorderFactory.createEmptyBorder(14, 26, 12, 26));
         final Color quiet = UIManager.getColor("Label.disabledForeground");
@@ -633,7 +652,7 @@ final class ServerConsole implements IProgressBar {
 
         final JPanel numbers = new JPanel();
         numbers.setLayout(new BoxLayout(numbers, BoxLayout.PAGE_AXIS));
-        final JPanel title = row(heading(TEXT.getMessage("lblDetails")), Box.createHorizontalGlue(),
+        final JPanel title = row(heading(TEXT.getMessage("lblWebConsoleDiagnostics")), Box.createHorizontalGlue(),
                 copyButton(TEXT.getMessage("lblWebConsoleCopyLog"), () -> text.getText()));
         title.setAlignmentX(0f);
         numbers.add(title);
@@ -690,6 +709,10 @@ final class ServerConsole implements IProgressBar {
     }
 
     private void fit() {
+        // As wide as its widest part, shown or not, so the window keeps one width as help comes and goes
+        for (final Component part : main.getComponents()) {
+            widest = Math.max(widest, part.getPreferredSize().width + main.getInsets().left + main.getInsets().right);
+        }
         frame.pack();
         frame.setSize(frame.getWidth(), Math.min(frame.getHeight(), GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().height));
     }
