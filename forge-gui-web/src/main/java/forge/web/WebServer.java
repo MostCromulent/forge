@@ -310,7 +310,7 @@ public final class WebServer implements AutoCloseable {
         }
         CardThumbnails.of(file).whenComplete((bytes, failed) -> {
             if (bytes != null) {
-                respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER);
+                respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER, null);
                 return;
             }
             Logger.warn("Could not shrink {}: {}", file, failed.getMessage());
@@ -327,7 +327,7 @@ public final class WebServer implements AutoCloseable {
     }
 
     private void respondImage(final ChannelHandlerContext ctx, final File file) throws IOException {
-        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), imageType(file), null, KEEP_FOREVER);
+        respond(ctx, HttpResponseStatus.OK, Files.readAllBytes(file.toPath()), imageType(file), null, KEEP_FOREVER, null);
     }
 
     /** True when the socket's page came from this server, whichever address the browser reached it by. */
@@ -356,15 +356,15 @@ public final class WebServer implements AutoCloseable {
         return Access.NONE;
     }
 
-    /** The token in the link, which a page load then keeps as a cookie. */
-    private static String queryToken(final QueryStringDecoder q) {
-        final List<String> values = q.parameters().get("token");
+    /** A value from the link's query, or null when the link does not carry it. */
+    private static String param(final QueryStringDecoder q, final String name) {
+        final List<String> values = q.parameters().get(name);
         return values == null ? null : values.get(0);
     }
 
     /** Which link a request came in on: the token in it, or the one its page load kept. */
     private Access access(final FullHttpRequest req, final QueryStringDecoder q) {
-        final Access fromQuery = accessOf(queryToken(q));
+        final Access fromQuery = accessOf(param(q, "token"));
         if (fromQuery != Access.NONE) {
             return fromQuery;
         }
@@ -384,7 +384,7 @@ public final class WebServer implements AutoCloseable {
     }
 
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type) {
-        respond(ctx, status, body, type, null, "no-cache");
+        respond(ctx, status, body, type, null, "no-cache", null);
     }
 
     private void notFound(final ChannelHandlerContext ctx) {
@@ -396,17 +396,14 @@ public final class WebServer implements AutoCloseable {
         if (body == null) {
             notFound(ctx);
         } else {
-            respond(ctx, HttpResponseStatus.OK, body, type, null, KEEP_AN_HOUR);
+            respond(ctx, HttpResponseStatus.OK, body, type, null, KEEP_AN_HOUR, null);
         }
     }
 
-    /** Answers a request; a cookie, when given, is the token the page was loaded with. */
-    private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
-            final String cookieToken, final String cacheControl) {
-        respond(ctx, status, body, type, cookieToken, cacheControl, null);
-    }
-
-    /** Holds the connection open when the browser asked, because a board of forty pictures would otherwise cost forty handshakes. */
+    /**
+     * Answers a request; a cookie, when given, is the token the page was loaded with. Holds the connection open when the
+     * browser asked, because a board of forty pictures would otherwise cost forty handshakes.
+     */
     private void respond(final ChannelHandlerContext ctx, final HttpResponseStatus status, final byte[] body, final String type,
             final String cookieToken, final String cacheControl, final String etag) {
         final boolean keepAlive = Boolean.TRUE.equals(ctx.channel().attr(KEEP_ALIVE).get());
@@ -606,61 +603,50 @@ public final class WebServer implements AutoCloseable {
             ServerTraffic.carrying(ctx.channel(), "/img".equals(path) || "/sleeveart".equals(path) ? ServerTraffic.Kind.CARD_ART
                     : "/sound".equals(path) || "/music".equals(path) ? ServerTraffic.Kind.AUDIO : ServerTraffic.Kind.PAGE);
             if ("/avatar".equals(path) || "/sleeve".equals(path)) {
-                final List<String> index = q.parameters().get("i");
-                final Integer i = index == null ? null : Ints.tryParse(index.get(0));
-                final byte[] png = i == null ? null : SkinSprites.png("/avatar".equals(path), i);
-                if (png == null) {
-                    notFound(ctx);
-                } else {
-                    respond(ctx, HttpResponseStatus.OK, png, "image/png", null, KEEP_AN_HOUR);
-                }
+                final String index = param(q, "i");
+                final Integer i = index == null ? null : Ints.tryParse(index);
+                respondOrNotFound(ctx, i == null ? null : SkinSprites.png("/avatar".equals(path), i), "image/png");
                 return;
             }
             if ("/sleeveart".equals(path)) {
-                final List<String> key = q.parameters().get("key");
+                final String key = param(q, "key");
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveSleeveArt(ctx, key.get(0));
+                    serveSleeveArt(ctx, key);
                 }
                 return;
             }
             if ("/mana".equals(path)) {
-                final List<String> symbol = q.parameters().get("s");
-                final byte[] png = symbol == null ? null : SkinSprites.manaPng(symbol.get(0));
-                respondOrNotFound(ctx, png, "image/png");
+                final String symbol = param(q, "s");
+                respondOrNotFound(ctx, symbol == null ? null : SkinSprites.manaPng(symbol), "image/png");
                 return;
             }
             if ("/ability".equals(path)) {
-                final List<String> icon = q.parameters().get("k");
-                final byte[] png = icon == null ? null : SkinSprites.abilityPng(icon.get(0));
-                respondOrNotFound(ctx, png, "image/png");
+                final String icon = param(q, "k");
+                respondOrNotFound(ctx, icon == null ? null : SkinSprites.abilityPng(icon), "image/png");
                 return;
             }
             if ("/skinicon".equals(path)) {
-                final List<String> icon = q.parameters().get("k");
-                respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon.get(0)), "image/png");
+                final String icon = param(q, "k");
+                respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon), "image/png");
                 return;
             }
             if ("/sound".equals(path) || "/music".equals(path)) {
-                final List<String> name = q.parameters().get("name");
-                final List<String> track = q.parameters().get("track");
-                serveAudio(ctx, "/sound".equals(path), name == null ? null : name.get(0), track == null ? null : track.get(0),
-                        req.headers().get(HttpHeaderNames.RANGE));
+                serveAudio(ctx, "/sound".equals(path), param(q, "name"), param(q, "track"), req.headers().get(HttpHeaderNames.RANGE));
                 return;
             }
             if ("/img".equals(path)) {
-                final List<String> key = q.parameters().get("key");
-                final List<String> width = q.parameters().get("w");
+                final String key = param(q, "key");
                 if (key == null) {
                     notFound(ctx);
                 } else {
-                    serveImage(ctx, key.get(0), width != null && String.valueOf(CardThumbnails.WIDTH).equals(width.get(0)));
+                    serveImage(ctx, key, String.valueOf(CardThumbnails.WIDTH).equals(param(q, "w")));
                 }
                 return;
             }
             if ("/text".equals(path)) {
-                respond(ctx, HttpResponseStatus.OK, PageText.json(), "application/json; charset=utf-8", null, "no-cache");
+                respond(ctx, HttpResponseStatus.OK, PageText.json(), "application/json; charset=utf-8");
                 return;
             }
             final String resource = "/".equals(path) ? "index.html" : path.substring(1);
@@ -671,7 +657,7 @@ public final class WebServer implements AutoCloseable {
                 return;
             }
             // The page keeps the link's token as a cookie, so its later requests come in on the same link
-            final String token = queryToken(q);
+            final String token = param(q, "token");
             // Any other page file keeps its name from one build to the next, so the browser asks whether it changed
             final String etag = etag(body);
             final boolean unchanged = etag.equals(req.headers().get(HttpHeaderNames.IF_NONE_MATCH));
@@ -707,8 +693,8 @@ public final class WebServer implements AutoCloseable {
                         ch.close();
                     }
                 };
-                final List<String> id = new QueryStringDecoder(done.requestUri()).parameters().get("client");
-                endpoint.connected(browser, id == null ? "" : id.get(0), ch.attr(ACCESS).get() == Access.HOST);
+                final String id = param(new QueryStringDecoder(done.requestUri()), "client");
+                endpoint.connected(browser, id == null ? "" : id, ch.attr(ACCESS).get() == Access.HOST);
                 // A proxy between here and the browser drops a socket that says nothing for long, as a player thinking does
                 pings = ctx.executor().scheduleAtFixedRate(() -> ch.writeAndFlush(new PingWebSocketFrame()),
                         PING_SECONDS, PING_SECONDS, TimeUnit.SECONDS);

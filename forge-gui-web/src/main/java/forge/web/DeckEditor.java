@@ -109,11 +109,6 @@ final class DeckEditor {
 
     /** saved says the deck was opened from where target saves it; a new deck, or one that is only being read, was not. */
     DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
-            final DeckStore.Storages storages, final boolean guest, final DeviceSink sink) {
-        this(deck, readOnly, saved, target, check, storages, guest, sink, null);
-    }
-
-    DeckEditor(final Deck deck, final boolean readOnly, final boolean saved, final Target target, final Check check,
             final DeckStore.Storages storages, final boolean guest, final DeviceSink sink, final Collection collection) {
         // Edited as a copy, so a deck another screen holds (a catalogue entry, a seat) never changes under it
         this.deck = new Deck(deck, deck.getName());

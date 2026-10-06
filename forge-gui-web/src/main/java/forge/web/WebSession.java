@@ -285,6 +285,14 @@ public final class WebSession {
         }
     }
 
+    /** Shows the browser the game a match is played through, when one is attached. */
+    private void attach(final WebGuiGame gui) {
+        final BrowserChannel b = browser;
+        if (b != null) {
+            gui.attach(b);
+        }
+    }
+
     /** Whether this session has a game open that guests can take a seat in. */
     boolean hostsGame() {
         return local.isHost();
@@ -985,10 +993,7 @@ public final class WebSession {
     private void guestMatchOpened(final WebGuiGame gui) {
         final Stage now = stage;
         if (now instanceof Setup s && s.gui() == gui && move(now, new Playing(gui, true, false, null))) {
-            final BrowserChannel b = browser;
-            if (b != null) {
-                gui.attach(b);
-            }
+            attach(gui);
         }
     }
 
@@ -1455,10 +1460,7 @@ public final class WebSession {
             playing.gui().close();
             return;
         }
-        final BrowserChannel b = browser;
-        if (b != null) {
-            playing.gui().attach(b);
-        }
+        attach(playing.gui());
         // A game's result belongs to the campaign that started it, wherever the browser has gone by the time it is recorded
         final Campaign campaign = campaign(back.mode());
         playing.gui().onGameOver(() -> onCampaign(() -> {
@@ -1508,10 +1510,7 @@ public final class WebSession {
             playing.gui().close();
             return null;
         }
-        final BrowserChannel b = browser;
-        if (b != null) {
-            playing.gui().attach(b);
-        }
+        attach(playing.gui());
         if (gauntletRunning) {
             playing.gui().onGameOver(() -> recordGauntletGame(playing));
         }
@@ -1606,10 +1605,7 @@ public final class WebSession {
         if (!move(from, playing)) {
             return;
         }
-        final BrowserChannel b = browser;
-        if (b != null) {
-            playing.gui().attach(b);
-        }
+        attach(playing.gui());
         try {
             begin.run();
             if (playing.spectating()) {

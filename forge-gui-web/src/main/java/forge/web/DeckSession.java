@@ -169,7 +169,7 @@ final class DeckSession {
             }
             target = targetOf(o.key(), editorPath, check);
         }
-        editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck);
+        editor = new DeckEditor(deck, readOnly, o.key() != null, target, check, storages, guest, this::sendDeviceDeck, null);
         eventPool = false;
         editorSeat = o.seat();
         editorTable = lobby.table();
@@ -195,7 +195,7 @@ final class DeckSession {
         } else {
             final Check check = check(lobby.format().name(), null, false);
             problem = new DeckEditor(deck, false, true, targetOf(key, DeckCatalog.pathOf(key), check), check, storages, guest,
-                    this::sendDeviceDeck).delete();
+                    this::sendDeviceDeck, null).delete();
         }
         if (problem != null) {
             channel.send(new Notice(problem, null, false));
@@ -206,7 +206,7 @@ final class DeckSession {
     /** Opens a pool's deck that saves back into its pool, with a null channel when no browser is attached to show it yet. */
     synchronized void openPool(final Deck human, final IStorage<DeckGroup> storage, final GameType type, final BrowserChannel channel) {
         editor = new DeckEditor(human, false, true, new DeckEditor.Group(storage), Check.of(type, null), storages,
-                !host.getAsBoolean(), this::sendDeviceDeck);
+                !host.getAsBoolean(), this::sendDeviceDeck, null);
         editorSeat = null;
         editorPath = "";
         if (channel != null) {
@@ -225,7 +225,7 @@ final class DeckSession {
         } else {
             target = new DeckEditor.Stored(eventDecks);
         }
-        editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck);
+        editor = new DeckEditor(pool, false, true, target, Check.of(type, null), storages, eventDecks == null, this::sendDeviceDeck, null);
         eventPool = true;
         editorSeat = lobby.mySeat();
         editorTable = lobby.table();

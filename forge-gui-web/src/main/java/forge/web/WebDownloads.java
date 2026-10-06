@@ -104,7 +104,7 @@ final class WebDownloads {
     }
 
     /** The address and port fields a download dialog carries; a zip service reads them and nothing else. */
-    private record Text(String value) implements ITextField {
+    record Text(String value) implements ITextField {
         @Override public String getText() { return value; }
         @Override public void setText(final String text) { }
         @Override public boolean isEnabled() { return false; }

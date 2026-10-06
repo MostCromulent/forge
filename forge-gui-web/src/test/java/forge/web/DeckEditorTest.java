@@ -44,7 +44,7 @@ public class DeckEditorTest {
 
     private DeckEditor editor(final Deck deck, final GameType format) {
         return new DeckEditor(deck, false, false, new DeckEditor.Stored(storages.of(format)), Check.of(format, null), storages,
-                false, (id, text, f) -> { });
+                false, (id, text, f) -> { }, null);
     }
 
     private static PaperCard card(final String name) {
@@ -57,7 +57,7 @@ public class DeckEditorTest {
         final Deck precon = new Deck("Precon");
         precon.getMain().add(card("Forest"), 10);
         final DeckEditor e = new DeckEditor(precon, true, false, new DeckEditor.Stored(storages.of(GameType.Constructed)),
-                Check.of(GameType.Constructed, null), storages, false, (id, text, f) -> { });
+                Check.of(GameType.Constructed, null), storages, false, (id, text, f) -> { }, null);
         Assert.assertEquals(e.copyOf(), "Precon");
         Assert.assertNull(e.add("Llanowar Elves", DeckSection.Main, 1));
         Assert.assertEquals(precon.getMain().countByName("Llanowar Elves"), 0);
@@ -97,7 +97,7 @@ public class DeckEditorTest {
         host.getMain().add(card("Forest"), 10);
         final List<String> sent = new ArrayList<>();
         final DeckEditor e = new DeckEditor(host, true, false, new DeckEditor.Stored(storages.of(GameType.Constructed)),
-                Check.of(GameType.Constructed, null), storages, true, (id, text, f) -> sent.add(text));
+                Check.of(GameType.Constructed, null), storages, true, (id, text, f) -> sent.add(text), null);
         Assert.assertNull(e.add("Llanowar Elves", DeckSection.Main, 1));
         Assert.assertTrue(e.target() instanceof DeckEditor.Device);
         Assert.assertEquals(sent.size(), 1);

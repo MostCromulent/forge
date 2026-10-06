@@ -8,7 +8,6 @@ import forge.gui.download.GuiDownloadFilteredCardImages;
 import forge.gui.download.GuiDownloadService;
 import forge.gui.interfaces.IButton;
 import forge.gui.interfaces.IProgressBar;
-import forge.gui.interfaces.ITextField;
 import forge.game.GameFormat;
 import forge.item.PaperCard;
 import forge.localinstance.skin.FSkinProp;
@@ -299,7 +298,7 @@ final class CardImageDownloads {
         running = new GuiDownloadFilteredCardImages(chosenCards());
         downloadStarted = 0;
         // Once the service has listed what is missing, the start command it hands over runs at once, as the count was the confirmation
-        running.initialize(new Blank(), new Blank(), new Bar(), new Starter(), this::finished, null, null);
+        running.initialize(new WebDownloads.Text(""), new WebDownloads.Text(""), new Bar(), new Starter(), this::finished, null, null);
     }
 
     private void stopDownload() {
@@ -394,19 +393,6 @@ final class CardImageDownloads {
         @Override public boolean requestFocusInWindow() { return false; }
         @Override public void setImage(final FSkinProp color) { }
         @Override public void setTextColor(final int r, final int g, final int b) { }
-        @Override public boolean isVisible() { return false; }
-        @Override public void setVisible(final boolean b0) { }
-        @Override public String getToolTipText() { return ""; }
-        @Override public void setToolTipText(final String s0) { }
-    }
-
-    /** The service asks for proxy settings; the console uses none. */
-    private static final class Blank implements ITextField {
-        @Override public String getText() { return ""; }
-        @Override public void setText(final String text0) { }
-        @Override public boolean requestFocusInWindow() { return false; }
-        @Override public boolean isEnabled() { return true; }
-        @Override public void setEnabled(final boolean b0) { }
         @Override public boolean isVisible() { return false; }
         @Override public void setVisible(final boolean b0) { }
         @Override public String getToolTipText() { return ""; }

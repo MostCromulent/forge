@@ -44,7 +44,7 @@ final class WebSessions implements WebServer.Endpoint {
     /** How long the host's seat stays reserved for a browser that has gone, so a reload keeps it. */
     private static final long HOST_GRACE_MILLIS = 20_000;
     /** How long a drafting seat's browser may be gone before the draft host is told its player left. */
-    long draftHoldMillis = 15_000;
+    private static final long DRAFT_HOLD_MILLIS = 15_000;
     /** Runs when no browser has been connected for a while, which is the only sign the game is over with. */
     private ScheduledFuture<?> idle;
 
@@ -174,7 +174,7 @@ final class WebSessions implements WebServer.Endpoint {
         if (session != null) {
             session.disconnected(channel);
             announcePresence();
-            timer.schedule(session::goneAWhile, draftHoldMillis, TimeUnit.MILLISECONDS);
+            timer.schedule(session::goneAWhile, DRAFT_HOLD_MILLIS, TimeUnit.MILLISECONDS);
         }
         letGo();
         // A seat held by a browser that never comes back would leave nobody able to set the table
@@ -197,16 +197,12 @@ final class WebSessions implements WebServer.Endpoint {
 
     /** Every browser is sent the table again, after a change no lobby update carries. */
     void lobbyChanged() {
-        for (final WebSession session : byId.values()) {
-            session.lobbyChanged();
-        }
+        byId.values().forEach(WebSession::lobbyChanged);
     }
 
     /** Every seat's dial reads again which pod seats are held, after a player went or came back. */
     void seatsChanged() {
-        for (final WebSession session : byId.values()) {
-            session.seatsChanged();
-        }
+        byId.values().forEach(WebSession::seatsChanged);
     }
 
     /** Drops every seat and stops the server, guests first so none of them outlives the game they were in. */
@@ -292,16 +288,12 @@ final class WebSessions implements WebServer.Endpoint {
     /** Tells every browser who is here, whenever that changes. */
     void announcePresence() {
         final Presence now = presence();
-        for (final WebSession session : byId.values()) {
-            session.tell(now);
-        }
+        byId.values().forEach(session -> session.tell(now));
     }
 
     /** Tells every browser without a seat that the host's seat has changed hands, or come free. */
     private void announceSeat() {
-        for (final WebSession session : byId.values()) {
-            session.hostSeatChanged();
-        }
+        byId.values().forEach(WebSession::hostSeatChanged);
     }
 
     /** Tells the guests waiting on a game that there is now one to join. */

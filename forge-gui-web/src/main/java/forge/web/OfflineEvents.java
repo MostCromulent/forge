@@ -121,12 +121,7 @@ final class OfflineEvents {
 
     /** What builds the draft the form describes, run later on the draft's own thread since importing a cube waits on a web site. */
     static Supplier<BoosterDraft> draft(final DraftStart d) {
-        final LimitedPoolType type;
-        try {
-            type = LimitedPoolType.valueOf(d.product());
-        } catch (final IllegalArgumentException | NullPointerException e) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoProduct", String.valueOf(d.product())));
-        }
+        final LimitedPoolType type = poolType(d.product());
         return switch (type) {
             case Full -> BoosterDraft::full;
             case Block, FantasyBlock -> {
@@ -181,13 +176,16 @@ final class OfflineEvents {
         }
     }
 
-    static SealedCardPoolGenerator generator(final SealedCreate c) {
-        final LimitedPoolType type;
+    private static LimitedPoolType poolType(final String product) {
         try {
-            type = LimitedPoolType.valueOf(c.product());
+            return LimitedPoolType.valueOf(product);
         } catch (final IllegalArgumentException | NullPointerException e) {
-            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoProduct", String.valueOf(c.product())));
+            throw new IllegalArgumentException(Localizer.getInstance().getMessage("lblWebEventsNoProduct", String.valueOf(product)));
         }
+    }
+
+    static SealedCardPoolGenerator generator(final SealedCreate c) {
+        final LimitedPoolType type = poolType(c.product());
         return switch (type) {
             case Full -> SealedCardPoolGenerator.full(packs(c.packs()));
             case Prerelease -> {
