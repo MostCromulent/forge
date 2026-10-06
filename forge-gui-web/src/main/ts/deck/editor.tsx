@@ -31,6 +31,8 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   const [cardMenu, setCardMenu] = useState<MenuAt | null>(null);
   const [picking, setPicking] = useState<{ name: string; zone: DeckSection } | null>(null);
+  /** Which half a phone shows, where there is room for one at a time. */
+  const [half, setHalf] = useState<'find' | 'deck'>('find');
   // A list pasted anywhere but a field opens the importer with it, as a file dropped on the page does
   useEffect(() => {
     const pasted = (e: ClipboardEvent) => {
@@ -78,6 +80,11 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
       else u.browse = { format: state.format };
     });
   };
+  // Shown in the head, and on a phone in the deck's own summary, beside the verdict it explains
+  const check = state.limited
+    ? <span class="check-fixed">{t('lblWebEditorLimitedFixed')}</span>
+    : state.collection ? <span class="check-fixed">{state.check}</span>
+    : <CheckControl model={model} state={state} actions={actions} />;
   return (
     <div class="editor-page" onPointerOver={e => setPeek(peekAt(e, '.editor-page'))} onPointerLeave={() => setPeek(null)}
       onDragOver={e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); }}
@@ -97,15 +104,14 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
               if (name && name !== state.name) actions.renameDeck(name);
             }} />
           : <button class="deck-name" title={t('lblRename')} onClick={() => setRenaming(true)}>{state.name}</button>}
-        {state.limited
-          ? <span class="check-fixed">{t('lblWebEditorLimitedFixed')}</span>
-          : state.collection ? <span class="check-fixed">{state.check}</span>
-          : <CheckControl model={model} state={state} actions={actions} />}
+        {check}
         <div class="head-right">
           <span class="save-state">{saveState(state)}</span>
-          <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={t('lblWebEditorUndoTip')}>&#8630; {t('lblUndo')}</button>
+          <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={t('lblWebEditorUndoTip')} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <div class="menu-anchor">
-            <button aria-expanded={menu !== null} onClick={() => setMenu(menu ? null : 'menu')}>{t('lblDeck')} &#8964;</button>
+            <button aria-expanded={menu !== null} aria-label={t('lblDeck')} onClick={() => setMenu(menu ? null : 'menu')}>
+              <span class="word">{t('lblDeck')} &#8964;</span><span class="dots" aria-hidden="true">&#8943;</span>
+            </button>
             {menu === 'menu' && state.limited && !state.collection && (
               <div class="deck-menu" role="menu">
                 <button role="menuitem" onClick={() => { setMenu(null); setDialog('text'); }}>{t('lblWebEditorCopyAsText')}</button>
@@ -147,9 +153,15 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
           <button class="primary" onClick={() => actions.closeEditor()}>{t('lblDone')}</button>
         </div>
       </PageHeader>
-      <div class="editor-shell">
+      <div class="editor-tabs" role="group">
+        <button aria-pressed={half === 'find'} onClick={() => setHalf('find')}>{t('lblWebEditorFindCards')}</button>
+        <button aria-pressed={half === 'deck'} onClick={() => setHalf('deck')}>
+          {t('lblDeck')} <span class={state.verdict ? 'n no' : 'n'}>{state.verdict ? '! ' : ''}{state.stats.main}</span>
+        </button>
+      </div>
+      <div class={half === 'deck' ? 'editor-shell deck' : 'editor-shell'}>
         <Catalogue model={model} actions={actions} state={state} handlers={handlers} />
-        <DeckHalf actions={actions} state={state} handlers={handlers} />
+        <DeckHalf actions={actions} state={state} handlers={handlers} check={check} />
       </div>
       {dialog === 'text' && <TextDialog state={state} close={() => setDialog(null)} />}
       {dialog === 'delete' && (

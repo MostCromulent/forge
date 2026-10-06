@@ -1,6 +1,8 @@
 // The editor's right half: the deck as the deck finder shows it, made editable
 
+import type { ComponentChildren } from 'preact';
 import { useLayoutEffect, useState } from 'preact/hooks';
+import { isPortrait } from '../form';
 import { flyingFor, land } from '../flight';
 import { drawHand, regroup, type GroupBy } from './decklist';
 import { imageUrl } from '../images';
@@ -16,9 +18,12 @@ const GROUP_KEY = 'forge.groupBy';
 const VIEW_KEY = 'forge.deckView';
 const HAND = 7;
 
-export function DeckHalf({ actions, state, handlers }: { actions: Actions; state: EditorState; handlers: CardHandlers }) {
+export function DeckHalf({ actions, state, handlers, check }: {
+  actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
+}) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
-  const [cards, setCards] = useState(() => stored(VIEW_KEY) !== 'list');
+  // Stacked cards are too small to read on a phone, so there the deck opens as a list until the player says otherwise
+  const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
   const view = (asCards: boolean) => {
     setCards(asCards);
     store(VIEW_KEY, asCards ? 'cards' : 'list');
@@ -47,6 +52,7 @@ export function DeckHalf({ actions, state, handlers }: { actions: Actions; state
           {state.verdict
             ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
             : <p class="verdict yes">{t('lblWebEditorLegalFor', state.check)}</p>}
+          {check && <div class="deck-check">{check}</div>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
         </div>
         <Curve curve={state.stats.curve} creatures={state.stats.creatures} average={state.stats.averageMana} px={34} />

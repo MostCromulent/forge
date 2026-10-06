@@ -30,6 +30,8 @@
 .deck-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
 .menu-cap { padding: 4px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
 .editor-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
+/* What only a phone shows: the tabs between the halves, the menu as dots, and the check in the deck's summary */
+.editor-tabs, .editor-head .dots, .deck-head .deck-check { display: none; }
 button.small { padding: 3px 10px; font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-2); font-weight: 600; }
 

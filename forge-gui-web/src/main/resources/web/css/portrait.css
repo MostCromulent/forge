@@ -415,3 +415,91 @@ html[data-form="portrait"] .reveal-panel header .zone-count { display: none; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }
 /* Asked who goes first, the dock can answer too, so the question stops above it */
 html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }
+
+/* --- the deck editor -------------------------------------------------------- */
+/* Head: one line. The deck's name, its save state, Undo, the menu and Done */
+html[data-form="portrait"] #editor .editor-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto auto; align-items: center; gap: 6px; padding: 6px 10px; }
+html[data-form="portrait"] #editor .editor-head .wordmark-block, html[data-form="portrait"] #editor .editor-head .icon-button, html[data-form="portrait"] #editor .editor-head > .legality, html[data-form="portrait"] #editor .editor-head > .check-fixed, html[data-form="portrait"] #editor .editor-head .word { display: none; }
+html[data-form="portrait"] #editor .editor-head .dots { display: inline; }
+html[data-form="portrait"] #editor .editor-head .head-right { display: contents; }
+html[data-form="portrait"] #editor .editor-head .deck-name { min-width: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; font-size: 16px; }
+html[data-form="portrait"] #editor .editor-head .save-state { font-size: 11.5px; }
+html[data-form="portrait"] #editor .editor-head button { min-height: 40px; }
+html[data-form="portrait"] #editor .editor-head .head-right > button:not(.primary), html[data-form="portrait"] #editor .editor-head .menu-anchor > button { min-width: 40px; padding: 0; font-size: 18px; }
+html[data-form="portrait"] #editor .editor-head .primary { padding: 0 16px; }
+
+/* One half at a time, chosen by the two tabs under the head */
+html[data-form="portrait"] #editor .editor-page { grid-template-rows: auto auto minmax(0, 1fr); }
+html[data-form="portrait"] #editor .editor-tabs { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); background: var(--surface); }
+html[data-form="portrait"] #editor .editor-tabs button { border: 0; border-radius: 0; background: none; min-height: 42px; color: var(--muted); font-size: 13.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
+html[data-form="portrait"] #editor .editor-tabs button[aria-pressed="true"] { color: var(--accent-2); box-shadow: inset 0 -2px 0 var(--accent-2); background: var(--accent-soft); }
+html[data-form="portrait"] #editor .editor-tabs .n { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--text); background: var(--surface-3); border-radius: 999px; padding: 1px 8px; font-size: 12px; }
+/* A deck with a problem wears an outline and a "!" where a sound one is filled, so the hue is not what tells them apart */
+html[data-form="portrait"] #editor .editor-tabs .n.no { background: none; box-shadow: inset 0 0 0 1.5px var(--text); }
+html[data-form="portrait"] #editor .editor-shell { grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] #editor .editor-shell:not(.deck) > .deck-half, html[data-form="portrait"] #editor .editor-shell.deck > .catalogue { display: none; }
+html[data-form="portrait"] #editor .deck-peek { display: none; }
+
+/* Find cards: search on a line of its own, then colours, type and filters on one line */
+html[data-form="portrait"] #editor .cat-bar { padding: 8px 10px 6px; }
+html[data-form="portrait"] #editor .cat-bar .fbar { gap: 6px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; }
+html[data-form="portrait"] #editor .cat-bar .search-wrap { grid-column: 1 / -1; }
+html[data-form="portrait"] #editor .cat-bar .find { height: 40px; font-size: 15px; }
+html[data-form="portrait"] #editor .search-tip { display: none !important; }
+html[data-form="portrait"] #editor .cat-bar .colours { gap: 4px; padding: 4px; }
+html[data-form="portrait"] #editor .cat-bar .colour { width: 28px; height: 28px; }
+html[data-form="portrait"] #editor .cat-bar .type-by { height: 38px; min-width: 0; width: 100%; font-size: 13px; padding: 0 4px; }
+html[data-form="portrait"] #editor .cat-bar .add { min-height: 38px; }
+html[data-form="portrait"] #editor .catalogue .count-row { padding: 2px 10px 4px; gap: 8px; }
+html[data-form="portrait"] #editor .catalogue { min-width: 0; grid-template-columns: minmax(0, 1fr); }
+html[data-form="portrait"] #editor .cat-bar .clear-all { grid-column: 1 / -1; justify-self: end; }
+html[data-form="portrait"] #editor .catalogue .count-row .shown { flex: 1; min-width: 0; font-size: 12px; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* There is no Enter key to offer */
+html[data-form="portrait"] #editor .cat-grid .enter { display: none; }
+html[data-form="portrait"] #editor .catalogue .count-row select, html[data-form="portrait"] #editor .catalogue .count-row .seg button { min-height: 36px; }
+html[data-form="portrait"] #editor .cat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 8px; padding: 8px 10px 64px; }
+/* A finger needs more than the pointer's 20px steppers. Side leaves the tile, where a near miss would send a card to the sideboard */
+html[data-form="portrait"] #editor .slot:not(:hover):not(.indeck) .under { opacity: 1; }
+html[data-form="portrait"] #editor .cat-grid .under { display: grid; grid-template-columns: 1fr auto 1fr; gap: 4px; }
+html[data-form="portrait"] #editor .cat-grid .under .step { width: auto; height: 36px; font-size: 18px; }
+html[data-form="portrait"] #editor .cat-grid .under .n { min-width: 22px; font-size: 13px; }
+html[data-form="portrait"] #editor .cat-grid .under .side { display: none; }
+
+/* Deck: one column that scrolls as a whole: the summary and curve, the main deck, basic lands, then the sideboard */
+html[data-form="portrait"] #editor .deck-half { border-left: 0; display: block; overflow-y: auto; padding-bottom: 64px; }
+html[data-form="portrait"] #editor .deck-half .zone { display: block; }
+html[data-form="portrait"] #editor .deck-half .zone-body { overflow: visible; }
+html[data-form="portrait"] #editor .deck-half .side-zone { max-height: none; }
+/* What the deck holds and whether it is legal beside the curve, then what it is checked against and the sample hand on one line */
+html[data-form="portrait"] #editor .deck-head { padding: 8px 10px; gap: 4px 10px; align-items: center; }
+html[data-form="portrait"] #editor .deck-head > div:first-child { display: contents; }
+html[data-form="portrait"] #editor .deck-head .sizes { grid-area: 1 / 1; align-self: end; }
+html[data-form="portrait"] #editor .deck-head .verdict { grid-area: 2 / 1; align-self: start; }
+html[data-form="portrait"] #editor .deck-head .curve { grid-area: 1 / 2 / 3 / 3; }
+html[data-form="portrait"] #editor .deck-head .deck-check { grid-area: 3 / 1; }
+html[data-form="portrait"] #editor .deck-head button.small { grid-area: 3 / 2; justify-self: end; }
+/* The name is in the head, a line above */
+html[data-form="portrait"] #editor .deck-head h3 { display: none; }
+html[data-form="portrait"] #editor .deck-head .verdict { margin: 0; }
+html[data-form="portrait"] #editor .deck-head .verdict .link { padding: 8px 4px; margin: -8px 0; }
+html[data-form="portrait"] #editor .deck-head .deck-check { display: flex; min-width: 0; }
+html[data-form="portrait"] #editor .deck-head .deck-check .legality { font-size: 0; gap: 0; min-width: 0; }
+html[data-form="portrait"] #editor .deck-head .deck-check select { font-size: 13px; height: 36px; max-width: 100%; }
+html[data-form="portrait"] #editor .deck-head button.small { min-height: 36px; padding: 0 12px; font-size: 13px; }
+html[data-form="portrait"] #editor .zone > h4 { padding: 8px 10px 4px; gap: 8px; }
+html[data-form="portrait"] #editor .zone > h4 select, html[data-form="portrait"] #editor .zone > h4 .view-seg button { min-height: 36px; font-size: 13px; }
+html[data-form="portrait"] #editor .zone > h4 .view-seg button { padding: 0 12px; }
+html[data-form="portrait"] #editor .zone-body { padding: 2px 10px 10px; }
+html[data-form="portrait"] #editor .zone-body.deck-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 8px; }
+html[data-form="portrait"] #editor .zone-body.cols { grid-template-columns: 1fr; gap: 0; }
+/* A list row has no hover to bring its buttons out, so they are always there, with the move to the other section set apart */
+html[data-form="portrait"] #editor .ed-line { min-height: 44px; gap: 8px; }
+html[data-form="portrait"] #editor .ed-line .n { color: var(--text); font-weight: 700; }
+html[data-form="portrait"] #editor .ed-line .ra { display: inline-flex; gap: 4px; }
+html[data-form="portrait"] #editor .ed-line .ra button { width: 38px; height: 36px; font-size: 16px; line-height: 1; padding: 0; }
+html[data-form="portrait"] #editor .ed-line .ra button:nth-child(3) { width: 52px; margin-left: 8px; font-size: 13px; }
+html[data-form="portrait"] #editor .ed-line:hover { padding-left: 0; background: none; }
+html[data-form="portrait"] #editor .land-row { display: grid; grid-template-columns: repeat(3, max-content); justify-content: space-between; padding: 8px 10px; gap: 8px 6px; }
+html[data-form="portrait"] #editor .land-row .band-lab, html[data-form="portrait"] #editor .land-row .land-set { grid-column: 1 / -1; }
+html[data-form="portrait"] #editor .land-row .band-lab { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+html[data-form="portrait"] #editor .land-row .step { width: 36px; height: 36px; font-size: 18px; }
