@@ -10,9 +10,9 @@ const LOCAL_KEY = 'forge.settings';
 const GUEST_KEY = 'forge.guestSettings';
 
 
-/** The playmats a player can lay under the board; the table is the plain one, with no picture. */
+/** The playmats a player can lay under the board; the first is the bare table, with no picture. */
 export const PLAYMATS: { id: string; name: TextKey; image: string | null; thumb: string | null }[] = [
-  { id: 'table', name: 'lblWebPlaymatTable', image: null, thumb: null },
+  { id: 'table', name: 'lblNone', image: null, thumb: null },
   { id: 'mistbound', name: 'lblWebPlaymatMistbound', image: '/playmats/mistbound-ruins.jpg', thumb: '/playmats/mistbound-ruins-thumb.jpg' },
   { id: 'nebula', name: 'lblWebPlaymatNebula', image: '/playmats/stormy-nebula.jpg', thumb: '/playmats/stormy-nebula-thumb.jpg' },
   { id: 'bayou', name: 'lblWebPlaymatBayou', image: '/playmats/twilight-bayou.jpg', thumb: '/playmats/twilight-bayou-thumb.jpg' },
@@ -86,7 +86,7 @@ export const SETTINGS: SettingDef[] = [
   },
   {
     section: t('lblDisplay'), key: 'playmat', label: t('lblWebPlaymat'), type: 'choice', menu: 'playmat',
-    options: PLAYMATS.map(m => [m.id, t(m.name)]), def: 'table',
+    options: PLAYMATS.map(m => [m.id, t(m.name)]), def: 'nebula',
   },
   {
     section: t('lblDisplay'), key: 'playmatBrightness', label: t('lblWebPlaymatBrightness'), type: 'choice', menu: 'playmat',

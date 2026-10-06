@@ -740,8 +740,8 @@ html[data-motion="reduced"] #game-over .panel > * { animation-duration: 1ms; }
 .card { width: calc(var(--card-w) * var(--fit, 1)); height: calc(var(--card-h) * var(--fit, 1)); border-radius: var(--radius); position: relative; background: var(--surface-2); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, filter .3s ease, opacity .3s ease; flex: none; }
 /* A tapped card's shadow turns with it, so its offset turns the other way to keep falling downwards, and glow states carry it by --lift */
 /* A tight dark edge where the card meets the table, and a softer fall around it, so cards stand off a busy playmat */
-.battlefield .card { --lift: 0 1px 2px #000c, 0 4px 12px #000a; box-shadow: var(--lift); }
-.battlefield .card.tapped { --lift: 1px 0 2px #000c, 4px 0 12px #000a; }
+.battlefield .card { --lift: 0 1px 2px #000d, 0 3px 7px #000b; box-shadow: var(--lift); }
+.battlefield .card.tapped { --lift: 1px 0 2px #000d, 3px 0 7px #000b; }
 /* An untapped flyer bobs and sways on two cycles that never line up, and its shadow falls further below it */
 @property --bob { syntax: '<length>'; inherits: false; initial-value: 0px; }
 @property --sway { syntax: '<length>'; inherits: false; initial-value: 0px; }
