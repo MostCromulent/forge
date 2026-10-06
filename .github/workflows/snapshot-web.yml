@@ -73,7 +73,7 @@ jobs:
 
           This is an unofficial test build from the `forge-gui-web` branch of this fork, not a Card-Forge release. It is rebuilt at most once a day.
 
-          **Built** @DATE@ from `@SHORT@`.
+          **Built** @DATE@ UTC from `@SHORT@`.
 
           ## Starting it
 
