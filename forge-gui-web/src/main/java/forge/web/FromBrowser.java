@@ -204,6 +204,11 @@ final class FromBrowser {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
+    /** A .dck file's text, saved as a deck of the format without going through the importer. */
+    @Command("deckFile")
+    record DeckFile(String text, String format, @Nullable Clash clash) {
+    }
+
 
     @Command("reply")
     record Reply(int id, @Ts("unknown") JsonElement value) {

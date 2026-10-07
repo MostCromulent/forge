@@ -228,6 +228,8 @@ export interface Actions {
   commitImport(c: Omit<ImportCommit, 't'>): void;
   deviceDecks(decks: DeviceDeckText[]): void;
 }
+  /** Saves a .dck file's deck under the format, with no importer. clash answers a name that is already taken. */
+  addDeckFile(text: string, format: string, clash?: 'replace' | 'keep'): void;
 
 /** The kind of event a table opened from the start page is to be, until the table arrives and is switched to it. */
 export const pendingTable: { kind: 'sealed' | 'draft' | null } = { kind: null };
@@ -383,3 +385,4 @@ export function createActions(send: Send): Actions {
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }
+    addDeckFile: (text, format, clash) => send({ t: 'deckFile', text, format, clash }),

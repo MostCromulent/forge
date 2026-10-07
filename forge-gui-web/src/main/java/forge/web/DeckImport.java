@@ -20,6 +20,7 @@ import forge.web.ToBrowser.ImportSummary;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -68,59 +69,100 @@ final class DeckImport {
         int notImported = 0;
         // Reading starts in the main deck, so a legendary card before any heading stays there and the commander is chosen below
         DeckSection section = DeckSection.Main;
+        // A deck file is read as Forge reads its own decks, since the list recognizer does not know its card lines
+        final boolean file = Arrays.stream(raw).anyMatch(l -> l.trim().equalsIgnoreCase("[metadata]"));
+        DeckSection fileSection = null;
+        boolean fileHead = false;
         for (int i = 0; i < raw.length; i++) {
             final String line = raw[i].trim();
-            if (line.startsWith("//")) {
-                // A comment, unless it is the "// Name:" line some sites put first
-                final String named = DeckRecognizer.deckNameMatch(line);
-                kinds[i] = named.isEmpty() ? IGNORED : HEADING;
-                name = named.isEmpty() ? name : named;
-                continue;
+            final CardPool listed = new CardPool();
+            final DeckSection to;
+            if (file) {
+                if (line.startsWith("[") && line.endsWith("]")) {
+                    final String heading = line.substring(1, line.length() - 1);
+                    fileSection = DeckSection.smartValueOf(heading);
+                    fileHead = "metadata".equalsIgnoreCase(heading);
+                    kinds[i] = fileSection == null ? IGNORED : HEADING;
+                    continue;
+                }
+                if (fileHead && line.startsWith("Name=")) {
+                    kinds[i] = HEADING;
+                    name = line.substring("Name=".length());
+                    continue;
+                }
+                if (fileSection != null) {
+                    listed.addAll(CardPool.fromCardList(List.of(line)));
+                }
+                if (listed.isEmpty()) {
+                    kinds[i] = IGNORED;
+                    continue;
+                }
+                // A card Forge does not have is read as a stand-in, which no game can play
+                if (listed.toFlatList().get(0).getRules().isUnsupported()) {
+                    kinds[i] = PROBLEM;
+                    notImported++;
+                    problems.add(unknown(i, line.replaceFirst("\\|.*$", ""), false));
+                    continue;
+                }
+                to = fileSection;
+            } else {
+                if (line.startsWith("//")) {
+                    // A comment, unless it is the "// Name:" line some sites put first
+                    final String named = DeckRecognizer.deckNameMatch(line);
+                    kinds[i] = named.isEmpty() ? IGNORED : HEADING;
+                    name = named.isEmpty() ? name : named;
+                    continue;
+                }
+                final Token token = i < lines.length ? recognizer.recognizeLine(lines[i], section) : null;
+                if (token == null) {
+                    kinds[i] = IGNORED;
+                    continue;
+                }
+                switch (token.getType()) {
+                    case DECK_NAME -> {
+                        kinds[i] = HEADING;
+                        name = token.getText();
+                        continue;
+                    }
+                    case DECK_SECTION_NAME -> {
+                        kinds[i] = HEADING;
+                        section = DeckSection.valueOf(token.getText());
+                        continue;
+                    }
+                    case UNKNOWN_CARD, UNSUPPORTED_CARD -> {
+                        kinds[i] = PROBLEM;
+                        notImported++;
+                        problems.add(unknown(i, line, token.getType() == TokenType.UNSUPPORTED_CARD));
+                        continue;
+                    }
+                    default -> {
+                        if (!CARDS.contains(token.getType())) {
+                            kinds[i] = IGNORED;
+                            continue;
+                        }
+                        listed.add(token.getCard(), token.getQuantity());
+                        to = token.getTokenSection();
+                    }
+                }
             }
-            final Token token = i < lines.length ? recognizer.recognizeLine(lines[i], section) : null;
-            if (token == null) {
+            if (collection != null && collection.mainOnly() && to != DeckSection.Main) {
                 kinds[i] = IGNORED;
                 continue;
             }
-            switch (token.getType()) {
-                case DECK_NAME -> {
-                    kinds[i] = HEADING;
-                    name = token.getText();
-                }
-                case DECK_SECTION_NAME -> {
-                    kinds[i] = HEADING;
-                    section = DeckSection.valueOf(token.getText());
-                }
-                case UNKNOWN_CARD, UNSUPPORTED_CARD -> {
-                    kinds[i] = PROBLEM;
-                    notImported++;
-                    problems.add(unknown(i, line, token.getType() == TokenType.UNSUPPORTED_CARD));
-                }
-                default -> {
-                    if (!CARDS.contains(token.getType())) {
-                        kinds[i] = IGNORED;
-                        continue;
-                    }
-                    if (collection != null && collection.mainOnly() && token.getTokenSection() != DeckSection.Main) {
-                        kinds[i] = IGNORED;
-                        continue;
-                    }
-                    final PaperCard listed = token.getCard();
-                    // The listed printing stands for the name: the editor takes the printings owned when the deck is made
-                    final PaperCard card = collection == null || listed.getRules().getType().isBasicLand() || owned.contains(listed.getName()) ? listed : null;
-                    if (card == null) {
-                        kinds[i] = PROBLEM;
-                        notImported++;
-                        problems.add(new ImportProblem(i, Localizer.getInstance().getMessage("lblWebImportLineCard", i + 1, listed.getName()),
-                                Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED),
-                                List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
-                        continue;
-                    }
-                    kinds[i] = READ;
-                    deck.getOrCreate(token.getTokenSection()).add(card, token.getQuantity());
-                    lineOf.putIfAbsent(card.getName(), i);
-                }
+            final PaperCard first = listed.toFlatList().get(0);
+            // The listed printing stands for the name: the editor takes the printings owned when the deck is made
+            final boolean taken = collection == null || first.getRules().getType().isBasicLand() || owned.contains(first.getName());
+            if (!taken) {
+                kinds[i] = PROBLEM;
+                notImported++;
+                problems.add(new ImportProblem(i, Localizer.getInstance().getMessage("lblWebImportLineCard", i + 1, first.getName()),
+                        Localizer.getInstance().getMessage(DeckEditor.NOT_OWNED),
+                        List.of(new ImportFix("leaveOut", Localizer.getInstance().getMessage("lblWebImportLeaveOut"), null))));
+                continue;
             }
+            kinds[i] = READ;
+            deck.getOrCreate(to).addAll(listed);
+            lineOf.putIfAbsent(first.getName(), i);
         }
         final String chosen = chooseCommander(deck, check, problems);
         final Map<String, String> flags = Legality.check(deck, check).flags();

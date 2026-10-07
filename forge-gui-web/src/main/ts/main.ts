@@ -82,6 +82,10 @@ const actions: Actions = {
     model.nameTaken = null;
     wire.commitImport(c);
   },
+  addDeckFile: (text, format, clash) => {
+    model.nameTaken = null;
+    wire.addDeckFile(text, format, clash);
+  },
   sealedCreate: c => {
     model.nameTaken = null;
     model.error = null;

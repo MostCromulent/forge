@@ -14,7 +14,7 @@ import { t } from '../text';
 const READ_DELAY_MS = 300;
 const LINE_PX = 22;
 const MARKS: Record<string, string> = { read: '✓', problem: '!', ignored: '–', heading: '' };
-const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
+export const SITES = 'Moxfield, Archidekt, TappedOut, MTGGoldfish';
 /** Where the text is kept while it is not yet imported, so closing the dialog by mistake loses nothing. */
 const DRAFT_KEY = 'forge.importDraft';
 

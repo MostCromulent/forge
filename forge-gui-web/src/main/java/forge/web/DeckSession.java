@@ -111,6 +111,7 @@ final class DeckSession {
                 ui.runBackgroundTask("Import", () -> channel.send(fetched(fetch)));
             }
             case "importCommit" -> commit(channel, Wire.decode(msg, ImportCommit.class));
+            case "deckFile" -> addFile(channel, Wire.decode(msg, DeckFile.class));
             case "deckDelete" -> deleteDeck(channel, Wire.decode(msg, DeckDelete.class).key());
             default -> edit(channel, type, msg);
         }
@@ -397,10 +398,58 @@ final class DeckSession {
             }
             return;
         }
+        save(channel, deck, check, c);
+    }
+
+    /** Saves a deck file as it stands, with no importer: it is already a deck. */
+    private synchronized void addFile(final BrowserChannel channel, final DeckFile f) {
+        final FileDeck read;
+        try {
+            read = readFile(f.text());
+        } catch (final RuntimeException e) {
+            Logger.warn(e, "A deck file could not be read");
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileUnreadable"), null, true));
+            return;
+        }
+        if (read == null || read.deck().isEmpty()) {
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileUnreadable"), null, true));
+            return;
+        }
+        final ImportCommit c = new ImportCommit(f.text(), read.deck().getName(), f.format(), null, false, FromBrowser.ImportAction.save, null, null, f.clash());
+        if (save(channel, read.deck(), check(f.format(), null, false), c) && read.leftOut() > 0) {
+            channel.send(new Notice(Localizer.getInstance().getMessage("lblWebDeckFileLeftOut", read.leftOut()), null, false));
+        }
+    }
+
+    /** A deck file's deck, and how many of its cards Forge does not have. */
+    record FileDeck(Deck deck, int leftOut) {
+    }
+
+    /** Null when the text is not a deck file. */
+    static FileDeck readFile(final String text) {
+        final Deck deck = parse(text);
+        if (deck == null) {
+            return null;
+        }
+        int leftOut = 0;
+        for (final Map.Entry<DeckSection, CardPool> part : deck) {
+            // A card Forge does not have is read as a stand-in, which no game can play
+            for (final PaperCard card : part.getValue().toFlatList()) {
+                if (card.getRules() != null && card.getRules().isUnsupported()) {
+                    part.getValue().remove(card);
+                    leftOut++;
+                }
+            }
+        }
+        return new FileDeck(deck, leftOut);
+    }
+
+    /** False when nothing was saved: the name will not do, or it is taken and the browser must be asked. */
+    private boolean save(final BrowserChannel channel, final Deck deck, final Check check, final ImportCommit c) {
         final String nameProblem = DeckStore.nameProblem(c.name());
         if (nameProblem != null) {
             channel.send(new Notice(nameProblem, null, false));
-            return;
+            return false;
         }
         deck.setName(c.name().trim());
         if (c.url() != null) {
@@ -408,17 +457,17 @@ final class DeckSession {
         }
         final String key = host.getAsBoolean() ? saveOnHost(channel, deck, check, c) : saveOnDevice(channel, deck, check, c);
         if (key == null) {
-            return;
+            return false;
         }
         switch (c.action()) {
             case use -> {
                 lobby.sendDecks(channel);
                 if (c.seat() == null || !atTable.getAsBoolean()) {
-                    return;
+                    return true;
                 }
                 if (DeckStore.family(check.format()) != DeckStore.family(lobby.format())) {
                     channel.send(new Notice(Localizer.getInstance().getMessage("lblWebEditorNotSeated"), Localizer.getInstance().getMessage("lblWebEditorFormatMismatch", check.format(), lobby.format()), false));
-                    return;
+                    return true;
                 }
                 lobby.setDeck(c.seat(), relisted(key, deck));
                 channel.send(lobby.state());
@@ -432,6 +481,7 @@ final class DeckSession {
             }
             default -> lobby.sendDecks(channel);
         }
+        return true;
     }
 
     /** A saved deck's key, registered again after the list was rebuilt, in case the rebuild left it out (Brawl drops illegal decks). */
