@@ -66,6 +66,18 @@ jobs:
           rsync -a --exclude adventure forge-gui/res dist/forge-web/
           (cd dist && zip -q -r forge-web.zip forge-web)
 
+      # Desktop Forge as its own snapshot packages it, from the same commit. The web snapshot does not wait on it.
+      - name: Build the desktop package
+        continue-on-error: true
+        run: |
+          export DISPLAY=":1"
+          mvn -B -P windows-linux install -DskipTests -T 1C
+          bundle=$(dirname "$(ls forge-installer/target/*/forge.sh | head -n 1)")
+          cp forge-gui-web/target/forge-gui-web.jar "$bundle/"
+          cp -r forge-gui-web/target/lib "$bundle/lib"
+          mv "$bundle" dist/forge-web-and-desktop
+          (cd dist && zip -q -r forge-web-and-desktop.zip forge-web-and-desktop)
+
       - name: Write release notes
         run: |
           cat > notes.md <<'EOF'
@@ -82,20 +94,30 @@ jobs:
           3. Open `forge-gui-web.jar`, or run `java -jar forge-gui-web.jar` in that folder.
 
           The game opens in your browser, along with a server window. Keep that window open while you play.
-
+          @DESKTOP@
           ## Good to know
 
           The web build uses the same user folder as desktop Forge, so your decks and settings are shared between the two. If you already play desktop Forge, you may want to back that up first: `%APPDATA%\Forge` on Windows, `~/Library/Application Support/Forge` on macOS, `~/.forge` on Linux.
 
           Invite links aren't encrypted, and anyone who has one can join. Only send them to people you're playing with, and keep the host's link to yourself.
           EOF
+          desktop=""
+          if [ -f dist/forge-web-and-desktop.zip ]; then
+            desktop='\n## Which download\n\n`forge-web.zip` is the web GUI alone. `forge-web-and-desktop.zip` adds desktop Forge and its Adventure mode, built from the same code, with `forge-gui-web.jar` in the same folder.\n'
+          fi
           sed -i -e "s|@REPO@|$GITHUB_REPOSITORY|" -e "s|@SHA@|$GITHUB_SHA|" \
-            -e "s|@SHORT@|${GITHUB_SHA:0:11}|" -e "s|@DATE@|$(date -u '+%F %H:%M')|" notes.md
+            -e "s|@SHORT@|${GITHUB_SHA:0:11}|" -e "s|@DATE@|$(date -u '+%F %H:%M')|" -e "s|^ *@DESKTOP@$|$desktop|" notes.md
 
       - name: Replace the snapshot release
         run: |
+          files=("dist/forge-web.zip#Web GUI only")
+          if [ -f dist/forge-web-and-desktop.zip ]; then
+            files+=("dist/forge-web-and-desktop.zip#Web GUI with desktop Forge")
+          else
+            echo "::warning::The desktop package did not build, so this snapshot carries the web GUI alone."
+          fi
           gh release delete "$TAG" --cleanup-tag --yes || true
-          gh release create "$TAG" dist/forge-web.zip --prerelease --target "$GITHUB_SHA" \
+          gh release create "$TAG" "${files[@]}" --prerelease --target "$GITHUB_SHA" \
             --title "Forge Web GUI (pre-release)" --notes-file notes.md
         env:
           GH_TOKEN: ${{ github.token }}
