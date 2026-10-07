@@ -92,7 +92,7 @@ final class WebQuestView implements IWinLoseView<WebQuestView.Button> {
 
     /** Cards shown face up under a title, as a reveal draws them. */
     static RewardStep cardsStep(final String title, final List<PaperCard> cards, final boolean lost) {
-        final List<PackCard> shown = cards.stream().map(c -> new PackCard(c.getName(), c.getImageKey(false), c.getRarity().name(), 0)).toList();
+        final List<PackCard> shown = cards.stream().map(c -> new PackCard(c.getName(), Foil.key(c), c.getRarity().name(), 0)).toList();
         return new RewardStep("CARDS", 0, lost ? "lost" : null, shown, 0, 0, false, null, null, null, title, null, null);
     }
 

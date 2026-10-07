@@ -196,7 +196,7 @@ public final class WebGuiBase implements IGuiBase {
         final boolean packs = !all.isEmpty() && all.stream().allMatch(CardEdition.class::isInstance);
         final boolean cards = !all.isEmpty() && all.stream().allMatch(PaperCard.class::isInstance);
         final List<String> images = packs ? all.stream().map(e -> boosterImage((CardEdition) e)).toList()
-                : cards ? all.stream().map(c -> ((PaperCard) c).getImageKey(false)).toList() : null;
+                : cards ? all.stream().map(c -> Foil.key((PaperCard) c)).toList() : null;
         final List<Integer> answer = hostRequests.ask("choices", null, message, options, min, max, images, packs ? "pack" : cards ? "card" : null);
         final List<T> result = new ArrayList<>();
         if (answer != null) {
@@ -227,7 +227,7 @@ public final class WebGuiBase implements IGuiBase {
         }
         final List<Integer> answer = hostRequests.ask("choices", title, message,
                 list.stream().map(c -> c.getDisplayName() + " (" + c.getEdition() + ")").toList(), 1, 1,
-                list.stream().map(c -> c.getImageKey(false)).toList(), "card");
+                list.stream().map(Foil::key).toList(), "card");
         if (answer != null && !answer.isEmpty() && answer.get(0) >= 0 && answer.get(0) < list.size()) {
             return list.get(answer.get(0));
         }

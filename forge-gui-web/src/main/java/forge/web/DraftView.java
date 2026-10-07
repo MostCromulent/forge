@@ -45,7 +45,7 @@ final class DraftView {
         final CardRules rules = card.getRules();
         // A ranked card scores at least 1, where desktop's rounding can show 0
         final double score = CardRanker.getRawScore(card);
-        return new DraftCard(card.getName(), card.getImageKey(false), JsonCodec.manaCost(rules.getManaCost()),
+        return new DraftCard(card.getName(), Foil.key(card), JsonCodec.manaCost(rules.getManaCost()),
                 rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()), rules.getType().toString(),
                 rules.getOracleText().replace("\\n", "\n").replace("\r\n", "\n"), CardCatalog.pt(rules),
                 card.getRarity().toString(), score <= 0 ? null : (int) Math.max(1, Math.round(Math.min(99, score))), packNumber, pickNumber, sideboard);

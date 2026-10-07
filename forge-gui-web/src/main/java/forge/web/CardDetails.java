@@ -45,24 +45,24 @@ final class CardDetails {
     static Detail card(final CardView card, final GameView game, final boolean mayView, final boolean mayFlip) {
         final List<CardFace> faces = new ArrayList<>();
         if (mayView) {
-            faces.add(face(card.getCurrentState(), game));
+            faces.add(face(card, card.getCurrentState(), game));
             if (card.isSplitCard() && card.hasLeftSplitState() && card.hasRightSplitState()) {
-                faces.add(face(card.getLeftSplitState(), game));
-                faces.add(face(card.getRightSplitState(), game));
+                faces.add(face(card, card.getLeftSplitState(), game));
+                faces.add(face(card, card.getRightSplitState(), game));
             } else if (mayFlip) {
-                faces.add(face(card.getAlternateState(), game));
+                faces.add(face(card, card.getAlternateState(), game));
             }
         }
         return new Detail(DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), faces);
     }
 
-    private static CardFace face(final CardStateView state, final GameView game) {
+    private static CardFace face(final CardView card, final CardStateView state, final GameView game) {
         final String pt = state.isCreature() ? state.getPower() + "/" + state.getToughness()
                 : state.isPlaneswalker() ? state.getLoyalty()
                 : state.isBattle() ? state.getDefense() : null;
         return new CardFace(state.getName(), JsonCodec.manaCost(state.getManaCost()),
                 state.getType() == null ? "" : state.getType().toString(), pt,
-                CardDetailUtil.composeCardText(state, game, true).trim(), state.getImageKey(),
+                CardDetailUtil.composeCardText(state, game, true).trim(), Foil.key(card, state),
                 state.getColors() == null ? 0 : state.getColors().getColor(),
                 StringUtils.isEmpty(state.getSetCode()) ? null : state.getSetCode(),
                 state.getRarity());

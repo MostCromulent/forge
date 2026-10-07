@@ -675,11 +675,11 @@ public class WebGuiGame extends NetworkGuiGame {
                 out.add(isInMirror(card)
                         ? new RequestOption(label, cardRef(card), null, null, null)
                         : new RequestOption(label, null, card.getName(),
-                                card.getCurrentState() == null ? null : card.getCurrentState().getImageKey(), null));
+                                card.getCurrentState() == null ? null : Foil.key(card, card.getCurrentState()), null));
             } else if (item instanceof PlayerView player) {
                 out.add(new RequestOption(label, null, null, null, Ref.player(player.getId())));
             } else if (item instanceof PaperCard paper) {
-                out.add(new RequestOption(label, null, paper.getName(), paper.getImageKey(false), null));
+                out.add(new RequestOption(label, null, paper.getName(), Foil.key(paper), null));
             } else if (item instanceof CardFaceView face) {
                 out.add(new RequestOption(label, null, face.getName(), ImageKeys.CARD_PREFIX + face.getName(), null));
             } else {

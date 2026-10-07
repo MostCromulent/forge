@@ -201,7 +201,7 @@ final class CardCatalog {
 
     private static CatalogueRow toBrowser(final Row row, final String problem, final int inDeck, final Extra extra) {
         final CardRules rules = row.card().getRules();
-        return new CatalogueRow(row.card().getName(), row.card().getImageKey(false), row.cost(), row.mv(),
+        return new CatalogueRow(row.card().getName(), Foil.key(row.card()), row.cost(), row.mv(),
                 row.colours(), rules.getType().toString(), pt(rules), row.heading(), inDeck, problem,
                 extra == null ? null : extra.isNew(), extra == null ? null : extra.value(), extra == null ? null : extra.count(),
                 extra == null ? null : extra.owned(), extra == null ? null : extra.note(), extra == null ? null : extra.key());

@@ -675,6 +675,7 @@ html[data-motion="reduced"] #zoom.flipping > * { animation: none; }
   clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%); box-shadow: inset 0 0 0 2px #cfd3da; }
 
 #zoom img { width: var(--zoom-w); aspect-ratio: 63 / 88; border-radius: 14px; box-shadow: 0 10px 40px #000a; }
+#zoom canvas.foil { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 14px; }
 #zoom .detail { width: 260px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 40px #000a; font-size: 13px; }
 #zoom .detail header { display: flex; justify-content: space-between; gap: 8px; }
 #zoom .detail header .cid { margin-right: auto; align-self: center; color: var(--muted); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }

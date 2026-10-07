@@ -872,7 +872,7 @@ final class DeckEditor {
             final CardRules rules = shown.getRules();
             final List<EditorPrinting> split = printings.stream()
                     .map(p -> new EditorPrinting(p.getKey().getImageKey(false), p.getValue())).toList();
-            out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), shown.getImageKey(false),
+            out.add(new EditorCard(name, printings.stream().mapToInt(Map.Entry::getValue).sum(), Foil.key(shown),
                     JsonCodec.manaCost(rules.getManaCost()), rules.getManaCost().getCMC(), CardCatalog.letters(rules.getColor()),
                     printings.size(), split, legality.flags().get(name)));
         });

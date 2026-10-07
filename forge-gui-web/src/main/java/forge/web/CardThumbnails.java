@@ -21,7 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/** Shrinks card images with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text. */
+/** Card images the file itself will not do for: shrunk with a proper filter, because a browser shrinking a full scan on a rotated or animated layer breaks up the text, and a foil's with the foil painted on. */
 final class CardThumbnails {
     /** Twice a board card's width, so it stays sharp on a screen scaled up to 2.5 times. */
     static final int WIDTH = 256;
@@ -44,12 +44,12 @@ final class CardThumbnails {
     private CardThumbnails() {
     }
 
-    /** The image shrunk to WIDTH, in its own format; an image already that narrow comes back as it is. */
-    static CompletableFuture<byte[]> of(final File file) {
-        final String key = file.getAbsolutePath() + ':' + file.lastModified();
+    /** The image in its own format, shrunk to WIDTH when small and painted as a foil when foil is a seed above 0; one that needs neither comes back as it is. */
+    static CompletableFuture<byte[]> of(final File file, final boolean small, final int foil) {
+        final String key = file.getAbsolutePath() + ':' + file.lastModified() + ':' + small + ':' + foil;
         final CompletableFuture<byte[]> made = KEPT.computeIfAbsent(key, k -> CompletableFuture.supplyAsync(() -> {
             try {
-                return shrink(file);
+                return render(file, small, foil);
             } catch (final IOException e) {
                 throw new UncheckedIOException(e);
             }
@@ -63,21 +63,25 @@ final class CardThumbnails {
         return made;
     }
 
-    private static byte[] shrink(final File file) throws IOException {
+    private static byte[] render(final File file, final boolean small, final int foil) throws IOException {
         final BufferedImage source = ImageIO.read(file);
         if (source == null) {
             throw new IOException("Not an image: " + file);
         }
-        if (source.getWidth() <= WIDTH) {
+        final boolean shrink = small && source.getWidth() > WIDTH;
+        if (!shrink && foil == 0) {
             return Files.readAllBytes(file.toPath());
         }
         final boolean png = file.getName().toLowerCase(Locale.ROOT).endsWith(".png");
         BufferedImage image = source;
         // Halving at a time with bilinear sampling reads every source pixel, which one large step would skip
-        while (image.getWidth() > WIDTH) {
+        while (shrink && image.getWidth() > WIDTH) {
             final int w = Math.max(WIDTH, image.getWidth() / 2);
             final int h = Math.max(1, Math.round(image.getHeight() * (float) w / image.getWidth()));
             image = scaled(image, w, h, png);
+        }
+        if (foil > 0) {
+            Foil.paint(image, foil);
         }
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
         if (png) {

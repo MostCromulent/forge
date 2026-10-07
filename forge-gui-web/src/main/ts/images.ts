@@ -9,10 +9,16 @@ export const imageUrl = (key: string): string => `img?key=${encodeURIComponent(k
 /** The image shrunk by the server to its one width, because a browser shrinking the full scan on a moving card breaks up the text. */
 export const smallImage = (src: string): string => (src ? `${src}&w=256` : '');
 
+/** Forge's foil mark on the name in a card's image key, which is what tells the server to paint the foil onto the picture. */
+const foilKey = (key: string): string => key.replace(/^c:[^|$]*/, '$&+');
+
 // Empty for a card the viewer may not see, so the element falls back to its back or its frame
 export function cardImageSrc(model: Model, card: CardView | null | undefined): string {
-  const key = card && model.visible.has(card.$key) ? stateOf(model, card).ImageKey : null;
-  return key ? imageUrl(key) : '';
+  if (!card || !model.visible.has(card.$key)) return '';
+  const state = stateOf(model, card);
+  if (!state.ImageKey) return '';
+  // Foil as the server's Foil.key has it: the paper card is one, or the match made this card one at random
+  return imageUrl(card.PaperFoil || state.FoilIndex ? foilKey(state.ImageKey) : state.ImageKey);
 }
 
 // Assigning the same src again restarts the request; the answer says whether the image changed

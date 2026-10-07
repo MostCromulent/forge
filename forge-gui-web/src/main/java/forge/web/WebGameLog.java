@@ -65,7 +65,7 @@ final class WebGameLog {
         final CardView card = entry.sourceCard();
         if (card != null && card.getCurrentState() != null && mayView.test(card)) {
             return new LogEntry(entry.type(), entry.message(),
-                    DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), card.getCurrentState().getImageKey());
+                    DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_CARD_VIEW, card.getId()), Foil.key(card, card.getCurrentState()));
         }
         return new LogEntry(entry.type(), entry.message(), null, null);
     }

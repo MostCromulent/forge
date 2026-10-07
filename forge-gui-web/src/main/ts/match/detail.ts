@@ -1,6 +1,7 @@
 import { appendSymbolText, cardImageSrc, hideOnError, imageUrl, setImage, setSymbolText } from '../images';
 import { COMMANDER_LETHAL, COMMANDER_WARNING } from './board';
 import { frameColour } from './cards';
+import { showFoil, tiltFoil } from './foil';
 import { changesOf, plain, sortRulesText, type Block, type Changes, type Line, type SortedText } from './rulestext';
 import { byId, q, replay, make } from '../dom';
 import { changeUi, ui } from '../ui';
@@ -23,6 +24,13 @@ export function initDetail(actionsFor: Actions): void {
   // A card taken off the page under the pointer never reports the pointer leaving it, so its preview would stay
   document.addEventListener('pointerover', () => {
     if (hoverGone()) hoverCard(null);
+  });
+  // The preview lets the pointer through, so a foil's streaks follow it across the card the preview is of
+  document.addEventListener('pointermove', e => {
+    const hover = ui.hover;
+    if (!hover || !('card' in hover) || !hover.at) return;
+    const box = hover.at.getBoundingClientRect();
+    tiltFoil((e.clientX - box.left) / box.width - 0.5, (e.clientY - box.top) / box.height - 0.5);
   });
 }
 
@@ -301,6 +309,7 @@ function drawDetail(model: Model): void {
   zoom.classList.toggle('text-card', text);
   img.hidden = text;
   if (!text) setImage(img, src);
+  showFoil(q<HTMLCanvasElement>(zoom, 'canvas'), text ? '' : src);
   q(zoom, '.detail').hidden = !face;
   setSource(q(zoom, '.from'), hover.from);
   setSource(q(zoom, '.from-tab'), hover.from);
@@ -483,7 +492,7 @@ function drawPt(el: HTMLElement, model: Model, key: number | null, face: CardFac
 
 function ensureZoom(zoom: HTMLElement): void {
   if (zoom.firstChild) return;
-  zoom.innerHTML = '<span class="shot"><img alt=""><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
+  zoom.innerHTML = '<span class="shot"><img alt=""><canvas class="foil" hidden></canvas><span class="from-tab"></span></span><div class="detail"><header><b class="name"></b><span class="cid"></span><span class="cost"></span></header><div class="cmdr-taken" hidden></div><div class="type"><span class="type-line"></span><span class="kind-chip"></span><span class="set"></span></div><div class="from"></div><div class="text"></div><div class="foot"></div><div class="pt"></div></div><div class="hint"></div>';
   const img = q<HTMLImageElement>(zoom, 'img');
   hideOnError(img);
   // Cleared once played: a preview still carrying the class would flip again the next time it is shown
@@ -532,6 +541,7 @@ function drawPlayer(zoom: HTMLElement, d: PlayerDetail | undefined): void {
   ensureZoom(zoom);
   zoom.classList.remove('image-only', 'text-card');
   q(zoom, 'img').hidden = true;
+  showFoil(q<HTMLCanvasElement>(zoom, 'canvas'), '');
   q(zoom, '.detail').hidden = !d;
   setSource(q(zoom, '.from'), undefined);
   setSource(q(zoom, '.from-tab'), undefined);

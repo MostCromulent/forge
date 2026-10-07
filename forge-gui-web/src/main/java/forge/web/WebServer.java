@@ -261,9 +261,10 @@ public final class WebServer implements AutoCloseable {
 
     /** A missing image is downloaded and the request answered when it lands, and small asks for the card at the size the board draws it. */
     private void serveImage(final ChannelHandlerContext ctx, final String key, final boolean small) throws IOException {
+        final int foil = Foil.seed(key);
         final File file = cardImage(key);
         if (file != null) {
-            respondCardImage(ctx, file, small);
+            respondCardImage(ctx, file, small, foil);
             return;
         }
         if (!safeImageKey(key) || unavailableImages.contains(key)
@@ -279,7 +280,7 @@ public final class WebServer implements AutoCloseable {
             if (answered.compareAndSet(false, true)) {
                 try {
                     if (fetched != null) {
-                        respondCardImage(ctx, fetched, small);
+                        respondCardImage(ctx, fetched, small, foil);
                     } else {
                         notFound(ctx);
                     }
@@ -299,17 +300,17 @@ public final class WebServer implements AutoCloseable {
         }, FETCH_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     }
 
-    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small) throws IOException {
-        if (!small) {
+    private void respondCardImage(final ChannelHandlerContext ctx, final File file, final boolean small, final int foil) throws IOException {
+        if (!small && foil == 0) {
             respondImage(ctx, file);
             return;
         }
-        CardThumbnails.of(file).whenComplete((bytes, failed) -> {
+        CardThumbnails.of(file, small, foil).whenComplete((bytes, failed) -> {
             if (bytes != null) {
                 respond(ctx, HttpResponseStatus.OK, bytes, imageType(file), null, KEEP_FOREVER, null);
                 return;
             }
-            Logger.warn("Could not shrink {}: {}", file, failed.getMessage());
+            Logger.warn("Could not draw {}: {}", file, failed.getMessage());
             try {
                 respondImage(ctx, file);
             } catch (final IOException e) {

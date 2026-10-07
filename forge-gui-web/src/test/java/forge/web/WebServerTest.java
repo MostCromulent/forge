@@ -1,9 +1,11 @@
 package forge.web;
 
 import com.google.gson.JsonObject;
+import forge.item.PaperCard;
 import forge.localinstance.properties.ForgePreferences;
 import forge.localinstance.properties.ForgePreferences.FPref;
 import forge.model.FModel;
+import forge.util.ImageUtil;
 import org.testng.Assert;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -99,6 +101,19 @@ public class WebServerTest {
         for (final String key : new String[] {"c:Lightning Bolt|M10", "t:w_1_1_soldier", "i:mana/w", "c:Who..What|UNH"}) {
             Assert.assertTrue(WebServer.safeImageKey(key), key);
         }
+    }
+
+    // Fails if a marked key stops naming the foil printing, whose picture the server then would not find, or if its seed leaves the browser's, which foil.test.ts pins
+    @Test
+    public void aFoilsImageKeyNamesItsPrintingAndItsStreaks() {
+        final PaperCard plain = FModel.getMagicDb().getCommonCards().getCard("Shivan Dragon", "M14");
+        final String key = Foil.key(plain.getFoiled());
+        Assert.assertEquals(key, "c:Shivan Dragon+|M14|1");
+        final PaperCard named = ImageUtil.getPaperCardFromImageKey(key);
+        Assert.assertTrue(named.isFoil());
+        Assert.assertEquals(named.getCardImageKey(), plain.getCardImageKey());
+        Assert.assertEquals(Foil.seed(key), 28);
+        Assert.assertEquals(Foil.seed(Foil.key(plain)), 0);
     }
 
     @Test
