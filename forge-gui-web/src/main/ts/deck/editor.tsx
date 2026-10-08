@@ -110,7 +110,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
           <button disabled={!state.canUndo} onClick={() => actions.editorUndo()} title={t('lblWebEditorUndoTip')} aria-label={t('lblUndo')}>&#8630;<span class="word"> {t('lblUndo')}</span></button>
           <div class="menu-anchor">
             <button aria-expanded={menu !== null} aria-label={t('lblDeck')} onClick={() => setMenu(menu ? null : 'menu')}>
-              <span class="word">{t('lblDeck')} &#8964;</span><span class="dots" aria-hidden="true">&#8943;</span>
+              <span class="word">{t('lblDeck')}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></span><span class="dots" aria-hidden="true">&#8943;</span>
             </button>
             {menu === 'menu' && state.limited && !state.collection && (
               <div class="deck-menu" role="menu">
