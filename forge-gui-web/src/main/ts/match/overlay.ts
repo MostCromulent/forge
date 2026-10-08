@@ -173,15 +173,12 @@ function paintArrows(model: Model): void {
       forced.forEach(attacker => ribbon(elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
-  // Another player's spell or ability aimed at you or yours shows its arrows unasked; the rest show theirs under the pointer
-  const mine = (player?: Ref) => !!player && model.localPlayers.includes(player.ref);
+  // Another player's spell or ability shows its arrows unasked, since you did not see it aimed; your own show theirs under the pointer
   for (const item of phone ? [] : derefAll(model, g.Stack) as StackItemView[]) {
-    const targets = stackTargets(model, item);
-    const atMe = mode === '2' && !mine(item.ActivatingPlayer)
-      && targets.some(target => model.localPlayers.includes(target.$key) || mine((target as CardView).Controller));
-    if (atMe || item.$key === ui.hoveredStackItem) {
+    const theirs = !!item.ActivatingPlayer && !model.localPlayers.includes(item.ActivatingPlayer.ref);
+    if ((mode === '2' && theirs) || item.$key === ui.hoveredStackItem) {
       const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
-      targets.forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
+      stackTargets(model, item).forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
     }
   }
   drawQueued(ctx);
