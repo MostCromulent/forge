@@ -171,7 +171,7 @@ function Stack({ card, zone, landed, handlers, takeOut }: {
 }) {
   return (
     <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
-      title={card.problem ? `${card.name}: ${card.problem}` : card.name} {...handlers(card.name, zone, card.image, card.count)} onDblClick={takeOut}>
+      title={card.problem} {...handlers(card.name, zone, card.image, card.count)} onDblClick={takeOut}>
       <img alt={card.name} src={imageUrl(card.image)} draggable={false} />
       {card.count > 1 && <span class="deck-count">×{card.count}</span>}
     </div>
