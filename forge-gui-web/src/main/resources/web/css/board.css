@@ -194,7 +194,14 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .player-extra:not(:has(> :not(:empty):not([hidden]))) { display: none; }
 .seat.compact .player-extra { display: contents; }
 .player-id .name { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 8px #000c; }
-.seat.compact .player-id { gap: 3px; }
+/* In a compact seat the hand stands beside the name, drawn small, so the player's line ends with the tiles and the cards get the height */
+.seat.compact .player-id { grid-template-columns: auto auto; gap: 3px 2px; align-items: center; }
+.seat.compact .player-id .avatar { grid-column: 1 / 3; }
+.seat.compact .player-id .name { max-width: 84px; }
+.seat.compact .hand-fan { padding: 0 4px 0 0; }
+.seat.compact .hand-fan .backs { width: 28px; height: 20px; }
+.seat.compact .hand-fan .backs i { left: 7px; width: 13px; height: 17px; border-radius: 2px; }
+.seat.compact .hand-fan .hand-count { font-size: 12px; }
 /* In a full seat the portrait rides a row ahead of the tiles, on the side the player faces: above yours, below theirs */
 .seat:not(.compact) .player { flex-direction: column; align-items: flex-start; gap: 10px; }
 /* The name and hand sit together beside the portrait, centred on it */

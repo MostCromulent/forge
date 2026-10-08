@@ -63,7 +63,7 @@ html[data-form="portrait"] #opponent.seat .player { padding-right: 46px; }
 html[data-form="portrait"] #match #me .player { padding-right: 148px; }
 @media (max-width: 374px) { html[data-form="portrait"] #match #me .player { padding-right: 138px; } }
 html[data-form="portrait"] #match .seat .player-id { display: grid; grid-template-columns: 36px auto; grid-template-rows: auto; column-gap: 8px; row-gap: 0; align-items: end; justify-items: start; order: 0; min-width: 78px; flex: 0 1 auto; overflow: hidden; padding: 4px 0 4px 6px; margin-left: -6px; }
-html[data-form="portrait"] #match .seat .player-id .avatar { grid-row: 1; width: 36px; height: 36px; align-self: center; }
+html[data-form="portrait"] #match .seat .player-id .avatar { grid-row: 1; grid-column: 1; width: 36px; height: 36px; align-self: center; }
 html[data-form="portrait"] #match .seat .avatar .initial { font-size: 18px; }
 html[data-form="portrait"] #match .seat .avatar .ai-badge { width: 18px; height: 18px; left: -5px; top: -5px; padding: 2px; }
 /* The life total stands beside the portrait, large, with the name under it */
