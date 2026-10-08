@@ -1,6 +1,7 @@
 // The cog dialog: settings in tabs down a side rail, with a search box that looks through every tab
 
 import type { ComponentChildren } from 'preact';
+import { exportBackup, importBackup } from './backup';
 import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
@@ -88,8 +89,32 @@ export function Options({ close }: { close: () => void }) {
           ? [<SectionHeading key={`section ${def.section}`} name={def.section} keys={searching && def.type === 'key'} />] : []),
         <Row key={def.key} def={def} />,
       ])}
+      {!searching && tab.name === t('lblAdvanced') && <BackupRow />}
       {!shown.length && <p class="hint">{t('lblWebOptionsNoMatch')}</p>}
     </OptionsDialog>
+  );
+}
+
+/** What this browser keeps for its player, saved as a file or put back from one. A file put back loads the page again. */
+function BackupRow() {
+  const [refused, setRefused] = useState(false);
+  const file = useRef<HTMLInputElement>(null);
+  return (
+    <div class="setting">
+      <div>
+        <div>{t('lblWebOptionsBackup')}</div>
+        <div class="hint">{t(refused ? 'lblWebOptionsImportRefused' : 'lblWebOptionsBackupHint')}</div>
+      </div>
+      <div class="backup">
+        <button class="edit" onClick={() => void exportBackup()}>{t('lblWebOptionsExport')}</button>
+        <button class="edit" onClick={() => file.current?.click()}>{t('lblImport')}</button>
+        <input ref={file} type="file" accept=".json,application/json" hidden onChange={e => {
+          const chosen = e.currentTarget.files?.[0];
+          e.currentTarget.value = '';
+          if (chosen) void chosen.text().then(importBackup).then(done => setRefused(!done));
+        }} />
+      </div>
+    </div>
   );
 }
 

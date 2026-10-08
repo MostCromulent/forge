@@ -121,6 +121,7 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 /* A key is drawn as a keycap, and Edit as a button of the same make */
 #options .setting .key-bind, #options .setting .edit { justify-self: end; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
 #options .setting .key-bind:hover, #options .setting .edit:hover { border-color: var(--accent-2); }
+#options .backup { display: flex; gap: 8px; justify-self: end; }
 #options .key-bind { min-width: 56px; border-bottom-width: 3px; font: 700 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
 #options .key-bind.listening { background: var(--brass); border-color: var(--accent-2); color: var(--on-brass); }
 #options .css-editor { grid-column: 1 / -1; display: grid; gap: 6px; }
