@@ -172,7 +172,13 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
           {shown.map(p => {
             const n = counts.get(p.key) ?? 0;
             return (
-              <div key={p.key} class={`print-cell${n ? ' cur' : ''}${p.problem ? ' off' : ''}`}>
+              <div key={p.key} class={`print-cell${n ? ' cur' : ''}${p.problem ? ' off' : ''}`}
+                // Two clicks on a printing make every copy that printing and close, as desktop's dialog does. Two quick presses of a stepper are only that.
+                onDblClick={e => {
+                  if (p.problem || (e.target as Element).closest('button')) return;
+                  send(new Map([[p.key, card?.count ?? 0]]));
+                  close();
+                }}>
                 <img loading="lazy" alt="" src={imageUrl(p.key)} />
                 <span class="ed"><b>{p.setName}</b>{p.problem ? `⊘ ${p.problem}` : `${p.edition}${p.year ? ` · ${p.year}` : ''}`}</span>
                 <span class="under">
