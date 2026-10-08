@@ -1,6 +1,7 @@
 // The cog dialog: settings in tabs down a side rail, with a search box that looks through every tab
 
 import type { ComponentChildren } from 'preact';
+import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { saveText } from './dom';
 import { keyName, rebind, type KeyBindings } from './keys';
@@ -68,12 +69,15 @@ export function Options({ close }: { close: () => void }) {
     <OptionsDialog title={t('lblWebHeadOptions')} kind="tabbed" close={close}
       head={<input ref={search} class="search" type="search" placeholder={t('lblWebOptionsSearch')} aria-label={t('lblWebOptionsSearch')}
         value={query} onInput={e => setQuery(e.currentTarget.value)} />}
-      rail={TABS.map((tb, i) => (
-        <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">{tb.icon}</svg>{tb.name}
-          {!searching && i === at && <span class="rail-mark" />}
-        </button>
-      ))}
+      rail={<>
+        {TABS.map((tb, i) => (
+          <button key={tb.name} role="tab" aria-selected={!searching && i === at} onClick={() => open(i)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">{tb.icon}</svg>{tb.name}
+            {!searching && i === at && <span class="rail-mark" />}
+          </button>
+        ))}
+        <ForgeLinks />
+      </>}
       footer={<>
         <span class="hint">{t('lblWebOptionsFooter')}</span>
         {!searching && shown[0]?.type === 'key' && <button class="section-action" onClick={() => setKeys(defaultKeys())}>{t('lblWebOptionsResetKeys')}</button>}

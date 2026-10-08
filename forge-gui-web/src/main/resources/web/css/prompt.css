@@ -62,8 +62,11 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #options header .spacer { flex: 1; }
 #options .tabbed { width: min(720px, 92vw); height: min(560px, 86vh); }
 #options .split { display: grid; grid-template-columns: 168px minmax(0, 1fr); min-height: 0; }
-#options .rail { display: grid; align-content: start; gap: 2px; padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--line); }
+#options .rail { display: flex; flex-direction: column; gap: 2px; padding: 10px 8px; background: var(--bg); border-right: 1px solid var(--line); }
 #options .rail button { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--muted); font-size: 13px; text-align: left; }
+/* The ways out to Forge's project and players rest at the foot of the list, quieter than the tabs */
+#options .rail .forge-links { margin-top: auto; padding-top: 8px; border-top: 1px solid var(--line); }
+#options .rail .forge-links svg:not(.leaves) { fill: currentColor; stroke: none; }
 #options .rail button:hover { color: var(--text); background: var(--surface); }
 #options .rail button[aria-selected="true"] { color: var(--text); background: var(--surface-2); border-color: var(--line-bright); }
 /* The open tab's gold edge is an element of its own, so a change of tab glides it to the next, and the page slides (dialogs.css) */

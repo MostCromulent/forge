@@ -1,6 +1,7 @@
 // The first screen: the name and face you play under, then the menu for the host and a wait for a table for everyone else
 
 import type { ComponentChildren } from 'preact';
+import { ForgeLinks } from './links';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { LookPicker } from './lookpicker';
 import { changeUi, eased, ui } from './ui';
@@ -41,6 +42,7 @@ export function Menu({ model, actions }: { model: Model; actions: Actions }) {
         </div>
       </PageHeader>
       <div class="menu-page">
+        <ForgeLinks foot />
         {choosing && <Chooser who={choosing} model={model} actions={actions} back={() => setChoosing(null)} />}
         <div class="start-step" hidden={!!choosing}>
           <SetupHead trail={[{ label: t('lblWebHeadStart') }]} title={t('lblWebMenuHowToPlay')} />
@@ -183,6 +185,7 @@ export function NamePrompt({ model, actions, initial = '', cancel }: {
   const offerHost = !cancel && model.canClaimHost;
   return (
     <div class="menu-page start">
+      <ForgeLinks foot />
       <Wordmark />
       <form class="start-card" onSubmit={e => {
         e.preventDefault();
