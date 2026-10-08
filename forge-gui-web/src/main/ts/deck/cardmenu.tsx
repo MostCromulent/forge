@@ -1,12 +1,18 @@
 // A card's menu in the editor, which holds every route a drag offers, in words, so nothing depends on dragging
 
-import { useEffect } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { imageUrl } from '../images';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSection, EditorCard, EditorState } from '../protocol';
 import type { Zone } from './drag';
 import { t, type TextKey } from '../text';
+
+/** The parts of a set the printing picker filters by, as desktop's does: the section's name in the edition file, and its label. */
+const ART_STYLES: [string, TextKey][] = [
+  ['', 'lblArtStyleAll'], ['cards', 'lblArtStyleStandard'], ['borderless', 'lblArtStyleBorderless'], ['full art', 'lblArtStyleFullArt'],
+  ['showcase', 'lblArtStyleShowcase'], ['extended art', 'lblArtStyleExtendedArt'], ['retro frame', 'lblArtStyleRetroFrame'], ['promo', 'lblArtStylePromo'],
+];
 
 /** How many copies a section holds, as the printing picker says it. */
 const IN_SECTION: Record<DeckSection, TextKey> = {
@@ -117,7 +123,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
   );
 }
 
-/** Steppers move copies between printings so the total never changes, and each step is saved as it is made, so there is no Cancel. */
+/** Every printing as a picture, filtered by set or style as desktop's dialog is. Steppers move copies between printings so the total never changes, and each step is saved as it is made, so there is no Cancel. */
 export function PrintingPicker({ name, zone, model, state, actions, close }: {
   name: string; zone: DeckSection; model: Model; state: EditorState; actions: Actions; close: () => void;
 }) {
@@ -142,19 +148,33 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
     next.set(donor, (next.get(donor) ?? 0) - by);
     send(next);
   };
+  // The printings held when the list arrives come first, as desktop puts the current one first, and stay put while counts change
+  const ordered = useMemo(() => [...list].sort((x, y) => Number(counts.has(y.key)) - Number(counts.has(x.key))), [list]);
+  const [query, setQuery] = useState('');
+  const [style, setStyle] = useState('');
+  const wanted = query.trim().toLowerCase();
+  const shown = ordered.filter(p => (!wanted || p.edition.toLowerCase().includes(wanted) || p.setName.toLowerCase().includes(wanted))
+    && (!style || p.style === style));
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog picker">
-        <h3>{t('lblWebCardMenuPrintingsOf', name)}</h3>
-        <p class="hint">{t(IN_SECTION[zone], card?.count ?? 0)}</p>
-        <div class="print-rows">
+        <h3>{t('lblChangePrintingDialogTitle', name)}</h3>
+        <div class="print-bar">
+          <input placeholder={t('lblChangePrintingSearchHint')} aria-label={t('lblChangePrintingSearchHint')} value={query}
+            onInput={e => setQuery(e.currentTarget.value)} />
+          <select aria-label={t('lblArtStyleAll')} value={style} onChange={e => setStyle(e.currentTarget.value)}>
+            {ART_STYLES.map(([section, label]) => <option key={section} value={section}>{t(label)}</option>)}
+          </select>
+        </div>
+        <div class="print-grid">
           {!list.length && <p class="hint">{t('lblWebCardMenuReadingPrintings')}</p>}
-          {list.map(p => {
+          {list.length > 0 && !shown.length && <p class="hint">{t('lblChangePrintingNoResults')}</p>}
+          {shown.map(p => {
             const n = counts.get(p.key) ?? 0;
             return (
-              <div key={p.key} class={`print-row${n ? ' cur' : ''}${p.problem ? ' off' : ''}`} data-image={p.key}>
+              <div key={p.key} class={`print-cell${n ? ' cur' : ''}${p.problem ? ' off' : ''}`}>
                 <img loading="lazy" alt="" src={imageUrl(p.key)} />
-                <span class="ed"><b>{p.setName}</b><span>{p.problem ? `⊘ ${p.problem}` : `${p.edition}${p.year ? ` · ${p.year}` : ''}`}</span></span>
+                <span class="ed"><b>{p.setName}</b>{p.problem ? `⊘ ${p.problem}` : `${p.edition}${p.year ? ` · ${p.year}` : ''}`}</span>
                 <span class="under">
                   <button class="step" disabled={!n} onClick={() => shift(p.key, -1)}>&minus;</button>
                   <span class={n ? 'n' : 'n zero'}>{n}</span>
@@ -164,7 +184,10 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
             );
           })}
         </div>
-        <div class="actions"><button class="primary" onClick={close}>{t('lblDone')}</button></div>
+        <div class="actions">
+          <p class="hint">{t(IN_SECTION[zone], card?.count ?? 0)}</p>
+          <button class="primary" onClick={close}>{t('lblDone')}</button>
+        </div>
       </div>
     </div>
   );

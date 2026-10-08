@@ -741,17 +741,22 @@ final class DeckCatalog {
         return new ArrayList<>(startsWith.subList(0, Math.min(limit, startsWith.size())));
     }
 
-    /** Every printing of one card, so a specific art can be picked for a sleeve. */
+    /** Every printing of one card, newest first as desktop's printing dialog lists them, so a specific one can be picked for a deck or a sleeve. */
     static List<Printing> printings(final String name, final GameFormat pool) {
+        final CardEdition.Collection editions = StaticData.instance().getEditions();
+        final List<PaperCard> cards = new ArrayList<>(StaticData.instance().getCommonCards().getAllCardsNoAlt(name));
+        cards.sort(Comparator.comparing((PaperCard card) -> editions.get(card.getEdition()) == null ? null : editions.get(card.getEdition()).getDate(),
+                Comparator.nullsLast(Comparator.reverseOrder())).thenComparing(PaperCard::getCollectorNumber, Comparator.nullsLast(Comparator.naturalOrder())));
         final List<Printing> out = new ArrayList<>();
-        for (final PaperCard card : StaticData.instance().getCommonCards().getAllCardsNoAlt(name)) {
-            final CardEdition edition = StaticData.instance().getEditions().get(card.getEdition());
+        for (final PaperCard card : cards) {
+            final CardEdition edition = editions.get(card.getEdition());
             final Calendar date = Calendar.getInstance();
             if (edition != null) {
                 date.setTime(edition.getDate());
             }
             out.add(new Printing(card.getName(), card.getEdition(), card.getImageKey(false),
                     edition == null ? card.getEdition() : edition.getName(), edition == null ? 0 : date.get(Calendar.YEAR),
+                    edition == null ? null : edition.getSectionForCollectorNumber(card.getCollectorNumber()),
                     pool != null && !pool.getFilterPrinted().test(card) ? Localizer.getInstance().getMessage("lblWebDeckCatalogNotIn", pool.getName()) : null));
         }
         return out;

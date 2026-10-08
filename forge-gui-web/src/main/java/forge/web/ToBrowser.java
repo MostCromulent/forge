@@ -284,8 +284,8 @@ final class ToBrowser {
     record Printings(String name, List<Printing> printings) {
     }
 
-    /** One printing of a card: its set's code and name, the year it came out, and why it can't be used, when it can't. */
-    record Printing(String name, String edition, String key, String setName, int year, @Nullable String problem) {
+    /** One printing of a card: its set's code and name, the year it came out, the part of the set it is in (cards, borderless, showcase and so on), and why it can't be used, when it can't. */
+    record Printing(String name, String edition, String key, String setName, int year, @Nullable String style, @Nullable String problem) {
     }
 
     /** A guest's deck changed: the deck as .dck text to keep in its browser, or no text when it was deleted. */

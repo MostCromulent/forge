@@ -36,6 +36,17 @@ public class DeckEditorTest {
         WebTestSupport.initModel();
     }
 
+    // Fails if a card's printings are not listed newest first, or do not say which are borderless, as the printing picker filters by
+    @Test
+    public void printingsAreNewestFirstAndCarryTheirStyle() {
+        final List<ToBrowser.Printing> printings = DeckCatalog.printings("Llanowar Elves", null);
+        for (int i = 1; i < printings.size(); i++) {
+            Assert.assertTrue(printings.get(i - 1).year() >= printings.get(i).year(), "printing " + i + " is newer than the one before it");
+        }
+        Assert.assertTrue(printings.stream().anyMatch(p -> "cards".equals(p.style())), "no printing is in its set's main run");
+        Assert.assertTrue(printings.stream().anyMatch(p -> p.style() != null && !"cards".equals(p.style())), "no printing has a style of its own");
+    }
+
     @BeforeMethod
     public void freshFolders() throws IOException {
         dir = Files.createTempDirectory("forge-editor").toFile();
