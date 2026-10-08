@@ -16,9 +16,11 @@ const foilKey = (key: string): string => key.replace(/^c:[^|$]*/, '$&+');
 export function cardImageSrc(model: Model, card: CardView | null | undefined): string {
   if (!card || !model.visible.has(card.$key)) return '';
   const state = stateOf(model, card);
-  if (!state.ImageKey) return '';
+  // A face-down card's picture is the card's own, which says how it came to be face down: a morph, a manifest, a foretold card
+  const key = card.Facedown && card.FacedownImageKey ? card.FacedownImageKey : state.ImageKey;
+  if (!key) return '';
   // Foil as the server's Foil.key has it: the paper card is one, or the match made this card one at random
-  return imageUrl(card.PaperFoil || state.FoilIndex ? foilKey(state.ImageKey) : state.ImageKey);
+  return imageUrl(card.PaperFoil || state.FoilIndex ? foilKey(key) : key);
 }
 
 // Assigning the same src again restarts the request; the answer says whether the image changed
