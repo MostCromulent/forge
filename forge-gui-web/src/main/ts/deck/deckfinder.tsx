@@ -314,9 +314,6 @@ export function DeckFinder({ model, actions, seat, close }: {
               <ColourToggles label={t('lblColors')} colourless pressed={c => filter.colours.has(c)}
                 toggle={c => change({ colours: toggled(filter.colours, c) })}
                 title={(c, name) => t('lblWebFinderColourDecks', name, decks.filter(d => (d.colors ?? '').includes(c)).length)} />
-            </FilterBar>
-            <div class="count-row">
-              <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
               {/* A search orders the list by how well each name matches, so the sort waits until it is cleared */}
               {normalize(filter.query)
                 ? <select class="sort-by" aria-label={t('lblSort')} disabled><option>{t('lblWebEditorSortBestMatch')}</option></select>
@@ -328,7 +325,8 @@ export function DeckFinder({ model, actions, seat, close }: {
                 <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4" /><circle cx="8.5" cy="8.5" r="1.2" /><circle cx="15.5" cy="15.5" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="15.5" cy="8.5" r="1.2" /><circle cx="8.5" cy="15.5" r="1.2" /></svg>
                 {t('lblRandom')}
               </button>
-            </div>
+            </FilterBar>
+            <p class="shown">{list.length === decks.length ? t('lblWebMenuDecksCount', decks.length) : t('lblWebFinderDeckCountOf', list.length, decks.length)}</p>
             <div class="dk-hits">
               {list.length
                 ? list.map(d => <Hit key={d.key} deck={d} chosen={d.key === chosen} choose={() => setChosen(d.key)}
@@ -339,7 +337,7 @@ export function DeckFinder({ model, actions, seat, close }: {
           <aside class="dk-chosen" onPointerOver={e => setPeek(peekAt(e, '.finder') ?? peek)} onPointerLeave={() => setPeek(null)}>
             {!chosen ? <p class="none">{t('lblWebFinderPickHint')}</p>
               : !details ? <p class="none">{t('lblWebFinderReading')}</p>
-                : <Chosen details={details} />}
+                : <Chosen details={details} formats={summary?.formats} />}
           </aside>
         </div>
         <footer class="finder-foot">
@@ -563,18 +561,15 @@ function Hit({ deck: d, chosen, choose, use, source }: {
   return (
     <button class="dk-hit" aria-pressed={chosen} title={d.problem ?? ''} onClick={choose} onDblClick={use}>
       <Title deck={d} />
-      <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
-      {/* Commander decks are all one format, so there the column says each deck's bracket instead */}
-      {d.bracket != null
-        ? <span class="deck-formats"><BracketMark level={d.bracket} /></span>
-        : <span class="deck-formats">{d.formats ?? ''}</span>}
+      {d.bracket != null && <BracketMark level={d.bracket} />}
       {source && <span class="tag">{d.source}</span>}
+      <span class="size">{d.main}{d.sideboard ? `+${d.sideboard}` : ''}</span>
       <span class={`legal ${d.problem ? 'no' : 'yes'}`}>{d.problem ? t('lblWebFinderIllegal') : t('lblWebFinderLegal')}</span>
     </button>
   );
 }
 
-/** The deck's name with its colours under it. */
+/** The deck's colours and its name. */
 function Title({ deck }: { deck: DeckSummary }) {
   return (
     <span class="dk-hit-title">
@@ -604,7 +599,7 @@ export function peekAt(e: PointerEvent, frameSelector: string): { image: string;
   };
 }
 
-function Chosen({ details }: { details: DeckDetails }) {
+function Chosen({ details, formats }: { details: DeckDetails; formats?: string }) {
   const s = details.stats;
   // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
@@ -621,6 +616,8 @@ function Chosen({ details }: { details: DeckDetails }) {
         </div>
         <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
+        {/* The formats the deck's cards are legal in, as the desktop chooser words it */}
+        {formats && <p class="deck-formats">{formats}</p>}
         {details.bracket && <BracketPanel bracket={details.bracket} />}
         <div class="stats">
           <Curve curve={s.curve} creatures={s.creatures} px={42} />

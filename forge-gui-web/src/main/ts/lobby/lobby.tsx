@@ -192,6 +192,8 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
           onContextMenu={e => { if (hasDeck && seat.mayEdit && !commander) { e.preventDefault(); randomSleeve(); } }}>
           <img alt="" hidden={!hasDeck && !dealt} src={commander ? smallImage(imageUrl(commander)) : hasDeck || dealt ? sleeveSrc : undefined}
             style={commander ? undefined : { objectPosition: objectPosition(seat.sleeveOffset) }} />
+          {/* The sleeve holds two controls, so pointing at it names what each part does */}
+          {hasDeck && seat.mayEdit && !dealt && <span class="sleeve-deck">{t('lblWebLobbyChangeDeck')}</span>}
         </button>
         {/* A sleeve is worn by a deck, so there is nothing to choose until there is one */}
         <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
