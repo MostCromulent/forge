@@ -63,7 +63,7 @@ final class FromBrowser {
     record SetPlayerCount(int count) {
     }
 
-    /** Changes one or more of a seat's choices; a field left out is left alone. */
+    /** Changes one or more of a seat's choices; a field left out is left alone, and a blank name gives the computer a new random one. */
     @Command("setSeat")
     record SetSeat(int index, @Nullable String name, @Nullable String deck, @Nullable Integer avatar,
             @Nullable Integer sleeve) {

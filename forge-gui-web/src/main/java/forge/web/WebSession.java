@@ -1130,8 +1130,10 @@ public final class WebSession {
         if (seat.deck() != null) {
             lobby.setDeck(seat.index(), seat.deck());
         }
-        if (seat.avatar() != null) {
-            lobby.setAvatar(seat.index(), seat.avatar());
+        if (seat.avatar() != null && lobby.setAvatar(seat.index(), seat.avatar()) && seat.index() == local.webSeat()) {
+            // The face on your own seat is the one you are known by everywhere else too
+            avatar = seat.avatar();
+            sessions.announcePresence();
         }
         if (seat.sleeve() != null) {
             lobby.setSleeve(seat.index(), seat.sleeve());

@@ -428,6 +428,43 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertEquals(seatTypes(offline).subList(1, 4), List.of("AI", "AI", "AI"), "seats at a table nobody was invited to: " + seatTypes(offline));
     }
 
+    // Fails if a blank name leaves the computer's name as it was, or blank
+    @Test(timeOut = 120_000)
+    public void aBlankNameGivesTheComputerAnother() throws Exception {
+        final TestBrowser host = hostAt("lobby");
+        final int ai = seatTypes(host.latestTable()).indexOf("AI");
+        final String before = seatNames(host.latestTable()).get(ai);
+        sessions.onMessage(host, message("setSeat", "index", ai, "name", ""));
+        final JsonObject renamed = host.awaitLobby(l -> !before.equals(seatNames(l).get(ai)), "the computer kept its name");
+        Assert.assertFalse(seatNames(renamed).get(ai).isBlank(), "the computer was left with no name");
+    }
+
+    // Fails if a portrait chosen on your own seat is not the one the list of who is here shows for you
+    @Test(timeOut = 120_000)
+    public void yourSeatsPortraitIsTheOneYouAreKnownBy() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        final JsonObject table = host.latestTable();
+        final int mine = table.get("mySeat").getAsInt();
+        final String name = seatNames(table).get(mine);
+        int free = 0;
+        while (seatAvatars(table).contains(free)) {
+            free++;
+        }
+        final int chosen = free;
+        sessions.onMessage(host, message("setSeat", "index", mine, "avatar", chosen));
+        host.awaitNewest("presence", p -> avatarOf(p, name) == chosen, "the list of who is here kept the old portrait");
+    }
+
+    private static int avatarOf(final JsonObject presence, final String name) {
+        for (final var p : presence.getAsJsonArray("people")) {
+            final JsonObject person = p.getAsJsonObject();
+            if (name.equals(person.get("name").getAsString())) {
+                return person.has("avatar") ? person.get("avatar").getAsInt() : 0;
+            }
+        }
+        return -1;
+    }
+
     private static List<String> seatTypes(final JsonObject table) {
         final List<String> out = new ArrayList<>();
         table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("type").getAsString()));

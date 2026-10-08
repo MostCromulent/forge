@@ -1285,16 +1285,19 @@ final class Lobby {
         return out;
     }
 
+    /** A blank name gives the computer a new random one, and leaves a person's as it is. */
     void setName(final int index, final String name) {
-        if (name == null || name.isBlank()) {
+        if (name == null) {
             return;
         }
         if (index == local.webSeat()) {
-            local.updateOwnSeat(UpdateLobbyPlayerEvent.nameUpdate(name.trim()));
-        } else if (host() != null && index < host().getNumberOfSlots()
+            if (!name.isBlank()) {
+                local.updateOwnSeat(UpdateLobbyPlayerEvent.nameUpdate(name.trim()));
+            }
+        } else if (host() != null && index >= 0 && index < host().getNumberOfSlots()
                 && host().getSlot(index).getType() == LobbySlotType.AI
                 && seatNames(host(), index).stream().noneMatch(name.trim()::equalsIgnoreCase)) {
-            host().getSlot(index).setName(name.trim());
+            host().getSlot(index).setName(name.isBlank() ? computerName(host()) : name.trim());
             local.pushLobby();
         }
     }
@@ -1307,10 +1310,11 @@ final class Lobby {
         compose(index);
     }
 
-    void setAvatar(final int index, final int value) {
+    /** Returns whether the seat took the avatar, which it does not when another seat holds it. */
+    boolean setAvatar(final int index, final int value) {
         final GameLobby table = view();
         if (value < 0 || value >= SkinSprites.avatarCount() || table == null || avatarsHeld(table, index).contains(value)) {
-            return;
+            return false;
         }
         if (index == local.webSeat()) {
             local.updateOwnSeat(UpdateLobbyPlayerEvent.avatarUpdate(value));
@@ -1318,6 +1322,7 @@ final class Lobby {
             host().getSlot(index).setAvatarIndex(value);
             local.pushLobby();
         }
+        return true;
     }
 
     private static Set<Integer> avatarsHeld(final GameLobby lobby, final int except) {

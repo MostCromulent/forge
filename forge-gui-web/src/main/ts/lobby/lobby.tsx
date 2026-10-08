@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
+import { rememberAvatar } from '../menu';
 import { BracketMark, DeckFinder, peekAt } from '../deck/deckfinder';
 import { imageUrl, smallImage } from '../images';
 import { ExtraPicker } from './extrapicker';
@@ -75,7 +76,10 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       {seat && picker?.kind === 'avatar' && (
         <LookPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
           current={seat.avatar} taken={lobby.seats.filter((_, i) => i !== picker.seat).map(s => s.avatar)} close={chosen => {
-            if (chosen !== null) actions.setSeat(picker.seat, { avatar: chosen });
+            if (chosen !== null) {
+              if (seat.mine) rememberAvatar(chosen);
+              actions.setSeat(picker.seat, { avatar: chosen });
+            }
             close();
           }} />
       )}
@@ -168,7 +172,10 @@ function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sl
   // No two seats share a portrait, so the pick is among those nobody holds
   const randomAvatar = () => {
     const free = Array.from({ length: avatarCount }, (_, i) => i).filter(i => lobby.seats.every(s => s.avatar !== i));
-    if (free.length) actions.setSeat(index, { avatar: free[Math.floor(Math.random() * free.length)] });
+    if (!free.length) return;
+    const avatar = free[Math.floor(Math.random() * free.length)];
+    if (seat.mine) rememberAvatar(avatar);
+    actions.setSeat(index, { avatar });
   };
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
@@ -277,7 +284,7 @@ function ExtraRow({ name, counted = true, extra, mayEdit, open }: {
   );
 }
 
-// Your own name, and the computer's at a table you host, is edited in place and saved when you leave it
+// Your own name, and the computer's at a table you host, is edited in place and saved when you leave it. A right click gives the computer a new one.
 function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void }) {
   // Typing edits the page, not what Preact drew, so each edit ends by drawing the field afresh with the name the server has
   const [edits, setEdits] = useState(0);
@@ -287,6 +294,7 @@ function SeatName({ seat, rename }: { seat: Seat; rename: (name: string) => void
   }
   return (
     <span key={edits} class="who-name" contentEditable="plaintext-only" spellcheck={false}
+      onContextMenu={e => { if (!seat.mine) { e.preventDefault(); rename(''); } }}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
       onBlur={e => {
         const typed = (e.currentTarget.textContent ?? '').trim();
