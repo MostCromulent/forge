@@ -236,6 +236,15 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
   button.classList.toggle('asked', [...asked].some(k => k !== open));
   for (const seat of root.querySelectorAll<HTMLElement>(':scope > .seat')) seat.hidden = Number(seat.dataset.player) !== open;
   if (shownSeat !== open) {
+    // The seat comes in from the side its tab is on, so a change reads as a step along the row
+    const order = across.map(o => o.$key);
+    const seat = root.querySelector<HTMLElement>(`:scope > .seat[data-player="${open}"]`);
+    if (seat && shownSeat !== null) {
+      const later = order.indexOf(open as number) > order.indexOf(shownSeat);
+      replay(seat, later ? 'from-right' : 'from-left', 'from-right', 'from-left');
+      // The classes also hold the card size still, so they go once the seat is in
+      seat.addEventListener('animationend', () => seat.classList.remove('from-right', 'from-left'), { once: true });
+    }
     shownSeat = open;
     // A seat that was out of sight had no size to fit its cards to
     window.dispatchEvent(new Event('resize'));

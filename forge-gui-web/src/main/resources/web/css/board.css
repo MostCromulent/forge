@@ -112,6 +112,14 @@ html[data-side="open"]::view-transition-old(side-column) { animation: side-fade-
 .seat-tab.out .skull-mark { display: grid; }
 .seat-tab.out .who { text-decoration: line-through; }
 .seat-tab.out .life { visibility: hidden; }
+/* A seat coming on show slides in from its tab's side. Its frame stays where it is, and only what it holds moves. */
+#opponent.tabbed > .seat:is(.from-right, .from-left) > * { animation: seat-from-right .24s cubic-bezier(.2,.7,.3,1) both; }
+#opponent.tabbed > .seat.from-left > * { animation-name: seat-from-left; }
+@keyframes seat-from-right { from { opacity: 0; translate: 36px 0; } }
+@keyframes seat-from-left { from { opacity: 0; translate: -36px 0; } }
+html[data-motion="reduced"] #opponent.tabbed > .seat > * { animation: none; }
+/* Out of sight the seat had no room to size its cards for, so they take their size at once and do not grow as they come in */
+#opponent.tabbed > .seat:is(.from-right, .from-left), #opponent.tabbed > .seat:is(.from-right, .from-left) .group { transition: none; }
 /* Quadrants: four quarters of the table, you in the bottom left with your hand under you, the others going round */
 #match.quads { grid-template-columns: 1fr 1fr var(--side-w); grid-template-areas: "q1 q2 side" "phase phase side" "me q3 side" "hand q3 side"; }
 #match.quads[data-opponents="2"] { grid-template-areas: "q1 q2 side" "phase phase side" "me me side" "hand hand side"; }
