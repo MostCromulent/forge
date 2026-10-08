@@ -7,6 +7,7 @@ import type { Model } from '../model';
 import type { DeckSection, EditorCard, EditorState } from '../protocol';
 import type { Zone } from './drag';
 import { t, type TextKey } from '../text';
+import { addCard, preferPrinting, preferredPrinting } from './preferred';
 
 /** The parts of a set the printing picker filters by, as desktop's does: the section's name in the edition file, and its label. */
 const ART_STYLES: [string, TextKey][] = [
@@ -39,7 +40,7 @@ export function cardIn(state: EditorState, zone: Zone | DeckSection, name: strin
 }
 
 export function CardMenu({ at, state, actions, close, printings }: {
-  at: MenuAt; state: EditorState; actions: Actions; close: () => void; printings: (zone: DeckSection) => void;
+  at: MenuAt; state: EditorState; actions: Actions; close: () => void; printings: (zone: DeckSection | null) => void;
 }) {
   useEffect(() => {
     const away = () => close();
@@ -87,8 +88,8 @@ export function CardMenu({ at, state, actions, close, printings }: {
     <div class="deck-menu card-menu" role="menu" style={{ left: `${at.x}px`, top: `${at.y}px` }} onPointerDown={e => e.stopPropagation()}>
       <span class="menu-cap">{at.name}</span>
       {zone === null && <>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToMain')}</button>
-        <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Sideboard', count: 1 }))}>{t('lblWebCardMenuAddToSideboard')}</button>
+        <button role="menuitem" onClick={act(() => addCard(actions, state, at.name, 'Main'))}>{t('lblWebCardMenuAddToMain')}</button>
+        <button role="menuitem" onClick={act(() => addCard(actions, state, at.name, 'Sideboard'))}>{t('lblWebCardMenuAddToSideboard')}</button>
       </>}
       {zone !== null && zone !== 'Commander' && <>
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: zone, count: 1 }))}>{t('lblWebCardMenuAddOneMore')}</button>
@@ -108,7 +109,8 @@ export function CardMenu({ at, state, actions, close, printings }: {
           {t('lblWebCardMenuMakeCommander')}
         </button>
       )}
-      <button role="menuitem" onClick={act(() => printings(zone ?? anywhere ?? 'Main'))}>{t('lblWebCardMenuChangePrinting')}</button>
+      {/* A card in the deck changes the printing of its copies there; one in the catalogue, the printing this browser prefers for it */}
+      <button role="menuitem" onClick={act(() => printings(zone))}>{t(zone ? 'lblWebCardMenuChangePrinting' : 'lblWebCardMenuPreferredPrinting')}</button>
       {zone !== null && <>
         <hr />
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>
@@ -124,25 +126,21 @@ export function CardMenu({ at, state, actions, close, printings }: {
 
 /** Every printing as a picture, filtered by set or style as desktop's dialog is. Steppers move copies between printings so the total never changes, and each step is saved as it is made, so there is no Cancel. */
 export function PrintingPicker({ name, zone, model, state, actions, close }: {
-  name: string; zone: DeckSection; model: Model; state: EditorState; actions: Actions; close: () => void;
+  name: string; zone: DeckSection | null; model: Model; state: EditorState; actions: Actions; close: () => void;
 }) {
   useEffect(() => {
     actions.askPrintings(name, state.cardPool ?? null);
   }, [name]);
-  const card = cardIn(state, zone, name);
+  const card = zone ? cardIn(state, zone, name) : undefined;
+  const preferred = preferredPrinting(name);
   const list = model.printings?.name === name ? model.printings.list : [];
   const counts = new Map((card?.split ?? []).map(p => [p.key, p.count]));
   const send = (next: Map<string, number>) => actions.edit({
-    op: 'printings', name, from: zone, count: card?.count ?? 0,
+    op: 'printings', name, from: zone ?? undefined, count: card?.count ?? 0,
     printings: [...next].filter(([, n]) => n > 0).map(([key, count]) => ({ name: key, count })),
   });
   // One more of this printing is one fewer of the printing with the most copies, and the other way round
   const shift = (key: string, by: 1 | -1) => {
-    // A card the section does not hold yet, as one picked from the catalogue, is added in this printing
-    if (!card) {
-      actions.edit({ op: 'add', name, to: zone, count: 1, printings: [{ name: key, count: 1 }] });
-      return;
-    }
     const next = new Map(counts);
     const others = list.map(p => p.key).filter(k => k !== key && !list.find(p => p.key === k)?.problem);
     const donor = by > 0 ? others.filter(k => (next.get(k) ?? 0) > 0).sort((a, b) => (next.get(b) ?? 0) - (next.get(a) ?? 0))[0]
@@ -153,7 +151,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
     send(next);
   };
   // The printings held when the list arrives come first, as desktop puts the current one first, and stay put while counts change
-  const ordered = useMemo(() => [...list].sort((x, y) => Number(counts.has(y.key)) - Number(counts.has(x.key))), [list]);
+  const ordered = useMemo(() => [...list].sort((x, y) => Number(counts.has(y.key) || y.key === preferred) - Number(counts.has(x.key) || x.key === preferred)), [list]);
   const [query, setQuery] = useState('');
   const [style, setStyle] = useState('');
   const wanted = query.trim().toLowerCase();
@@ -162,7 +160,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
   return (
     <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
       <div class="dialog picker">
-        <h3>{t('lblChangePrintingDialogTitle', name)}</h3>
+        <h3>{t(zone ? 'lblChangePrintingDialogTitle' : 'lblWebCardMenuPreferredOf', name)}</h3>
         <div class="print-bar">
           <input placeholder={t('lblChangePrintingSearchHint')} aria-label={t('lblChangePrintingSearchHint')} value={query}
             onInput={e => setQuery(e.currentTarget.value)} />
@@ -176,27 +174,29 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
           {shown.map(p => {
             const n = counts.get(p.key) ?? 0;
             return (
-              <div key={p.key} class={`print-cell${n ? ' cur' : ''}${p.problem ? ' off' : ''}`}
+              <div key={p.key} class={`print-cell${(zone ? n : p.key === preferred) ? ' cur' : ''}${p.problem ? ' off' : ''}${zone ? '' : ' choose'}`}
+                onClick={zone || p.problem ? undefined : () => preferPrinting(name, p.key)}
                 // Two clicks on a printing make every copy that printing and close, as desktop's dialog does. Two quick presses of a stepper are only that.
                 onDblClick={e => {
                   if (p.problem || (e.target as Element).closest('button')) return;
-                  if (card) send(new Map([[p.key, card.count]]));
-                  else shift(p.key, 1);
+                  if (zone) send(new Map([[p.key, card?.count ?? 0]]));
+                  else preferPrinting(name, p.key);
                   close();
                 }}>
                 <img loading="lazy" alt="" src={imageUrl(p.key)} />
                 <span class="ed"><b>{p.setName}</b>{p.problem ? `⊘ ${p.problem}` : `${p.edition}${p.year ? ` · ${p.year}` : ''}`}</span>
-                <span class="under">
+                {zone && <span class="under">
                   <button class="step" disabled={!n} onClick={() => shift(p.key, -1)}>&minus;</button>
                   <span class={n ? 'n' : 'n zero'}>{n}</span>
-                  <button class="step" disabled={!!p.problem || (!!card && n >= card.count)} onClick={() => shift(p.key, 1)}>+</button>
-                </span>
+                  <button class="step" disabled={!!p.problem || n >= (card?.count ?? 0)} onClick={() => shift(p.key, 1)}>+</button>
+                </span>}
               </div>
             );
           })}
         </div>
         <div class="actions">
-          <p class="hint">{t(IN_SECTION[zone], card?.count ?? 0)}</p>
+          <p class="hint">{zone ? t(IN_SECTION[zone], card?.count ?? 0) : t('lblWebCardMenuPreferredHint')}</p>
+          {!zone && <button disabled={!preferred} onClick={() => preferPrinting(name, null)}>{t('lblWebCardMenuPreferredNone')}</button>}
           <button class="primary" onClick={close}>{t('lblDone')}</button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useDismiss } from '../hooks';
 import { Catalogue } from './catalogue';
 import { CardMenu, PrintingPicker, type MenuAt } from './cardmenu';
 import { DeckHalf } from './deckhalf';
+import { addCard } from './preferred';
 import { saveText } from '../dom';
 import { startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
 import { longPress } from '../press';
@@ -47,7 +48,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   useDismiss(menu !== null, nameMenu, () => setMenu(null));
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
   const [cardMenu, setCardMenu] = useState<MenuAt | null>(null);
-  const [picking, setPicking] = useState<{ name: string; zone: DeckSection } | null>(null);
+  const [picking, setPicking] = useState<{ name: string; zone: DeckSection | null } | null>(null);
   /** Which half a phone shows, where there is room for one at a time. */
   const [half, setHalf] = useState<'find' | 'deck'>('find');
   // A list pasted anywhere but a field opens the importer with it, as a file dropped on the page does
@@ -71,7 +72,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     } else if (v.zone === 'Commander') {
       actions.edit({ op: 'commander', name: carried.name, from: carried.from === 'catalogue' ? undefined : carried.from, count: 1 });
     } else if (v.zone !== 'catalogue' && carried.from === 'catalogue') {
-      actions.edit({ op: 'add', name: carried.name, to: v.zone, count: carried.count });
+      addCard(actions, state, carried.name, v.zone, carried.count);
     } else if (v.zone !== 'catalogue' && carried.from !== 'catalogue') {
       actions.edit({ op: 'move', name: carried.name, from: carried.from, to: v.zone, count: carried.count });
     }

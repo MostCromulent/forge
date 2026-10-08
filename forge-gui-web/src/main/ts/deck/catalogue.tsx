@@ -11,6 +11,7 @@ import type { CardHandlers } from './drag';
 import type { Model } from '../model';
 import type { CatalogueRow, EditorState } from '../protocol';
 import { store, stored } from '../storage';
+import { addCard, choosesPrintings, preferredPrinting } from './preferred';
 import { t, type TextKey } from '../text';
 
 export const TYPES: [string, TextKey][] = [['any', 'lblWebCatalogueAnyType'], ['creature', 'lblCreatures'], ['planeswalker', 'lblPlaneswalkers'],
@@ -86,14 +87,18 @@ export function Catalogue({ model, actions, state, handlers }: {
 
   // A page of a conquest's collection, left from that page, is not this deck's catalogue
   const page = model.catalogue && !model.catalogue.source ? model.catalogue : null;
-  const rows = page?.rows ?? [];
+  // A card shows in the printing this browser prefers for it, in the tile, the table, the preview and the drag alike
+  const rows = (page?.rows ?? []).map(row => {
+    const key = choosesPrintings(state) ? preferredPrinting(row.name) : undefined;
+    return key ? { ...row, image: key } : row;
+  });
   const counts = countsInDeck(state);
   const canAdd = (row: CatalogueRow) => !row.problem && roomFor(state, row, counts.get(row.name) ?? 0) > 0;
   const top = text.trim() ? rows.find(canAdd) : undefined;
   const searched = page?.ranked ? text.trim() : '';
   const add = (name: string, to: 'Main' | 'Sideboard' = 'Main') => {
     liftCard(name, to);
-    actions.edit({ op: 'add', name, to, count: 1 });
+    addCard(actions, state, name, to);
   };
   const remove = (name: string) => actions.edit({ op: 'remove', name, from: 'Main', count: 1 });
   const makeCommander = (name: string) => actions.edit({ op: 'commander', name, count: 1 });
