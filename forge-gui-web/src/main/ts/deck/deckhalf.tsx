@@ -32,6 +32,10 @@ export function DeckHalf({ actions, state, handlers, check }: {
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
   const groups = regroup(state, by);
+  // Two clicks on a card take one copy out. A pool's cards cannot leave it, so there the copy goes to the other section.
+  const takeOut = (name: string, zone: 'Main' | 'Sideboard') => (state.limited
+    ? actions.edit({ op: 'move', name, from: zone, to: zone === 'Main' ? 'Sideboard' : 'Main', count: 1 })
+    : removeOne(actions, name, zone));
   // A card added from the catalogue flies to its line once the deck shows it there
   useLayoutEffect(() => {
     const key = flyingFor();
@@ -82,8 +86,8 @@ export function DeckHalf({ actions, state, handlers, check }: {
             <div key={g.heading} class="group">
               <h4>{g.heading}<span>{g.cards.reduce((n, c) => n + c.count, 0)}</span></h4>
               {g.cards.map(c => cards
-                ? <Stack key={c.name} card={c} zone="Main" landed={state.landed === c.name} handlers={handlers} />
-                : <Line key={c.name} card={c} zone="Main" landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
+                ? <Stack key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} handlers={handlers} />
+                : <Line key={c.name} card={c} zone="Main" takeOut={() => takeOut(c.name, 'Main')} landed={state.landed === c.name} actions={actions} handlers={handlers} mainOnly={state.mainOnly} />)}
             </div>
           ))}
         </div>
@@ -114,13 +118,13 @@ export function DeckHalf({ actions, state, handlers, check }: {
         {cards
           ? (
             <div class="zone-body deck-cols">
-              <div class="group">{state.sideboard.map(c => <Stack key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} handlers={handlers} />)}</div>
+              <div class="group">{state.sideboard.map(c => <Stack key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} handlers={handlers} />)}</div>
             </div>
           )
           : (
             <div class="zone-body cols">
               {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
-                <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
+                <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
               ))}
             </div>
           )}
@@ -166,10 +170,12 @@ function CommanderZone({ actions, state, handlers }: { actions: Actions; state: 
 }
 
 /** One card in a section drawn as the card, the copies counted on it; cards in a column overlap to show their names. */
-function Stack({ card, zone, landed, handlers }: { card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers }) {
+function Stack({ card, zone, landed, handlers, takeOut }: {
+  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; handlers: CardHandlers; takeOut: () => void;
+}) {
   return (
     <div class={`deck-stack${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
-      title={card.problem ? `${card.name}: ${card.problem}` : card.name} {...handlers(card.name, zone, card.image, card.count)}>
+      title={card.problem ? `${card.name}: ${card.problem}` : card.name} {...handlers(card.name, zone, card.image, card.count)} onDblClick={takeOut}>
       <img alt={card.name} src={imageUrl(card.image)} draggable={false} />
       {card.count > 1 && <span class="deck-count">×{card.count}</span>}
     </div>
@@ -177,13 +183,15 @@ function Stack({ card, zone, landed, handlers }: { card: EditorCard; zone: 'Main
 }
 
 /** One card in a section: its count, name and cost, and while the pointer is on it, one fewer, one more, and a move to the other section. */
-function Line({ card, zone, landed, actions, handlers, mainOnly }: {
-  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean;
+function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
+  card: EditorCard; zone: 'Main' | 'Sideboard'; landed: boolean; actions: Actions; handlers: CardHandlers; mainOnly?: boolean; takeOut: () => void;
 }) {
   const other: DeckSection = zone === 'Main' ? 'Sideboard' : 'Main';
   return (
     <div class={`dk-line ed-line${card.problem ? ' bad' : ''}${landed ? ' landed' : ''}`} data-image={card.image} data-card={card.name} data-from={zone}
-      {...handlers(card.name, zone, card.image, card.count)}>
+      {...handlers(card.name, zone, card.image, card.count)}
+      // Two quick presses on the line's own buttons are two presses of that button, and nothing more
+      onDblClick={e => { if (!(e.target as Element).closest('button')) takeOut(); }}>
       <span class="n">{card.count}</span>
       <span class="nm">{card.name}</span>
       {card.printings > 1 && <span class="prints">{t('lblWebEditorPrintings', card.printings)}</span>}
