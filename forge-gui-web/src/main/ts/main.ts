@@ -20,7 +20,7 @@ import { initStack } from './match/stack';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
-import { asksPlayer, worthSeeing } from './match/pace';
+import { asksPlayer, behindItsBoard, worthSeeing } from './match/pace';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
@@ -40,7 +40,8 @@ let sentDeviceDecks = false;
 // Queries are numbered, so an answer to one the player has since changed is dropped
 let catalogueRequest = 0;
 let importRequest = 0;
-const send = connect(receive, online => {
+// A sound or a log line is sent ahead of the board it belongs to, and is taken after it (pace.ts)
+const send = connect(behindItsBoard(receive, 300), online => {
   byId('banner').hidden = online;
   // The server replays the conversation for every connection, so the browser starts each one empty
   if (!online) {
@@ -225,8 +226,8 @@ function receive(msg: ServerMessage): void {
   if (!held) {
     // Each release is for this turn's hold only, so an earlier banner ending late cannot free a later turn early
     const releaseThis = () => { if (held?.[0] === msg) release(); };
-    // A sound or a log line is sent ahead of the state it belongs to, so it waits as well and comes with its own board
-    if ((msg.t === 'sound' || msg.t === 'log' || (msg.t === 'state' && !msg.full)) && Date.now() < showUntil) {
+    // A sound or a log line comes behind its own board, so it waits with that board when the board does, and not for it
+    if (msg.t === 'state' && !msg.full && Date.now() < showUntil) {
       held = [msg];
       setTimeout(releaseThis, showUntil - Date.now());
     } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {

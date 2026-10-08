@@ -36,3 +36,29 @@ export function worthSeeing(events: GameEvent[], localPlayers: number[]): boolea
 export function asksPlayer(prompt: Prompt): boolean {
   return prompt.priority || prompt.ok.enabled || prompt.cancel.enabled || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0;
 }
+
+/**
+ * The server sends a sound and a log line as their event happens, and the board that shows the event after them. This hands them on
+ * after that board, so a sound is heard as its card moves, wherever the board is held up on the way (a turn banner, a pause on a play).
+ * One no board follows within `wait` is handed on by itself.
+ */
+export function behindItsBoard<T extends { t: string }>(deliver: (msg: T) => void, wait: number): (msg: T) => void {
+  let ahead: T[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const flush = () => {
+    clearTimeout(timer);
+    timer = undefined;
+    const waiting = ahead;
+    ahead = [];
+    waiting.forEach(deliver);
+  };
+  return msg => {
+    if (msg.t === 'sound' || msg.t === 'log') {
+      ahead.push(msg);
+      timer ??= setTimeout(flush, wait);
+    } else {
+      deliver(msg);
+      if (msg.t === 'state') flush();
+    }
+  };
+}

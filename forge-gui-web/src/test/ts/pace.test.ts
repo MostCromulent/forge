@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { worthSeeing } from '../../main/ts/match/pace';
+import { describe, expect, it, vi } from 'vitest';
+import { behindItsBoard, worthSeeing } from '../../main/ts/match/pace';
 import type { GameEvent } from '../../main/ts/protocol';
 
 const ME = 1;
@@ -36,5 +36,40 @@ describe('worthSeeing', () => {
     expect(worthSeeing([{ kind: 'playerCounters', player: { ref: ME } }], [ME])).toBe(true);
     expect(worthSeeing([{ kind: 'cardCounters', card: { ref: 9 } }], [ME])).toBe(true);
     expect(worthSeeing([{ kind: 'cardAttached', card: { ref: 9 }, to: { ref: 8 } }], [ME])).toBe(true);
+  });
+});
+
+describe('behindItsBoard', () => {
+  const run = () => {
+    const got: string[] = [];
+    const take = behindItsBoard<{ t: string; n?: number }>(m => got.push(m.t + (m.n ?? '')), 300);
+    return { got, take };
+  };
+  it('hands a sound and a log line over after the board they were sent ahead of', () => {
+    const { got, take } = run();
+    take({ t: 'sound', n: 1 });
+    take({ t: 'log' });
+    take({ t: 'sound', n: 2 });
+    expect(got).toEqual([]);
+    take({ t: 'state' });
+    expect(got).toEqual(['state', 'sound1', 'log', 'sound2']);
+  });
+  it('lets any other message through without freeing a waiting sound', () => {
+    const { got, take } = run();
+    take({ t: 'sound' });
+    take({ t: 'prompt' });
+    expect(got).toEqual(['prompt']);
+  });
+  it('hands a sound over by itself when no board follows it', () => {
+    vi.useFakeTimers();
+    const { got, take } = run();
+    take({ t: 'sound' });
+    vi.advanceTimersByTime(299);
+    expect(got).toEqual([]);
+    vi.advanceTimersByTime(1);
+    expect(got).toEqual(['sound']);
+    take({ t: 'state' });
+    expect(got).toEqual(['sound', 'state']);
+    vi.useRealTimers();
   });
 });
