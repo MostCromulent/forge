@@ -225,10 +225,7 @@ html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.pla
 .format-play { margin: 0; font-size: 12px; line-height: 1.45; color: var(--muted); }
 .format-play b { color: var(--text); font-weight: 600; }
 
-.seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
-/* Three or more seats read as a grid rather than a row that wraps unevenly */
-.seats:not([data-count="2"]) { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
-.seats:not([data-count="2"]) .plate { width: 376px; }
+.seats { display: grid; justify-content: center; gap: 18px; grid-template-columns: repeat(2, auto); }
 
 .plate {
   display: flex;
@@ -253,12 +250,9 @@ html[data-motion="reduced"] .plate { animation: none; }
 /* The sleeve is the seat's subject: a card back at true card aspect, and the only sleeve control */
 .sleeve-slot { position: relative; flex: none; }
 .plate .sleeve { padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; display: block; background: var(--surface-2); }
-.seats:not([data-count="2"]) .plate .sleeve { width: 76px; height: 106px; }
 /* Secondary to the sleeve it sits on, so it stays out of the way until the pointer is over the slot */
 .sleeve-style { position: absolute; right: 4px; bottom: 4px; padding: 2px 7px; font-size: 11px; border-radius: 6px; background: #0b0e14cc; opacity: 0; transition: opacity .12s ease; }
 .sleeve-slot:hover .sleeve-style, .sleeve-style:focus-visible { opacity: 1; }
-.seats:not([data-count="2"]) .sleeve-style { left: 4px; text-align: center; }
-.seats:not([data-count="2"]) .who .avatar { width: 52px; height: 52px; }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 /* An empty slot is a card-shaped outline, not a sleeve: there is nothing sleeved yet */
@@ -301,8 +295,6 @@ html[data-motion="reduced"] .plate { animation: none; }
 .plate.add-seat { align-items: center; justify-content: center; gap: 8px; min-height: 64px; border-style: dashed; background: none; color: var(--muted); font-weight: 600; animation: none; }
 .plate.add-seat:hover { border-color: var(--accent-2); color: var(--accent-2); }
 .add-seat svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
-/* Two seats sit side by side, so the spot for a third lies under them both */
-.seats[data-count="2"] .add-seat { grid-row: 2; grid-column: 1 / span 2; width: auto; }
 /* Removing a seat is a cross on its corner, apart from what the seat holds: quiet at rest, and red under the pointer */
 .plate { position: relative; }
 .drop { position: absolute; top: -10px; right: -10px; box-sizing: border-box; width: 24px; height: 24px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: var(--bg-deep); border: 2px solid var(--line-bright); color: var(--muted); }

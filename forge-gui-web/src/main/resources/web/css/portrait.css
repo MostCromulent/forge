@@ -303,9 +303,11 @@ html[data-form="portrait"] .match-bar .field:last-child { border-bottom: 0; }
 html[data-form="portrait"] .match-bar .field-value { min-height: 44px; }
 html[data-form="portrait"] .match-bar .count { width: 100%; }
 html[data-form="portrait"] .match-bar .count button { flex: 1; min-height: 44px; font-size: 14px; }
-html[data-form="portrait"] #lobby .seats, html[data-form="portrait"] #lobby .seats[data-count] { grid-auto-flow: row; grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 10px; }
-html[data-form="portrait"] #lobby .seats .plate, html[data-form="portrait"] #lobby .seats[data-count] .plate { width: auto; min-width: 0; padding: 10px; gap: 10px; }
+html[data-form="portrait"] #lobby .seats { grid-template-columns: minmax(0, 1fr); justify-content: stretch; gap: 10px; }
+html[data-form="portrait"] #lobby .seats .plate { width: auto; min-width: 0; padding: 10px; gap: 10px; }
 html[data-form="portrait"] #lobby .seats .plate .sleeve { width: 76px; height: 106px; flex: none; }
+html[data-form="portrait"] #lobby .sleeve-style { left: 4px; text-align: center; }
+html[data-form="portrait"] #lobby .who .avatar { width: 52px; height: 52px; }
 html[data-form="portrait"] #lobby .plate button { min-height: 44px; }
 html[data-form="portrait"] #lobby .plate .drop { min-height: 0; width: 26px; height: 26px; top: -9px; right: -6px; }
 html[data-form="portrait"] #lobby .play-row { justify-items: stretch; margin-top: 10px; }

@@ -52,7 +52,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
         {lim
           ? <EventHead key={lim.kind} model={model} lobby={lobby} actions={actions} preview={setPreview} start={() => actions.startMatch(ui.spectate)} />
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
-        <div class="seats" id="seats" data-count={lobby.seats.length}>
+        <div class="seats" id="seats">
           {/* Keyed by who sits there too, so a seat added or newly taken comes in afresh (lobby.css) */}
           {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
