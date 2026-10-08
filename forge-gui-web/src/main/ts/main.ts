@@ -21,6 +21,7 @@ import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
 import { asksPlayer, worthSeeing } from './match/pace';
+import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
 import { byId, saveText } from './dom';
@@ -262,6 +263,7 @@ function apply(msg: ServerMessage): void {
     case 'hello':
       model.host = msg.host;
       setGuest(!model.host);
+      setVersion(msg.version);
       // Before any game opens, so the game is seeded with them rather than corrected afterwards
       if (!model.host && !restored) {
         restored = true;

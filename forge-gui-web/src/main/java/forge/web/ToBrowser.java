@@ -43,7 +43,7 @@ final class ToBrowser {
             boolean canClaimHost, boolean networked, @Nullable String playerName, List<Integer> avatars, List<Integer> sleeves, int avatarCount,
             int sleeveCount, List<SavedSleeveArt> sleeveArt, boolean inEvent, @Nullable String eventPool, int sealedPools,
             @Nullable String eventKind, boolean drafting, int draftPools, @Nullable String campaign, @Nullable String campaignSave,
-            @Nullable String currentConquest, @Nullable String currentQuest, ServerSettings settings) {
+            @Nullable String currentConquest, @Nullable String currentQuest, @Nullable String version, ServerSettings settings) {
     }
 
     record SavedSleeveArt(String key, int offset) {

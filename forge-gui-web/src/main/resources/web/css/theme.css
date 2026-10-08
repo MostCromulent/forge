@@ -104,6 +104,10 @@ button.primary:active:not(:disabled) { box-shadow: none; transform: translateY(1
 /* On the start pages the two lie side by side along the bottom edge */
 .forge-links.foot { position: fixed; left: 0; right: 0; bottom: 16px; z-index: 1; grid-auto-flow: column; justify-content: center; }
 .forge-links.foot .leaves { display: none; }
+/* The server's build, for a bug report: under the links in the options rail, after them along the foot */
+.forge-links .version { padding: 4px 10px 2px; color: var(--faint); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; user-select: text; }
+.forge-links.foot .version { align-self: center; padding: 0 10px; }
+@media (max-width: 620px) { .forge-links.foot .version { grid-row: 2; grid-column: 1 / span 2; padding: 0 0 2px; text-align: center; } }
 #notices { position: fixed; top: 12px; right: 12px; display: grid; gap: 8px; z-index: 38; }
 /* A notice slides in from the edge it sits against, and back out as it goes (main.ts) */
 .notice { animation: notice-in .22s cubic-bezier(.2,.7,.3,1); }

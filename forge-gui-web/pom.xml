@@ -35,6 +35,39 @@
     <build>
         <finalName>forge-gui-web</finalName>
         <plugins>
+            <!-- Dates a snapshot's version as desktop's and Android's builds do, for the jar's manifest -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>timestamp-property</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>timestamp-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>month.date</name>
+                            <pattern>MM.dd</pattern>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-property</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>regex-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>snapshot-version</name>
+                            <value>${revision}</value>
+                            <regex>-SNAPSHOT</regex>
+                            <replacement>-SNAPSHOT-${month.date}</replacement>
+                            <failIfNoMatch>false</failIfNoMatch>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <!-- Writes src/main/ts/protocol.gen.ts from the protocol's Java records once they compile, and
                  src/main/ts/text.gen.ts from the language keys the TypeScript uses, for the TypeScript type check
                  below. It is declared first so it runs before that check in the same phase. -->
@@ -166,6 +199,7 @@
                         </manifest>
                         <!-- Quest's saves are read by XStream, which needs these, as desktop's jar declares them -->
                         <manifestEntries>
+                            <Implementation-Version>${snapshot-version}</Implementation-Version>
                             <Add-Opens>java.base/java.util java.base/java.lang java.base/java.lang.reflect java.base/java.text java.base/java.math java.base/java.util.concurrent java.base/java.net java.base/java.nio</Add-Opens>
                         </manifestEntries>
                     </archive>

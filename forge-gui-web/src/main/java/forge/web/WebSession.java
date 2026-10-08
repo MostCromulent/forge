@@ -1167,6 +1167,8 @@ public final class WebSession {
                 now instanceof InCampaign c ? c.save() : now instanceof Playing p && p.back() instanceof InCampaign c ? c.save() : null,
                 isHost ? conquest.current() : null,
                 isHost ? quest.current() : null,
+                // The jar's manifest holds it, so a server run from classes has none
+                WebSession.class.getPackage().getImplementationVersion(),
                 // The menu's volume slider and music need them before any match sends them with its controls
                 WebSettings.values(settings));
     }
