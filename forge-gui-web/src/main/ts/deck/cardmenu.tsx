@@ -108,8 +108,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
           {t('lblWebCardMenuMakeCommander')}
         </button>
       )}
-      <button role="menuitem" disabled={!anywhere} title={anywhere ? undefined : t('lblWebCardMenuAddFirst')}
-        onClick={act(() => anywhere && printings(zone ?? anywhere))}>{t('lblWebCardMenuChangePrinting')}</button>
+      <button role="menuitem" onClick={act(() => printings(zone ?? anywhere ?? 'Main'))}>{t('lblWebCardMenuChangePrinting')}</button>
       {zone !== null && <>
         <hr />
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>
@@ -139,6 +138,11 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
   });
   // One more of this printing is one fewer of the printing with the most copies, and the other way round
   const shift = (key: string, by: 1 | -1) => {
+    // A card the section does not hold yet, as one picked from the catalogue, is added in this printing
+    if (!card) {
+      actions.edit({ op: 'add', name, to: zone, count: 1, printings: [{ name: key, count: 1 }] });
+      return;
+    }
     const next = new Map(counts);
     const others = list.map(p => p.key).filter(k => k !== key && !list.find(p => p.key === k)?.problem);
     const donor = by > 0 ? others.filter(k => (next.get(k) ?? 0) > 0).sort((a, b) => (next.get(b) ?? 0) - (next.get(a) ?? 0))[0]
@@ -176,7 +180,8 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
                 // Two clicks on a printing make every copy that printing and close, as desktop's dialog does. Two quick presses of a stepper are only that.
                 onDblClick={e => {
                   if (p.problem || (e.target as Element).closest('button')) return;
-                  send(new Map([[p.key, card?.count ?? 0]]));
+                  if (card) send(new Map([[p.key, card.count]]));
+                  else shift(p.key, 1);
                   close();
                 }}>
                 <img loading="lazy" alt="" src={imageUrl(p.key)} />
@@ -184,7 +189,7 @@ export function PrintingPicker({ name, zone, model, state, actions, close }: {
                 <span class="under">
                   <button class="step" disabled={!n} onClick={() => shift(p.key, -1)}>&minus;</button>
                   <span class={n ? 'n' : 'n zero'}>{n}</span>
-                  <button class="step" disabled={!!p.problem || n >= (card?.count ?? 0)} onClick={() => shift(p.key, 1)}>+</button>
+                  <button class="step" disabled={!!p.problem || (!!card && n >= card.count)} onClick={() => shift(p.key, 1)}>+</button>
                 </span>
               </div>
             );

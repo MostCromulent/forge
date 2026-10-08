@@ -193,6 +193,25 @@ final class DeckEditor {
         return change(name, () -> addOwned(deck.getOrCreate(to), card, count));
     }
 
+    /** Adds one copy in the printing chosen by its image key. A pool or a collection holds its own printings, so there the card is added as any other. */
+    String addPrinting(final String name, final DeckSection to, final String imageKey) {
+        if (limited() || collection != null) {
+            return add(name, to, 1);
+        }
+        if (fixedSection(to)) {
+            return Localizer.getInstance().getMessage(MAIN_ONLY);
+        }
+        final PaperCard card = ImageUtil.getPaperCardFromImageKey(imageKey);
+        if (card == null || !card.getName().equals(name)) {
+            return Localizer.getInstance().getMessage("lblWebEditorNotAPrinting", String.valueOf(name));
+        }
+        final String limit = overLimit(card, 1);
+        if (limit != null) {
+            return limit;
+        }
+        return change(name, () -> addOwned(deck.getOrCreate(to), card, 1));
+    }
+
     String remove(final String name, final DeckSection from, final int count) {
         if (limited() && from != DeckSection.Sideboard) {
             return move(name, from, DeckSection.Sideboard, count);

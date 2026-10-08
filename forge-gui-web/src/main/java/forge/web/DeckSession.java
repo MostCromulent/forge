@@ -278,7 +278,9 @@ final class DeckSession {
         final DeckSection from = e.from() == null ? DeckSection.Main : e.from();
         final DeckSection to = e.to() == null ? DeckSection.Main : e.to();
         return switch (e.op()) {
-            case add -> editor.add(e.name(), to, Math.max(1, e.count()));
+            // An add that names a printing adds one copy in that printing
+            case add -> e.printings() == null || e.printings().isEmpty() ? editor.add(e.name(), to, Math.max(1, e.count()))
+                    : editor.addPrinting(e.name(), to, e.printings().get(0).name());
             case remove -> editor.remove(e.name(), from, Math.max(1, e.count()));
             case move -> editor.move(e.name(), from, to, Math.max(1, e.count()));
             case commander -> editor.makeCommander(e.name(), e.from());

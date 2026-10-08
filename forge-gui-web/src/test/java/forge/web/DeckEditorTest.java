@@ -89,6 +89,20 @@ public class DeckEditorTest {
         Assert.assertEquals(storages.of(GameType.Constructed).get(DeckEditor.NEW_DECK).getMain().countByName("Swamp"), 30);
     }
 
+    // Fails if a card added in a chosen printing arrives in another, or a printing of a different card is taken for it
+    @Test
+    public void aCardIsAddedInTheChosenPrinting() {
+        final DeckEditor e = editor(new Deck("Printings"), GameType.Constructed);
+        final List<ToBrowser.Printing> printings = DeckCatalog.printings("Llanowar Elves", null);
+        final String oldest = printings.get(printings.size() - 1).key();
+        Assert.assertNull(e.addPrinting("Llanowar Elves", DeckSection.Main, oldest));
+        final Map.Entry<PaperCard, Integer> held = e.deck().getMain().iterator().next();
+        Assert.assertEquals(held.getKey().getImageKey(false), oldest);
+        Assert.assertEquals(held.getValue().intValue(), 1);
+        Assert.assertNotNull(e.addPrinting("Forest", DeckSection.Main, oldest), "a printing of another card was accepted");
+        Assert.assertEquals(e.deck().getMain().countAll(), 1);
+    }
+
     // Fails if a rename onto another deck's file overwrites it
     @Test
     public void renameOntoTakenNameRefused() {
