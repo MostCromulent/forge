@@ -118,10 +118,7 @@ export function Importer({ model, actions, from, seat, initialText, initialUrl, 
     : [['edit', t('lblWebImportAndEdit')], from === 'seat' ? ['use', t('lblWebImportAndUse')] : ['save', t('lblImport')]];
   return (
     <div class="backdrop importer-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <div class="importer" onDragOver={e => e.preventDefault()} onDrop={e => {
-        e.preventDefault();
-        void e.dataTransfer?.files[0]?.text().then(dropped => typed(dropped));
-      }}>
+      <div class="importer">
         <header class="imp-head">
           <h2>{t('lblWebImportTitle')}</h2>
           <span class="muted">{t('lblWebImportSubtitle')}</span>

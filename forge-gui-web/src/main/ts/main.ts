@@ -545,6 +545,10 @@ async function keepAwake(on: boolean): Promise<void> {
   }
   locking = false;
 }
+// A file let go over the page would otherwise be opened in its place, ending the session
+for (const kind of ['dragover', 'drop']) {
+  addEventListener(kind, e => { if ((e as DragEvent).dataTransfer?.types.includes('Files')) e.preventDefault(); });
+}
 // The browser gives the lock up when the page is hidden, so it is asked for again on the way back
 document.addEventListener('visibilitychange', () => {
   lock = null;

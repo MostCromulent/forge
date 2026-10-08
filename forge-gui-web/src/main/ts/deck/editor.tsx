@@ -11,7 +11,7 @@ import { saveText } from '../dom';
 import { startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
 import { longPress } from '../press';
 import { deckText } from './decklist';
-import { DropOver, peekAt } from './deckfinder';
+import { peekAt } from './deckfinder';
 import { imageUrl } from '../images';
 import { changeUi } from '../ui';
 import { HeadControls, PageHeader } from '../header';
@@ -42,8 +42,6 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   const [menu, setMenu] = useState<'menu' | 'new' | null>(null);
   const [dialog, setDialog] = useState<'text' | 'delete' | null>(null);
   const [renaming, setRenaming] = useState(false);
-  /** Whether a file is held over the editor, which a drop would import. */
-  const [dropping, setDropping] = useState(false);
   const nameMenu = useRef<HTMLDivElement>(null);
   useDismiss(menu !== null, nameMenu, () => setMenu(null));
   const [peek, setPeek] = useState<{ image: string; left: number; top: number } | null>(null);
@@ -112,20 +110,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
     : state.collection ? <span class="check-fixed">{state.check}</span>
     : <CheckControl model={model} state={state} actions={actions} />;
   return (
-    <div class="editor-page" onPointerOver={e => setPeek(peekAt(e, '.editor-page'))} onPointerLeave={() => setPeek(null)}
-      onDragOver={e => {
-        if (!e.dataTransfer?.types.includes('Files')) return;
-        e.preventDefault();
-        setDropping(true);
-      }}
-      onDragLeave={e => { if (e.currentTarget === e.target) setDropping(false); }}
-      onDrop={e => {
-        const file = e.dataTransfer?.files[0];
-        setDropping(false);
-        if (!file) return;
-        e.preventDefault();
-        void file.text().then(text => changeUi(u => { u.importer = { from: 'editor', text }; }));
-      }}>
+    <div class="editor-page" onPointerOver={e => setPeek(peekAt(e, '.editor-page'))} onPointerLeave={() => setPeek(null)}>
       <PageHeader class="editor-head">
         {state.collection && <span class="deck-owner">{state.collection} &rsaquo;</span>}
         {renaming
@@ -182,7 +167,6 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
         <Catalogue model={model} actions={actions} state={state} handlers={handlers} />
         <DeckHalf actions={actions} state={state} handlers={handlers} check={check} />
       </div>
-      {dropping && <DropOver />}
       {dialog === 'text' && <TextDialog state={state} close={() => setDialog(null)} />}
       {dialog === 'delete' && (
         <div class="backdrop" onMouseDown={e => { if (e.target === e.currentTarget) setDialog(null); }}>
