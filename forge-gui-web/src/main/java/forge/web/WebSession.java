@@ -747,7 +747,7 @@ public final class WebSession {
                 final SetSeatExtra extra = Wire.decode(msg, SetSeatExtra.class);
                 lobby.setSeatExtra(extra.index(), extra.section(), extra.choice());
             }
-            case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count());
+            case "setPlayerCount" -> lobby.setPlayerCount(Wire.decode(msg, FromBrowser.SetPlayerCount.class).count(), invited(stage));
             case "setMatchLength" -> {
                 if (lobby.setMatchLength(Wire.decode(msg, FromBrowser.SetMatchLength.class).games())) {
                     sessions.lobbyChanged();

@@ -413,6 +413,27 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertEquals(new HashSet<>(seatAvatars(seated)).size(), 4, "a guest kept a portrait another holds: " + seatAvatars(seated));
     }
 
+    // Fails if a seat added to a table others can join is given to the AI, or one added to a table nobody was invited to is left open
+    @Test(timeOut = 120_000)
+    public void anAddedSeatIsOpenOnlyWhereOthersCanJoin() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        sessions.onMessage(host, message("setPlayerCount", "count", 4));
+        final JsonObject invited = host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 4, "the table never grew to four");
+        Assert.assertEquals(seatTypes(invited).subList(2, 4), List.of("OPEN", "OPEN"), "seats added where others can join: " + seatTypes(invited));
+        disconnectBrowsers();
+
+        final TestBrowser alone = hostAt("lobby");
+        sessions.onMessage(alone, message("setPlayerCount", "count", 4));
+        final JsonObject offline = alone.awaitLobby(l -> l.getAsJsonArray("seats").size() == 4, "the table never grew to four");
+        Assert.assertEquals(seatTypes(offline).subList(1, 4), List.of("AI", "AI", "AI"), "seats at a table nobody was invited to: " + seatTypes(offline));
+    }
+
+    private static List<String> seatTypes(final JsonObject table) {
+        final List<String> out = new ArrayList<>();
+        table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("type").getAsString()));
+        return out;
+    }
+
     private static List<Integer> seatAvatars(final JsonObject table) {
         final List<Integer> out = new ArrayList<>();
         table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("avatar").getAsInt()));

@@ -1,6 +1,6 @@
 // The browser reaches the game through a client even when it hosts, so your own seat arrives as REMOTE and is known by its "mine" flag
 
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { changeUi, ui, type Picker } from '../ui';
 import { sleeveUrl, avatarUrl } from '../looks';
 import { LookPicker } from '../lookpicker';
@@ -13,6 +13,7 @@ import { EventHead } from './event';
 import { MatchBar, TableHeader, seatsLeaving } from './matchbar';
 import { SetupHead, WAY_NAMES } from '../header';
 import { t, type TextKey } from '../text';
+import { useDismiss } from '../hooks';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSummary, LobbyTable, Seat, SeatExtra } from '../protocol';
@@ -53,7 +54,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           : <MatchBar model={model} lobby={lobby} actions={actions} preview={setPreview} />}
         <div class="seats" id="seats" data-count={lobby.seats.length}>
           {/* Keyed by who sits there too, so a seat added or newly taken comes in afresh (lobby.css) */}
-          {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)}
+          {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
         </div>
@@ -77,10 +78,40 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
 }
 
 // The seat kinds a netplay lobby can hold; offline shows only the first two
-const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblWebLobbyKindComputer', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
+const KIND: Record<string, TextKey> = { LOCAL: 'lblWebLobbyKindYou', AI: 'lblAI', OPEN: 'lblWebLobbyKindOpen', REMOTE: 'lblWebLobbyKindRemote' };
 
 /** What a seat of this type is called, or the type itself for one this page does not know. */
 const kindName = (type: string): string => (KIND[type] ? t(KIND[type]) : type);
+
+// Lucide's bot and user (ISC, see web/licenses/lucide-license.txt)
+const AI_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8V4H8" /><rect width="16" height="12" x="4" y="8" rx="2" /><path d="M2 14h2M20 14h2M15 13v2M9 13v2" /></svg>;
+const PLAYER_ICON = <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>;
+
+/** Who plays a seat the host may hand over: a chip that opens the two choices, each with a line saying what it means. */
+function SeatKind({ type, toAi, toOpen }: { type: string; toAi: () => void; toOpen: () => void }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLSpanElement>(null);
+  useDismiss(open, root, () => setOpen(false));
+  const ai = type === 'AI';
+  // Choosing what the seat already is only closes the menu, since asking again would deal the AI a new name
+  const choose = (change: boolean, act: () => void) => () => {
+    setOpen(false);
+    if (change) act();
+  };
+  return (
+    <span ref={root} class="popup-anchor">
+      <button class="kind chip" title={t('lblWebLobbyWhoPlaysSeat')} aria-expanded={open} onClick={() => setOpen(!open)}>
+        {ai ? AI_ICON : PLAYER_ICON}{kindName(type)}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div class="popup kind-menu" role="menu">
+          <button role="menuitemradio" aria-checked={ai} onClick={choose(!ai, toAi)}>{AI_ICON}<span>{t('lblAI')}</span><small>{t('lblWebLobbyAiPlaysSeat')}</small></button>
+          <button role="menuitemradio" aria-checked={!ai} onClick={choose(ai, toOpen)}>{PLAYER_ICON}<span>{t('lblWebLobbyOpenForPlayer')}</span><small>{t('lblWebLobbyOpenForPlayerHint')}</small></button>
+        </div>
+      )}
+    </span>
+  );
+}
 
 /** A number below count other than current, at random; current itself when it is the only one. */
 function another(current: number, count: number): number {
@@ -100,8 +131,8 @@ function randomDeck(model: Model, actions: Actions, index: number): void {
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
-function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount, choose, random }: {
-  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; avatarCount: number; sleeveCount: number;
+function Plate({ seat, index, lobby, actions, leaving, joinable, avatarCount, sleeveCount, choose, random }: {
+  seat: Seat; index: number; lobby: LobbyTable; actions: Actions; leaving: boolean; joinable: boolean; avatarCount: number; sleeveCount: number;
   choose: (kind: Picker['kind']) => void; random: () => void;
 }) {
   // Your own seat is the one the server dealt you, whatever type it wears on the host's side
@@ -117,8 +148,8 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
   const beforePools = !!lim && !lim.activeEventId;
   // With another player seated, each player presses Ready once their deck is chosen; the computer is always ready
   const pressReady = !lim && seat.type !== 'AI' && !waiting && lobby.seats.some(s => s.type !== 'AI' && s.type !== 'OPEN' && s.mine !== mine);
-  // The host turns a seat between a computer and one someone can join; everyone else only reads it
-  const swappable = lobby.host && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
+  // Where others can join, the host turns a seat between the AI's and one someone can take; everyone else only reads it
+  const swappable = lobby.host && joinable && !mine && (seat.type === 'AI' || seat.type === 'OPEN');
   // The host may hand their own seat to the computer and watch; a match is only ever watched from the host's seat
   const watchable = lobby.host && mine && (!lobby.limited || !!lobby.limited.activeEventId);
   // Any seat whose deck this browser chooses can be dealt one at random; an event's decks are its players' own pools
@@ -153,6 +184,8 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
         <button class="sleeve-style" title={t('lblWebSleevesChooseSleeve')} hidden={!hasDeck || !seat.mayEdit}
           onClick={() => choose('sleeve')}>{t('lblWebLobbyChangeSleeve')}</button>
       </div>
+      <button class="drop" aria-label={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.seats.length <= 2}
+        onClick={() => actions.removeSeat(index)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
       <div class="plate-body">
         <div class="who">
           {/* A seat nobody has taken has no face to show */}
@@ -162,17 +195,14 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
           <SeatName seat={seat} rename={name => actions.setSeat(index, { name })} />
           {watchable
             ? <button class="kind" title={t('lblWebLobbyWhoPlaysSeat')} aria-pressed={ui.spectate}
-                onClick={() => changeUi(u => { u.spectate = !u.spectate; })}>{t(ui.spectate ? 'lblWebLobbyKindComputer' : KIND.LOCAL)}</button>
-            : <button class="kind" disabled={!swappable} title={swappable ? t('lblWebLobbySwapSeat') : ''}
-                onClick={() => (seat.type === 'AI' ? actions.openSeat(index) : actions.aiSeat(index))}>
-                {mine ? t(KIND.LOCAL) : kindName(seat.type)}
-              </button>}
+                onClick={() => changeUi(u => { u.spectate = !u.spectate; })}>{t(ui.spectate ? 'lblAI' : KIND.LOCAL)}</button>
+            : swappable
+              ? <SeatKind type={seat.type} toAi={() => actions.aiSeat(index)} toOpen={() => actions.openSeat(index)} />
+              : <span class="kind">{mine ? t(KIND.LOCAL) : kindName(seat.type)}</span>}
           {seat.role && <span class={`role ${seat.role}`}>{t(seat.role === 'archenemy' ? 'lblArchenemy' : 'lblWebLobbyHero')}</span>}
           {lobby.host && seat.role === 'hero' && (
             <button class="make-archenemy" onClick={() => actions.setArchenemy(index)}>{t('lblWebLobbyMakeArchenemy')}</button>
           )}
-          <button class="drop" title={t('lblWebLobbyRemoveSeat')} hidden={mine || !lobby.host || lobby.seats.length <= 2}
-            onClick={() => actions.removeSeat(index)}>&times;</button>
         </div>
         {watchable && ui.spectate && <p class="seat-note">{t('lblWebLobbyComputerPlaysSeat')}</p>}
         {dealt && !waiting && <p class="deck-row fixed">{format?.facts[0]}</p>}

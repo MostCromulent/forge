@@ -1129,8 +1129,8 @@ final class Lobby {
         return true;
     }
 
-    /** New seats are computers added at the end, and removal takes open seats first, then computers, from the end, never a person's. */
-    void setPlayerCount(final int count) {
+    /** New seats are added at the end, open where others can join and the AI's otherwise. Removal takes open seats first, then the AI's, from the end, never a person's. */
+    void setPlayerCount(final int count, final boolean open) {
         final ServerGameLobby lobby = host();
         if (lobby == null || drafting(lobby)) {
             return;
@@ -1138,7 +1138,7 @@ final class Lobby {
         final int wanted = Math.min(maxSeats(), Math.max(2, count));
         while (lobby.getNumberOfSlots() < wanted) {
             final int before = lobby.getNumberOfSlots();
-            addSeat();
+            addSeat(open);
             if (lobby.getNumberOfSlots() == before) {
                 return;
             }
@@ -1162,11 +1162,15 @@ final class Lobby {
         return -1;
     }
 
-    private void addSeat() {
+    private void addSeat(final boolean open) {
         final ServerGameLobby lobby = host();
         if (lobby != null && !drafting(lobby) && lobby.getNumberOfSlots() < maxSeats()) {
             lobby.addSlot();
-            aiSeat(lobby.getNumberOfSlots() - 1);
+            if (open) {
+                openSeat(lobby.getNumberOfSlots() - 1);
+            } else {
+                aiSeat(lobby.getNumberOfSlots() - 1);
+            }
         }
     }
 

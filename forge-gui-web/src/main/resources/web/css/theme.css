@@ -37,6 +37,8 @@
   --pick: var(--accent-2);
   --attack: #ffffff;
   --danger: #f59e0b;
+  /* Taking something away for good. A red of its own, since the amber above reads as the gold of a choice. */
+  --remove: #e5383b;
   --error: #ef4a3c;
   /* Where a card you may play is sitting, from desktop's zone banners, all clear of the castable cyan and the prompt's lime */
   --zone-graveyard: #a98fe0;
