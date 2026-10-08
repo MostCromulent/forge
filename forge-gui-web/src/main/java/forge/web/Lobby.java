@@ -200,10 +200,10 @@ final class Lobby {
     static CardPools cardPools() {
         final var formats = FModel.getFormats();
         final List<CardPoolGroup> out = new ArrayList<>();
-        out.add(new CardPoolGroup("Sanctioned", names(formats.getSanctionedList())));
-        out.add(new CardPoolGroup("Casual", names(formats.getCasualList())));
-        out.add(new CardPoolGroup("Archived", names(formats.getArchivedList())));
-        out.add(new CardPoolGroup("Block", names(formats.getBlockList())));
+        out.add(new CardPoolGroup("Sanctioned", pools(formats.getSanctionedList())));
+        out.add(new CardPoolGroup("Casual", pools(formats.getCasualList())));
+        out.add(new CardPoolGroup("Archived", pools(formats.getArchivedList())));
+        out.add(new CardPoolGroup("Block", pools(formats.getBlockList())));
         // Which formats load depends on the install, so a heading can come up empty
         out.removeIf(g -> g.formats().isEmpty());
         return new CardPools(out);
@@ -247,6 +247,17 @@ final class Lobby {
             return Localizer.getInstance().getMessage(f.getRestrictedCards().isEmpty() ? "lblWebLobbyEverySet" : "lblWebLobbyEverySetRestricted");
         }
         return Localizer.getInstance().getMessage("lblWebLobbySetForward", first.getName());
+    }
+
+    /** The formats a 60-card Constructed game can take its cards from. A commander format's file is that format's ban list, so it is left out. */
+    private static List<String> pools(final Iterable<GameFormat> formats) {
+        final List<String> out = new ArrayList<>();
+        for (final GameFormat f : formats) {
+            if (f.getFormatSubType() != GameFormat.FormatSubType.COMMANDER) {
+                out.add(f.getName());
+            }
+        }
+        return out;
     }
 
     private static List<String> names(final Iterable<GameFormat> formats) {
