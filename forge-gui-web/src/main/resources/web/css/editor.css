@@ -7,8 +7,13 @@ html:not([data-form="portrait"]) #editor .editor-page { width: min(1500px, 94vw)
 /* The wordmark, volume and options belong to the page behind */
 html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon-button, .volume) { display: none; }
 .editor-page { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.editor-head .deck-name { background: none; border: 0; border-bottom: 1px dashed var(--line-bright); border-radius: 0; padding: 2px 0; font-size: 16px; font-weight: 650; }
-.editor-head .deck-name:hover { border-bottom-color: var(--accent-2); }
+/* The deck's name is the button for what can be done with the deck, so it wears a frame and a chevron */
+.editor-head .deck-name { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; padding: 5px 9px 5px 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; font-size: 16px; font-weight: 650; }
+.editor-head .deck-name > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-head .deck-name:hover, .editor-head .deck-name[aria-expanded="true"] { border-color: var(--accent-2); }
+.editor-head .deck-name .chevron { flex: none; width: 14px; height: 14px; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.name-menu { min-width: 0; }
+.name-menu .deck-menu { left: 0; right: auto; transform-origin: 0 0; }
 .deck-name-field { font-size: 16px; font-weight: 650; min-width: 260px; }
 .save-state { color: var(--muted); font-size: 12px; }
 .editor-head .legality, .imp-sub .legality, .finder-head .legality { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
@@ -29,14 +34,15 @@ html:not([data-form="portrait"]) #editor .editor-head :is(.wordmark-block, .icon
   position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 230px; padding: 5px; display: grid;
   background: var(--surface); border: 1px solid var(--line-bright); border-radius: 10px; box-shadow: 0 12px 34px var(--scrim-deep);
 }
-.deck-menu button { background: none; border: 0; text-align: left; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+.deck-menu button { display: flex; align-items: center; gap: 9px; background: none; border: 0; text-align: left; padding: 6px 10px; border-radius: 6px; font-size: 13px; }
+.deck-menu button svg { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .deck-menu button:hover { background: var(--surface-3); }
-.deck-menu .danger { color: var(--danger); }
+.deck-menu .danger { color: var(--remove); }
 .deck-menu hr { border: 0; border-top: 1px solid var(--line); margin: 4px 6px; }
 .menu-cap { padding: 4px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
 .editor-shell { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
 /* What only a phone shows: the tabs between the halves, the menu as dots, and the check in the deck's summary */
-.editor-tabs, .editor-head .dots, .deck-head .deck-check { display: none; }
+.editor-tabs, .deck-head .deck-check { display: none; }
 button.small { padding: 3px 10px; font-size: 12px; }
 button.link { background: none; border: 0; padding: 0; color: var(--accent-2); font-weight: 600; }
 
@@ -217,9 +223,6 @@ button.step { width: 20px; height: 20px; display: grid; place-items: center; pad
 .print-row.cur { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent-2); }
 .print-row.off { opacity: .45; }
 span.deck-name { border-bottom: 0 !important; }
-/* A menu's button says so with a chevron drawn on the word's own line, where a text arrowhead sat low and thin */
-.editor-head .word .chevron { width: 13px; height: 13px; margin-left: 5px; vertical-align: -2px; fill: none; stroke: var(--muted); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.editor-head button[aria-expanded="true"] .chevron { stroke: var(--text); }
 .editor-head .check-fixed { color: var(--muted); font-size: 12px; padding-left: 14px; border-left: 1px solid var(--line); }
 .land-row .land-set { font-size: 12px; padding: 2px 22px 2px 8px; max-width: 220px; }
 /* A deck built from a game mode's own cards: whose it is before its name, and the cards not yet played with */
