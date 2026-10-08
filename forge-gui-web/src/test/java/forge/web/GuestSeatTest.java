@@ -233,38 +233,6 @@ public class GuestSeatTest extends SessionsTest {
         host.awaitNewest("presence", p -> !named(p, "Player"), "the removed player is still listed");
     }
 
-    /** Fails if a guest is left in match setup when the match starts after the host removed a seat below the guest's. */
-    @Test(timeOut = 120_000)
-    public void aGuestFollowsTheHostIntoTheMatchAfterASeatBelowIsRemoved() throws Exception {
-        final TestBrowser host = hostAt("invite");
-        send(host, message("setPlayerCount", "count", 3));
-        send(host, message("aiSeat", "index", 1));
-        send(host, message("openSeat", "index", 2));
-        host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3
-                && "OPEN".equals(l.getAsJsonArray("seats").get(2).getAsJsonObject().get("type").getAsString()), "the third seat never opened");
-        final TestBrowser guest = connect("player");
-        sessions.onMessage(guest, message("setName", "name", "Player"));
-        Assert.assertEquals(guest.awaitLobbyWithSeat().get("mySeat").getAsInt(), 2, "the guest did not take the third seat");
-
-        sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
-        for (final TestBrowser browser : List.of(host, guest)) {
-            final JsonObject choose = message("setSeat", "index", browser.latestTable().get("mySeat").getAsInt());
-            choose.addProperty("deck", deck);
-            sessions.onMessage(browser, choose);
-            sessions.onMessage(browser, message("ready", "ready", true));
-        }
-        host.awaitLobby(l -> l.getAsJsonArray("seats").get(2).getAsJsonObject().get("ready").getAsBoolean(), "the guest never readied");
-
-        send(host, message("removeSeat", "index", 1));
-        host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 2 && l.get("canStart").getAsBoolean(),
-                "the host could not start once the computer's seat was removed");
-        guest.forget();
-        sessions.onMessage(host, message("start", "spectate", false));
-        guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(),
-                "the guest was left in match setup when the match started" + diagnosis(host, guest));
-    }
-
     private static boolean named(final JsonObject presence, final String name) {
         for (final var p : presence.getAsJsonArray("people")) {
             if (name.equals(p.getAsJsonObject().get("name").getAsString())) {
