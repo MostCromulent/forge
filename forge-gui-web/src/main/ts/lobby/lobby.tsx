@@ -59,7 +59,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
           {/* A seat can be added where it will appear, as well as by the count above */}
           {lobby.host && !lim && lobby.seats.length < lobby.maxSeats && (
-            <button class="plate add-seat" onClick={() => actions.setPlayerCount(lobby.seats.length + 1)}>
+            <button class="add-seat" onClick={() => actions.setPlayerCount(lobby.seats.length + 1)}>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('lblWebLobbyAddSeat')}
             </button>
           )}
