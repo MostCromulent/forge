@@ -280,6 +280,7 @@ probe('three opponents are behind a players button, and a change marks a hidden 
   expect(dock.y + dock.height).toBeLessThanOrEqual(664);
   await p.page.locator('#seat-switch').tap();
   await expect(tabs).toHaveCount(3);
+  await expect(tabs.first()).toBeVisible();
   for (const tab of await tabs.all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await tabs.nth(1).tap();
   // Each seat is looked at once, so what it holds now is what was seen
