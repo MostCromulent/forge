@@ -34,7 +34,8 @@ test('an offline draft is picked, saved, built and played as a gauntlet', async 
   await page.click('.draft-save button:has-text("Save")');
 
   await expect(page.locator('#editor')).toBeVisible({ timeout: 60_000 });
-  await expect(page.locator('.check-fixed')).toHaveText('Limited · 40 cards');
+  // The check is drawn again in the deck's summary, which only a phone shows
+  await expect(page.locator('.editor-head .check-fixed')).toHaveText('Limited · 40 cards');
   // A click picks into the main deck, so the deck opens already holding every pick
   await expect(page.locator('.deck-head .sizes')).toContainText('45 cards');
   await page.click('.editor-head button.primary');
