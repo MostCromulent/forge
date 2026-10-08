@@ -173,11 +173,16 @@ function paintArrows(model: Model): void {
       forced.forEach(attacker => ribbon(elementFor(obj.$key), elementFor(attacker.ref), KINDS.mustBlock));
     }
   }
-  const item = !phone && ui.hoveredStackItem !== null ? model.objects.get(ui.hoveredStackItem) : null;
-  if (item) {
-    const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
+  // Another player's spell or ability aimed at you or yours shows its arrows unasked; the rest show theirs under the pointer
+  const mine = (player?: Ref) => !!player && model.localPlayers.includes(player.ref);
+  for (const item of phone ? [] : derefAll(model, g.Stack) as StackItemView[]) {
     const targets = stackTargets(model, item);
-    targets.forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
+    const atMe = mode === '2' && !mine(item.ActivatingPlayer)
+      && targets.some(target => model.localPlayers.includes(target.$key) || mine((target as CardView).Controller));
+    if (atMe || item.$key === ui.hoveredStackItem) {
+      const from = document.querySelector<HTMLElement>(`.stack-item[data-key="${item.$key}"]`);
+      targets.forEach(target => ribbon(from, elementFor(target.$key), KINDS.target));
+    }
   }
   drawQueued(ctx);
 }
@@ -277,8 +282,9 @@ function drawAim(ctx: CanvasRenderingContext2D, model: Model): void {
     const clicked = lastAim?.key === key ? lastAim.targets : [];
     lastAim = { key, targets: [...new Set([...p.highlighted, ...clicked])] };
   } else {
-    // Paying for it, the prompt no longer names the targets, so the ones last picked stay drawn from its waiting slot
-    const waiting = p?.paying && lastAim ? onStack(lastAim.key) : null;
+    // Paying for it, the prompt no longer names the targets, so the ones last picked stay drawn from its waiting slot, through any prompt on the way to paying
+    const slot = lastAim && !p?.priority ? onStack(lastAim.key) : null;
+    const waiting = slot?.classList.contains('awaiting') ? slot : null;
     if (waiting && lastAim) {
       const targets = lastAim.targets;
       targets.forEach(k => ribbon(waiting, elementFor(k) ?? onStack(String(k)), KINDS.target));
@@ -477,7 +483,7 @@ function drawQueued(ctx: CanvasRenderingContext2D): void {
       const off = (rank - (arrows.length - 1) / 2) * gap;
       const aim = { x: c.x + across.x * off, y: c.y + across.y * off };
       const a = edge(q.from, aim, 2);
-      arrow(ctx, a, aim, q.kind, reach(a, aim, to, 6) * (q.grows ? growth(q.from, q.to, q.kind) : 1));
+      arrow(ctx, a, aim, q.kind, reach(a, aim, to, 6) * growth(q.from, q.to, q.kind, q.grows));
     });
   }
   queued = [];
@@ -514,11 +520,11 @@ const ids = new WeakMap<Element, number>();
 let nextId = 0;
 const idOf = (el: Element) => ids.get(el) ?? (ids.set(el, ++nextId), nextId);
 
-/** How far along an arrow is, from 0 as it first appears to 1 once it has reached its target. */
-function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind): number {
+/** How far along an arrow is, from 0 as it first appears to 1 once it has reached its target. One drawn whole is remembered as grown, so it stays whole if it then becomes one that grows. */
+function growth(from: HTMLElement, to: HTMLElement, kind: ArrowKind, grows: boolean): number {
   if (reducedMotion()) return 1;
   const key = `${idOf(from)}>${idOf(to)}>${kind.core}`;
-  const first = born.get(key) ?? performance.now();
+  const first = grows ? born.get(key) ?? performance.now() : -Infinity;
   drawnNow.set(key, first);
   const t = Math.min(1, (performance.now() - first) / GROW_MS);
   if (t < 1) growing = true;
