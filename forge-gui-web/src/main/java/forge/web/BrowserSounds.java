@@ -26,8 +26,10 @@ final class BrowserSounds {
 
             @Override
             public SoundEffectType visit(final GameEventBlockersDeclared event) {
-                // Your own blocks already made their sound as you declared them
-                return isLocal.test(event.defendingPlayer()) ? null : SoundEffectType.Block;
+                // Your own blocks already made their sound as you declared them, and an attacker nobody blocked is listed against itself
+                final boolean blocked = event.blockers().values().stream()
+                        .anyMatch(pairs -> pairs.entries().stream().anyMatch(pair -> !pair.getKey().equals(pair.getValue())));
+                return blocked && !isLocal.test(event.defendingPlayer()) ? SoundEffectType.Block : null;
             }
         };
     }
