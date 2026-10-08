@@ -637,6 +637,7 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .roster { margin: 0; padding: 6px 8px; list-style: none; display: grid; gap: 1px; border-bottom: 1px solid var(--line); }
 .roster li { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
 .roster li.watching .who { color: var(--muted); }
+.roster li.arrived { background: var(--accent-soft); box-shadow: inset 2px 0 var(--accent-2); }
 .face-small { width: 21px; height: 21px; flex: none; border-radius: 50%; object-fit: cover; }
 .roster .who { font-size: 12px; }
 .roster .spacer { flex: 1; }
@@ -646,6 +647,9 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .roster .face-change { padding: 0; border: none; border-radius: 50%; background: none; display: grid; }
 .roster .face-change:hover { box-shadow: 0 0 0 2px var(--accent-2); }
 .roster .doing { font-size: 11px; color: var(--muted); }
+.roster .seat-gone { display: flex; align-items: center; gap: 3px; padding: 1px 4px 1px 8px; border-radius: 999px; background: var(--accent-soft); border-color: var(--accent-2); color: var(--text); font-size: 11px; }
+.roster .seat-gone .chev { width: 12px; height: 12px; stroke: var(--accent-2); }
+.roster .deck-menu { width: 190px; }
 /* The crown says who holds the host's seat; the label on it says so to a screen reader */
 .crown { width: 13px; height: 13px; flex: none; fill: none; stroke: var(--accent-2); stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 

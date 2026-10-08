@@ -260,6 +260,26 @@ public final class WebSession {
         return browser != null;
     }
 
+    BrowserChannel browser() {
+        return browser;
+    }
+
+    /** Whether this guest holds a seat at the host's table, which it keeps while its browser is gone. */
+    boolean seatedAsGuest() {
+        final Stage now = stage;
+        return !isHost && (now instanceof Setup || now instanceof Playing p && p.invited());
+    }
+
+    /** This session's seat at the table it sits at, or -1. */
+    int seatIndex() {
+        return local.webSeat();
+    }
+
+    /** The host hands another seat of its running match to the AI. */
+    void handSeatToAi(final int seat) {
+        local.handToAi(seat);
+    }
+
     /** Whether this session holds the host's seat. */
     boolean hosting() {
         return isHost;
@@ -416,6 +436,17 @@ public final class WebSession {
             case "setLimited", "eventSetup", "eventStart", "eventNew", "benchSeat", "eventDecksOnly", "eventHostAgain", "eventForget" -> {
                 if (stage instanceof Setup) {
                     onEvent(channel, msg);
+                }
+            }
+            case "giveSeat" -> {
+                if (isHost) {
+                    final FromBrowser.GiveSeat give = Wire.decode(msg, FromBrowser.GiveSeat.class);
+                    sessions.giveSeat(give.from(), give.to());
+                }
+            }
+            case "dropPlayer" -> {
+                if (isHost) {
+                    sessions.dropPlayer(Wire.decode(msg, FromBrowser.DropPlayer.class).name());
                 }
             }
             case "chat" -> {
@@ -689,10 +720,13 @@ public final class WebSession {
             case "ready" -> lobby.setReady(Wire.decode(msg, Ready.class).ready());
             case "openSeat", "aiSeat", "removeSeat" -> {
                 final SeatCommand seat = Wire.decode(msg, SeatCommand.class);
-                switch (seat.t()) {
-                    case openSeat -> lobby.openSeat(seat.index());
-                    case aiSeat -> lobby.aiSeat(seat.index());
-                    case removeSeat -> lobby.removeSeat(seat.index());
+                // A guest's seat is emptied by sending the guest away, which opens it; the seat itself goes only once it is empty
+                if (!isHost || seat.t() == FromBrowser.SeatAction.aiSeat || !sessions.releaseGuestAt(seat.index())) {
+                    switch (seat.t()) {
+                        case openSeat -> lobby.openSeat(seat.index());
+                        case aiSeat -> lobby.aiSeat(seat.index());
+                        case removeSeat -> lobby.removeSeat(seat.index());
+                    }
                 }
             }
             case "setFormat" -> {
@@ -852,7 +886,7 @@ public final class WebSession {
         final Opening joining = new Opening();
         final Stage from = stage;
         // Only one seat is taken at a time: the stage says a join is under way until it lands or fails
-        if (isHost || !(from instanceof Menu) || !sessions.hostHasGame() || browser == null || seatName == null
+        if (isHost || !(from instanceof Menu) || !sessions.hostHasGame() || sessions.hostPlaying() || browser == null || seatName == null
                 || !move(from, joining)) {
             return;
         }

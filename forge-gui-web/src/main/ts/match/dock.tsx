@@ -41,14 +41,31 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   if (open || model.inMatch) {
     lastSeen.current = model.chat[model.chat.length - 1];
   }
+  // Who was here when the dock was last touched, so anyone who has arrived since is marked until it is touched again
+  const known = useRef<Set<string> | null>(null);
+  const [, redraw] = useState(0);
 
   const people = model.presence;
   if (!people.length) {
     return null;
   }
+  known.current ??= new Set(people.map(p => p.name));
+  const arrived = people.filter(p => !known.current!.has(p.name) && p.name !== model.playerName);
+  const arrivedBadge = arrived.length > 0 && (
+    <span key={arrived.length} class="dock-new">{t('lblWebDockJoined', arrived.length === 1 ? arrived[0].name : arrived.length)}</span>
+  );
+  const sawArrivals = () => {
+    if (arrived.length) {
+      known.current = new Set(people.map(p => p.name));
+      redraw(n => n + 1);
+    }
+  };
   const inMatch = model.inMatch;
   // In a match the roster is a summary until asked, because the board already names everyone with a seat
-  const showList = !inMatch || listed;
+  const mayReseat = model.host && people.some(p => p.disconnected);
+  // A disconnected seat is the host's to settle, so the host is shown it without asking
+  const showList = !inMatch || listed || mayReseat;
+  const waiting = people.filter(p => !p.host && !p.disconnected && (p.doing === 'waiting' || p.doing === 'joining'));
   const host = people.find(p => p.host);
   const watching = people.filter(p => p.doing === 'watching').length;
   const seated = people.filter(p => p.doing !== 'watching');
@@ -56,13 +73,14 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   if (!inMatch && !open) {
     const unread = unreadSince(model.chat, lastSeen.current, model.playerName);
     return (
-      <button class={unread ? 'dock folded unread' : 'dock folded'} onClick={() => setOpen(true)}>
+      <button class={unread || arrived.length ? 'dock folded unread' : 'dock folded'} onClick={() => setOpen(true)}>
         <span class="faces" aria-hidden="true">
           {people.slice(0, 3).map(p => <img key={p.name} alt="" src={avatarUrl(p.avatar)} />)}
         </span>
         <span class="dock-count">{t('lblWebDockHere', people.length)}</span>
         {/* Keyed on the count, so each new line redraws it and it pulses again */}
         {unread > 0 && <span key={unread} class="dock-new">{t('lblWebDockNew', unread > 9 ? '9+' : unread)}</span>}
+        {arrivedBadge}
       </button>
     );
   }
@@ -79,6 +97,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
   );
   return (<>
     <section class={inMatch ? 'dock open in-match' : closing ? 'dock open closing' : 'dock open'} aria-label={t('lblWebDockWhoIsHere')}
+      onPointerDown={sawArrivals}
       onAnimationEnd={e => {
         // The panel folds once it has slid down, so the bar takes its place without a jump
         if (e.animationName === 'dock-sink') {
@@ -94,6 +113,7 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           <span class="dock-sum">
             {host ? t('lblWebDockHosts', host.name) : t('lblWebDockAtThisTable')}{watching ? ` · ${t('lblWebDockNumWatching', watching)}` : ''}
           </span>
+          {arrivedBadge}
           <Chevron up={!listed} />
         </button>
       ) : (
@@ -101,13 +121,14 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
           <span class="live" aria-hidden="true" />
           <b>{t('lblWebDockOnThisServer')}</b>
           <span class="dock-count">{people.length}</span>
+          {arrivedBadge}
           <Chevron up={false} />
         </button>
       )}
       {showList && (
         <ul class="roster">
           {people.map(p => (
-            <li key={p.name} class={p.doing === 'watching' ? 'watching' : ''}>
+            <li key={p.name} class={`${p.doing === 'watching' || p.disconnected ? 'watching' : ''}${arrived.includes(p) ? ' arrived' : ''}`}>
               {!inMatch && p.name === model.playerName
                 ? <button class="face-change" title={t('lblWebMenuSelectAvatar')} aria-label={t('lblWebMenuSelectAvatar')} onClick={() => setPicking(true)}>
                     <img class="face-small" alt="" src={avatarUrl(p.avatar)} /></button>
@@ -120,7 +141,9 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
                 </button>
               )}
               <span class="spacer" />
-              <span class="doing">{DOING[p.doing] ? t(DOING[p.doing]) : p.doing}</span>
+              {mayReseat && p.disconnected && (waiting.length > 0 || !model.drafting)
+                ? <SeatMenu name={p.name} waiting={waiting} inMatch={inMatch} mayDrop={!model.drafting} actions={actions} />
+                : <span class="doing">{p.disconnected ? t('lblWebDockDisconnected') : DOING[p.doing] ? t(DOING[p.doing]) : p.doing}</span>}
             </li>
           ))}
         </ul>
@@ -146,6 +169,34 @@ export function Dock({ model, actions, rename }: { model: Model; actions: Action
     </section>
     {picker}
   </>);
+}
+
+/** What the host can do with a seat whose player has disconnected: give it to someone waiting, or take it away. */
+function SeatMenu({ name, waiting, inMatch, mayDrop, actions }: {
+  name: string; waiting: readonly Person[]; inMatch: boolean; mayDrop: boolean; actions: Actions;
+}) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const away = () => setOpen(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  return (
+    <div class="menu-anchor" onPointerDown={e => e.stopPropagation()}>
+      <button class="seat-gone" aria-expanded={open} onClick={() => setOpen(!open)}>{t('lblWebDockDisconnected')}<Chevron up={open} /></button>
+      {open && (
+        <div class="deck-menu" role="menu">
+          <span class="menu-cap">{name}</span>
+          {waiting.map(w => (
+            <button key={w.name} role="menuitem" onClick={() => actions.giveSeat(name, w.name)}>{t('lblWebDockGiveSeatTo', w.name)}</button>
+          ))}
+          {/* A drafter's seat is held by the draft, so it cannot be opened */}
+          {mayDrop && <button role="menuitem" onClick={() => actions.dropPlayer(name)}>{t(inMatch ? 'lblWebDockSeatToAi' : 'lblWebDockOpenSeat')}</button>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Chevron({ up }: { up: boolean }) {

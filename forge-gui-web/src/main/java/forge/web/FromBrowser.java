@@ -38,6 +38,16 @@ final class FromBrowser {
     record Say(String text) {
     }
 
+    /** The host gives a disconnected player's seat to someone waiting, who plays on from where it was left. */
+    @Command("giveSeat")
+    record GiveSeat(String from, String to) {
+    }
+
+    /** The host takes a disconnected player's seat away: it opens at the table, and the AI plays it in a match. */
+    @Command("dropPlayer")
+    record DropPlayer(String name) {
+    }
+
     @Command("ready")
     record Ready(boolean ready) {
     }

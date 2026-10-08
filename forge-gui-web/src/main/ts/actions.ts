@@ -43,6 +43,8 @@ export interface Actions {
   askStackMenu(itemKey: number): void;
   stackYield(itemKey: number, action: YieldAction): void;
   say(text: string): void;
+  giveSeat(from: string, to: string): void;
+  dropPlayer(name: string): void;
   setSetting(key: string, value: string): void;
 
   // The start page
@@ -261,6 +263,8 @@ export function createActions(send: Send): Actions {
     askStackMenu: key => send({ t: 'stackMenu', key }),
     stackYield: (key, action) => send({ t: 'stackYield', key, action }),
     say: text => send({ t: 'chat', text }),
+    giveSeat: (from, to) => send({ t: 'giveSeat', from, to }),
+    dropPlayer: name => send({ t: 'dropPlayer', name }),
     setSetting: (key, value) => send({ t: 'setSetting', key, value }),
     setName: (name, avatar) => send({ t: 'setName', name, avatar }),
     openLobby: invite => send({ t: invite ? 'invite' : 'lobby' }),

@@ -54,8 +54,8 @@ final class ToBrowser {
     record Presence(List<Person> people) {
     }
 
-    /** What a person is doing: waiting, joining, at a table, playing or watching one. */
-    record Person(String name, int avatar, String doing, boolean host) {
+    /** What a person is doing: waiting, joining, at a table, playing or watching one. disconnected is a guest whose browser has gone while it holds a seat. */
+    record Person(String name, int avatar, String doing, boolean host, boolean disconnected) {
     }
 
     @Message("error")

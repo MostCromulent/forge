@@ -260,6 +260,8 @@ export function rememberAvatar(index: number): void {
 function Waiting({ model, actions }: { model: Model; actions: Actions }) {
   const failed = !model.joining && !!model.error;
   const state = model.joining ? 'joining' : failed ? 'failed' : 'idle';
+  // A match takes nobody new, so the wait is for the host to give up a seat or open the next table
+  const midMatch = state === 'idle' && model.presence.some(p => p.host && (p.doing === 'playing' || p.doing === 'watching'));
   return (
     <div class="menu-page">
       <Wordmark />
@@ -271,12 +273,12 @@ function Waiting({ model, actions }: { model: Model; actions: Actions }) {
         </ol>
         <div class="wait-head">
           <span class="wait-mark" aria-hidden="true" />
-          <b>{t(model.joining ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : 'lblWebMenuNoTableYet')}</b>
+          <b>{t(model.joining ? 'lblWebMenuTakingSeat' : failed ? 'lblWebMenuCouldNotTakeSeat' : midMatch ? 'lblWebMenuMatchInProgress' : 'lblWebMenuNoTableYet')}</b>
         </div>
         <p class="wait-body">
           {model.joining ? t('lblWebMenuMakingRoom')
             : failed ? model.error
-              : t(model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
+              : t(midMatch ? 'lblWebMenuSeatedAfterMatch' : model.canClaimHost ? 'lblWebMenuNobodyHosting' : 'lblWebMenuSeatedWhenOpens')}
         </p>
         <div class="wait-buttons">
           {failed && <button onClick={() => actions.join()}>{t('lblWebMenuTryAgain')}</button>}

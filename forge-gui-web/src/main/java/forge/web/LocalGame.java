@@ -307,6 +307,13 @@ public final class LocalGame {
         server.convertToAI(seat);
     }
 
+    /** Hands another seat of the running match to an AI, which only the host can do. Outside a match it does nothing. */
+    public void handToAi(final int seat) {
+        if (hosted != null) {
+            server.replaceWithAI(seat);
+        }
+    }
+
     public HostedMatch hostedMatch() {
         return hosted == null ? null : hosted.getHostedMatch();
     }

@@ -192,6 +192,73 @@ final class WebSessions implements WebServer.Endpoint {
         }
     }
 
+    /** The seated guest of this name, which a session that left its seat can still carry. */
+    private WebSession seatedGuest(final String name) {
+        for (final WebSession session : byId.values()) {
+            if (session.seatedAsGuest() && name != null && name.equals(session.playerName())) {
+                return session;
+            }
+        }
+        return null;
+    }
+
+    private boolean drafting() {
+        final ServerGameLobby table = hostLobby();
+        return table != null && table.getDraftHost() != null && !table.getDraftHost().isFinished();
+    }
+
+    /** The host gives a disconnected guest's seat to a browser that is waiting, which takes over the session that holds it. */
+    void giveSeat(final String from, final String to) {
+        final WebSession seat;
+        final WebSession taker;
+        final BrowserChannel channel;
+        synchronized (this) {
+            seat = seatedGuest(from);
+            taker = byId.values().stream().filter(s -> s.attached() && s != host && !s.hasGame() && to != null && to.equals(s.playerName()))
+                    .findFirst().orElse(null);
+            channel = taker == null ? null : taker.browser();
+            if (seat == null || channel == null || seat.attached()) {
+                return;
+            }
+            // The browser that left would otherwise come back to the seat it no longer has
+            byId.values().remove(seat);
+            byId.replaceAll((key, session) -> session == taker ? seat : session);
+            byChannel.put(channel, seat);
+        }
+        taker.disconnected(channel);
+        taker.shutdown();
+        seat.connected(channel);
+        announcePresence();
+    }
+
+    /** The host takes a disconnected guest's seat away, and the guest's name with it. */
+    void dropPlayer(final String name) {
+        final WebSession seat = seatedGuest(name);
+        final WebSession h = host;
+        // A drafter who has left is the draft host's to deal with, which holds the seat for a return
+        if (seat == null || h == null || seat.attached() || drafting()) {
+            return;
+        }
+        // A match cannot lose a player, so the AI plays on; a table's seat opens when the guest's connection closes
+        h.handSeatToAi(seat.seatIndex());
+        seat.gameGone();
+        announcePresence();
+    }
+
+    /** Sends the guest in this seat of the host's table back to wait, which opens the seat. False when no guest holds it. */
+    boolean releaseGuestAt(final int index) {
+        final ServerGameLobby table = hostLobby();
+        if (table == null || drafting() || index < 0 || index >= table.getNumberOfSlots()) {
+            return false;
+        }
+        // By name, because a client keeps the seat number it sat down at when a seat below it is removed
+        final WebSession guest = seatedGuest(table.getSlot(index).getName());
+        if (guest != null) {
+            guest.gameGone();
+        }
+        return guest != null;
+    }
+
     /** The host's lobby, where the table's event and its draft run, or null when nobody is hosting one. */
     ServerGameLobby hostLobby() {
         final WebSession h = host;
@@ -228,6 +295,12 @@ final class WebSessions implements WebServer.Endpoint {
     /** How many sessions have a browser attached right now. */
     int playersHere() {
         return (int) byId.values().stream().filter(WebSession::attached).count();
+    }
+
+    /** Whether the host's table is in a match, which takes nobody new. */
+    boolean hostPlaying() {
+        final ServerGameLobby table = hostLobby();
+        return table != null && table.isMatchActive();
     }
 
     boolean hostHasGame() {
@@ -300,14 +373,15 @@ final class WebSessions implements WebServer.Endpoint {
         final List<Person> people = new ArrayList<>();
         for (final WebSession session : byId.values()) {
             final String who = session.playerName();
-            if (who != null && session.attached()) {
-                people.add(new Person(who, session.avatarIndex(), session.doing(), session.hosting()));
+            final boolean disconnected = !session.attached() && session.seatedAsGuest();
+            if (who != null && (session.attached() || disconnected)) {
+                people.add(new Person(who, session.avatarIndex(), session.doing(), session.hosting(), disconnected));
             }
         }
         final WebSession h = host;
         final List<LobbySlot> apps = appSeats();
         for (final LobbySlot seat : apps) {
-            people.add(new Person(seat.getName(), seat.getAvatarIndex(), h.doing(), false));
+            people.add(new Person(seat.getName(), seat.getAvatarIndex(), h.doing(), false, false));
         }
         appSeatNames = apps.stream().map(LobbySlot::getName).toList();
         return new Presence(people);
