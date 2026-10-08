@@ -514,7 +514,7 @@ function IdentityPanel({ value, apply }: { value: DeckFilter['identity']; apply:
 
 const SOURCE_NAMES: Record<string, TextKey> = {
   all: 'lblWebFinderSourceAll', [NET]: 'lblWebFinderSourceNet', yours: 'lblWebFinderSourceYours', device: 'lblWebFinderSourceDevice',
-  linked: 'lblWebFinderSourceLinked', precons: 'lblWebFinderSourcePrecons', quest: 'lblWebFinderSourceQuest', generated: 'lblWebFinderSourceGenerated',
+  linked: 'lblWebFinderSourceLinked', precons: 'lblWebFinderSourcePrecons', generated: 'lblWebFinderSourceGenerated',
 };
 const sourceName = (id: string) => (SOURCE_NAMES[id] ? t(SOURCE_NAMES[id]) : id.charAt(0).toUpperCase() + id.slice(1));
 

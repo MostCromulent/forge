@@ -56,7 +56,6 @@ final class DeckCatalog {
     static final String LINKED = "linked";
     static final String EVENT = "event";
     private static final String PRECON = "precons";
-    private static final String QUEST = "quest";
     /** Sources that make a deck when you pick one, rather than loading a saved deck. */
     private static final String GENERATED = "generated";
     private static final String NET = "net";
@@ -250,7 +249,6 @@ final class DeckCatalog {
                 add(out, format, DeckProxy.getAllCommanderPreconDecks(), PRECON);
             } else if (format == GameType.Constructed) {
                 add(out, format, DeckProxy.getAllPreconstructedDecks(QuestController.getPrecons()), PRECON);
-                add(out, format, DeckProxy.getAllQuestEventAndChallenges(), QUEST);
                 addGenerators(out);
             }
             for (final NetDeckCategory category : netCategories) {
