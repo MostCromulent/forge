@@ -65,6 +65,9 @@ const PLAY_MS = 260;
 const SHIFT_MS = 340;
 /** Cards moving together (a deal, a mulligan, a discard) set off this far apart, so each can be followed. */
 const STAGGER_MS = 110;
+/** A hand swapped for another (a mulligan) is two runs of cards, so each card's trip and the gap between them are shorter. */
+const SWAP_MS = 350;
+const SWAP_STAGGER_MS = 70;
 /** How long a spell may wait once no cost is being paid for it; past this its stack item is not coming. */
 const SETTLE_MS = 900;
 const POP_MS = 220;
@@ -223,15 +226,20 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     }
     land(key);
   }
+  // A hand that leaves as another is dealt (a mulligan) has gone before the first new card sets off, and both go quicker
+  const swap = dealt.length > 0 && leavingHand.length > 0;
+  const ms = swap ? SWAP_MS : FLIGHT_MS;
+  const apart = swap ? SWAP_STAGGER_MS : STAGGER_MS;
+  const afterLeaving = swap ? (leavingHand.length - 1) * apart + ms : 0;
   // Cards drawn together land from left to right, wherever the hand's sort puts each one
   dealt.sort((a, b) => restingRect(a.el).left - restingRect(b.el).left).forEach(({ el, start }, i) =>
-    fly(el, start, FLIGHT_MS, i * STAGGER_MS));
+    fly(el, start, ms, afterLeaving + i * apart));
   // The host's draw sound is heard as the first card sets off; each card after it makes its own as it follows
-  echoSound('draw', dealt.slice(1).map((_, i) => (i + 1) * STAGGER_MS));
+  echoSound('draw', dealt.slice(swap ? 0 : 1).map((_, i) => afterLeaving + (swap ? i : i + 1) * apart));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
   leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key }, i) => {
-    if (tile) holdTile(key, i * STAGGER_MS);
-    sendTo(was, target ?? was.rect, tile ? 1 : target ? 0.25 : 0, i * STAGGER_MS);
+    if (tile) holdTile(key, i * apart);
+    sendTo(was, target ?? was.rect, tile ? 1 : target ? 0.25 : 0, i * apart, undefined, ms);
   });
   settleWaiting(!!model.prompt?.paying);
   const travelled = new Set(trips.keys());
