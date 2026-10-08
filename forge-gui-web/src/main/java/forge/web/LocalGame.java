@@ -12,6 +12,7 @@ import forge.gamemodes.match.PreparedMatch;
 import forge.gamemodes.match.LobbySlot;
 import forge.gamemodes.match.LobbySlotType;
 import forge.gamemodes.net.ChatMessage;
+import forge.gamemodes.net.NetworkLogConfig;
 import forge.gamemodes.net.client.ClientGameLobby;
 import forge.gamemodes.net.client.FGameClient;
 import forge.gamemodes.net.event.NetEvent;
@@ -97,6 +98,7 @@ public final class LocalGame {
         awaitOldSeatsFreed();
         // The server costs nothing to leave running, so it outlives every game it serves
         if (!HostingServer.isHosting()) {
+            NetworkLogConfig.activateNetworkLogging();
             server.startLoopbackServer();
             startedServer = true;
         }
