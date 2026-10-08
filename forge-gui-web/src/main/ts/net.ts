@@ -3,11 +3,12 @@ import type { ClientMessage, Send, ServerMessage } from './protocol';
 // The id says which browser this is, so a reload returns to the seat it left instead of taking another one.
 const ID_KEY = 'forge.clientId';
 
-function clientId(): string {
+export function clientId(): string {
   try {
     let id = localStorage.getItem(ID_KEY);
     if (!id) {
-      id = crypto.randomUUID();
+      // randomUUID exists only on https or localhost, and a guest's link is usually plain http
+      id = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
       localStorage.setItem(ID_KEY, id);
     }
     return id;
