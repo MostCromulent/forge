@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { store, stored } from '../storage';
 import { imageUrl } from '../images';
-import { Curve } from './deckhalf';
+import { Curve, useDeckView } from './deckhalf';
 import { CardGroup, SITES } from './importer';
 import { ColourToggles, Pips, toggled } from '../symbols';
 import { changeUi, ui } from '../ui';
@@ -598,11 +598,7 @@ function Chosen({ details }: { details: DeckDetails }) {
   const s = details.stats;
   // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
-  const [cards, setCards] = useState(() => stored(VIEW_KEY) === 'cards');
-  const view = (asCards: boolean) => {
-    setCards(asCards);
-    store(VIEW_KEY, asCards ? 'cards' : 'list');
-  };
+  const [cards, view] = useDeckView();
   return (
     <>
       <div class="dk-chosen-head">
@@ -638,7 +634,6 @@ export function BracketMark({ level }: { level: number }) {
 }
 
 const BRACKET_OPEN_KEY = 'forge.bracketOpen';
-const VIEW_KEY = 'forge.finderView';
 
 /** A Commander deck's bracket in one row that opens to each reason and its cards, remembering whether it was left open. */
 function BracketPanel({ bracket }: { bracket: Bracket }) {

@@ -22,12 +22,7 @@ export function DeckHalf({ actions, state, handlers, check }: {
   actions: Actions; state: EditorState; handlers: CardHandlers; check?: ComponentChildren;
 }) {
   const [by, setBy] = useState<GroupBy>(storedGroup);
-  // Stacked cards are too small to read on a phone, so there the deck opens as a list until the player says otherwise
-  const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
-  const view = (asCards: boolean) => {
-    setCards(asCards);
-    store(VIEW_KEY, asCards ? 'cards' : 'list');
-  };
+  const [cards, view] = useDeckView();
   const [hand, setHand] = useState<EditorCard[] | null>(null);
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
@@ -264,6 +259,16 @@ function SampleHand({ hand, again, more, close }: { hand: EditorCard[]; again: (
 
 function showProblems(): void {
   document.querySelector('.editor-page .ed-line.bad, .editor-page .commander .flag')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/** Whether a deck is drawn as cards rather than as a list, and the way to change it; the editor and the deck finder share the choice. */
+export function useDeckView(): [boolean, (asCards: boolean) => void] {
+  // Stacked cards are too small to read on a phone, so there the deck opens as a list until the player says otherwise
+  const [cards, setCards] = useState(() => (stored(VIEW_KEY) ?? (isPortrait() ? 'list' : 'cards')) !== 'list');
+  return [cards, asCards => {
+    setCards(asCards);
+    store(VIEW_KEY, asCards ? 'cards' : 'list');
+  }];
 }
 
 function storedGroup(): GroupBy {
