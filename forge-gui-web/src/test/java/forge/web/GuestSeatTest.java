@@ -257,7 +257,6 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(host, message("start", "spectate", false));
         guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the guest was not taken into the match");
         final HostedMatch match = sessions.hostLobby().getHostedMatch();
-        // A game is safe to end only once it asks a player something, which is after its zones are dealt
         awaitTrue(() -> match.getGame() != null && match.getHumanControllers().stream().anyMatch(c -> c.getInputQueue().getInput() != null),
                 "the first game never asked a player anything");
         final Game first = match.getGame();
@@ -267,6 +266,8 @@ public class GuestSeatTest extends SessionsTest {
         send(host, message("dropPlayer", "name", "Player"));
         awaitTrue(() -> first.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
                 "the removed player's seat was not handed to the AI");
+        // A game is safe to end only while it waits on the host. If the removed seat held the question of who plays first, the deal is running now
+        awaitPriority(host);
         send(host, JsonCodec.message("concede"));
         host.awaitMatching("gameOver", g -> true, "the host was not shown the first game's result");
         Assert.assertFalse(first.getMatch().isMatchOver(), "one game decided a match of three");

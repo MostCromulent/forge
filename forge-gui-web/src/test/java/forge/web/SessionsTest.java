@@ -1,5 +1,6 @@
 package forge.web;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import forge.game.Game;
 import forge.game.player.Player;
@@ -170,10 +171,17 @@ abstract class SessionsTest {
                     if (input instanceof InputPassPriority) {
                         return true;
                     }
-                    // Keeping the opening hand is an input of its own, answered with OK
                     if (input != null && System.currentTimeMillis() - lastPress[0] > 500) {
                         lastPress[0] = System.currentTimeMillis();
-                        sessions.onMessage(host, JsonCodec.message("ok"));
+                        // At a table of more than two the winner of the toss names who goes first, which OK does not answer
+                        final JsonObject prompt = host.last("prompt");
+                        final JsonArray players = prompt == null ? null : prompt.getAsJsonArray("selectablePlayers");
+                        if (players != null && !players.isEmpty()) {
+                            sessions.onMessage(host, message("selectPlayer", "key", players.get(0).getAsJsonObject().get("ref").getAsInt()));
+                        } else {
+                            // Keeping the opening hand is an input of its own, answered with OK
+                            sessions.onMessage(host, JsonCodec.message("ok"));
+                        }
                     }
                 }
             }
