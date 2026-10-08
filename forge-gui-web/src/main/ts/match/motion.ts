@@ -754,6 +754,10 @@ function fly(el: HTMLElement, from: DOMRect, duration: number, delay: number): v
     { translate: '0px 0px', scale: '1', opacity: 1 },
   ], { duration, delay, easing: EASE, fill: 'backwards' });
   flight.id = FLIGHT;
+  // A ring marks a card where it rests, so a card in the air wears none until it lands (board.css)
+  el.classList.add('landing');
+  const landed = () => { if (!el.getAnimations().some(a => a.id === FLIGHT)) el.classList.remove('landing'); };
+  flight.finished.then(landed, landed);
 }
 
 // The card is already gone from the model, so a copy of it makes the trip
