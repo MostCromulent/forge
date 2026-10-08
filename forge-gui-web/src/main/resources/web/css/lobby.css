@@ -373,6 +373,9 @@ html:not([data-form="portrait"]) .finder:has(.rail) .rail h4 { display: none; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source { flex: none; height: 38px; gap: 6px; border-radius: 0; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source:hover { background: none; color: var(--text); }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source[aria-pressed="true"] { background: none; box-shadow: none; color: var(--accent-2); border-bottom-color: var(--accent-2); }
+/* A tab's count is a badge, so it reads as a number about the tab and not as more of its name */
+html:not([data-form="portrait"]) .finder:has(.rail) .rail section > .source .dk-count { min-width: 12px; padding: 0 6px; border-radius: 9px; background: var(--surface-2); font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; }
+html:not([data-form="portrait"]) .finder:has(.rail) .rail section > .source[aria-pressed="true"] .dk-count { background: var(--accent-soft); color: var(--accent-2); }
 /* Net decks have categories of their own, which take a row under the tabs while net decks are the ones listed */
 html:not([data-form="portrait"]) .finder:has(.rail) .net-cats { order: 1; flex: 0 0 100%; flex-flow: row wrap; gap: 6px; margin: 0; padding: 8px 10px; border-left: 0; border-top: 1px solid var(--line); }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .net-cats .source { height: 28px; padding: 0 11px; border: 1px solid var(--line); border-radius: 14px; font-size: 12.5px; }
