@@ -507,3 +507,5 @@ html[data-form="portrait"] #editor .land-row .step { width: 36px; height: 36px; 
 /* A phone has no room beside the word, so the tag goes under it */
 html[data-form="portrait"] .menu-page .wordmark { flex-wrap: wrap; justify-content: center; }
 html[data-form="portrait"] .menu-page .wordmark .beta { position: static; flex-basis: 100%; margin: .8em 0 0; text-align: center; }
+/* Three sleeves across a phone, where the desktop's size would leave two */
+html[data-form="portrait"] :is(.art-grid, .sleeve-grid) { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
