@@ -477,6 +477,51 @@ public class GuestSeatTest extends SessionsTest {
         return -1;
     }
 
+    // Fails if a mulligan asks for cards to put back without saying which cards can be picked, so no client can ring them
+    @Test(timeOut = 120_000)
+    public void aMulliganSaysWhichCardsCanGoBack() throws Exception {
+        final TestBrowser host = hostAt("lobby");
+        final JsonObject table = host.awaitLobbyWithSeat();
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String deck = legalDeck(host.awaitNewest("decks"));
+        for (int i = 0; i < table.getAsJsonArray("seats").size(); i++) {
+            final JsonObject choose = message("setSeat", "index", i);
+            choose.addProperty("deck", deck);
+            sessions.onMessage(host, choose);
+        }
+        host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
+        sessions.onMessage(host, message("start", "spectate", false));
+        final long[] pressed = { 0 };
+        final String[] seen = { "no game" };
+        awaitTrue(() -> {
+            final HostedMatch match = sessions.hostLobby().getHostedMatch();
+            if (match == null || match.getGame() == null || match.getHumanControllers().isEmpty()) {
+                return false;
+            }
+            for (final JsonObject m : host.got) {
+                if ("request".equals(m.get("t").getAsString()) && answered.add(m)) {
+                    sessions.onMessage(host, TestBrowser.reply(m.get("id").getAsInt(), m.get("default")));
+                }
+            }
+            final Object input = match.getHumanControllers().get(0).getInputQueue().getInput();
+            if (input instanceof forge.gamemodes.match.input.InputLondonMulligan) {
+                return true;
+            }
+            seen[0] = input == null ? "no input" : input.getClass().getSimpleName();
+            // Cancel is the mulligan and OK answers anything before it. A press before the input is ready is lost, so it is made again.
+            if (input != null && System.currentTimeMillis() - pressed[0] > 500) {
+                pressed[0] = System.currentTimeMillis();
+                sessions.onMessage(host, JsonCodec.message(input instanceof forge.gamemodes.match.input.InputConfirmMulligan ? "cancel" : "ok"));
+            }
+            return false;
+        }, () -> "the web seat was never asked which card to put back: " + seen[0]);
+        final JsonObject prompt = host.awaitNewest("prompt", p -> p.get("message").getAsString().contains("bottom of your library")
+                && p.getAsJsonArray("selectable").size() > 0);
+        Assert.assertNotNull(prompt, "the prompt never said which cards can be picked");
+        Assert.assertEquals(prompt.getAsJsonArray("selectable").size(), 7, "every card in the new hand can go back");
+        Assert.assertEquals(prompt.get("selectableMin").getAsInt(), 1);
+    }
+
     private static List<String> seatTypes(final JsonObject table) {
         final List<String> out = new ArrayList<>();
         table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("type").getAsString()));
