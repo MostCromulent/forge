@@ -165,7 +165,10 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     // The other permanents stand in from the row's end (board.css), clear of the stack panel's edge
     const indent = r === 0 && live(rows[0][1]).length ? supportIndent : 0;
     const gaps = gap * Math.max(0, zones.length - 1) + indent;
-    const used = (share: number) => need.reduce((n, x) => n + Math.min(x, share), 0) + gaps;
+    // A zone at the smallest size keeps that width whatever its share, so the zones beside it give up the difference
+    const least = zones.map(z => zoneWidth(z, { fit: minFit, lines: 1 }, gap));
+    const taken = (i: number, share: number) => Math.max(least[i], Math.min(need[i], share));
+    const used = (share: number) => zones.reduce((n, _, i) => n + taken(i, share), 0) + gaps;
     let lo = 0;
     let hi = room;
     for (let i = 0; i < 30; i++) {
@@ -173,7 +176,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       if (used(mid) <= room) lo = mid;
       else hi = mid;
     }
-    const sizes = zones.map((z, i) => sizeFor(z, Math.min(need[i], lo), cap, two, gap));
+    const sizes = zones.map((z, i) => sizeFor(z, taken(i, lo), cap, two, gap));
     return row.map(z => sizes[zones.indexOf(z)] ?? { fit: cap, lines: 1, raw: cap });
   };
   const rowHeight = (r: number, sizes: Sized[], cap: number) => {
@@ -215,7 +218,7 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
     const across = zones.reduce((n, z) => n + zoneWidth(z, chosen.sizes[r][row.indexOf(z)], rowGap(r)), 0)
       + rowGap(r) * Math.max(0, zones.length - 1) + indent;
     // On a phone a row too wide for the board starts at its edge and scrolls
-    const shift = minWidth ? 0 : Math.max(0, 2 * block + across - width);
+    const shift = minWidth ? 0 : Math.min(block, Math.max(0, 2 * block + across - width));
     row[0][0].el.parentElement?.style.setProperty('padding-left', shift ? `${shift}px` : '');
   });
   rows.forEach((row, r) => row.forEach((zone, z) => {
