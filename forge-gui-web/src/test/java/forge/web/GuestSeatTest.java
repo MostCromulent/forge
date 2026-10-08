@@ -3,6 +3,7 @@ package forge.web;
 import com.google.gson.JsonObject;
 import forge.ai.PlayerControllerAi;
 import forge.game.Game;
+import forge.gamemodes.match.HostedMatch;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -231,6 +232,47 @@ public class GuestSeatTest extends SessionsTest {
         awaitTrue(() -> game.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
                 "the removed player's seat was not handed to the AI");
         host.awaitNewest("presence", p -> !named(p, "Player"), "the removed player is still listed");
+    }
+
+    /** Fails if a match waits for a next-game choice from a seat the AI took over, or the next game gives that seat back to a human. */
+    @Test(timeOut = 120_000)
+    public void theMatchGoesOnAfterASeatIsHandedToTheAi() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        final JsonObject hosted = host.awaitLobbyWithSeat();
+        final TestBrowser guest = connect("player");
+        sessions.onMessage(guest, message("setName", "name", "Player"));
+        final JsonObject seated = guest.awaitLobbyWithSeat();
+        Assert.assertNotNull(seated, "the guest never took a seat");
+        sessions.onMessage(host, JsonCodec.message("decks"));
+        final String deck = legalDeck(host.awaitNewest("decks"));
+        for (final TestBrowser browser : List.of(host, guest)) {
+            final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
+            choose.addProperty("deck", deck);
+            sessions.onMessage(browser, choose);
+            sessions.onMessage(browser, message("ready", "ready", true));
+        }
+        host.awaitLobby(l -> l.get("canStart").getAsBoolean(), "the host could not start");
+        sessions.onMessage(host, message("start", "spectate", false));
+        guest.awaitMatching("hello", h -> h.get("inMatch").getAsBoolean(), "the guest was not taken into the match");
+        final HostedMatch match = sessions.hostLobby().getHostedMatch();
+        // A game is safe to end only once it asks a player something, which is after its zones are dealt
+        awaitTrue(() -> match.getGame() != null && match.getHumanControllers().stream().anyMatch(c -> c.getInputQueue().getInput() != null),
+                "the first game never asked a player anything");
+        final Game first = match.getGame();
+
+        sessions.disconnected(guest);
+        host.awaitNewest("presence", p -> disconnected(p, "Player"), "the host was not shown the seat as disconnected");
+        send(host, message("dropPlayer", "name", "Player"));
+        awaitTrue(() -> first.getPlayers().stream().anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi),
+                "the removed player's seat was not handed to the AI");
+        send(host, JsonCodec.message("concede"));
+        host.awaitMatching("gameOver", g -> true, "the host was not shown the first game's result");
+        Assert.assertFalse(first.getMatch().isMatchOver(), "one game decided a match of three");
+
+        send(host, message("nextGame", "decision", "CONTINUE"));
+        awaitTrue(() -> match.getGame() != null && match.getGame() != first, "the second game never started");
+        Assert.assertTrue(match.getGame().getRegisteredPlayers().stream()
+                .anyMatch(p -> "Player".equals(p.getName()) && p.getController() instanceof PlayerControllerAi), "the AI's seat went back to a human in the second game");
     }
 
     /** Fails if a guest is left in match setup when the match starts after the host removed a seat below the guest's. */
