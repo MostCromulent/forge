@@ -4,6 +4,8 @@ import com.google.common.eventbus.Subscribe;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventCardChangeZone;
+import forge.game.event.GameEventTurnPhase;
+import forge.game.phase.PhaseType;
 import forge.gui.interfaces.IGuiGame;
 
 import java.util.ArrayList;
@@ -19,6 +21,7 @@ import java.util.stream.Collectors;
  * <ul>
  *   <li>Size threshold: 50+ buffered events in {@link #receiveGameEvent}</li>
  *   <li>Time threshold: 500ms+ since last flush in {@link #receiveGameEvent}</li>
+ *   <li>Cleanup step: a turn's events never share a batch with the next turn's start</li>
  *   <li>Input queue change: registered as {@link Observer} on player InputQueues,
  *       ensuring events are delivered before the game thread blocks for input</li>
  *   <li>Sync points: explicit {@link #flush()} from {@code flushPendingEvents()}</li>
@@ -43,7 +46,8 @@ public class GameEventForwarder implements Observer {
         pendingEvents.add(ev);
         boolean sizeThreshold = pendingEvents.size() >= FLUSH_SIZE_THRESHOLD;
         boolean timeThreshold = (System.nanoTime() - lastFlushTime) >= FLUSH_INTERVAL_NS;
-        if (timeThreshold || sizeThreshold) {
+        boolean turnEnding = ev instanceof GameEventTurnPhase phase && phase.phase() == PhaseType.CLEANUP;
+        if (timeThreshold || sizeThreshold || turnEnding) {
             flush();
         }
     }
