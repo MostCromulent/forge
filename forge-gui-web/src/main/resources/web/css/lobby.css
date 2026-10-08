@@ -367,12 +367,15 @@ html:not([data-form="portrait"]) .finder:has(.rail) { grid-template-columns: min
 html:not([data-form="portrait"]) .finder:has(.rail) > .finder-head { grid-column: 1 / -1; border-bottom: 0; padding-bottom: 4px; }
 html:not([data-form="portrait"]) .finder:has(.rail) > .finder-body { display: contents; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail { grid-column: 1 / -1; flex-direction: row; gap: 0; padding: 0 12px; border-right: 0; border-bottom: 1px solid var(--line); background: none; overflow-x: auto; overflow-y: hidden; }
-html:not([data-form="portrait"]) .finder:has(.rail) .rail section { flex: 1; flex-direction: row; align-items: center; gap: 2px; }
+html:not([data-form="portrait"]) .finder:has(.rail) .rail section { flex: 1; flex-flow: row wrap; align-items: center; gap: 0 2px; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail h4 { display: none; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source { flex: none; height: 38px; gap: 6px; border-radius: 0; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source:hover { background: none; color: var(--text); }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .source[aria-pressed="true"] { background: none; box-shadow: none; color: var(--accent-2); border-bottom-color: var(--accent-2); }
-html:not([data-form="portrait"]) .finder:has(.rail) .net-cats { flex-direction: row; margin: 0 0 0 8px; padding: 0 0 0 8px; }
+/* Net decks have categories of their own, which take a row under the tabs while net decks are the ones listed */
+html:not([data-form="portrait"]) .finder:has(.rail) .net-cats { order: 1; flex: 0 0 100%; flex-flow: row wrap; gap: 6px; margin: 0; padding: 8px 10px; border-left: 0; border-top: 1px solid var(--line); }
+html:not([data-form="portrait"]) .finder:has(.rail) .rail .net-cats .source { height: 28px; padding: 0 11px; border: 1px solid var(--line); border-radius: 14px; font-size: 12.5px; }
+html:not([data-form="portrait"]) .finder:has(.rail) .rail .net-cats .source[aria-pressed="true"] { border-color: var(--accent-2); background: var(--accent-soft); }
 html:not([data-form="portrait"]) .finder:has(.rail) .rail .get-net { align-self: center; margin: 0 6px 0 auto; white-space: nowrap; }
 html:not([data-form="portrait"]) .finder:has(.rail) .results { grid-column: 1; grid-row: 3 / span 2; }
 html:not([data-form="portrait"]) .finder:has(.rail) .dk-chosen { grid-column: 2; grid-row: 3; }
