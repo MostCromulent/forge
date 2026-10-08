@@ -2,7 +2,6 @@
 
 import { useEffect } from 'preact/hooks';
 import { imageUrl } from '../images';
-import { removeOne } from './deckhalf';
 import type { Actions } from '../actions';
 import type { Model } from '../model';
 import type { DeckSection, EditorCard, EditorState } from '../protocol';
@@ -57,7 +56,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
         <span class="menu-cap">{at.name}</span>
         {zone === null
           ? <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
-          : <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuRemoveOne')}</button>}
+          : <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>}
       </div>
     );
   }
@@ -68,7 +67,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
         <span class="menu-cap">{at.name}</span>
         <button role="menuitem" onClick={act(() => actions.edit({ op: 'add', name: at.name, to: 'Main', count: 1 }))}>{t('lblWebCardMenuAddToDeck')}</button>
         {zone !== null && <>
-          <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuReturnOne')}</button>
+          <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuReturnOne')}</button>
           {inDeck && inDeck.count > 1 && (
             <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: inDeck.count }))}>
               {t('lblWebCardMenuReturnAll', inDeck.count)}
@@ -107,7 +106,7 @@ export function CardMenu({ at, state, actions, close, printings }: {
         onClick={act(() => anywhere && printings(zone ?? anywhere))}>{t('lblWebCardMenuChangePrinting')}</button>
       {zone !== null && <>
         <hr />
-        <button role="menuitem" onClick={act(() => removeOne(actions, at.name, zone))}>{t('lblWebCardMenuRemoveOne')}</button>
+        <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: 1 }))}>{t('lblWebCardMenuRemoveOne')}</button>
         {inDeck && inDeck.count > 1 && (
           <button role="menuitem" onClick={act(() => actions.edit({ op: 'remove', name: at.name, from: zone, count: inDeck.count }))}>
             {t('lblWebCardMenuRemoveAll', inDeck.count)}

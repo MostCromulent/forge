@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { useDismiss } from '../hooks';
 import { Catalogue } from './catalogue';
 import { CardMenu, PrintingPicker, type MenuAt } from './cardmenu';
-import { DeckHalf, removeOne } from './deckhalf';
+import { DeckHalf } from './deckhalf';
 import { saveText } from '../dom';
 import { startDrag, verdictFor, type CardHandlers, type Carried, type Verdict } from './drag';
 import { longPress } from '../press';
@@ -67,8 +67,7 @@ export function Editor({ model, actions }: { model: Model; actions: Actions }) {
   }
   const dropped = (carried: Carried, v: Verdict) => {
     if (v.zone === 'catalogue' && carried.from !== 'catalogue') {
-      if (carried.count === 1) removeOne(actions, carried.name, carried.from);
-      else actions.edit({ op: 'remove', name: carried.name, from: carried.from, count: carried.count });
+      actions.edit({ op: 'remove', name: carried.name, from: carried.from, count: carried.count });
     } else if (v.zone === 'Commander') {
       actions.edit({ op: 'commander', name: carried.name, from: carried.from === 'catalogue' ? undefined : carried.from, count: 1 });
     } else if (v.zone !== 'catalogue' && carried.from === 'catalogue') {

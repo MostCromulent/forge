@@ -7,12 +7,11 @@ import { flyingFor, land } from '../flight';
 import { drawHand, regroup, type GroupBy } from './decklist';
 import { imageUrl } from '../images';
 import { Pip, Pips, SymbolText } from '../symbols';
-import { showNotice } from '../notices';
 import type { Actions } from '../actions';
 import type { CardHandlers } from './drag';
 import type { DeckSection, EditorCard, EditorState } from '../protocol';
 import { store, stored } from '../storage';
-import { t, type TextKey } from '../text';
+import { t } from '../text';
 
 const GROUP_KEY = 'forge.groupBy';
 const VIEW_KEY = 'forge.deckView';
@@ -32,7 +31,7 @@ export function DeckHalf({ actions, state, handlers, check }: {
   // Two clicks on a card take one copy out. A pool's cards cannot leave it, so there the copy goes to the other section.
   const takeOut = (name: string, zone: 'Main' | 'Sideboard') => (state.limited
     ? actions.edit({ op: 'move', name, from: zone, to: zone === 'Main' ? 'Sideboard' : 'Main', count: 1 })
-    : removeOne(actions, name, zone));
+    : actions.edit({ op: 'remove', name, from: zone, count: 1 }));
   // A card added from the catalogue flies to its line once the deck shows it there
   useLayoutEffect(() => {
     const key = flyingFor();
@@ -195,23 +194,12 @@ function Line({ card, zone, landed, actions, handlers, mainOnly, takeOut }: {
       {card.problem && <span class="flag">! {card.problem}</span>}
       <span class="cost"><SymbolText text={card.cost} /></span>
       <span class="ra">
-        <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => removeOne(actions, card.name, zone)}>&minus;</button>
+        <button aria-label={t('lblWebEditorOneFewer', card.name)} onClick={() => actions.edit({ op: 'remove', name: card.name, from: zone, count: 1 })}>&minus;</button>
         <button aria-label={t('lblWebEditorOneMore', card.name)} onClick={() => actions.edit({ op: 'add', name: card.name, to: zone, count: 1 })}>+</button>
         {!mainOnly && <button onClick={() => actions.edit({ op: 'move', name: card.name, from: zone, to: other, count: 1 })}>{other === 'Main' ? t('lblMain') : t('lblSide')}</button>}
       </span>
     </div>
   );
-}
-
-/** Takes one copy out, and offers the removal back in a notice: a slip costs one click, so it needs no confirmation. */
-export function removeOne(actions: Actions, name: string, zone: DeckSection): void {
-  actions.edit({ op: 'remove', name, from: zone, count: 1 });
-  const removed: Partial<Record<DeckSection, TextKey>> = {
-    Main: 'lblWebEditorRemovedMain', Sideboard: 'lblWebEditorRemovedSideboard', Commander: 'lblWebEditorRemovedCommander',
-  };
-  const key = removed[zone];
-  const title = key ? t(key, name) : t('lblWebEditorRemovedFrom', name, zone.toLowerCase());
-  showNotice({ t: 'notice', title, error: false }, () => actions.editorUndo(), t('lblUndo'));
 }
 
 /** A deck's mana curve as bars px tall at most, with the average beside the heading when it is given. */
