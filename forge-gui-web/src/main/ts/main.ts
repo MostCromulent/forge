@@ -224,7 +224,8 @@ function receive(msg: ServerMessage): void {
   if (!held) {
     // Each release is for this turn's hold only, so an earlier banner ending late cannot free a later turn early
     const releaseThis = () => { if (held?.[0] === msg) release(); };
-    if (msg.t === 'state' && !msg.full && Date.now() < showUntil) {
+    // A sound or a log line is sent ahead of the state it belongs to, so it waits as well and comes with its own board
+    if ((msg.t === 'sound' || msg.t === 'log' || (msg.t === 'state' && !msg.full)) && Date.now() < showUntil) {
       held = [msg];
       setTimeout(releaseThis, showUntil - Date.now());
     } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
