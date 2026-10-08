@@ -69,7 +69,8 @@ export function appendLog(msg: LogMessage, tints: readonly { name: string; colou
     stick = true;
   }
   for (const entry of msg.entries) {
-    const el = make('div', `log-entry ${entry.type.toLowerCase()}`);
+    // The type's class is prefixed, since a bare one (mana, turn) would take the board's rule of the same name
+    const el = make('div', `log-entry log-${entry.type.toLowerCase()}`);
     // Entries about a card show it, as the desktop log does
     if (entry.imageKey) {
       const thumb = make('img', 'thumb');
