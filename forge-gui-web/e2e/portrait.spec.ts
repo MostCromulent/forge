@@ -263,23 +263,33 @@ probe('a spell on the stack shows as a chip under the strip, and its target wear
 
 const FOUR = { players: 4 };
 
-probe('three opponents are tabs, and a new permanent marks a hidden tab', async p => {
+/** Shows an opponent's seat as a player does: the players button, then that opponent's row. */
+async function showSeat(page: Page, n: number): Promise<void> {
+  await page.locator('#seat-switch').tap();
+  await page.locator('#seat-tabs .seat-tab').nth(n).tap();
+  await expect(page.locator('#seat-tabs')).toBeHidden();
+}
+
+probe('three opponents are behind a players button, and a change marks a hidden seat', async p => {
   await settledBoard(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   const tabs = p.page.locator('#seat-tabs .seat-tab');
-  await expect(tabs).toHaveCount(3);
+  await expect(p.page.locator('#seat-tabs')).toBeHidden();
   await expect(p.page.locator('#opponent .seat:not([hidden])')).toHaveCount(1);
-  for (const tab of await tabs.all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(await p.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   const dock = await box(p.page, '#prompt');
   expect(dock.y + dock.height).toBeLessThanOrEqual(664);
-  // Each seat is looked at once, so what it holds now is what was seen
-  for (const n of [1, 2, 0]) await tabs.nth(n).tap();
-  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
-  // The dev state replaces the whole board, so every card in the hidden seats is new
-  await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
-  await expect(tabs.nth(1).locator('.new')).toHaveText('+2');
+  await p.page.locator('#seat-switch').tap();
+  await expect(tabs).toHaveCount(3);
+  for (const tab of await tabs.all()) expect((await tab.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await tabs.nth(1).tap();
-  await expect(tabs.nth(1).locator('.new')).toBeEmpty();
+  // Each seat is looked at once, so what it holds now is what was seen
+  for (const n of [2, 0]) await showSeat(p.page, n);
+  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
+  await setState(p, 'p0battlefield=Forest\np1battlefield=Mountain\np2battlefield=Island;Grizzly Bears\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
+  await expect(p.page.locator('#seat-switch')).toHaveClass(/\bchanged\b/);
+  await expect(tabs.nth(1)).toHaveClass(/\bchanged\b/);
+  await showSeat(p.page, 1);
+  await expect(tabs.nth(1)).not.toHaveClass(/\bchanged\b/);
   await expect(p.page.locator('#opponent .seat:not([hidden]) .card', { hasText: 'Grizzly Bears' })).toBeVisible();
 }, PHONE);
 
@@ -287,20 +297,22 @@ probe('a hidden opponent can be chosen from the dock', async p => {
   await settledBoard(p, 'p0hand=Lightning Bolt\np0battlefield=Mountain\np1battlefield=Mountain\np2battlefield=Island\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectablePlayers.length ?? 0) > 0);
-  // Two of the three opponents are in hidden tabs, and each has a button in the dock
+  // Two of the three opponents are out of sight, and each has a button in the dock
   await expect(p.page.locator('#prompt .choose-players button')).toHaveCount(2);
   await expect(p.page.locator('#seat-tabs .seat-tab.asked')).toHaveCount(2);
+  await expect(p.page.locator('#seat-switch')).toHaveClass(/\basked\b/);
 }, PHONE);
 
-probe('a question about one hidden opponent\'s cards brings their tab forward', async p => {
+probe('a question about a hidden opponent\'s cards marks the players button and leaves the view where it is', async p => {
   await settledBoard(p, 'p0hand=Murder\np0battlefield=Swamp;Swamp;Swamp\np1battlefield=Mountain\np2battlefield=Island;Hill Giant\np3battlefield=Swamp\nactiveplayer=p0', FOUR);
   const tabs = p.page.locator('#seat-tabs .seat-tab');
-  // Looked away from the only player with a creature, in this same turn
-  await tabs.nth(0).tap();
-  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
+  // Looking away from the only player with a creature
+  await showSeat(p.page, 0);
   await castFirstInHand(p);
   await p.until('a target is asked for', () => (window.forge.model.prompt?.selectable.length ?? 0) > 0);
-  await expect(tabs.nth(1)).toHaveClass(/\bon\b/);
+  await expect(tabs.nth(0)).toHaveClass(/\bon\b/);
+  await expect(p.page.locator('#seat-switch')).toHaveClass(/\basked\b/);
+  await showSeat(p.page, 1);
   await expect(p.page.locator('#opponent .seat:not([hidden]) .card.selectable')).toBeVisible();
 }, PHONE);
 

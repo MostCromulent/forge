@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newCards, repeatTap, seatToOpen, tagsFor, tapInspects } from '../../main/ts/match/portrait';
+import { fieldChanged, repeatTap, seatToOpen, tagsFor, tapInspects } from '../../main/ts/match/portrait';
 
 describe('tapInspects', () => {
   const card = { playable: false, selectable: false, mine: false };
@@ -47,28 +47,34 @@ describe('tagsFor', () => {
   });
 });
 
-describe('newCards', () => {
-  it('counts what arrived, even when as many left', () => {
-    expect(newCards(new Set([1, 2, 3]), [2, 3, 4])).toBe(1);
+describe('fieldChanged', () => {
+  it('is true when a permanent arrived', () => {
+    expect(fieldChanged(new Set([1, 2]), [1, 2, 3])).toBe(true);
   });
-  it('counts nothing for a seat never looked at', () => {
-    expect(newCards(undefined, [1, 2])).toBe(0);
+  it('is true when a permanent left', () => {
+    expect(fieldChanged(new Set([1, 2, 3]), [1, 2])).toBe(true);
+  });
+  it('is false when the same permanents are there', () => {
+    expect(fieldChanged(new Set([1, 2, 3]), [3, 1, 2])).toBe(false);
+  });
+  it('is false for a seat never looked at', () => {
+    expect(fieldChanged(undefined, [1, 2])).toBe(false);
   });
 });
 
 describe('seatToOpen', () => {
-  const base = { open: 11, seats: [11, 12, 13], active: 12, turn: 4, chosenTurn: 0, promptSeats: [] as number[], promptIsNew: false };
+  const base = { open: 11, seats: [11, 12, 13], active: 12, turn: 4, chosenTurn: 0 };
   it('follows the turn to an opponent', () => {
     expect(seatToOpen(base)).toBe(12);
   });
   it('stays where the player chose during this turn', () => {
     expect(seatToOpen({ ...base, chosenTurn: 4 })).toBe(11);
   });
-  it('opens the one seat a new prompt is about, whatever was chosen', () => {
-    expect(seatToOpen({ ...base, chosenTurn: 4, promptSeats: [13], promptIsNew: true })).toBe(13);
+  it('follows the next turn after the player chose', () => {
+    expect(seatToOpen({ ...base, chosenTurn: 3 })).toBe(12);
   });
-  it('does not move for a prompt spread over several seats', () => {
-    expect(seatToOpen({ ...base, chosenTurn: 4, promptSeats: [12, 13], promptIsNew: true })).toBe(11);
+  it('stays where the player chose through their own turn', () => {
+    expect(seatToOpen({ ...base, chosenTurn: 3, active: 1 })).toBe(11);
   });
   it('opens the first seat when none is open or the open one has gone', () => {
     expect(seatToOpen({ ...base, open: null, active: null })).toBe(11);

@@ -2,7 +2,7 @@
 
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from '../images';
-import { commanderTax, game, me, players, zone, deref, derefAll, stateOf, isLocal, type Model } from '../model';
+import { commanderTax, game, me, players, zone, deref, stateOf, isLocal, type Model } from '../model';
 import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -21,12 +21,13 @@ import { setting } from '../settings';
 import { logTints } from './log';
 import type { CardClick } from './cards';
 import type { Actions } from '../actions';
-import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StackItemView, StateMessage, ZoneType } from '../protocol';
+import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from '../protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
-import { notePick, stackTargets } from './overlay';
+import { notePick } from './overlay';
 import { hovers, isTouch, longPress } from '../press';
-import { newCards, repeatTap, seatToOpen, tapInspects } from './portrait';
+import { fieldChanged, repeatTap, seatToOpen, tapInspects } from './portrait';
 import { isPortrait } from '../form';
+import { sheet, swipeDown } from '../sheet';
 import { changeUi, ui } from '../ui';
 import { t, type TextKey } from '../text';
 
@@ -116,11 +117,12 @@ function seated(model: Model): PlayerView[] {
   return seating.map(k => byKey.get(k)).filter((p): p is PlayerView => !!p && !isLocal(model, p));
 }
 
-/** One opponent takes the top half as a full seat, and two or three share it as compact seats in columns or quarters. */
+/** One opponent takes the top half as a full seat. Two or three share it in columns or quarters, unless the player asks for one at a time behind tabs, which four or more and a phone always get. */
 function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], actions: Actions, select: CardClick): void {
   const across = seated(model);
   const many = across.length > 1;
-  const quads = many && setting('boardLayout') === 'quadrants';
+  const tabbed = many && (isPortrait() || across.length > 3 || setting('boardLayout') === 'tabs');
+  const quads = many && !tabbed && setting('boardLayout') === 'quadrants';
   const match = byId('match');
   match.classList.toggle('many', many);
   match.classList.toggle('quads', quads);
@@ -144,27 +146,40 @@ function renderOpponents(root: HTMLElement, model: Model, onField: CardView[], a
       return el;
     },
     (el, p) => {
+      // Alone on a desktop's top half, a seat is laid out as a two-player game's is, with its cards at full size
+      el.classList.toggle('compact', !tabbed || isPortrait());
       el.style.setProperty('--tint', tints.find(t => t.name === p.Name)?.colour ?? 'var(--muted)');
       renderSeat(el, model, p, onField, actions, select);
     });
-  renderSeatTabs(root, model, isPortrait() ? across : [], tints);
+  renderSeatTabs(root, model, tabbed ? across : [], tints);
 }
 
-/** The question the open seat was last chosen for, so only a new one moves it, and the seat last shown, so a change is measured again. */
-let seatPrompt: object | null = null;
+/** The seat last shown, so a change is measured again. */
 let shownSeat: number | null = null;
 
-/** On a phone one opponent's seat shows at a time, and the others are tabs that say what changed while they were out of sight. */
+/** One opponent's seat shows at a time, and each of the others has a tab that says whose turn it is and whether their table changed out of sight. A phone lists the tabs in a sheet that its players button opens. */
 function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], tints: { name: string; colour: string }[]): void {
+  const match = byId('match');
   let tabs = document.getElementById('seat-tabs');
-  if (!tabs) {
+  let button = document.getElementById('seat-switch');
+  if (!tabs || !button) {
     tabs = Object.assign(document.createElement('div'), { id: 'seat-tabs' });
     tabs.setAttribute('role', 'tablist');
+    tabs.setAttribute('aria-label', t('lblWebSetupOpponents'));
+    swipeDown(tabs, () => changeUi(u => { u.seatsOpen = false; }));
     root.before(tabs);
+    button = Object.assign(document.createElement('button'), { id: 'seat-switch', title: t('lblWebSetupOpponents'), innerHTML: PLAYERS_ICON });
+    button.onclick = () => changeUi(u => { u.seatsOpen = !u.seatsOpen; });
+    match.append(button);
   }
   const tabbed = across.length >= 2;
-  tabs.hidden = !tabbed;
+  const listed = tabbed && isPortrait();
+  tabs.hidden = !tabbed || (listed && !ui.seatsOpen);
+  tabs.classList.toggle('sheet', listed);
+  button.hidden = !listed;
+  sheet('seats', listed && ui.seatsOpen, () => changeUi(u => { u.seatsOpen = false; }));
   root.classList.toggle('tabbed', tabbed);
+  match.classList.toggle('tabbed', tabbed);
   if (!tabbed) {
     if (shownSeat !== null) {
       for (const seat of root.querySelectorAll<HTMLElement>(':scope > .seat')) seat.hidden = false;
@@ -177,22 +192,21 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
   const seatOf = (key: number) => Number(document.querySelector<HTMLElement>(`#opponent .card[data-key="${key}"]`)?.closest<HTMLElement>('.seat')?.dataset.player);
   const asked = new Set([...(p?.selectable ?? []).map(r => seatOf(r.ref)), ...(p?.highlighted ?? []).map(seatOf), ...(p?.selectablePlayers ?? []).map(r => r.ref)]
     .filter(k => across.some(o => o.$key === k)));
-  const open = seatToOpen({ open: ui.openSeat, seats: across.map(o => o.$key), active: g?.PlayerTurn?.ref ?? null, turn: g?.Turn ?? 0,
-    chosenTurn: ui.seatChosenTurn, promptSeats: [...asked], promptIsNew: !!p && p !== seatPrompt });
-  seatPrompt = p ?? null;
+  const open = seatToOpen({ open: ui.openSeat, seats: across.map(o => o.$key), active: g?.PlayerTurn?.ref ?? null, turn: g?.Turn ?? 0, chosenTurn: ui.seatChosenTurn });
   ui.openSeat = open;
-  const myKey = me(model)?.$key;
-  const stack = derefAll(model, g?.Stack) as StackItemView[];
-  const blocking = byId('match').classList.contains('declaring-blocks');
+  const tintOf = (o: PlayerView) => tints.find(x => x.name === o.Name)?.colour ?? 'var(--muted)';
+  match.style.setProperty('--open-tint', tintOf(across.find(o => o.$key === open) ?? across[0]));
+  let changedOutOfSight = false;
   reconcile<PlayerView, HTMLButtonElement>(tabs, across, o => o.$key,
     () => {
       const el = make('button', 'seat-tab');
       el.setAttribute('role', 'tab');
-      el.innerHTML = '<img alt="" draggable="false"><b class="life"></b><span class="who"></span><span class="new"></span><span class="aim"></span><i class="dot" aria-hidden="true"></i>';
+      el.innerHTML = `<span class="pic"><img alt="" draggable="false"><i class="dot" aria-hidden="true"></i><span class="skull-mark">${SKULL}</span></span><span class="who"></span><span class="note"></span><b class="life"></b>`;
       // A tab only shows a seat; the player is chosen on the portrait inside it
       el.onclick = () => changeUi(u => {
         u.openSeat = Number(el.dataset.key);
         u.seatChosenTurn = Number(el.dataset.turn);
+        u.seatsOpen = false;
       });
       return el;
     },
@@ -200,27 +214,26 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
       const shown = o.$key === open;
       const field = zone(model, o, 'Battlefield').map(c => c.$key);
       if (shown) ui.seenOnField.set(o.$key, new Set(field));
-      const fresh = shown || !setting('tabNewCards') ? 0 : newCards(ui.seenOnField.get(o.$key), field);
+      const changed = !shown && !!setting('tabNewCards') && fieldChanged(ui.seenOnField.get(o.$key), field);
+      changedOutOfSight ||= changed;
+      const turn = g?.PlayerTurn?.ref === o.$key;
       el.dataset.turn = String(g?.Turn ?? 0);
+      el.title = o.Name ?? '';
       el.classList.toggle('on', shown);
       el.setAttribute('aria-selected', String(shown));
-      el.classList.toggle('turn', g?.PlayerTurn?.ref === o.$key);
-      el.style.setProperty('--tint', tints.find(x => x.name === o.Name)?.colour ?? 'var(--muted)');
+      el.classList.toggle('turn', turn);
+      el.classList.toggle('out', !!o.HasLost);
+      el.classList.toggle('changed', changed);
+      el.classList.toggle('asked', !shown && asked.has(o.$key));
+      el.style.setProperty('--tint', tintOf(o));
       setImage(q<HTMLImageElement>(el, 'img'), playerAvatarUrl(o));
       q(el, '.life').textContent = String(o.Life ?? 0);
       q(el, '.who').textContent = o.Name ?? '';
-      const badge = q(el, '.new');
-      // The tab flashes once each time more arrive
-      if (fresh > Number(badge.dataset.n ?? 0)) replay(el, 'flash');
-      badge.dataset.n = String(fresh);
-      badge.textContent = fresh ? t('lblWebPortraitNewCards', fresh) : '';
-      badge.title = fresh ? t('lblWebPortraitNewCardsTitle', fresh) : '';
-      const attackers = blocking ? zone(model, o, 'Battlefield').filter(c => c.Attacking).length : 0;
-      const aimed = stack.some(i => i.ActivatingPlayer?.ref === o.$key
-        && stackTargets(model, i).some(x => x.$key === myKey || (x as CardView).Controller?.ref === myKey));
-      q(el, '.aim').textContent = shown ? '' : attackers ? t('lblWebPortraitAttacking', attackers) : aimed ? t('lblWebPortraitTargeting') : '';
-      el.classList.toggle('asked', !shown && asked.has(o.$key));
+      q(el, '.note').textContent = o.HasLost ? t('lblWebBoardOutOfGame') : turn ? t('lblWebSeatTheirTurn') : '';
     });
+  // The players button stands for every seat out of sight
+  button.classList.toggle('changed', changedOutOfSight);
+  button.classList.toggle('asked', [...asked].some(k => k !== open));
   for (const seat of root.querySelectorAll<HTMLElement>(':scope > .seat')) seat.hidden = Number(seat.dataset.player) !== open;
   if (shownSeat !== open) {
     shownSeat = open;
@@ -228,6 +241,9 @@ function renderSeatTabs(root: HTMLElement, model: Model, across: PlayerView[], t
     window.dispatchEvent(new Event('resize'));
   }
 }
+
+// Lucide's users (ISC, see web/licenses/lucide-license.txt)
+const PLAYERS_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><i class="dot" aria-hidden="true"></i>';
 
 /** Out of a game that goes on: said once, over the board, with a way to leave when nobody else is waiting on you. */
 let outSaid = false;

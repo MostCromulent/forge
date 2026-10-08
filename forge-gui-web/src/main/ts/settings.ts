@@ -35,13 +35,28 @@ interface SettingBase {
   menu?: 'stops' | 'decisions' | 'playmat';
 }
 
+/** A choice shown as a picture: its value, name, a line under the name, the drawing's SVG, and when it cannot be chosen. */
+export interface Tile {
+  value: string;
+  label: string;
+  hint: string;
+  picture: string;
+  unavailable?: () => boolean;
+}
+
 export type SettingDef = SettingBase & (
   | { type: 'toggle'; def: boolean }
   | { type: 'choice'; options: [string, string][]; def: string }
+  | { type: 'tiles'; options: Tile[]; def: string }
   | { type: 'slider'; min: number; max: number; def: number; step?: number; unit?: 'seconds' }
   | { type: 'css'; def: string }
   | { type: 'key'; action: keyof KeyBindings; def: string }
 );
+
+const theirs = (x: number, y: number, width: number) => `<rect class="theirs" x="${x}" y="${y}" width="${width}" height="32" rx="3"/>`;
+const YOURS = '<rect class="yours" x="4" y="44" width="96" height="32" rx="3"/>';
+/** A table of five or more shows one opponent at a time whatever is chosen, so the other layouts cannot be picked during one. */
+const tabsOnly = () => Number(document.querySelector<HTMLElement>('#match:not([hidden])')?.dataset.opponents ?? 0) > 3;
 
 export const SETTINGS: SettingDef[] = [
   { section: t('lblWebGameMenuStopsTitle'), key: 'interruptAttackers', label: t('lblWebOptionsInterruptAttackers'), type: 'toggle', server: true, menu: 'stops', def: true },
@@ -70,8 +85,15 @@ export const SETTINGS: SettingDef[] = [
     options: [['LOW', t('lblWebOptionsLow')], ['MEDIUM', t('lblMedium')], ['HIGH', t('lblWebOptionsHigh')]], def: 'MEDIUM',
   },
   {
-    section: t('lblDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), hint: t('lblWebOptionsBoardLayoutHint'), type: 'choice',
-    options: [['columns', t('lblColumns')], ['quadrants', t('lblWebOptionsQuadrants')]], def: 'columns',
+    section: t('lblDisplay'), key: 'boardLayout', label: t('lblWebOptionsBoardLayout'), type: 'tiles', def: 'columns',
+    options: [
+      { value: 'columns', label: t('lblColumns'), hint: t('lblWebOptionsColumnsHint'), unavailable: tabsOnly,
+        picture: `${theirs(4, 4, 30)}${theirs(37, 4, 30)}${theirs(70, 4, 30)}${YOURS}` },
+      { value: 'quadrants', label: t('lblWebOptionsQuadrants'), hint: t('lblWebOptionsQuadrantsHint'), unavailable: tabsOnly,
+        picture: `${theirs(4, 4, 46)}${theirs(54, 4, 46)}<rect class="yours" x="4" y="44" width="46" height="32" rx="3"/>${theirs(54, 44, 46)}` },
+      { value: 'tabs', label: t('lblWebOptionsTabs'), hint: t('lblWebOptionsTabsHint'),
+        picture: `<rect class="theirs" x="4" y="12" width="96" height="24" rx="3"/><rect class="tab on" x="4" y="4" width="18" height="9" rx="2"/><rect class="tab" x="25" y="5" width="16" height="6" rx="2"/><rect class="tab" x="44" y="5" width="16" height="6" rx="2"/>${YOURS}` },
+    ],
   },
   {
     section: t('lblDisplay'), key: 'handSort', label: t('lblWebOptionsHandSort'), type: 'choice',

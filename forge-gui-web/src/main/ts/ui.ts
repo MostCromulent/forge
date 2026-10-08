@@ -72,9 +72,10 @@ export interface UiState {
   inspect: boolean;
   /** The hand is open as a drawer over the board, on a phone. */
   handOpen: boolean;
-  /** On a phone, the opponent whose seat is showing, and the turn in which the player last chose one. */
+  /** Where one opponent shows at a time: whose seat it is, the turn in which the player last chose one, and whether a phone's list of them is open. */
   openSeat: number | null;
   seatChosenTurn: number;
+  seatsOpen: boolean;
   /** The permanents each opponent had when their seat was last showing, by player key. */
   seenOnField: Map<number, Set<number>>;
   /** On a phone, the player whose zones are open from their bar, where only the counts are kept on show. */
@@ -117,6 +118,7 @@ export const ui: UiState = {
   openSeat: null,
   zonesFor: null,
   seatChosenTurn: 0,
+  seatsOpen: false,
   seenOnField: new Map(),
   menuSheet: null,
 };
@@ -193,6 +195,7 @@ export function resetMatchUi(): void {
   ui.openSeat = null;
   ui.zonesFor = null;
   ui.seatChosenTurn = 0;
+  ui.seatsOpen = false;
   ui.seenOnField.clear();
   ui.faceIndex = 0;
 }

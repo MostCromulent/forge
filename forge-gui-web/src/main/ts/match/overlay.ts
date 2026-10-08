@@ -193,9 +193,9 @@ function paintTags(model: Model): void {
   const want = new Map<HTMLElement, number[]>();
   for (const [key, numbers] of tags) {
     const el = elementFor(key);
-    // A card in an opponent's seat that is not showing is marked on that opponent's tab
-    const shown = el && el.offsetParent !== null ? el
-      : document.querySelector<HTMLElement>(`.seat-tab[data-key="${el?.closest<HTMLElement>('.seat')?.dataset.player ?? key}"]`);
+    // A card in an opponent's seat that is not showing is marked on that opponent's tab, or on a phone's players button while its list is shut
+    const tab = document.querySelector<HTMLElement>(`.seat-tab[data-key="${el?.closest<HTMLElement>('.seat')?.dataset.player ?? key}"]`);
+    const shown = el && el.offsetParent !== null ? el : tab && tab.offsetParent === null ? document.getElementById('seat-switch') : tab;
     if (shown) want.set(shown, [...(want.get(shown) ?? []), ...numbers]);
   }
   for (const old of document.querySelectorAll<HTMLElement>('.target-tags')) {

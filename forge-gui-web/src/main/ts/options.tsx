@@ -126,7 +126,7 @@ export function OptionsDialog({ title, label, kind, head, rail, footer, close, c
 export function Row({ def, onChange }: { def: SettingDef; onChange?: () => void }) {
   const [editing, setEditing] = useState(false);
   return (
-    <div class="setting">
+    <div class={def.type === 'tiles' ? 'setting wide' : 'setting'}>
       <div>
         <div>{def.label}</div>
         {def.hint && <div class="hint">{def.hint}</div>}
@@ -158,6 +158,22 @@ function Control({ def, onChange }: { def: SettingDef; onChange?: () => void }) 
           {def.options.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
         </select>
       );
+    case 'tiles': {
+      // A choice that cannot be made now shows the one in force in its place
+      const usable = def.options.filter(o => !o.unavailable?.());
+      const inForce = usable.some(o => o.value === value) ? value : usable[0]?.value;
+      return (
+        <div class="tiles" role="radiogroup" aria-label={def.label}>
+          {def.options.map(o => (
+            <button key={o.value} role="radio" aria-checked={inForce === o.value} disabled={!usable.includes(o)} onClick={() => change(o.value)}>
+              <svg viewBox="0 0 104 80" aria-hidden="true" dangerouslySetInnerHTML={{ __html: o.picture }} />
+              <b>{o.label}</b>
+              <small>{o.hint}</small>
+            </button>
+          ))}
+        </div>
+      );
+    }
     case 'css':
       // Row draws the CSS editor's own button and editor, since the editor is too big for the control column
       return null;

@@ -24,7 +24,7 @@ export function initLog(): void {
 }
 
 // Told apart by lightness as well as hue, so they hold for red-green colour blindness
-const PLAYER_TINTS = ['#8fc3ff', '#f0a35e', '#c3a8ff', '#5fd0c0'];
+const PLAYER_TINTS = ['#8fc3ff', '#f0a35e', '#c3a8ff', '#5fd0c0', '#f3a6c8', '#a9b7c9', '#d6c9f0'];
 
 /** Tints each player's name, matching longer names first so "Forge AI 2" is never read as "Forge AI". */
 function tintNames(el: HTMLElement, names: readonly { name: string; colour: string }[]): void {

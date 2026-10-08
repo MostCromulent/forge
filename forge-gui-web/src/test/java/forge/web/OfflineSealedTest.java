@@ -94,7 +94,8 @@ public class OfflineSealedTest extends SessionsTest {
             sessions.onMessage(host, message("limitedOpen", "kind", "draft"));
             host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "the Limited page never opened");
             sessions.onMessage(host, message("poolOpen", "name", name));
-            sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 1));
+            // No game count is sent, so the saved games-per-match is left as other tests expect it
+            sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 0));
             awaitTrue(() -> sessions.hostLobby() != null && sessions.hostLobby().getHostedMatch() != null
                     && sessions.hostLobby().getHostedMatch().getGame() != null, "the free-for-all never started");
             Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRegisteredPlayers().size(), 8);
