@@ -66,7 +66,7 @@ public class GuestSeatTest extends SessionsTest {
 
         // The guest's deck is theirs, chosen from their own list, and the host has to see it or cannot start
         sessions.onMessage(guestBrowser, JsonCodec.message("decks"));
-        final String deck = legalDeck(guestBrowser.awaitNewest("decks"));
+        final String deck = legalDeck(guestBrowser.awaitDecks());
         final JsonObject choose = message("setSeat", "index", guestSeat);
         choose.addProperty("deck", deck);
         sessions.onMessage(guestBrowser, choose);
@@ -100,7 +100,7 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertNotNull(seated, "the guest never took a seat" + diagnosis(host, guest));
 
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
+        final String deck = legalDeck(host.awaitDecks());
         for (final TestBrowser browser : List.of(host, guest)) {
             final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
@@ -208,7 +208,7 @@ public class GuestSeatTest extends SessionsTest {
         final JsonObject seated = guest.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat");
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
+        final String deck = legalDeck(host.awaitDecks());
         for (final TestBrowser browser : List.of(host, guest)) {
             final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
@@ -246,7 +246,7 @@ public class GuestSeatTest extends SessionsTest {
         final JsonObject seated = guest.awaitLobbyWithSeat();
         Assert.assertNotNull(seated, "the guest never took a seat");
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
+        final String deck = legalDeck(host.awaitDecks());
         for (final TestBrowser browser : List.of(host, guest)) {
             final JsonObject choose = message("setSeat", "index", (browser == host ? hosted : seated).get("mySeat").getAsInt());
             choose.addProperty("deck", deck);
@@ -282,7 +282,7 @@ public class GuestSeatTest extends SessionsTest {
     public void aGuestFollowsTheHostIntoTheMatchAfterASeatBelowIsRemoved() throws Exception {
         final TestBrowser host = hostAt("invite");
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
+        final String deck = legalDeck(host.awaitDecks());
         send(host, message("setPlayerCount", "count", 3));
         send(host, message("aiSeat", "index", 1));
         send(host, message("openSeat", "index", 2));
@@ -483,7 +483,7 @@ public class GuestSeatTest extends SessionsTest {
         final TestBrowser host = hostAt("lobby");
         final JsonObject table = host.awaitLobbyWithSeat();
         sessions.onMessage(host, JsonCodec.message("decks"));
-        final String deck = legalDeck(host.awaitNewest("decks"));
+        final String deck = legalDeck(host.awaitDecks());
         for (int i = 0; i < table.getAsJsonArray("seats").size(); i++) {
             final JsonObject choose = message("setSeat", "index", i);
             choose.addProperty("deck", deck);
@@ -520,6 +520,9 @@ public class GuestSeatTest extends SessionsTest {
         Assert.assertNotNull(prompt, "the prompt never said which cards can be picked");
         Assert.assertEquals(prompt.getAsJsonArray("selectable").size(), 7, "every card in the new hand can go back");
         Assert.assertEquals(prompt.get("selectableMin").getAsInt(), 1);
+        // The match is left, so the next test does not find a game still waiting on this one's answer
+        send(host, JsonCodec.message("leave"));
+        host.awaitMatching("hello", h -> !h.get("inMatch").getAsBoolean(), "leaving did not end the match");
     }
 
     private static List<String> seatTypes(final JsonObject table) {
