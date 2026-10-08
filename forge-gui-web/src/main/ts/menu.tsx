@@ -16,8 +16,12 @@ const MAX_NAME_LENGTH = 24;
 
 export function Menu({ model, actions }: { model: Model; actions: Actions }) {
   const choosing = ui.menuChoice;
-  // A step deeper slides forward, and the trail back slides back (dialogs.css)
-  const setChoosing = (way: 'play' | 'friends' | null) => eased(u => { u.menuChoice = way; }, () => ({ way: way ? 'on' : 'back' }));
+  // A step deeper slides forward, and the trail back shows the earlier step at once (dialogs.css)
+  const setChoosing = (way: 'play' | 'friends' | null) => {
+    document.documentElement.toggleAttribute('data-back', !way);
+    if (way) eased(u => { u.menuChoice = way; }, () => ({ way: 'on' }));
+    else changeUi(u => { u.menuChoice = null; });
+  };
   // A new name arriving means the change went through
   useEffect(() => changeUi(u => { u.renaming = false; }), [model.playerName]);
   if (ui.renaming) {

@@ -29,10 +29,19 @@ import type { Model } from './model';
 let editing = false;
 let edits = 0;
 
+/** How far in each page is from the first one, so a move to a lower number is a move back. */
+const DEPTH = { name: 0, menu: 1, lobby: 2, limited: 2, drafting: 2, conquest: 2, quest: 2, editor: 3, match: 4 };
+let shown: keyof typeof DEPTH | null = null;
+
 export function renderScreens(model: Model, actions: Actions, dismissNotice: (id: number) => void): void {
   // A screen that is not showing is not drawn, so what it held (a picker, a half-typed search) goes with it
   const page = screenOf(model);
   const under = pageUnder(model);
+  if (page !== shown) {
+    // Stays until the next change of page, because taking it off would start the arrival animation late
+    document.documentElement.toggleAttribute('data-back', shown !== null && DEPTH[page] < DEPTH[shown]);
+    shown = page;
+  }
   // The page under the editor is drawn afresh when the editor shuts, since what it shows may be what was edited
   if (editing && page !== 'editor') edits++;
   editing = page === 'editor';

@@ -18,6 +18,8 @@
 .card-menu.closing, .backdrop.closing > .card-menu { animation: menu-out .1s ease-in forwards; }
 /* A screen rises in as a box does when it opens (index.html holds a root for each) */
 :is(#menu, #lobby, #editor, #limited, #drafting, #conquest, #quest) > * { animation: box-in .18s ease-out; }
+/* Going back to an earlier screen shows it at once (screens.tsx) */
+html[data-back] :is(#menu, #lobby, #editor, #limited, #drafting, #conquest, #quest) > *, html[data-back] .modes .mode.plaque { animation: none; }
 /* A move along something with an order slides the way it runs: a Conquest tab, a step of the start menu (ui.ts eased) */
 html[data-way]::view-transition-old(page) { animation: .24s cubic-bezier(.2,.7,.3,1) both page-out; }
 html[data-way]::view-transition-new(page) { animation: .26s cubic-bezier(.2,.7,.3,1) both page-in; }
