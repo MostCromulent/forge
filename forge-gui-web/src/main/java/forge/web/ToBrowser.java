@@ -335,6 +335,41 @@ final class ToBrowser {
     record AttackersDeclared(Ref player, List<Attack> attacks) {
     }
 
+    record Block(Ref blocker, Ref attacker) {
+    }
+
+    /** The blocks one defending player made, which is none when that player let every attacker through. */
+    @Event("blockersDeclared")
+    record BlockersDeclared(Ref player, List<Block> blocks) {
+    }
+
+    /** A spell or an ability went onto the stack. */
+    @Event("stackAdded")
+    record StackAdded(@Nullable Ref player) {
+    }
+
+    @Event("stackResolved")
+    record StackResolved(@Nullable Ref player) {
+    }
+
+    /** Life gained or lost in any way, damage included. */
+    @Event("lifeChanged")
+    record LifeChanged(Ref player, int from, int to) {
+    }
+
+    @Event("playerCounters")
+    record PlayerCounters(Ref player) {
+    }
+
+    @Event("cardCounters")
+    record CardCounters(Ref card) {
+    }
+
+    /** No to means the card came off what it was attached to. */
+    @Event("cardAttached")
+    record CardAttached(Ref card, @Nullable Ref to) {
+    }
+
     @Event("shuffled")
     record Shuffled(Ref player) {
     }
