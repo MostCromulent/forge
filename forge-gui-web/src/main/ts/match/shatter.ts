@@ -25,7 +25,7 @@ interface Timing {
 }
 
 // Tuned on a 1440 by 900 board. A seat's portrait has no build-up: it comes apart and bursts, without the slow motion
-const FINAL: Timing = { fly: 0.85, crack: 1.5, brk: 1.78, burst: 1.86, title: 2.79, end: 5.34 };
+const FINAL: Timing = { fly: 0.75, crack: 1.0, brk: 1.22, burst: 1.3, title: 2.23, end: 4.78 };
 const SEAT: Timing = { fly: 0, crack: 0, brk: 0, burst: 0.07, title: Infinity, end: 2.45 };
 const GRAVITY = 1500;
 // The build's loudest moment, 2.35s into its file, lands on the burst; the burst's hit, 0.05s into its file, lands
