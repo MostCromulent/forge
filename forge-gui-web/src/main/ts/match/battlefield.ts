@@ -176,7 +176,9 @@ function fitCards(root: HTMLElement, rows: RowZones[]): void {
       if (used(mid) <= room) lo = mid;
       else hi = mid;
     }
-    const sizes = zones.map((z, i) => sizeFor(z, taken(i, lo), cap, two, gap));
+    // Zones too wide for the row even at the smallest size are sized for the room there is, so the overflow counts against the layout
+    const over = Math.min(1, (room - gaps) / least.reduce((n, x) => n + x, 0));
+    const sizes = zones.map((z, i) => sizeFor(z, taken(i, lo) * over, cap, two, gap));
     return row.map(z => sizes[zones.indexOf(z)] ?? { fit: cap, lines: 1, raw: cap });
   };
   const rowHeight = (r: number, sizes: Sized[], cap: number) => {
