@@ -31,8 +31,6 @@ import java.util.stream.Collectors;
 public class GameEventForwarder implements Observer {
     private final IGuiGame gui;
     private final List<GameEvent> pendingEvents = new ArrayList<>();
-    /** Whether anything but a priority event is waiting, which a person about to be asked something must see. */
-    private boolean somethingToSend;
     /** Whether anything but a redraw hint is waiting, which is what makes a pass of priority worth a batch. */
     private boolean somethingHappened;
 
@@ -44,7 +42,6 @@ public class GameEventForwarder implements Observer {
     public void receiveGameEvent(GameEvent ev) {
         pendingEvents.add(ev);
         if (!(ev instanceof GameEventPlayerPriority)) {
-            somethingToSend = true;
             somethingHappened |= !ev.isRedrawHint();
         } else if (somethingHappened) {
             flush();
@@ -57,7 +54,6 @@ public class GameEventForwarder implements Observer {
         }
         List<GameEvent> batch = new ArrayList<>(pendingEvents);
         pendingEvents.clear();
-        somethingToSend = false;
         somethingHappened = false;
         gui.handleGameEvents(batch);
     }
@@ -91,9 +87,7 @@ public class GameEventForwarder implements Observer {
      */
     @Override
     public void update(Observable o, Object arg) {
-        if (somethingToSend) {
-            flush();
-        }
+        flush();
     }
 
 }
