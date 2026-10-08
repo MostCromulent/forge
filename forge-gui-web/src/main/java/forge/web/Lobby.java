@@ -38,16 +38,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /** Match setup read from the engine's lobby: a browser changes its own seat as a client, and the host sets the rest of the table. */
 final class Lobby {
     /** A match seats at most four; a draft pod seats up to eight, of whom any four play each match. */
-    private static final int MAX_SEATS = 4;
+    private static final int MAX_SEATS = 8;
     private static final int MAX_POD = 8;
     /** The formats on offer, as desktop orders them. Each but Constructed is a variant; Constructed is the absence of one. */
     private static final List<GameType> FORMATS = List.of(GameType.Constructed, GameType.Commander,
@@ -1291,7 +1293,8 @@ final class Lobby {
     }
 
     void setAvatar(final int index, final int value) {
-        if (value < 0 || value >= SkinSprites.avatarCount()) {
+        final GameLobby table = view();
+        if (value < 0 || value >= SkinSprites.avatarCount() || table == null || avatarsHeld(table, index).contains(value)) {
             return;
         }
         if (index == local.webSeat()) {
@@ -1299,6 +1302,34 @@ final class Lobby {
         } else if (host() != null) {
             host().getSlot(index).setAvatarIndex(value);
             local.pushLobby();
+        }
+    }
+
+    private static Set<Integer> avatarsHeld(final GameLobby lobby, final int except) {
+        final Set<Integer> held = new HashSet<>();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            if (i != except) {
+                held.add(lobby.getSlot(i).getAvatarIndex());
+            }
+        }
+        return held;
+    }
+
+    /** Players are told apart by portrait in a match, so a seat arriving with one an earlier seat holds takes the first free one. */
+    static void distinctAvatars(final GameLobby lobby) {
+        final Set<Integer> held = avatarsHeld(lobby, -1);
+        final Set<Integer> seen = new HashSet<>();
+        for (int i = 0; i < lobby.getNumberOfSlots(); i++) {
+            final LobbySlot slot = lobby.getSlot(i);
+            if (!seen.add(slot.getAvatarIndex())) {
+                int free = 0;
+                while (held.contains(free)) {
+                    free++;
+                }
+                slot.setAvatarIndex(free);
+                held.add(free);
+                seen.add(free);
+            }
         }
     }
 

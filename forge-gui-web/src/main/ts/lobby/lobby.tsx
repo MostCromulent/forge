@@ -67,7 +67,7 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
       {seat && picker?.kind === 'sleeve' && <SleevePicker model={model} actions={actions} index={picker.seat} seat={seat} close={close} />}
       {seat && picker?.kind === 'avatar' && (
         <LookPicker title={t('lblWebLobbyChooseAvatarFor', seat.name ?? '')} count={model.looks?.avatarCount ?? 0} urlOf={avatarUrl}
-          current={seat.avatar} close={chosen => {
+          current={seat.avatar} taken={lobby.seats.filter((_, i) => i !== picker.seat).map(s => s.avatar)} close={chosen => {
             if (chosen !== null) actions.setSeat(picker.seat, { avatar: chosen });
             close();
           }} />
@@ -128,7 +128,11 @@ function Plate({ seat, index, lobby, actions, leaving, avatarCount, sleeveCount,
     actions.setSleeveArt(index, '', CENTRE);
     actions.setSeat(index, { sleeve: another(seat.sleeveArt ? -1 : seat.sleeve, sleeveCount) });
   };
-  const randomAvatar = () => actions.setSeat(index, { avatar: another(seat.avatar, avatarCount) });
+  // No two seats share a portrait, so the pick is among those nobody holds
+  const randomAvatar = () => {
+    const free = Array.from({ length: avatarCount }, (_, i) => i).filter(i => lobby.seats.every(s => s.avatar !== i));
+    if (free.length) actions.setSeat(index, { avatar: free[Math.floor(Math.random() * free.length)] });
+  };
   // A deck's own card art wins over the numbered sleeve, exactly as it does in a match
   const sleeveSrc = seat.sleeveArt ? artUrl(seat.sleeveArt) : sleeveUrl(seat.sleeve);
   // A deck led by a commander shows the commander, which says more about it than its sleeve does

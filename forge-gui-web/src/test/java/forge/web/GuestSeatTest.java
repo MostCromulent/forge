@@ -7,6 +7,8 @@ import forge.gamemodes.match.HostedMatch;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 /** A second browser taking a seat in the host's game, with both in this process and reaching the same loopback server. */
@@ -380,5 +382,40 @@ public class GuestSeatTest extends SessionsTest {
         sessions.onMessage(host, message("setPlayerCount", "count", 1));
         Thread.sleep(500);
         Assert.assertEquals(host.latestTable().getAsJsonArray("seats").size(), 2, "a table went below two players");
+    }
+    // Fails if a table stops short of eight seats, or takes a ninth
+    @Test(timeOut = 120_000)
+    public void aTableTakesEightSeats() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        sessions.onMessage(host, message("setPlayerCount", "count", 9));
+        host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 8, "the table never grew to eight");
+        Thread.sleep(500);
+        Assert.assertEquals(host.latestTable().getAsJsonArray("seats").size(), 8, "a table went above eight players");
+    }
+
+    // Fails if two seats can end with the same portrait, by a seat choosing a taken one or a guest arriving with one
+    @Test(timeOut = 120_000)
+    public void noTwoSeatsShareAPortrait() throws Exception {
+        final TestBrowser host = hostAt("invite");
+        sessions.onMessage(host, message("setPlayerCount", "count", 3));
+        final JsonObject three = host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 3, "the table never grew to three");
+        final int mine = three.get("mySeat").getAsInt();
+        final int taken = seatAvatars(three).get(mine == 0 ? 1 : 0);
+        sessions.onMessage(host, message("setSeat", "index", mine, "avatar", taken));
+        // The seat count changes after the portrait was asked for, so a table of four has the answer in it
+        sessions.onMessage(host, message("setPlayerCount", "count", 4));
+        final JsonObject four = host.awaitLobby(l -> l.getAsJsonArray("seats").size() == 4, "the table never grew to four");
+        Assert.assertEquals(new HashSet<>(seatAvatars(four)).size(), 4, "a seat took a portrait another holds: " + seatAvatars(four));
+
+        final TestBrowser guest = connect("guest");
+        sessions.onMessage(guest, message("setName", "name", "Guest", "avatar", seatAvatars(four).get(mine)));
+        final JsonObject seated = host.awaitLobby(l -> seatNames(l).contains("Guest"), "the guest never sat down");
+        Assert.assertEquals(new HashSet<>(seatAvatars(seated)).size(), 4, "a guest kept a portrait another holds: " + seatAvatars(seated));
+    }
+
+    private static List<Integer> seatAvatars(final JsonObject table) {
+        final List<Integer> out = new ArrayList<>();
+        table.getAsJsonArray("seats").forEach(s -> out.add(s.getAsJsonObject().get("avatar").getAsInt()));
+        return out;
     }
 }

@@ -226,9 +226,9 @@ html[data-way] .modes .mode.plaque, html[data-motion="reduced"] .modes .mode.pla
 .format-play b { color: var(--text); font-weight: 600; }
 
 .seats { display: grid; justify-content: center; gap: 18px; grid-auto-flow: column; }
-/* Three or four seats read as a grid rather than a row that wraps unevenly */
-.seats[data-count="3"], .seats[data-count="4"] { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
-.seats[data-count="3"] .plate, .seats[data-count="4"] .plate { width: 376px; }
+/* Three or more seats read as a grid rather than a row that wraps unevenly */
+.seats:not([data-count="2"]) { grid-auto-flow: row; grid-template-columns: repeat(2, auto); }
+.seats:not([data-count="2"]) .plate { width: 376px; }
 
 .plate {
   display: flex;
@@ -253,12 +253,12 @@ html[data-motion="reduced"] .plate { animation: none; }
 /* The sleeve is the seat's subject: a card back at true card aspect, and the only sleeve control */
 .sleeve-slot { position: relative; flex: none; }
 .plate .sleeve { padding: 0; border-radius: 8px; overflow: hidden; width: 108px; height: 151px; display: block; background: var(--surface-2); }
-.seats[data-count="3"] .plate .sleeve, .seats[data-count="4"] .plate .sleeve { width: 76px; height: 106px; }
+.seats:not([data-count="2"]) .plate .sleeve { width: 76px; height: 106px; }
 /* Secondary to the sleeve it sits on, so it stays out of the way until the pointer is over the slot */
 .sleeve-style { position: absolute; right: 4px; bottom: 4px; padding: 2px 7px; font-size: 11px; border-radius: 6px; background: #0b0e14cc; opacity: 0; transition: opacity .12s ease; }
 .sleeve-slot:hover .sleeve-style, .sleeve-style:focus-visible { opacity: 1; }
-.seats[data-count="3"] .sleeve-style, .seats[data-count="4"] .sleeve-style { left: 4px; text-align: center; }
-.seats[data-count="3"] .who .avatar, .seats[data-count="4"] .who .avatar { width: 52px; height: 52px; }
+.seats:not([data-count="2"]) .sleeve-style { left: 4px; text-align: center; }
+.seats:not([data-count="2"]) .who .avatar { width: 52px; height: 52px; }
 .plate .sleeve img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .plate .sleeve:hover { outline: 2px solid var(--accent-2); outline-offset: 2px; }
 /* An empty slot is a card-shaped outline, not a sleeve: there is nothing sleeved yet */

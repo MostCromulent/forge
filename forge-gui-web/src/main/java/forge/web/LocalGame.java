@@ -124,7 +124,7 @@ public final class LocalGame {
         hosted.getSlot(0).setType(LobbySlotType.OPEN);
         hosted.setListener(new IUpdateable() {
             @Override public void update(final boolean fullUpdate) {
-                server.updateLobbyState();
+                pushLobby();
                 onUpdate.run();
             }
             @Override public void update(final int slot, final LobbySlotType type) { }
@@ -198,6 +198,7 @@ public final class LocalGame {
     /** Sends the table out to every client, because a slot edited straight on the server does not announce itself. */
     public void pushLobby() {
         if (hosted != null) {
+            Lobby.distinctAvatars(hosted);
             server.updateLobbyState();
         }
     }

@@ -75,4 +75,34 @@ public class OfflineSealedTest extends SessionsTest {
         Assert.assertNotNull(editorOn(host, name));
         Assert.assertNotSame(FModel.getDecks().getSealed().get(name).getHumanDeck(), first, "a confirmed replace did not replace");
     }
+    // Fails if a draft pool's free-for-all still stops at three opponents
+    @Test(timeOut = 120_000)
+    public void aDraftFreeForAllSeatsEveryOpponent() throws Exception {
+        WebTestSupport.skipUnlessStress();
+        final String name = "Draft test " + UUID.randomUUID().toString().substring(0, 8);
+        final DeckGroup group = new DeckGroup(name);
+        group.setHumanDeck(TestDecks.of(name, "Forest", 40));
+        for (int i = 0; i < 7; i++) {
+            group.addAiDeck(TestDecks.of("Opponent " + (i + 1), "Mountain", 40));
+        }
+        final IStorage<DeckGroup> drafts = FModel.getDecks().getDraft();
+        drafts.add(group);
+        try {
+            final TestBrowser host = connect("host");
+            sessions.onMessage(host, JsonCodec.message("claimHost"));
+            sessions.onMessage(host, message("setName", "name", "Host"));
+            sessions.onMessage(host, message("limitedOpen", "kind", "draft"));
+            host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "the Limited page never opened");
+            sessions.onMessage(host, message("poolOpen", "name", name));
+            sessions.onMessage(host, message("poolPlay", "name", name, "mode", "several", "opponent", 0, "count", 7, "games", 1));
+            awaitTrue(() -> sessions.hostLobby() != null && sessions.hostLobby().getHostedMatch() != null
+                    && sessions.hostLobby().getHostedMatch().getGame() != null, "the free-for-all never started");
+            Assert.assertEquals(sessions.hostLobby().getHostedMatch().getGame().getRegisteredPlayers().size(), 8);
+            awaitPriority(host);
+            send(host, JsonCodec.message("leave"));
+            host.awaitMatching("hello", h -> h.has("inEvent") && h.get("inEvent").getAsBoolean(), "leaving did not return to the pool");
+        } finally {
+            drafts.delete(name);
+        }
+    }
 }

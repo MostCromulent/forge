@@ -102,8 +102,8 @@ public final class WebSession {
     private volatile OnlineDraft onlineDraft;
     /** Whether the draft host was told this seat's player left, so it is told when the browser is back. */
     private volatile boolean seatReportedGone;
-    /** A match seats at most four players, so several opponents at once are at most three. */
-    private static final int MOST_OPPONENTS = 3;
+    /** A match seats at most eight players, so several opponents at once are at most seven. */
+    private static final int MOST_OPPONENTS = 7;
     /** Whether this session is playing a limited gauntlet, and the result of its last game. */
     private volatile boolean gauntletRunning;
     private volatile LimitedResult lastResult;

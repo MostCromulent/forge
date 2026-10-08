@@ -5,3 +5,5 @@
 .look-picker { width: min(92vw, 820px); }
 .look-grid { display: grid; grid-template-columns: repeat(auto-fill, 80px); grid-auto-rows: 80px; gap: 8px; max-height: 55vh; overflow: auto; justify-content: center; }
 .look-grid .look.chosen { box-shadow: 0 0 0 3px var(--select); }
+/* Held by another seat at the table */
+.look-grid .look:disabled { opacity: .22; cursor: default; }

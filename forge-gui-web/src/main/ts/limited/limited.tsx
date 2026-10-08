@@ -128,9 +128,9 @@ function DraftSetup({ model, actions }: { model: Model; actions: Actions }) {
   );
 }
 
-/** How many opponents a free-for-all can seat: a match holds at most four players, and a pool has so many decks. */
+/** How many opponents a free-for-all can seat: a match holds at most eight players, and a pool has so many decks. */
 export function severalCap(opponents: number): number {
-  return Math.min(3, opponents);
+  return Math.min(7, opponents);
 }
 
 const COLOUR_NAMES: Record<string, TextKey> = { W: 'lblWhite', U: 'lblBlue', B: 'lblBlack', R: 'lblRed', G: 'lblGreen' };
@@ -157,7 +157,7 @@ function YourDeck({ pool, actions }: { pool: PoolRow; actions: Actions }) {
 /** The opponents as one numbered list in the gauntlet's order, from which a draft's free-for-all is chosen at random. */
 function Opponents({ pool, draft, actions }: { pool: PoolRow; draft: boolean; actions: Actions }) {
   const cap = severalCap(pool.opponents.length);
-  const [count, setCount] = useState(cap);
+  const [count, setCount] = useState(Math.min(3, cap));
   const [games, setGames] = useState(3);
   const short = pool.deckSize < DECK_SIZE;
   const several = draft && cap >= 2;
