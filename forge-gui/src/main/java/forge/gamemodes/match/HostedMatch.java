@@ -532,7 +532,8 @@ public class HostedMatch {
     }
 
     private static boolean stillPlaying(final PlayerControllerHuman controller) {
-        return controller.getPlayer().getOriginalLobbyPlayer() == controller.getLobbyPlayer();
+        // A spectator's controller has no player
+        return controller.getPlayer() == null || controller.getPlayer().getOriginalLobbyPlayer() == controller.getLobbyPlayer();
     }
 
     private synchronized void addNextGameDecision(final PlayerControllerHuman controller, final NextGameDecision decision) {
