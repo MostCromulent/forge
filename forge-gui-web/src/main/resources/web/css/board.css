@@ -1044,8 +1044,9 @@ body.dragging-block #zoom { display: none; }
 #first-reveal.choosing { pointer-events: auto; animation: first-reveal-in .3s ease forwards; }
 @keyframes first-reveal-in { from { opacity: 0; } }
 #first-reveal.choosing .reveal-face { animation: none; padding: 0; background: none; border: 0; color: var(--text); font: inherit; cursor: pointer; }
-#first-reveal.choosing .reveal-face > :first-child { transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
-#first-reveal.choosing .reveal-face:is(:hover, :focus-visible) > :first-child { transform: scale(1.08); border-color: var(--accent-2); box-shadow: 0 0 0 3px #0e1116, 0 0 24px var(--accent-glow); }
+/* Each face can be picked, so it wears the ring a pickable portrait wears on the table, and the one under the pointer the ring of a pick */
+#first-reveal.choosing .reveal-face > :first-child { border-color: transparent; box-shadow: 0 0 0 3px var(--selectable); transition: transform .15s ease, box-shadow .15s ease; }
+#first-reveal.choosing .reveal-face:is(:hover, :focus-visible) > :first-child { transform: scale(1.08); box-shadow: 0 0 0 3px var(--pick), 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent); }
 #first-reveal.choosing .reveal-face:focus-visible { outline: none; }
 #first-reveal.choosing p { animation-delay: .1s; }
 /* Still said, only without the movement */
