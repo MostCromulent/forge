@@ -1,23 +1,24 @@
 /* The menu and match setup, on the same dark ground as the board so that starting a game is one continuous place */
 
-.wordmark { position: relative; font-weight: 700; letter-spacing: .03em; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
+.wordmark { position: relative; display: inline-flex; align-items: baseline; gap: .1em; font-weight: 700; font-size: 20px; font-family: Georgia, "Times New Roman", serif; }
 /* Hangs off the end of the name, so the name stays centred where it is centred */
-.wordmark .beta { position: absolute; left: 100%; top: 50%; translate: 0 -50%; margin-left: 8px; padding: 1px 6px; border: 1px solid var(--line-bright); border-radius: 999px;
-  font: 600 9.5px/1.4 system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wordmark i { position: relative; display: inline-block; padding-bottom: .34em; font-style: normal; }
+/* A dash under each letter, of one width and centred on it, low enough to clear the g. The one place Magic's five colours are pure decoration. */
+.wordmark i::after { content: ''; position: absolute; left: 50%; bottom: 0; width: .5em; height: .15em; margin-left: -.25em; border-radius: .075em; background: var(--dash); }
+.wordmark i:nth-child(1) { --dash: var(--mtg-w); }
+.wordmark i:nth-child(2) { --dash: var(--mtg-u); }
+.wordmark i:nth-child(3) { --dash: var(--mtg-b); }
+.wordmark i:nth-child(4) { --dash: var(--mtg-r); }
+.wordmark i:nth-child(5) { --dash: var(--mtg-g); }
+/* On the centred pages the tag hangs off the word's end, so the word itself stays in the middle */
+.wordmark .beta { position: absolute; left: 100%; bottom: .34em; margin-left: .7em; font: 700 .45em/1 system-ui, sans-serif; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; color: var(--muted); }
 
 /* --- menu ------------------------------------------------------------- */
 
 .menu-page { min-height: 100%; display: grid; align-content: center; justify-items: center; gap: 24px; padding: 40px 20px; }
-.wordmark-block { display: grid; justify-items: center; gap: 7px; }
-.menu-page .wordmark { font-size: 44px; line-height: 1; letter-spacing: .06em; font-family: Georgia, "Times New Roman", serif; }
-/* The one place Magic's five colours are pure decoration: no card art nearby and nothing encoded by hue */
-.stripes { display: flex; gap: 4px; }
-.stripes i { width: 34px; height: 3px; border-radius: 2px; }
-.stripes i:nth-child(1) { background: var(--mtg-w); }
-.stripes i:nth-child(2) { background: var(--mtg-u); }
-.stripes i:nth-child(3) { background: var(--mtg-b); }
-.stripes i:nth-child(4) { background: var(--mtg-r); }
-.stripes i:nth-child(5) { background: var(--mtg-g); }
+.wordmark-block { display: grid; justify-items: center; }
+.menu-page .wordmark { font-size: 44px; line-height: 1; }
+.menu-page .wordmark .beta { font-size: .3em; }
 
 /* --- the start page --------------------------------------------------- */
 
@@ -782,9 +783,8 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .event-setup .wiz { border: none; background: transparent; }
 
 /* The page header: the wordmark, and how to invite, set the sound and options, and leave. The match settings are in the bar under it. */
-.page-head .wordmark-block { justify-items: start; gap: 4px; }
-.page-head .wordmark .beta { position: static; translate: none; display: inline-block; vertical-align: middle; }
-.page-head .stripes i { width: 14px; }
+.page-head .wordmark-block { justify-items: start; }
+.page-head .wordmark .beta { position: static; margin-left: .28em; }
 .icon-button { width: 32px; height: 30px; padding: 0; display: grid; place-items: center; }
 .icon-button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .icon-button[aria-expanded="true"] { background: var(--surface-2); }

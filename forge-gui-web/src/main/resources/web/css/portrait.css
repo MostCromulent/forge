@@ -504,3 +504,6 @@ html[data-form="portrait"] #editor .land-row { display: grid; grid-template-colu
 html[data-form="portrait"] #editor .land-row .band-lab, html[data-form="portrait"] #editor .land-row .land-set { grid-column: 1 / -1; }
 html[data-form="portrait"] #editor .land-row .band-lab { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
 html[data-form="portrait"] #editor .land-row .step { width: 36px; height: 36px; font-size: 18px; }
+/* A phone has no room beside the word, so the tag goes under it */
+html[data-form="portrait"] .menu-page .wordmark { flex-wrap: wrap; justify-content: center; }
+html[data-form="portrait"] .menu-page .wordmark .beta { position: static; flex-basis: 100%; margin: .8em 0 0; text-align: center; }

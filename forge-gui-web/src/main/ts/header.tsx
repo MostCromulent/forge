@@ -8,8 +8,11 @@ import { t } from './text';
 export function Wordmark() {
   return (
     <div class="wordmark-block">
-      <span class="wordmark">Forge<span class="beta">{t('lblWebBeta')}</span></span>
-      <span class="stripes" aria-hidden="true"><i /><i /><i /><i /><i /></span>
+      {/* Five letters for Magic's five colours: each stands on a dash of its own */}
+      <span class="wordmark" aria-label="Forge">
+        {[...'Forge'].map(letter => <i key={letter} aria-hidden="true">{letter}</i>)}
+        <span class="beta">{t('lblWebBeta')}</span>
+      </span>
     </div>
   );
 }
