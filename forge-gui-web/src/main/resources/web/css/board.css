@@ -150,9 +150,10 @@ html[data-motion="reduced"] .row > .group { transition: none; }
 .row:has(> .group:empty) > .group { justify-content: center; }
 .row > .group:empty { display: none; }
 /* Contained, so the grid's width never feeds back into the board's, which battlefield.ts measures to size the cards */
-.row:not(.paired):has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; contain: inline-size; }
+/* The one gap battlefield.ts counts is the far group's margin, as a grid's own gap would also stand before the empty first column */
+.row:not(.paired):has(> .group:first-child:not(:empty)):has(> .group:last-child:not(:empty)) { display: grid; grid-template-columns: 1fr auto 1fr; column-gap: 0; contain: inline-size; }
 .row:not(.paired):has(> .group:last-child:not(:empty)) > .group:first-child { grid-column: 2; justify-content: center; }
-.row:not(.paired):has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 0; }
+.row:not(.paired):has(> .group:first-child:not(:empty)) > .group:last-child { grid-column: 3; justify-content: flex-end; margin-left: 52px; }
 /* The other permanents stand just past the lands, the two centred together while the row has room */
 .row.paired { justify-content: safe center; gap: 40px; }
 .row.paired > .group { flex: 0 0 auto; justify-content: center; }

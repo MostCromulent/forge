@@ -93,6 +93,7 @@ html[data-form="portrait"] #match .seat .player-extra :is(.player-counter, .embl
 html[data-form="portrait"] #match .seat .battlefield { --row-gap-0: 12px; --row-gap-1: 16px; --fit-spare: 18px; gap: 0; padding: 9px 5px 12px; overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: none; }
 html[data-form="portrait"] #match .seat .battlefield.crowded { overflow-y: auto; }
 html[data-form="portrait"] #match .seat .row { gap: 12px; padding-top: 4px; min-height: 0; }
+html[data-form="portrait"] #match .seat .row > .group.far { margin-left: 0; }
 /* Your line no longer stands beside the hand, so the hand keeps none of its room */
 html[data-form="portrait"] #hand { padding-left: 0; padding-right: 0; }
 /* The hand as a strip of card tops, until its drawer opens */
