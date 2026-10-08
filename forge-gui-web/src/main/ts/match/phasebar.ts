@@ -7,6 +7,7 @@ import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { GameView, PhaseType, TurnMarker } from '../protocol';
 import { isPortrait } from '../form';
+import { asksPlayer } from './pace';
 import { sheet, swipeDown } from '../sheet';
 
 // A pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
@@ -322,8 +323,8 @@ export function stopWaiting(): void {
 
 function drawWaiting(pill: HTMLElement, model: Model): void {
   const mine = me(model);
-  // The game is waiting on you, whether that is priority or a declaration to make
-  const onMe = !!(mine?.HasPriority || model.prompt?.ok?.enabled || model.prompt?.cancel?.enabled);
+  // The game is waiting on you, whether that is priority, a declaration to make or a choice to answer
+  const onMe = !!(mine?.HasPriority || (model.prompt && asksPlayer(model.prompt)) || model.requests.size > 0);
   // Only a person minds waiting; against the computer your own wait is nobody's business
   const people = players(model).filter(p => !isLocal(model, p) && !p.IsAI && !p.HasLost);
   // The engine marks priority only once it has passed, so at a step's start it is whoever's turn it is, or the one other player
