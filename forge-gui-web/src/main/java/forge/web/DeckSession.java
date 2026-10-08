@@ -307,7 +307,7 @@ final class DeckSession {
             return Localizer.getInstance().getMessage("lblWebEditorWrongFormat", done.check().format());
         }
         lobby.setDeck(seat, adopt(done));
-        channel.send(lobby.state());
+        lobby.sendState(channel);
         return null;
     }
 
@@ -470,7 +470,7 @@ final class DeckSession {
                     return true;
                 }
                 lobby.setDeck(c.seat(), relisted(key, deck));
-                channel.send(lobby.state());
+                lobby.sendState(channel);
             }
             case edit -> {
                 lobby.sendDecks(channel);

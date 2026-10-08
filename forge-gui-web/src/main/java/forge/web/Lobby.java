@@ -255,7 +255,7 @@ final class Lobby {
         return out;
     }
 
-    /** Guards the record of the last deck list sent, so two threads cannot both decide to send the same one. */
+    /** Held while a deck list or the table is built and sent, so two threads cannot both send the same list, or send an older table after a newer one. */
     private final Object sentLock = new Object();
     private BrowserChannel decksSentTo;
     private Decks decksSent;
@@ -581,7 +581,13 @@ final class Lobby {
         return details == null ? null : new DeckDetailsMessage(details);
     }
 
-    LobbyMessage state() {
+    void sendState(final BrowserChannel to) {
+        synchronized (sentLock) {
+            to.send(state());
+        }
+    }
+
+    private LobbyMessage state() {
         synchronized (DeckCatalog.DECKS) {
             final GameLobby lobby = view();
             if (lobby == null) {

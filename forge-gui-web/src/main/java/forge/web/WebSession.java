@@ -354,7 +354,7 @@ public final class WebSession {
         } else if (now instanceof Setup) {
             // Match setup is drawn from the table, which only these messages describe
             lobby.sendDecks(channel);
-            channel.send(lobby.state());
+            lobby.sendState(channel);
             if (isHost && lobby.settingUpEvent()) {
                 sendEventOptions(channel);
             }
@@ -764,7 +764,7 @@ public final class WebSession {
                 lobby.setSleeveArt(art.index(), art.key(), art.offset());
             }
         }
-        channel.send(lobby.state());
+        lobby.sendState(channel);
     }
 
     /** A change to the table's draft or sealed event, which is the host's to make. */
@@ -822,7 +822,7 @@ public final class WebSession {
                 ui.runBackgroundTask("Event", () -> reportProblem(channel, lobby.startEvent()));
             }
         }
-        channel.send(lobby.state());
+        lobby.sendState(channel);
     }
 
     private void reportProblem(final BrowserChannel channel, final String problem) {
@@ -876,7 +876,7 @@ public final class WebSession {
         }
         applyChosenAvatar();
         lobby.sendDecks(channel);
-        channel.send(lobby.state());
+        lobby.sendState(channel);
         sessions.hostGameOpened();
     }
 
@@ -915,7 +915,7 @@ public final class WebSession {
             final BrowserChannel b = browser;
             if (b != null) {
                 lobby.sendDecks(b);
-                b.send(lobby.state());
+                lobby.sendState(b);
             }
         });
     }
@@ -1061,7 +1061,7 @@ public final class WebSession {
         if (b != null && stage instanceof Setup) {
             // A guest learns of the host's format or card pool only here, so its deck list is rebuilt here too
             relistDecks(b);
-            b.send(lobby.state());
+            lobby.sendState(b);
         }
     }
 
