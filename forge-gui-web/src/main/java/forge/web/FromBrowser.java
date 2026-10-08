@@ -194,6 +194,11 @@ final class FromBrowser {
             ImportAction action, @Nullable Integer seat, @Nullable String url, @Nullable Clash clash) {
     }
 
+    /** A .dck file's text, saved as a deck of the format without going through the importer. */
+    @Command("deckFile")
+    record DeckFile(String text, String format, @Nullable Clash clash) {
+    }
+
     /** A deck a guest keeps in its browser: the id it is kept under, the deck as .dck text, and its format. */
     record DeviceDeckText(String id, String text, String format) {
     }
@@ -204,11 +209,6 @@ final class FromBrowser {
     }
 
     // ---- Match -------------------------------------------------------------------------------------------------
-    /** A .dck file's text, saved as a deck of the format without going through the importer. */
-    @Command("deckFile")
-    record DeckFile(String text, String format, @Nullable Clash clash) {
-    }
-
 
     @Command("reply")
     record Reply(int id, @Ts("unknown") JsonElement value) {

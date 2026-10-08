@@ -226,10 +226,10 @@ export interface Actions {
   readImport(request: number, text: string, format: string, cardPool: string | null, unrestricted: boolean): void;
   fetchImport(request: number, url: string): void;
   commitImport(c: Omit<ImportCommit, 't'>): void;
-  deviceDecks(decks: DeviceDeckText[]): void;
-}
   /** Saves a .dck file's deck under the format, with no importer. clash answers a name that is already taken. */
   addDeckFile(text: string, format: string, clash?: 'replace' | 'keep'): void;
+  deviceDecks(decks: DeviceDeckText[]): void;
+}
 
 /** The kind of event a table opened from the start page is to be, until the table arrives and is switched to it. */
 export const pendingTable: { kind: 'sealed' | 'draft' | null } = { kind: null };
@@ -381,8 +381,8 @@ export function createActions(send: Send): Actions {
       send(cardPool ? { t: 'importRead', request, text, format, cardPool, unrestricted } : { t: 'importRead', request, text, format, unrestricted }),
     fetchImport: (request, url) => send({ t: 'importFetch', request, url }),
     commitImport: c => send({ t: 'importCommit', ...c }),
+    addDeckFile: (text, format, clash) => send({ t: 'deckFile', text, format, clash }),
     deviceDecks: decks => send({ t: 'deviceDecks', decks }),
     answerHostChoice: (id, value) => send({ t: 'hostChoice', id, value }),
   };
 }
-    addDeckFile: (text, format, clash) => send({ t: 'deckFile', text, format, clash }),

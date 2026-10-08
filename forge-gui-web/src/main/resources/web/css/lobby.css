@@ -684,9 +684,6 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .finder-foot .delete-line b { color: var(--text); }
 .finder-foot .danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--line)); }
 .finder-foot .linked-line { margin-right: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
-.drop-over-finder {
-  position: absolute; inset: 10px; z-index: 6; display: grid; place-items: center; pointer-events: none; font-size: 16px; font-weight: 700;
-  border: 2px dashed var(--accent-2); border-radius: 12px; background: var(--accent-soft);
 /* What "+ New deck" opens: a deck site's link first, then the other ways to make a deck */
 .dialog.new-deck { width: min(92vw, 440px); gap: 16px; }
 .new-deck section { display: grid; gap: 8px; }
@@ -699,6 +696,9 @@ html[data-motion="reduced"] .dock-new { animation: none; }
 .new-deck .way span { display: grid; flex: 1; min-width: 0; }
 .new-deck .way small { color: var(--muted); font-size: 12.5px; }
 .new-deck .way::after { content: "\203A"; color: var(--faint); }
+.drop-over-finder {
+  position: absolute; inset: 10px; z-index: 6; display: grid; place-items: center; pointer-events: none; font-size: 16px; font-weight: 700;
+  border: 2px dashed var(--accent-2); border-radius: 12px; background: var(--accent-soft);
 }
 
 /* A Limited table: the switch above, the event beside the seats, and seats that ready up before any deck exists */
