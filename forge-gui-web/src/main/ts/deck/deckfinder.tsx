@@ -111,6 +111,16 @@ export function sourceCounts(decks: readonly DeckSummary[]): Map<string, number>
 }
 
 /** The deck finder, which chooses a seat's deck, or with no seat lists one format's decks and opens the editor instead. */
+/** Shown over the deck selector or the editor while a file is held over it: what is under dims, and a card says what a drop does. */
+export function DropOver() {
+  return (
+    <div class="drop-over">
+      {/* Lucide's file-down (ISC, see web/licenses/lucide-license.txt) */}
+      <div><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4M12 18v-6M9 15l3 3 3-3" /></svg>{t('lblWebFinderDropToImport')}</div>
+    </div>
+  );
+}
+
 export function DeckFinder({ model, actions, seat, close }: {
   model: Model; actions: Actions; seat?: { index: number; seat: Seat }; close: () => void;
 }) {
@@ -411,7 +421,7 @@ export function DeckFinder({ model, actions, seat, close }: {
             </div>
           </div>
         )}
-        {dropping && <div class="drop-over-finder">{t('lblWebFinderDropToImport')}</div>}
+        {dropping && <DropOver />}
         {peek && <div class="deck-peek" style={{ left: `${peek.left}px`, top: `${peek.top}px` }}><img alt="" src={imageUrl(peek.image)} /></div>}
       </div>
     </div>
