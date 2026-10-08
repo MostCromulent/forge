@@ -57,6 +57,12 @@ export function Lobby({ model, actions }: { model: Model; actions: Actions }) {
           {lobby.seats.map((s, i) => <Plate key={`${i} ${s.type} ${s.name ?? ''}`} seat={s} index={i} lobby={lobby} actions={actions} leaving={leaving.has(i)} joinable={model.networked}
             avatarCount={model.looks?.avatarCount ?? 0} sleeveCount={model.looks?.sleeveCount ?? 0}
             choose={kind => changeUi(u => { u.picker = { kind, seat: i }; })} random={() => randomDeck(model, actions, i)} />)}
+          {/* A seat can be added where it will appear, as well as by the count above */}
+          {lobby.host && !lim && lobby.seats.length < lobby.maxSeats && (
+            <button class="plate add-seat" onClick={() => actions.setPlayerCount(lobby.seats.length + 1)}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>{t('lblWebLobbyAddSeat')}
+            </button>
+          )}
         </div>
         {/* An event's Play is on its rail, which also says what the match waits on; only a warning about illegal decks is left */}
         {lim ? lim.activeEventId && <IllegalDecks lobby={lobby} /> : <Verdict lobby={lobby} start={() => actions.startMatch(ui.spectate)} />}
