@@ -283,7 +283,7 @@ function Tile({ row, count, top, limit, room, limited, commanderWanted, mainOnly
   return (
     <div class={`slot${count ? ' indeck' : ''}${row.problem ? ' bad' : ''}${top ? ' top' : ''}`} data-card={row.name} data-from="catalogue">
       {top && <span class="enter">{commanderWanted ? t('lblWebCataloguePressEnterChoose') : t('lblWebCataloguePressEnterAdd')}</span>}
-      <button class="tile" title={row.name} {...handlers(row.name, 'catalogue', row.image, 1)}
+      <button class="tile" title={row.name} data-image={row.image} {...handlers(row.name, 'catalogue', row.image, 1)}
         onClick={() => (commanderWanted ? makeCommander(row.name) : add(row.name))}>
         <span class="tile-name">{row.name}</span>
         <img loading="lazy" alt="" src={imageUrl(row.image)} onError={e => { e.currentTarget.hidden = true; }} />
