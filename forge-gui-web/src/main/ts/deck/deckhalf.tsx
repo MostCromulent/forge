@@ -27,6 +27,8 @@ export function DeckHalf({ actions, state, handlers, check }: {
   const hasCommander = state.commanders.length > 0 || state.commanderWanted;
   const half = Math.ceil(state.sideboard.length / 2);
   const groups = regroup(state, by);
+  // A deck that is only the wrong size has no card to point at
+  const flagged = [...state.main.flatMap(g => g.cards), ...state.sideboard, ...state.commanders].some(card => card.problem);
   // Two clicks on a card take one copy out. A pool's cards cannot leave it, so there the copy goes to the other section.
   const takeOut = (name: string, zone: 'Main' | 'Sideboard') => (state.limited
     ? actions.edit({ op: 'move', name, from: zone, to: zone === 'Main' ? 'Sideboard' : 'Main', count: 1 })
@@ -49,7 +51,7 @@ export function DeckHalf({ actions, state, handlers, check }: {
             : state.mainOnly ? t('lblWebFinderSizesNoSideboard', state.stats.main, state.stats.lands)
             : t('lblWebEditorSizes', state.stats.total, state.stats.sideboard, state.stats.lands)}</p>
           {state.verdict
-            ? <p class="verdict no">{state.verdict} <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button></p>
+            ? <p class="verdict no">{state.verdict} {flagged && <button class="link" onClick={showProblems}>{t('lblWebEditorShowThem')}</button>}</p>
             : <p class="verdict yes">{t('lblWebEditorLegalFor', state.check)}</p>}
           {check && <div class="deck-check">{check}</div>}
           <button class="small" disabled={!state.stats.main} onClick={() => setHand(drawHand(state, HAND))}>{t('lblWebEditorSampleHand')}</button>
@@ -87,6 +89,22 @@ export function DeckHalf({ actions, state, handlers, check }: {
           ))}
         </div>
       </div>
+      {!state.limited && !state.mainOnly && <div class="zone side-zone" data-zone="Sideboard">
+        <h4><span class="zn">{t('lblSideboard')}</span><span class="count">{state.stats.sideboard}</span></h4>
+        {cards
+          ? (
+            <div class="zone-body deck-cols">
+              <div class="group">{state.sideboard.map(c => <Stack key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} handlers={handlers} />)}</div>
+            </div>
+          )
+          : (
+            <div class="zone-body cols">
+              {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
+                <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
+              ))}
+            </div>
+          )}
+      </div>}
       <div class="land-row">
         <span class="band-lab">{t('lblWebEditorBasicLands')}</span>
         {state.lands.map(l => (
@@ -108,22 +126,6 @@ export function DeckHalf({ actions, state, handlers, check }: {
             onClick={() => actions.edit({ op: 'suggestLands', count: 0 })}>{t('lblWebEditorSuggestLands')}</button>
         </>}
       </div>
-      {!state.limited && !state.mainOnly && <div class="zone side-zone" data-zone="Sideboard">
-        <h4><span class="zn">{t('lblSideboard')}</span><span class="count">{state.stats.sideboard}</span></h4>
-        {cards
-          ? (
-            <div class="zone-body deck-cols">
-              <div class="group">{state.sideboard.map(c => <Stack key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} handlers={handlers} />)}</div>
-            </div>
-          )
-          : (
-            <div class="zone-body cols">
-              {[state.sideboard.slice(0, half), state.sideboard.slice(half)].map((column, i) => (
-                <div key={i}>{column.map(c => <Line key={c.name} card={c} zone="Sideboard" takeOut={() => takeOut(c.name, 'Sideboard')} landed={state.landed === c.name} actions={actions} handlers={handlers} />)}</div>
-              ))}
-            </div>
-          )}
-      </div>}
       {hand && <SampleHand hand={hand} again={() => setHand(drawHand(state, HAND))}
         more={() => setHand(drawHand(state, hand.length + 1))} close={() => setHand(null)} />}
     </section>

@@ -4,12 +4,12 @@ import { connect } from './net';
 import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
 import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
-import { initForm } from './form';
+import { initForm, isPortrait } from './form';
 import { initPress } from './press';
 import { initSheets, matchHistory } from './sheet';
 import { keyCommand, type KeyCommand } from './keys';
 import { rememberName, rememberedAvatar, rememberedName } from './menu';
-import { renderScreens, screenOf } from './screens';
+import { renderScreens, pageUnder, screenOf } from './screens';
 import { readySplit } from './match/dialogs';
 import { announceComing, renderMatch, resetTable } from './match/board';
 import { renderPrompt, flash, pressPromptButton } from './match/prompt';
@@ -561,14 +561,15 @@ function render(): void {
   const events = model.events;
   model.events = [];
   const page = screenOf(model);
-  byId('menu').hidden = page !== 'menu' && page !== 'name';
-  byId('lobby').hidden = page !== 'lobby';
+  const under = pageUnder(model);
   byId('editor').hidden = page !== 'editor';
-  byId('limited').hidden = page !== 'limited';
-  byId('drafting').hidden = page !== 'drafting';
-  byId('conquest').hidden = page !== 'conquest';
-  byId('quest').hidden = page !== 'quest';
-  byId('match').hidden = page !== 'match';
+  for (const id of ['menu', 'lobby', 'limited', 'drafting', 'conquest', 'quest', 'match']) {
+    const el = byId(id);
+    // A phone has no room for a panel, so there the editor takes the screen and the page under it is put away
+    el.hidden = id !== (under === 'name' ? 'menu' : under) || (page === 'editor' && isPortrait());
+    // On a desktop the page under the editor is seen and not used
+    el.inert = page === 'editor';
+  }
   matchHistory(page === 'match');
   void keepAwake(page === 'match' && !model.gameOver);
   renderScreens(model, actions, dismissNotice);
