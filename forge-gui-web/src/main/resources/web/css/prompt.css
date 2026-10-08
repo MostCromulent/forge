@@ -73,6 +73,8 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #options .rail button { position: relative; }
 #options .rail-mark { position: absolute; left: -1px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--accent-2); view-transition-name: rail-mark; }
 #options .split .rows { view-transition-name: rail-page; }
+/* A named part of the screen behind is drawn over everything unnamed while a tab changes, so the dialog is named to stay above it */
+#options { view-transition-name: options; }
 #options .stops-dialog { width: min(440px, 92vw); }
 #options .decisions-dialog { width: min(620px, 92vw); }
 #options .decision { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); }
