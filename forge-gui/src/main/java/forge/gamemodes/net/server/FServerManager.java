@@ -611,6 +611,15 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         return null;
     }
 
+    /** The slots above a removed one each move down, and the clients holding them move with them. */
+    public void slotRemoved(final int index) {
+        for (final RemoteClient client : clients.values()) {
+            if (client.getIndex() > index) {
+                client.setIndex(client.getIndex() - 1);
+            }
+        }
+    }
+
     public void clearPlayerGuis() {
         for (final RemoteClient client : clients.values()) {
             client.setGui(null);

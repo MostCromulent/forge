@@ -1658,6 +1658,8 @@ public final class WebSession {
             Logger.error(e, "Could not start the match");
             local.endMatch();
             move(playing, new Menu());
+            // The table went with the match, and nothing else tells the guests seated at it
+            sessions.hostGameClosed();
             channel.send(error(Localizer.getInstance().getMessage("lblWebSessionMatchFailed", String.valueOf(e.getMessage()))));
         }
     }
