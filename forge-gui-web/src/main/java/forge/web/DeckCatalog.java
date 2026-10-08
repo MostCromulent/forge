@@ -706,6 +706,16 @@ final class DeckCatalog {
         return out;
     }
 
+    static void forgetSleeveArt(final String imageKey) {
+        final var prefs = FModel.getPreferences();
+        final FPref pref = FPref.UI_SLEEVE_ART_LIBRARY;
+        final Map<String, Integer> library = new LinkedHashMap<>(SleeveArt.parseLibrary(prefs.getPref(pref)));
+        if (library.remove(imageKey) != null) {
+            prefs.setPref(pref, SleeveArt.formatLibrary(library));
+            prefs.save();
+        }
+    }
+
     /** Remembers a card-art sleeve alongside the ones desktop has saved, newest last. */
     static void rememberSleeveArt(final String imageKey, final int offset) {
         if (imageKey == null || imageKey.isEmpty()) {

@@ -132,6 +132,11 @@ final class FromBrowser {
     record SleeveArt(int index, String key, int offset) {
     }
 
+    /** Takes a card-art sleeve out of the saved ones. A deck already wearing it keeps it. */
+    @Command("forgetSleeveArt")
+    record ForgetSleeveArt(String key) {
+    }
+
     @Command("start")
     record Start(boolean spectate) {
     }

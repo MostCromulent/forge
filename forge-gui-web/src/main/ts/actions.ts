@@ -198,6 +198,7 @@ export interface Actions {
   setSeat(index: number, change: SeatChange): void;
   /** Sleeves a seat's deck in a card's art, cropped at offset; an empty key goes back to the numbered sleeve. */
   setSleeveArt(index: number, key: string, offset: number): void;
+  forgetSleeveArt(key: string): void;
   startMatch(spectate: boolean): void;
   /** Asks for a deck's card list and statistics, which arrive later in the model. */
   askDeckDetails(key: string): void;
@@ -365,6 +366,7 @@ export function createActions(send: Send): Actions {
     aiSeat: index => send({ t: 'aiSeat', index }),
     setSeat: (index, change) => send({ t: 'setSeat', index, ...change }),
     setSleeveArt: (index, key, offset) => send({ t: 'sleeveArt', index, key, offset }),
+    forgetSleeveArt: key => send({ t: 'forgetSleeveArt', key }),
     startMatch: spectate => send({ t: 'start', spectate }),
     askDeckDetails: key => send({ t: 'deckDetails', key }),
     deckQuery: (kind, value) => send({ t: 'deckQuery', kind, value }),

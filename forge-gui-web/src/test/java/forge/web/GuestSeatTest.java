@@ -455,6 +455,18 @@ public class GuestSeatTest extends SessionsTest {
         host.awaitNewest("presence", p -> avatarOf(p, name) == chosen, "the list of who is here kept the old portrait");
     }
 
+    // Fails if a card-art sleeve the host removed is still offered
+    @Test(timeOut = 120_000)
+    public void theHostTakesASavedSleeveAway() throws Exception {
+        final TestBrowser host = hostAt("lobby");
+        final String key = "Sleeve Removal Test Card";
+        DeckCatalog.rememberSleeveArt(key, 500);
+        Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().anyMatch(art -> art.key().equals(key)), "the sleeve was never saved");
+        sessions.onMessage(host, message("forgetSleeveArt", "key", key));
+        host.awaitNewest("hello", h -> !h.has("sleeveArt") || !h.get("sleeveArt").toString().contains(key), "the removed sleeve is still offered");
+        Assert.assertTrue(DeckCatalog.savedSleeveArt().stream().noneMatch(art -> art.key().equals(key)), "the sleeve is still saved");
+    }
+
     private static int avatarOf(final JsonObject presence, final String name) {
         for (final var p : presence.getAsJsonArray("people")) {
             final JsonObject person = p.getAsJsonObject();

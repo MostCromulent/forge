@@ -464,6 +464,14 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .art-tile img, .sleeve-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .art-tile[aria-pressed="true"], .sleeve-tile[aria-pressed="true"] { outline: 2px solid var(--accent-2); outline-offset: 1px; }
 .art-tile.add { display: grid; place-items: center; font-size: 24px; color: var(--muted); border-style: dashed; }
+/* Adding one is the same dashed outline as adding a seat, and lights the same way */
+.art-tile.add:is(:hover, :focus-visible) { border-color: var(--accent-2); color: var(--accent-2); }
+/* A saved card art can be taken away with the seat's own remove button, which waits for the pointer so a grid of them stays quiet */
+.art-slot { position: relative; display: grid; }
+.art-slot .drop { top: -7px; right: -7px; width: 22px; height: 22px; opacity: 0; transition: opacity .12s ease; }
+.art-slot .drop::after { inset: -4px; }
+.art-slot:hover .drop, .art-slot .drop:focus-visible { opacity: 1; }
+@media (hover: none) { .art-slot .drop { opacity: 1; } }
 
 .sleeves.picking .saved, .sleeves.picking .numbered { display: none; }
 .back-to-sleeves { grid-column: 1 / -1; justify-self: start; color: var(--muted); }

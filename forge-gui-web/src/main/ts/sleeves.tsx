@@ -37,9 +37,16 @@ export function SleevePicker({ model, actions, index, seat, close }: {
             <h3>{t('lblWebSleevesCardArt')}</h3>
             <div class="art-grid">
               {model.savedSleeveArt.map(art => (
-                <button key={art.key} class="art-tile" aria-pressed={art.key === seat.sleeveArt} onClick={() => choose(art.key, art.offset)}>
-                  <img alt="" src={artUrl(art.key)} style={{ objectPosition: objectPosition(art.offset) }} />
-                </button>
+                <span key={art.key} class="art-slot">
+                  <button class="art-tile" aria-pressed={art.key === seat.sleeveArt} onClick={() => choose(art.key, art.offset)}>
+                    <img alt="" src={artUrl(art.key)} style={{ objectPosition: objectPosition(art.offset) }} />
+                  </button>
+                  {/* The saved sleeves are the host's, so only the host takes one away */}
+                  {model.host && (
+                    <button class="drop" title={t('lblWebSleevesRemoveArt')} aria-label={t('lblWebSleevesRemoveArt')}
+                      onClick={() => actions.forgetSleeveArt(art.key)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg></button>
+                  )}
+                </span>
               ))}
               <button class="art-tile add" title={t('lblWebSleevesPickCard')} onClick={() => setPicking(true)}>+</button>
             </div>

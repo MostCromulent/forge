@@ -428,7 +428,7 @@ public final class WebSession {
             });
             // The table can be changed only while it is set up: not while it is being built, and not once it is played
             case "ready", "openSeat", "aiSeat", "removeSeat", "setFormat", "setCardPool", "setVariant", "setArchenemy", "setSeatExtra",
-                    "setPlayerCount", "setMatchLength", "setMaxBracket", "setSeat", "sleeveArt" -> {
+                    "setPlayerCount", "setMatchLength", "setMaxBracket", "setSeat", "sleeveArt", "forgetSleeveArt" -> {
                 if (stage instanceof Setup) {
                     onSetup(channel, msg);
                 }
@@ -762,6 +762,13 @@ public final class WebSession {
             case "sleeveArt" -> {
                 final SleeveArt art = Wire.decode(msg, SleeveArt.class);
                 lobby.setSleeveArt(art.index(), art.key(), art.offset());
+            }
+            case "forgetSleeveArt" -> {
+                // The saved sleeves are the host's own Forge profile, and the list of them travels in the hello
+                if (isHost) {
+                    DeckCatalog.forgetSleeveArt(Wire.decode(msg, ForgetSleeveArt.class).key());
+                    channel.send(hello());
+                }
             }
         }
         lobby.sendState(channel);
