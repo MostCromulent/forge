@@ -598,10 +598,21 @@ function Chosen({ details }: { details: DeckDetails }) {
   const s = details.stats;
   // Game changers are marked where they sit in the list, whether or not the bracket's reasons are open
   const changers = new Set(details.bracket?.reasons.find(r => r.kind === 'gameChangers')?.cards ?? []);
+  const [cards, setCards] = useState(() => stored(VIEW_KEY) === 'cards');
+  const view = (asCards: boolean) => {
+    setCards(asCards);
+    store(VIEW_KEY, asCards ? 'cards' : 'list');
+  };
   return (
     <>
       <div class="dk-chosen-head">
-        <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
+        <div class="dk-chosen-title">
+          <h3>{details.name} <span class="pips"><Pips colors={details.colors} /></span></h3>
+          <span class="seg view-seg" role="group" aria-label={t('lblWebEditorShowDeckAs')}>
+            <button aria-pressed={cards} onClick={() => view(true)}>{t('lblCards')}</button>
+            <button aria-pressed={!cards} onClick={() => view(false)}>{t('lblWebDraftList')}</button>
+          </span>
+        </div>
         <p class="sizes">{s.sideboard ? t('lblWebEditorSizes', s.total, s.sideboard, s.lands) : t('lblWebFinderSizesNoSideboard', s.total, s.lands)}</p>
         <p class={details.problem ? 'verdict no' : 'verdict yes'}>{details.problem ?? t('lblWebFinderLegalForFormat')}</p>
         {details.bracket && <BracketPanel bracket={details.bracket} />}
@@ -613,9 +624,9 @@ function Chosen({ details }: { details: DeckDetails }) {
           </div>
         </div>
       </div>
-      <div class="dk-cards">
-        {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} marked={changers} />)}
-        {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} marked={changers} />}
+      <div class={cards ? 'dk-cards deck-cols' : 'dk-cards'}>
+        {details.main.map(g => <CardGroup key={g.heading} heading={g.heading} cards={g.cards} marked={changers} stacked={cards} />)}
+        {details.sideboard.length > 0 && <CardGroup heading={t('lblSideboard')} cards={details.sideboard} marked={changers} stacked={cards} />}
       </div>
     </>
   );
@@ -627,6 +638,7 @@ export function BracketMark({ level }: { level: number }) {
 }
 
 const BRACKET_OPEN_KEY = 'forge.bracketOpen';
+const VIEW_KEY = 'forge.finderView';
 
 /** A Commander deck's bracket in one row that opens to each reason and its cards, remembering whether it was left open. */
 function BracketPanel({ bracket }: { bracket: Bracket }) {

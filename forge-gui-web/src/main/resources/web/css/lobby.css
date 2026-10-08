@@ -381,7 +381,10 @@ html[data-motion="reduced"] .plate { animation: none; }
 
 .dk-chosen { display: grid; grid-template-rows: auto 1fr; min-height: 0; }
 .dk-chosen-head { padding: 14px 18px; border-bottom: 1px solid var(--line); }
-.dk-chosen-head h3 { margin: 0 0 4px; }
+.dk-chosen-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
+.dk-chosen-title h3 { margin: 0; min-width: 0; }
+.dk-chosen-title .seg { flex: none; }
+.dk-chosen-title .seg button { padding: 2px 9px; font-size: 11.5px; }
 .verdict { margin: 0; font-size: 13px; }
 .verdict.yes { color: var(--muted); }
 
@@ -419,6 +422,10 @@ html[data-motion="reduced"] .plate { animation: none; }
 .dk-line .gc { margin-left: auto; font: 700 9.5px ui-monospace, Consolas, monospace; color: var(--accent-2); }
 .verdict.no { color: var(--select); }
 .dk-cards { overflow: auto; padding: 14px 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-content: start; }
+/* The chosen deck as cards, stacked as the editor stacks them (editor.css), but only to be looked at */
+.dk-cards.deck-cols { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px 10px; }
+.dk-cards .deck-stack { cursor: default; }
+.deck-stack .gc { position: absolute; left: 4px; top: 4px; padding: 0 5px; border-radius: 999px; background: #000c; font: 700 9.5px/15px ui-monospace, Consolas, monospace; color: var(--accent-2); }
 .group { margin-bottom: 14px; }
 .group h4 { display: flex; justify-content: space-between; margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 3px; }
 .none { color: var(--muted); padding: 18px; }
@@ -524,7 +531,8 @@ html[data-motion="reduced"] .plate { animation: none; }
 
 /* The hovered card, shown beside the list as it is over the table */
 .deck-peek { position: absolute; width: var(--preview-w); pointer-events: none; z-index: 5; }
-.deck-peek img { width: 100%; border-radius: 10px; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
+/* A card's corner is about a twentieth of its width, and a scan is white outside it */
+.deck-peek img { width: 100%; border-radius: 5% / 3.6%; display: block; box-shadow: 0 10px 30px rgba(0, 0, 0, .6); }
 .finder { position: relative; }
 
 /* --- sleeve picker: fill the dialog rather than leaving it half empty --- */
