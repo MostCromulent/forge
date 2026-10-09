@@ -462,7 +462,7 @@ final class DeckCatalog {
     private static void generated(final List<DeckSummary> out, final String key, final String name, final String note,
             final String colours) {
         out.add(new DeckSummary(key, name, GENERATED, colours, true, note, null, null, null, null, null, null, null, true,
-                null, null, null, null, null, null));
+                null, null, null, null, null, null, null));
     }
 
     private void add(final List<DeckSummary> out, final GameType format, final Iterable<DeckProxy> source, final String tag) {
@@ -478,7 +478,7 @@ final class DeckCatalog {
                     deck.getSleeveArtKey(), deck.getSleeveArtOffset(), readOnly(key, guest),
                     linked ? site(deck.getSourceUrl()) : null, linked ? deck.getSourceUrl() : null,
                     linked ? linkedFile(deck).lastModified() : null, listedBracket(deck, format), facts.averageMana(),
-                    proxy.isFavoriteDeck() ? true : null));
+                    proxy.isFavoriteDeck() ? true : null, aiSkips(deck)));
         }
     }
 
@@ -489,7 +489,12 @@ final class DeckCatalog {
         out.add(new DeckSummary(key, deck.getName(), DEVICE, facts.colors(), null, null, facts.played(),
                 facts.sideboard(), problemAt(deck, format, pool), facts.legalIn(), null,
                 deck.getSleeveArtKey(), deck.getSleeveArtOffset(), false, null, null, null, listedBracket(deck, format),
-                facts.averageMana(), null));
+                facts.averageMana(), null, aiSkips(deck)));
+    }
+
+    private static Integer aiSkips(final Deck deck) {
+        final int skipped = deck.getUnplayableAICards().inMainDeck;
+        return skipped == 0 ? null : skipped;
     }
 
     /** The decks loaded from links that belong to this format: each keeps its format, or is Commander when it has a commander. */

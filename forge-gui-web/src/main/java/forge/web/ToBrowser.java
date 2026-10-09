@@ -86,12 +86,16 @@ final class ToBrowser {
     record Decks(List<DeckSummary> decks, List<String> cardFormats, @Nullable String cardPool) {
     }
 
-    /** A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts. */
+    /**
+     * A deck in the finder. A generator's entry is only a name until it is picked, so it has no counts.
+     * aiSkips counts the main deck's cards the computer will not play, and is left out when there are none.
+     */
     record DeckSummary(String key, String name, String source, String colors, @Nullable Boolean generated,
             @Nullable String note, @Nullable Integer main, @Nullable Integer sideboard, @Nullable String problem,
             @Nullable List<String> legalIn, @Nullable String formats, @Nullable String sleeveArt,
             @Nullable Integer sleeveOffset, @Nullable Boolean readOnly, @Nullable String linked, @Nullable String sourceUrl,
-            @Nullable Long synced, @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite) {
+            @Nullable Long synced, @Nullable Integer bracket, @Nullable Integer averageMana, @Nullable Boolean favourite,
+            @Nullable Integer aiSkips) {
     }
 
     /** The keys of the listed decks a card or set filter lets through, for the query it answers. */

@@ -130,14 +130,17 @@ function another(current: number, count: number): number {
   return current >= 0 && pick >= current ? pick + 1 : pick;
 }
 
-/** Decks a seat may be dealt at random: any the lobby would accept, generators included, up to the table's bracket. */
-export function randomPool(decks: readonly DeckSummary[], maxBracket = 5): DeckSummary[] {
-  return decks.filter(d => !d.problem && (d.bracket == null || d.bracket <= maxBracket));
+/**
+ * Decks a seat may be dealt at random: any the lobby would accept, generators included, up to the table's bracket.
+ * A computer is dealt none holding cards it will not play, as desktop deals it none.
+ */
+export function randomPool(decks: readonly DeckSummary[], maxBracket = 5, forComputer = false): DeckSummary[] {
+  return decks.filter(d => !d.problem && (d.bracket == null || d.bracket <= maxBracket) && !(forComputer && d.aiSkips));
 }
 
 /** A computer seat given a deck legal here, so a table fills without a trip to the chooser each. */
 function randomDeck(model: Model, actions: Actions, index: number): void {
-  const pool = randomPool(model.decks ?? [], model.lobby?.maxBracket);
+  const pool = randomPool(model.decks ?? [], model.lobby?.maxBracket, model.lobby?.seats[index]?.type === 'AI');
   if (pool.length) actions.setSeat(index, { deck: pool[Math.floor(Math.random() * pool.length)].key });
 }
 
