@@ -121,9 +121,9 @@ export function noteBoard(): void {
 /** Animates what happened since the last frame. Runs after the board is drawn, so both ends can be measured. */
 export function animateCardMoves(model: Model, events: readonly GameEvent[]): void {
   const dealt: { el: HTMLElement; start: DOMRect }[] = [];
-  const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string }[] = [];
+  const leavingHand: { was: Snapshot; target: DOMRect | null; tile?: boolean; key?: string; onto?: HTMLElement | null }[] = [];
   const trips = journeys(events);
-  // Hand icons already swelling this frame, so several cards drawn at once swell it once
+  // Hand icons and zone tiles already swelling this frame, so several cards arriving at once swell each once
   const swelled = new Set<HTMLElement>();
   let fromLibrary = 0;
   /** How long until the last permanent being unmade where it stood has gone, so the row does not close over it. */
@@ -202,10 +202,14 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       land(key);
       continue;
     }
+    // The tile the card came to rest on swells as it lands, or at once when nothing is seen to travel there
+    const onto = landedTile(model, key, move.to);
+    let arrives = 0;
     if (!ghost && start && move.from?.zone === 'Library') {
       // The library shows no card to copy, so a back in the owner's sleeve makes the trip, staggered when several go together
       const target = tileImageRect(key) ?? placeRect(move.to);
       if (target) {
+        arrives = FLIGHT_MS + fromLibrary * STAGGER_MS;
         if (tileImageRect(key)) holdTile(key, fromLibrary * STAGGER_MS);
         sendTo({ rect: start, ghost: cardBack(model, key) }, target, 1, fromLibrary++ * STAGGER_MS);
       }
@@ -213,8 +217,11 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
     if (ghost && start && was) {
       const tile = tileImageRect(key);
       const target = tile ?? placeRect(move.to);
-      if (move.from?.zone === 'Hand') leavingHand.push({ was: { ...was, rect: start }, target, tile: !!tile, key });
-      else {
+      if (move.from?.zone === 'Hand') {
+        leavingHand.push({ was: { ...was, rect: start }, target, tile: !!tile, key, onto });
+        land(key);
+        continue;
+      } else {
         // A permanent destroyed or exiled is unmade where it stood; the tile's picture of it waits until it has gone
         const leaving = move.from?.zone === 'Battlefield' && (move.to?.zone === 'Graveyard' || move.to?.zone === 'Exile')
           ? unmake(ghost, start, was.size, !!was.tapped, move.to.zone) : 0;
@@ -222,8 +229,10 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : 0);
         unmaking = Math.max(unmaking, leaving);
         if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
+        arrives = leaving || FLIGHT_MS;
       }
     }
+    swell(onto, arrives, swelled);
     land(key);
   }
   // A hand that leaves as another is dealt (a mulligan) has gone before the first new card sets off, and both go quicker
@@ -237,7 +246,8 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
   // The host's draw sound is heard as the first card sets off; each card after it makes its own as it follows
   echoSound('draw', dealt.slice(swap ? 0 : 1).map((_, i) => afterLeaving + (swap ? i : i + 1) * apart));
   // Cards leaving the hand together (a mulligan, a discard) go one after another from the right, as a deal arrives
-  leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key }, i) => {
+  leavingHand.sort((a, b) => b.was.rect.left - a.was.rect.left).forEach(({ was, target, tile, key, onto }, i) => {
+    swell(onto, i * apart + ms, swelled);
     if (tile) holdTile(key, i * apart);
     sendTo(was, target ?? was.rect, tile ? 1 : target ? 0.25 : 0, i * apart, undefined, ms);
   });
@@ -518,6 +528,24 @@ function holdCount(el: HTMLElement, duration: number): void {
 function holdTile(key: string | undefined, delay: number): void {
   const img = key ? document.querySelector<HTMLElement>(`.zone-tile img[data-key="${key}"]`) : null;
   img?.animate([{ opacity: 0 }, { opacity: 0, offset: 0.92 }, { opacity: 1 }], { duration: FLIGHT_MS + delay, easing: 'linear' });
+}
+
+/** The zone tile a card has come to rest on. A card that went anywhere else has none, nor has a token, which is gone by now. */
+function landedTile(model: Model, key: string, to: Place | undefined): HTMLElement | null {
+  const card = model.objects.get(Number(key)) as CardView | undefined;
+  if (!to?.player || card?.Zone !== to.zone) {
+    return null;
+  }
+  return document.querySelector<HTMLElement>(`.seat[data-player="${to.player.ref}"] .zone-tile[data-zone="${to.zone}"]`);
+}
+
+/** Swells a zone tile once as a card lands on it, however many land together. */
+function swell(tile: HTMLElement | null | undefined, delay: number, swelled: Set<HTMLElement>): void {
+  if (!tile || swelled.has(tile)) {
+    return;
+  }
+  swelled.add(tile);
+  tile.animate([{ scale: '1' }, { scale: '1.12', filter: 'brightness(1.5)', offset: 0.35 }, { scale: '1' }], { duration: 480, delay, easing: EASE });
 }
 
 // A face-down top card is not drawn on its tile, and its hidden picture measures nothing
