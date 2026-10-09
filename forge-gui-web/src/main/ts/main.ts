@@ -221,6 +221,10 @@ let held: ServerMessage[] | null = null;
 let showUntil = 0;
 /** Longer than any banner, so it only matters if the banner's own release is lost. */
 const HOLD_LIMIT_MS = 4000;
+/** Whether what is held waits behind a turn's banner, and not behind a board still being shown. */
+let announcing = false;
+/** The sound of a turn ending, which the host sends with the next turn's first state. */
+const TURN_SOUND = 'end_of_turn';
 
 function receive(msg: ServerMessage): void {
   if (!held) {
@@ -232,6 +236,7 @@ function receive(msg: ServerMessage): void {
       setTimeout(releaseThis, showUntil - Date.now());
     } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
       held = [msg];
+      announcing = true;
       // The banner's end releases the turn; this only guards the page against a release that never comes
       setTimeout(releaseThis, HOLD_LIMIT_MS);
     } else {
@@ -248,6 +253,9 @@ function receive(msg: ServerMessage): void {
     showUntil = 0;
     release();
     apply(msg);
+  } else if (msg.t === 'sound' && msg.name === TURN_SOUND && announcing) {
+    // The turn's sound is heard as its banner goes up, and not after it with the turn's first draw
+    apply(msg);
   } else {
     held.push(msg);
   }
@@ -256,6 +264,7 @@ function receive(msg: ServerMessage): void {
 function release(): void {
   const waiting = held ?? [];
   held = null;
+  announcing = false;
   waiting.forEach(receive);
 }
 
