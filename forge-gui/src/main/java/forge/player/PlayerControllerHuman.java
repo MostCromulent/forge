@@ -2126,13 +2126,12 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
                     cardView = sa.getCardView();
             }
             return this.getGui().confirm(cardView, question.replaceAll("\n", " "));
-        } else {
-            final boolean result = InputConfirm.confirm(this, sa, question);
-            if (result) {
-                macros().addRememberedAction(new PayCostAction(sa.getCardView()));
-            }
-            return result;
         }
+        final boolean result = InputConfirm.confirm(this, sa, question);
+        if (result) {
+            macros().addRememberedAction(new PayCostAction(sa.getCardView()));
+        }
+        return result;
     }
 
     // Mutated from game thread on replacement prompts; cleared from Netty thread via YieldUpdate.ClearAbilityOrders.
@@ -3885,13 +3884,8 @@ public class PlayerControllerHuman extends PlayerController implements IGameCont
         if (!mayAutoPass()) {
             return;
         }
-        final boolean wasYielding = yieldController.autoPassUntilEndOfTurn();
-        yieldController.setAutoPassUntilEndOfTurn(false);
+        yieldController.clearEndOfTurnYieldAndDispatch();
         PlayerView playerView = getLocalPlayerView();
-        // A remote client keeps its own copy of the yield for its display, so it is told the yield has ended
-        if (wasYielding && playerView != null) {
-            getGui().applyYieldUpdate(new YieldUpdate.SetAutoPassUntilEndOfTurn(playerView, false));
-        }
         getGui().showPromptMessage(playerView, "");
         getGui().updateButtons(playerView, false, false, false);
         getGui().awaitNextInput();

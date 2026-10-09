@@ -1434,6 +1434,8 @@ public class CardView extends GameEntityView {
             }
             set(TrackableProperty.Power, num);
             set(TrackableProperty.BasePower, base);
+            // isLethalDamageByPower() cards use power. so this needs update too for VAssignCombatDamage dialog -> auto
+            CardView.this.updateLethalDamage(c);
         }
         void updatePower(CardState c) {
             Card card = c.getCard();
@@ -1463,6 +1465,15 @@ public class CardView extends GameEntityView {
             }
             set(TrackableProperty.Toughness, num);
             set(TrackableProperty.BaseToughness, base);
+            /*
+             * The VAssignCombatDamage dialog reads a stale LethalDamage property that was cached while the token’s
+             * toughness was still 0.
+             *
+             * TrackableProperty.LethalDamage is only refreshed from updateDamage, updateAssignedDamage, updateCounters,
+             * and Card.updatePTforView(). Tokens get their P/T set after creation (setBaseToughness and similar), and
+             * that path never refreshes the view’s lethal value. The view keeps the 0 from when the token was created.
+             * */
+            CardView.this.updateLethalDamage(c);
         }
         void updateToughness(CardState c) {
             Card card = c.getCard();

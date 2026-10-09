@@ -97,8 +97,7 @@ public class InputQueue extends Observable implements IHasForgeLog {
             //HostedMatch.setCurrentPlayer(game.getPlayer(input.getOwner()));
         //}
         inputStack.push(input);
-        // A question asked once the game is over would wait for an answer nobody gives: onGameOver only lets go of
-        // the inputs already waiting when it runs, so one asked a moment later is let go here
+        // onGameOver releases only the inputs already waiting when it runs
         if (gameView.isGameOver()) {
             input.relaseLatchWhenGameIsOver();
         }

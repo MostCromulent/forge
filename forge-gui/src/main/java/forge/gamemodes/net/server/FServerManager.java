@@ -611,10 +611,12 @@ public final class FServerManager implements IHasForgeLog, HostingServer.Server 
         return null;
     }
 
-    /** The slots above a removed one each move down, and the clients holding them move with them. */
+    /** The client holding a removed slot loses it. The slots above move down, and their clients move with them. */
     public void slotRemoved(final int index) {
         for (final RemoteClient client : clients.values()) {
-            if (client.getIndex() > index) {
+            if (client.getIndex() == index) {
+                client.setIndex(RemoteClient.UNASSIGNED_SLOT);
+            } else if (client.getIndex() > index) {
                 client.setIndex(client.getIndex() - 1);
             }
         }
