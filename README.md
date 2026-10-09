@@ -13,14 +13,14 @@ Sealed, Planar Conquest and Quest are laid out for a computer screen.
 
 <p>
   <img src="forge-gui-web/docs/table.webp" width="49%" alt="Setting up a game against two AI opponents">
-  <img src="forge-gui-web/docs/cast.webp" width="49%" alt="A spell cast from the hand at two creatures">
-</p>
-<p>
-  <img src="forge-gui-web/docs/attack.webp" width="49%" alt="Three creatures attacking">
-  <img src="forge-gui-web/docs/victory.webp" width="49%" alt="A winning spell and the end of a game">
-</p>
-<p>
   <img src="forge-gui-web/docs/conquest.webp" width="49%" alt="The map of a Planar Conquest">
+</p>
+<p>
+  <img src="forge-gui-web/docs/cast.webp" width="49%" alt="A spell cast from the hand at two creatures">
+  <img src="forge-gui-web/docs/attack.webp" width="49%" alt="Three creatures attacking">
+</p>
+<p>
+  <img src="forge-gui-web/docs/victory.webp" width="49%" alt="A winning spell and the end of a game">
 </p>
 
 ## For players
