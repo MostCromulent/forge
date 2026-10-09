@@ -976,6 +976,9 @@ function drawTally(root: HTMLElement, everyone: PlayerView[], wins: (p: PlayerVi
 }
 
 /** Shows the result once the losing portrait has broken, drawn once per ending so what fades in does so once. */
+/** How many motes of light rise past a winner's portrait. */
+const WIN_MOTES = 16;
+
 function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const root = byId('game-over');
   const show = model.gameOver && titleReady;
@@ -1026,7 +1029,7 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
     : won && everyone.length === 2 && losers.length === 1 ? t('lblWebBoardPlayerHasLost', losers[0].Name ?? '')
     : won ? t('lblWebBoardLastOneStanding')
     : t('lblWebBoardPlayerWins', winner.Name ?? '');
-  root.innerHTML = '<div class="panel"><p class="stage"></p><div class="face"></div><p class="word"></p><div class="rule"></div><p class="sub"></p>'
+  root.innerHTML = '<div class="panel"><p class="stage"></p><div class="face-wrap"><div class="face"></div></div><p class="word"></p><div class="rule"></div><p class="sub"></p>'
     + '<div class="tally"></div><div class="actions"></div></div>'
     + '<button class="to-result primary"></button>';
   q(root, '.to-result').textContent = t('lblWebBoardShowResult');
@@ -1042,6 +1045,16 @@ function renderGameOver(model: Model, g: GameView, actions: Actions): void {
   const panel = q(root, '.panel');
   panel.classList.add(outcome);
   const face = q(root, '.face');
+  // Your own win is lit from behind the portrait: rays that stay, and motes that rise past it once
+  if (outcome === 'win') {
+    face.before(make('span', 'win-rays'), ...Array.from({ length: WIN_MOTES }, (_, i) => {
+      const mote = make('span', 'win-mote');
+      mote.style.setProperty('--at', `${(i * 83) % 300 - 150}px`);
+      mote.style.setProperty('--drift', `${(i * 53) % 50 - 25}px`);
+      mote.style.setProperty('--wait', `${(0.35 + i * 0.16).toFixed(2)}s`);
+      return mote;
+    }));
+  }
   if (winner) face.style.backgroundImage = cssUrl(playerAvatarUrl(winner));
   face.hidden = !winner;
   q(root, '.word').textContent = word;
