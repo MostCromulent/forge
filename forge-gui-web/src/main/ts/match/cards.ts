@@ -244,7 +244,7 @@ function showBlocking(el: HTMLElement, card: CardView): void {
     : card.BlockAdditional ? t('lblWebCardMayBlockCount', card.BlockAdditional + 1) : '';
 }
 
-// New damage jolts the card and throws the number off it, so combat is legible without the log
+// New damage flashes the card white, jolts it and throws the number off it, so combat is legible without the log
 function showDamage(el: HTMLElement, damage: number): void {
   const before = el.dataset.damage === undefined ? damage : Number(el.dataset.damage);
   el.dataset.damage = String(damage);
@@ -252,6 +252,9 @@ function showDamage(el: HTMLElement, damage: number): void {
     return;
   }
   replay(el, 'struck');
+  const flash = make('span', 'hit-white');
+  el.append(flash);
+  flash.addEventListener('animationend', () => flash.remove());
   const hit = make('span', 'hit-number');
   hit.textContent = `-${damage - before}`;
   el.append(hit);
