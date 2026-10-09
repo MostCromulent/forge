@@ -471,9 +471,15 @@ final class ToBrowser {
 
     // ---- Requests: questions the game waits on, answered with {t: 'reply', id, value} -------------------------
 
-    /** Which fields are set depends on what it is: a card on the table, one that is not (a split pile, a card face), or a player. */
+    /**
+     * Which fields are set depends on what it is: a card on the table, one that is not (a split pile, a card face), or a player.
+     * An ability names the card it comes from as its source, and a colour its mana symbol's letter.
+     */
     record RequestOption(String label, @Nullable Ref card, @Nullable String name, @Nullable String imageKey,
-            @Nullable Ref player) {
+            @Nullable Ref player, @Nullable Ref source, @Nullable String symbol) {
+        RequestOption(final String label, final Ref card, final String name, final String imageKey, final Ref player) {
+            this(label, card, name, imageKey, player, null, null);
+        }
     }
 
     enum ChoiceKind { choices, reveal }

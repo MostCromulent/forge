@@ -39,6 +39,7 @@ const GLYPHS: Record<string, string> = {
   up: '<path d="M6.5 14.5l5.5-5.5 5.5 5.5"/>',
   down: '<path d="M6.5 9.5l5.5 5.5 5.5-5.5"/>',
   wait: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  stop: '<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>',
 };
 const glyph = (name: string, size: number): string => `<svg class="glyph" viewBox="0 0 24 24" style="width:${size}px;height:${size}px;stroke-width:${(1.3 * 24 / size).toFixed(2)}">${GLYPHS[name]}</svg>`;
 
@@ -159,7 +160,7 @@ function build(root: HTMLElement): void {
   pill.innerHTML = `<span class="owner"><img alt="" hidden><b></b><span class="turn"></span></span>`
     + `<span class="track"><span class="slide" aria-hidden="true"></span>${track}</span>`
     + `<span class="waiting" hidden>${glyph('wait', 11)}<span class="who"></span><b></b></span>`
-    + `<span class="until" hidden>${glyph('skip', 12)}<span class="text"></span></span>`
+    + `<span class="until" hidden>${glyph('skip', 12)}<span class="verb"></span><span class="text"></span><span class="stop">${glyph('stop', 10)}</span></span>`
     + '<span class="caret"></span>';
   pill.onclick = () => changeUi(u => { u.stopsOpen = !u.stopsOpen; });
   // The chip naming a pass under way stops it, rather than opening the stops grid
@@ -299,6 +300,7 @@ function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: The
   const until = q(pill, '.until');
   until.hidden = !text;
   until.title = text ? t('lblWebPhasePassingPriority', text) : '';
+  q(until, '.verb').textContent = t('lblWebPhasePassing');
   q(until, '.text').textContent = text;
 }
 

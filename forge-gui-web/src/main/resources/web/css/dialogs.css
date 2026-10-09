@@ -135,6 +135,33 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .order-move { display: flex; align-items: center; gap: 8px; margin-right: auto; }
 .dialog .order-move :is(.earlier, .later) { width: 44px; height: 36px; padding: 0; font-size: 20px; line-height: 1; }
 .dialog .order-move button:disabled { opacity: .4; }
+/* Abilities being put in order are read, not looked at, so they run down a striped list, each with the card it comes from */
+.dialog .ordered.listed { display: grid; gap: 0; padding: 0; min-width: min(640px, 80vw); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.dialog .listed .ordered-item { display: grid; grid-template-columns: 24px auto 1fr auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 0; background: var(--surface); }
+.dialog .listed .ordered-item:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 45%, var(--surface)); }
+.dialog .listed .ordered-item.selected { transform: none; outline: none; background: color-mix(in srgb, var(--accent-2) 9%, var(--surface)); box-shadow: inset 3px 0 0 var(--accent-2); }
+.dialog .listed .order-number { position: static; grid-area: 1 / 1; width: 24px; height: 24px; box-sizing: border-box; }
+.dialog .listed .card-host { grid-area: 1 / 2; display: flex; }
+.dialog .listed .card { --fit: 1; width: 40px; height: 56px; }
+/* At this size the card only says which one it is; what the board marks on it would cover the picture */
+.dialog .listed .card :is(.pt, .badges, .sick, .count, .corner, .cost-badge, .kind-tag) { display: none; }
+.dialog .listed .ability { grid-area: 1 / 3; min-width: 0; display: grid; gap: 2px; padding: 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: inherit; }
+.dialog .listed .ability-source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; font-weight: 650; color: var(--accent-2); }
+.dialog .listed .order-tag { padding: 1px 6px; border-radius: 99px; border: 1px solid color-mix(in srgb, var(--accent-2) 45%, transparent); background: var(--accent-soft); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; white-space: nowrap; }
+.dialog .listed .ability-detail { color: var(--muted); font-size: 11.5px; }
+.dialog .listed :is(.order-grip, .order-step) { grid-area: 1 / 4; }
+.dialog .listed .order-grip { width: 10px; height: 16px; opacity: .55; background: radial-gradient(circle, var(--muted) 1.2px, transparent 1.7px) 0 0 / 6px 6px; }
+.dialog .listed .order-step { display: flex; gap: 6px; }
+.dialog .listed .order-step button { width: 34px; height: 30px; padding: 0; display: grid; place-items: center; }
+.dialog .listed .order-step button:disabled { opacity: .4; }
+.dialog .listed .order-step svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+/* A colour is chosen by its mana symbol, in Magic's own order, with its name under it so the hue is never the only sign */
+.dialog .options.colours { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(64px, 1fr); gap: 6px; }
+.dialog .colour-option { display: grid; justify-items: center; gap: 7px; padding: 12px 4px 9px; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--muted); font-size: 12.5px; }
+.dialog .colour-option img { width: 42px; height: 42px; border-radius: 50%; filter: drop-shadow(0 3px 5px #0009); }
+.dialog .colour-option:hover { background: #ffffff0a; color: var(--text); }
+.dialog .colour-option.picked { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent-2) 55%, transparent); box-shadow: none; color: var(--text); font-weight: 650; }
+.dialog .colour-option.picked img { outline: 2px solid var(--accent-2); outline-offset: 3px; }
 
 /* A card's own list of what it can do: a menu on the card, not a window in the middle of the board */
 .backdrop.anchored { background: none; }

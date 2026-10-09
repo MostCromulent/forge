@@ -3,19 +3,19 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import type { ComponentChildren } from 'preact';
 import { createCard, updateCard } from './cards';
-import { imageUrl } from '../images';
+import { imageUrl, symbolUrl } from '../images';
 import { hoverCard } from './detail';
 import { rankByName } from '../search';
-import { SymbolText } from '../symbols';
+import { COLOURS, SymbolText } from '../symbols';
 import { useDebounced } from '../hooks';
 import type { Actions } from '../actions';
 import { keyName } from '../keys';
 import { boundKeys } from '../settings';
 import { playerAvatarUrl } from '../looks';
-import { cardMenu, isLocal, oldestRequest, stackPick, type Model } from '../model';
+import { cardMenu, isLocal, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import type {
   ChoicesRequest, DistributeRequest, ManipulateRequest, NumberRequest, OptionRequest, OrderRequest, Request, RequestOption,
-  PlayerView, SideboardRequest, TextRequest, TrackedObject,
+  CardView, PlayerView, SideboardRequest, TextRequest, TrackedObject,
 } from '../protocol';
 import { t } from '../text';
 import { make, reducedMotion } from '../dom';
@@ -266,18 +266,53 @@ function Choices({ req, model, answer }: { req: ChoicesRequest; model: Model; an
   const note = matches.length > SHOW_AT_MOST ? t('lblWebDialogShowingFirst', SHOW_AT_MOST, req.options.length)
     : searchable && picked.size ? t('lblWebDialogSelected', picked.size) : '';
   const ready = reveal || (picked.size >= req.min && (req.max < 0 || picked.size <= req.max));
+  const colours = !reveal && req.options.every(o => o.symbol);
   return (
     <>
       {searchable && <input ref={search} class="choice-search" placeholder={t('lblWebDialogSearchOptions', req.options.length)}
         value={typed} onInput={e => setTyped(e.currentTarget.value)} />}
-      <div class={reveal ? 'options grid' : 'options'}>
-        {shown.map(i => <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
+      <div class={reveal ? 'options grid' : colours ? 'options colours' : 'options'}>
+        {shown.map(i => colours
+          ? <ColourOption key={i} symbol={req.options[i].symbol ?? ''} picked={picked.has(i)} onClick={() => toggle(i)} />
+          : <OptionView key={i} model={model} opt={req.options[i]} picked={picked.has(i)} onClick={() => toggle(i)} />)}
       </div>
       <p class="hint">{note}</p>
       <ButtonRow><Button primary disabled={!ready} onClick={() => answer(reveal ? [] : [...picked])}>{reveal ? t('lblOK') : t('lblWebDialogConfirm')}</Button></ButtonRow>
     </>
   );
 }
+
+/** A colour to choose, as its mana symbol from the skin with its name under it. */
+function ColourOption({ symbol, picked, onClick }: { symbol: string; picked: boolean; onClick: () => void }) {
+  const name = COLOURS.find(([letter]) => letter === symbol)?.[1];
+  return (
+    <button class={picked ? 'colour-option picked' : 'colour-option'} aria-pressed={picked} onClick={onClick}>
+      <img alt="" src={symbolUrl(symbol)} /><span>{name ? t(name) : symbol}</span>
+    </button>
+  );
+}
+
+/** The engine ends a triggered ability's text with what set it off, in square brackets. */
+const SET_OFF_BY = /\s*\[([^\]]*)\]$/;
+
+/** An ability to be put in order: the card it comes from, pictured and named, over its text. */
+function AbilityRow({ model, opt, text, detail, tag, onClick }: {
+  model: Model; opt: RequestOption; text: string; detail: string; tag?: string; onClick: () => void;
+}) {
+  const source = opt.source ? model.objects.get(opt.source.ref) as CardView | undefined : undefined;
+  return (
+    <>
+      {source && <BoardCard model={model} card={source} />}
+      <button class="ability" onClick={onClick}>
+        {(source || tag) && <span class="ability-source">{source ? stateOf(model, source).Name : ''}{tag && <span class="order-tag">{tag}</span>}</span>}
+        <span><SymbolText text={text} /></span>
+        {detail && <span class="ability-detail">{detail}</span>}
+      </button>
+    </>
+  );
+}
+
+const CHEVRON = { up: 'M6.5 14.5l5.5-5.5 5.5 5.5', down: 'M6.5 9.5l5.5 5.5 5.5-5.5' };
 
 /** How long a card takes to slide to a new place in the order, and to settle when it is put down. */
 const CARRY_MS = 170;
@@ -297,6 +332,14 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const stood = useRef<Map<Element, DOMRect> | null>(null);
   const ghost = useRef<HTMLElement | null>(null);
   const dragged = useRef(false);
+  // Options that are only words, such as abilities, are listed down the dialog; cards keep their row
+  const listed = req.options.every(o => !o.card && !o.imageKey && !o.name && !o.player);
+  const words = req.options.map(o => {
+    const found = SET_OFF_BY.exec(o.label ?? '');
+    return found ? { text: o.label.slice(0, found.index), detail: found[1] } : { text: o.label ?? '', detail: '' };
+  });
+  // What set an ability off is worth its line only where it tells two of them apart
+  const tellsApart = new Set(words.map(w => w.detail)).size > 1;
   const move = (from: number, to: number) => {
     if (row.current) stood.current = new Map([...row.current.children].map(el => [el, el.getBoundingClientRect()]));
     setChosen(list => {
@@ -334,8 +377,8 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
         from = el.getBoundingClientRect();
         slots = [...row.current.children].map(c => c.getBoundingClientRect());
         // The copy sits under the same classes as the row, so the card in it is drawn as the row draws it
-        const lifted = make('div', 'options ordered order-ghost');
-        lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;`;
+        const lifted = make('div', `options ordered order-ghost${listed ? ' listed' : ''}`);
+        lifted.style.cssText = `left: ${from.left}px; top: ${from.top}px;${listed ? ` width: ${from.width}px; min-width: 0;` : ''}`;
         lifted.append(el.cloneNode(true));
         row.current.after(lifted);
         ghost.current = lifted;
@@ -349,7 +392,7 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
       lean += (Math.max(-9, Math.min(9, (m.clientX - last) * 0.9)) - lean) * 0.35;
       last = m.clientX;
       lifted.style.translate = `${dx}px ${dy}px`;
-      lifted.style.rotate = `${lean.toFixed(2)}deg`;
+      if (!listed) lifted.style.rotate = `${lean.toFixed(2)}deg`;
       const x = from.left + from.width / 2 + dx;
       const y = from.top + from.height / 2 + dy;
       const far = (r: DOMRect) => Math.hypot(r.left + r.width / 2 - x, r.top + r.height / 2 - y);
@@ -390,14 +433,15 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const step = (by: number) => {
     if (at >= 0 && at + by >= 0 && at + by < chosen.length) move(at, at + by);
   };
-  // The arrow keys carry the card that is held along the row
+  // The arrow keys carry the card that is held along the row, or the ability up and down its list
   const stepRef = useRef(step);
   stepRef.current = step;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const by = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : 0;
+      if (!by) return;
       e.preventDefault();
-      stepRef.current(e.key === 'ArrowLeft' ? -1 : 1);
+      stepRef.current(by);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -405,6 +449,14 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const waiting = req.options.some((_, i) => !chosen.includes(i));
   // A card may leave the row only when the question lets some be left out
   const optional = req.min < req.options.length;
+  const rememberBox = req.remember
+    && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>;
+  const stepButton = (by: number, pos: number) => (
+    <button class={by < 0 ? 'earlier' : 'later'} disabled={by < 0 ? pos === 0 : pos === chosen.length - 1}
+      aria-label={t(by < 0 ? 'lblWebDialogMoveEarlier' : 'lblWebDialogMoveLater')} onClick={() => step(by)}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d={by < 0 ? CHEVRON.up : CHEVRON.down} /></svg>
+    </button>
+  );
   return (
     <>
       {waiting && <>
@@ -414,24 +466,34 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
             : <OptionView key={i} model={model} opt={o} onClick={() => setChosen(list => [...list, i])} />)}
         </div>
       </>}
-      <div class="options ordered" ref={row}>
-        {chosen.map((i, pos) => (
-          <div key={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>
-            <OptionView model={model} opt={req.options[i]} onClick={() => {
-              if (!dragged.current) setHeld(h => (h === i ? null : i));
-            }} />
-            {/* The number is the order they go in, which is the question the dialog is asking */}
-            <span class="order-number">{pos + 1}</span>
-            {pos === 0 && req.top && <span class="order-end">{req.top}</span>}
-          </div>
-        ))}
+      <div class={listed ? 'options ordered listed' : 'options ordered'} ref={row}>
+        {chosen.map((i, pos) => {
+          const hold = () => {
+            if (!dragged.current) setHeld(h => (h === i ? null : i));
+          };
+          return (
+            <div key={i} class={`ordered-item${carried === i ? ' carried' : ''}${held === i ? ' selected' : ''}`} onPointerDown={e => carry(e, i)}>
+              {listed
+                ? <AbilityRow model={model} opt={req.options[i]} text={words[i].text} detail={tellsApart ? words[i].detail : ''}
+                    tag={pos === 0 ? req.top : undefined} onClick={hold} />
+                : <OptionView model={model} opt={req.options[i]} onClick={hold} />}
+              {/* The number is the order they go in, which is the question the dialog is asking */}
+              <span class="order-number">{pos + 1}</span>
+              {!listed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
+              {/* The held ability's arrows take the place of its grip, so they are where the eye already is */}
+              {listed && (held === i ? <span class="order-step">{stepButton(-1, pos)}{stepButton(1, pos)}</span> : <span class="order-grip" aria-hidden="true" />)}
+            </div>
+          );
+        })}
       </div>
-      {req.remember && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>}
+      {!listed && rememberBox}
       <ButtonRow>
         {/* Always there, so holding a card moves nothing else in the dialog */}
         <span class="order-move">
-          <button class="earlier" disabled={at <= 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
-          <button class="later" disabled={at < 0 || at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
+          {listed ? rememberBox : <>
+            <button class="earlier" disabled={at <= 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
+            <button class="later" disabled={at < 0 || at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
+          </>}
           {optional && <button disabled={at < 0} onClick={() => {
             setChosen(list => list.filter(c => c !== held));
             setHeld(null);

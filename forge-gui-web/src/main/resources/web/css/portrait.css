@@ -140,6 +140,7 @@ html[data-form="portrait"] #phase-strip .caret { display: none; }
 html[data-form="portrait"] #phase-strip .waiting:not(.you) { display: none; }
 html[data-form="portrait"] #phase-strip .waiting { right: auto; left: 12px; top: -14px; transform: none; z-index: 3; }
 html[data-form="portrait"] #phase-strip .until { left: auto; right: 6px; top: 0; transform: none; z-index: 3; height: 32px; min-width: 44px; padding: 0 12px; border-radius: 16px; }
+html[data-form="portrait"] #phase-strip .until :is(.verb, .stop) { display: none; }
 /* The stops grid in a sheet: every cell takes a finger, and the grid scrolls sideways inside the sheet */
 .until-row { display: none; }
 html[data-form="portrait"] #phase-strip .stops .grid-scroll { overflow-x: auto; overscroll-behavior-x: contain; margin: 0 -12px; padding: 0 12px; }
@@ -403,6 +404,11 @@ html[data-form="portrait"] #prompt.blocked { display: none; }
 /* Cards being put in order go four to a row on a phone */
 html[data-form="portrait"] #dialog-layer .dialog .ordered { gap: 30px 6px; justify-content: flex-start; }
 html[data-form="portrait"] #dialog-layer .dialog .ordered .card { --fit: 1; width: calc((100vw - 56px) / 4); height: calc((100vw - 56px) / 4 * 88 / 63); }
+html[data-form="portrait"] #dialog-layer .dialog .ordered.listed { gap: 0; min-width: 0; }
+html[data-form="portrait"] #dialog-layer .dialog .ordered.listed .ordered-item { gap: 9px; padding: 9px; }
+html[data-form="portrait"] #dialog-layer .dialog .ordered.listed .card { width: 34px; height: 48px; }
+html[data-form="portrait"] #dialog-layer .dialog .options.colours { grid-auto-columns: minmax(46px, 1fr); gap: 2px; }
+html[data-form="portrait"] #dialog-layer .dialog .colour-option img { width: 34px; height: 34px; }
 html[data-form="portrait"] #dialog-layer .dialog .order-move :is(.earlier, .later) { width: 64px; height: 44px; }
 
 /* A card drawn without its picture is sized as the hand's cards are, so its words stay inside it */

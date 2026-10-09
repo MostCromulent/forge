@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import forge.ImageKeys;
 import forge.LobbyPlayer;
+import forge.card.MagicColor;
 import forge.deck.CardPool;
 import forge.game.GameEntityView;
 import forge.game.GameLog;
@@ -692,8 +693,13 @@ public class WebGuiGame extends NetworkGuiGame {
                 out.add(new RequestOption(label, null, paper.getName(), Foil.key(paper), null));
             } else if (item instanceof CardFaceView face) {
                 out.add(new RequestOption(label, null, face.getName(), ImageKeys.CARD_PREFIX + face.getName(), null));
+            } else if (item instanceof SpellAbilityView ability && ability.getHostCard() != null && isInMirror(ability.getHostCard())) {
+                out.add(new RequestOption(label, null, null, null, null, cardRef(ability.getHostCard()), null));
             } else {
-                out.add(new RequestOption(label, null, null, null, null));
+                // A colour is offered as itself or, by some effects, as its English name
+                final MagicColor.Color colour = item instanceof MagicColor.Color c ? c
+                        : item instanceof String s ? MagicColor.Color.fromName(s) : null;
+                out.add(new RequestOption(label, null, null, null, null, null, colour == null ? null : colour.getShortName()));
             }
         }
         return out;
