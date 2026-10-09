@@ -680,10 +680,11 @@ function revealFirst(model: Model, first: number | null, said?: string, pick?: (
 export function announceComing(model: Model, msg: StateMessage, then: () => void): boolean {
   const g = game(model);
   const delta = msg.deltas[model.root] as { Turn?: number; PlayerTurn?: Ref } | undefined;
-  if (msg.full || !g || !delta || (delta.Turn === undefined && delta.PlayerTurn === undefined)) {
+  // Only the turn's number starts a turn: its player is named in the cleanup step, which can come a message earlier
+  if (msg.full || !g || !delta || delta.Turn === undefined) {
     return false;
   }
-  return announce(model, delta.Turn ?? g.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
+  return announce(model, delta.Turn, deref(model, delta.PlayerTurn ?? g.PlayerTurn), then);
 }
 
 // Only catches the turn a table was first drawn in, as every later turn is announced when its message arrives
@@ -717,7 +718,10 @@ function announce(model: Model, turnNumber: number | undefined, active: PlayerVi
   strip.classList.add('announcing');
   // The pill returns as the banner starts to fade (84% of turn-sweep), so one fades in while the other fades out
   const sweep = parseFloat(getComputedStyle(banner).animationDuration) * 1000;
-  setTimeout(() => strip.classList.remove('announcing'), sweep * 0.84);
+  // unless the next turn's banner has gone up meanwhile, which a turn that passes at once allows
+  setTimeout(() => {
+    if ([...strip.querySelectorAll('.turn-banner')].at(-1) === banner) strip.classList.remove('announcing');
+  }, sweep * 0.84);
   // The turn goes on just before the banner has quite gone
   setTimeout(then, Math.max(0, sweep - TURN_OVERLAP_MS));
   // The end of the ::after light's animation reaches the banner too, so the sweep is named or the banner leaves early
