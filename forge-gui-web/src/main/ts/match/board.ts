@@ -752,7 +752,7 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   }
 }
 
-// Damage to another player rings and shakes their portrait, and washes the edges of the screen near it
+// Damage to another player rings and shakes their portrait, and seeps in from the edges of the screen near it
 function hitAvatar(avatar: HTMLElement, amount: number): void {
   const at = avatar.getBoundingClientRect();
   const wash = make('div', `hit-flash near${amount >= 5 ? ' hard' : ''}`);
@@ -768,12 +768,12 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
   glow.addEventListener('animationend', () => glow.remove());
 }
 
-// Damage to your own life shakes the board and washes the edges, so it cannot be missed
+// Damage to your own life shakes the board and seeps red in from the edges, so it cannot be missed
 function takeHit(amount: number): void {
   const match = byId('match');
   replay(match, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
   match.addEventListener('animationend', () => match.classList.remove('hit', 'hit-hard'), { once: true });
-  const flash = make('div', 'hit-flash');
+  const flash = make('div', amount >= 5 ? 'hit-flash hard' : 'hit-flash');
   document.body.append(flash);
   flash.addEventListener('animationend', () => flash.remove());
 }

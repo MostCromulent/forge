@@ -1057,18 +1057,24 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 .avatar.first::after { content: attr(data-first-label); position: absolute; right: -10px; top: -6px; padding: 2px 6px; border-radius: 9px; background: var(--brass); color: var(--on-brass);
   font-size: 10px; font-weight: 800; letter-spacing: .04em; border: 1px solid color-mix(in srgb, var(--accent-2) 52%, #fff); box-shadow: 0 1px 3px #000a; }
 @keyframes turn-sweep { from { opacity: 0; transform: translate(-50%, -50%) translateY(-14px) scale(.9); } 12% { opacity: 1; transform: translate(-50%, -50%) translateY(2px) scale(1.02); } 20% { transform: translate(-50%, -50%) translateY(0) scale(1); } 84% { opacity: 1; transform: translate(-50%, -50%) translateY(0) scale(1); } to { opacity: 0; transform: translate(-50%, -50%) translateY(0) scale(1.05); } }
-/* A hit on your own life: the board lurches and the edges wash warm for a moment */
+/* A hit on your own life: the board lurches, and deep red seeps in from the edges and draws back */
 #match.hit { animation: hit-shake .32s ease-out; }
 #match.hit-hard { animation: hit-shake-hard .42s ease-out; }
 @keyframes hit-shake { 25%, 75% { transform: translate(1.5px, -1px); } 50% { transform: translate(-2px, 1px); } }
 @keyframes hit-shake-hard { 20%, 70% { transform: translate(3px, -1.5px); } 45% { transform: translate(-4px, 2px); } 90% { transform: translate(1px, -.5px); } }
-.hit-flash { position: fixed; inset: 0; z-index: 80; pointer-events: none; animation: hit-wash .55s ease-out forwards;
-  background: radial-gradient(ellipse at center, transparent 50%, rgba(255,122,89,.3) 100%); }
+.hit-flash { --hit: .85; position: fixed; inset: 0; z-index: 80; overflow: hidden; pointer-events: none; animation: hit-linger 1.2s ease-out forwards;
+  background: radial-gradient(ellipse at center, transparent 58%, rgba(176,20,30,calc(.4 * var(--hit))) 67%, rgba(112,6,16,calc(.72 * var(--hit))) 100%); }
+.hit-flash.hard { --hit: 1.25; }
+/* The seep is a second layer inside the edge, its inner side broken up by a noise mask so it is no clean ellipse */
+.hit-flash::before { content: ''; position: absolute; inset: 0; animation: hit-seep 1.2s ease-out forwards;
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(176,20,30,calc(.15 * var(--hit))) 46.5%, rgba(176,20,30,calc(.52 * var(--hit))) 56%, rgba(112,6,16,calc(.65 * var(--hit))) 74%);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.021' numOctaves='4' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  4.03 0 0 0 -1.68'/%3E%3C/filter%3E%3Crect width='260' height='260' filter='url(%23n)'/%3E%3C/svg%3E") 0 0 / 52vw 52vw; }
+@keyframes hit-linger { from { opacity: 0; } 8% { opacity: 1; } 40% { opacity: .75; } to { opacity: 0; } }
+@keyframes hit-seep { from { scale: 1.07; } 12% { scale: 1; } to { scale: 1.115; } }
+html[data-motion="reduced"] .hit-flash::before { animation: none; }
 @keyframes hit-wash { from { opacity: 0; } 25% { opacity: 1; } to { opacity: 0; } }
-/* Another player's hit: the same wash, kept to the edges of the screen near their portrait */
-.hit-flash.near { animation-duration: .7s; background: radial-gradient(ellipse at center, transparent 46%, rgba(255,122,89,.42) 100%);
-  mask-image: radial-gradient(circle at var(--at), #000 0 20%, transparent 46%); }
-.hit-flash.near.hard { background: radial-gradient(ellipse at center, transparent 46%, rgba(255,122,89,.65) 100%); }
+/* Another player's hit: the same seep, kept to the edges of the screen near their portrait */
+.hit-flash.near { mask-image: radial-gradient(circle at var(--at), #000 0 20%, transparent 46%); }
 /* And as a ring round the portrait, with the same shake, on the portrait alone */
 .avatar.hit { animation: hit-shake .32s ease-out; }
 .avatar.hit-hard { animation: hit-shake-hard .42s ease-out; }
