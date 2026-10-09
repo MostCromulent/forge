@@ -1,5 +1,5 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
-import { deref, game, oldestRequest, stackPick, type Model } from '../model';
+import { deref, derefAll, game, oldestRequest, stackPick, stateOf, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from '../press';
@@ -11,7 +11,7 @@ import { keyName } from '../keys';
 import { boundKeys, setting } from '../settings';
 import { isPortrait } from '../form';
 import { notePick } from './overlay';
-import type { PlayerView, PromptButton, Ref } from '../protocol';
+import type { CardView, PlayerView, PromptButton, Ref, StackItemView } from '../protocol';
 import { t } from '../text';
 
 // The console in the bottom-left corner, whose rim lights while the game waits on you
@@ -186,10 +186,12 @@ function drawPrompt(model: Model, actions: Actions): void {
   if (!p) return;
   // Several prompts open with a short line naming the phase, which becomes the title rather than repeating under it
   const lines = (p.message ?? '').trim().split('\n');
-  // A heading, not a sentence: short, and with nothing that ends a sentence
-  const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]);
+  // A heading, not a sentence: short, with nothing that ends a sentence, and not a card named with its number
+  const heading = lines.length > 1 && lines[0].length <= 24 && !/[.!?]$/.test(lines[0]) && !/\(\d+\)$/.test(lines[0]);
   q(root, '.step').textContent = heading ? lines[0] : p.priority ? t('lblPriority') : stepName(game(model)?.Phase);
-  setSymbolText(q(root, '.message'), (heading ? lines.slice(1) : lines).join(' ').trim());
+  // The host's lines stay lines, as each is a part of its own: the source, what it does, what to do
+  const body = (heading ? lines.slice(1) : lines).map(line => line.trim()).filter(line => line).join('\n');
+  setSymbolText(q(root, '.message'), body || (p.priority && p.ok.enabled ? priorityLine(model, p.ok.label) : ''));
   renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, p.card);
   renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
@@ -198,6 +200,14 @@ function drawPrompt(model: Model, actions: Actions): void {
   const waiting = !!p.ok?.enabled || !!p.cancel?.enabled;
   root.classList.toggle('waiting', waiting);
   root.classList.toggle('priority', waiting && !!p.priority);
+}
+
+/** What having priority asks, which the host says only as the turn, phase and stack the page shows elsewhere. */
+function priorityLine(model: Model, pass: string): string {
+  const top = (derefAll(model, game(model)?.Stack) as StackItemView[])[0];
+  const source = top && deref(model, top.SourceCard) as CardView | undefined;
+  const name = source && stateOf(model, source).Name;
+  return name ? t('lblWebPromptRespond', name, pass) : t('lblWebPromptAct', pass);
 }
 
 /** Offers as buttons the players a prompt lets you pick who have no seat on the board, which draws only one opponent. */

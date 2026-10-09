@@ -31,9 +31,11 @@ html[data-motion="reduced"] #prompt .glints { display: none; }
 #prompt .prompt-body { display: flex; gap: 10px; align-items: flex-start; }
 #prompt .prompt-body:not(:has(.message:not(:empty))):not(:has(img:not([hidden]))) { display: none; }
 #prompt .prompt-card { width: 44px; border-radius: 4px; flex: none; }
-#prompt .message { margin: 0; min-height: 0; max-height: 8em; overflow-y: auto; scrollbar-width: thin; color: var(--text); font-size: 13.5px; line-height: 1.35; }
+#prompt .message { margin: 0; min-height: 0; max-height: 8em; overflow-y: auto; white-space: pre-line; scrollbar-width: thin; color: var(--text); font-size: 13.5px; line-height: 1.35; }
 /* One answer bar: the secondary is a narrower segment beside the primary, as the two are always a pair */
 #prompt .buttons { display: flex; gap: 2px; }
+/* With nothing to answer, the console is only as tall as what it says. A phone's dock keeps its one row */
+html:not([data-form="portrait"]) #prompt .buttons:not(:has(button:not(:disabled))) { display: none; }
 /* The key sits beside its label as a keycap of its own, so it reads as the key to press rather than part of the answer */
 #prompt .buttons button { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; min-width: 0; height: 36px; padding: 0 10px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
 /* The answer first, taking two thirds; the way out after it, the other third */
