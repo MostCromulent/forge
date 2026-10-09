@@ -59,6 +59,11 @@ final class PromptState {
         changed();
     }
 
+    /** Whether Cancel is the priority prompt's End Turn, which the host would start without this side knowing of the pass. */
+    synchronized boolean cancelEndsTurn() {
+        return priority && cancel.enabled() && Localizer.getInstance().getMessage("lblEndTurn").equals(cancel.label());
+    }
+
     synchronized void selectable(final List<Ref> cards, final int min) {
         selectable = cards;
         selectableMin = min;
