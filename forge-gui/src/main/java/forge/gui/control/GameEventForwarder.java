@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
  *   <li>Priority: a player receives it once the game has settled, so a batch holds whole actions
  *       and what one player did is sent before anyone chooses what to do next. A pass with nothing
  *       but redraw hints since the last batch sends nothing</li>
- *   <li>End of turn: nobody receives priority in the cleanup step, so what happened in it is sent
- *       before the turn ends and never travels with the next turn's start</li>
+ *   <li>End of turn: normally no player receives priority in the cleanup step, so what happened in
+ *       it is sent before the turn ends and never travels with the next turn's start</li>
  *   <li>Input queue change: registered as {@link Observer} on player InputQueues,
  *       ensuring events are delivered before the game thread blocks for input</li>
  *   <li>Sync points: explicit {@link #flush()} from {@code flushPendingEvents()}</li>
