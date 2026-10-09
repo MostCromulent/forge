@@ -764,14 +764,15 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         final List<Integer> keys = new ArrayList<>();
         for (final T choice : choices) {
-            if (!(choice instanceof SpellAbilityView spell) || spell.getHostCard() == null) {
-                return null;
-            }
             Integer found = null;
-            for (final StackItemView item : gv.getStack()) {
-                if (item.getSourceCard() != null && item.getSourceCard().getId() == spell.getHostCard().getId()) {
-                    found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId());
-                    break;
+            if (choice instanceof StackItemView target) {
+                found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, target.getId());
+            } else if (choice instanceof SpellAbilityView spell && spell.getHostCard() != null) {
+                for (final StackItemView item : gv.getStack()) {
+                    if (item.getSourceCard() != null && item.getSourceCard().getId() == spell.getHostCard().getId()) {
+                        found = DeltaPacket.makeDeltaKey(DeltaPacket.TYPE_STACK_ITEM_VIEW, item.getId());
+                        break;
+                    }
                 }
             }
             if (found == null) {

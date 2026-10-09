@@ -32,6 +32,7 @@ let current: Model | null = null;
 let countSeen = 0;
 let foldedFor: object | null = null;
 let foldedForPick: object | null = null;
+let openedForPick: number | null = null;
 
 function fold(folded: boolean): void {
   foldedFor = folded ? current?.prompt ?? null : null;
@@ -102,6 +103,10 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
     q(root, '.head b').textContent = t('lblStack');
   }
   countSeen = count;
+  const pick = stackPick(model);
+  // A spell is picked on the list, so a folded list opens once for the question
+  if (pick && pick.id !== openedForPick) ui.stackCollapsed = false;
+  openedForPick = pick?.id ?? null;
   const collapsed = ui.stackCollapsed;
   showPanel(root, items.length + awaiting.size > 0);
   root.classList.toggle('collapsed', collapsed);
@@ -110,7 +115,6 @@ export function renderStack(model: Model, events: readonly GameEvent[]): void {
   collapse.textContent = t(collapsed ? 'lblShow' : 'lblWebStackHide');
   collapse.title = t(collapsed ? 'lblWebStackShowTitle' : 'lblWebStackHideTitle');
   const pile = q(root, '.pile');
-  const pick = stackPick(model);
   // An awaiting spell stands where its item will appear, at the top, so paying for it moves nothing
   const entries: (StackItemView | string)[] = [...awaiting.keys(), ...items];
   reconcile(pile, entries, e => typeof e === 'string' ? `awaiting-${e}` : e.$key,

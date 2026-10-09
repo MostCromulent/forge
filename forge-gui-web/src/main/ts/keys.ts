@@ -115,8 +115,13 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
     return 'confirmDistribute';
   }
   // A question in a dialog is answered there, and the prompt under it keeps its buttons to itself
-  if ((oldestRequest(model) && !stackPick(model)) || model.spectating) {
+  const pick = stackPick(model);
+  if ((oldestRequest(model) && !pick) || model.spectating) {
     return null;
+  }
+  // A spell picked on the stack is declined from the prompt's Cancel, when it may be
+  if (pick) {
+    return escape && pick.min === 0 ? 'cancel' : null;
   }
   const prompt = model.prompt;
   if (ok && prompt?.ok?.enabled) return 'ok';

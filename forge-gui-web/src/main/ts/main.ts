@@ -1,7 +1,7 @@
 // The controller, which is the only place that talks to the server and draws the model once per frame
 
 import { connect } from './net';
-import { createModel, applyState, cardMenu, isLocal, oldestRequest, players } from './model';
+import { createModel, applyState, cardMenu, isLocal, oldestRequest, players, stackPick } from './model';
 import { createActions, pendingTable, type Actions } from './actions';
 import { changeUi, initUi, resetMatchUi, ui } from './ui';
 import { initForm, isPortrait } from './form';
@@ -196,7 +196,12 @@ function runKey(command: KeyCommand): void {
     case 'editorUndo': actions.editorUndo(); break;
     case 'declineHostChoice': if (model.hostChoice) actions.answerHostChoice(model.hostChoice.id, []); break;
     case 'ok': pressPromptButton('ok'); actions.ok(); break;
-    case 'cancel': pressPromptButton('cancel'); actions.cancel(); break;
+    case 'cancel': {
+      pressPromptButton('cancel');
+      const pick = stackPick(model);
+      if (pick) actions.answer(pick.id, []); else actions.cancel();
+      break;
+    }
     case 'toggleAutoPass': pressPromptButton('auto-pass'); actions.toggleAutoPass(); break;
     case 'endTurn': pressPromptButton('end-turn'); if (model.controls?.untilEndOfTurn) actions.stopYield(); else actions.endTurn(); break;
     case 'undo': pressPromptButton('undo'); actions.undo(); break;

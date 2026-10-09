@@ -1,5 +1,5 @@
 import { cardImageSrc, hideOnError, setImage, setSymbolText } from '../images';
-import { deref, game, oldestRequest, type Model } from '../model';
+import { deref, game, oldestRequest, stackPick, type Model } from '../model';
 import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from '../press';
@@ -169,6 +169,19 @@ function drawPrompt(model: Model, actions: Actions): void {
   const cancel = q<HTMLButtonElement>(root, '.cancel');
   ok.onclick = () => actions.ok();
   cancel.onclick = () => actions.cancel();
+  // A spell picked on the stack has no dialog, so what it asks, and the way out of it, are shown here
+  const pick = stackPick(model);
+  if (pick) {
+    setSymbolText(q(root, '.message'), pick.message ?? '');
+    renderPromptCard(q<HTMLImageElement>(root, '.prompt-card'), model, null);
+    renderPlayerChoices(root, model, [], actions);
+    setButton(ok, undefined);
+    setButton(cancel, pick.min === 0 ? { label: t('lblCancel'), enabled: true } : undefined);
+    cancel.onclick = () => actions.answer(pick.id, []);
+    root.classList.add('waiting');
+    root.classList.remove('priority');
+    return;
+  }
   const p = model.prompt;
   if (!p) return;
   // Several prompts open with a short line naming the phase, which becomes the title rather than repeating under it
