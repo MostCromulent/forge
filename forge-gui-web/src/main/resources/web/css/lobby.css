@@ -398,7 +398,7 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-hit-title { flex: 1; min-width: 0; display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 10px; }
 .dk-hit-title .pips { flex: none; width: 78px; }
 .dk-hit-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dk-hit-title .pip { width: 14px; height: 14px; font-size: 8.5px; }
+.dk-hit-title .pip { width: 14px; height: 14px; }
 .tag { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 .dk-hit .tag { flex: none; width: 76px; text-align: right; }
 /* Legality differs by word, weight and a mark as well as colour */
@@ -516,26 +516,8 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .colour[aria-pressed="true"] { background: var(--surface-3); box-shadow: inset 0 0 0 1px var(--accent-2); }
 .colours:has([aria-pressed="true"]) .colour[aria-pressed="false"] .pip { opacity: .38; }
 
-/* A pip carries its letter, so colour identity never rests on hue alone */
-.pip {
-  display: inline-grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 700;
-  color: #14171c;
-  background: var(--muted);
-}
-
-.pip-W { background: var(--mtg-w); }
-.pip-U { background: var(--mtg-u); }
-.pip-B { background: var(--mtg-b); }
-.pip-R { background: var(--mtg-r); }
-.pip-G { background: var(--mtg-g); }
-.pip-C { background: var(--mtg-c); }
+/* A pip is the colour's mana symbol, whose shape says which it is, so colour identity never rests on hue alone */
+.pip { display: inline-block; width: 17px; height: 17px; border-radius: 50%; }
 .pips { display: inline-flex; gap: 2px; vertical-align: middle; }
 
 .shown { margin: 0; color: var(--faint, var(--muted)); font-size: 12px; }

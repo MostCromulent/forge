@@ -15,8 +15,8 @@ export function Pips({ colors }: { colors: string | null | undefined }) {
   return <>{[...(colors ?? '')].map(c => <Pip key={c} letter={c} />)}</>;
 }
 
-/** One colour's pip: W, U, B, R, G or C. */
-export const Pip = ({ letter }: { letter: string }) => <i class={`pip pip-${letter}`}>{letter}</i>;
+/** One colour's pip: the mana symbol of W, U, B, R, G or C, from the skin as a card's cost draws it. */
+export const Pip = ({ letter }: { letter: string }) => <img class="pip" alt={letter} src={symbolUrl(letter)} />;
 
 /** The colours in the order Magic writes them, then colourless, each with the key of its name. */
 export const COLOURS: [string, TextKey][] = [['W', 'lblWhite'], ['U', 'lblBlue'], ['B', 'lblBlack'], ['R', 'lblRed'], ['G', 'lblGreen'],
