@@ -98,6 +98,7 @@ public final class LocalGame {
         awaitOldSeatsFreed();
         // The server costs nothing to leave running, so it outlives every game it serves
         if (!HostingServer.isHosting()) {
+            NetworkLogConfig.activateNetworkLogging();
             server.startLoopbackServer();
             startedServer = true;
         }
@@ -176,8 +177,6 @@ public final class LocalGame {
         // AbstractGuiGame.getDeckForPlayer reads the client lobby
         gui.setClientLobby(joined);
         final CountDownLatch ready = new CountDownLatch(1);
-        // A client that closes switches the log off for the whole process, and the server here outlives its matches
-        NetworkLogConfig.activateNetworkLogging();
         client = new FGameClient(playerName, gui, FServerManager.LOOPBACK);
         client.setDispatchExecutor(gui.dispatchExecutor());
         client.setDraftHandler(draftHandler);
@@ -349,6 +348,10 @@ public final class LocalGame {
         if (client != null) {
             client.close();
             client = null;
+            // Closing a client switches the log off for the whole process, while the server and any other seats play on
+            if (HostingServer.isHosting()) {
+                NetworkLogConfig.activateNetworkLogging();
+            }
         }
         // Every seat's GUI lives on the one server, so only the host may clear them
         if (hosted != null) {
