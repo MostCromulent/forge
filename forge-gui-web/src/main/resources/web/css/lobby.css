@@ -396,9 +396,9 @@ html:not([data-form="portrait"]) .finder:has(.rail) > .finder-foot { grid-column
 .dk-hit[aria-pressed="true"] { background: var(--accent-soft); border-left-color: var(--accent-2); }
 /* Colours sit in a column of their own before the name, so the names line up down the list */
 .dk-hit-title { flex: 1; min-width: 0; display: flex; flex-direction: row-reverse; justify-content: flex-end; align-items: center; gap: 10px; }
-.dk-hit-title .pips { flex: none; width: 78px; }
+.dk-hit-title .pips { flex: none; width: 88px; }
 .dk-hit-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dk-hit-title .pip { width: 14px; height: 14px; }
+.dk-hit-title .pip { width: 16px; height: 16px; }
 .tag { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
 .dk-hit .tag { flex: none; width: 76px; text-align: right; }
 /* Legality differs by word, weight and a mark as well as colour */
