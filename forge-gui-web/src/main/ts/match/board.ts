@@ -2,7 +2,7 @@
 
 import { reconcile } from './render';
 import { cardImageSrc, hideOnError, noImageOnError, setImage, symbolUrl } from '../images';
-import { commanderTax, game, me, players, zone, deref, stateOf, isLocal, type Model } from '../model';
+import { commanderTax, game, me, players, zone, deref, stackPick, stateOf, isLocal, type Model } from '../model';
 import { renderHand } from './hand';
 import { renderZones, togglePile, zoneTitle } from './zones';
 import { renderBattlefield } from './battlefield';
@@ -60,10 +60,10 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   // Answered from the prompt's own buttons instead, or a game conceded before anyone chose, the faces have nothing left to ask
   if (!choice || model.gameOver) document.querySelector('#first-reveal.choosing')?.remove();
   noticeLosses(model, actions);
-  // A prompt offering cards or players to pick dims everything else (board.css); paying a cost is not such a pick
+  // A prompt offering cards or players to pick, or a spell picked on the stack, dims everything else (board.css); paying a cost is not such a pick
   const p = model.prompt;
-  byId('match').classList.toggle('picking', !!p && !p.paying
-    && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0));
+  byId('match').classList.toggle('picking', !!stackPick(model) || (!!p && !p.paying
+    && ((p.selectableMin > 0 && p.selectable.length > 0) || p.selectablePlayers.length > 0)));
   // The click position travels with the click, so an ability list opens on the card as desktop's menu does
   const select: CardClick = (el, menu, e) => {
     const key = Number(el.dataset.key);
