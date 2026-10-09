@@ -22,7 +22,7 @@ export function Volume({ close, anchor = '#side-tools .volume' }: { close: () =>
           return (
             <label key={def.key} class="volume-row">
               <span>{def.label}</span>
-              <input type="range" min={0} max={100} step={5} value={value} class={value > 0 ? '' : 'off'}
+              <input type="range" min={0} max={100} step={5} value={value} class={value > 0 ? 'level' : 'level off'} style={{ '--level': value / 100 }}
                 onInput={e => set(def.key, Number(e.currentTarget.value))} />
               <span class="value">{value > 0 ? t('lblWebOptionsPercent', value) : t('lblOff')}</span>
             </label>

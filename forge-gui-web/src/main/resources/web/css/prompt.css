@@ -118,7 +118,21 @@ html:not([data-form="portrait"]) #prompt .buttons:not(:has(button:not(:disabled)
 #options .switch[aria-checked="true"]::after { left: 18px; background: var(--on-brass); }
 #options .pick { justify-self: end; min-width: 150px; height: 30px; padding: 0 8px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; color: var(--text); font: inherit; font-size: 12.5px; }
 #options .slider { display: grid; grid-template-columns: minmax(0, 1fr) 38px; align-items: center; gap: 8px; width: 220px; height: 28px; }
-#options .slider input { width: 100%; margin: 0; accent-color: var(--accent-2); }
+#options .slider input { width: 100%; margin: 0; }
+/* A slider is drawn here rather than by the browser, which colours the bar up to the middle of the handle even at nought.
+   The bar fills to the handle's middle, and at its lowest the handle is a hollow ring at the far left over an empty bar */
+input.level { --knob: 14px; -webkit-appearance: none; appearance: none; height: 16px; margin: 0; padding: 0; border: 0; background: none; cursor: pointer; }
+input.level::-webkit-slider-runnable-track { height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--accent-2) calc(var(--knob) / 2 + (100% - var(--knob)) * var(--level, 0)), var(--line-bright) 0); }
+input.level::-webkit-slider-thumb { -webkit-appearance: none; width: var(--knob); height: var(--knob); margin-top: -5px; box-sizing: border-box; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); }
+input.level::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line-bright); }
+input.level::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent-2); }
+input.level::-moz-range-thumb { width: var(--knob); height: var(--knob); box-sizing: border-box; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); }
+input.level.off::-webkit-slider-runnable-track { background: var(--line-bright); }
+input.level.off::-webkit-slider-thumb { background: var(--surface); border-color: var(--muted); }
+input.level.off::-moz-range-progress { background: none; }
+input.level.off::-moz-range-thumb { background: var(--surface); border-color: var(--muted); }
+input.level:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 4px; }
 #options .slider span { color: var(--muted); font-size: 11.5px; text-align: right; font-variant-numeric: tabular-nums; }
 /* A key is drawn as a keycap, and Edit as a button of the same make */
 #options .setting .key-bind, #options .setting .edit { justify-self: end; height: 30px; padding: 0 14px; background: linear-gradient(180deg, var(--surface-3), var(--surface-2)); border: 1px solid var(--line-bright); border-radius: 6px; color: var(--text); font-size: 12px; box-shadow: 0 1px 2px #0009, inset 0 1px 0 #ffffff12; }
@@ -141,8 +155,6 @@ html:not([data-form="portrait"]) #prompt .buttons:not(:has(button:not(:disabled)
 #volume .volume-panel { position: fixed; display: grid; gap: 8px; padding: 10px 12px; min-width: 240px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 34px #000a; }
 #volume .volume-row { display: grid; grid-template-columns: 48px 1fr 34px; align-items: center; gap: 8px; font-size: 12.5px; }
 #volume .volume-row .value { color: var(--muted); font-size: 11.5px; text-align: right; }
-/* At nought the browser still colours the track up to the middle of the handle, so a silenced slider is drawn grey */
-#volume .volume-row input.off { accent-color: var(--muted); opacity: .7; }
 /* A rare long answer is cut short rather than pushing its partner out of the console; the full text is its title */
 #prompt .buttons .label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 /* Players a prompt lets you pick who have no seat on the board to click */
