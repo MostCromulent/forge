@@ -20,7 +20,6 @@ Sealed, Planar Conquest and Quest are laid out for a computer screen.
   <img src="forge-gui-web/docs/victory.webp" width="49%" alt="A winning spell and the end of a game">
 </p>
 <p>
-  <img src="forge-gui-web/docs/hover.webp" width="49%" alt="Cards raised from the hand as the pointer passes over them">
   <img src="forge-gui-web/docs/conquest.webp" width="49%" alt="The map of a Planar Conquest">
 </p>
 
