@@ -17,6 +17,7 @@ import forge.game.card.CardFaceView;
 import forge.game.card.CardView;
 import forge.game.event.GameEvent;
 import forge.game.event.GameEventGameOutcome;
+import forge.game.event.GameEventZone;
 import forge.game.phase.PhaseType;
 import forge.game.player.DelayedReveal;
 import forge.game.player.IHasIcon;
@@ -343,11 +344,20 @@ public class WebGuiGame extends NetworkGuiGame {
             send(entries);
         }
         if (settings.getBoolean(FPref.UI_ENABLE_SOUNDS) && settings.getInt(FPref.UI_VOL_SOUNDS) > 0) {
-            final Sound sound = sounds.soundFor(event);
+            final Sound sound = sounds.soundFor(withKnownCard(event, gv));
             if (sound != null) {
                 send(sound);
             }
         }
+    }
+
+    /** A card that has just moved arrives in its event as a name and a picture only, so its sound is chosen from the card this client holds. */
+    private static GameEvent withKnownCard(final GameEvent event, final GameView gv) {
+        if (!(event instanceof GameEventZone zone) || zone.card() == null) {
+            return event;
+        }
+        final CardView known = gv.getTracker().getObj(TrackableTypes.CardViewType, zone.card().getId());
+        return known == null ? event : new GameEventZone(zone.zoneType(), zone.player(), zone.mode(), known, zone.sa());
     }
 
     /** Finds each seated player's name in the engine's match summary ("Alice: 1 Bob: 0 "), so a name holding a colon or space is read whole. */

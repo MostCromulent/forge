@@ -82,6 +82,8 @@ public class LoopbackGameTest {
             Assert.assertTrue(browser.all("log").stream().flatMap(m -> m.getAsJsonArray("entries").asList().stream())
                     .anyMatch(e -> "LAND".equals(e.getAsJsonObject().get("type").getAsString()) && e.getAsJsonObject().has("imageKey")),
                     "no land entry carried its card");
+            Assert.assertTrue(browser.all("sound").stream().anyMatch(m -> m.get("name").getAsString().endsWith("_land")),
+                    "no land made its sound");
 
             // A second match reuses the running loopback host
             final WebGuiGame second = new WebGuiGame();
