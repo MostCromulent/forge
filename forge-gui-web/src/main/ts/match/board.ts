@@ -752,8 +752,13 @@ function showLife(el: HTMLElement, avatar: HTMLElement, life: number, local: boo
   }
 }
 
-// Damage to another player washes red round their portrait and shakes it, the board's own hit made small
+// Damage to another player rings and shakes their portrait, and washes the edges of the screen near it
 function hitAvatar(avatar: HTMLElement, amount: number): void {
+  const at = avatar.getBoundingClientRect();
+  const wash = make('div', `hit-flash near${amount >= 5 ? ' hard' : ''}`);
+  wash.style.setProperty('--at', `${at.left + at.width / 2}px ${at.top + at.height / 2}px`);
+  document.body.append(wash);
+  wash.addEventListener('animationend', () => wash.remove());
   replay(avatar, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
   avatar.addEventListener('animationend', e => {
     if (e.target === avatar) avatar.classList.remove('hit', 'hit-hard');

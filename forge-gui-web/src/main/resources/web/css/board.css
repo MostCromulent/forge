@@ -1065,7 +1065,11 @@ html[data-motion="reduced"] #first-reveal .reveal-face > :first-child, html[data
 .hit-flash { position: fixed; inset: 0; z-index: 80; pointer-events: none; animation: hit-wash .55s ease-out forwards;
   background: radial-gradient(ellipse at center, transparent 50%, rgba(255,122,89,.3) 100%); }
 @keyframes hit-wash { from { opacity: 0; } 25% { opacity: 1; } to { opacity: 0; } }
-/* Another player's hit: the same wash as a ring round their portrait, and the same shake, on the portrait alone */
+/* Another player's hit: the same wash, kept to the edges of the screen near their portrait */
+.hit-flash.near { animation-duration: .7s; background: radial-gradient(ellipse at center, transparent 46%, rgba(255,122,89,.42) 100%);
+  mask-image: radial-gradient(circle at var(--at), #000 0 20%, transparent 46%); }
+.hit-flash.near.hard { background: radial-gradient(ellipse at center, transparent 46%, rgba(255,122,89,.65) 100%); }
+/* And as a ring round the portrait, with the same shake, on the portrait alone */
 .avatar.hit { animation: hit-shake .32s ease-out; }
 .avatar.hit-hard { animation: hit-shake-hard .42s ease-out; }
 .avatar-hit { position: absolute; inset: -22px; border-radius: 50%; pointer-events: none;
