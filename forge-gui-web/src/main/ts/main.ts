@@ -20,7 +20,7 @@ import { initStack } from './match/stack';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
-import { asksPlayer, behindItsBoard, worthSeeing } from './match/pace';
+import { asksPlayer, behindItsBoard, setBoardBehind, worthSeeing } from './match/pace';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
@@ -238,9 +238,11 @@ function receive(msg: ServerMessage): void {
     // A sound or a log line comes behind its own board, so it waits with that board when the board does, and not for it
     if (msg.t === 'state' && !msg.full && Date.now() < showUntil) {
       held = [msg];
+      setBoardBehind(true);
       setTimeout(releaseThis, showUntil - Date.now());
     } else if (msg.t === 'state' && announceComing(model, msg, releaseThis)) {
       held = [msg];
+      setBoardBehind(true);
       announcing = true;
       // The banner's end releases the turn; this only guards the page against a release that never comes
       setTimeout(releaseThis, HOLD_LIMIT_MS);
@@ -269,6 +271,7 @@ function receive(msg: ServerMessage): void {
 function release(): void {
   const waiting = held ?? [];
   held = null;
+  setBoardBehind(false);
   announcing = false;
   waiting.forEach(receive);
 }

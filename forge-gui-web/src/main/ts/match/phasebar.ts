@@ -7,7 +7,7 @@ import { t, tNodes, type TextKey } from '../text';
 import type { Actions } from '../actions';
 import type { GameView, PhaseType, TurnMarker } from '../protocol';
 import { isPortrait } from '../form';
-import { asksPlayer } from './pace';
+import { asksPlayer, boardBehind } from './pace';
 import { sheet, swipeDown } from '../sheet';
 
 // A pill on the divider showing the turn's owner and the five phases, which opens the grid of phase stops when clicked
@@ -305,6 +305,7 @@ function drawUntil(pill: HTMLElement, model: Model, myTurn: boolean, theirs: The
 // Who the game is waiting on, and for how long: another player, or you when another person is at the table
 let waitingFor: number | null = null;
 let waitingSince = 0;
+let waitingTick = 0;
 let waitingTimer = 0;
 let lastPulse = 0;
 
@@ -341,7 +342,7 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   }
   if (waitingFor !== holder.$key) {
     waitingFor = holder.$key;
-    waitingSince = Date.now();
+    waitingSince = waitingTick = Date.now();
     lastPulse = 0;
   }
   chip.classList.toggle('you', onMe);
@@ -354,9 +355,14 @@ function drawWaiting(pill: HTMLElement, model: Model): void {
   q(chip, '.who').replaceChildren(...words.map(w => (w instanceof Node ? w : String(w))));
   // A wait of a moment is not worth a chip, and one that appeared reading 0s looked stuck
   const show = () => {
-    const seconds = Math.floor((Date.now() - waitingSince) / 1000);
+    const now = Date.now();
+    // While the page catches up on boards it held for the pace, nobody is being waited on, so that time is not counted
+    const behind = boardBehind();
+    if (behind) waitingSince += now - waitingTick;
+    waitingTick = now;
+    const seconds = Math.floor((now - waitingSince) / 1000);
     const yours = chip.classList.contains('you');
-    chip.hidden = seconds < (yours ? YOUR_WAIT_SHOWN_AFTER_S : WAIT_SHOWN_AFTER_S);
+    chip.hidden = behind || seconds < (yours ? YOUR_WAIT_SHOWN_AFTER_S : WAIT_SHOWN_AFTER_S);
     q(chip, 'b').textContent = t('lblWebOptionsSeconds', seconds);
     // Your wait pulses once every PULSE_EVERY_S, restarted by taking the class off and putting it back
     if (yours && seconds >= PULSE_EVERY_S && seconds % PULSE_EVERY_S === 0 && lastPulse !== seconds) {

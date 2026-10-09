@@ -37,6 +37,15 @@ export function asksPlayer(prompt: Prompt): boolean {
   return prompt.priority || prompt.ok.enabled || prompt.cancel.enabled || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0;
 }
 
+let behind = false;
+
+/** Whether boards the server has sent wait their turn to be shown, so the page is behind the game and no player is keeping it. */
+export const boardBehind = (): boolean => behind;
+
+export function setBoardBehind(value: boolean): void {
+  behind = value;
+}
+
 /**
  * The server sends a sound and a log line as their event happens, and the board that shows the event after them. This hands them on
  * after that board, so a sound is heard as its card moves, wherever the board is held up on the way (a turn banner, a pause on a play).
