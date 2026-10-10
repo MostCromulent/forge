@@ -420,6 +420,14 @@ html[data-form="portrait"] #match .slot.attacking:has(> .card.tapped:last-child)
 html[data-form="portrait"] .reveal-panel header { flex-wrap: nowrap; align-items: flex-start; }
 html[data-form="portrait"] .reveal-panel header .zone-who { flex: 1; min-width: 0; }
 html[data-form="portrait"] .reveal-panel header .zone-count { display: none; }
+html[data-form="portrait"] .reveal-panel.bare { max-width: none; padding: 8px 0; }
+html[data-form="portrait"] .reveal-panel.bare .zone-who { width: auto; }
+/* Three across at most, and larger than a zone's cards when there are few */
+html[data-form="portrait"] .reveal-panel.bare .cards { --fit: min(var(--few), 1.25); max-width: none; }
+/* A touch screen has no drag, so the line about dragging goes and the shelves give its room to the cards */
+html[data-form="portrait"] .manipulate .shelf-hint { display: none; }
+html[data-form="portrait"] .manipulate .shelf { padding: 8px 10px 10px; }
+html[data-form="portrait"] .manipulate .shelf-cards { --fit: 1; gap: 10px; padding-top: 10px; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }
 /* Asked who goes first, the dock can answer too, so the question stops above it */
 html[data-form="portrait"] #first-reveal.choosing { inset: 0 0 var(--dock-h, 45px) 0; }

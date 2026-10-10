@@ -184,13 +184,14 @@ export function RevealWindow({ model, title: asSent, cards, close, aiSkipsOf }: 
       </div>
     );
   }
+  const few = count === 1 ? 2.6 : count <= 3 ? 2.15 : count <= 5 ? 1.7 : 1.45;
   return (
     <div class="reveal-back" onMouseDown={e => { if (e.target === e.currentTarget) close(); }}>
-      <section class="zone-panel reveal-panel" role="dialog" aria-label={title}>
-        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span><span class="zone-gap" />
-          <button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button></header>
+      <section class="zone-panel reveal-panel bare" role="dialog" aria-label={title} style={`--few: ${few}`}>
+        <header><b class="zone-who"><SymbolText text={title} /></b><span class="zone-count">{counted}</span></header>
         <div class="cards">{cards.map((o, i) => <OptionView key={i} model={model} opt={o} />)}</div>
-        <footer><span class="zone-hint" /><button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
+        <footer><button class="zone-fold" onClick={() => setFolded(true)}>{t('lblWebZoneShowBoard')}</button>
+          <button class="zone-answer ok primary" onClick={close}><span class="label">{t('lblOK')}</span><kbd>{keyName(boundKeys().ok)}</kbd></button></footer>
       </section>
     </div>
   );
@@ -551,6 +552,20 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
   const [piles, setPiles] = useState(() => ({ top: all.filter(i => req.movable.includes(i)), bottom: [] as number[] }));
   const held = useRef<number | null>(null);
   const bothEnds = req.toBottom || req.toTop;
+  const root = useRef<HTMLDivElement>(null);
+  const heights = useRef<number[]>([]);
+  // Each shelf grows or shrinks to its new height as cards move between them
+  useLayoutEffect(() => {
+    const shelves = [...root.current!.querySelectorAll<HTMLElement>('.shelf')];
+    shelves.forEach((el, k) => {
+      for (const a of el.getAnimations()) a.cancel();
+      const was = heights.current[k];
+      if (was && was !== el.offsetHeight && !reducedMotion()) {
+        el.animate([{ height: `${was}px` }, { height: `${el.offsetHeight}px` }], { duration: 240, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+      }
+    });
+    heights.current = shelves.map(el => el.offsetHeight);
+  }, [piles]);
 
   const place = (shelf: Shelf, at: number) => {
     const card = held.current;
@@ -571,9 +586,11 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
     return next;
   });
 
-  const shelf = (name: Shelf, label: string, note: string) => (
+  const sendAll = (to: Shelf) => setPiles(p => (to === 'top' ? { top: [...p.top, ...p.bottom], bottom: [] } : { top: [], bottom: [...p.bottom, ...p.top] }));
+
+  const shelf = (name: Shelf, label: string, empty: string) => (
     <div class={`shelf ${name}`} onDragOver={e => e.preventDefault()} onDrop={() => place(name, piles[name].length)}>
-      <p class="shelf-label"><b>{label}</b><span>{note}</span></p>
+      <p class="shelf-label"><b>{label}</b><i>{piles[name].length}</i></p>
       <div class="shelf-cards">
         {piles[name].map((i, pos) => (
           <div key={i} class="shelf-card" draggable onDragStart={() => { held.current = i; }}
@@ -582,20 +599,27 @@ function Manipulate({ req, model, answer }: { req: ManipulateRequest; model: Mod
             <OptionView model={model} opt={req.options[i]} />
             {bothEnds && <button class="send" onClick={() => send(name, pos)}
               title={name === 'top' ? t('lblWebDialogPutOnBottom') : t('lblWebDialogPutOnTop')}>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d={name === 'top' ? 'M12 5v14M6 13l6 6 6-6' : 'M12 19V5M6 11l6-6 6 6'} /></svg>
               {name === 'top' ? t('lblWebDialogToBottom') : t('lblWebDialogToTop')}</button>}
           </div>
         ))}
-        {piles[name].length === 0 && <p class="shelf-empty">{t('lblWebDialogNothingHere')}</p>}
+        {piles[name].length === 0 && <p class="shelf-empty">{empty}</p>}
       </div>
     </div>
   );
 
   return (
-    <div class="manipulate">
-      {shelf('top', t('lblWebDialogTopOfLibrary'), t('lblWebDialogDrawnFirst'))}
-      <p class="between">{t('lblWebDialogOtherCards', rest.length)}</p>
-      {bothEnds && shelf('bottom', t('lblWebDialogBottomOfLibrary'), t('lblWebDialogLastFurthestDown'))}
-      <ButtonRow><Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')}</Button></ButtonRow>
+    <div class="manipulate" ref={root}>
+      <p class="shelf-hint">{t('lblWebDialogReorderHint')}</p>
+      {shelf('top', t('lblWebDialogTopOfLibrary'), t('lblWebDialogDropForTop'))}
+      <p class="between"><span class="deck-mark" aria-hidden="true"><i /></span>{t('lblWebDialogOtherCards', rest.length)}</p>
+      {bothEnds && shelf('bottom', t('lblWebDialogBottomOfLibrary'), t('lblWebDialogDropForBottom'))}
+      <ButtonRow>
+        {bothEnds && (piles.top.length > 0
+          ? <button class="all" onClick={() => sendAll('bottom')}>{t('lblWebDialogAllToBottom')}</button>
+          : <button class="all" onClick={() => sendAll('top')}>{t('lblWebDialogAllToTop')}</button>)}
+        <Button primary onClick={() => answer([...piles.top, ...rest, ...piles.bottom])}>{t('lblWebDialogConfirm')}</Button>
+      </ButtonRow>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { reconcile } from './render';
 import { createCard, updateCard, type CardClick } from './cards';
 import { stateOf, zone, type Model } from '../model';
-import { byId, q, make } from '../dom';
+import { byId, q, make, reducedMotion } from '../dom';
 import { changeUi, ui, type ZoneSort } from '../ui';
 import { normalize, rankByName } from '../search';
 import { manaValue } from './hand';
@@ -79,6 +79,31 @@ export function renderZones(model: Model, actions: Actions, select: CardClick): 
   if (root.firstElementChild !== box || root.childElementCount !== 1) root.replaceChildren(box);
   reconcile(q(root, '.zone-shelf'), [...panels.entries()], ([k]) => k, createPanel,
     (el, [, p]) => updatePanel(el, model, actions, p, select));
+  for (const el of box.querySelectorAll<HTMLElement>('.zone-panel:not([data-opened])')) growFromPile(el);
+}
+
+/** A window new to the page grows out of the pile it shows; on a phone, or with no pile on the board, it rises in as any dialog does. */
+function growFromPile(el: HTMLElement): void {
+  const [player, zoneName] = (el.dataset.key ?? '').split('/');
+  const pile = isPortrait() ? null
+    : document.querySelector(`.seat[data-player="${player}"] ${zoneName === 'Hand' ? '.hand-fan' : `.zone-tile[data-zone="${zoneName}"]`}`)?.getBoundingClientRect();
+  if (!pile?.width) {
+    el.dataset.opened = 'plain';
+    return;
+  }
+  const at = el.getBoundingClientRect();
+  el.style.transformOrigin = `${pile.left + pile.width / 2 - at.left}px ${pile.top + pile.height / 2 - at.top}px`;
+  el.dataset.opened = 'pile';
+}
+
+/** A window that grew out of a pile goes back into it before it is closed. */
+function putAway(el: HTMLElement, close: () => void): void {
+  if (el.dataset.opened !== 'pile' || reducedMotion()) {
+    close();
+    return;
+  }
+  el.animate([{}, { opacity: 1, offset: .5 }, { opacity: 0, scale: .06 }], { duration: 170, easing: 'cubic-bezier(.5, 0, .8, .3)', fill: 'forwards' })
+    .onfinish = close;
 }
 
 /** The one element the dialogs sit in, kept across renders so a reconcile of the panels is not undone. */
@@ -128,9 +153,13 @@ function updatePanel(el: HTMLElement, model: Model, actions: Actions, p: Panel, 
   sort.onchange = () => changeUi(u => { u.zoneSort = sort.value as ZoneSort; });
   q(el, '.zone-fold').onclick = () => changeUi(u => { u.zonesMinimised = true; });
   // The game put this one up and the game takes it down, so it offers no way out of its own
-  const done = q(el, '.zone-done');
+  const done = q<HTMLButtonElement>(el, '.zone-done');
   done.hidden = p.forced;
-  done.onclick = () => togglePile(p.player, p.zone);
+  done.onclick = () => {
+    // A second press while the window shrinks would open it again
+    done.disabled = true;
+    putAway(el, () => togglePile(p.player, p.zone));
+  };
   // A dialog the game put up carries the prompt's question and its OK, but not its other button, which is the way out of priority
   const prompt = p.forced ? model.prompt : null;
   q(el, '.zone-hint').textContent = p.forced ? prompt?.message || t('lblWebZoneWaitingOnYou') : '';
