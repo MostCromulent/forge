@@ -1053,7 +1053,7 @@ body.dragging-block #zoom { display: none; }
 #phase-strip .pill { transition: opacity .16s ease, background-color .15s ease, border-color var(--pill-ms) var(--pill-ease), box-shadow var(--pill-ms) var(--pill-ease); }
 #phase-strip.announcing .pill, #phase-strip.announcing .stops { opacity: 0; pointer-events: none; }
 /* Who goes first and how the game ended are said in the middle of the board, so the pill steps aside for them too */
-#match:has(#first-reveal) #phase-strip .pill, #match.ending #phase-strip .pill { opacity: 0; pointer-events: none; }
+#match:has(#first-reveal, #coin-toss) #phase-strip .pill, #match.ending #phase-strip .pill { opacity: 0; pointer-events: none; }
 .turn-banner {
   position: absolute;
   left: 50%;
@@ -1081,6 +1081,19 @@ body.dragging-block #zoom { display: none; }
 @keyframes turn-sheen { to { transform: translateX(120%); } }
 
 /* Who goes first never takes a click, so the mulligan prompt under it can be answered straight away */
+/* The toss for a match's first game: mobile's coin, alone over the board, before who goes first is asked or said (coin.ts) */
+#coin-toss { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 36px;
+  background: radial-gradient(closest-side, #070910d9, #07091000); animation: backdrop-in .25s ease-out; cursor: pointer; }
+#coin-toss.closing { animation: backdrop-out .2s ease-in forwards; }
+#coin-toss .coin-scene { position: relative; width: 200px; height: 200px; perspective: 900px; }
+#coin-toss .coin { position: absolute; inset: 0; transform-style: preserve-3d; }
+#coin-toss .coin i { position: absolute; inset: 0; border-radius: 50%; }
+#coin-toss .coin-side { background: url("../coin?side=heads") center / 102%; backface-visibility: hidden; transform: translateZ(7px); }
+#coin-toss .coin-side.tails { background-image: url("../coin?side=tails"); transform: rotateX(180deg) translateZ(7px); }
+#coin-toss .coin .coin-edge { inset: 1px; background: repeating-conic-gradient(#b8912e 0 1.5deg, #8d6b1c 1.5deg 3deg); }
+#coin-toss .coin-shadow { position: absolute; left: 10%; right: 10%; bottom: -30px; height: 24px; border-radius: 50%; background: #000; filter: blur(11px); opacity: .5; }
+#coin-toss p { margin: 0; font-size: 17px; font-weight: 600; text-align: center; opacity: 0; transition: opacity .3s; }
+#coin-toss.landed p { opacity: 1; }
 #first-reveal { position: fixed; inset: 0 calc(var(--side-w) + 16px) 0 0; z-index: 70; pointer-events: none; display: grid; place-content: center; justify-items: center; gap: 22px;
   background: radial-gradient(closest-side, #070910d9, #07091000); animation: first-reveal 2.2s ease forwards; }
 #first-reveal .reveal-faces { display: flex; gap: 36px; }

@@ -25,6 +25,7 @@ import type { Actions } from '../actions';
 import type { CardStateView, CardView, GameEvent, GameView, PlayerView, Ref, StateMessage, ZoneType } from '../protocol';
 import { avatarModifiers, commandKind, type CommandKind } from './command';
 import { notePick } from './overlay';
+import { coinInAir, readyCoin, tossCoin } from './coin';
 import { hovers, isTouch, longPress } from '../press';
 import { fieldChanged, repeatTap, seatToOpen, tapInspects } from './portrait';
 import { isPortrait } from '../form';
@@ -47,16 +48,26 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
   // Before anything is redrawn, so each card's move is measured from where it stood on screen
   noteBoard();
   for (const e of events) {
+    if (e.kind === 'coinTossed') toss(model, model.localPlayers.includes(e.winner.ref));
     if (e.kind === 'gameStarted') {
       firstPlayer = e.first.ref;
-      // Who chose who starts already knows who does
-      if (!choseStarter) revealFirst(model, firstPlayer);
+      firstDue = true;
     }
   }
   const choice = model.prompt?.starterChoice;
-  if (choice && !choseStarter) {
-    choseStarter = true;
-    chooseFirst(model, actions, choice);
+  // The winner is asked who starts as the toss is made, and the question can reach the page before the toss's own event
+  if (choice === 'toss') toss(model, true);
+  // Who goes first is said or asked once the coin has come down
+  if (!coinInAir()) {
+    if (firstDue) {
+      firstDue = false;
+      // Who chose who starts already knows who does
+      if (!choseStarter) revealFirst(model, firstPlayer);
+    }
+    if (choice && !choseStarter) {
+      choseStarter = true;
+      chooseFirst(model, actions, choice);
+    }
   }
   // Answered from the prompt's own buttons instead, or a game conceded before anyone chose, the faces have nothing left to ask
   if (!choice || model.gameOver) document.querySelector('#first-reveal.choosing')?.remove();
@@ -373,7 +384,7 @@ function renderSeat(root: HTMLElement, model: Model, player: PlayerView | undefi
   avatar.classList.toggle('selectable', (model.prompt?.selectablePlayers ?? []).some(r => r.ref === player.$key));
   avatar.classList.toggle('active', game(model)?.PlayerTurn?.ref === player.$key);
   // Who went first stays marked until their first turn is over, for anyone who missed the reveal
-  avatar.classList.toggle('first', firstPlayer === player.$key && (game(model)?.Turn ?? 0) <= 1);
+  avatar.classList.toggle('first', firstPlayer === player.$key && !firstDue && (game(model)?.Turn ?? 0) <= 1);
   // A player who has lost leaves an empty socket: their portrait broke, or breaks now, out of it
   avatar.classList.toggle('lost', !!player.HasLost);
   renderHandFan(q(root, '.hand-fan'), model, player);
@@ -611,6 +622,9 @@ export function resetTable(): void {
   stopWaiting();
   forgetPictures();
   firstPlayer = null;
+  firstDue = false;
+  tossed = false;
+  readyCoin();
   seating = null;
   outSaid = false;
   document.getElementById('out-banner')?.remove();
@@ -627,8 +641,21 @@ export function resetTable(): void {
 
 /** The player the game said takes the first turn, from the moment it is settled until the next game. */
 let firstPlayer: number | null = null;
+/** The game has said who starts and the page has yet to show it, which waits for the coin. */
+let firstDue = false;
 /** This viewer was asked who starts, having won the toss or lost the last game. */
 let choseStarter = false;
+/** The first game's toss has been shown. */
+let tossed = false;
+
+/** Shows the toss once, to a player at the table, whichever of its event and the winner's question arrives first. */
+function toss(model: Model, heads: boolean): void {
+  const name = me(model)?.Name;
+  if (tossed || name === undefined) return;
+  tossed = true;
+  // The page is drawn again as the coin is put away, which is when who goes first is said or asked
+  tossCoin(heads, t(heads ? 'lblYouHaveWonTheCoinToss' : 'lblYouLostTheCoinToss', name), () => changeUi(() => {}));
+}
 
 /** Two players are asked to play or draw, so your own face answers OK and the other cancels, while with more a face picks that player. */
 function chooseFirst(model: Model, actions: Actions, choice: string): void {

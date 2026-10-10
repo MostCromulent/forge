@@ -390,6 +390,11 @@ final class ToBrowser {
     record GameStarted(Ref first) {
     }
 
+    /** The toss before a match's first game, which the player it names won. */
+    @Event("coinTossed")
+    record CoinTossed(Ref winner) {
+    }
+
     static final List<Class<? extends Record>> EVENTS = Wire.marked(ToBrowser.class, Event.class);
 
 

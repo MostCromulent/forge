@@ -654,6 +654,10 @@ public final class WebServer implements AutoCloseable {
                 respondOrNotFound(ctx, icon == null ? null : SkinSprites.abilityPng(icon), "image/png");
                 return;
             }
+            if ("/coin".equals(path)) {
+                respondOrNotFound(ctx, SkinSprites.coinPng(!"tails".equals(param(q, "side"))), "image/png");
+                return;
+            }
             if ("/skinicon".equals(path)) {
                 final String icon = param(q, "k");
                 respondOrNotFound(ctx, icon == null ? null : SkinSprites.iconPng(icon), "image/png");

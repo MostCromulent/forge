@@ -10,6 +10,7 @@ import forge.game.event.GameEventCardAttachment;
 import forge.game.event.GameEventCardChangeZone;
 import forge.game.event.GameEventCardCounters;
 import forge.game.event.GameEventCardDamaged;
+import forge.game.event.GameEventFlipCoin;
 import forge.game.event.GameEventGameStarted;
 import forge.game.event.GameEventPlayerCounters;
 import forge.game.event.GameEventPlayerDamaged;
@@ -30,6 +31,7 @@ import forge.web.ToBrowser.CardAttached;
 import forge.web.ToBrowser.CardCounters;
 import forge.web.ToBrowser.CardDamaged;
 import forge.web.ToBrowser.CardMoved;
+import forge.web.ToBrowser.CoinTossed;
 import forge.web.ToBrowser.GameStarted;
 import forge.web.ToBrowser.LifeChanged;
 import forge.web.ToBrowser.Place;
@@ -119,6 +121,9 @@ final class BrowserEvents {
         }
         if (event instanceof GameEventGameStarted e && e.firstTurn() != null) {
             return new GameStarted(Ref.player(e.firstTurn().getId()));
+        }
+        if (event instanceof GameEventFlipCoin e && e.startingToss() && e.flipper() != null) {
+            return new CoinTossed(Ref.player(e.flipper().getId()));
         }
         return null;
     }

@@ -81,6 +81,15 @@ final class SkinSprites {
         return encoded.computeIfAbsent("c" + name, k -> cell(iconSheet(prop.getType().getFilename()), prop, k));
     }
 
+    /** A face of the coin tossed for a match's first game, which is mobile's art. */
+    static byte[] coinPng(final boolean heads) {
+        final String name = heads ? "coin_heads.png" : "coin_tails.png";
+        return encoded.computeIfAbsent(name, k -> {
+            final BufferedImage face = read(new File(ForgeConstants.DEFAULT_SKINS_DIR + k));
+            return face == null ? null : encode(face, k);
+        });
+    }
+
     private static FSkinProp prop(final String name) {
         try {
             return FSkinProp.valueOf(name);
