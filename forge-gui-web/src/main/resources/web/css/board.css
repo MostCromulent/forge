@@ -952,15 +952,16 @@ html[data-motion="reduced"] .battlefield .card.flying:not(.tapped) { animation: 
 .card.pile.auto-tap:not(.selectable) .count:not(.opened) { background: var(--playable, #66ccff); border-color: var(--playable, #66ccff); color: #04121c; }
 .card.highlighted { outline: 2px solid var(--pick); outline-offset: 0; box-shadow: 0 0 12px 2px color-mix(in srgb, var(--pick) 55%, transparent), var(--lift, 0 0 #0000); }
 /* While a prompt offers a pick, what it offers keeps its ring and everything else dims, and the gold ring marks what is already chosen */
-#match.picking :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
-#match.picking #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
+/* The dim waits for cards still flying to their places (motion.ts), so a hand is not darkened round while it is being dealt */
+#match.picking:not(:has(.card.landing)) :is(.card, .avatar, .emblem, .cmd-tile, .zone-tile):not(.selectable):not(.highlighted),
+#match.picking:not(:has(.card.landing)) #stack .stack-item:not(.targetable) { filter: brightness(.42) saturate(.6); }
 /* Important, because the picking and selectable outlines above are more specific and would hide the aimed arrow's mark (overlay.ts) */
 #match .aimed { outline: 2px solid var(--aimed) !important; outline-offset: 1px; box-shadow: 0 0 16px 2px var(--aimed) !important; }
 .avatar, .emblem, .cmd-tile, .zone-tile { transition: filter .3s ease; }
 /* The whole slot steps forward so attachments travel with the attacker, and a tapped one steps further so the leading edges line up */
 /* On every slot, not only an attacking one, so the step back at the end of combat eases as the step forward does */
 .battlefield .slot { transition: transform .15s ease; }
-/* While a card is on its way into a pile the pile keeps its old depth and room (motion.ts holdPile), and widens when it arrives */
+/* A pile a card is on its way into starts from its old depth and room and widens as the card flies (motion.ts openPile) */
 .battlefield .slot.holding { padding-left: calc(var(--held-behind) * var(--card-w) * var(--fit, 1) * var(--fan)); }
 .battlefield .slot.opening { transition: transform .15s ease, padding-left .26s cubic-bezier(.2,.7,.3,1); }
 .card.pile.grown[data-depth="1"]::after, .card.pile.grown[data-depth="2"]::before, .card.pile.grown[data-depth="3"] .pile-edge { animation: pile-out .26s cubic-bezier(.2,.7,.3,1); }
@@ -1033,7 +1034,7 @@ body.dragging-block #zoom { display: none; }
 .card.pile .sick { right: -3px; top: 21px; }
 .card.pile[data-depth]::after { display: block; }
 .card.pile[data-depth="2"]::before, .card.pile[data-depth="3"]::before { display: block; }
-/* Held back while a card is on its way into the pile (motion.ts holdPile); after the rules above, so they win */
+/* Held back for the one frame a pile is laid out as it was (motion.ts openPile); after the rules above, so they win */
 .card.pile[data-held-depth="0"]::after, .card.pile[data-held-depth="0"]::before, .card.pile[data-held-depth="0"] .pile-edge,
 .card.pile[data-held-depth="1"]::before, .card.pile[data-held-depth="1"] .pile-edge, .card.pile[data-held-depth="2"] .pile-edge { display: none; }
 /* A pile's count is black with white figures on the top card's corner, and laid out, it goes quiet as a way back */

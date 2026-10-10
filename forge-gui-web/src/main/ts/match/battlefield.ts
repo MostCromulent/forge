@@ -281,7 +281,7 @@ export function slotsFor(model: Model, cards: CardView[], onField: CardView[]): 
   }
   const hosts = cards.filter(c => !hostOf(c));
   const marks = [
-    new Set(((model.prompt?.selectableMin ?? 0) > 0 ? model.prompt?.selectable ?? [] : []).map(r => r.ref)),
+    new Set((model.prompt?.selectable ?? []).map(r => r.ref)),
     new Set(model.prompt?.highlighted ?? []),
     new Set((model.playable?.cards ?? []).map(r => r.ref)),
     new Set((model.playable?.autoTap ?? []).map(r => r.ref)),

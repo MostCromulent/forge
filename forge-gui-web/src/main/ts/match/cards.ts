@@ -60,8 +60,7 @@ export function updateCard(el: HTMLElement, model: Model, card: CardView): void 
   const state = stateOf(model, card);
   // A card held face down in exile under a permanent shows its owner's sleeve, even when its owner may look at it
   const visible = model.visible.has(card.$key) && !(card.Facedown && el.classList.contains('ghost'));
-  // Only a prompt that demands a pick rings its cards; an optional one leaves the playable outline to do it
-  const selectable = (model.prompt?.selectableMin ?? 0) > 0 && has(model.prompt?.selectable, card.$key);
+  const selectable = has(model.prompt?.selectable, card.$key);
   const type = visible ? (state.Type ?? '') : '';
   el.classList.toggle('back', !visible);
   // A hidden card shows its owner's sleeve
