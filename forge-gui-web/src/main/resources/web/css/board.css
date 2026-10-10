@@ -969,7 +969,6 @@ body.dragging-block #zoom { display: none; }
 /* And goes white for a few frames, which is seen at a glance where the jolt is not */
 .card .hit-white { position: absolute; inset: 0; z-index: 3; border-radius: var(--radius); background: #fff; pointer-events: none; animation: hit-white .18s ease-out forwards; }
 @keyframes hit-white { from { opacity: .85; } to { opacity: 0; } }
-html[data-motion="reduced"] .card .hit-white { display: none; }
 .card .hit-number { position: absolute; left: 50%; top: 28%; z-index: 4; transform: translateX(-50%); color: #ff7a59; font-size: 26px; font-weight: 800; pointer-events: none; text-shadow: 0 2px 6px #000, 0 0 12px #000; animation: hit-number 1s ease-out forwards; }
 @keyframes hit-number { from { opacity: 0; transform: translate(-50%, 10px) scale(.6); } 25% { opacity: 1; transform: translate(-50%, 0) scale(1.15); } to { opacity: 0; transform: translate(-50%, -30px) scale(1); } }
 /* A power, toughness or loyalty change kicks its badge */

@@ -337,7 +337,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
         { duration, delay, easing: EASE, composite: 'add', fill: 'backwards' });
     }
     if (was.ghost && was.ghost !== el && el.closest('.battlefield')) {
-      morph(el, was.ghost, was.size);
+      morph(el, was.tapped ?? was.ghost.classList.contains('tapped'), was.size);
     }
   }
 }
@@ -346,8 +346,7 @@ function slide(cards: Iterable<HTMLElement>, travelled: Set<string>, duration = 
 const MORPH_MS = 220;
 
 /** Starts a card redrawn as a new element from the old element's turn and size, since it has no earlier look to transition from. */
-function morph(el: HTMLElement, old: HTMLElement, oldSize: { w: number; h: number } | undefined): void {
-  const wasTapped = old.classList.contains('tapped');
+function morph(el: HTMLElement, wasTapped: boolean, oldSize: { w: number; h: number } | undefined): void {
   const isTapped = el.classList.contains('tapped');
   const turn = (wasTapped ? 90 : 0) - (isTapped ? 90 : 0);
   // A tapped card is also drawn at nine tenths its size

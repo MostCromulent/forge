@@ -6,7 +6,7 @@ import { longPress } from '../press';
 import { abilityUrl, cardImageSrc, hideOnError, noImageOnError, setImage, setSymbolText, smallImage } from '../images';
 import { playerSleeveUrl, cssUrl } from '../looks';
 import { reconcile } from './render';
-import { q, replay, make } from '../dom';
+import { q, replay, make, reducedMotion } from '../dom';
 import type { CardView, KeywordText, PlayerView, Ref } from '../protocol';
 import { t } from '../text';
 
@@ -252,9 +252,12 @@ function showDamage(el: HTMLElement, damage: number): void {
     return;
   }
   replay(el, 'struck');
-  const flash = make('span', 'hit-white');
-  el.append(flash);
-  flash.addEventListener('animationend', () => flash.remove());
+  // The flash takes itself away when it ends, so it is only added where it will run
+  if (!reducedMotion()) {
+    const flash = make('span', 'hit-white');
+    el.append(flash);
+    flash.addEventListener('animationend', () => flash.remove());
+  }
   const hit = make('span', 'hit-number');
   hit.textContent = `-${damage - before}`;
   el.append(hit);

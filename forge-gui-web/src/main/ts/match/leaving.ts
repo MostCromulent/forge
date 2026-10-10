@@ -58,6 +58,10 @@ export function unmake(card: HTMLElement, rect: DOMRect, size: { w: number; h: n
   }
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   const w = size?.w || rect.width, h = size?.h || rect.height;
+  // A card in a seat that is out of sight has no size, and nothing of it can be drawn
+  if (!w || !h) {
+    return 0;
+  }
   const pad = Math.round(w * 0.5);
   const canvas = document.createElement('canvas');
   canvas.width = Math.round((w + 2 * pad) * dpr);

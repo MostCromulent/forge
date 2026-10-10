@@ -772,7 +772,13 @@ function hitAvatar(avatar: HTMLElement, amount: number): void {
 function takeHit(amount: number): void {
   const match = byId('match');
   replay(match, amount >= 5 ? 'hit-hard' : 'hit', 'hit', 'hit-hard');
-  match.addEventListener('animationend', () => match.classList.remove('hit', 'hit-hard'), { once: true });
+  // A card's own animations end inside the board and are heard here too, so only the board's own ends the shake
+  const settled = (e: AnimationEvent) => {
+    if (e.target !== match) return;
+    match.classList.remove('hit', 'hit-hard');
+    match.removeEventListener('animationend', settled);
+  };
+  match.addEventListener('animationend', settled);
   const flash = make('div', amount >= 5 ? 'hit-flash hard' : 'hit-flash');
   document.body.append(flash);
   flash.addEventListener('animationend', () => flash.remove());
