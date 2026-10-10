@@ -426,6 +426,8 @@ html[data-form="portrait"] .reveal-panel.bare .zone-who { width: auto; }
 html[data-form="portrait"] .reveal-panel.bare .cards { --fit: min(var(--few), 1.25); max-width: none; }
 /* A touch screen has no drag, so the line about dragging goes and the shelves give its room to the cards */
 html[data-form="portrait"] .manipulate .shelf-hint { display: none; }
+/* The count beside them says the same in less room */
+html[data-form="portrait"] .dialog .dist-pips { display: none; }
 html[data-form="portrait"] .manipulate .shelf { padding: 8px 10px 10px; }
 html[data-form="portrait"] .manipulate .shelf-cards { --fit: 1; gap: 10px; padding-top: 10px; }
 html[data-form="portrait"] .reveal-panel .cards .section:first-child:not(:has(~ .section)) { display: none; }

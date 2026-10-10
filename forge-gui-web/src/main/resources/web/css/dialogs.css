@@ -64,11 +64,23 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
 /* Damage or counters split between targets: room round the cards, and what is left to assign beside the buttons that need it gone */
 .dialog:has(.dist-row) { padding: 20px 24px; gap: 20px; }
-.dialog .dist-row { display: flex; flex-wrap: wrap; gap: 22px; justify-content: center; align-items: flex-end; padding: 4px 8px; }
-.dialog .dist-left { margin-right: auto; align-self: center; color: var(--accent-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dialog .dist-row { display: flex; flex-wrap: wrap; gap: 26px; justify-content: center; align-items: flex-start; padding: 4px 8px; }
+/* Large enough to read, since what each card is decides the split */
+html:not([data-form="portrait"]) .dialog .dist-row { --fit: 1.5; }
+.dialog .dist-left { display: flex; align-items: center; gap: 12px; margin-right: auto; color: var(--accent-2); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dialog .dist-pips { display: flex; flex-wrap: wrap; gap: 4px; max-width: 124px; }
+.dialog .dist-pips i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line-bright); }
+.dialog .dist-pips i.on { background: var(--accent-2); border-color: var(--accent-2); }
 .dialog .dist-left.done { color: var(--muted); font-weight: 400; }
 /* Room under each card for a tab on its foot, such as Blocking, above its steppers */
-.dialog .dist-target { display: grid; justify-items: center; gap: 16px; }
+.dialog .dist-target { width: calc(var(--card-w) * var(--fit, 1)); display: grid; justify-items: center; gap: 22px; }
+/* A player stands in a frame the size of the cards beside it, with the whole name, so every count lines up */
+.dialog .dist-row .player-option { box-sizing: border-box; width: 100%; height: calc(var(--card-h) * var(--fit, 1)); }
+html:not([data-form="portrait"]) .dialog .dist-row .po-avatar { width: 78px; height: 78px; }
+.dialog .dist-row .po-name { white-space: normal; overflow-wrap: anywhere; text-align: center; line-height: 1.2; }
+.dialog .dist-note { margin: -14px 0 0; min-height: 17px; color: var(--muted); font-size: 12px; }
+.dialog .dist-note.lethal { color: var(--accent-2); font-weight: 650; }
+.dialog .dist-note.lethal::before { content: '✓ '; }
 /* A player offered in a dialog, the size of a card beside the cards: their portrait with their life on it, and their name */
 .player-option { width: var(--card-w); min-height: var(--card-h); display: grid; align-content: center; justify-items: center; gap: 10px; padding: 8px 6px;
   border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line-bright); }
@@ -81,11 +93,11 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
   border: 1px solid var(--line-bright); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .player-option .po-name { max-width: 100%; font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The steppers span the card above them, edge to edge, so each count reads as that card's */
-.dialog .dist-step { width: var(--card-w); display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--line-bright);
-  border-radius: 8px; background: var(--surface-2); overflow: hidden; }
-.dialog .dist-step button { width: 30px; padding: 5px 0; border: 0; border-radius: 0; background: none; }
+.dialog .dist-step { width: 100%; height: 40px; display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; border: 1px solid var(--line-bright);
+  border-radius: 10px; background: var(--surface-2); overflow: hidden; }
+.dialog .dist-step button { height: 100%; padding: 0; border: 0; border-radius: 0; background: none; font-size: 20px; line-height: 1; }
 .dialog .dist-step button:hover { background: var(--surface-3); }
-.dialog .dist-step b { min-width: 1.4em; text-align: center; font-size: 16px; font-variant-numeric: tabular-nums; }
+.dialog .dist-step b { text-align: center; font-size: 21px; font-variant-numeric: tabular-nums; }
 .dialog .actions button.primary { min-width: 110px; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 .dialog input { background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font: inherit; }
 /* A number is set large between its two steps, with the first few a click away */
@@ -113,7 +125,25 @@ html[data-motion="reduced"] :is(.backdrop, .backdrop > *, .dialog, .card-menu, .
 .dialog .ordered-item.carried > :not(.order-number, .order-end) { visibility: hidden; }
 .dialog .order-ghost { position: fixed; z-index: 90; display: block; margin: 0; padding: 0; pointer-events: none; scale: 1.07; }
 .dialog .order-ghost .ordered-item { cursor: grabbing; box-shadow: 0 20px 34px #000b, 0 4px 10px #0008; }
-.dialog .order-ghost :is(.order-number, .order-end) { display: none; }
+.dialog .order-ghost :is(.order-number, .order-end, .order-nudge) { display: none; }
+/* Cards to be ordered are large enough to read, in a centred row, each with the arrows that move it under it */
+.dialog .ordered:not(.listed) { justify-content: center; gap: 22px; padding: 14px 6px 0; }
+.dialog .ordered:not(.listed):has(.order-end) { padding-bottom: 30px; }
+.dialog .ordered.order-ghost { padding: 0; }
+html:not([data-form="portrait"]) .dialog .ordered:not(.listed) { --fit: 1.5; }
+.dialog .ordered:not(.listed) .ordered-item { display: grid; justify-items: center; gap: 8px; }
+/* The ring goes round the held card, not round its arrows as well */
+.dialog .ordered:not(.listed) .ordered-item.selected { outline: none; }
+.dialog .ordered:not(.listed) .ordered-item.selected :is(.card, .player-option) { outline: 2px solid var(--select); outline-offset: 2px; }
+.dialog .order-nudge { display: flex; gap: 6px; }
+.dialog .ordered-item:not(.selected) .order-nudge { visibility: hidden; }
+.dialog .order-nudge button { width: 44px; height: 30px; padding: 0; border-radius: 99px; font-size: 18px; line-height: 1; }
+.dialog .ordered:not(.listed) .order-number { left: -11px; top: -11px; min-width: 28px; height: 28px; font-size: 14px; box-shadow: 0 2px 6px #0008; }
+/* Which way the order runs, under the row it describes */
+.dialog .order-rail { display: flex; align-items: center; gap: 12px; margin: 0; padding: 0 6px; color: var(--muted); font-size: 11.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.dialog .order-rail b:first-child { color: var(--accent-2); }
+.dialog .order-rail i { position: relative; flex: 1; height: 1px; background: linear-gradient(90deg, var(--accent-2), var(--line)); }
+.dialog .order-rail i::after { content: ''; position: absolute; right: -1px; top: -3.5px; border: 4px solid transparent; border-left-color: var(--line-bright); }
 .dialog .order-number {
   position: absolute;
   left: -9px;

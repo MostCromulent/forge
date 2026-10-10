@@ -487,6 +487,14 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
   const optional = req.min < req.options.length;
   const rememberBox = req.remember
     && <label><input type="checkbox" checked={remember} onChange={e => setRemember(e.currentTarget.checked)} /> {t('lblWebDialogRememberOrder')}</label>;
+  // A library's order is named at both ends, and any other order by what goes first
+  const ends = req.top === t('lblClosestToTop') ? [t('lblTop'), t('lblBottom')]
+    : req.top === t('lblClosestToBottom') ? [t('lblBottom'), t('lblTop')] : [req.top ?? '', ''];
+  const railed = !listed && !optional && !!req.top;
+  const nudge = (by: number, pos: number) => (
+    <button class={by < 0 ? 'earlier' : 'later'} disabled={by < 0 ? pos === 0 : pos === chosen.length - 1}
+      aria-label={t(by < 0 ? 'lblWebDialogMoveEarlier' : 'lblWebDialogMoveLater')} onClick={() => step(by)}>{by < 0 ? '‹' : '›'}</button>
+  );
   const stepButton = (by: number, pos: number) => (
     <button class={by < 0 ? 'earlier' : 'later'} disabled={by < 0 ? pos === 0 : pos === chosen.length - 1}
       aria-label={t(by < 0 ? 'lblWebDialogMoveEarlier' : 'lblWebDialogMoveLater')} onClick={() => step(by)}>
@@ -515,21 +523,20 @@ function Order({ req, model, answer }: { req: OrderRequest; model: Model; answer
                 : <OptionView model={model} opt={req.options[i]} onClick={hold} />}
               {/* The number is the order they go in, which is the question the dialog is asking */}
               <span class="order-number">{pos + 1}</span>
-              {!listed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
+              {!listed && !railed && pos === 0 && req.top && <span class="order-end">{req.top}</span>}
+              {/* Under every card, shown for the one that is held, so holding a card moves nothing else in the dialog */}
+              {!listed && <span class="order-nudge">{nudge(-1, pos)}{nudge(1, pos)}</span>}
               {/* The held ability's arrows take the place of its grip, so they are where the eye already is */}
               {listed && (held === i ? <span class="order-step">{stepButton(-1, pos)}{stepButton(1, pos)}</span> : <span class="order-grip" aria-hidden="true" />)}
             </div>
           );
         })}
       </div>
+      {railed && <p class="order-rail"><b>{ends[0]}</b><i />{ends[1] && <b>{ends[1]}</b>}</p>}
       {!listed && rememberBox}
       <ButtonRow>
-        {/* Always there, so holding a card moves nothing else in the dialog */}
         <span class="order-move">
-          {listed ? rememberBox : <>
-            <button class="earlier" disabled={at <= 0} aria-label={t('lblWebDialogMoveEarlier')} onClick={() => step(-1)}>‹</button>
-            <button class="later" disabled={at < 0 || at === chosen.length - 1} aria-label={t('lblWebDialogMoveLater')} onClick={() => step(1)}>›</button>
-          </>}
+          {listed && rememberBox}
           {optional && <button disabled={at < 0} onClick={() => {
             setChosen(list => list.filter(c => c !== held));
             setHeld(null);
@@ -711,6 +718,16 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
     return !player ? 2 : isLocal(model, player) ? 1 : 0;
   };
   const order = req.options.map((_, i) => i).sort((a, b) => rank(a) - rank(b) || a - b);
+  // What combat damage comes to on each target: whether a blocker's is lethal, and the life a player is left on
+  const note = (i: number): { text: string; lethal?: boolean } => {
+    const ref = req.options[i].player;
+    const player = ref ? model.objects.get(ref.ref) as PlayerView | undefined : undefined;
+    if (player) {
+      return { text: values[i] ? t('lblWebDialogLifeAfter', player.Life ?? 0, (player.Life ?? 0) - values[i]) : '' };
+    }
+    const short = (req.lethal?.[i] ?? 0) - values[i];
+    return short <= 0 ? { text: t('lblWebDialogLethal'), lethal: true } : { text: values[i] ? t('lblWebDialogShortOfLethal', short) : '' };
+  };
   // Side by side, each with its count under it, as the cards stand on the table
   return (
     <>
@@ -723,11 +740,16 @@ function Distribute({ req, model, answer }: { req: DistributeRequest; model: Mod
               <b>{values[i]}</b>
               <Button onClick={() => step(i, 1)}>+</Button>
             </div>
+            {req.lethal && <p class={note(i).lethal ? 'dist-note lethal' : 'dist-note'}>{note(i).text}</p>}
           </div>
         ))}
       </div>
       <ButtonRow>
-        <span class={left ? 'dist-left' : 'dist-left done'}>{t('lblWebDialogLeftToAssign', left)}</span>
+        <span class={left ? 'dist-left' : 'dist-left done'}>
+          {/* A pip for each point, filled as it is placed, while there are few enough to count at a glance */}
+          {req.amount <= 20 && <span class="dist-pips">{Array.from({ length: req.amount }, (_, k) => <i key={k} class={k < req.amount - left ? 'on' : ''} />)}</span>}
+          {left ? t('lblWebDialogLeftToAssign', left) : t('lblWebDialogAllAssigned', req.amount)}
+        </span>
         {req.maySkip && <Button onClick={() => answer(null)}>{t('lblSkip')}</Button>}
         <Button onClick={() => setValues([...req.default])}>{t('lblReset')}</Button>
         <Button primary disabled={left !== 0} onClick={() => answer(values)}>{t('lblWebDialogConfirm')} <kbd>{keyName(boundKeys().ok)}</kbd></Button>

@@ -1045,8 +1045,15 @@ public class WebGuiGame extends NetworkGuiGame {
         }
         // Desktop's title: "Assign damage dealt by" the attacker
         final String title = Localizer.getInstance().getMessage("lbLAssignDamageDealtBy").replace("%s", attacker == null ? "" : attacker.getName());
+        final List<Integer> lethal = new ArrayList<>();
+        for (final CardView blocker : blockers) {
+            lethal.add(Math.max(0, blocker.getLethalDamage()));
+        }
+        if (defender != null) {
+            lethal.add(0);
+        }
         final DistributeRequest request = new DistributeRequest(title, damage, 0,
-                options(recipients, null), cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)));
+                options(recipients, null), cardRef(attacker), maySkip, Ints.asList(Answers.defaultCombatSplit(blockers, damage, defender != null)), lethal);
         final JsonElement reply = ask(request, Answers.amounts(recipients.size(), damage, 0, maySkip));
         if (reply.isJsonNull()) {
             return null;
@@ -1077,7 +1084,7 @@ public class WebGuiGame extends NetworkGuiGame {
         final String title = Localizer.getInstance().getMessage("lbLAssignAmountForEffect", amountLabel,
                 effectSource == null ? "" : effectSource.getName());
         final DistributeRequest request = new DistributeRequest(title, amount, perMin, options(recipients, null),
-                cardRef(effectSource), false, Ints.asList(def));
+                cardRef(effectSource), false, Ints.asList(def), null);
         final JsonArray reply = ask(request, Answers.amounts(recipients.size(), amount, perMin, false)).getAsJsonArray();
         final Map<Object, Integer> result = new LinkedHashMap<>();
         for (int i = 0; i < recipients.size(); i++) {

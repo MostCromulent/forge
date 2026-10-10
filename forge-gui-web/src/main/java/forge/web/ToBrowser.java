@@ -550,10 +550,10 @@ final class ToBrowser {
             @Name("default") @Nullable Integer defaultAnswer) {
     }
 
-    /** Divide an amount among the options; null skips when maySkip allows it. */
+    /** Divide an amount among the options; null skips when maySkip allows it. For combat damage, lethal is what each option takes to destroy it. */
     @Request("distribute")
     record DistributeRequest(@Nullable String message, int amount, int perMin, List<RequestOption> options, @Nullable Ref card,
-            boolean maySkip, @Name("default") List<Integer> defaultAnswer) {
+            boolean maySkip, @Name("default") List<Integer> defaultAnswer, @Nullable List<Integer> lethal) {
     }
 
     record SideboardEntry(String name, String imageKey, int total) {
