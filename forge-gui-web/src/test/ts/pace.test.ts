@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { behindItsBoard, worthSeeing } from '../../main/ts/match/pace';
-import type { GameEvent } from '../../main/ts/protocol';
+import { asksPlayer, behindItsBoard, passingFor, worthSeeing } from '../../main/ts/match/pace';
+import type { Controls, GameEvent, Prompt } from '../../main/ts/protocol';
 
 const ME = 1;
 const THEM = 2;
@@ -71,5 +71,27 @@ describe('behindItsBoard', () => {
     take({ t: 'state' });
     expect(got).toEqual(['sound', 'state']);
     vi.useRealTimers();
+  });
+});
+
+describe('asksPlayer', () => {
+  const prompt = (over: Partial<Prompt>): Prompt => ({ t: 'prompt', message: '', priority: false, ok: { label: 'OK', enabled: false }, cancel: { label: 'Cancel', enabled: false },
+    focusOk: false, paying: false, selectable: [], selectablePlayers: [], selectableMin: 0, highlighted: [], ...over });
+  const stopPassing = prompt({ cancel: { label: 'Cancel', enabled: true } });
+  it('takes Cancel as a question, except while the game passes for the player', () => {
+    expect(asksPlayer(stopPassing)).toBe(true);
+    expect(asksPlayer(stopPassing, true)).toBe(false);
+  });
+  it('still takes a choice as a question while the game passes for the player', () => {
+    expect(asksPlayer(prompt({ selectable: [{ ref: 9 }] }), true)).toBe(true);
+    expect(asksPlayer(prompt({ priority: true }), true)).toBe(true);
+  });
+  it('knows the game is passing from any of the three ways to pass', () => {
+    const controls = (over: Partial<Controls>) => ({ untilEndOfTurn: false, untilStackEmpty: false, ...over }) as Controls;
+    expect(passingFor(controls({}))).toBe(false);
+    expect(passingFor(null)).toBe(false);
+    expect(passingFor(controls({ untilEndOfTurn: true }))).toBe(true);
+    expect(passingFor(controls({ untilStackEmpty: true }))).toBe(true);
+    expect(passingFor(controls({ marker: { phase: 'END_OF_TURN', mine: true } as Controls['marker'] }))).toBe(true);
   });
 });

@@ -20,7 +20,7 @@ import { initStack } from './match/stack';
 import { initOverlay, drawOverlay } from './match/overlay';
 import { afterBlockDrags, initBlockDrag, renderBlockDrag } from './match/blockdrag';
 import { boundKeys, initSettings, onServerSettings, restoreGuestSettings, setGuest, setting } from './settings';
-import { asksPlayer, behindItsBoard, setBoardBehind, worthSeeing } from './match/pace';
+import { asksPlayer, behindItsBoard, passingFor, setBoardBehind, worthSeeing } from './match/pace';
 import { setVersion } from './links';
 import { applyAudioSettings, playMusic, playSound } from './audio';
 import { rememberStops, restoreStops } from './match/stopmemory';
@@ -57,8 +57,12 @@ const wire = createActions(msg => {
   if (!held || !HELD_INPUT.has(msg.t)) send(msg);
   else console.warn(`Not sent while the page catches up: ${msg.t}`);
 });
+/** What is held back for the player to see in its turn: the game as it goes. Anything else, such as chat or a card's details, is shown as it comes. */
+const HELD_MESSAGES = new Set(['state', 'prompt', 'controls', 'request', 'zones', 'playable', 'sound', 'log', 'gameOver', 'drawOffer', 'flash']);
 const actions: Actions = {
   ...wire,
+  // Cancel on a pass stops the pass, which the host takes at any time, even while the page catches up
+  cancel: () => (held && passingFor(model.controls) ? wire.stopYield() : wire.cancel()),
   ok: () => afterBlockDrags(() => wire.ok()),
   // An answered question leaves the model at once, so its dialog closes without waiting for the server
   answer: (id, value) => {
@@ -250,18 +254,25 @@ function receive(msg: ServerMessage): void {
       apply(msg);
       if (msg.t === 'state' && worthSeeing(msg.events, msg.localPlayers)) {
         showUntil = Date.now() + Number(setting('pace'));
-      } else if (msg.t === 'request' || (msg.t === 'prompt' && asksPlayer(msg))) {
+      } else if (msg.t === 'request' || (msg.t === 'prompt' && asksPlayer(msg, passingFor(model.controls)))) {
         // Asked something, the player is looking at the board as it stands, and what they do next is shown at once
         showUntil = 0;
       }
     }
   } else if (msg.t === 'hello') {
-    // A new table or a reconnection starts over, so nothing waits behind the old turn
+    // A new table or a reconnection starts over: what waited is taken as it stands, with none of it holding the rest back
+    const waiting = held;
+    held = null;
+    setBoardBehind(false);
+    announcing = false;
     showUntil = 0;
-    release();
+    waiting.filter(m => m.t !== 'sound').forEach(apply);
     apply(msg);
-  } else if (msg.t === 'sound' && msg.name === TURN_SOUND && announcing) {
-    // The turn's sound is heard as its banner goes up, and not after it with the turn's first draw
+  } else if (!HELD_MESSAGES.has(msg.t)) {
+    apply(msg);
+  } else if (msg.t === 'sound' && msg.name === TURN_SOUND && announcing && !held.slice(1).some(m => m.t === 'state')) {
+    // The turn's sound is heard as its banner goes up, and not after it with the turn's first draw. A later turn's
+    // sound comes behind that turn's own state, and waits for its own banner
     apply(msg);
   } else {
     held.push(msg);

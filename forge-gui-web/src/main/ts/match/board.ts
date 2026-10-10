@@ -15,6 +15,7 @@ import { forgetPictures } from './cards';
 import { artUrl } from '../sleeves';
 import { playerAvatarUrl, playerSleeveUrl, cssUrl, ROBOT_ICON } from '../looks';
 import { animateCardMoves, noteBoard, resetMotion, showCount } from './motion';
+import { boardBehind } from './pace';
 import { canShatter, shatter } from './shatter';
 import { byId, q, replay, make } from '../dom';
 import { setting } from '../settings';
@@ -77,8 +78,8 @@ export function renderMatch(model: Model, actions: Actions, events: readonly Gam
         inspectCard(el);
         return;
       }
-      // Shown at once, since the host's answer can be a moment away
-      replay(el, 'pressed');
+      // Shown at once, since the host's answer can be a moment away; not while newer boards wait, when the click is not sent
+      if (!boardBehind()) replay(el, 'pressed');
     }
     notePick(key);
     foldStack();

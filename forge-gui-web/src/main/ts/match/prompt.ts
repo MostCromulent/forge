@@ -4,6 +4,7 @@ import { playerAvatarUrl } from '../looks';
 import { hoverable, inspectCard } from './detail';
 import { longPress } from '../press';
 import { stepName } from './phasebar';
+import { boardBehind } from './pace';
 import { byId, q, replay, reducedMotion } from '../dom';
 import { changeUi, ui } from '../ui';
 import type { Actions } from '../actions';
@@ -59,6 +60,8 @@ function buildGlints(root: HTMLElement): void {
 /** Dips an enabled prompt button dark for a moment, so a press by click or by key is seen to land. */
 function showPressed(button: Element | null): void {
   if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+  // An answer given while newer boards wait their turn is not sent, so it is not shown as taken either
+  if (boardBehind() && button.closest('.buttons')) return;
   replay(button, 'pressed');
 }
 

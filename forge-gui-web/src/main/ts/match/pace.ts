@@ -1,6 +1,6 @@
 // Paces what the page shows: a board with another player's play on it stays up a moment before the next replaces it
 
-import type { GameEvent, Prompt, Ref } from '../protocol';
+import type { Controls, GameEvent, Prompt, Ref } from '../protocol';
 
 /** Zones everyone can see into, where a card arriving or leaving is something to look at. */
 const OPEN = new Set(['Battlefield', 'Stack', 'Graveyard', 'Exile', 'Command']);
@@ -32,9 +32,17 @@ export function worthSeeing(events: GameEvent[], localPlayers: number[]): boolea
   });
 }
 
-/** Whether a prompt asks the player for something, so they are looking at the board and their answer must not wait. */
-export function asksPlayer(prompt: Prompt): boolean {
-  return prompt.priority || prompt.ok.enabled || prompt.cancel.enabled || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0;
+/** Whether the game is passing priority for the player until some point, as the chip beside the phase pill says. */
+export function passingFor(controls: Controls | null | undefined): boolean {
+  return !!controls && (!!controls.marker || controls.untilEndOfTurn || controls.untilStackEmpty);
+}
+
+/**
+ * Whether a prompt asks the player for something, so they are looking at the board and their answer must not wait.
+ * While the game passes for them, Cancel only offers to stop that, which asks nothing.
+ */
+export function asksPlayer(prompt: Prompt, passing = false): boolean {
+  return prompt.priority || prompt.ok.enabled || (prompt.cancel.enabled && !passing) || prompt.selectable.length > 0 || prompt.selectablePlayers.length > 0;
 }
 
 let behind = false;
