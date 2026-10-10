@@ -145,7 +145,9 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
       }
       continue;
     }
-    const el = elementFor(key);
+    // A stack item carries its source card's key, so only a card that went to the stack is looked for there:
+    // a creature sacrificed for its own ability, or dying with its trigger waiting, is not that item
+    const el = move.to?.zone === 'Stack' ? elementFor(key) : cardElement(key) ?? pileTopFor(key);
     if (move.to?.zone === 'Stack' && !el) {
       if (start) {
         hold(key, start, seen ?? null);
