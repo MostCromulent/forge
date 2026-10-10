@@ -4,7 +4,7 @@ import { cardImageSrc, noImageOnError, setImage } from '../images';
 import { game, deref, derefAll, me, stackPick, stateOf, type Model } from '../model';
 import { isPortrait } from '../form';
 import { hoverCard, hoverable, inspectCard } from './detail';
-import { journeys, noteFizzled } from './motion';
+import { FIZZLE_MS, journeys, noteFizzled } from './motion';
 import { stackTargets } from './overlay';
 import { hovers, longPress } from '../press';
 import { byId, q, make, reducedMotion } from '../dom';
@@ -310,14 +310,13 @@ function arrive(el: HTMLElement, source: string, collapsed: boolean): void {
     { duration: 320, easing: 'cubic-bezier(.2, .7, .3, 1)' });
 }
 
-/** How long a resolved ability takes to go, and a spell or ability that failed takes to be seen to fail. */
+/** How long a resolved ability takes to go. */
 const GONE_MS = 140;
-const FIZZLE_MS = 460;
 
 /**
  * Shows what leaves the stack this frame, before its element is taken away. A spell that resolves is carried off by its
  * own card's flight, so only an ability fades. One that fizzled, or was taken off while something else resolved (it was
- * countered), greys, shudders and sinks out of sight.
+ * countered), is unwoven where it stands.
  */
 function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly GameEvent[]): void {
   if (reducedMotion()) return;
@@ -335,18 +334,64 @@ function showLeaving(pile: HTMLElement, staying: Set<string>, events: readonly G
     ghost.classList.remove('top', 'lifted', 'targetable');
     ghost.style.cssText += `position: fixed; left: ${box.left}px; top: ${box.top}px; width: ${box.width}px; height: ${box.height}px; margin: 0; z-index: 41; pointer-events: none;`;
     document.body.append(ghost);
-    const gone = failed ? ghost.animate([
-      { filter: 'none', translate: '0 0', scale: '1', opacity: 1 },
-      { filter: 'grayscale(1) brightness(.8)', translate: '-4px 0', offset: 0.14 },
-      { translate: '4px 0', offset: 0.28 },
-      { translate: '-2px 0', offset: 0.42 },
-      { filter: 'grayscale(1) brightness(.6) blur(0px)', translate: '0 0', scale: '1', opacity: .9, offset: 0.56 },
-      { filter: 'grayscale(1) brightness(.45) blur(3px)', translate: '0 12px', scale: '.9', opacity: 0 },
-    ], { duration: FIZZLE_MS, easing: 'ease-out' })
-      : ghost.animate([{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.92' }], { duration: GONE_MS, easing: 'ease-in' });
-    gone.finished.then(() => ghost.remove(), () => ghost.remove());
-    // A failed spell's card waits under this before it leaves for wherever it is put (motion.ts)
-    if (failed && !ability && source) noteFizzled(source);
+    if (failed) {
+      unweave(ghost, box);
+      // Nothing is left of a failed spell to travel, so its card makes no trip (motion.ts)
+      if (!ability && source) noteFizzled(source);
+    } else {
+      ghost.animate([{ opacity: 1, scale: '1' }, { opacity: 0, scale: '.92' }], { duration: GONE_MS, easing: 'ease-in' })
+        .finished.then(() => ghost.remove(), () => ghost.remove());
+    }
+  }
+}
+
+let unwoven = 0;
+
+/**
+ * A failed spell comes apart in patches, with a thin pale light along every edge as it goes, and a few motes drift up.
+ * An SVG filter keeps the item only where a noise is above a level that rises, and lights the band just under that level.
+ */
+function unweave(ghost: HTMLElement, box: DOMRect): void {
+  const id = `unweave-${++unwoven}`;
+  const cut = (level: number) => `0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  14 0 0 0 ${(-14 * level).toFixed(3)}`;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.style.position = 'absolute';
+  svg.innerHTML = `<filter id="${id}" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">`
+    + `<feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="3" seed="${unwoven}" result="noise"/>`
+    + `<feColorMatrix class="keep" in="noise" type="matrix" values="${cut(0.2)}" result="keep"/>`
+    + `<feColorMatrix class="lit" in="noise" type="matrix" values="${cut(0.17)}" result="lit"/>`
+    + '<feComposite in="SourceGraphic" in2="keep" operator="in" result="item"/>'
+    + '<feFlood flood-color="#c6d4ff" flood-opacity=".85"/><feComposite in2="lit" operator="in"/><feComposite in2="keep" operator="out"/>'
+    + '<feComposite in2="SourceAlpha" operator="in" result="edge"/><feGaussianBlur in="edge" stdDeviation="1.3" result="halo"/>'
+    + '<feMerge><feMergeNode in="item"/><feMergeNode in="halo"/><feMergeNode in="edge"/></feMerge></filter>';
+  document.body.append(svg);
+  const keep = svg.querySelector('.keep') as Element, lit = svg.querySelector('.lit') as Element;
+  const began = performance.now();
+  const step = (now: number) => {
+    const t = now - began;
+    if (t >= FIZZLE_MS || !ghost.isConnected) {
+      ghost.remove();
+      svg.remove();
+      return;
+    }
+    const level = 0.2 + 0.62 * Math.min(1, t / (FIZZLE_MS - 40));
+    keep.setAttribute('values', cut(level));
+    lit.setAttribute('values', cut(level - 0.028));
+    const grey = Math.min(1, t / (FIZZLE_MS / 2));
+    ghost.style.filter = `grayscale(${grey}) brightness(${1 - 0.25 * grey}) url(#${id})`;
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  for (let i = 0; i < 10; i++) {
+    const mote = make('span', 'unweave-mote');
+    mote.style.left = `${box.left + 8 + Math.random() * (box.width - 16)}px`;
+    mote.style.top = `${box.top + 20 + Math.random() * (box.height - 30)}px`;
+    document.body.append(mote);
+    mote.animate([{ opacity: 0, translate: '0 0' }, { opacity: .55, offset: 0.4 }, { opacity: 0, translate: `${Math.random() * 20 - 10}px ${-26 - Math.random() * 34}px` }],
+      { duration: 420, delay: 60 + Math.random() * (FIZZLE_MS - 260), easing: 'ease-out', fill: 'backwards' })
+      .finished.then(() => mote.remove(), () => mote.remove());
   }
 }
 

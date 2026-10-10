@@ -572,6 +572,8 @@ html[data-motion="reduced"] #phase-strip .pill:hover .caret { animation: none; }
   border: 1px solid var(--line); box-shadow: 0 6px 18px #0008; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent-2); }
 #stack.collapsed .pile { display: none; }
 .stack-item { position: absolute; left: 0; width: var(--stack-w); height: calc(var(--stack-w) * 1.4); border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); box-shadow: 0 6px 18px #000a; transition: top .15s ease, transform .15s ease, filter .3s ease; cursor: default; }
+/* Motes that drift up from a spell coming apart on the stack */
+.unweave-mote { position: fixed; z-index: 42; width: 2px; height: 2px; border-radius: 50%; background: #c6d4ff; box-shadow: 0 0 5px #9684ff; opacity: 0; pointer-events: none; }
 .stack-item img { position: relative; z-index: 1; width: 100%; height: 100%; border-radius: 8px; object-fit: cover; display: block; }
 .stack-item .frame { position: absolute; inset: 0; padding: 8px; font-weight: 700; font-size: 12px; }
 .stack-item.noimg img { display: none; }

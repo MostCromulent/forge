@@ -221,10 +221,13 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         sendTo({ rect: start, ghost: cardBack(model, key) }, target, 1, fromLibrary++ * STAGGER_MS);
       }
     }
-    // A spell on the stack, a tile's top card and a card in a hand drawn as an icon have no card to copy, so one is made
-    const fizzling = fizzled.has(key);
-    if (!ghost && start && move.from?.zone !== 'Library' && (tileImageRect(key) ?? placeRect(move.to))) {
-      ghost = standIn(model, key, fizzling);
+    if (fizzled.has(key)) {
+      // A spell that failed comes apart on the stack (stack.ts), so nothing of it travels: its tile waits, and then shows it
+      if (tileImageRect(key)) holdTile(key, FIZZLE_MS - FLIGHT_MS);
+      arrives = FIZZLE_MS;
+    } else if (!ghost && start && move.from?.zone !== 'Library' && (tileImageRect(key) ?? placeRect(move.to))) {
+      // A spell on the stack, a tile's top card and a card in a hand drawn as an icon have no card to copy, so one is made
+      ghost = standIn(model, key);
       const h = start.height, w = Math.min(start.width, h * CARD_ASPECT);
       was = { rect: start, ghost, size: { w, h } };
     }
@@ -240,12 +243,10 @@ export function animateCardMoves(model: Model, events: readonly GameEvent[]): vo
         const leaving = move.from?.zone === 'Battlefield' && (move.to?.zone === 'Graveyard' || move.to?.zone === 'Exile')
           ? unmake(ghost, start, was.size, !!was.tapped, move.to.zone) : 0;
         // A card landing on a zone tile ends on the tile's picture, which is held back until it arrives
-        // A spell that fizzles is seen to fail on the stack before what is left of it goes
-        const wait = fizzling ? FIZZLE_LEAD_MS : 0;
-        if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : wait);
+        if (tile) holdTile(key, leaving ? leaving - FLIGHT_MS : 0);
         unmaking = Math.max(unmaking, leaving);
-        if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0, wait);
-        arrives = leaving || FLIGHT_MS + wait;
+        if (!leaving) sendTo({ ...was, rect: start }, target ?? start, tile ? 1 : target ? 0.25 : 0);
+        arrives = leaving || FLIGHT_MS;
       }
     }
     swell(onto, arrives, landings);
@@ -573,26 +574,29 @@ function swell(tile: HTMLElement | null | undefined, delay: number, landings: Ma
   tile.animate([{ scale: '1' }, { scale: '1.12', filter: 'brightness(1.5)', offset: 0.35 }, { scale: '1' }], { duration: 480, delay, easing: EASE });
 }
 
-/** Keeps a tile's count at what it was until the first card on its way there lands, as its picture is kept. */
+/** Keeps a tile's count short of the cards still on their way to it, until the first of each batch lands, as its picture is kept. */
 function holdCounts(landings: Map<HTMLElement, { cards: number; at: number }>): void {
   for (const [tile, { cards, at }] of landings) {
-    const count = tile.querySelector<HTMLElement>('.zone-count');
-    const now = count?.textContent ?? '';
-    if (!count || !at || !/^\d+$/.test(now) || Number(now) < cards) continue;
-    // The board is redrawn many times before the card lands, so the tile is marked and the redraw leaves its count alone
-    tile.dataset.heldCount = '1';
-    count.textContent = String(Number(now) - cards);
+    if (!at || tile.dataset.count === undefined) continue;
+    tile.dataset.pending = String(Number(tile.dataset.pending ?? 0) + cards);
+    showCount(tile);
     setTimeout(() => {
-      delete tile.dataset.heldCount;
-      count.textContent = tile.dataset.count ?? now;
+      tile.dataset.pending = String(Math.max(0, Number(tile.dataset.pending ?? 0) - cards));
+      showCount(tile);
     }, at);
   }
 }
 
-/** Spells that failed on the stack this frame, by card key (stack.ts): each greys and waits there a moment before it goes. */
+/** Writes a zone tile's count, less any cards that have not landed on it yet. The board is redrawn many times while one is in flight. */
+export function showCount(tile: HTMLElement): void {
+  const count = tile.querySelector<HTMLElement>('.zone-count');
+  if (count) count.textContent = String(Math.max(0, Number(tile.dataset.count ?? 0) - Number(tile.dataset.pending ?? 0)));
+}
+
+/** Spells that failed on the stack this frame, by card key (stack.ts). */
 const fizzled = new Set<string>();
-/** How long a fizzled spell is seen to fail before what is left of it sets off. */
-const FIZZLE_LEAD_MS = 320;
+/** How long a spell that failed takes to come apart on the stack. */
+export const FIZZLE_MS = 520;
 /** A card's width over its height. */
 const CARD_ASPECT = 5 / 7;
 
@@ -601,7 +605,7 @@ export function noteFizzled(key: string): void {
 }
 
 /** A card made to make a trip nothing on the page can be copied for: its picture if the viewer may see it, or its back. */
-function standIn(model: Model, key: string, grey: boolean): HTMLElement {
+function standIn(model: Model, key: string): HTMLElement {
   const card = model.objects.get(Number(key)) as CardView | undefined;
   const src = lastPicture(Number(key))?.src || (card ? cardImageSrc(model, card) : '');
   if (!src) {
@@ -612,7 +616,6 @@ function standIn(model: Model, key: string, grey: boolean): HTMLElement {
   img.src = src;
   img.alt = '';
   el.append(img);
-  if (grey) el.style.filter = 'grayscale(1) brightness(.7)';
   return el;
 }
 
