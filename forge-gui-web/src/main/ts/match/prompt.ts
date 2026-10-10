@@ -182,7 +182,7 @@ function drawPrompt(model: Model, actions: Actions): void {
     setButton(cancel, pick.min === 0 ? { label: t('lblCancel'), enabled: true } : undefined);
     cancel.onclick = () => actions.answer(pick.id, []);
     root.classList.add('waiting');
-    root.classList.remove('priority');
+    root.classList.remove('priority', 'attack', 'strike');
     return;
   }
   const p = model.prompt;
@@ -199,6 +199,17 @@ function drawPrompt(model: Model, actions: Actions): void {
   renderPlayerChoices(root, model, p.selectablePlayers ?? [], actions);
   setButton(q<HTMLButtonElement>(root, '.ok'), p.ok);
   setButton(q<HTMLButtonElement>(root, '.cancel'), p.cancel);
+  // Declaring attackers, each button says what it will do: the host's OK reads the same whether nothing attacks or everything does
+  const strike = p.ok.enabled && p.cancel.label === t('lblAlphaStrike');
+  const attackers = p.ok.enabled && p.cancel.label === t('lblCallBack')
+    ? [...model.objects.values()].filter(o => (o as CardView).Attacking).length : 0;
+  root.classList.toggle('attack', strike || attackers > 0);
+  root.classList.toggle('strike', strike);
+  if (strike) setButton(ok, { label: t('lblWebPromptNoAttack'), enabled: true });
+  if (attackers) {
+    setButton(ok, { label: t('lblWebPromptAttackWith', attackers), enabled: true });
+    setButton(cancel, { label: t('lblWebPromptClearAttackers'), enabled: p.cancel.enabled });
+  }
   q(root, '.ok').classList.toggle('focus', !!p.focusOk);
   const waiting = !!p.ok?.enabled || !!p.cancel?.enabled;
   root.classList.toggle('waiting', waiting);

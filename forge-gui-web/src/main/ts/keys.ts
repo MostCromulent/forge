@@ -2,6 +2,7 @@
 
 import { cardMenu, oldestRequest, stackPick, type Model } from './model';
 import type { UiState } from './ui';
+import { t } from './text';
 
 export type KeyCommand =
   | 'closeOptions' | 'closeGameMenu' | 'closeVolume' | 'closeStackMenu' | 'closeStops' | 'closePicker' | 'declineHostChoice'
@@ -125,7 +126,8 @@ export function keyCommand(press: KeyPress, model: Model, ui: UiState, keys: Key
   }
   const prompt = model.prompt;
   if (ok && prompt?.ok?.enabled) return 'ok';
-  if (escape && prompt?.cancel?.enabled) return 'cancel';
+  // Escape takes something back, so it never sends every creature in to attack
+  if (escape && prompt?.cancel?.enabled && prompt.cancel.label !== t('lblAlphaStrike')) return 'cancel';
   if (key === keys.endTurn) return 'endTurn';
   if (key === keys.autoPass) return 'toggleAutoPass';
   if (key === keys.undo) return 'undo';
